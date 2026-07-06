@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -115,18 +116,76 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     static_cast<float>(this->declare_parameter<double>("circle_nms_dist_threshold", descriptor));
   const auto yaw_norm_thresholds =
     this->declare_parameter<std::vector<double>>("yaw_norm_thresholds", descriptor);
-  const float score_threshold =
-    static_cast<float>(this->declare_parameter<double>("score_threshold", descriptor));
+
+  // Distance-based score thresholds
+  const std::vector<double> distance_bin_upper_limits_double =
+    this->declare_parameter<std::vector<double>>(
+      "detection_score_thresholds.distance_bin_upper_limits", std::vector<double>{});
+  // Must set at least one upper bound
+  if (distance_bin_upper_limits_double.empty()) {
+    throw std::invalid_argument(
+      "The number of upper bounds: detection_score_thresholds.distance_bin_upper_limits must be at "
+      "least one");
+  }
+  const std::vector<float> distance_bin_upper_limits(
+    distance_bin_upper_limits_double.begin(), distance_bin_upper_limits_double.end());
+
+  // Create empty vector of thresholds for each class * number of upper bounds
+  std::vector<float> score_thresholds =
+    std::vector<float>(class_names_.size() * distance_bin_upper_limits.size(), 0.0);
+  int current_class_index = 0;
+  for (const auto & class_name : class_names_) {
+    // Construct the parameter path (e.g., "detection_score_thresholds.min_confidence_scores.CAR")
+    std::string param_path = "detection_score_thresholds.min_confidence_scores." + class_name;
+
+    // The same class name may appear multiple times in class_names_, so only declare the parameter
+    // on the first occurrence and reuse the already-declared value afterwards.
+    std::vector<double> class_score_thresholds =
+      this->has_parameter(param_path)
+        ? this->get_parameter(param_path).as_double_array()
+        : this->declare_parameter<std::vector<double>>(param_path, std::vector<double>{});
+    if (class_score_thresholds.size() != distance_bin_upper_limits.size()) {
+      throw std::invalid_argument(
+        "The number of thresholds for " + class_name +
+        " is not equal to the number of upper bounds");
+    }
+
+    // Move it to the correct position in the 1d-vector score_thresholds, where the order is number
+    // of classes * number of upper bounds
+    int current_upper_bound_index = 0;
+    for (auto class_score_threshold : class_score_thresholds) {
+      // The index is the current class index + the current upper bound index * the number of
+      // classes since score thresholds for the same class are in the same column For example, #
+      // CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
+      // [
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 0-50m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 50.0-90m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 90.0-121.0m
+      //  0.35, 0.35, 0.35, 0.35, 0.35    # 121.0-200.0m
+      // ]
+      auto score_threshold_index =
+        current_class_index + current_upper_bound_index * class_names_.size();
+      score_thresholds[score_threshold_index] = class_score_threshold;
+      current_upper_bound_index++;
+    }
+    current_class_index++;
+  }
 
   BEVFusionConfig config(
-    plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
+    class_names_.size(), plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
     image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
     point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
     raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,
     features_height, features_width, num_depth_features, image_feature_channel, num_proposals,
-    circle_nms_dist_threshold, yaw_norm_thresholds, score_threshold, use_intensity);
+    circle_nms_dist_threshold, yaw_norm_thresholds, score_thresholds, distance_bin_upper_limits,
+    use_intensity);
 
   sensor_fusion_ = config.sensor_fusion_;
+
+  use_compressed_images_ =
+    this->declare_parameter<bool>("use_compressed_images", false, descriptor);
+  const auto run_image_undistortion =
+    this->declare_parameter<bool>("run_image_undistortion", descriptor);
 
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);
@@ -142,6 +201,19 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
           image_backbone_engine_path, 1ULL << 32U)
       }
       : TrtBEVFusionConfig{trt_main_config, std::nullopt};
+
+  // Build Image Preprocessing Parameters
+  // TODO(KokSeang): Remove image preprocessing parameters out of BEVFusionConfig
+  auto image_pre_processing_params = ImagePreProcessingParams(
+        raw_image_height,
+        raw_image_width,
+        roi_height,
+        roi_width,
+        img_aug_scale_y,
+        img_aug_scale_x,
+        run_image_undistortion
+    );
+
   // clang-format on
   detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =
@@ -155,7 +227,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS(1));
 
-  initializeSensorFusionSubscribers(config.num_cameras_);
+  initializeSensorFusionSubscribers(config.num_cameras_, image_pre_processing_params);
 
   published_time_pub_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
@@ -200,7 +272,7 @@ void BEVFusionNode::cloudCallback(
   std::unordered_map<std::string, double> proc_timing;
   bool is_num_voxels_within_range = true;
   const bool is_success = detector_ptr_->detect(
-    pc_msg_ptr, image_msgs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
+    pc_msg_ptr, camera_data_ptrs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
     is_num_voxels_within_range);
 
   if (!is_success) {
@@ -241,25 +313,24 @@ void BEVFusionNode::cloudCallback(
 void BEVFusionNode::imageCallback(
   const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id)
 {
-  image_msgs_[camera_id] = msg;
+  camera_data_ptrs_[camera_id]->update_image_msg(msg);
 
   std::size_t num_valid_images = std::count_if(
-    image_msgs_.begin(), image_msgs_.end(),
-    [](const auto & image_msg) { return image_msg != nullptr; });
+    camera_data_ptrs_.begin(), camera_data_ptrs_.end(),
+    [](const auto & camera_data) { return camera_data->is_image_msg_available(); });
 
-  images_available_ = num_valid_images == image_msgs_.size();
+  images_available_ = num_valid_images == camera_data_ptrs_.size();
 }
 
 void BEVFusionNode::cameraInfoCallback(
   const sensor_msgs::msg::CameraInfo & msg, std::size_t camera_id)
 {
-  camera_info_msgs_[camera_id] = msg;
-
+  camera_data_ptrs_[camera_id]->update_camera_info(msg);
   std::size_t num_valid_intrinsics = std::count_if(
-    camera_info_msgs_.begin(), camera_info_msgs_.end(),
-    [](const auto & opt) { return opt.has_value(); });
+    camera_data_ptrs_.begin(), camera_data_ptrs_.end(),
+    [](const auto & camera_data) { return camera_data->is_camera_info_available(); });
 
-  intrinsics_available_ = num_valid_intrinsics == camera_info_msgs_.size();
+  intrinsics_available_ = num_valid_intrinsics == camera_data_ptrs_.size();
 
   if (
     lidar2camera_extrinsics_[camera_id].has_value() || !lidar_frame_.has_value() ||
@@ -278,7 +349,7 @@ void BEVFusionNode::cameraInfoCallback(
     Matrix4f lidar2camera_rowmajor_transform = lidar2camera_transform.eval();
     lidar2camera_extrinsics_[camera_id] = lidar2camera_rowmajor_transform;
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN(this->get_logger(), "%s", ex.what());
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("bevfusion"), ex.what());
     return;
   }
 

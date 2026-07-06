@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Validator Diagnostic",
+  "type": "object",
+  "definitions": {
+    "trajectory_validator_diagnostic": {
+      "type": "object",
+      "properties": {
+        "configured_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of configured_actions. Each entry encodes one configured_action as filter_name:action:diagnostic_name, where filter_name is the filter short name returned by plugin->get_name(), action is one of none/comfortable/moderate/emergency, and diagnostic_name is the DiagnosticStatus name to publish when that action fires on the best candidate trajectory.",
+          "default": [
+            "uncrossable_boundary_departure_filter:moderate:trajectory_validator_uncrossable_boundary_departure_danger"
+          ]
+        },
+        "no_candidates_diag_status_name": {
+          "type": "string",
+          "description": "Diagnostic status name published at ERROR when no candidate trajectory is available. Set to an empty string to disable this status.",
+          "default": "trajectory_validator_no_candidate_trajectory"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "trajectory_validator_diagnostic": {
+              "$ref": "#/definitions/trajectory_validator_diagnostic"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

@@ -33,15 +33,18 @@ target_link_libraries(${PROJECT_NAME}_lib
 # Suppress deprecated-declarations warning from parameter_traits library
 target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wno-deprecated-declarations)
 
-rclcpp_components_register_node(${PROJECT_NAME}_lib
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_lib
   PLUGIN "autoware::minimum_rule_based_planner::MinimumRuleBasedPlannerNode"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
 ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   plugins/obstacle_stop.cpp
+  plugins/surround_obstacle_stop.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_plugins PRIVATE

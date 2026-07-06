@@ -53,6 +53,8 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   iou_threshold_.PEDESTRIAN = declare_parameter<double>("iou_threshold.PEDESTRIAN");
   iou_threshold_.TRUCK = declare_parameter<double>("iou_threshold.TRUCK");
   iou_threshold_.UNKNOWN = declare_parameter<double>("iou_threshold.UNKNOWN");
+  iou_threshold_.ANIMAL = declare_parameter<double>("iou_threshold.ANIMAL");
+  iou_threshold_.HAZARD = declare_parameter<double>("iou_threshold.HAZARD");
 
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
@@ -183,7 +185,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
     roi.y_offset = min_y;
     roi.width = max_x - min_x;
     roi.height = max_y - min_y;
-    m_cluster_roi.insert(std::make_pair(i, roi));
+    m_cluster_roi.emplace(i, roi);
     if (debugger_) debug_obstacle_rois.push_back(roi);
   }
 

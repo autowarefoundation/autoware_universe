@@ -1634,7 +1634,7 @@ void PathPlanner::interpolate_lane_change_sections(
 
 Trajectory PathPlanner::shift_trajectory_to_ego(
   const Trajectory & trajectory, const geometry_msgs::msg::Pose & ego_pose,
-  const double ego_velocity, const double ego_yaw_rate, const TrajectoryShiftParams & params,
+  const double ego_velocity, const double ego_yaw_rate, const TrajectoryShiftParams & shift_params,
   const double delta_arc_length)
 {
   if (trajectory.points.size() < 2) {
@@ -1651,16 +1651,16 @@ Trajectory PathPlanner::shift_trajectory_to_ego(
   const double abs_yaw_dev = std::abs(signed_yaw_dev);
 
   if (
-    std::abs(lateral_offset) < params.minimum_shift_length &&
-    abs_yaw_dev < params.minimum_shift_yaw) {
+    std::abs(lateral_offset) < shift_params.minimum_shift_length &&
+    abs_yaw_dev < shift_params.minimum_shift_yaw) {
     return trajectory;
   }
 
   const double clamped_velocity =
-    std::max(std::max(0.0, ego_velocity), params.min_speed_for_curvature);
+    std::max(std::max(0.0, ego_velocity), shift_params.min_speed_for_curvature);
   const double abs_d = std::abs(lateral_offset);
   double L = compute_shift_length_from_lateral_accel(
-    abs_d, clamped_velocity, params.lateral_accel_limit, params.minimum_shift_distance);
+    abs_d, clamped_velocity, shift_params.lateral_accel_limit, shift_params.minimum_shift_distance);
 
   double accumulated_length = 0.0;
   size_t merge_idx = nearest_idx;

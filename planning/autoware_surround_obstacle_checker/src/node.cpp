@@ -14,45 +14,25 @@
 
 #include "node.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
-#include <boost/assert.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/format.hpp>
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/linestring.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
-
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include <algorithm>
 #include <functional>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 
-#define EIGEN_MPL2_ONLY
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
 namespace autoware::surround_obstacle_checker
 {
-namespace bg = boost::geometry;
-using Point2d = bg::model::d2::point_xy<double>;
-using Polygon2d = bg::model::polygon<Point2d>;
+
 using autoware_perception_msgs::msg::ObjectClassification;
-using autoware_utils::create_point;
-using autoware_utils::pose2transform;
 
 SurroundObstacleCheckerNode::SurroundObstacleCheckerNode(const rclcpp::NodeOptions & node_options)
 : Node("surround_obstacle_checker_node", node_options)
@@ -71,6 +51,9 @@ SurroundObstacleCheckerNode::SurroundObstacleCheckerNode(const rclcpp::NodeOptio
   }
 
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
+
+  proximity_checker_ = std::make_unique<obstacle_proximity_checker::ProximityChecker>(
+    toProximityCheckerParameters(), vehicle_info_);
 
   // Publishers
   pub_clear_velocity_limit_ = this->create_publisher<VelocityLimitClearCommand>(
@@ -119,6 +102,56 @@ bool SurroundObstacleCheckerNode::getUseDynamicObject() const
   return use_dynamic_object;
 }
 
+obstacle_proximity_checker::Parameters SurroundObstacleCheckerNode::toProximityCheckerParameters()
+  const
+{
+  const auto param = param_listener_->get_params();
+
+  obstacle_proximity_checker::Parameters parameters;
+  parameters.pointcloud_enable_check = param.pointcloud.enable_check;
+
+  for (const auto & [label, object_type_param] : param.object_types_map) {
+    parameters.object_type_enable_check[label] = object_type_param.enable_check;
+  }
+
+  for (const auto & [label, obstacle_type_param] : param.obstacle_types_map) {
+    obstacle_proximity_checker::ObstacleTypeParameters obstacle_parameters;
+    obstacle_parameters.surround_check_front_distance =
+      obstacle_type_param.surround_check_front_distance;
+    obstacle_parameters.surround_check_side_distance =
+      obstacle_type_param.surround_check_side_distance;
+    obstacle_parameters.surround_check_back_distance =
+      obstacle_type_param.surround_check_back_distance;
+    parameters.obstacle_types_map[label] = obstacle_parameters;
+  }
+
+  return parameters;
+}
+
+obstacle_proximity_checker::Inputs SurroundObstacleCheckerNode::toProximityCheckerInputs() const
+{
+  obstacle_proximity_checker::Inputs inputs;
+  inputs.ego_pose = odometry_ptr_->pose.pose;
+  inputs.objects = object_ptr_;
+
+  if (!pointcloud_ptr_) return inputs;
+
+  const auto transform_stamped =
+    getTransform("base_link", pointcloud_ptr_->header.frame_id, pointcloud_ptr_->header.stamp, 0.5);
+
+  if (!transform_stamped.has_value()) return inputs;
+
+  Eigen::Affine3f isometry =
+    tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
+  pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
+  pcl::fromROSMsg(*pointcloud_ptr_, transformed_pointcloud);
+  autoware_utils::transform_pointcloud(transformed_pointcloud, transformed_pointcloud, isometry);
+
+  inputs.pointcloud_in_base_link = transformed_pointcloud.makeShared();
+
+  return inputs;
+}
+
 void SurroundObstacleCheckerNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -135,6 +168,7 @@ void SurroundObstacleCheckerNode::onTimer()
   }
 
   const auto param = param_listener_->get_params();
+  proximity_checker_->update_parameters(toProximityCheckerParameters());
   const auto use_dynamic_object = getUseDynamicObject();
 
   if (param.publish_debug_footprints) {
@@ -157,20 +191,17 @@ void SurroundObstacleCheckerNode::onTimer()
       "Surround obstacle check is disabled for all dynamic object types and for pointcloud check.");
   }
 
-  const auto nearest_obstacle = getNearestObstacle();
+  const double contact_distance_threshold =
+    state_ == State::STOP ? param.surround_check_hysteresis_distance : 1e-3;
+  const auto proximity_result =
+    proximity_checker_->check(toProximityCheckerInputs(), contact_distance_threshold);
   const auto is_vehicle_stopped = vehicle_stop_checker_->isVehicleStopped();
 
-  constexpr double epsilon = 1e-3;
   switch (state_) {
     case State::PASS: {
-      const auto is_obstacle_found = [&]() {
-        if (!nearest_obstacle.has_value()) return false;
-        return nearest_obstacle.value().nearest_distance < epsilon;
-      }();
-
       bool is_stop_required = false;
       std::tie(is_stop_required, last_obstacle_found_time_) = isStopRequired(
-        is_obstacle_found, is_vehicle_stopped, state_, last_obstacle_found_time_,
+        proximity_result.is_obstacle_found, is_vehicle_stopped, state_, last_obstacle_found_time_,
         param.state_clear_time);
       if (!is_stop_required) {
         break;
@@ -193,14 +224,9 @@ void SurroundObstacleCheckerNode::onTimer()
     }
 
     case State::STOP: {
-      const auto is_obstacle_found = [&]() {
-        if (!nearest_obstacle.has_value()) return false;
-        return nearest_obstacle.value().nearest_distance < param.surround_check_hysteresis_distance;
-      }();
-
       bool is_stop_required = false;
       std::tie(is_stop_required, last_obstacle_found_time_) = isStopRequired(
-        is_obstacle_found, is_vehicle_stopped, state_, last_obstacle_found_time_,
+        proximity_result.is_obstacle_found, is_vehicle_stopped, state_, last_obstacle_found_time_,
         param.state_clear_time);
       if (is_stop_required) {
         break;
@@ -222,8 +248,8 @@ void SurroundObstacleCheckerNode::onTimer()
       break;
   }
 
-  if (nearest_obstacle.has_value()) {
-    debug_ptr_->pushStopObstacle(nearest_obstacle);
+  if (proximity_result.nearest_obstacle.has_value()) {
+    debug_ptr_->pushStopObstacle(proximity_result.nearest_obstacle);
   }
 
   if (state_ == State::STOP) {
@@ -236,155 +262,6 @@ void SurroundObstacleCheckerNode::onTimer()
   pub_processing_time_->publish(processing_time_msg);
 
   debug_ptr_->publish();
-}
-
-std::optional<StopObstacle> SurroundObstacleCheckerNode::getNearestObstacle() const
-{
-  const auto nearest_pointcloud = getNearestObstacleByPointCloud();
-  const auto nearest_object = getNearestObstacleByDynamicObject();
-  if (!nearest_pointcloud.has_value() && !nearest_object.has_value()) {
-    return {};
-  }
-
-  if (!nearest_pointcloud.has_value()) {
-    return nearest_object;
-  }
-
-  if (!nearest_object.has_value()) {
-    return nearest_pointcloud;
-  }
-
-  return nearest_pointcloud.value().nearest_distance < nearest_object.value().nearest_distance
-           ? nearest_pointcloud
-           : nearest_object;
-}
-
-std::optional<StopObstacle> SurroundObstacleCheckerNode::getNearestObstacleByPointCloud() const
-{
-  const auto param = param_listener_->get_params();
-
-  if (!param.pointcloud.enable_check || !pointcloud_ptr_) {
-    return std::nullopt;
-  }
-
-  if (pointcloud_ptr_->data.empty()) {
-    return std::nullopt;
-  }
-
-  const auto transform_stamped =
-    getTransform("base_link", pointcloud_ptr_->header.frame_id, pointcloud_ptr_->header.stamp, 0.5);
-
-  if (!transform_stamped.has_value()) {
-    return std::nullopt;
-  }
-
-  Eigen::Affine3f isometry =
-    tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
-  pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
-  pcl::fromROSMsg(*pointcloud_ptr_, transformed_pointcloud);
-  autoware_utils::transform_pointcloud(transformed_pointcloud, transformed_pointcloud, isometry);
-
-  const auto & pointcloud_param = param.obstacle_types_map.at("pointcloud");
-  const double front_margin = pointcloud_param.surround_check_front_distance;
-  const double side_margin = pointcloud_param.surround_check_side_distance;
-  const double back_margin = pointcloud_param.surround_check_back_distance;
-  const double base_to_front = vehicle_info_.max_longitudinal_offset_m + front_margin;
-  const double base_to_rear = vehicle_info_.rear_overhang_m + back_margin;
-  const double width = vehicle_info_.vehicle_width_m + side_margin * 2;
-  const auto base_link_origin = []() {
-    geometry_msgs::msg::Pose p;
-    p.position.x = 0.0;
-    p.position.y = 0.0;
-    p.position.z = 0.0;
-    p.orientation = autoware_utils_geometry::create_quaternion_from_yaw(0.0);
-    return p;
-  }();
-  const auto ego_polygon =
-    autoware_utils::to_footprint(base_link_origin, base_to_front, base_to_rear, width);
-
-  // distance comparison on base_link frame
-  geometry_msgs::msg::Point nearest_point_base_link;
-  double minimum_distance = std::numeric_limits<double>::max();
-  bool was_minimum_distance_updated = false;
-  for (const auto & p : transformed_pointcloud) {
-    Point2d boost_point(p.x, p.y);
-
-    const auto distance_to_object = bg::distance(ego_polygon, boost_point);
-
-    if (distance_to_object < minimum_distance) {
-      nearest_point_base_link = create_point(p.x, p.y, p.z);
-      minimum_distance = distance_to_object;
-      was_minimum_distance_updated = true;
-    }
-  }
-
-  if (was_minimum_distance_updated) {
-    // transform the nearest point from base_link to map frame
-    const auto & pose = odometry_ptr_->pose.pose;
-    const auto nearest_point_map =
-      autoware::universe_utils::transformPoint(nearest_point_base_link, pose);
-
-    StopObstacle obstacle;
-    obstacle.is_point_cloud = true;
-    obstacle.nearest_distance = minimum_distance;
-    obstacle.nearest_point = nearest_point_map;
-    obstacle.uuid = UUID();  // Default UUID
-    return obstacle;
-  }
-  return std::nullopt;
-}
-
-std::optional<StopObstacle> SurroundObstacleCheckerNode::getNearestObstacleByDynamicObject() const
-{
-  if (!object_ptr_ || !getUseDynamicObject()) {
-    return std::nullopt;
-  }
-
-  const auto param = param_listener_->get_params();
-
-  // TODO(murooka) check computation cost
-  PredictedObject nearest_object;
-  double minimum_distance = std::numeric_limits<double>::max();
-  bool was_minimum_distance_updated = false;
-  for (const auto & object : object_ptr_->objects) {
-    const int label = object.classification.front().label;
-    const auto & str_label = label_map_.at(label);
-
-    if (!param.object_types_map.at(str_label).enable_check) {
-      continue;
-    }
-    const auto & object_param = param.obstacle_types_map.at(str_label);
-    const double front_margin = object_param.surround_check_front_distance;
-    const double side_margin = object_param.surround_check_side_distance;
-    const double back_margin = object_param.surround_check_back_distance;
-    const double base_to_front = vehicle_info_.max_longitudinal_offset_m + front_margin;
-    const double base_to_rear = vehicle_info_.rear_overhang_m + back_margin;
-    const double width = vehicle_info_.vehicle_width_m + side_margin * 2;
-    const auto ego_polygon =
-      autoware_utils::to_footprint(odometry_ptr_->pose.pose, base_to_front, base_to_rear, width);
-
-    const auto object_polygon = autoware_utils::to_polygon2d(object);
-
-    const auto distance_to_object = bg::distance(ego_polygon, object_polygon);
-
-    if (distance_to_object < minimum_distance) {
-      nearest_object = object;
-      minimum_distance = distance_to_object;
-      was_minimum_distance_updated = true;
-    }
-  }
-
-  if (was_minimum_distance_updated) {
-    const auto & object_position =
-      nearest_object.kinematics.initial_pose_with_covariance.pose.position;
-    StopObstacle obstacle;
-    obstacle.is_point_cloud = false;
-    obstacle.nearest_distance = minimum_distance;
-    obstacle.nearest_point = object_position;
-    obstacle.uuid = nearest_object.object_id;
-    return obstacle;
-  }
-  return std::nullopt;
 }
 
 std::optional<geometry_msgs::msg::TransformStamped> SurroundObstacleCheckerNode::getTransform(

@@ -71,6 +71,8 @@ PidLongitudinalController::PidLongitudinalController(
   m_enable_overshoot_emergency = node.declare_parameter<bool>("enable_overshoot_emergency");
   m_enable_large_tracking_error_emergency =
     node.declare_parameter<bool>("enable_large_tracking_error_emergency");
+  m_enable_emergency_exit_without_stop =
+    node.declare_parameter<bool>("enable_emergency_exit_without_stop", false);
   m_enable_slope_compensation = node.declare_parameter<bool>("enable_slope_compensation");
   m_enable_keep_stopped_until_steer_convergence =
     node.declare_parameter<bool>("enable_keep_stopped_until_steer_convergence");
@@ -128,6 +130,12 @@ PidLongitudinalController::PidLongitudinalController(
       node.declare_parameter<double>("time_threshold_before_pid_integration");  // [s]
     m_ff_scale_min = node.declare_parameter<double>("ff_scale_min");
     m_ff_scale_max = node.declare_parameter<double>("ff_scale_max");
+
+    m_enable_velocity_lookahead_feedback =
+      node.declare_parameter<bool>("enable_velocity_lookahead_feedback");
+    m_velocity_lookahead_time = node.declare_parameter<double>("velocity_lookahead_time");  // [s]
+    m_velocity_lookahead_blend_weight =
+      node.declare_parameter<double>("velocity_lookahead_blend_weight");  // [-]
 
     m_enable_brake_keeping_before_stop =
       node.declare_parameter<bool>("enable_brake_keeping_before_stop");         // [-]
@@ -272,13 +280,6 @@ void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg:
     return;
   }
 
-  if (m_use_temporal_trajectory) {
-    const rclcpp::Time current_stamp(msg.header.stamp);
-    m_prev_trajectory_stamp = current_stamp;
-  } else {
-    m_prev_trajectory_stamp.reset();
-  }
-
   m_trajectory = msg;
 }
 
@@ -346,6 +347,8 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
     update_param("time_threshold_before_pid_integration", m_time_threshold_before_pid_integrate);
     update_param("ff_scale_min", m_ff_scale_min);
     update_param("ff_scale_max", m_ff_scale_max);
+    update_param("velocity_lookahead_time", m_velocity_lookahead_time);
+    update_param("velocity_lookahead_blend_weight", m_velocity_lookahead_blend_weight);
   }
 
   // stopping state
@@ -487,39 +490,10 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   autoware_planning_msgs::msg::TrajectoryPoint target_point;
 
   if (m_use_temporal_trajectory) {
-    const double prev_nearest_time = [&]() {
-      if (!m_prev_nearest_time.has_value()) {
-        return traj_start_time;
-      }
-      return std::clamp(*m_prev_nearest_time, traj_start_time, traj_end_time);
-    }();
-    const double predicted_time = std::clamp(
-      prev_nearest_time + std::max(control_data.dt, 0.0), traj_start_time, traj_end_time);
-    const double local_dt = std::max(
-      longitudinal_utils::estimateLocalTrajectoryTimeStep(
-        control_data.interpolated_traj.points, predicted_time),
-      std::max(control_data.dt, 1.0e-3));
-    const double backward_window = std::max(local_dt, std::max(control_data.dt, 0.0));
-    const double forward_window = std::max(3.0 * local_dt, std::max(control_data.dt, 0.0));
-    control_data.temporal_predicted_time = predicted_time;
-    control_data.temporal_window_min = predicted_time - backward_window;
-    control_data.temporal_window_max = predicted_time + forward_window;
-    const auto observed_time = longitudinal_utils::estimateTrajectoryTimeFromPose(
-      control_data.interpolated_traj.points, current_pose, m_ego_nearest_dist_threshold,
-      m_ego_nearest_yaw_threshold, predicted_time - backward_window,
-      predicted_time + forward_window);
-
-    double nearest_time = predicted_time;
-    if (observed_time.has_value()) {
-      control_data.temporal_observed_time = *observed_time;
-      control_data.temporal_observation_used = true;
-      const double max_phase_correction = std::max(2.0 * local_dt, std::max(control_data.dt, 0.0));
-      const double bounded_correction =
-        std::clamp(*observed_time - predicted_time, -max_phase_correction, max_phase_correction);
-      constexpr double observation_gain = 0.5;
-      nearest_time = std::clamp(
-        predicted_time + observation_gain * bounded_correction, traj_start_time, traj_end_time);
-    }
+    const rclcpp::Time traj_stamp(m_trajectory.header.stamp);
+    const double elapsed_time = (clock_->now() - traj_stamp).seconds();
+    const double nearest_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
+    control_data.temporal_predicted_time = nearest_time;
     control_data.temporal_fused_time = nearest_time;
     m_prev_nearest_time = nearest_time;
 
@@ -880,6 +854,12 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
         // NOTE: On manual driving, no need stopping to exit the emergency.
         return changeControlState(ControlState::DRIVE);
       }
+      if (
+        m_enable_emergency_exit_without_stop && stop_dist > p.emergency_state_overshoot_stop_dist) {
+        m_pid_vel.reset();
+        m_lpf_vel_error->reset(0.0);
+        return changeControlState(ControlState::DRIVE);
+      }
     }
     return;
   }
@@ -1230,7 +1210,60 @@ double PidLongitudinalController::applyVelocityFeedback(const ControlData & cont
   const double vel_sign = (control_data.shift == Shift::Forward)
                             ? 1.0
                             : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
+
   const double current_vel = control_data.current_motion.vel;
+
+  if (m_enable_velocity_lookahead_feedback) {
+    const double dt_target = m_velocity_lookahead_time;
+    const double w = m_velocity_lookahead_blend_weight;
+
+    const double current_vel_abs = std::max(std::abs(current_vel), 0.1);
+    const double lookahead_distance = current_vel_abs * dt_target;
+
+    size_t future_idx = control_data.target_idx;
+    double accumulated_dist = 0.0;
+
+    for (size_t i = control_data.target_idx; i + 1 < control_data.interpolated_traj.points.size();
+         ++i) {
+      const auto & p0 = control_data.interpolated_traj.points.at(i).pose.position;
+      const auto & p1 = control_data.interpolated_traj.points.at(i + 1).pose.position;
+
+      const double dx = p1.x - p0.x;
+      const double dy = p1.y - p0.y;
+      const double dz = p1.z - p0.z;
+      const double ds = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+      accumulated_dist += ds;
+      future_idx = i + 1;
+
+      if (accumulated_dist >= lookahead_distance) {
+        break;
+      }
+    }
+
+    const auto target_motion = Motion{
+      control_data.interpolated_traj.points.at(future_idx).longitudinal_velocity_mps,
+      control_data.interpolated_traj.points.at(future_idx).acceleration_mps2};
+
+    const double diff_vel = (target_motion.vel - current_vel) * vel_sign;
+    const double error_vel_filtered = m_lpf_vel_error->filter(diff_vel);
+
+    const double a_connect = error_vel_filtered / dt_target;
+
+    double target_acc = target_motion.acc;
+
+    // Detect stopped points, on the trajectory they have acceleration 0 based on the speed diff,
+    // but we still need deceleration to enter stop.
+    if (
+      abs(target_motion.vel) < m_state_transition_params.stopped_state_entry_vel &&
+      target_motion.acc < m_state_transition_params.stopped_state_entry_acc) {
+      target_acc = m_stopped_state_params.acc;
+    }
+
+    const double feedback_acc = w * a_connect + (1.0 - w) * target_acc;
+    return feedback_acc;
+  }
+
   const auto target_motion = Motion{
     control_data.interpolated_traj.points.at(control_data.target_idx).longitudinal_velocity_mps,
     control_data.interpolated_traj.points.at(control_data.target_idx).acceleration_mps2};

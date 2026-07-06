@@ -25,11 +25,11 @@ EuclideanClusterNode::EuclideanClusterNode(const rclcpp::NodeOptions & options)
 : Node("euclidean_cluster_node", options)
 {
   const bool use_height = this->declare_parameter<bool>("use_height");
-  const int min_cluster_size = this->declare_parameter<int>("min_cluster_size");
+  const int min_points_per_cluster = this->declare_parameter<int>("min_points_per_cluster");
   const int max_cluster_size = this->declare_parameter<int>("max_cluster_size");
-  const float tolerance = this->declare_parameter<float>("tolerance");
-  cluster_ =
-    std::make_shared<EuclideanCluster>(use_height, min_cluster_size, max_cluster_size, tolerance);
+  const float tolerance = this->declare_parameter<float>("tolerance_m");
+  cluster_ = std::make_shared<EuclideanCluster>(
+    use_height, min_points_per_cluster, max_cluster_size, tolerance);
 
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(

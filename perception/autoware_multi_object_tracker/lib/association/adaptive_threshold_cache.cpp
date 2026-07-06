@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 
 #include <algorithm>
-#include <cmath>
 
 namespace autoware::multi_object_tracker
 {

@@ -14,7 +14,7 @@
   <arg name="input_tracked_objects" default="~/input/tracked_objects"/>
   <arg name="input_vector_map" default="~/input/vector_map"/>
   <arg name="input_turn_indicators" default="~/input/turn_indicators"/>
-  <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
+  <arg name="build_only" default="false" description="shutdown node after model initialization"/>
 
   <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="both">
     <param from="$(var diffusion_planner_param_path)" allow_substs="true"/>

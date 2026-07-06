@@ -42,8 +42,11 @@ inline constexpr std::pair<uint8_t, std::string_view> kObjectClassifications[] =
   {ObjectClassification::MOTORCYCLE, "motorcycle"},
   {ObjectClassification::BICYCLE, "bicycle"},
   {ObjectClassification::PEDESTRIAN, "pedestrian"},
-  {ObjectClassification::UNKNOWN, "unknown"}};
-// DO NOT accept "animal", "hazard", "over_drivable", "under_drivable" class
+  {ObjectClassification::UNKNOWN, "unknown"},
+  {ObjectClassification::ANIMAL, "animal"},
+  {ObjectClassification::HAZARD, "hazard"},
+  {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
+  {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
 
 constexpr std::string_view to_type_string(const uint8_t label)
 {
@@ -137,7 +140,6 @@ struct AssessmentTrajectories
 {
   bool map_based{true};
   bool constant_curvature{true};
-  bool diffusion_based{true};
 };
 
 struct DracParams
@@ -157,9 +159,6 @@ struct DracParams
     assessment_trajectories.constant_curvature =
       enable_assessment &&
       extract_labeled_param<bool>(drac.assessment_trajectories.constant_curvature, key);
-    assessment_trajectories.diffusion_based =
-      enable_assessment &&
-      extract_labeled_param<bool>(drac.assessment_trajectories.diffusion_based, key);
     ego_total_braking_delay = extract_labeled_param<double>(drac.ego_total_braking_delay, key);
     ego_footprint_margin.lateral = drac.ego_footprint_margin.lateral;
     ego_footprint_margin.front = drac.ego_footprint_margin.front;
@@ -176,46 +175,6 @@ struct DracParams
   EgoFootprintMargin ego_footprint_margin{};
   Threshold warn_threshold{-2.0};
   Threshold error_threshold{};
-};
-
-struct PetParams
-{
-  bool enable_assessment{true};
-  AssessmentTrajectories assessment_trajectories{};
-  double ego_total_braking_delay{0.4};
-  EgoFootprintMargin ego_footprint_margin{};
-  double ego_assumed_acceleration{-5.0};
-  PetThreshold warn_threshold{};
-  PetThreshold error_threshold{0.6, 0.3};
-
-  PetParams() = default;
-  PetParams(const validator::Params & node_params, const std::string_view key)
-  {
-    const auto & pet = node_params.collision_check.pet_collision;
-    enable_assessment = extract_labeled_param<bool>(pet.enable_assessment, key);
-    assessment_trajectories.map_based =
-      enable_assessment && extract_labeled_param<bool>(pet.assessment_trajectories.map_based, key);
-    assessment_trajectories.constant_curvature =
-      enable_assessment &&
-      extract_labeled_param<bool>(pet.assessment_trajectories.constant_curvature, key);
-    assessment_trajectories.diffusion_based =
-      enable_assessment &&
-      extract_labeled_param<bool>(pet.assessment_trajectories.diffusion_based, key);
-    ego_total_braking_delay = extract_labeled_param<double>(pet.ego_total_braking_delay, key);
-    ego_footprint_margin.lateral = pet.ego_footprint_margin.lateral;
-    ego_footprint_margin.front = pet.ego_footprint_margin.front;
-    ego_footprint_margin.rear = pet.ego_footprint_margin.rear;
-    ego_assumed_acceleration = extract_labeled_param<double>(pet.ego_assumed_acceleration, key);
-
-    warn_threshold.ego_first_passing_time_gap =
-      extract_labeled_param<double>(pet.warn_threshold.ego_first_passing_time_gap, key);
-    warn_threshold.object_first_passing_time_gap =
-      extract_labeled_param<double>(pet.warn_threshold.object_first_passing_time_gap, key);
-    error_threshold.ego_first_passing_time_gap =
-      extract_labeled_param<double>(pet.error_threshold.ego_first_passing_time_gap, key);
-    error_threshold.object_first_passing_time_gap =
-      extract_labeled_param<double>(pet.error_threshold.object_first_passing_time_gap, key);
-  }
 };
 
 struct RssParams
@@ -264,7 +223,6 @@ std::map<std::string_view, PluginParam> create_param_map_per_object(
 }
 
 using DracParamMap = std::map<std::string_view, DracParams>;
-using PetParamMap = std::map<std::string_view, PetParams>;
 using RssParamMap = std::map<std::string_view, RssParams>;
 
 }  // namespace autoware::trajectory_validator::plugin::safety

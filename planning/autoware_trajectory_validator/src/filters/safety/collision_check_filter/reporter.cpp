@@ -56,9 +56,6 @@ int next_marker_id(const visualization_msgs::msg::MarkerArray & debug_markers)
 
 Color resolve_trajectory_color(const std::string & trajectory_id)
 {
-  if (trajectory_id.find("_diffusion_based_trajectory") != std::string::npos) {
-    return Color{1.0F, 0.55F, 0.0F};
-  }
   if (trajectory_id.find("_constant_curvature_path") != std::string::npos) {
     return Color{0.0F, 0.75F, 1.0F};
   }
@@ -75,8 +72,9 @@ autoware_internal_planning_msgs::msg::SafetyFactorArray make_safety_factor_array
   SafetyFactor safety_factor;
   safety_factor.type = SafetyFactor::OBJECT;
   safety_factor.object_id = collision_detail.object_identification.uuid;
-  safety_factor.ttc_begin = static_cast<float>(collision_detail.ttc);
-  safety_factor.ttc_end = static_cast<float>(collision_detail.ttc + time_resolution);
+  safety_factor.ttc_begin = static_cast<float>(collision_detail.first_collision_timing.ttc);
+  safety_factor.ttc_end =
+    static_cast<float>(collision_detail.first_collision_timing.ttc + time_resolution);
   safety_factor.is_safe = false;
   if (!collision_detail.object_trajectory.empty()) {
     safety_factor.points.push_back(collision_detail.object_trajectory.front().position);
@@ -116,57 +114,6 @@ void add_collision_planning_factor(
   planning_factors.factors.push_back(std::move(factor));
 }
 
-void process_pet_artifacts(
-  const nav_msgs::msg::Odometry & odometry,
-  reporter::ContinuousDetectionTimes & pet_continuous_times, const rclcpp::Time & current_time,
-  const PetArtifact & pet_artifact, VisualizationData & artifacts,
-  visualization_msgs::msg::MarkerArray & debug_markers, double time_resolution)
-{
-  pet_continuous_times.update(
-    current_time, pet_artifact.object_evaluations, [](const auto & evaluation) {
-      return evaluation.detail.object_identification.trajectory_id_string();
-    });
-
-  if (pet_artifact.risk == RiskLevel::SAFE || pet_artifact.object_evaluations.empty()) {
-    return;
-  }
-
-  std::string log_messages{};
-  std::string marker_messages{};
-  uint8_t log_level = MetricReport::WARN;
-  for (const auto & evaluation : pet_artifact.object_evaluations) {
-    if (evaluation.risk == RiskLevel::SAFE) {
-      continue;
-    }
-
-    const auto & timing = evaluation.detail;
-    const auto & obj_id = timing.object_identification;
-    const bool is_error = evaluation.risk == RiskLevel::ERROR;
-    if (is_error) {
-      log_level = MetricReport::ERROR;
-    }
-
-    const auto finding_msg = fmt::format(
-      "PET collision, classification: {}, ID: {}, PET: {}, TTC: {}, duration: {}, stamp: {}.{};",
-      obj_id.classification, obj_id.trajectory_id_string(), timing.pet, timing.ttc,
-      pet_continuous_times.get_time(obj_id.trajectory_id_string()), obj_id.stamp.sec,
-      obj_id.stamp.nanosec);
-    log_messages += finding_msg;
-    reporter::append_text_marker_message(marker_messages, finding_msg);
-    reporter::add_debug_markers(
-      debug_markers, current_time, "planned_speed_collision", obj_id.trajectory_id_string(),
-      timing.ego_trajectory, timing.object_trajectory, timing.ego_hull, timing.object_hull);
-    if (is_error) {
-      add_collision_planning_factor(
-        time_resolution, odometry.header.stamp, odometry.pose.pose, timing, "PET",
-        artifacts.planning_factors);
-    }
-  }
-
-  artifacts.error_msg += marker_messages;
-  reporter::log_collision_messages(log_level, log_messages);
-}
-
 void process_drac_artifacts(
   const nav_msgs::msg::Odometry & odometry,
   reporter::ContinuousDetectionTimes & drac_continuous_times, const rclcpp::Time & current_time,
@@ -184,8 +131,8 @@ void process_drac_artifacts(
 
   std::string log_messages{};
   std::string marker_messages{};
-  const bool has_error = drac_artifact.risk == RiskLevel::ERROR;
-  const uint8_t log_level = has_error ? MetricReport::ERROR : MetricReport::WARN;
+  const bool has_error = drac_artifact.risk == RiskLevel::DANGER;
+  const RiskLevel::_level_type log_level = has_error ? RiskLevel::DANGER : RiskLevel::HIGH_CAUTION;
   for (const auto & evaluation : drac_artifact.object_evaluations) {
     const auto & timing = evaluation.detail;
     const auto & obj_id = timing.object_identification;
@@ -193,7 +140,8 @@ void process_drac_artifacts(
     const auto finding_msg = fmt::format(
       "DRAC collision, classification: {}, ID: {}, PET: {}, TTC: {}, DRAC: {}, duration: {}, "
       "stamp: {}.{};",
-      obj_id.classification, obj_id.trajectory_id_string(), timing.pet, timing.ttc,
+      obj_id.classification, obj_id.trajectory_id_string(), timing.worst_pet_timing.pet,
+      timing.first_collision_timing.ttc,
       drac_artifact.required_acceleration.has_value()
         ? std::to_string(drac_artifact.required_acceleration.value())
         : "Cant be avoided",
@@ -252,7 +200,7 @@ void process_rss_artifacts(
   }
 
   artifacts.error_msg += marker_messages;
-  reporter::log_collision_messages(MetricReport::ERROR, log_messages);
+  reporter::log_collision_messages(RiskLevel::DANGER, log_messages);
 }
 }  // namespace
 
@@ -386,14 +334,12 @@ void append_text_marker_message(std::string & text, const std::string & message)
   }
 }
 
-void log_collision_messages(const uint8_t level, const std::string & messages)
+void log_collision_messages(const RiskLevel::_level_type level, const std::string & messages)
 {
-  using autoware_trajectory_validator::msg::MetricReport;
-
   if (messages.empty()) {
     return;
   }
-  if (level == MetricReport::ERROR) {
+  if (level == RiskLevel::DANGER) {
     RCLCPP_ERROR(rclcpp::get_logger("CollisionCheckFilter"), "Not feasible: %s", messages.c_str());
     return;
   }
@@ -401,8 +347,7 @@ void log_collision_messages(const uint8_t level, const std::string & messages)
 }
 
 autoware_internal_planning_msgs::msg::PlanningFactorArray process_collision_artifacts(
-  const nav_msgs::msg::Odometry & odometry, const PetArtifact & pet_artifact,
-  ContinuousDetectionTimes & pet_continuous_times, const DracArtifact & drac_artifact,
+  const nav_msgs::msg::Odometry & odometry, const DracArtifact & drac_artifact,
   ContinuousDetectionTimes & drac_continuous_times, const RssArtifact & rss_artifact,
   ContinuousDetectionTimes & rss_continuous_times,
   visualization_msgs::msg::MarkerArray & debug_markers, double time_resolution)
@@ -410,9 +355,6 @@ autoware_internal_planning_msgs::msg::PlanningFactorArray process_collision_arti
   VisualizationData visualization_data{};
   const auto current_time = rclcpp::Time{odometry.header.stamp};
 
-  process_pet_artifacts(
-    odometry, pet_continuous_times, current_time, pet_artifact, visualization_data, debug_markers,
-    time_resolution);
   process_drac_artifacts(
     odometry, drac_continuous_times, current_time, drac_artifact, visualization_data, debug_markers,
     time_resolution);

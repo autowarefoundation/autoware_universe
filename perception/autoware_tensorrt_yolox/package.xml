@@ -36,6 +36,7 @@
 
   <exec_depend>autoware_image_transport_decompressor</exec_depend>
 
+  <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
 

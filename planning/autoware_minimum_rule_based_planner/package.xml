@@ -17,11 +17,13 @@
 
   <build_depend>generate_parameter_library</build_depend>
 
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
+  <depend>autoware_obstacle_proximity_checker</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_factor_interface</depend>
   <depend>autoware_planning_msgs</depend>

@@ -19,7 +19,6 @@
 #include <Eigen/Core>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>

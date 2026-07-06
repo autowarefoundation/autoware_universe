@@ -61,13 +61,6 @@ struct GridAndStride
   int stride;
 };
 
-typedef struct Colormap_
-{
-  int id;
-  std::string name;
-  std::vector<unsigned char> color;
-} Colormap;
-
 /**
  * @class TrtYoloX
  * @brief TensorRT YOLOX for faster inference
@@ -89,7 +82,6 @@ public:
    * quantization)
    * @param[in] norm_factor scaling factor for preprocess
    * @param[in] cache_dir unused variable
-   * @param[in] color_map_path path for colormap for masks
    * @param[in] calib_config calibration configuration
    */
   TrtYoloX(
@@ -97,7 +89,6 @@ public:
     const float nms_threshold = 0.7, const bool use_gpu_preprocess = false,
     const uint8_t gpu_id = 0, std::string calibration_image_list_path = std::string(),
     const double norm_factor = 1.0, [[maybe_unused]] const std::string & cache_dir = "",
-    const std::string & color_map_path = "",
     const CalibrationConfig & calib_config = CalibrationConfig());
   /**
    * @brief Deconstruct TrtYoloX
@@ -160,17 +151,6 @@ public:
    * @brief get num for multitask heads
    */
   int getMultitaskNum(void);
-
-  /**
-   * @brief get colorized masks from index using specific colormap
-   * @param[out] cmask colorized mask
-   * @param[in] index multitask index
-   * @param[in] colormap colormap for masks
-   */
-  void getColorizedMask(
-    const std::vector<tensorrt_yolox::Colormap> & colormap, const cv::Mat & mask,
-    cv::Mat & colorized_mask);
-  inline std::vector<Colormap> getColorMap() { return sematic_color_map_; }
 
   /**
    * @brief get batch size
@@ -336,7 +316,6 @@ private:
   CudaUniquePtrHost<unsigned char[]> argmax_buf_h_;
   // device buffer for argmax postprocessing  on GPU
   CudaUniquePtr<unsigned char[]> argmax_buf_d_;
-  std::vector<tensorrt_yolox::Colormap> sematic_color_map_;
 };
 
 }  // namespace autoware::tensorrt_yolox

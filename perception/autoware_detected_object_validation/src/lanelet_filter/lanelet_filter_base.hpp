@@ -18,7 +18,6 @@
 #include "autoware/agnocast_wrapper/node.hpp"
 #include "autoware/agnocast_wrapper/tf2.hpp"
 #include "autoware/detected_object_validation/utils/utils.hpp"
-#include "autoware_lanelet2_extension/utility/utilities.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/ros/published_time_publisher.hpp"

@@ -87,6 +87,11 @@
           "default": 1.0,
           "description": "Time span of object information used for prediction"
         },
+        "remap_unsupported_labels_to_unknown": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, remap ANIMAL and HAZARD classifications to UNKNOWN before prediction to keep compatibility with downstream planning that only supports the legacy label set."
+        },
         "check_lateral_acceleration_constraints": {
           "type": "boolean",
           "default": false,
@@ -292,6 +297,7 @@
         "sigma_yaw_angle_deg",
         "object_buffer_time_length",
         "history_time_length",
+        "remap_unsupported_labels_to_unknown",
         "check_lateral_acceleration_constraints",
         "max_lateral_accel",
         "min_acceleration_before_curve",

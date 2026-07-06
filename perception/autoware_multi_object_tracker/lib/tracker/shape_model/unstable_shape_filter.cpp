@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
 // limitations under the License.
 
 #include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
-
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
 #include <cmath>
 

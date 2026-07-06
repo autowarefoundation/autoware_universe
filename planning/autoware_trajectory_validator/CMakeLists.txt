@@ -9,29 +9,27 @@ generate_parameter_library(${PROJECT_NAME}_param
   param/parameter_struct.yaml
 )
 
-set(trajectory_validator_lib_target ${PROJECT_NAME}_lib)
-
-include_directories(
-  SYSTEM
+generate_parameter_library(${PROJECT_NAME}_diagnostic_param
+  param/diagnostic_parameter_struct.yaml
 )
 
+set(trajectory_validator_lib_target ${PROJECT_NAME}_lib)
+
+
 ament_auto_add_library(${trajectory_validator_lib_target} SHARED
-  src/trajectory_validator_node.cpp
-  src/validation_stage.cpp
   src/pseudo_emergency_stop_handler.cpp
+  src/trajectory_validator_wrapper.cpp
+  src/detail/trajectory_validator.cpp
+  src/detail/diagnostic.cpp
 )
 
 target_link_libraries(${trajectory_validator_lib_target}
   ${PROJECT_NAME}_param
+  ${PROJECT_NAME}_diagnostic_param
 )
 
 target_compile_options(${trajectory_validator_lib_target} PUBLIC
   -Wno-error=deprecated-declarations
-)
-
-rclcpp_components_register_node(${trajectory_validator_lib_target}
-  PLUGIN "autoware::trajectory_validator::TrajectoryValidator"
-  EXECUTABLE ${PROJECT_NAME}_node
 )
 
 ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
@@ -56,6 +54,7 @@ unset(PYTHON_EXECUTABLE)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MetricReport.msg"
+  "msg/RiskLevel.msg"
   "msg/ValidationReport.msg"
   "msg/ValidationReportArray.msg"
   DEPENDENCIES
@@ -75,6 +74,7 @@ endif()
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_cmake_ros REQUIRED)
   find_package(ament_lint_auto REQUIRED)
   ament_auto_find_test_dependencies()
 
@@ -130,37 +130,6 @@ if(BUILD_TESTING)
     autoware_trajectory_validator_plugins
   )
 
-  # ==========================================
-  # 2. Dummy Plugin (Test Utility)
-  # ==========================================
-  pluginlib_export_plugin_description_file(autoware_trajectory_validator
-    test/dummy_plugin/dummy_plugins.xml
-  )
-
-  ament_auto_add_library(dummy_validator_plugin SHARED
-    test/dummy_plugin/dummy_validator_plugin.cpp
-  )
-
-  target_link_libraries(dummy_validator_plugin
-    ${trajectory_validator_lib_target}
-  )
-
-  # ==========================================
-  # 3. Node Integration/Unit Tests
-  # ==========================================
-  ament_add_ros_isolated_gtest(test_trajectory_validator_node
-    test/node/test_trajectory_validator_node.cpp
-  )
-
-  target_link_libraries(test_trajectory_validator_node
-    ${trajectory_validator_lib_target}
-    dummy_validator_plugin
-  )
-
-  ament_target_dependencies(test_trajectory_validator_node
-    autoware_test_utils
-  )
-
   ament_add_gtest(test_traffic_light_filter
     test/plugins/test_traffic_light_filter.cpp
   )
@@ -168,11 +137,25 @@ if(BUILD_TESTING)
     autoware_trajectory_validator_plugins
   )
 
+  ament_add_ros_isolated_gtest(test_diagnostic_core_behavior
+    test/diagnostic/diagnostic_core_behavior.cpp
+  )
+  target_link_libraries(test_diagnostic_core_behavior
+    ${trajectory_validator_lib_target}
+    rclcpp::rclcpp
+  )
+
+  ament_add_ros_isolated_gtest(test_diagnostic_shadow_mode
+    test/diagnostic/diagnostic_shadow_mode.cpp
+  )
+  target_link_libraries(test_diagnostic_shadow_mode
+    ${trajectory_validator_lib_target}
+    rclcpp::rclcpp
+  )
 
 endif()
 
-ament_auto_package(
+autoware_ament_auto_package(
   INSTALL_TO_SHARE
   config
-  launch
 )

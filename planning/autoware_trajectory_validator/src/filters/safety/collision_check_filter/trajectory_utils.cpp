@@ -444,55 +444,6 @@ TravelDistanceTrajectory compute_cumulative_distances(const PoseTrajectory & pos
   return distances;
 }
 
-TimeTrajectory compute_sample_times(double start_time, double end_time, double time_resolution)
-{
-  TimeTrajectory times;
-  times.reserve(static_cast<size_t>((end_time - start_time) / time_resolution) + 2U);
-
-  constexpr double epsilon = 1e-3;
-  auto append_sample = [&](const double t) {
-    if (t < start_time || t > end_time) return;
-    if (!times.empty() && t < times.back() + epsilon) return;
-    times.push_back(t);
-  };
-
-  append_sample(start_time);
-  for (int64_t tick = static_cast<int64_t>(std::floor(start_time / time_resolution)) + 1;; ++tick) {
-    const double tick_time = static_cast<double>(tick) * time_resolution;
-    if (tick_time >= end_time) {
-      break;
-    }
-    append_sample(tick_time);
-  }
-  append_sample(end_time);
-
-  return times;
-}
-
-geometry_msgs::msg::Pose interpolate_predicted_path_pose(
-  const autoware_perception_msgs::msg::PredictedPath & predicted_path, double query_time,
-  double path_start_time)
-{
-  if (predicted_path.path.empty()) {
-    throw std::invalid_argument("predicted path must not be empty");
-  }
-
-  const double path_time_step = rclcpp::Duration(predicted_path.time_step).seconds();
-  if (predicted_path.path.size() == 1 || path_time_step <= 0.0) {
-    return predicted_path.path.front();
-  }
-
-  const double clamped_query_time = std::clamp(
-    query_time, path_start_time,
-    path_start_time + path_time_step * static_cast<double>(predicted_path.path.size() - 1));
-  const double shifted_query_time = clamped_query_time - path_start_time;
-  const size_t index = static_cast<size_t>(std::floor(shifted_query_time / path_time_step));
-  const size_t next_index = std::min(index + 1, predicted_path.path.size() - 1);
-  const double ratio =
-    (shifted_query_time - static_cast<double>(index) * path_time_step) / path_time_step;
-  return autoware::universe_utils::calcInterpolatedPose(
-    predicted_path.path.at(index), predicted_path.path.at(next_index), ratio, false);
-}
 }  // namespace detail
 
 TrajectoryData generate_ego_trajectory(
@@ -573,44 +524,6 @@ TrajectoryData generate_predicted_path_trajectory(
     std::move(times), std::move(distances), std::move(poses), std::move(footprints));
 }
 
-TrajectoryData generate_diffusion_based_trajectory(
-  const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  rclcpp::Duration start_time, double max_time, const builtin_interfaces::msg::Time & stamp,
-  double time_resolution)
-{
-  const auto most_confident_path_it = std::max_element(
-    predicted_object.kinematics.predicted_paths.begin(),
-    predicted_object.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-  const auto & predicted_path = *most_confident_path_it;
-  const double prediction_horizon =
-    start_time.seconds() + static_cast<double>(predicted_path.path.size() - 1) *
-                             rclcpp::Duration(predicted_path.time_step).seconds();
-  auto times = detail::compute_sample_times(
-    start_time.seconds(), std::min(max_time, prediction_horizon), time_resolution);
-  PoseTrajectory poses;
-  poses.reserve(times.size());
-  for (const auto & time : times) {
-    poses.push_back(
-      detail::interpolate_predicted_path_pose(predicted_path, time, start_time.seconds()));
-  }
-
-  TravelDistanceTrajectory distances;
-  distances.reserve(poses.size());
-  distances.push_back(0.0);
-  for (size_t i = 1; i < poses.size(); ++i) {
-    distances.push_back(
-      distances.back() +
-      autoware_utils_geometry::calc_distance2d(poses.at(i - 1).position, poses.at(i).position));
-  }
-
-  auto footprints = footprint::compute_footprint_trajectory(poses, predicted_object.shape);
-
-  return TrajectoryData(
-    TrajectoryIdentification{predicted_object, stamp, "diffusion_based_trajectory", 0.0},
-    std::move(times), std::move(distances), std::move(poses), std::move(footprints));
-}
-
 TrajectoryData generate_constant_curvature_trajectory(
   const autoware_perception_msgs::msg::PredictedObject & predicted_object, double braking_lag,
   double assumed_acceleration, rclcpp::Duration start_time, double max_time,
@@ -666,18 +579,6 @@ TrajectoryData generate_object_trajectory(
     return generate_constant_curvature_trajectory(
       predicted_object, 0.0, acc, objects_reference_time, time_horizon,
       context.predicted_objects->header.stamp, time_resolution);
-  }
-
-  if (traj_type_str.find("diffusion_based") != std::string::npos) {
-    assert(context.neural_network_predicted_objects);
-    const auto & predicted_object =
-      find_predicted_object(context.neural_network_predicted_objects->objects);
-    const rclcpp::Duration objects_reference_time =
-      rclcpp::Time(context.neural_network_predicted_objects->header.stamp) -
-      rclcpp::Time(context.odometry->header.stamp);
-    return generate_predicted_path_trajectory(
-      predicted_object, 0.0, acc, objects_reference_time, time_horizon,
-      context.neural_network_predicted_objects->header.stamp, time_resolution);
   }
 
   throw std::logic_error("Unsupported trajectory type in DRAC assessment: " + traj_type_str);

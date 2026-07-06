@@ -117,8 +117,9 @@ void TrafficLightFilter::set_vehicle_info(const VehicleInfo & vehicle_info)
 }
 
 TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext & context)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (const auto has_invalid_input = is_invalid_input(context, vehicle_info_ptr_)) {
     return tl::make_unexpected(*has_invalid_input);
   }
@@ -164,13 +165,20 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
     context.odometry->pose.pose.position.z);
 
   std::vector<MetricReport> metrics;
+
+  auto get_risk_level = [](bool is_crossing) {
+    RiskLevel risk_level;
+    risk_level.level = is_crossing ? RiskLevel::DANGER : RiskLevel::SAFE;
+    return risk_level;
+  };
+
   metrics.push_back(
     autoware_trajectory_validator::build<MetricReport>()
       .validator_name(get_name())
       .validator_category(category())
       .metric_name("check_crossing_red_light")
       .metric_value(0.0)
-      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
+      .risk(get_risk_level(is_crossing_red)));
 
   metrics.push_back(
     autoware_trajectory_validator::build<MetricReport>()
@@ -178,7 +186,7 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
       .validator_category(category())
       .metric_name("check_crossing_amber_light")
       .metric_value(0.0)
-      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
+      .risk(get_risk_level(is_crossing_amber)));
 
   const bool is_feasible = !is_crossing_red && !is_crossing_amber;
 

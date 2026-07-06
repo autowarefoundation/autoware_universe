@@ -31,6 +31,7 @@
 
 namespace planning_diagnostics
 {
+using autoware_trajectory_validator::msg::RiskLevel;
 using autoware_trajectory_validator::msg::ValidationReportArray;
 using autoware_utils::Accumulator;
 using MetricMsg = tier4_metric_msgs::msg::Metric;
@@ -42,7 +43,7 @@ using json = nlohmann::json;
  * @brief Accumulates trajectory validation error statistics from ValidationReportArray.
  *
  * Two scopes (published under metric_to_str(Metric::trajectory_validation) + "/" + <scope> + "/…"):
- * 1) Whole trajectory (per candidate / generator), from ValidationReport.level —
+ * 1) Whole trajectory (per candidate / generator), from ValidationReport.risk.level —
  *    <scope> = <generator_name>
  * 2) Each MetricReport row —
  *    <scope> = <generator_name>/<validator_name>/<metric_name>
@@ -61,6 +62,8 @@ public:
   struct Parameters
   {
     bool count_warn_as_error = false;
+    double initial_span_duration_s =
+      0.1;  // [s] default duration on the first frame of an error span
   } parameters;
 
   TrajectoryValidationAccumulator() = default;
@@ -102,7 +105,7 @@ private:
     std::optional<double> last_update_time_s_;
 
     /// `current_time_s` is ValidationReport.trajectory_stamp for this step; dt is derived inside.
-    void update(bool is_error, double current_time_s);
+    void update(bool is_error, double current_time_s, double initial_span_duration_s);
     /// Move ongoing error duration into the accumulator (e.g. before final JSON export).
     void flushOpenErrorForJson();
   };

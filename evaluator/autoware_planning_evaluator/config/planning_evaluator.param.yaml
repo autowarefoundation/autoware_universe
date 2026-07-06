@@ -1,6 +1,7 @@
 /**:
   ros__parameters:
     ego_frame: base_link # reference frame of ego
+    initial_span_duration_s: 0.1 # [s] default duration on the first frame of a span accumulation (error_duration, keep_duration)
 
     metrics_for_publish:
       - curvature

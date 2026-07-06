@@ -101,9 +101,9 @@ FilterContext create_filter_context(const nav_msgs::msg::Odometry::ConstSharedPt
 }
 
 AssessmentTrajectories make_assessment_trajectories(
-  const bool map_based, const bool constant_curvature, const bool diffusion_based)
+  const bool map_based, const bool constant_curvature)
 {
-  return AssessmentTrajectories{map_based, constant_curvature, diffusion_based};
+  return AssessmentTrajectories{map_based, constant_curvature};
 }
 
 template <typename ParamMap>
@@ -523,19 +523,6 @@ TEST(TrajectoryUtilitiesTest, GenerateTimedEgoTrajectoryHandlesNonUniformTimeAnd
   EXPECT_NEAR(trajectory_data.getDistances().at(2), 1.0, 1e-6);
 }
 
-TEST(TrajectoryUtilitiesTest, ComputeSampleTimesStartsAtStartTimeAndIncludesEndTime)
-{
-  const auto times = trajectory::detail::compute_sample_times(-0.1, 0.4, kDefaultTimeResolution);
-
-  ASSERT_EQ(times.size(), 6u);
-  EXPECT_NEAR(times.at(0), -0.1, 1e-6);
-  EXPECT_NEAR(times.at(1), 0.0, 1e-6);
-  EXPECT_NEAR(times.at(2), 0.1, 1e-6);
-  EXPECT_NEAR(times.at(3), 0.2, 1e-6);
-  EXPECT_NEAR(times.at(4), 0.3, 1e-6);
-  EXPECT_NEAR(times.at(5), 0.4, 1e-6);
-}
-
 TEST(TrajectoryUtilitiesTest, GeneratePredictedPathTrajectoryUsesHighestConfidencePath)
 {
   const auto shape = create_bounding_box_shape(4.0, 2.0);
@@ -622,42 +609,6 @@ TEST(TrajectoryUtilitiesTest, GenerateConstantCurvaturePathTrajectoryMatchesPred
       tf2::getYaw(expected_poses.at(i).orientation), 1e-6);
   }
 }
-TEST(TrajectoryUtilitiesTest, GenerateTimeInterpolatedPredictedPathTrajectoryUsesTimeStep)
-{
-  const auto shape = create_bounding_box_shape(4.0, 2.0);
-  const auto initial_pose = create_pose(0.0, 0.0, 0.0);
-  const auto initial_twist = create_twist(0.0);
-  const std::vector<autoware_perception_msgs::msg::PredictedPath> predicted_paths = {
-    create_straight_predicted_path(0.0, 1.0, {0.0, 2.0, 4.0})};
-  auto object = create_predicted_object(initial_pose, initial_twist, shape, predicted_paths);
-
-  object.kinematics.predicted_paths.front().time_step = rclcpp::Duration::from_seconds(0.2);
-
-  const auto trajectory_data = trajectory::generate_diffusion_based_trajectory(
-    object, rclcpp::Duration::from_seconds(-0.15), 0.4, builtin_interfaces::msg::Time{},
-    kDefaultTimeResolution);
-
-  ASSERT_EQ(trajectory_data.size(), 6u);
-  EXPECT_EQ(
-    trajectory_data.getObjectIdentification().trajectory_type, "diffusion_based_trajectory");
-  EXPECT_NEAR(trajectory_data.getTimes().at(0), -0.15, 1e-6);
-  EXPECT_NEAR(trajectory_data.getTimes().at(1), -0.1, 1e-6);
-  EXPECT_NEAR(trajectory_data.getTimes().at(2), 0.0, 1e-6);
-  EXPECT_NEAR(trajectory_data.getTimes().at(5), 0.25, 1e-6);
-  EXPECT_NEAR(trajectory_data.getDistances().at(0), 0.0, 1e-6);
-  EXPECT_NEAR(trajectory_data.getDistances().at(1), 0.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getDistances().at(2), 1.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getDistances().at(3), 2.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getDistances().at(4), 3.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getDistances().at(5), 4.0, 1e-6);
-  EXPECT_NEAR(trajectory_data.getPoses().at(0).position.x, 0.0, 1e-6);
-  EXPECT_NEAR(trajectory_data.getPoses().at(1).position.x, 0.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getPoses().at(2).position.x, 1.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getPoses().at(3).position.x, 2.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getPoses().at(4).position.x, 3.5, 1e-6);
-  EXPECT_NEAR(trajectory_data.getPoses().at(5).position.x, 4.0, 1e-6);
-}
-
 TEST(TrajectoryUtilitiesTest, GenerateObjectTrajectoriesRespectsEnabledTypes)
 {
   const auto shape = create_bounding_box_shape(4.0, 2.0);
@@ -673,15 +624,9 @@ TEST(TrajectoryUtilitiesTest, GenerateObjectTrajectoriesRespectsEnabledTypes)
   predicted_objects->header.stamp = odometry->header.stamp;
   predicted_objects->objects.push_back(object);
 
-  auto neural_network_predicted_objects =
-    std::make_shared<autoware_perception_msgs::msg::PredictedObjects>();
-  neural_network_predicted_objects->header.stamp = odometry->header.stamp;
-  neural_network_predicted_objects->objects.push_back(object);
-
   FilterContext context;
   context.odometry = odometry;
   context.predicted_objects = predicted_objects;
-  context.neural_network_predicted_objects = neural_network_predicted_objects;
 
   const auto count_trajectory_type =
     [](const std::vector<TrajectoryData> & trajectories, const std::string & trajectory_type) {
@@ -691,45 +636,33 @@ TEST(TrajectoryUtilitiesTest, GenerateObjectTrajectoriesRespectsEnabledTypes)
     };
 
   const auto all_enabled_drac_param_map = make_param_map_with_assessment_trajectories<DracParamMap>(
-    make_assessment_trajectories(true, true, true));
-  const auto all_enabled_pet_param_map = make_param_map_with_assessment_trajectories<PetParamMap>(
-    make_assessment_trajectories(true, true, true));
+    make_assessment_trajectories(true, true));
   const auto all_enabled = collision_timing_assessment::generate_object_trajectories(
-    context, 0.2, 0.0, 0.1, all_enabled_drac_param_map, all_enabled_pet_param_map);
-  EXPECT_EQ(all_enabled.size(), 3u);
+    context, 0.2, 0.0, 0.1, all_enabled_drac_param_map);
+  EXPECT_EQ(all_enabled.size(), 2u);
   EXPECT_EQ(count_trajectory_type(all_enabled, "map_based_predicted_path"), 1);
   EXPECT_EQ(count_trajectory_type(all_enabled, "constant_curvature_path"), 1);
-  EXPECT_EQ(count_trajectory_type(all_enabled, "diffusion_based_trajectory"), 1);
 
   const auto constant_curvature_drac_param_map =
     make_param_map_with_assessment_trajectories<DracParamMap>(
-      make_assessment_trajectories(false, true, false));
-  const auto constant_curvature_pet_param_map =
-    make_param_map_with_assessment_trajectories<PetParamMap>(
-      make_assessment_trajectories(false, true, false));
+      make_assessment_trajectories(false, true));
   const auto constant_curvature_only = collision_timing_assessment::generate_object_trajectories(
-    context, 0.2, 0.0, 0.1, constant_curvature_drac_param_map, constant_curvature_pet_param_map);
+    context, 0.2, 0.0, 0.1, constant_curvature_drac_param_map);
   ASSERT_EQ(constant_curvature_only.size(), 1u);
   EXPECT_EQ(
     constant_curvature_only.front().getObjectIdentification().trajectory_type,
     "constant_curvature_path");
 
-  const auto predicted_path_and_diffusion_drac_param_map =
+  const auto predicted_path_only_drac_param_map =
     make_param_map_with_assessment_trajectories<DracParamMap>(
-      make_assessment_trajectories(true, false, true));
-  const auto predicted_path_and_diffusion_pet_param_map =
-    make_param_map_with_assessment_trajectories<PetParamMap>(
-      make_assessment_trajectories(true, false, true));
-  const auto predicted_path_and_diffusion =
-    collision_timing_assessment::generate_object_trajectories(
-      context, 0.2, 0.0, 0.1, predicted_path_and_diffusion_drac_param_map,
-      predicted_path_and_diffusion_pet_param_map);
-  EXPECT_EQ(predicted_path_and_diffusion.size(), 2u);
-  EXPECT_EQ(count_trajectory_type(predicted_path_and_diffusion, "map_based_predicted_path"), 1);
-  EXPECT_EQ(count_trajectory_type(predicted_path_and_diffusion, "diffusion_based_trajectory"), 1);
+      make_assessment_trajectories(true, false));
+  const auto predicted_path_only = collision_timing_assessment::generate_object_trajectories(
+    context, 0.2, 0.0, 0.1, predicted_path_only_drac_param_map);
+  EXPECT_EQ(predicted_path_only.size(), 1u);
+  EXPECT_EQ(count_trajectory_type(predicted_path_only, "map_based_predicted_path"), 1);
 }
 
-TEST(TrajectoryUtilitiesTest, GenerateObjectTrajectoriesUsesTrajectoryTypeUnionAcrossParamMaps)
+TEST(TrajectoryUtilitiesTest, GenerateObjectTrajectoriesReturnsEmptyWhenAllTypesDisabled)
 {
   const auto shape = create_bounding_box_shape(4.0, 2.0);
   const auto object = create_predicted_object(
@@ -744,46 +677,17 @@ TEST(TrajectoryUtilitiesTest, GenerateObjectTrajectoriesUsesTrajectoryTypeUnionA
   predicted_objects->header.stamp = odometry->header.stamp;
   predicted_objects->objects.push_back(object);
 
-  auto neural_network_predicted_objects =
-    std::make_shared<autoware_perception_msgs::msg::PredictedObjects>();
-  neural_network_predicted_objects->header.stamp = odometry->header.stamp;
-  neural_network_predicted_objects->objects.push_back(object);
-
   FilterContext context;
   context.odometry = odometry;
   context.predicted_objects = predicted_objects;
-  context.neural_network_predicted_objects = neural_network_predicted_objects;
 
   const auto drac_param_map = make_param_map_with_assessment_trajectories<DracParamMap>(
-    make_assessment_trajectories(false, true, false));
-  const auto pet_param_map = make_param_map_with_assessment_trajectories<PetParamMap>(
-    make_assessment_trajectories(true, false, true));
+    make_assessment_trajectories(false, false));
 
   const auto trajectories = collision_timing_assessment::generate_object_trajectories(
-    context, 0.2, 0.0, 0.1, drac_param_map, pet_param_map);
+    context, 0.2, 0.0, 0.1, drac_param_map);
 
-  EXPECT_EQ(trajectories.size(), 3u);
-  EXPECT_EQ(
-    std::count_if(
-      trajectories.begin(), trajectories.end(),
-      [](const auto & trajectory) {
-        return trajectory.getObjectIdentification().trajectory_type == "map_based_predicted_path";
-      }),
-    1);
-  EXPECT_EQ(
-    std::count_if(
-      trajectories.begin(), trajectories.end(),
-      [](const auto & trajectory) {
-        return trajectory.getObjectIdentification().trajectory_type == "constant_curvature_path";
-      }),
-    1);
-  EXPECT_EQ(
-    std::count_if(
-      trajectories.begin(), trajectories.end(),
-      [](const auto & trajectory) {
-        return trajectory.getObjectIdentification().trajectory_type == "diffusion_based_trajectory";
-      }),
-    1);
+  EXPECT_TRUE(trajectories.empty());
 }
 
 }  // namespace autoware::trajectory_validator::plugin::safety

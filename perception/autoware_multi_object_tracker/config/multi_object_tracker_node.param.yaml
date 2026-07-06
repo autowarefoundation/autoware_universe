@@ -1,39 +1,54 @@
 /**:
   ros__parameters:
-    # default tracker models for each class
-    car_tracker: "multi_vehicle_tracker"
-    truck_tracker: "multi_vehicle_tracker"
-    bus_tracker: "multi_vehicle_tracker"
-    trailer_tracker: "multi_vehicle_tracker"
-    pedestrian_tracker: "pedestrian_and_bicycle_tracker"
-    bicycle_tracker: "pedestrian_and_bicycle_tracker"
-    motorcycle_tracker: "pedestrian_and_bicycle_tracker"
-
     # default tracker node parameters
-    publish_rate: 10.0
     world_frame_id: map
     ego_frame_id: base_link
-    enable_delay_compensation: false
-    consider_odometry_uncertainty: false
-    enable_unknown_object_velocity_estimation: true
-    enable_unknown_object_motion_output: false
 
-    # tracker parameters
-    tracker_lifetime: 1.0  # [s]
-    min_known_object_removal_iou: 0.1  # [ratio]
-    min_unknown_object_removal_iou: 0.001  # [ratio]
+    # publish-trigger
+    publish_on_timer: false
+    publish_rate: 10.0
+
+    # ego pose source: "tf" (look up from TF tree) or "odometry" (interpolate from ~/input/odometry)
+    ego_source: tf
+    # delay compensation, least -> most:
+    # "none" | "publish_delay" (detection + update->publish delay) | "odometry" (up to latest odometry) | "full" (to now)
+    delay_compensation: none
+
+    consider_odometry_uncertainty: false
+
+    # Per-tracker-type configuration
+    tracker_configs:
+      polygon_tracker:
+        enable_velocity_estimation: true
+        enable_motion_output:
+          unknown:    false
+          car:        true
+          truck:      true
+          bus:        true
+          trailer:    true
+          motorcycle: true
+          bicycle:    true
+          pedestrian: true
+          animal:     true
+          hazard:     false
+      static_tracker:
+        convert_polygon_to_bbox: false # convert POLYGON shape to BOUNDING_BOX at publish time
 
     # pruning parameters
-    # list of generalized IoU thresholds for each class
-    pruning_generalized_iou_thresholds:
-      # UNKNOWN,  CAR, TRUCK,  BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN
-      [    -0.3, -0.4,  -0.6, -0.6,    -0.6,       -0.1,    -0.1,       -0.1]
-    pruning_static_object_speed: 1.38  # [m/s]
-    pruning_moving_object_speed: 5.5   # [m/s]
-    pruning_static_iou_threshold: 0.0  # [ratio]
+    min_known_object_removal_iou: 0.1  # [ratio]
+    min_unknown_object_removal_iou: 0.001  # [ratio]
+    pruning_generalized_iou_threshold: 0.1  # [ratio]
     pruning_distance_thresholds:
-      # UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN
-      [     9.0, 5.0,   9.0, 9.0,     9.0,        4.0,     3.0,        2.0]
+      unknown: 9.0
+      car: 5.0
+      truck: 9.0
+      bus: 9.0
+      trailer: 9.0
+      motorcycle: 4.0
+      bicycle: 3.0
+      pedestrian: 2.0
+      animal: 2.0
+      hazard: 2.0
 
     # debug parameters
     publish_processing_time: false

@@ -77,11 +77,6 @@ validator:
           default_value: true
           description: Use constant curvature trajectories for DRAC assessment
           read_only: false
-        diffusion_based:
-          type: bool
-          default_value: true
-          description: Use diffusion based trajectories for DRAC assessment
-          read_only: false
       ego_total_braking_delay:
         type: double
         default_value: 0.4
@@ -114,91 +109,6 @@ validator:
           type: double
           default_value: -5.0
           description: Ego acceleration threshold for DRAC error (m/s^2, negative)
-          read_only: false
-    pet_collision:
-      enable_assessment:
-        base:
-          &pet_ea {
-            type: bool,
-            default_value: true,
-            description: PET enable_assessment per class,
-            read_only: false,
-          }
-        unknown: *pet_ea
-        car: *pet_ea
-        truck: *pet_ea
-        bus: *pet_ea
-        trailer: *pet_ea
-        motorcycle: *pet_ea
-        bicycle: *pet_ea
-        pedestrian: *pet_ea
-        animal: *pet_ea
-        hazard: *pet_ea
-        over_drivable: *pet_ea
-        under_drivable: *pet_ea
-      assessment_trajectories:
-        map_based:
-          type: bool
-          default_value: true
-          description: Use map based predicted path trajectories for PET assessment
-          read_only: false
-        constant_curvature:
-          type: bool
-          default_value: true
-          description: Use constant curvature trajectories for PET assessment
-          read_only: false
-        diffusion_based:
-          type: bool
-          default_value: true
-          description: Use diffusion based trajectories for PET assessment
-          read_only: false
-      ego_total_braking_delay:
-        type: double
-        default_value: 0.4
-        description: Total ego braking delay for PET assessment
-        read_only: false
-      ego_footprint_margin:
-        lateral:
-          type: double
-          default_value: 0.0
-          description: lateral margin added to both sides of the ego footprint for PET assessment
-          read_only: false
-        front:
-          type: double
-          default_value: 0.0
-          description: front margin added to the ego footprint for PET assessment
-          read_only: false
-        rear:
-          type: double
-          default_value: 0.0
-          description: rear margin added to the ego footprint for PET assessment
-          read_only: false
-      ego_assumed_acceleration:
-        type: double
-        default_value: -5.0
-        description: Assumed ego acceleration for PET assessment (m/s^2, negative)
-        read_only: false
-      warn_threshold:
-        ego_first_passing_time_gap:
-          type: double
-          default_value: 1.0
-          description: Allowed time gap when ego passes first for PET warning
-          read_only: false
-        object_first_passing_time_gap:
-          type: double
-          default_value: 1.0
-          description: Allowed time gap when object passes first for PET warning
-          read_only: false
-      error_threshold:
-        ego_first_passing_time_gap:
-          type: double
-          default_value: 0.3
-          description: Allowed time gap when ego passes first for PET error
-          read_only: false
-        object_first_passing_time_gap:
-          type: double
-          default_value: 0.6
-          description: Allowed time gap when object passes first for PET error
           read_only: false
     rss:
       enable_assessment:

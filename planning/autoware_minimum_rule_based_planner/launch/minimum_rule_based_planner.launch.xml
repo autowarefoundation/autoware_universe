@@ -24,27 +24,13 @@
   <arg name="input_pointcloud" default="~/input/pointcloud"/>
   <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
 
-  <!-- Modifier plugins -->
-  <arg name="launch_obstacle_stop" default="true"/>
-  <arg name="launch_modules_list_end" default="&quot;&quot;]"/>
-  <arg name="minimum_rule_base_planner_trajectory_modifier_launch_modules" default="["/>
-  <let
-    name="minimum_rule_base_planner_trajectory_modifier_launch_modules"
-    value="$(eval &quot;'$(var minimum_rule_base_planner_trajectory_modifier_launch_modules)' + 'autoware::minimum_rule_based_planner::plugin::ObstacleStop, '&quot;)"
-    if="$(var launch_obstacle_stop)"
-  />
-  <let
-    name="minimum_rule_base_planner_trajectory_modifier_launch_modules"
-    value="$(eval &quot;'$(var minimum_rule_base_planner_trajectory_modifier_launch_modules)' + '$(var launch_modules_list_end)'&quot;)"
-  />
-
   <node pkg="autoware_minimum_rule_based_planner" exec="autoware_minimum_rule_based_planner_node" name="minimum_rule_based_planner_node" output="both">
     <!-- Load parameter files -->
+    <env name="LD_LIBRARY_PATH" value="/opt/acados/lib:$(env LD_LIBRARY_PATH)"/>
     <param from="$(var common_param_path)"/>
     <param from="$(var minimum_rule_base_planner_param_path)" allow_substs="true"/>
     <param from="$(var minimum_rule_base_planner_elastic_band_smoother_param_path)" allow_substs="true"/>
     <param from="$(var minimum_rule_base_planner_jerk_filtered_smoother_param_path)" allow_substs="true"/>
-    <param name="modifier_launch_modules" value="$(var minimum_rule_base_planner_trajectory_modifier_launch_modules)"/>
 
     <!-- Topic remappings -->
     <remap from="~/input/route" to="$(var input_route)"/>
