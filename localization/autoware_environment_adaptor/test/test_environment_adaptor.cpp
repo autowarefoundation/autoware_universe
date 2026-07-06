@@ -30,7 +30,7 @@
 #include <thread>
 #include <vector>
 
-using namespace std::chrono_literals;
+using std::chrono_literals::operator""ms;
 using autoware::environment_adaptor::test_utils::diag_cov;
 using autoware::environment_adaptor::test_utils::make_map_bin;
 

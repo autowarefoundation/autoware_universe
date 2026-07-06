@@ -22,6 +22,8 @@
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
+#include <string>
+
 namespace autoware::environment_adaptor
 {
 
