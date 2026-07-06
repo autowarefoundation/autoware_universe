@@ -21,10 +21,9 @@
 #include "autoware/planning_evaluator/metrics_calculator.hpp"
 #include "autoware/planning_evaluator/obstacle_metrics_calculator.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/math/accumulator.hpp>
@@ -212,8 +211,8 @@ private:
   // ROS publishers
   AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped) processing_time_pub_;
   AUTOWARE_PUBLISHER_PTR(MetricArrayMsg) metrics_pub_;
-  std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<autoware::agnocast_wrapper::TransformListener> transform_listener_{nullptr};
+  std::unique_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_;
   autoware::route_handler::RouteHandler route_handler_;
 
   // Message to publish
