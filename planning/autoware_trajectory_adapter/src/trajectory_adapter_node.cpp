@@ -64,9 +64,7 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
 
   pub_trajectory_->publish(trajectory);
 
-  auto turn_indicators = trajectory_itr->candidate_trajectory.turn_indicators_command;
-  turn_indicators.stamp = now();
-  pub_turn_indicators_->publish(turn_indicators);
+  pub_turn_indicators_->publish(trajectory_itr->candidate_trajectory.turn_indicators_command);
 }
 
 }  // namespace autoware::trajectory_adapter
