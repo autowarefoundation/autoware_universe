@@ -2,7 +2,7 @@ autoware_system_design_format: 0.3.0
 # node information
 name: TrajectoryOptimizer.node
 package:
-  name: autoware_trajectory_optimizer
+  name: autoware_trajectory_processor
   provider: autoware
 launch:
   plugin: autoware::trajectory_optimizer::TrajectoryOptimizer

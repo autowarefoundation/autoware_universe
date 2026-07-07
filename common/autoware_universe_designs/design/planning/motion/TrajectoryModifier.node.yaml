@@ -2,7 +2,7 @@ autoware_system_design_format: 0.3.0
 # node information
 name: TrajectoryModifier.node
 package:
-  name: autoware_trajectory_modifier
+  name: autoware_trajectory_processor
   provider: autoware
 launch:
   plugin: autoware::trajectory_modifier::TrajectoryModifier

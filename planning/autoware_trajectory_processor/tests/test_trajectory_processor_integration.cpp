@@ -136,9 +136,9 @@ protected:
     test_options.append_parameter_override("use_sim_time", true);
 
     const auto modifier_dir =
-      ament_index_cpp::get_package_share_directory("autoware_trajectory_modifier");
+      ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
     const auto optimizer_dir =
-      ament_index_cpp::get_package_share_directory("autoware_trajectory_optimizer");
+      ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
     const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
     optimizer_options.append_parameter_override(
       "trajectory_velocity_optimizer.smooth_velocities", true);
