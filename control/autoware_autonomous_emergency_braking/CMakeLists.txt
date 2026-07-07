@@ -16,6 +16,7 @@ ament_auto_add_library(autoware_autonomous_emergency_braking_helpers SHARED
   include/autoware/autonomous_emergency_braking/utils.hpp
   src/utils.cpp
 )
+autoware_agnocast_wrapper_setup(autoware_autonomous_emergency_braking_helpers)
 
 set(AEB_NODE ${PROJECT_NAME}_node)
 ament_auto_add_library(${AEB_NODE} SHARED
