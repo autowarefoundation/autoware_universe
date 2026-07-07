@@ -8,14 +8,12 @@ The estimated scale factor can be used to monitor and tune the speed scale in `a
 
 ## Package Architecture
 
-The package is split into a core library (separated from ROS node I/O) and a ROS adapter layer:
+The package is split into a core library and a ROS adapter layer. The core implements estimation without ROS topic subscription or publication; it uses `rclcpp::Time` only for timestamp handling. Core logic can be unit-tested without spinning up a ROS graph.
 
 | Layer | Library                              | Responsibility                                                                                           |
 | ----- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Core  | `autoware_speed_scale_estimator`     | Utils, Kalman filter estimation (`SpeedScaleEstimator`)                                                  |
+| Core  | `autoware_speed_scale_estimator`     | Utils, Kalman filter estimation (`SpeedScaleEstimator`); no ROS graph I/O                                |
 | ROS   | `autoware_speed_scale_estimator_ros` | Message handling, debug formatting, node I/O (`SpeedScaleEstimatorProcessor`, `SpeedScaleEstimatorNode`) |
-
-Core algorithms can be unit-tested without spinning up a ROS graph.
 
 ## Block Diagram
 
@@ -70,7 +68,9 @@ Estimation is performed only when all of the following constraints are satisfied
 
 - **Speed constraints (pose velocity)** — $v_{min} \leq v_{pose} \leq v_{max}$
 
-  Default $v_{min} = 6.0\ \mathrm{m/s}$ improves pose-differentiation SNR. Default $v_{max} = 17.0\ \mathrm{m/s}$ filters out extreme speeds. Together with $\omega_{max}$, estimation runs mainly on moderate-speed, near-straight segments.
+  Default $v_{min} = 6.0\ \mathrm{m/s}$ rejects low-speed samples where pose-differentiation SNR is poor: at short $\Delta t$, displacement $\|\Delta \mathbf{p}\|$ becomes comparable to localization pose noise (e.g. NDT jitter), so relative error in $v_{pose} = \|\Delta \mathbf{p}\| / \Delta t$ grows and corrupts the scale-factor observation $z = v_{pose}$. Wheel speed reports also tend to have larger relative uncertainty near standstill or creep. In practice, sub-6 m/s segments are often urban and involve frequent acceleration/deceleration, which further degrades consistency between pose-derived and wheel-reported velocity. Default $v_{max} = 17.0\ \mathrm{m/s}$ filters out extreme speeds. Together with $\omega_{max}$, estimation runs mainly on moderate-speed, near-straight segments (~22 km/h and above).
+
+  Estimation is intentionally skipped in urban/low-speed segments. Lower `min_speed` if broader coverage is needed, accepting higher estimate variance.
 
 - **Wheel velocity validity** — $|v_{wheel}| > 10^{-6}$
 
@@ -123,8 +123,8 @@ $$
 
 ## Parameters
 
-{{ json_to_markdown("localization/autoware_speed_scale_estimator/schema/speed_scale_estimator.schema.json") }}
+{{ json_to_markdown("sensing/autoware_speed_scale_estimator/schema/speed_scale_estimator.schema.json") }}
 
 ### Tuning
 
-Default constraint values are a practical starting point, not vehicle-specific optima. If estimation accuracy is insufficient, tune `max_pose_lag`, `max_stamp_lag`, `sensor_buffer_duration`, `max_angular_velocity`, `min_speed`, `max_speed`, and Kalman noise parameters per vehicle and operation. IMU bias cancellation or other preprocessing may allow a stricter angular velocity threshold; without it, thresholds near the IMU noise floor are expected.
+Default constraint values are a practical starting point, not vehicle-specific optima. If estimation accuracy is insufficient, tune `max_pose_lag`, `max_stamp_lag`, `sensor_buffer_duration`, `max_angular_velocity`, `min_speed`, `max_speed`, and Kalman noise parameters per vehicle and operation. For urban or general-road monitoring, consider lowering `min_speed` and increasing `measurement_noise_covariance` to tolerate noisier pose-differentiation observations. IMU bias cancellation or other preprocessing may allow a stricter angular velocity threshold; without it, thresholds near the IMU noise floor are expected.
