@@ -2,6 +2,13 @@
 Changelog for package autoware_motion_velocity_road_user_stop_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): re-enable bugprone-optional-value-conversion for road user stop module (`#12583 <https://github.com/autowarefoundation/autoware_universe/issues/12583>`_)
+  Co-authored-by: mitsudome-r <ryohsuke.mitsudome@tier4.jp>
+* Contributors: Vishal Chauhan, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

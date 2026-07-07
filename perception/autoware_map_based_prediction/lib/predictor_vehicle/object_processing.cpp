@@ -141,7 +141,7 @@ lanelet::ConstLanelets getLanelets(const map_based_prediction::LaneletsData & da
 }
 }  // namespace
 
-ObjectTracker::ObjectTracker(rclcpp::Node & node) : node_(node)
+ObjectTracker::ObjectTracker(autoware::agnocast_wrapper::Node & node) : node_(node)
 {
 }
 
