@@ -168,6 +168,21 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
   )
+
+  # GPU/TensorRT characterization test for CNNClassifier (only compiled under
+  # TRT+CUDA, hence the gate). It builds a node, so it uses the ROS-isolated runner;
+  # TIMEOUT covers the first-time TensorRT engine build.
+  if(TRT_AVAIL AND CUDA_AVAIL)
+    ament_add_ros_isolated_gtest(test_cnn_classifier
+      test/test_cnn_classifier.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_classifier
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
+  endif()
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
