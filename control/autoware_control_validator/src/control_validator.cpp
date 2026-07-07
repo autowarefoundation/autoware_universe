@@ -408,6 +408,20 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 {
   stop_watch.tic();
 
+  // refresh parameters if they were updated at runtime
+  if (param_listener_.is_old(params_)) {
+    params_ = param_listener_.get_params();
+    diag_error_count_threshold_ = params_.diag_error_count_threshold;
+    display_on_terminal_ = params_.display_on_terminal;
+    latency_validator.update_parameters(params_);
+    lateral_jerk_validator.update_parameters(params_);
+    trajectory_validator.update_parameters(params_);
+    acceleration_validator.update_parameters(params_);
+    velocity_validator.update_parameters(params_);
+    overrun_validator.update_parameters(params_);
+    yaw_validator.update_parameters(params_);
+  }
+
   // prepare ros topics
   const auto waiting = [this](const auto topic_name) {
     RCLCPP_INFO_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for %s", topic_name);
