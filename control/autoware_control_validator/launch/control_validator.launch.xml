@@ -4,7 +4,10 @@
   <arg name="input_predicted_trajectory" default="/control/trajectory_follower/lateral/predicted_trajectory"/>
   <arg name="input_operational_mode_state" default="/api/operation_mode/state"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node name="control_validator" exec="autoware_control_validator_node" pkg="autoware_control_validator" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <!-- load config a file -->
     <param from="$(var control_validator_param_path)"/>
 
