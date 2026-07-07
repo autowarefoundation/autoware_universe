@@ -240,8 +240,8 @@ TEST_F(ProximityCheckerTest, DetectsOverDrivableObjectWhenEnabled)
   parameters_.obstacle_types_map["over_drivable"] = make_obstacle_type_parameters();
   checker_->update_parameters(parameters_);
 
-  const auto objects = make_predicted_objects(
-    {make_object_with_label(ObjectClassification::OVER_DRIVABLE, 5.2, 0.0)});
+  const auto objects =
+    make_predicted_objects({make_object_with_label(ObjectClassification::OVER_DRIVABLE, 5.2, 0.0)});
   const auto result = checker_->check(make_inputs(ego_pose_, nullptr, objects), 0.5);
 
   ASSERT_TRUE(result.nearest_obstacle.has_value());

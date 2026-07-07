@@ -38,11 +38,16 @@ SurroundObstacleCheckerNode::SurroundObstacleCheckerNode(const rclcpp::NodeOptio
 : Node("surround_obstacle_checker_node", node_options)
 {
   label_map_ = {
-    {ObjectClassification::UNKNOWN, "unknown"}, {ObjectClassification::CAR, "car"},
-    {ObjectClassification::TRUCK, "truck"},     {ObjectClassification::BUS, "bus"},
-    {ObjectClassification::TRAILER, "trailer"}, {ObjectClassification::MOTORCYCLE, "motorcycle"},
-    {ObjectClassification::BICYCLE, "bicycle"}, {ObjectClassification::PEDESTRIAN, "pedestrian"},
-    {ObjectClassification::ANIMAL, "animal"},   {ObjectClassification::HAZARD, "hazard"},
+    {ObjectClassification::UNKNOWN, "unknown"},
+    {ObjectClassification::CAR, "car"},
+    {ObjectClassification::TRUCK, "truck"},
+    {ObjectClassification::BUS, "bus"},
+    {ObjectClassification::TRAILER, "trailer"},
+    {ObjectClassification::MOTORCYCLE, "motorcycle"},
+    {ObjectClassification::BICYCLE, "bicycle"},
+    {ObjectClassification::PEDESTRIAN, "pedestrian"},
+    {ObjectClassification::ANIMAL, "animal"},
+    {ObjectClassification::HAZARD, "hazard"},
     {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
     {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
   // Parameters

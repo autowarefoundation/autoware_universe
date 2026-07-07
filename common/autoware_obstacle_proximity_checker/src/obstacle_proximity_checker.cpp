@@ -42,11 +42,16 @@ using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_utils::create_point;
 
 const std::unordered_map<int, std::string> kLabelMap = {
-  {ObjectClassification::UNKNOWN, "unknown"}, {ObjectClassification::CAR, "car"},
-  {ObjectClassification::TRUCK, "truck"},     {ObjectClassification::BUS, "bus"},
-  {ObjectClassification::TRAILER, "trailer"}, {ObjectClassification::MOTORCYCLE, "motorcycle"},
-  {ObjectClassification::BICYCLE, "bicycle"}, {ObjectClassification::PEDESTRIAN, "pedestrian"},
-  {ObjectClassification::HAZARD, "hazard"},   {ObjectClassification::ANIMAL, "animal"},
+  {ObjectClassification::UNKNOWN, "unknown"},
+  {ObjectClassification::CAR, "car"},
+  {ObjectClassification::TRUCK, "truck"},
+  {ObjectClassification::BUS, "bus"},
+  {ObjectClassification::TRAILER, "trailer"},
+  {ObjectClassification::MOTORCYCLE, "motorcycle"},
+  {ObjectClassification::BICYCLE, "bicycle"},
+  {ObjectClassification::PEDESTRIAN, "pedestrian"},
+  {ObjectClassification::HAZARD, "hazard"},
+  {ObjectClassification::ANIMAL, "animal"},
   {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
   {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
 
