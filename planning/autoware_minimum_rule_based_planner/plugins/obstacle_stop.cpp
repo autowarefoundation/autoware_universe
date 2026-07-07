@@ -205,11 +205,18 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
     debug_data_.target_polygons);
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
-  auto collision_point = get_nearest_object_collision(
-    traj_points, context_->vehicle_info, predicted_objects, object_decel_map_,
-    params_.rss_params.ego_decel, params_.rss_params.reaction_time,
-    params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
-    params_.rss_params.lookahead_horizon, colliding_object, params_.rss_params.enable);
+  // TODO(Quda): Port the latest modifier logic
+  std::optional<CollisionPoint> collision_point;
+  if (params_.rss_params.enable) {
+    collision_point = get_nearest_object_collision(
+      traj_points, context_->vehicle_info, predicted_objects, object_decel_map_,
+      params_.rss_params.ego_decel, params_.rss_params.reaction_time,
+      params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
+      params_.rss_params.lookahead_horizon, colliding_object);
+  } else {
+    collision_point =
+      get_nearest_object_collision(traj_points, predicted_objects, colliding_object);
+  }
 
   if (collision_point) debug_data_.colliding_object = colliding_object;
   return collision_point;
