@@ -17,6 +17,10 @@
 
 #include "autoware_utils/system/time_keeper.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
@@ -46,8 +50,6 @@
 #include <pcl/point_types.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <deque>
 #include <limits>
@@ -71,7 +73,7 @@ using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_utils::Polygon2d;
 using autoware_utils::Polygon3d;
 using diagnostic_updater::DiagnosticStatusWrapper;
-using diagnostic_updater::Updater;
+using Updater = autoware::agnocast_wrapper::diagnostic_updater::Updater;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using Path = std::vector<geometry_msgs::msg::Pose>;
@@ -321,7 +323,7 @@ private:
 /**
  * @brief Autonomous Emergency Braking (AEB) node
  */
-class AEB : public rclcpp::Node
+class AEB : public autoware::agnocast_wrapper::Node
 {
 public:
   /**
@@ -331,27 +333,28 @@ public:
   explicit AEB(const rclcpp::NodeOptions & node_options);
 
   // subscriber
-  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
-    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
-  autoware_utils::InterProcessPollingSubscriber<VelocityReport> sub_velocity_{
-    this, "~/input/velocity"};
-  autoware_utils::InterProcessPollingSubscriber<Imu> sub_imu_{this, "~/input/imu"};
-  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_traj_{
-    this, "~/input/predicted_trajectory"};
-  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> predicted_objects_sub_{
-    this, "~/input/objects"};
-  autoware_utils::InterProcessPollingSubscriber<AutowareState> sub_autoware_state_{
-    this, "/autoware/state"};
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(PointCloud2)
+  sub_point_cloud_ = create_polling_subscriber<PointCloud2>(
+    "~/input/pointcloud", autoware_utils::single_depth_sensor_qos());
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(VelocityReport)
+  sub_velocity_ = create_polling_subscriber<VelocityReport>("~/input/velocity");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Imu)
+  sub_imu_ = create_polling_subscriber<Imu>("~/input/imu");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
+  sub_predicted_traj_ = create_polling_subscriber<Trajectory>("~/input/predicted_trajectory");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects)
+  predicted_objects_sub_ = create_polling_subscriber<PredictedObjects>("~/input/objects");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(AutowareState)
+  sub_autoware_state_ = create_polling_subscriber<AutowareState>("/autoware/state");
   // publisher
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_obstacle_pointcloud_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr debug_marker_publisher_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr virtual_wall_publisher_;
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_pub_;
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr debug_rss_distance_publisher_;
-  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::PointCloud2) pub_obstacle_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) debug_marker_publisher_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) virtual_wall_publisher_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils::ProcessingTimeDetail) debug_processing_time_detail_pub_;
+  AUTOWARE_PUBLISHER_PTR(tier4_debug_msgs::msg::Float32Stamped) debug_rss_distance_publisher_;
+  AUTOWARE_PUBLISHER_PTR(MetricArray) metrics_pub_;
   // timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 
   // callback
@@ -359,13 +362,13 @@ public:
    * @brief Callback for point cloud messages
    * @param input_msg Shared pointer to the point cloud message
    */
-  void onPointCloud(const PointCloud2::ConstSharedPtr input_msg);
+  void onPointCloud(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) & input_msg);
 
   /**
    * @brief Callback for IMU messages
    * @param input_msg Shared pointer to the IMU message
    */
-  void onImu(const Imu::ConstSharedPtr input_msg);
+  void onImu(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Imu) & input_msg);
 
   /**
    * @brief Timer callback function
@@ -535,14 +538,14 @@ public:
 
   // Member variables
   PointCloud2::SharedPtr obstacle_ros_pointcloud_ptr_{nullptr};
-  VelocityReport::ConstSharedPtr current_velocity_ptr_{nullptr};
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(VelocityReport) current_velocity_ptr_ {};
   Vector3::SharedPtr angular_velocity_ptr_{nullptr};
-  Trajectory::ConstSharedPtr predicted_traj_ptr_{nullptr};
-  PredictedObjects::ConstSharedPtr predicted_objects_ptr_{nullptr};
-  AutowareState::ConstSharedPtr autoware_state_{nullptr};
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) predicted_traj_ptr_ {};
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(PredictedObjects) predicted_objects_ptr_ {};
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(AutowareState) autoware_state_ {};
 
-  tf2_ros::Buffer tf_buffer_{get_clock()};
-  tf2_ros::TransformListener tf_listener_{tf_buffer_};
+  autoware::agnocast_wrapper::Buffer tf_buffer_{get_clock()};
+  autoware::agnocast_wrapper::TransformListener tf_listener_{tf_buffer_, *this};
 
   // vehicle info
   VehicleInfo vehicle_info_;
@@ -586,7 +589,7 @@ public:
   double mpc_prediction_time_interval_;
   CollisionDataKeeper collision_data_keeper_;
   // Parameter callback
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 };
 }  // namespace autoware::motion::control::autonomous_emergency_braking
 

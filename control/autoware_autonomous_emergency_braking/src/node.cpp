@@ -58,6 +58,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -209,7 +210,8 @@ AEB::AEB(const rclcpp::NodeOptions & node_options)
   // start time
   const double aeb_hz = declare_parameter<double>("aeb_hz");
   const auto period_ns = rclcpp::Rate(aeb_hz).period();
-  timer_ = rclcpp::create_timer(this, this->get_clock(), period_ns, std::bind(&AEB::onTimer, this));
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, this->get_clock(), period_ns, std::bind(&AEB::onTimer, this));
 
   debug_processing_time_detail_pub_ =
     create_publisher<autoware_utils::ProcessingTimeDetail>("~/debug/processing_time_detail_ms", 1);
@@ -277,7 +279,7 @@ void AEB::onTimer()
   updater_.force_update();
 }
 
-void AEB::onImu(const Imu::ConstSharedPtr input_msg)
+void AEB::onImu(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Imu) & input_msg)
 {
   // transform imu
   const auto logger = get_logger();
@@ -289,7 +291,7 @@ void AEB::onImu(const Imu::ConstSharedPtr input_msg)
   tf2::doTransform(input_msg->angular_velocity, *angular_velocity_ptr_, transform_stamped.value());
 }
 
-void AEB::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
+void AEB::onPointCloud(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) & input_msg)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -351,13 +353,13 @@ bool AEB::fetchLatestData()
     return false;
   };
 
-  current_velocity_ptr_ = sub_velocity_.take_data();
+  current_velocity_ptr_ = sub_velocity_->take_data();
   if (!current_velocity_ptr_) {
     return missing("ego velocity");
   }
 
   if (use_pointcloud_data_) {
-    const auto pointcloud_ptr = sub_point_cloud_.take_data();
+    const auto pointcloud_ptr = sub_point_cloud_->take_data();
     if (!pointcloud_ptr) {
       return missing("object pointcloud message");
     }
@@ -371,12 +373,12 @@ bool AEB::fetchLatestData()
   }
 
   if (use_predicted_object_data_) {
-    predicted_objects_ptr_ = predicted_objects_sub_.take_data();
+    predicted_objects_ptr_ = predicted_objects_sub_->take_data();
     if (!predicted_objects_ptr_) {
       return missing("predicted objects");
     }
   } else {
-    predicted_objects_ptr_.reset();
+    predicted_objects_ptr_ = {};
   }
 
   if (!obstacle_ros_pointcloud_ptr_ && !predicted_objects_ptr_) {
@@ -385,7 +387,7 @@ bool AEB::fetchLatestData()
 
   const bool has_imu_path = std::invoke([&]() {
     if (!use_imu_path_) return false;
-    const auto imu_ptr = sub_imu_.take_data();
+    const auto imu_ptr = sub_imu_->take_data();
     if (!imu_ptr) {
       return missing("imu message");
     }
@@ -398,7 +400,7 @@ bool AEB::fetchLatestData()
     if (!use_predicted_trajectory_) {
       return false;
     }
-    predicted_traj_ptr_ = sub_predicted_traj_.take_data();
+    predicted_traj_ptr_ = sub_predicted_traj_->take_data();
     return (!predicted_traj_ptr_) ? missing("control predicted trajectory") : true;
   });
 
@@ -409,7 +411,7 @@ bool AEB::fetchLatestData()
     return false;
   }
 
-  autoware_state_ = sub_autoware_state_.take_data();
+  autoware_state_ = sub_autoware_state_->take_data();
   if (check_autoware_state_ && !autoware_state_) {
     return missing("autoware_state");
   }
@@ -625,9 +627,9 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
 
   // Debug print
   if (!filtered_objects->empty() && publish_debug_pointcloud_) {
-    const auto filtered_objects_ros_pointcloud_ptr = std::make_shared<PointCloud2>();
+    auto filtered_objects_ros_pointcloud_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_obstacle_pointcloud_);
     pcl::toROSMsg(*filtered_objects, *filtered_objects_ros_pointcloud_ptr);
-    pub_obstacle_pointcloud_->publish(*filtered_objects_ros_pointcloud_ptr);
+    pub_obstacle_pointcloud_->publish(std::move(filtered_objects_ros_pointcloud_ptr));
   }
   return has_collision;
 }
