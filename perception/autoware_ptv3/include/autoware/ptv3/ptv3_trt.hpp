@@ -26,6 +26,7 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -44,7 +45,7 @@ class PTV3_PUBLIC PTv3TRT
 {
 public:
   explicit PTv3TRT(
-    const tensorrt_common::TrtCommonConfig & backbone_trt_config,
+    const tensorrt_common::TrtCommonConfig & encoder_trt_config,
     const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
     const std::optional<tensorrt_common::TrtCommonConfig> & det3d_head_trt_config,
     const PTv3Config & config);
@@ -71,7 +72,8 @@ public:
 
 protected:
   void initPtr();
-  void initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  [[nodiscard]] std::array<std::int64_t, 3> stageProfileCounts(std::size_t stage_index) const;
   void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
@@ -85,7 +87,7 @@ protected:
   bool preProcess(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr, bool should_run_seg3d);
 
-  bool inferenceBackbone();
+  bool inferenceEncoder();
   bool inferenceSeg3dHead();
   bool inferenceDetection3DHead();
 
@@ -95,8 +97,8 @@ protected:
 
   bool postProcessDetection3D(std::vector<Box3D> & detection_boxes);
 
-  // The backbone is always present. The heads are loaded only when enabled.
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> backbone_trt_ptr_{nullptr};
+  // The encoder is always present. The heads are loaded only when enabled.
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> encoder_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> detection3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
@@ -158,10 +160,9 @@ protected:
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
 
-  // Backbone outputs shared with all the heads
-  CudaUniquePtr<float[]> bb_point_feat_d_{nullptr};
-  CudaUniquePtr<std::int32_t[]> bb_point_grid_coord_d_{nullptr};
-  CudaUniquePtr<std::int64_t[]> bb_point_offset_d_{nullptr};
+  // Encoder outputs shared with all the heads: per-stage point features,
+  // finest to deepest, sized by each stage's geometric voxel capacity.
+  std::vector<CudaUniquePtr<float[]>> stage_feat_d_;
 
   // Segmentation head outputs
   CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};

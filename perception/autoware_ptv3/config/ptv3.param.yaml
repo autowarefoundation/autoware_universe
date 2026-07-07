@@ -5,13 +5,16 @@
     # network
     trt_precision: fp16
     cloud_capacity: 2000000
-    backbone:
-      onnx_path: "$(var model_path)/$(var model_variant)_backbone.onnx"
-      engine_path: "$(var model_path)/$(var model_variant)_backbone.engine"
+    encoder:
+      onnx_path: "$(var model_path)/$(var model_variant)_encoder.onnx"
+      engine_path: "$(var model_path)/$(var model_variant)_encoder.engine"
+      workspace_size: 8589934592  # 8 GiB
+      voxels_num: [16000, 160000, 256000]
     segmentation3d:
       use_head: $(var use_seg3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_seg3d_head.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_seg3d_head.engine"
+      workspace_size: 8589934592  # 8 GiB
       source_reconstruction: "full"
       filter:
         class_probability_threshold: 0.05
@@ -21,6 +24,7 @@
       use_head: $(var use_det3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_det3d_head.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_det3d_head.engine"
+      workspace_size: 4294967296  # 4 GiB
       post_process_params:
         iou_nms_search_distance_2d: 10.0
         iou_nms_threshold: 0.1

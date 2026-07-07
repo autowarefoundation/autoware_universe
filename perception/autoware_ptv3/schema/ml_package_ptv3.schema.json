@@ -3,16 +3,9 @@
   "title": "Parameters for ptv3",
   "type": "object",
   "definitions": {
-    "backbone": {
+    "encoder": {
       "type": "object",
       "properties": {
-        "voxels_num": {
-          "items": {
-            "type": "integer"
-          },
-          "description": "Voxel ranges used during inference [min, opt, max].",
-          "default": [5000, 30000, 60000]
-        },
         "point_cloud_range": {
           "type": "array",
           "items": {
@@ -35,7 +28,14 @@
         },
         "serialization_orders": {
           "type": "array",
-          "items": [{ "const": "z" }, { "const": "z-trans" }],
+          "items": [
+            {
+              "const": "z"
+            },
+            {
+              "const": "z-trans"
+            }
+          ],
           "additionalItems": false,
           "description": "Space-filling curve serialization orders used by the exported model.",
           "default": ["z", "z-trans"],
@@ -51,14 +51,24 @@
           "description": "Serialized pooling stride for each encoder downsampling stage.",
           "default": [2, 2, 2, 2],
           "minItems": 1
+        },
+        "enc_channels": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Encoder feature channels per stage, finest to deepest (pooling_strides size + 1 entries).",
+          "default": [32, 64, 128, 256, 512],
+          "minItems": 2
         }
       },
       "required": [
-        "voxels_num",
         "point_cloud_range",
         "voxel_size",
         "serialization_orders",
-        "pooling_strides"
+        "pooling_strides",
+        "enc_channels"
       ],
       "additionalProperties": false
     },
@@ -67,18 +77,44 @@
       "properties": {
         "class_names": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Segmentation class names.",
           "minItems": 1,
           "uniqueItems": true
         },
         "palette": {
           "type": "array",
-          "items": { "type": "integer", "minimum": 0, "maximum": 255 },
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
           "description": "Flat RGB palette for visualization output. Must contain 3 values per class."
+        },
+        "dec_depths": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Decoder attention-block counts per stage; stages with blocks add serialization-metadata inputs to the seg-head engine.",
+          "default": [0, 0, 0, 0],
+          "minItems": 1
+        },
+        "dec_patch_size": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Decoder attention window size per stage; frames with fewer voxels at a block stage are skipped.",
+          "default": [512, 512, 512, 512],
+          "minItems": 1
         }
       },
-      "required": ["class_names", "palette"],
+      "required": ["class_names", "palette", "dec_depths", "dec_patch_size"],
       "additionalProperties": false
     },
     "detection3d": {
@@ -86,7 +122,10 @@
       "properties": {
         "bbox_voxel_size": {
           "type": "array",
-          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
           "minItems": 3,
           "maxItems": 3,
           "description": "Voxel size [x, y, z] in meters of the BEV grid on which the detection head regresses box centers."
@@ -102,14 +141,18 @@
         },
         "post_center_range": {
           "type": "array",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 6,
           "maxItems": 6,
           "description": "Bounds [x_min, y_min, z_min, x_max, y_max, z_max] in meters applied to decoded detection centers during post-processing. Any detection whose center lies outside is dropped."
         },
         "class_names": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1,
           "uniqueItems": true,
           "description": "Detection class names in the model's output label order."
@@ -132,9 +175,15 @@
         "ros__parameters": {
           "type": "object",
           "properties": {
-            "backbone": { "$ref": "#/definitions/backbone" },
-            "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
-            "detection3d": { "$ref": "#/definitions/detection3d" }
+            "encoder": {
+              "$ref": "#/definitions/encoder"
+            },
+            "segmentation3d": {
+              "$ref": "#/definitions/segmentation3d"
+            },
+            "detection3d": {
+              "$ref": "#/definitions/detection3d"
+            }
           },
           "additionalProperties": false
         }

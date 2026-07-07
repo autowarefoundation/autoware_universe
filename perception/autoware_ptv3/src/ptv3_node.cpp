@@ -16,8 +16,10 @@
 
 #include "autoware/ptv3/ros_utils.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -33,6 +35,13 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   auto to_float_vector = [](const auto & v) -> std::vector<float> {
     return std::vector<float>(v.begin(), v.end());
   };
+  auto declare_workspace_size = [this, &descriptor](const std::string & name) -> std::uint64_t {
+    const auto workspace_size = this->declare_parameter<std::int64_t>(name, descriptor);
+    if (workspace_size <= 0) {
+      throw std::runtime_error(name + " must be positive.");
+    }
+    return static_cast<std::uint64_t>(workspace_size);
+  };
 
   // TensorRT parameters
   const std::string plugins_path = this->declare_parameter<std::string>("plugins_path", descriptor);
@@ -40,21 +49,24 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     this->declare_parameter<std::string>("trt_precision", descriptor);
   const auto cloud_capacity = this->declare_parameter<std::int64_t>("cloud_capacity", descriptor);
 
-  // Backbone parameters
-  const std::string backbone_onnx_path =
-    this->declare_parameter<std::string>("backbone.onnx_path", descriptor);
-  const std::string backbone_engine_path =
-    this->declare_parameter<std::string>("backbone.engine_path", descriptor);
+  // Encoder parameters
+  const std::string encoder_onnx_path =
+    this->declare_parameter<std::string>("encoder.onnx_path", descriptor);
+  const auto encoder_workspace_size = declare_workspace_size("encoder.workspace_size");
+  const std::string encoder_engine_path =
+    this->declare_parameter<std::string>("encoder.engine_path", descriptor);
   const auto voxels_num =
-    this->declare_parameter<std::vector<std::int64_t>>("backbone.voxels_num", descriptor);
+    this->declare_parameter<std::vector<std::int64_t>>("encoder.voxels_num", descriptor);
   const auto point_cloud_range = to_float_vector(
-    this->declare_parameter<std::vector<double>>("backbone.point_cloud_range", descriptor));
+    this->declare_parameter<std::vector<double>>("encoder.point_cloud_range", descriptor));
   const auto voxel_size = to_float_vector(
-    this->declare_parameter<std::vector<double>>("backbone.voxel_size", descriptor));
+    this->declare_parameter<std::vector<double>>("encoder.voxel_size", descriptor));
   const auto serialization_orders =
-    this->declare_parameter<std::vector<std::string>>("backbone.serialization_orders", descriptor);
+    this->declare_parameter<std::vector<std::string>>("encoder.serialization_orders", descriptor);
   const auto pooling_strides =
-    this->declare_parameter<std::vector<std::int64_t>>("backbone.pooling_strides", descriptor);
+    this->declare_parameter<std::vector<std::int64_t>>("encoder.pooling_strides", descriptor);
+  const auto enc_channels =
+    this->declare_parameter<std::vector<std::int64_t>>("encoder.enc_channels", descriptor);
 
   if (point_cloud_range.size() != 6) {
     throw std::runtime_error("The size of point_cloud_range != 6");
@@ -72,9 +84,12 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   std::vector<std::string> filter_classes;
   std::string filter_output_format;
   std::string source_reconstruction = "none";
+  std::vector<std::int64_t> dec_depths;
+  std::vector<std::int64_t> dec_patch_size;
   if (use_seg3d_head) {
     const std::string seg3d_head_onnx_path =
       this->declare_parameter<std::string>("segmentation3d.onnx_path", descriptor);
+    const auto seg3d_head_workspace_size = declare_workspace_size("segmentation3d.workspace_size");
     const std::string seg3d_head_engine_path =
       this->declare_parameter<std::string>("segmentation3d.engine_path", descriptor);
     segmentation_class_names =
@@ -89,8 +104,12 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       this->declare_parameter<std::string>("segmentation3d.filter.output_format", descriptor);
     source_reconstruction =
       this->declare_parameter<std::string>("segmentation3d.source_reconstruction", descriptor);
+    dec_depths =
+      this->declare_parameter<std::vector<std::int64_t>>("segmentation3d.dec_depths", descriptor);
+    dec_patch_size = this->declare_parameter<std::vector<std::int64_t>>(
+      "segmentation3d.dec_patch_size", descriptor);
     seg3d_head_trt_config.emplace(
-      seg3d_head_onnx_path, trt_precision, seg3d_head_engine_path, 1ULL << 30U);
+      seg3d_head_onnx_path, trt_precision, seg3d_head_engine_path, seg3d_head_workspace_size);
   }
 
   // Detection head parameters
@@ -106,6 +125,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   if (use_det3d_head) {
     const std::string det3d_head_onnx_path =
       this->declare_parameter<std::string>("detection3d.onnx_path", descriptor);
+    const auto det3d_head_workspace_size = declare_workspace_size("detection3d.workspace_size");
     const std::string det3d_head_engine_path =
       this->declare_parameter<std::string>("detection3d.engine_path", descriptor);
 
@@ -169,21 +189,22 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       this->declare_parameter<std::vector<double>>("detection3d.post_center_range", descriptor));
 
     det3d_head_trt_config.emplace(
-      det3d_head_onnx_path, trt_precision, det3d_head_engine_path, 1ULL << 32U);
+      det3d_head_onnx_path, trt_precision, det3d_head_engine_path, det3d_head_workspace_size);
   }
 
   PTv3Config config(
     use_seg3d_head, use_det3d_head, plugins_path, cloud_capacity, voxels_num, point_cloud_range,
-    voxel_size, segmentation_class_names, serialization_orders, pooling_strides, palette,
-    filter_class_probability_threshold, filter_classes, filter_output_format, source_reconstruction,
-    detection_class_names_, bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds,
-    yaw_norm_thresholds, has_twist_, num_proposals, post_center_range);
+    voxel_size, segmentation_class_names, serialization_orders, pooling_strides, enc_channels,
+    palette, filter_class_probability_threshold, filter_classes, filter_output_format,
+    source_reconstruction, dec_depths, dec_patch_size, detection_class_names_, bbox_voxel_size,
+    distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds, has_twist_,
+    num_proposals, post_center_range);
 
-  const auto backbone_trt_config = tensorrt_common::TrtCommonConfig(
-    backbone_onnx_path, trt_precision, backbone_engine_path, 1ULL << 33U);
+  const auto encoder_trt_config = tensorrt_common::TrtCommonConfig(
+    encoder_onnx_path, trt_precision, encoder_engine_path, encoder_workspace_size);
 
   model_ptr_ = std::make_unique<PTv3TRT>(
-    backbone_trt_config, seg3d_head_trt_config, det3d_head_trt_config, config);
+    encoder_trt_config, seg3d_head_trt_config, det3d_head_trt_config, config);
 
   pointcloud_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
