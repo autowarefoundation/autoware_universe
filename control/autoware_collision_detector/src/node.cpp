@@ -171,7 +171,9 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
   updater_.add("collision_detect", this, &CollisionDetectorNode::checkCollision);
   updater_.setPeriod(0.1);
 
-  vehicle_stop_checker_ = std::make_unique<autoware::motion_utils::VehicleStopChecker>(this);
+  constexpr double vehicle_velocity_buffer_time_sec = 10.0;
+  vehicle_stop_checker_ = std::make_unique<autoware::motion_utils::VehicleStopCheckerBase>(
+    this, vehicle_velocity_buffer_time_sec);
 }
 
 PredictedObjects CollisionDetectorNode::filterObjects(const PredictedObjects & input_objects)
@@ -325,7 +327,7 @@ bool CollisionDetectorNode::shouldBeExcluded(
 
 void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  odometry_ptr_ = sub_odometry_.take_data();
+  odometry_ptr_ = sub_odometry_->take_data();
 
   if (!odometry_ptr_) {
     RCLCPP_INFO_THROTTLE(
@@ -333,15 +335,20 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
     return;
   }
 
+  geometry_msgs::msg::TwistStamped current_velocity;
+  current_velocity.header = odometry_ptr_->header;
+  current_velocity.twist = odometry_ptr_->twist.twist;
+  vehicle_stop_checker_->addTwist(current_velocity);
+
   if (vehicle_stop_checker_->isVehicleStopped()) {
     is_error_diag_ = false;
     stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "vehicle is stopping");
     return;
   }
 
-  pointcloud_ptr_ = sub_pointcloud_.take_data();
-  object_ptr_ = sub_dynamic_objects_.take_data();
-  operation_mode_ptr_ = sub_operation_mode_.take_data();
+  pointcloud_ptr_ = sub_pointcloud_->take_data();
+  object_ptr_ = sub_dynamic_objects_->take_data();
+  operation_mode_ptr_ = sub_operation_mode_->take_data();
 
   if (node_param_.use_pointcloud && !pointcloud_ptr_) {
     RCLCPP_WARN_THROTTLE(
@@ -417,7 +424,9 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
 
   stat.summary(status.level, status.message);
 
-  pub_debug_->publish(generate_debug_markers(ego_polygon, nearest_obstacle, is_error_diag_));
+  auto debug_markers = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_debug_);
+  *debug_markers = generate_debug_markers(ego_polygon, nearest_obstacle, is_error_diag_);
+  pub_debug_->publish(std::move(debug_markers));
 }
 
 std::optional<Obstacle> CollisionDetectorNode::getNearestObstacle(
