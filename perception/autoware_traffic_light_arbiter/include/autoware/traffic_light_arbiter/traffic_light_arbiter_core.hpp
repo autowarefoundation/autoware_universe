@@ -16,7 +16,6 @@
 #define AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_CORE_HPP_
 
 #include <autoware/traffic_light_arbiter/signal_match_validator.hpp>
-#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
@@ -25,7 +24,6 @@
 
 #include <memory>
 #include <optional>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -41,7 +39,6 @@ public:
   using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
-  using TrafficLightConstPtr = lanelet::TrafficLightConstPtr;
 
   TrafficLightArbiterCore(
     SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
@@ -51,29 +48,13 @@ public:
   // (vehicle traffic lights, plus pedestrian ones when signal matching is on).
   void set_map(const lanelet::LaneletMapConstPtr & map);
 
-  struct ExpiredExternalSignal
-  {
-    lanelet::Id id;
-    double age;
-  };
-
   // Stores the latest perception msg, then evicts external cache entries that
-  // are stale relative to its stamp; returns the evicted entries for logging.
-  std::vector<ExpiredExternalSignal> ingest_perception(const TrafficSignalArray & msg);
+  // are stale relative to its stamp.
+  void ingest_perception(const TrafficSignalArray & msg);
 
-  // Outcome of ingest_external: `accepted` is false when the msg's stamp was
-  // too far from current_time to use; `expired` lists cache entries the
-  // accepted ingest evicted, for caller logging.
-  struct ExternalIngestResult
-  {
-    bool accepted;
-    std::vector<ExpiredExternalSignal> expired;
-  };
-
-  // Rejects the msg when its stamp is too far from current_time; otherwise
-  // refreshes the external cache and returns any entries the sweep evicted.
-  ExternalIngestResult ingest_external(
-    const TrafficSignalArray & msg, const rclcpp::Time & current_time);
+  // Rejects the msg (returns false) when its stamp is too far from current_time;
+  // otherwise refreshes the external cache, sweeps stale entries, returns true.
+  bool ingest_external(const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
   // Result of one arbitration cycle. `output` holds the arbitrated signals by
   // value; std::nullopt means no map has arrived yet, so the Node skips the
@@ -94,12 +75,15 @@ private:
     const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
 
   // Sweeps external cache: removes every stored entry whose stamp deviates
-  // from `reference_time` beyond `tolerance`, returning the removed entries.
-  std::vector<ExpiredExternalSignal> sweep_expired_external_signals(
-    const rclcpp::Time & reference_time, double tolerance);
+  // from `reference_time` beyond `tolerance`.
+  void sweep_expired_external_signals(const rclcpp::Time & reference_time, double tolerance);
+
+  // Signal matching is on iff the validator exists: it is created in the
+  // constructor exactly when matching is enabled and never replaced afterward,
+  // so the pointer is the single source of truth for the mode.
+  bool is_signal_matching_enabled() const { return signal_match_validator_ != nullptr; }
 
   SourcePriority source_priority_;
-  bool enable_signal_matching_;
   double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
@@ -107,7 +91,7 @@ private:
   std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 
-  TrafficSignalArray latest_perception_msg_;
+  TrafficSignalArray perception_traffic_light_;
   std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
 };
 

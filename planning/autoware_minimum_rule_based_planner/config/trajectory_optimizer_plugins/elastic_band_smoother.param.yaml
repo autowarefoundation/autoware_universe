@@ -1,0 +1,47 @@
+/**:
+  ros__parameters:
+    # EBPathSmoother parameters (CommonParam, EgoNearestParam)
+    common:
+      output_delta_arc_length: 0.5
+      output_backward_traj_length: 5.0
+
+    elastic_band:
+      option:
+        enable_warm_start: true
+        enable_optimization_validation: false
+
+      common:
+        num_points: 100
+        delta_arc_length: 1.0
+
+      clearance:
+        num_joint_points: 3
+        clearance_for_fix: 0.0
+        clearance_for_joint: 0.1
+        clearance_for_smooth: 0.1
+
+      weight:
+        smooth_weight: 1.0
+        lat_error_weight: 0.001
+
+      qp:
+        max_iteration: 10000
+        eps_abs: 1.0e-7
+        eps_rel: 1.0e-7
+
+      validation:
+        max_error: 3.0
+
+    # EgoNearestParam for EB smoother
+    ego_nearest_dist_threshold: 3.0
+    ego_nearest_yaw_threshold: 1.046
+
+    # Replan parameters for EB smoother
+    replan:
+      enable: true
+      max_path_shape_around_ego_lat_dist: 2.0
+      max_path_shape_forward_lon_dist: 100.0
+      max_path_shape_forward_lat_dist: 0.2
+      max_ego_moving_dist: 5.0
+      max_goal_moving_dist: 15.0
+      max_delta_time_sec: 0.0

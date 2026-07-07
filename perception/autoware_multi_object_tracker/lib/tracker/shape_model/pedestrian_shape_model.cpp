@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/tracker/shape_model/pedestrian_shape_model.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -125,21 +125,11 @@ bool PedestrianShapeModel::update(
 
 void PedestrianShapeModel::exportTo(types::DynamicObject & output) const
 {
-  const double asymmetry = std::abs(length_ - width_) / std::max({length_, width_, 1e-6});
-
-  if (asymmetry < 0.15) {
-    // Nearly circular → CYLINDER
-    const double diameter = (length_ + width_) * 0.5;
-    output.shape.type = Shape::CYLINDER;
-    output.shape.dimensions.x = diameter;
-    output.shape.dimensions.y = diameter;
-    output.shape.dimensions.z = height_;
-  } else {
-    output.shape.type = Shape::BOUNDING_BOX;
-    output.shape.dimensions.x = length_;
-    output.shape.dimensions.y = width_;
-    output.shape.dimensions.z = height_;
-  }
+  // Always export a BOUNDING_BOX with explicit length (x) and width (y).
+  output.shape.type = Shape::BOUNDING_BOX;
+  output.shape.dimensions.x = length_;
+  output.shape.dimensions.y = width_;
+  output.shape.dimensions.z = height_;
   output.shape.footprint.points.clear();
   output.area = types::getArea(output.shape);
 }
