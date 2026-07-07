@@ -63,7 +63,12 @@ void RedundancySwitcherAdapter::initialize(
   const auto interval_ms =
     std::chrono::duration<double, std::milli>(election_request_send_interval_milli);
   timer_ = node_->create_wall_timer(interval_ms, [this]() {
-    send_election_request(ElectionRequest{false, false, false, priority_});
+    bool autoware_ready = false;
+    {
+      std::lock_guard<std::mutex> lock(policy_mutex_);
+      autoware_ready = autoware_ready_.has_value() && *autoware_ready_ == AutowareReady::True;
+    }
+    send_election_request(ElectionRequest{autoware_ready, false, false, priority_});
     check_election_status_timeout();
   });
 
