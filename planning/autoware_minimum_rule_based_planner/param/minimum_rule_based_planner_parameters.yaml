@@ -7,10 +7,8 @@ minimum_rule_based_planner:
   plugin_names:
     type: string_array
     default_value:
-      [
-        autoware::minimum_rule_based_planner::plugin::ObstacleStop,
-        autoware::minimum_rule_based_planner::plugin::SurroundObstacleStop,
-      ]
+      - autoware::minimum_rule_based_planner::plugin::ObstacleStop,
+      - autoware::minimum_rule_based_planner::plugin::SurroundObstacleStop,
     description: List of plugin names to load
     read_only: false
 
