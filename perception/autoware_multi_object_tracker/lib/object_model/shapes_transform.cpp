@@ -227,7 +227,6 @@ geometry_msgs::msg::Polygon unionFootprints(
     for (const auto & p : fp.points) {
       poly.outer().emplace_back(p.x, p.y);
     }
-    boost::geometry::correct(poly);
     return poly;
   };
 
@@ -252,6 +251,7 @@ geometry_msgs::msg::Polygon unionFootprints(
 
   // Merge by taking the convex hull of both footprints' vertices.
   autoware_utils_geometry::Polygon2d all_points;
+  all_points.outer().reserve(poly_a.outer().size() + poly_b.outer().size());
   for (const auto & pt : poly_a.outer()) {
     all_points.outer().push_back(pt);
   }
