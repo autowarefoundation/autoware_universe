@@ -46,7 +46,9 @@ const std::unordered_map<int, std::string> kLabelMap = {
   {ObjectClassification::TRUCK, "truck"},     {ObjectClassification::BUS, "bus"},
   {ObjectClassification::TRAILER, "trailer"}, {ObjectClassification::MOTORCYCLE, "motorcycle"},
   {ObjectClassification::BICYCLE, "bicycle"}, {ObjectClassification::PEDESTRIAN, "pedestrian"},
-  {ObjectClassification::HAZARD, "hazard"},   {ObjectClassification::ANIMAL, "animal"}};
+  {ObjectClassification::HAZARD, "hazard"},   {ObjectClassification::ANIMAL, "animal"},
+  {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
+  {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
 
 geometry_msgs::msg::Pose createBaseLinkOrigin()
 {
@@ -184,7 +186,8 @@ std::optional<ProximityObstacle> ProximityChecker::getNearestObstacleByDynamicOb
   double minimum_distance = std::numeric_limits<double>::max();
   bool was_minimum_distance_updated = false;
   for (const auto & object : input.objects->objects) {
-    const int label = object.classification.front().label;
+    const int label = object.classification.empty() ? ObjectClassification::UNKNOWN
+                                                    : object.classification.front().label;
     const auto label_iter = kLabelMap.find(label);
     if (label_iter == kLabelMap.end()) {
       continue;

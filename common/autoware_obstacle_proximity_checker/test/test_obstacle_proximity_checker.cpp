@@ -114,6 +114,21 @@ PredictedObject make_car_object(const double x, const double y, const uint8_t id
   return object;
 }
 
+PredictedObject make_object_with_label(
+  const uint8_t label, const double x, const double y, const uint8_t id = 1)
+{
+  auto object = make_car_object(x, y, id);
+  object.classification.front().label = label;
+  return object;
+}
+
+PredictedObject make_unclassified_object(const double x, const double y, const uint8_t id = 1)
+{
+  auto object = make_car_object(x, y, id);
+  object.classification.clear();
+  return object;
+}
+
 Inputs make_inputs(
   const geometry_msgs::msg::Pose & ego_pose,
   const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud = nullptr,
@@ -217,6 +232,37 @@ TEST_F(ProximityCheckerTest, IgnoresDisabledObjectTypes)
 
   EXPECT_FALSE(result.is_obstacle_found);
   EXPECT_FALSE(result.nearest_obstacle.has_value());
+}
+
+TEST_F(ProximityCheckerTest, DetectsOverDrivableObjectWhenEnabled)
+{
+  parameters_.object_type_enable_check["over_drivable"] = true;
+  parameters_.obstacle_types_map["over_drivable"] = make_obstacle_type_parameters();
+  checker_->update_parameters(parameters_);
+
+  const auto objects = make_predicted_objects(
+    {make_object_with_label(ObjectClassification::OVER_DRIVABLE, 5.2, 0.0)});
+  const auto result = checker_->check(make_inputs(ego_pose_, nullptr, objects), 0.5);
+
+  ASSERT_TRUE(result.nearest_obstacle.has_value());
+  EXPECT_FALSE(result.nearest_obstacle->is_point_cloud);
+  EXPECT_NEAR(result.nearest_obstacle->nearest_distance, 0.2, 1e-3);
+  EXPECT_TRUE(result.is_obstacle_found);
+}
+
+TEST_F(ProximityCheckerTest, TreatsEmptyClassificationAsUnknown)
+{
+  parameters_.object_type_enable_check["unknown"] = true;
+  parameters_.obstacle_types_map["unknown"] = make_obstacle_type_parameters();
+  checker_->update_parameters(parameters_);
+
+  const auto objects = make_predicted_objects({make_unclassified_object(5.2, 0.0)});
+  const auto result = checker_->check(make_inputs(ego_pose_, nullptr, objects), 0.5);
+
+  ASSERT_TRUE(result.nearest_obstacle.has_value());
+  EXPECT_FALSE(result.nearest_obstacle->is_point_cloud);
+  EXPECT_NEAR(result.nearest_obstacle->nearest_distance, 0.2, 1e-3);
+  EXPECT_TRUE(result.is_obstacle_found);
 }
 
 TEST_F(ProximityCheckerTest, SelectsNearestBetweenPointcloudAndObject)
