@@ -116,12 +116,13 @@ public:
     double ego_velocity);
 
   // Trajectory shifting
-  Trajectory shift_trajectory_to_ego(
+  static Trajectory shift_trajectory_to_ego(
     const Trajectory & trajectory, const geometry_msgs::msg::Pose & ego_pose, double ego_velocity,
     double ego_yaw_rate, const TrajectoryShiftParams & shift_params, double delta_arc_length);
 
   // Path to trajectory conversion
-  Trajectory convert_path_to_trajectory(const PathWithLaneId & path, double resample_interval);
+  static Trajectory convert_path_to_trajectory(
+    const PathWithLaneId & path, double resample_interval);
 
   // Params update
   void update_params(const Params & params);

@@ -123,7 +123,7 @@ protected:
 
 private:
   std::string name_;
-  rclcpp::Node * node_ptr_;
+  rclcpp::Node * node_ptr_{nullptr};
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 }  // namespace autoware::minimum_rule_based_planner::plugin
