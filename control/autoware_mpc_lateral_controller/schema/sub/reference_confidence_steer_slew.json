@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MPC Lateral Controller Params",
+  "type": "object",
+  "definitions": {
+    "reference_confidence_steer_slew": {
+      "type": "object",
+      "properties": {
+        "enable_confidence_steer_slew_limit": {
+          "type": "boolean",
+          "description": "when enabled, limit published steering rate when reference spatial extent ahead of ego is short (soft hold on curves during planner hesitation)",
+          "default": false
+        },
+        "reference_confidence_L_ahead_min": {
+          "type": "number",
+          "description": "spatial arc length [m] below which reference curvature is treated as low-confidence",
+          "default": 0.4
+        },
+        "reference_confidence_L_ahead_ref": {
+          "type": "number",
+          "description": "spatial arc length [m] at or above which reference is fully trusted and slew limiting is disabled",
+          "default": 2.0
+        },
+        "steer_slew_rate_min_rad_s": {
+          "type": "number",
+          "description": "steering rate limit [rad/s] at zero reference confidence; allowed per-cycle steer change blends linearly from min_rate*period (conf=0) to full MPC delta (conf=1)",
+          "default": 0.02
+        }
+      },
+      "required": [
+        "enable_confidence_steer_slew_limit",
+        "reference_confidence_L_ahead_min",
+        "reference_confidence_L_ahead_ref",
+        "steer_slew_rate_min_rad_s"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/reference_confidence_steer_slew"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

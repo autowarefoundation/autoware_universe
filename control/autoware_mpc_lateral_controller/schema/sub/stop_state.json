@@ -40,6 +40,11 @@
           "type": "number",
           "description": "threshold value to be sure output of the optimization is converged, it is used in stopped state",
           "default": 0.01
+        },
+        "stop_state_steer_hold_duration": {
+          "type": "number",
+          "description": "duration [s] to freeze steering command in stop state; after this elapsed time while kinematically stopped, MPC output is used again so steering can restore",
+          "default": 5.0
         }
       },
       "required": [
@@ -49,7 +54,8 @@
         "keep_steer_control_until_converged",
         "new_traj_duration_time",
         "new_traj_end_dist",
-        "mpc_converged_threshold_rps"
+        "mpc_converged_threshold_rps",
+        "stop_state_steer_hold_duration"
       ],
       "additionalProperties": false
     }

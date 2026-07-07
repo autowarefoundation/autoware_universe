@@ -67,6 +67,13 @@
     new_traj_duration_time: 1.0
     new_traj_end_dist: 0.3
     mpc_converged_threshold_rps:  0.01 # threshold of mpc convergence check [rad/s]
+    stop_state_steer_hold_duration: 1.0  # [s] freeze steering in stop state, then allow MPC restore
+
+    # reference-confidence steer slew limit (post-MPC, outside QP)
+    enable_confidence_steer_slew_limit: true
+    reference_confidence_L_ahead_min: 0.5   # [m] low-confidence remaining spatial extent
+    reference_confidence_L_ahead_ref: 1.0   # [m] full-confidence remaining spatial extent
+    steer_slew_rate_min_rad_s: 0.02         # [rad/s] soft-hold rate at zero reference confidence
 
     # steer offset
     steering_offset:

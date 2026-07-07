@@ -15,6 +15,9 @@
         "vehicle_model": { "$ref": "sub/vehicle_model.json#/definitions/vehicle_model" },
         "lowpass_filter": { "$ref": "sub/lowpass_filter.json#/definitions/lowpass_filter" },
         "stop_state": { "$ref": "sub/stop_state.json#/definitions/stop_state" },
+        "reference_confidence_steer_slew": {
+          "$ref": "sub/reference_confidence_steer_slew.json#/definitions/reference_confidence_steer_slew"
+        },
         "steering_offset": { "$ref": "sub/steering_offset.json#/definitions/steering_offset" },
         "dynamics_model": { "$ref": "sub/dynamics_model.json#/definitions/dynamics_model" }
       },
@@ -26,6 +29,7 @@
         "vehicle_model",
         "lowpass_filter",
         "stop_state",
+        "reference_confidence_steer_slew",
         "steering_offset",
         "dynamics_model"
       ],

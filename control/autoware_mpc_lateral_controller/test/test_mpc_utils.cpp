@@ -228,6 +228,22 @@ TEST(TestMPC, LongTrajectoryCurvatureUsesPerPointThreePointFit)
   EXPECT_NEAR(std::abs(short_curvature.at(0)), std::abs(curvature.at(interior_idx)), 0.05);
 }
 
+TEST(TestMPC, CalcMPCTrajectoryRemainingArcLength)
+{
+  using autoware::motion::control::mpc_lateral_controller::MPCTrajectory;
+
+  MPCTrajectory traj;
+  traj.push_back(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+  traj.push_back(0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.5);
+  traj.push_back(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0);
+  traj.push_back(2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0);
+
+  EXPECT_NEAR(MPCUtils::calcMPCTrajectoryRemainingArcLength(traj, 0), 2.0, 1e-9);
+  EXPECT_NEAR(MPCUtils::calcMPCTrajectoryRemainingArcLength(traj, 1), 1.5, 1e-9);
+  EXPECT_NEAR(MPCUtils::calcMPCTrajectoryRemainingArcLength(traj, 2), 1.0, 1e-9);
+  EXPECT_EQ(MPCUtils::calcMPCTrajectoryRemainingArcLength(traj, 3), 0.0);
+}
+
 TEST(TestMPC, TemporalYawAndCurvatureStayStableForShortSegments)
 {
   using autoware::motion::control::mpc_lateral_controller::MPCTrajectory;
