@@ -5,14 +5,14 @@ surround_obstacle_checker_node:
       description: Enable to check surrounding obstacle
   object_types:
     type: string_array
-    default_value: [unknown, car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
+    default_value: [unknown, car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, over_drivable, under_drivable]
   __map_object_types:
     enable_check:
       type: bool
       description: Enable to check surrounding obstacle
   obstacle_types:
     type: string_array
-    default_value: [pointcloud, unknown, car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
+    default_value: [pointcloud, unknown, car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, over_drivable, under_drivable]
   __map_obstacle_types:
     surround_check_front_distance:
       type: double
@@ -54,4 +54,4 @@ surround_obstacle_checker_node:
     type: string
     description: Select the label for debug footprint
     validation:
-      one_of<>: [[pointcloud, unknown, car, truck, bus, trailer, motorcycle, bicycle, pedestrian]]
+      one_of<>: [[pointcloud, unknown, car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, over_drivable, under_drivable]]
