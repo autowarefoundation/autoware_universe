@@ -21,12 +21,13 @@
 
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::diagnostic_graph_aggregator
 {
 
-DrivingModeMapping::DrivingModeMapping(rclcpp::Node & node, const Graph & graph)
+DrivingModeMapping::DrivingModeMapping(autoware::agnocast_wrapper::Node & node, const Graph & graph)
 {
   std::unordered_map<std::string, BaseUnit *> path_to_unit;
   for (const auto & unit : graph.nodes()) {
@@ -54,16 +55,18 @@ DrivingModeMapping::DrivingModeMapping(rclcpp::Node & node, const Graph & graph)
 
 void DrivingModeMapping::update(const rclcpp::Time & stamp) const
 {
-  DrivingModeFlag message;
+  auto available_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_available_);
+  auto continuable_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_continuable_);
+  available_msg->stamp = stamp;
   for (const auto & [mode, unit] : mode_to_unit_) {
     tier4_system_msgs::msg::DrivingModeFlagItem item;
     item.mode = mode;
     item.flag = unit->level() == DiagnosticStatus::OK;
-    message.items.push_back(item);
+    available_msg->items.push_back(item);
   }
-  message.stamp = stamp;
-  pub_available_->publish(message);
-  pub_continuable_->publish(message);
+  *continuable_msg = *available_msg;
+  pub_available_->publish(std::move(available_msg));
+  pub_continuable_->publish(std::move(continuable_msg));
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator
