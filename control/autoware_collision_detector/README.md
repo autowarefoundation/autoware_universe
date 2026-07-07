@@ -31,6 +31,9 @@ Check that `collision_detector` receives no ground pointcloud, dynamic objects.
 
 1. Initial Recognition and Exclusion:
    - The system checks if a newly recognized object's classification is listed in `nearby_object_type_filters`.
+   - Supported labels follow `autoware_perception_msgs/msg/ObjectClassification.msg`:
+     `UNKNOWN`, `CAR`, `TRUCK`, `BUS`, `TRAILER`, `MOTORCYCLE`, `BICYCLE`, `PEDESTRIAN`,
+     `ANIMAL`, `HAZARD`, `OVER_DRIVABLE`, and `UNDER_DRIVABLE`.
    - If so, and the object is within the `nearby_filter_radius`, it is marked for exclusion.
 
 2. New Object Determination:
@@ -81,7 +84,7 @@ To stop publishing the `ERROR` diagnostic, no collision must be detected for at 
 | `collision_distance`                  | `double`                | Distance threshold at which an object is considered a collision. [m]                                                      | 0.15                             |
 | `nearby_filter_radius`                | `double`                | Distance range for filtering objects. Objects within this radius are considered. [m]                                      | 5.0                              |
 | `keep_ignoring_time`                  | `double`                | Time to keep filtering objects that first appeared in the vicinity [sec]                                                  | 10.0                             |
-| `nearby_object_type_filters`          | `object of bool values` | Specifies which object types to filter. Only objects with `true` value will be filtered.                                  | `{unknown: true, others: false}` |
+| `nearby_object_type_filters`          | `object of bool values` | Specifies which object types to filter. Supported keys are `filter_unknown`, `filter_car`, `filter_truck`, `filter_bus`, `filter_trailer`, `filter_motorcycle`, `filter_bicycle`, `filter_pedestrian`, `filter_animal`, `filter_hazard`, `filter_over_drivable`, and `filter_under_drivable`. Only objects with `true` value will be filtered. | `{filter_unknown: true, filter_animal: true, filter_hazard: true, filter_over_drivable: true, filter_under_drivable: true, others: false}` |
 | `ignore_behind_rear_axle`             | `bool`                  | If true, collisions detected behind the rear axle of the ego vehicle are ignored                                          | `true`                           |
 | `time_buffer.on`                      | `double`                | [s] minimum consecutive detection time before triggering the ERROR diagnostic                                             | 0.2                              |
 | `time_buffer.off`                     | `double`                | [s] minimum consecutive time without collision detection (including the hysteresis) before releasing the ERROR diagnostic | 5.0                              |
