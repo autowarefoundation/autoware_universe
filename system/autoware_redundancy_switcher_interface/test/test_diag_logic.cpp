@@ -26,6 +26,11 @@ static std::optional<Annotated<SwitcherSignals>> make_switcher(
   return Annotated<SwitcherSignals>{{stable, interrupted, faulted}, annotation};
 }
 
+static std::optional<Annotated<AutowareReady>> make_autoware_ready(AutowareReady value)
+{
+  return Annotated<AutowareReady>{value, "test"};
+}
+
 static constexpr double kTimeout = 1000.0;  // ms
 static constexpr double kNow = 5000.0;      // arbitrary base time (ms)
 
@@ -103,6 +108,16 @@ TEST(DiagLogicTest, Transitional_JustOverTimeout_IsError)
   EXPECT_EQ(r.level, DiagLevel::Error);
   ASSERT_TRUE(r.transitional_start_ms.has_value());
   EXPECT_DOUBLE_EQ(*r.transitional_start_ms, start);
+}
+
+TEST(DiagLogicTest, Transitional_JustOverTimeout_WithAutowareNotReady_IsOk)
+{
+  const double start = kNow - kTimeout - 1.0;
+  const auto r = compute_switcher_level(
+    make_switcher(false, false, false), kNow, start, kTimeout,
+    make_autoware_ready(AutowareReady::False));
+  EXPECT_EQ(r.level, DiagLevel::Ok);
+  EXPECT_FALSE(r.transitional_start_ms.has_value());
 }
 
 // ── Timer cleared on non-transitional state ────────────────────────────────

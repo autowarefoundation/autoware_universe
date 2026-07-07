@@ -71,7 +71,8 @@ void DiagAdapter::update_status(diagnostic_updater::DiagnosticStatusWrapper & st
   {
     std::lock_guard<std::mutex> lock(transition_mutex_);
     const auto result = compute_switcher_level(
-      snap.switcher, now_ms, transitional_start_ms_, transitional_timeout_milli_);
+      snap.switcher, now_ms, transitional_start_ms_, transitional_timeout_milli_,
+      snap.autoware_ready);
     switcher_level = static_cast<uint8_t>(result.level);
     switcher_msg = result.message;
     transitional_start_ms_ = result.transitional_start_ms;
