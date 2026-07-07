@@ -1,0 +1,89 @@
+control_validator:
+  diag_error_count_threshold:
+    type: int
+    default_value: 0
+    description: If the number of consecutive invalid predicted_path exceeds this threshold, the Diag will be set to ERROR.
+
+  display_on_terminal:
+    type: bool
+    default_value: false
+    description: Show error message on terminal.
+
+  acc_lpf_gain:
+    type: double
+    default_value: 0.97
+    description: Low-pass filter gain for the acceleration validator.
+
+  vel_lpf_gain:
+    type: double
+    default_value: 0.9
+    description: Low-pass filter gain for filtering vehicle and target velocity.
+
+  hold_velocity_error_until_stop:
+    type: bool
+    default_value: true
+    description: If true, a velocity error is held until the vehicle stops.
+
+  thresholds:
+    max_distance_deviation:
+      type: double
+      default_value: 1.0
+      description: Invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m].
+    lateral_jerk:
+      type: double
+      default_value: 10.0
+      description: Invalid threshold of the lateral jerk for steering rate validation [m/s^3].
+    acc_error_offset:
+      type: double
+      default_value: 0.8
+      description: Offset threshold to validate the vehicle acceleration.
+    acc_error_scale:
+      type: double
+      default_value: 0.2
+      description: Scale threshold to validate the vehicle acceleration.
+    rolling_back_velocity:
+      type: double
+      default_value: 0.5
+      description: Threshold velocity to validate the vehicle velocity [m/s].
+    over_velocity_offset:
+      type: double
+      default_value: 2.0
+      description: Threshold velocity offset to validate the vehicle velocity [m/s].
+    over_velocity_ratio:
+      type: double
+      default_value: 0.2
+      description: Threshold ratio to validate the vehicle velocity.
+    overrun_stop_point_dist:
+      type: double
+      default_value: 0.8
+      description: Threshold distance to overrun stop point [m].
+    will_overrun_stop_point_dist:
+      type: double
+      default_value: 1.0
+      description: Threshold distance to predict overrun of the stop point [m].
+    assumed_limit_acc:
+      type: double
+      default_value: 5.0
+      description: Assumed acceleration for over run estimation [m/s^2].
+    assumed_delay_time:
+      type: double
+      default_value: 0.2
+      description: Assumed delay for over run estimation [s].
+    nominal_latency:
+      type: double
+      default_value: 0.01
+      description: Threshold of the control latency [s].
+    yaw_deviation_error:
+      type: double
+      default_value: 1.0
+      description: Threshold angle to validate the vehicle yaw relative to the nearest trajectory yaw [rad].
+    yaw_deviation_warn:
+      type: double
+      default_value: 0.5
+      description: Threshold angle to trigger a WARN diagnostic for the vehicle yaw [rad].
+
+  over_velocity:
+    vel_lpf_gain:
+      type: double
+      default_value: 0.985
+      description: Low-pass filter gain for filtering vehicle and target velocity in the over velocity check.
