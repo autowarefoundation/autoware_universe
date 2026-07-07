@@ -67,11 +67,9 @@ private:
   sub_route_ =
     create_polling_subscriber<LaneletRoute>("~/input/route", rclcpp::QoS{1}.transient_local());
   AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  sub_reference_trajectory_ =
-    create_polling_subscriber<Trajectory>("~/input/reference_trajectory");
+  sub_reference_trajectory_ = create_polling_subscriber<Trajectory>("~/input/reference_trajectory");
   AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  sub_predicted_trajectory_ =
-    create_polling_subscriber<Trajectory>("~/input/predicted_trajectory");
+  sub_predicted_trajectory_ = create_polling_subscriber<Trajectory>("~/input/predicted_trajectory");
   AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_adapi_v1_msgs::msg::OperationModeState)
   sub_operation_mode_ = create_polling_subscriber<autoware_adapi_v1_msgs::msg::OperationModeState>(
     "/api/operation_mode/state");
