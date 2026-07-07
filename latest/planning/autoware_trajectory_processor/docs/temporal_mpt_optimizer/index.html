@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/docs/continuous_jerk_filter/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/temporal_mpt_optimizer/">
       
       
-        <link rel="prev" href="../../">
+        <link rel="prev" href="../qp_smoother/">
       
       
-        <link rel="next" href="../kinematic_feasibility_enforcer/">
+        <link rel="next" href="../trajectory_optimizer_specification/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Continuous Jerk Filter - Autoware Universe Documentation</title>
+        <title>Temporal MPT Optimizer - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#continuous-jerk-filter" class="md-skip">
+        <a href="#temporal-mpt-optimizer" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Continuous Jerk Filter
+              Temporal MPT Optimizer
             
           </span>
         </div>
@@ -14711,7 +14711,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kinematic_feasibility_enforcer" class="md-nav__link">
+      <a href="../../../autoware_trajectory_optimizer/docs/kinematic_feasibility_enforcer" class="md-nav__link">
         
   
   
@@ -14739,7 +14739,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../qp_smoother" class="md-nav__link">
+      <a href="../../../autoware_trajectory_optimizer/docs/qp_smoother" class="md-nav__link">
         
   
   
@@ -14851,7 +14851,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../../autoware_trajectory_optimizer" class="md-nav__link">
         
   
   
@@ -14935,7 +14935,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../../../autoware_trajectory_optimizer/docs/continuous_jerk_filter" class="md-nav__link">
         
   
   
@@ -22771,33 +22771,33 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-overview-introduction" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Overview Introduction
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="1. Overview Introduction">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Features
+        Overview
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#design-philosophy" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#role-in-the-plugin-pipeline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Design Philosophy
+        Role in the plugin pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Role in the plugin pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-each-replaced-plugin-contributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What each replaced plugin contributes
       
     </span>
   </a>
@@ -22810,22 +22810,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-mathematical-formulation" class="md-nav__link">
+  <a href="#horizon-codegen" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Mathematical Formulation
+        Horizon (codegen)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="2. Mathematical Formulation">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mpc-formulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MPC formulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MPC formulation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#21-optimization-variables" class="md-nav__link">
+  <a href="#vehicle-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.1 Optimization Variables
+        Vehicle model
       
     </span>
   </a>
@@ -22833,10 +22844,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#22-objective-function" class="md-nav__link">
+  <a href="#cost" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.2 Objective Function
+        Cost
       
     </span>
   </a>
@@ -22844,21 +22855,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#23-constraints" class="md-nav__link">
+  <a href="#constraints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.3 Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#24-stop-point-detection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.4 Stop Point Detection
+        Constraints
       
     </span>
   </a>
@@ -22871,99 +22871,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-class-structures" class="md-nav__link">
+  <a href="#reference-construction" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Class Structures
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="3. Class Structures">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#31-continuousjerksmootherparams" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.1 ContinuousJerkSmootherParams
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#32-continuousjerksmoother-class" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3.2 ContinuousJerkSmoother Class
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-implementation-details" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Implementation Details
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4. Implementation Details">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#41-qp-problem-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.1 QP Problem Setup
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#42-variable-indexing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.2 Variable Indexing
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#43-error-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4.3 Error Handling
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-usage-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Usage Example
+        Reference construction
       
     </span>
   </a>
@@ -22971,10 +22882,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-integration-with-trajectory-optimizer" class="md-nav__link">
+  <a href="#enabling-the-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Integration with Trajectory Optimizer
+        Enabling the plugin
       
     </span>
   </a>
@@ -22982,10 +22893,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-performance-considerations" class="md-nav__link">
+  <a href="#build-requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. Performance Considerations
+        Build requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-visualization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug visualization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-with-spatial-mpt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison with spatial MPT
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known limitations
       
     </span>
   </a>
@@ -23012,199 +22967,239 @@
   
 
 
-<div><h1 id="continuous-jerk-filter">Continuous Jerk Filter<a class="headerlink" href="#continuous-jerk-filter" title="Permanent link">#</a></h1>
-<h2 id="1-overview-introduction">1. Overview Introduction<a class="headerlink" href="#1-overview-introduction" title="Permanent link">#</a></h2>
-<p>The <strong>Continuous Jerk Smoother</strong> provides jerk-constrained velocity smoothing for neural network output trajectories, ensuring kinematic feasibility while maintaining smooth motion profiles.</p>
-<h3 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">#</a></h3>
+<div><h1 id="temporal-mpt-optimizer">Temporal MPT Optimizer<a class="headerlink" href="#temporal-mpt-optimizer" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>The <strong>TrajectoryTemporalMPTOptimizer</strong> plugin refines the incoming trajectory using a fixed-horizon <strong>acados</strong> MPC for a temporal kinematic bicycle model. Unlike the spatial <a href="../mpt_optimizer/">MPT optimizer</a> (QP with corridor bounds from <code>autoware_path_optimizer</code>), this plugin tracks a <strong>time-ordered</strong> reference sequence: stage <code>k</code> uses trajectory point <code>start_idx + k</code> without arc-length resampling.</p>
+<p>States are <span class="arithmatex">\((x, y, \psi, v)\)</span>; controls are longitudinal acceleration and steering command <span class="arithmatex">\((a, \delta)\)</span>. The solver is generated at build time from <code>src/acados_mpt/generators/path_tracking_mpc_temporal.py</code>.</p>
+<h2 id="role-in-the-plugin-pipeline">Role in the plugin pipeline<a class="headerlink" href="#role-in-the-plugin-pipeline" title="Permanent link">#</a></h2>
+<p>The default trajectory optimizer pipeline runs many plugins in sequence after basic cleanup:</p>
+<p><code>yaml
+plugin_names:
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"</code></p>
+<p><strong>TrajectoryTemporalMPTOptimizer</strong> is intended to replace that entire post-<code>TrajectoryPointFixer</code> chain with a single joint optimization step. When enabled, a minimal pipeline is:</p>
+<p>```yaml
+plugin_names:
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"</p>
+<p>use_temporal_mpt_optimizer: true
+```</p>
+<p>Turn off the plugins it supersedes (<code>use_qp_smoother</code>, <code>use_velocity_optimizer</code>, <code>use_eb_smoother</code>, <code>use_akima_spline_interpolation</code>, <code>use_kinematic_feasibility_enforcer</code>, <code>use_mpt_optimizer</code>, <code>use_trajectory_extender</code>) so they are not loaded in parallel.</p>
+<h3 id="what-each-replaced-plugin-contributes">What each replaced plugin contributes<a class="headerlink" href="#what-each-replaced-plugin-contributes" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Replaced plugin</th>
+<th>Classical role</th>
+<th>Absorbed by temporal MPC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>TrajectoryKinematicFeasibilityEnforcer</strong></td>
+<td>Clamps yaw change per segment to Ackermann and yaw-rate limits</td>
+<td>Bicycle dynamics with bounded steering <span class="arithmatex">\(\delta\)</span> and lateral-acceleration constraint <span class="arithmatex">\(a\_\mathrm{lat} = v^2 K\)</span></td>
+</tr>
+<tr>
+<td><strong>TrajectoryQPSmoother</strong></td>
+<td>Smooths <span class="arithmatex">\((x, y)\)</span> via QP curvature penalty while tracking the reference</td>
+<td>Running cost on state tracking <span class="arithmatex">\((x, y, \psi, v)\)</span> plus control penalty on <span class="arithmatex">\((a, \delta)\)</span></td>
+</tr>
+<tr>
+<td><strong>TrajectoryVelocityOptimizer</strong></td>
+<td>Jerk-filtered longitudinal velocity profile</td>
+<td>Speed is a state; longitudinal acceleration is a control with box constraints</td>
+</tr>
+<tr>
+<td><strong>TrajectoryEBSmootherOptimizer</strong></td>
+<td>Elastic-band geometric path smoothing</td>
+<td>Implicit in jointly optimized <span class="arithmatex">\((x, y)\)</span> trajectory over the MPC horizon</td>
+</tr>
+<tr>
+<td><strong>TrajectorySplineSmoother</strong></td>
+<td>Akima spline interpolation of path geometry</td>
+<td>Not needed when MPC directly outputs a smooth state trajectory</td>
+</tr>
+<tr>
+<td><strong>TrajectoryMPTOptimizer</strong></td>
+<td>Spatial QP-MPT with adaptive corridor bounds</td>
+<td>Replaced by this temporal acados solver (different formulation, no corridor bounds)</td>
+</tr>
+<tr>
+<td><strong>TrajectoryExtender</strong></td>
+<td>Backward extension from past ego odometry</td>
+<td><strong>Not</strong> performed by temporal MPT; keep only if backward extension is still required</td>
+</tr>
+</tbody>
+</table>
+<p>The incoming message from upstream planning is treated as the MPC reference. The plugin overwrites at most the first <span class="arithmatex">\(N+1\)</span> points (8.0 s at 0.1 s spacing) with the optimized state and control trajectory.</p>
+<h2 id="horizon-codegen">Horizon (codegen)<a class="headerlink" href="#horizon-codegen" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Horizon length <span class="arithmatex">\(T_f\)</span></td>
+<td>8.0 s</td>
+</tr>
+<tr>
+<td>Stages <span class="arithmatex">\(N\)</span></td>
+<td>80</td>
+</tr>
+<tr>
+<td>Time step <span class="arithmatex">\(\Delta t\)</span></td>
+<td>0.1 s (<span class="arithmatex">\(T_f / N\)</span>)</td>
+</tr>
+</tbody>
+</table>
+<p>These values are fixed in the Python OCP definition; changing them requires regenerating the acados solver and rebuilding.</p>
+<h2 id="mpc-formulation">MPC formulation<a class="headerlink" href="#mpc-formulation" title="Permanent link">#</a></h2>
+<h3 id="vehicle-model">Vehicle model<a class="headerlink" href="#vehicle-model" title="Permanent link">#</a></h3>
+<p>Kinematic bicycle in the world frame (<code>generators/bicycle_model_temporal.py</code>):</p>
 <ul>
-<li><strong>Jerk-constrained optimization</strong>: Enforces jerk limits for comfortable passenger experience</li>
-<li><strong>Stop point detection</strong>: Automatically detects and handles zero-velocity points in trajectories</li>
-<li><strong>Reference tracking</strong>: Tracks input trajectory velocities and accelerations as soft constraints</li>
-<li><strong>Hard constraint enforcement</strong>: Enforces velocity upper bounds (including lateral acceleration limits)</li>
-<li><strong>QP-based formulation</strong>: Uses quadratic programming for efficient optimization</li>
+<li>States: <span class="arithmatex">\(x, y, \psi, v\)</span></li>
+<li>Controls: longitudinal acceleration <span class="arithmatex">\(a\)</span>, front steering <span class="arithmatex">\(\delta\)</span> [rad]</li>
+<li>Parameters: <span class="arithmatex">\(l_f, l_r\)</span> from <code>vehicle_info</code> via <code>cg_distance_from_rear_axle_ratio</code></li>
 </ul>
-<h3 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">#</a></h3>
-<p>The smoother is adapted from <code>JerkFilteredSmoother</code> but specifically designed for <strong>neural network output paths</strong>. It optimizes velocity profiles while respecting acceleration and jerk constraints, making it suitable for autonomous driving applications where smooth motion is critical.</p>
-<h2 id="2-mathematical-formulation">2. Mathematical Formulation<a class="headerlink" href="#2-mathematical-formulation" title="Permanent link">#</a></h2>
-<h3 id="21-optimization-variables">2.1 Optimization Variables<a class="headerlink" href="#21-optimization-variables" title="Permanent link">#</a></h3>
-<p>The optimization uses the following variables for N trajectory points:</p>
-<div class="arithmatex">\[
-x = \begin{bmatrix}
-  b[0], b[1], ..., b[N-1], \\
-  a[0], a[1], ..., a[N-1], \\
-  \delta[0], ..., \delta[N-1], \\
-  \sigma[0], \sigma[1], ..., \sigma[N-1], \\
-  \gamma[0], \gamma[1], ..., \gamma[N-1]
-\end{bmatrix}
-\]</div>
-<p>Where:</p>
+<h3 id="cost">Cost<a class="headerlink" href="#cost" title="Permanent link">#</a></h3>
+<p>LINEAR*LS tracking of the reference against <span class="arithmatex">\([x, y, \psi, v, a*\mathrm{ref}, \delta*\mathrm{ref}]\)</span> with weights from <code>path_tracking_mpc_temporal.py</code> (<span class="arithmatex">\(Q\)</span>, <span class="arithmatex">\(R\)</span>, terminal <span class="arithmatex">\(Q_e\)</span>). Control references <span class="arithmatex">\(a*\mathrm{ref}\)</span> and <span class="arithmatex">\(\delta\_\mathrm{ref}\)</span> are set to zero at runtime.</p>
+<h3 id="constraints">Constraints<a class="headerlink" href="#constraints" title="Permanent link">#</a></h3>
 <ul>
-<li><span class="arithmatex">\(b[i] = v[i]^2\)</span> (velocity squared)</li>
-<li><span class="arithmatex">\(a[i]\)</span> = acceleration at point i</li>
-<li><span class="arithmatex">\(\delta[i]\)</span>, <span class="arithmatex">\(\sigma[i]\)</span>, <span class="arithmatex">\(\gamma[i]\)</span> = slack variables for soft constraints</li>
+<li>Longitudinal acceleration and steering command box limits</li>
+<li>Nonlinear lateral-acceleration bound: <span class="arithmatex">\(|a\_\mathrm{lat}| \le 1.2\,\mathrm{m/s^2}\)</span></li>
+<li>Fixed initial state at stage 0</li>
 </ul>
-<h3 id="22-objective-function">2.2 Objective Function<a class="headerlink" href="#22-objective-function" title="Permanent link">#</a></h3>
-<p>The optimization minimizes a weighted sum of several objectives:</p>
-<h4 id="221-jerk-minimization">2.2.1 Jerk Minimization<a class="headerlink" href="#221-jerk-minimization" title="Permanent link">#</a></h4>
-<p>Minimizes the squared jerk along the trajectory:</p>
-<div class="arithmatex">\[
-J_{jerk} = \sum_{i} w_{jerk} \cdot \left(\frac{a[i+1] - a[i]}{\Delta s} \cdot v_{ref}[i]\right)^2 \cdot \Delta s
-\]</div>
-<p>Where:</p>
-<ul>
-<li><span class="arithmatex">\(w_{jerk}\)</span> = jerk weight parameter</li>
-<li><span class="arithmatex">\(\Delta s\)</span> = distance between consecutive points</li>
-<li><span class="arithmatex">\(v_{ref}[i]\)</span> = reference velocity at segment i</li>
-</ul>
-<h4 id="222-velocity-tracking">2.2.2 Velocity Tracking<a class="headerlink" href="#222-velocity-tracking" title="Permanent link">#</a></h4>
-<p>Tracks reference velocities from input trajectory:</p>
-<div class="arithmatex">\[
-J_{vel} = \sum_{i} w_{vel} \cdot (b[i] - v_{ref}[i]^2)^2
-\]</div>
-<h4 id="223-acceleration-tracking">2.2.3 Acceleration Tracking<a class="headerlink" href="#223-acceleration-tracking" title="Permanent link">#</a></h4>
-<p>Tracks reference accelerations from input trajectory:</p>
-<div class="arithmatex">\[
-J_{accel} = \sum_{i} w_{accel} \cdot (a[i] - a_{ref}[i])^2
-\]</div>
-<h4 id="224-slack-variable-penalties">2.2.4 Slack Variable Penalties<a class="headerlink" href="#224-slack-variable-penalties" title="Permanent link">#</a></h4>
-<p>Penalizes constraint violations:</p>
-<div class="arithmatex">\[
-J_{slack} = \sum_{i} (w_v \cdot \delta[i]^2 + w_a \cdot \sigma[i]^2 + w_j \cdot \gamma[i]^2)
-\]</div>
-<h3 id="23-constraints">2.3 Constraints<a class="headerlink" href="#23-constraints" title="Permanent link">#</a></h3>
-<h4 id="231-velocity-upper-bound-soft">2.3.1 Velocity Upper Bound (Soft)<a class="headerlink" href="#231-velocity-upper-bound-soft" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-0 \leq b[i] - \delta[i] \leq v_{max}[i]^2
-\]</div>
-<p>Where <span class="arithmatex">\(<span class="arithmatex">\(v_{max}[i]\)</span>\)</span> includes lateral acceleration limits.</p>
-<h4 id="232-acceleration-limits-soft">2.3.2 Acceleration Limits (Soft)<a class="headerlink" href="#232-acceleration-limits-soft" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-a_{min} \leq a[i] - \sigma[i] \leq a_{max}
-\]</div>
-<h4 id="233-jerk-limits-soft">2.3.3 Jerk Limits (Soft)<a class="headerlink" href="#233-jerk-limits-soft" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-j_{min} \cdot \Delta s \leq (a[i+1] - a[i]) \cdot v_{ref}[i] - \gamma[i] \cdot \Delta s \leq j_{max} \cdot \Delta s
-\]</div>
-<h4 id="234-dynamics-constraint-hard">2.3.4 Dynamics Constraint (Hard)<a class="headerlink" href="#234-dynamics-constraint-hard" title="Permanent link">#</a></h4>
-<p>Relates velocity squared to acceleration:</p>
-<div class="arithmatex">\[
-\frac{b[i+1] - b[i]}{\Delta s} = 2 \cdot a[i]
-\]</div>
-<p>Derived from kinematic relation: <span class="arithmatex">\(\frac{d(v^2)}{ds} = 2a\)</span></p>
-<h4 id="235-initial-conditions-hard">2.3.5 Initial Conditions (Hard)<a class="headerlink" href="#235-initial-conditions-hard" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-b[0] = v_0^2
-\]</div>
-<div class="arithmatex">\[
-a[0] = a_0
-\]</div>
-<h3 id="24-stop-point-detection">2.4 Stop Point Detection<a class="headerlink" href="#24-stop-point-detection" title="Permanent link">#</a></h3>
-<p>The optimizer automatically detects stop points (zero velocity) and:</p>
+<h2 id="reference-construction">Reference construction<a class="headerlink" href="#reference-construction" title="Permanent link">#</a></h2>
+<p>Horizon references are built in <code>trajectory_temporal_mpt_optimizer_utils</code> before each solve:</p>
 <ol>
-<li>Optimizes only up to the stop point</li>
-<li>Sets velocities to zero for points after the stop</li>
-<li>Reduces computational complexity</li>
+<li><strong>Initial state</strong> <span class="arithmatex">\(x_0\)</span> from the first trajectory point <span class="arithmatex">\((x, y, \psi, v)\)</span>.</li>
+<li><strong>Closest-point start</strong> <code>start_idx</code>: index whose XY position is nearest <span class="arithmatex">\(x_0\)</span> (typically 0 when the ego is at <code>traj_points[0]</code>).</li>
+<li><strong>Horizon sampling</strong>: stage <span class="arithmatex">\(k\)</span> uses point <code>min(start_idx + k, n_pts - 1)</code> — a time-ordered discrete sequence, not arc-length resampling.</li>
+<li><strong>Yaw bias</strong>: reference yaw is shifted by an integer multiple of <span class="arithmatex">\(2\pi\)</span> so heading cost aligns with <span class="arithmatex">\(x_0.\psi\)</span> when planner yaw branches differ.</li>
+<li><strong>Ego-centered coordinates</strong>: all position references and the state passed to the solver are translated by <span class="arithmatex">\(-x_0[:2]\)</span>; the solution is shifted back before writing to the output message.</li>
 </ol>
-<h2 id="3-class-structures">3. Class Structures<a class="headerlink" href="#3-class-structures" title="Permanent link">#</a></h2>
-<h3 id="31-continuousjerksmootherparams">3.1 <code>ContinuousJerkSmootherParams</code><a class="headerlink" href="#31-continuousjerksmootherparams" title="Permanent link">#</a></h3>
-<p>Configuration structure containing all tunable parameters:</p>
-<p>```cpp
-struct ContinuousJerkSmootherParams {
-  // QP optimization weights
-  double jerk_weight{10.0};                // Weight for jerk minimization
-  double over_v_weight{10000.0};           // Weight for velocity limit violation
-  double over_a_weight{5000.0};            // Weight for acceleration limit violation
-  double over_j_weight{200.0};             // Weight for jerk limit violation
-  double velocity_tracking_weight{100.0};  // Weight for tracking reference velocity
-  double accel_tracking_weight{10.0};      // Weight for tracking reference acceleration</p>
-<p>// Kinematic limits
-  double max_accel{2.0};   // Maximum acceleration [m/s²]
-  double min_decel{-3.0};  // Minimum deceleration [m/s²]
-  double max_jerk{1.5};    // Maximum jerk [m/s³]
-  double min_jerk{-1.5};   // Minimum jerk [m/s³]
-};
-```</p>
-<h3 id="32-continuousjerksmoother-class">3.2 <code>ContinuousJerkSmoother</code> Class<a class="headerlink" href="#32-continuousjerksmoother-class" title="Permanent link">#</a></h3>
-<h4 id="321-public-interface">3.2.1 Public Interface<a class="headerlink" href="#321-public-interface" title="Permanent link">#</a></h4>
-<p>```cpp
-class ContinuousJerkSmoother {
-public:
-  // Constructor
-  explicit ContinuousJerkSmoother(const ContinuousJerkSmootherParams &amp; params);</p>
-<p>// Main smoothing function
-  bool apply(
-    const double v0,                    // Initial velocity [m/s]
-    const double a0,                    // Initial acceleration [m/s²]
-    const TrajectoryPoints &amp; input,     // Input trajectory points
-    TrajectoryPoints &amp; output,          // Output smoothed trajectory points
-    const std::vector<double> &amp; max_velocity_per_point = {}  // Per-point velocity upper bounds
-  );</double></p>
-<p>// Parameter management
-  void set_params(const ContinuousJerkSmootherParams &amp; params);
-  ContinuousJerkSmootherParams get_params() const;</p>
-<p>~ContinuousJerkSmoother() = default;
-};
-```</p>
-<h2 id="4-implementation-details">4. Implementation Details<a class="headerlink" href="#4-implementation-details" title="Permanent link">#</a></h2>
-<h3 id="41-qp-problem-setup">4.1 QP Problem Setup<a class="headerlink" href="#41-qp-problem-setup" title="Permanent link">#</a></h3>
-<p>The optimization problem is formulated as:</p>
-<div class="arithmatex">\[
-\begin{align}
-\text{minimize:} &amp; \quad \frac{1}{2} x^T P x + q^T x \\
-\text{subject to:} &amp; \quad l \leq Ax \leq u
-\end{align}
-\]</div>
-<p>Where:</p>
-<ul>
-<li><span class="arithmatex">\(P\)</span> = Hessian matrix (quadratic terms)</li>
-<li><span class="arithmatex">\(q\)</span> = Linear term vector</li>
-<li><span class="arithmatex">\(A\)</span> = Constraint matrix</li>
-<li><span class="arithmatex">\(l\)</span>, <span class="arithmatex">\(<span class="arithmatex">\(u\)</span>\)</span> = Lower and upper bounds</li>
-</ul>
-<h3 id="42-variable-indexing">4.2 Variable Indexing<a class="headerlink" href="#42-variable-indexing" title="Permanent link">#</a></h3>
-<p><code>cpp
-IDX_B0 = 0;      // Start of b variables (velocity squared)
-IDX_A0 = N;      // Start of a variables (acceleration)
-IDX_DELTA0 = 2N; // Start of delta variables (velocity slack)
-IDX_SIGMA0 = 3N; // Start of sigma variables (acceleration slack)
-IDX_GAMMA0 = 4N; // Start of gamma variables (jerk slack)</code></p>
-<h3 id="43-error-handling">4.3 Error Handling<a class="headerlink" href="#43-error-handling" title="Permanent link">#</a></h3>
-<ul>
-<li>Returns <code>false</code> if optimization fails</li>
-<li>Logs warnings for empty trajectories or optimization failures</li>
-<li>Handles NaN values in optimization results</li>
-<li>Provides fallback behavior for edge cases</li>
-</ul>
-<h2 id="5-usage-example">5. Usage Example<a class="headerlink" href="#5-usage-example" title="Permanent link">#</a></h2>
-<p>```cpp
-// Create smoother with default parameters
-ContinuousJerkSmootherParams params;
-params.max_accel = 2.5;
-params.min_decel = -4.0;
-params.max_jerk = 2.0;
-params.min_jerk = -2.0;</p>
-<p>ContinuousJerkSmoother smoother(params);</p>
-<p>// Apply smoothing
-double v0 = 1.0;  // Initial velocity [m/s]
-double a0 = 0.0;  // Initial acceleration [m/s²]
-TrajectoryPoints input_trajectory = ...;
-TrajectoryPoints output_trajectory;</p>
-<p>std::vector<double> max_velocities(input_trajectory.size(), 10.0);  // 10 m/s limit</double></p>
-<p>bool success = smoother.apply(v0, a0, input_trajectory, output_trajectory, max_velocities);
-```</p>
-<h2 id="6-integration-with-trajectory-optimizer">6. Integration with Trajectory Optimizer<a class="headerlink" href="#6-integration-with-trajectory-optimizer" title="Permanent link">#</a></h2>
-<p>The continuous jerk smoother is typically used within the trajectory velocity optimizer pipeline:</p>
+<p>Unit tests for this logic live in <code>tests/test_trajectory_temporal_mpt_optimizer_utils.cpp</code>.</p>
+<h2 id="enabling-the-plugin">Enabling the plugin<a class="headerlink" href="#enabling-the-plugin" title="Permanent link">#</a></h2>
+<p>Two steps are required:</p>
 <ol>
-<li><strong>Input</strong>: Raw trajectory with reference velocities</li>
-<li><strong>Preprocessing</strong>: Calculate per-point velocity limits (considering lateral acceleration)</li>
-<li><strong>Optimization</strong>: Apply continuous jerk smoothing</li>
-<li><strong>Output</strong>: Kinematically feasible trajectory with smooth velocity profile</li>
+<li>Add the plugin class to <code>plugin_names</code> in <code>config/trajectory_optimizer.param.yaml</code> (position sets when it runs relative to other plugins).</li>
+<li>Set <code>use_temporal_mpt_optimizer: true</code> (runtime gate inside <code>optimize_trajectory()</code>).</li>
 </ol>
-<h2 id="7-performance-considerations">7. Performance Considerations<a class="headerlink" href="#7-performance-considerations" title="Permanent link">#</a></h2>
+<p>To disable completely, remove the class from <code>plugin_names</code>. Setting only <code>use_temporal_mpt_optimizer: false</code> skips optimization but still loads and initializes acados if the plugin remains in the list.</p>
+<p>Plugin-specific parameters live in <code>config/plugins/trajectory_temporal_mpt_optimizer.param.yaml</code> (loaded from <code>launch/trajectory_optimizer.launch.xml</code>).</p>
+<h2 id="build-requirements">Build requirements<a class="headerlink" href="#build-requirements" title="Permanent link">#</a></h2>
 <ul>
-<li><strong>Computational Complexity</strong>: <span class="arithmatex">\(<span class="arithmatex">\(O(N^3)\)</span>\)</span> for QP solving, but N is typically small (≤ 100 points)</li>
-<li><strong>Memory Usage</strong>: Matrices of size <span class="arithmatex">\(<span class="arithmatex">\((5N \times 5N)\)</span>\)</span> for P and <span class="arithmatex">\(<span class="arithmatex">\((4N \times 5N)\)</span>\)</span> for A</li>
-<li><strong>Real-time Feasibility</strong>: Suitable for real-time operation with typical trajectory lengths</li>
+<li><a href="https://github.com/acados/acados">acados</a> installed and <code>ACADOS_SOURCE_DIR</code> set (see Autoware ansible <code>setup_acados</code> role).</li>
+<li>At configure/build time, Python codegen runs via <code>src/acados_mpt/CMakeLists.txt</code> and produces <code>c_generated_code/</code> in the build tree.</li>
+</ul>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cg_distance_from_rear_axle_ratio</code></td>
+<td><code>0.8</code></td>
+<td>CG distance from rear axle as a fraction of <code>wheel_base</code> (<code>vehicle_info</code>). <code>lr = ratio × wheel_base</code>, <code>lf = wheel_base − lr</code>. Applied at node startup only (restart to change).</td>
+</tr>
+<tr>
+<td><code>min_points_for_optimization</code></td>
+<td><code>2</code></td>
+<td>Minimum trajectory points required before running MPC</td>
+</tr>
+<tr>
+<td><code>enable_debug_info</code></td>
+<td><code>false</code></td>
+<td>Extra <code>RCLCPP_INFO</code> / <code>WARN</code> on solve success or failure</td>
+</tr>
+<tr>
+<td><code>publish_debug_topics</code></td>
+<td><code>false</code></td>
+<td>Publish reference, odometry, output trajectory, solve status, and control debug topics under <code>~/debug/temporal_mpt/</code></td>
+</tr>
+<tr>
+<td><code>write_replay_fixture</code></td>
+<td><code>false</code></td>
+<td>Write a text fixture for offline replay (e.g. Python generators)</td>
+</tr>
+<tr>
+<td><code>replay_fixture_directory</code></td>
+<td><code>~/.ros/autoware_temporal_mpt_replay</code></td>
+<td>Output directory for replay fixtures</td>
+</tr>
+<tr>
+<td><code>log_replay_fixture_to_console</code></td>
+<td><code>false</code></td>
+<td>Log fixture path and contents to the console</td>
+</tr>
+</tbody>
+</table>
+<p><code>wheel_base</code> is read from the vehicle description (<code>vehicle_info.param.yaml</code>, loaded with the stack via <code>common_param_path</code> in <code>trajectory_optimizer.launch.xml</code>), not from this plugin YAML.</p>
+<h2 id="debug-visualization">Debug visualization<a class="headerlink" href="#debug-visualization" title="Permanent link">#</a></h2>
+<p>With <code>publish_debug_topics: true</code>, run:</p>
+<p><code>bash
+ros2 run autoware_trajectory_optimizer temporal_mpt_debug_visualizer.py</code></p>
+<p>See <code>scripts/temporal_mpt_debug_visualizer.py</code> for topic names and options.</p>
+<h2 id="comparison-with-spatial-mpt">Comparison with spatial MPT<a class="headerlink" href="#comparison-with-spatial-mpt" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Spatial <code>TrajectoryMPTOptimizer</code></th>
+<th>Temporal <code>TrajectoryTemporalMPTOptimizer</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Solver</td>
+<td>QP (<code>autoware_path_optimizer</code>)</td>
+<td>acados SQP</td>
+</tr>
+<tr>
+<td>Reference parameterization</td>
+<td>Spatial / corridor-based</td>
+<td>Time-ordered discrete points</td>
+</tr>
+<tr>
+<td>Bounds</td>
+<td>Adaptive lateral corridor</td>
+<td>Lateral-acceleration + steering limits</td>
+</tr>
+<tr>
+<td>Velocity handling</td>
+<td>Recalculated post-optimization</td>
+<td>Optimized as a state</td>
+</tr>
+<tr>
+<td>Typical pipeline position</td>
+<td>After multiple smoothers</td>
+<td>Replaces smoothers + spatial MPT</td>
+</tr>
+</tbody>
+</table>
+<h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">#</a></h2>
+<ul>
+<li>Only the first <span class="arithmatex">\(N+1\)</span> trajectory points are overwritten with the MPC state trajectory; the rest of the message is unchanged.</li>
+<li>On solver failure (<code>status != 0</code>), the plugin returns without modifying <code>traj_points</code> (debug topics may still publish the last iterate if enabled).</li>
+<li>Reference yaw uses a <span class="arithmatex">\(2\pi\)</span> bias so heading cost aligns with the initial state when planner yaw branches differ.</li>
+<li>Requires a successful acados build; the plugin creates the solver at initialization when loaded.</li>
+<li>Does not extend the trajectory backward; use <code>TrajectoryExtender</code> separately if that behavior is still needed.</li>
 </ul></div>
 
 
@@ -23241,7 +23236,7 @@ TrajectoryPoints output_trajectory;</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Autoware Trajectory Optimizer">
+          <a href="../qp_smoother/" class="md-footer__link md-footer__link--prev" aria-label="Previous: QP-Based Trajectory Smoother">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23251,20 +23246,20 @@ TrajectoryPoints output_trajectory;</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Autoware Trajectory Optimizer
+                QP-Based Trajectory Smoother
               </div>
             </div>
           </a>
         
         
           
-          <a href="../kinematic_feasibility_enforcer/" class="md-footer__link md-footer__link--next" aria-label="Next: Ackermann Kinematic Feasibility Enforcer">
+          <a href="../trajectory_optimizer_specification/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Optimizer - Specification and Assumptions">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Ackermann Kinematic Feasibility Enforcer
+                Trajectory Optimizer - Specification and Assumptions
               </div>
             </div>
             <div class="md-footer__button md-icon">

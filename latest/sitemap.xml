@@ -701,39 +701,35 @@
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_modifier/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_modifier/docs/TrafficLightStop/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/TrafficLightStop/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/continuous_jerk_filter/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/docs/continuous_jerk_filter/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/kinematic_feasibility_enforcer/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/docs/kinematic_feasibility_enforcer/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/mpt_optimizer/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/docs/mpt_optimizer/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/qp_smoother/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/docs/qp_smoother/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/temporal_mpt_optimizer/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/docs/temporal_mpt_optimizer/</loc>
-         <lastmod>2026-07-07</lastmod>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_optimizer/docs/trajectory_optimizer_specification/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/trajectory_optimizer_specification/</loc>
          <lastmod>2026-07-07</lastmod>
     </url>
     <url>
