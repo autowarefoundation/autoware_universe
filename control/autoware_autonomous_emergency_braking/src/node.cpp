@@ -627,7 +627,8 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
 
   // Debug print
   if (!filtered_objects->empty() && publish_debug_pointcloud_) {
-    auto filtered_objects_ros_pointcloud_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_obstacle_pointcloud_);
+    auto filtered_objects_ros_pointcloud_ptr =
+      ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_obstacle_pointcloud_);
     pcl::toROSMsg(*filtered_objects, *filtered_objects_ros_pointcloud_ptr);
     pub_obstacle_pointcloud_->publish(std::move(filtered_objects_ros_pointcloud_ptr));
   }
