@@ -72,7 +72,6 @@ public:
   void objectsCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & in_objects);
 
 private:
-  rclcpp::Node * node_;
   NodeState & state_;
 
   AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray) sub_traffic_signals_;

@@ -54,8 +54,7 @@ public:
     CrosswalkUserHistoryManager::Params history;
   };
 
-  explicit PredictorVru(rclcpp::Node & node)
-  : node_(node), traffic_signal_module_(node), history_manager_(node)
+  explicit PredictorVru(rclcpp::Node & node) : traffic_signal_module_(node), history_manager_(node)
   {
   }
   ~PredictorVru() = default;
@@ -94,7 +93,6 @@ public:
   PredictedObjects retrieveUndetectedObjects();
 
 private:
-  rclcpp::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   // Map data
