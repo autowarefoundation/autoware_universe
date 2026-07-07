@@ -36,6 +36,8 @@
     delay_step: 0
     line_string_max_step_m: 5.0
     use_time_interpolation: false
+    use_mppi_optimizer: false
+    shadow_mode: false
     planning_factor:
       enable_stop: true
       enable_slowdown: false

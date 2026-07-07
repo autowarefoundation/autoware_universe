@@ -24,6 +24,7 @@
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
+  <depend>autoware_mppi_optimizer</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_factor_interface</depend>
@@ -36,6 +37,7 @@
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>autoware_vehicle_info_utils</depend>
+  <depend>autoware_vehicle_msgs</depend>
   <depend>boost</depend>
   <depend>geometry_msgs</depend>
   <depend>lanelet2_core</depend>

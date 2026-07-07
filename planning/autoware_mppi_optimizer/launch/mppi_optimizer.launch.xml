@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="mppi_optimizer_param_path" default="$(find-pkg-share autoware_mppi_optimizer)/config/mppi_optimizer.param.yaml"/>
+  <arg name="vehicle_model" default="sample_vehicle"/>
+  <arg name="vehicle_info_param_path" default="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
+  <arg name="simulator_model_param_path" default="$(find-pkg-share $(var vehicle_model)_description)/config/simulator_model.param.yaml"/>
+
+  <arg name="input_trajectory" default="/planning/scenario_planning/lane_driving/behavior_planning/path"/>
+  <arg name="input_odometry" default="/localization/kinematic_state"/>
+  <arg name="input_steering_status" default="/vehicle/status/steering_status"/>
+  <arg name="output_trajectory" default="/planning/mppi_optimizer/trajectory"/>
+
+  <node pkg="autoware_mppi_optimizer" exec="autoware_mppi_optimizer_node" name="mppi_optimizer_node" output="screen">
+    <param from="$(var simulator_model_param_path)"/>
+    <param from="$(var mppi_optimizer_param_path)"/>
+    <param from="$(var vehicle_info_param_path)" allow_substs="true"/>
+    <remap from="~/input/trajectory" to="$(var input_trajectory)"/>
+    <remap from="~/input/odometry" to="$(var input_odometry)"/>
+    <remap from="~/input/steering_status" to="$(var input_steering_status)"/>
+    <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
+  </node>
+</launch>

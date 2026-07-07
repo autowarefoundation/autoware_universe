@@ -140,6 +140,8 @@ struct DiffusionPlannerParams
   double start_guidance_max_scale;
   double stop_guidance_stop_acceleration_mps2;
   double centerline_guidance_start_time_s;
+  bool use_mppi_optimizer;
+  bool shadow_mode;
 };
 
 /**

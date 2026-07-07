@@ -19,6 +19,8 @@
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/marker_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
+#include "autoware/mppi_optimizer/first_order_dubins_mppi_cost_params_ros.hpp"
+#include "autoware/mppi_optimizer/first_order_dubins_mppi_vehicle_params_ros.hpp"
 
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
@@ -32,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -67,6 +70,13 @@ std::string compute_file_hash_hex(const std::string & path)
   oss << std::hex << std::setw(sizeof(std::size_t) * 2) << std::setfill('0') << combined;
   return oss.str();
 }
+
+void record_section_time(
+  autoware_utils_system::StopWatch<std::chrono::milliseconds> & stop_watch,
+  const std::string & section_name, DiagnosticsInterface & diagnostics)
+{
+  diagnostics.add_key_value(section_name, stop_watch.toc(section_name));
+}
 }  // namespace
 
 DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
@@ -74,6 +84,11 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
 {
   // Initialize the node
   pub_trajectory_ = this->create_publisher<Trajectory>("~/output/trajectory", 1);
+  pub_mppi_reference_trajectory_ =
+    this->create_publisher<Trajectory>("~/debug/mppi/reference_trajectory", 1);
+  pub_mppi_optimized_trajectory_ =
+    this->create_publisher<Trajectory>("~/debug/mppi/optimized_trajectory", 1);
+  pub_mppi_markers_ = this->create_publisher<MarkerArray>("~/debug/mppi/markers", 1);
   pub_trajectories_ = this->create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
   pub_objects_ =
     this->create_publisher<PredictedObjects>("~/output/predicted_objects", rclcpp::QoS(1));
@@ -201,6 +216,10 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("guidance.stop_guidance.stop_acceleration_mps2", 1.0);
   params_.centerline_guidance_start_time_s =
     this->declare_parameter<double>("guidance.centerline_guidance.start_time_s", 2.0);
+  params_.use_mppi_optimizer = this->declare_parameter<bool>("use_mppi_optimizer", false);
+  params_.shadow_mode = this->declare_parameter<bool>("shadow_mode", false);
+  autoware::mppi_optimizer::declare_first_order_dubins_mppi_cost_params(*this);
+  autoware::mppi_optimizer::declare_first_order_dubins_mppi_vehicle_dynamics_params(*this);
 
   // planning factor params
   planning_factor_params_.enable_stop =
@@ -253,6 +272,20 @@ void DiffusionPlanner::load_model()
   RCLCPP_INFO_STREAM(
     get_logger(), "Loaded args_path=" << params_.args_path << " (hash="
                                       << compute_file_hash_hex(params_.args_path) << ")");
+  if (params_.ignore_neighbors) {
+    RCLCPP_INFO(
+      get_logger(), "Neighbor agents disabled for diffusion inference (ignore_neighbors)");
+  }
+  if (params_.use_mppi_optimizer) {
+    RCLCPP_INFO(
+      get_logger(), "MPPI will track diffusion reference trajectory (poses + velocities)");
+  }
+  if (params_.shadow_mode) {
+    RCLCPP_INFO(
+      get_logger(),
+      "Shadow mode enabled. MPPI will not track diffusion reference trajectory (poses + "
+      "velocities)");
+  }
 }
 
 SetParametersResult DiffusionPlanner::on_parameter(
@@ -343,6 +376,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
 #endif
       return result;
     }
+    update_param<bool>(parameters, "use_mppi_optimizer", temp_params.use_mppi_optimizer);
+    update_param<bool>(parameters, "shadow_mode", temp_params.shadow_mode);
     const bool args_path_changed = temp_params.args_path != previous_args_path;
     const bool model_paths_changed =
       temp_params.model_type != previous_model_type ||
@@ -590,6 +625,54 @@ void DiffusionPlanner::on_timer()
     pub_denoising_steps_->publish(planner_output.denoising_steps);
   }
 
+  if (params_.use_mppi_optimizer) {
+    autoware_utils_debug::ScopedTimeTrack mppi_st("mppi_optimizer", *time_keeper_);
+    stop_watch_ptr_->tic("mppi_optimizer");
+    if (!mppi_optimizer_) {
+      mppi_optimizer_ = std::make_unique<autoware::mppi_optimizer::FirstOrderDubinsMppiInterface>();
+      mppi_optimizer_->setCostParams(
+        autoware::mppi_optimizer::get_first_order_dubins_mppi_cost_params(*this));
+      mppi_optimizer_->setVehicleParams(
+        autoware::mppi_optimizer::get_first_order_dubins_mppi_vehicle_params(*this));
+    }
+
+    try {
+      autoware_utils_debug::ScopedTimeTrack optimize_trajectory_st(
+        "mppi_optimizer/optimize_trajectory", *time_keeper_);
+      stop_watch_ptr_->tic("mppi_optimizer/optimize_trajectory");
+      const std::optional<geometry_msgs::msg::AccelWithCovarianceStamped> ego_acceleration_for_mppi{
+        frame_context->ego_acceleration};
+      const auto steering_status = sub_steering_status_.take_data();
+      const std::optional<SteeringReport> ego_steering =
+        steering_status ? std::make_optional(*steering_status) : std::nullopt;
+      const auto mppi_result = mppi_optimizer_->optimizeTrajectory(
+        planner_output.trajectory, frame_context->ego_kinematic_state, ego_acceleration_for_mppi,
+        ego_steering, *objects);
+      record_section_time(
+        *stop_watch_ptr_, "mppi_optimizer/optimize_trajectory", *diagnostics_inference_);
+      if (!params_.shadow_mode) {
+        planner_output.trajectory = mppi_result.trajectory;
+      }
+
+      autoware_utils_debug::ScopedTimeTrack publish_debug_st(
+        "mppi_optimizer/publish_debug", *time_keeper_);
+      stop_watch_ptr_->tic("mppi_optimizer/publish_debug");
+      publish_mppi_debug(mppi_result.debug, planner_output.trajectory.header.frame_id, frame_time);
+      if (!planner_output.candidate_trajectories.candidate_trajectories.empty()) {
+        planner_output.candidate_trajectories.candidate_trajectories.front().points =
+          planner_output.trajectory.points;
+      }
+      record_section_time(
+        *stop_watch_ptr_, "mppi_optimizer/publish_debug", *diagnostics_inference_);
+    } catch (const std::runtime_error & e) {
+      RCLCPP_ERROR_STREAM(get_logger(), "MPPI optimization failed: " << e.what());
+      diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, e.what());
+      diagnostics_inference_->publish(frame_time);
+      return;
+    }
+    record_section_time(*stop_watch_ptr_, "mppi_optimizer", *diagnostics_inference_);
+  }
+
   publish_guidance_status(planner_output.guidance_triggered, frame_time);
 
   pub_trajectory_->publish(planner_output.trajectory);
@@ -647,6 +730,23 @@ void DiffusionPlanner::publish_guidance_status(
   msg.data = result;
 
   pub_guidance_status_->publish(msg);
+}
+
+void DiffusionPlanner::publish_mppi_debug(
+  const autoware::mppi_optimizer::FirstOrderDubinsMppiDebug & debug, const std::string & frame_id,
+  const rclcpp::Time & stamp)
+{
+  auto reference = debug.reference_trajectory;
+  auto optimized = debug.optimized_trajectory;
+  reference.header.stamp = stamp;
+  reference.header.frame_id = frame_id;
+  optimized.header.stamp = stamp;
+  optimized.header.frame_id = frame_id;
+
+  pub_mppi_reference_trajectory_->publish(reference);
+  pub_mppi_optimized_trajectory_->publish(optimized);
+  pub_mppi_markers_->publish(
+    autoware::mppi_optimizer::createMppiDebugMarkers(debug, frame_id, stamp));
 }
 
 void DiffusionPlanner::publish_planning_factor(const Trajectory & trajectory)
