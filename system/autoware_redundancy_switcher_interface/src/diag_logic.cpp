@@ -18,7 +18,8 @@ namespace autoware::redundancy_switcher
 
 SwitcherLevelResult compute_switcher_level(
   const std::optional<Annotated<SwitcherSignals>> & switcher, double now_ms,
-  std::optional<double> transitional_start_ms, double timeout_milli)
+  std::optional<double> transitional_start_ms, double timeout_milli,
+  const std::optional<Annotated<AutowareReady>> & autoware_ready)
 {
   if (!switcher.has_value()) {
     return {
@@ -39,6 +40,13 @@ SwitcherLevelResult compute_switcher_level(
   }
 
   // Transitional state (startup or state change in progress)
+  if (autoware_ready.has_value() && autoware_ready->value == AutowareReady::False) {
+    return {
+      DiagLevel::Ok,
+      "Switcher transitional state timeout skipped: Autoware is not ready (OK)",
+      std::nullopt};
+  }
+
   const double start_ms = transitional_start_ms.value_or(now_ms);
   const double elapsed_ms = now_ms - start_ms;
 
