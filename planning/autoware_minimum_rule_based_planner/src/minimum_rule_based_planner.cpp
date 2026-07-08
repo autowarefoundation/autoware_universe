@@ -234,7 +234,17 @@ void MinimumRuleBasedPlannerNode::publish_debug_trajectory(
 {
   Trajectory traj;
   traj.points = traj_points;
-  pub_debug_modifier_module_trajectories_.at(plugin_name)->publish(traj);
+  if (const auto it = pub_debug_modifier_module_trajectories_.find(plugin_name);
+      it != pub_debug_modifier_module_trajectories_.end()) {
+    it->second->publish(traj);
+  } else if (const auto opt_it = pub_debug_optimizer_module_trajectories_.find(plugin_name);
+             opt_it != pub_debug_optimizer_module_trajectories_.end()) {
+    opt_it->second->publish(traj);
+  } else {
+    RCLCPP_WARN_ONCE(
+      this->get_logger(), "No debug trajectory publisher registered for plugin '%s'",
+      plugin_name.c_str());
+  }
 }
 
 void MinimumRuleBasedPlannerNode::on_timer()
