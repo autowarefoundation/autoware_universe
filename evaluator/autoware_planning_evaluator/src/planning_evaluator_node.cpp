@@ -196,8 +196,7 @@ PlanningEvaluatorNode::~PlanningEvaluatorNode()
 
 void PlanningEvaluatorNode::getRouteData()
 {
-  // route. Pass allow_same_message=false so the latched route is applied only once per new message
-  // (reproduces the original "Newest" polling policy; avoids re-running setRoute every cycle).
+  // route
   {
     const auto msg = route_subscriber_->take_data(/*allow_same_message=*/false);
     if (msg) {
@@ -209,7 +208,7 @@ void PlanningEvaluatorNode::getRouteData()
     }
   }
 
-  // map. allow_same_message=false avoids re-running the heavy setMap() on the same latched map.
+  // map
   {
     const auto msg = vector_map_subscriber_->take_data(/*allow_same_message=*/false);
     if (msg) {
