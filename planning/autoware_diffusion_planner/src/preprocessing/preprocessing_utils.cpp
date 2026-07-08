@@ -116,7 +116,8 @@ std::vector<float> create_ego_current_state(
 
 std::vector<float> create_ego_agent_past(
   const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
-  const Eigen::Matrix4d & map_to_ego_transform, const std::optional<rclcpp::Time> & reference_time)
+  const Eigen::Matrix4d & map_to_ego_transform, const std::optional<rclcpp::Time> & reference_time,
+  bool use_time_interpolation)
 {
   const size_t features_per_timestep = 4;  // x, y, cos, sin
   const size_t total_size = num_timesteps * features_per_timestep;
@@ -193,8 +194,14 @@ std::vector<float> create_ego_agent_past(
       const double t1 = stamp_to_sec(odom_msgs[search_start + 1].header.stamp);
       const double ratio = (t1 > t0) ? (target_sec - t0) / (t1 - t0) : 0.0;
 
-      interpolated_pose = autoware_utils_geometry::calc_interpolated_pose(
-        odom_msgs[search_start].pose.pose, odom_msgs[search_start + 1].pose.pose, ratio, false);
+      if (use_time_interpolation) {
+        interpolated_pose = autoware_utils_geometry::calc_interpolated_pose(
+          odom_msgs[search_start].pose.pose, odom_msgs[search_start + 1].pose.pose, ratio, false);
+      } else {
+        // Match closest: take whichever bracketing message is nearer to the target time.
+        interpolated_pose = (ratio < 0.5) ? odom_msgs[search_start].pose.pose
+                                          : odom_msgs[search_start + 1].pose.pose;
+      }
     }
 
     store_pose(t, interpolated_pose);

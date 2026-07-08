@@ -500,9 +500,10 @@ void DiffusionPlanner::on_timer()
     return;
   }
 
-  // Take data from subscribers
+  // Take data from subscribers. Odometry is drained as a buffer (All policy); the core selects the
+  // sample nearest the tracked-objects timestamp and stamps the frame with the object time.
   auto objects = sub_tracked_objects_.take_data();
-  auto ego_kinematic_state = sub_current_odometry_.take_data();
+  auto ego_states = sub_current_odometry_.take_data();
   auto ego_acceleration = sub_current_acceleration_.take_data();
   auto traffic_signals = sub_traffic_signals_.take_data();
   auto temp_route_ptr = route_subscriber_.take_data();
@@ -510,16 +511,15 @@ void DiffusionPlanner::on_timer()
 
   // Prepare frame context using core
   const std::optional<FrameContext> frame_context = core_->create_frame_context(
-    ego_kinematic_state, ego_acceleration, objects, traffic_signals, turn_indicators_ptr,
-    temp_route_ptr, this->now());
+    ego_states, ego_acceleration, objects, traffic_signals, turn_indicators_ptr, temp_route_ptr,
+    this->now());
 
   if (!frame_context) {
     // Log detailed information about missing inputs
     RCLCPP_WARN_STREAM_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "There is no input data. objects: "
-        << (objects ? "true" : "false")
-        << ", ego_kinematic_state: " << (ego_kinematic_state ? "true" : "false")
+        << (objects ? "true" : "false") << ", ego_states: " << (ego_states.empty() ? "0" : "some")
         << ", ego_acceleration: " << (ego_acceleration ? "true" : "false")
         << ", route: " << (core_->get_route() ? "true" : "false")
         << ", turn_indicators: " << (turn_indicators_ptr ? "true" : "false"));
@@ -527,6 +527,16 @@ void DiffusionPlanner::on_timer()
       DiagnosticStatus::WARN, "No input data available for inference");
     diagnostics_inference_->publish(current_time);
     return;
+  }
+
+  // Warn (but proceed) when the closest buffered odometry is far from the object timestamp, e.g.
+  // during an odometry dropout.
+  if (frame_context->ego_object_time_diff_s > constants::MAX_EGO_OBJECT_TIME_DIFF_S) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
+      "Closest odometry is %.3f s from the tracked-objects timestamp (threshold %.3f s); "
+      "proceeding with the closest sample.",
+      frame_context->ego_object_time_diff_s, constants::MAX_EGO_OBJECT_TIME_DIFF_S);
   }
 
   if (traffic_signals.empty()) {

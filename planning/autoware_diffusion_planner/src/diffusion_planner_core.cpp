@@ -31,9 +31,11 @@
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_internal_planning_msgs/msg/generator_info.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <deque>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -70,6 +72,68 @@ std::string onnxruntime_execution_provider_from_backend(const std::string & back
 }
 }  // namespace
 #endif
+
+namespace
+{
+// Linearly interpolate an ego odometry sample (pose and twist) between two buffered samples at the
+// given ratio in [0, 1], where ratio 0 returns `earlier` and ratio 1 returns `later`.
+Odometry interpolate_ego_state(
+  const Odometry & earlier, const Odometry & later, const double ratio)
+{
+  Odometry interpolated = earlier;
+  interpolated.pose.pose = autoware_utils_geometry::calc_interpolated_pose(
+    earlier.pose.pose, later.pose.pose, ratio, false);
+  const auto lerp = [ratio](const double a, const double b) { return a + (b - a) * ratio; };
+  auto & lin = interpolated.twist.twist.linear;
+  auto & ang = interpolated.twist.twist.angular;
+  lin.x = lerp(earlier.twist.twist.linear.x, later.twist.twist.linear.x);
+  lin.y = lerp(earlier.twist.twist.linear.y, later.twist.twist.linear.y);
+  lin.z = lerp(earlier.twist.twist.linear.z, later.twist.twist.linear.z);
+  ang.x = lerp(earlier.twist.twist.angular.x, later.twist.twist.angular.x);
+  ang.y = lerp(earlier.twist.twist.angular.y, later.twist.twist.angular.y);
+  ang.z = lerp(earlier.twist.twist.angular.z, later.twist.twist.angular.z);
+  return interpolated;
+}
+
+// Select the current ego state from the buffered odometry, anchored at the frame (object) timestamp.
+// With time interpolation, interpolate the ego state between the two samples bracketing frame_time;
+// otherwise pick the nearest buffered sample (match closest). Returns the selected state together
+// with its absolute time offset from frame_time [s] (0 when interpolated within the buffer range).
+std::pair<Odometry, double> select_ego_state(
+  const std::deque<Odometry> & ego_history, const rclcpp::Time & frame_time,
+  const bool use_time_interpolation)
+{
+  // Nearest-sample selection: the result when interpolation is disabled, and the fallback when
+  // frame_time lies outside the buffered range.
+  const Odometry * nearest = &ego_history.front();
+  double min_time_diff_s = std::numeric_limits<double>::max();
+  for (const auto & candidate : ego_history) {
+    const double time_diff_s =
+      std::abs((rclcpp::Time(candidate.header.stamp) - frame_time).seconds());
+    if (time_diff_s < min_time_diff_s) {
+      min_time_diff_s = time_diff_s;
+      nearest = &candidate;
+    }
+  }
+
+  if (!use_time_interpolation) {
+    return {*nearest, min_time_diff_s};
+  }
+
+  // Interpolate at frame_time between the two bracketing samples, if frame_time is within the range.
+  const double frame_sec = frame_time.seconds();
+  for (size_t i = 0; i + 1 < ego_history.size(); ++i) {
+    const double t0 = rclcpp::Time(ego_history[i].header.stamp).seconds();
+    const double t1 = rclcpp::Time(ego_history[i + 1].header.stamp).seconds();
+    if (frame_sec >= t0 && frame_sec <= t1) {
+      const double ratio = (t1 > t0) ? (frame_sec - t0) / (t1 - t0) : 0.0;
+      return {interpolate_ego_state(ego_history[i], ego_history[i + 1], ratio), 0.0};
+    }
+  }
+  // frame_time is outside the buffered range: fall back to the nearest (clamped) sample.
+  return {*nearest, min_time_diff_s};
+}
+}  // namespace
 
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
@@ -229,7 +293,7 @@ void DiffusionPlannerCore::set_map(
 }
 
 std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
-  const std::shared_ptr<const Odometry> & ego_kinematic_state,
+  const std::vector<std::shared_ptr<const Odometry>> & ego_states,
   const std::shared_ptr<const AccelWithCovarianceStamped> & ego_acceleration,
   const std::shared_ptr<const TrackedObjects> & objects,
   const std::vector<std::shared_ptr<const autoware_perception_msgs::msg::TrafficLightGroupArray>> &
@@ -246,7 +310,27 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     effective_objects = std::make_shared<TrackedObjects>(empty_object_list);
   }
 
-  if (!effective_objects || !ego_kinematic_state || !ego_acceleration || !turn_indicators) {
+  // Buffer all newly received odometry (raw, unshifted) into the ego history, then prune by time
+  // window so the buffer spans both the ego-history duration (older than the object stamp) and the
+  // odometry samples that arrived ahead of the objects (odometry has lower latency).
+  for (const auto & ego_state : ego_states) {
+    if (!ego_state) {
+      continue;
+    }
+    ego_history_.push_back(*ego_state);
+  }
+  if (!ego_history_.empty()) {
+    const rclcpp::Time newest_stamp(ego_history_.back().header.stamp);
+    while (ego_history_.size() > 1) {
+      const rclcpp::Time oldest_stamp(ego_history_.front().header.stamp);
+      if ((newest_stamp - oldest_stamp).seconds() <= constants::ODOMETRY_BUFFER_WINDOW_S) {
+        break;
+      }
+      ego_history_.pop_front();
+    }
+  }
+
+  if (!effective_objects || ego_history_.empty() || !ego_acceleration || !turn_indicators) {
     return std::nullopt;
   }
 
@@ -254,22 +338,24 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     return std::nullopt;
   }
 
-  Odometry kinematic_state = *ego_kinematic_state;
+  // Tracked objects are the timing anchor: stamp the whole frame with the object timestamp and
+  // derive the current ego state from the buffered odometry at that time. With time interpolation
+  // the ego state is interpolated at the object timestamp; otherwise the nearest sample is used.
+  // When neighbors are ignored there may be no tracked-objects message at all; fall back to the
+  // newest odometry stamp in that case.
+  const rclcpp::Time frame_time =
+    objects ? rclcpp::Time(objects->header.stamp) : rclcpp::Time(ego_history_.back().header.stamp);
+  // The selected (raw, unshifted) sample is the current ego state stored in the frame context.
+  const auto [kinematic_state, min_time_diff_s] =
+    select_ego_state(ego_history_, frame_time, params_.use_time_interpolation);
+
+  // Get transforms. shift_x moves base_link to the vehicle center convention expected by the model.
+  geometry_msgs::msg::Pose pose_for_transform = kinematic_state.pose.pose;
   if (params_.shift_x) {
-    kinematic_state.pose.pose =
-      utils::shift_x(kinematic_state.pose.pose, vehicle_spec_.base_link_to_center);
+    pose_for_transform = utils::shift_x(pose_for_transform, vehicle_spec_.base_link_to_center);
   }
-
-  // Get transforms
-  const geometry_msgs::msg::Pose & pose_base_link = kinematic_state.pose.pose;
-  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4d(pose_base_link);
+  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4d(pose_for_transform);
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
-
-  // Update ego history
-  ego_history_.push_back(kinematic_state);
-  if (ego_history_.size() > static_cast<size_t>(EGO_HISTORY_SHAPE[1])) {
-    ego_history_.pop_front();
-  }
 
   // Update turn indicators history
   turn_indicators_history_.push_back(*turn_indicators);
@@ -287,11 +373,11 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   preprocess::process_traffic_signals(
     traffic_signals, traffic_light_id_map_, current_time, traffic_light_msg_timeout_s);
 
-  // Create frame context
-  const rclcpp::Time frame_time(ego_kinematic_state->header.stamp);
-  const FrameContext frame_context{
-    *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, processed_neighbor_histories,
-    frame_time};
+  // Create frame context. The frame is stamped with the object timestamp, and the ego state is
+  // derived from the buffered odometry at that time (see select_ego_state above).
+  const FrameContext frame_context{kinematic_state,      *ego_acceleration,
+                                   ego_to_map_transform, processed_neighbor_histories,
+                                   frame_time,           min_time_diff_s};
 
   return frame_context;
 }
@@ -353,10 +439,25 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
 
   // Ego history
   {
-    const std::optional<rclcpp::Time> reference_time =
-      params_.use_time_interpolation ? std::make_optional(frame_context.frame_time) : std::nullopt;
+    // The ego history buffer is dense and time-shifted relative to the object timestamp, so it is
+    // resampled at regular intervals anchored at the frame (object) timestamp. With time
+    // interpolation each sample is interpolated between the bracketing buffer entries; otherwise the
+    // nearest buffer entry is used (match closest).
+    const std::optional<rclcpp::Time> reference_time = std::make_optional(frame_context.frame_time);
+    // The buffer holds raw odometry; apply the same vehicle-center shift as the reference transform
+    // so the past trajectory is expressed consistently with the current ego frame.
+    std::deque<nav_msgs::msg::Odometry> shifted_history;
+    const std::deque<nav_msgs::msg::Odometry> * history = &ego_history_;
+    if (params_.shift_x) {
+      shifted_history = ego_history_;
+      for (auto & odom : shifted_history) {
+        odom.pose.pose = utils::shift_x(odom.pose.pose, vehicle_spec_.base_link_to_center);
+      }
+      history = &shifted_history;
+    }
     const std::vector<float> single_ego_agent_past = preprocess::create_ego_agent_past(
-      ego_history_, EGO_HISTORY_SHAPE[1], map_to_ego_transform, reference_time);
+      *history, EGO_HISTORY_SHAPE[1], map_to_ego_transform, reference_time,
+      params_.use_time_interpolation);
     input_data_map["ego_agent_past"] =
       utils::replicate_for_batch(single_ego_agent_past, params_.batch_size);
   }

@@ -69,20 +69,26 @@ std::vector<float> create_ego_current_state(
 /**
  * @brief Creates ego agent past trajectory data from pose messages.
  *
- * When reference_time is provided, generates trajectory by interpolating poses at regular
- * time intervals (0.1s) backwards from the reference time. When reference_time is std::nullopt,
- * uses the original behavior of taking the last num_timesteps odometry messages directly.
+ * When reference_time is provided, generates the trajectory by resampling poses at regular
+ * time intervals (0.1s) backwards from the reference time. Within that resampling,
+ * use_time_interpolation selects between interpolating each pose between the two bracketing
+ * odometry messages (true) and taking the nearest message (false, match closest). When
+ * reference_time is std::nullopt, uses the original behavior of taking the last num_timesteps
+ * odometry messages directly.
  *
  * @param[in] odom_msgs           Deque of odometry messages
  * @param[in] num_timesteps       Number of timesteps to process
  * @param[in] map_to_ego_transform Transformation matrix from map to ego frame
- * @param[in] reference_time      Reference time for interpolation (nullopt for legacy behavior)
+ * @param[in] reference_time      Reference time for resampling (nullopt for legacy behavior)
+ * @param[in] use_time_interpolation Interpolate between bracketing messages (true) or take the
+ *                                   nearest message (false); only used when reference_time is set
  * @return Vector of floats containing [x, y, cos_yaw, sin_yaw] for each timestep
  */
 std::vector<float> create_ego_agent_past(
   const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
   const Eigen::Matrix4d & map_to_ego_transform,
-  const std::optional<rclcpp::Time> & reference_time = std::nullopt);
+  const std::optional<rclcpp::Time> & reference_time = std::nullopt,
+  bool use_time_interpolation = true);
 
 /**
  * @brief Creates random sampled trajectories for diffusion model input.

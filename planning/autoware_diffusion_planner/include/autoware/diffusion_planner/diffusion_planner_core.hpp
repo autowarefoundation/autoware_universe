@@ -106,6 +106,8 @@ struct FrameContext
   Eigen::Matrix4d ego_to_map_transform;
   std::vector<AgentHistory> ego_centric_neighbor_histories;
   rclcpp::Time frame_time;
+  // Absolute time difference between the matched odometry sample and the object timestamp [s].
+  double ego_object_time_diff_s;
 };
 
 struct DiffusionPlannerParams
@@ -182,9 +184,11 @@ public:
   /**
    * @brief Prepare frame context for inference.
    *
-   * @param ego_kinematic_state Current ego vehicle odometry
+   * @param ego_states Buffered ego vehicle odometry (all messages received since the last cycle);
+   *                   the current ego state is derived at the object timestamp, either by time
+   *                   interpolation or by taking the nearest sample (see use_time_interpolation)
    * @param ego_acceleration Current ego vehicle acceleration
-   * @param objects Tracked objects in the scene
+   * @param objects Tracked objects in the scene (timing anchor for the frame)
    * @param traffic_signals Traffic signal information
    * @param turn_indicators Current turn indicator state
    * @param route_ptr Route information
@@ -192,7 +196,7 @@ public:
    * @return FrameContext containing preprocessed data, or nullopt if data is incomplete
    */
   std::optional<FrameContext> create_frame_context(
-    const std::shared_ptr<const Odometry> & ego_kinematic_state,
+    const std::vector<std::shared_ptr<const Odometry>> & ego_states,
     const std::shared_ptr<const AccelWithCovarianceStamped> & ego_acceleration,
     const std::shared_ptr<const TrackedObjects> & objects,
     const std::vector<

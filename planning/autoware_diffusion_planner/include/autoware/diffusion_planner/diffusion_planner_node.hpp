@@ -235,8 +235,10 @@ private:
   rclcpp::Service<SetBool>::SharedPtr set_stop_guidance_enabled_service_{nullptr};
   rclcpp::Service<SetBool>::SharedPtr set_centerline_guidance_enabled_service_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
-  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
-    this, "~/input/odometry"};
+  // Odometry is buffered (All policy) so the sample nearest the tracked-objects timestamp can be
+  // selected each cycle; odometry has lower latency than objects and may arrive several per tick.
+  autoware_utils::InterProcessPollingSubscriber<Odometry, autoware_utils::polling_policy::All>
+    sub_current_odometry_{this, "~/input/odometry", rclcpp::QoS{50}};
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
     sub_current_acceleration_{this, "~/input/acceleration"};
   autoware_utils::InterProcessPollingSubscriber<TrackedObjects> sub_tracked_objects_{
