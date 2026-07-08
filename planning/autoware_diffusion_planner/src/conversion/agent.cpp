@@ -19,10 +19,13 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
 {
+
+using autoware_perception_msgs::msg::Shape;
 
 namespace
 {
@@ -48,11 +51,39 @@ AgentLabel get_model_label(const TrackedObject & object)
   }
 }
 
-bool is_unknown_object(const TrackedObject & object)
+// The tracker output shape type reflects the object type produced by each tracker, so it is the
+// robust way (rather than the classification) to tell shapeless polygon agents apart.
+bool is_polygon_object(const TrackedObject & object)
 {
-  const auto autoware_label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
-  return autoware_label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
+  return object.shape.type == Shape::POLYGON;
+}
+
+// Return the agent footprint as {width, length} [m], resolved per shape type because each type
+// populates the shape message differently.
+std::pair<double, double> get_width_and_length(const TrackedObject & object)
+{
+  const auto & dimensions = object.shape.dimensions;
+  switch (object.shape.type) {
+    case Shape::CYLINDER:
+      // Only the diameter (dimensions.x) is defined; use it for both axes.
+      return {dimensions.x, dimensions.x};
+    case Shape::POLYGON: {
+      // No dimensions are provided; derive the extent from the footprint polygon.
+      const auto & points = object.shape.footprint.points;
+      if (points.empty()) {
+        return {0.0, 0.0};
+      }
+      const auto [min_x, max_x] = std::minmax_element(
+        points.begin(), points.end(), [](const auto & a, const auto & b) { return a.x < b.x; });
+      const auto [min_y, max_y] = std::minmax_element(
+        points.begin(), points.end(), [](const auto & a, const auto & b) { return a.y < b.y; });
+      return {max_y->y - min_y->y, max_x->x - min_x->x};
+    }
+    case Shape::BOUNDING_BOX:
+    default:
+      // dimensions.x is length, dimensions.y is width.
+      return {dimensions.y, dimensions.x};
+  }
 }
 
 }  // namespace
@@ -74,6 +105,7 @@ AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timest
   const double velocity_norm = std::hypot(linear_vel.x, linear_vel.y);
   const double velocity_x = velocity_norm * cos_yaw;
   const double velocity_y = velocity_norm * sin_yaw;
+  const auto [width, length] = get_width_and_length(original_info);
 
   return {
     static_cast<float>(pose(0, 3)),
@@ -82,20 +114,20 @@ AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timest
     static_cast<float>(sin_yaw),
     static_cast<float>(velocity_x),
     static_cast<float>(velocity_y),
-    static_cast<float>(original_info.shape.dimensions.y),  // width
-    static_cast<float>(original_info.shape.dimensions.x),  // length
+    static_cast<float>(width),
+    static_cast<float>(length),
     static_cast<float>(label == AgentLabel::VEHICLE),
     static_cast<float>(label == AgentLabel::PEDESTRIAN),
     static_cast<float>(label == AgentLabel::BICYCLE),
   };
 }
 
-void AgentData::update_histories(const TrackedObjects & objects, const bool ignore_unknown_agents)
+void AgentData::update_histories(const TrackedObjects & objects, const bool ignore_polygon_agents)
 {
   const rclcpp::Time objects_timestamp(objects.header.stamp);
   std::vector<std::string> found_ids;
   for (const TrackedObject & object : objects.objects) {
-    if (ignore_unknown_agents && is_unknown_object(object)) {
+    if (ignore_polygon_agents && is_polygon_object(object)) {
       continue;
     }
     const std::string object_id = autoware_utils_uuid::to_hex_string(object.object_id);

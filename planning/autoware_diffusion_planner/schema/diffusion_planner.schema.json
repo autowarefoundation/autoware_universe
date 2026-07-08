@@ -107,10 +107,10 @@
           "default": false,
           "description": "Ignore neighbor agents"
         },
-        "ignore_unknown_neighbors": {
+        "ignore_polygon_neighbors": {
           "type": "boolean",
           "default": true,
-          "description": "Ignore neighbor agents with unknown class"
+          "description": "Ignore neighbor agents whose shape is a polygon (shapeless, without dimensions)"
         },
         "traffic_light_group_msg_timeout_seconds": {
           "type": "number",
