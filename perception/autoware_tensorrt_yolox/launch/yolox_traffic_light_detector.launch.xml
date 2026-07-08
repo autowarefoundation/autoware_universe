@@ -6,6 +6,7 @@
   <arg name="input/image" default="/sensing/camera/camera6/image_raw"/>
   <arg name="output/objects" default="/perception/traffic_light_recognition/camera6/detection/rois"/>
   <arg name="yolox_param_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_traffic_light_detector.param.yaml"/>
+  <arg name="ml_package_param_path" default="$(var data_path)/tensorrt_yolox/ml_package_yolox.param.yaml"/>
   <arg name="model_path" default="$(var data_path)/tensorrt_yolox/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx" description="model path for traffic light detection"/>
   <arg name="label_path" default="$(var data_path)/tensorrt_yolox/car_ped_tl_detector_labels.txt" description="path name for traffic light detection"/>
   <arg name="semantic_segmentation_color_map_path" default="$(var data_path)/tensorrt_yolox/semseg_color_map.csv" description="sematic segmentation color map path"/>
@@ -26,6 +27,7 @@
     <remap from="~/in/image" to="$(var input/image)"/>
     <remap from="~/out/objects" to="$(var output/objects)"/>
     <param from="$(var yolox_param_path)" allow_substs="true"/>
+    <param from="$(var ml_package_param_path)" allow_substs="true"/>
     <param name="model_path" value="$(var model_path)"/>
     <param name="label_path" value="$(var label_path)"/>
     <param name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
