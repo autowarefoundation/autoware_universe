@@ -36,8 +36,6 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
     "~/input/trajectory", rclcpp::QoS{1},
     std::bind(&PlanningValidatorNode::onTrajectory, this, std::placeholders::_1));
 
-  // odometry subscriber that feeds the stop checker on every message (as the original
-  // VehicleStopChecker did with its own subscription)
   sub_odometry_ = create_subscription<Odometry>(
     "/localization/kinematic_state", rclcpp::QoS{1},
     std::bind(&PlanningValidatorNode::onOdometry, this, std::placeholders::_1));
