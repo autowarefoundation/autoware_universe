@@ -13,3 +13,4 @@ jobs:
       container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
       runner: "['self-hosted', 'Linux', 'X64']"
       pull-ccache: true
+      overlay_build_depends: ${{ github.event.pull_request.base.ref == 'humble' || github.event.pull_request.base.ref == 'jazzy' }}
