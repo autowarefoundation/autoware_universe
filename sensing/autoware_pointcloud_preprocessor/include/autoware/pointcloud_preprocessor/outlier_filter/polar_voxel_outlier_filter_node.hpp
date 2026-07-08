@@ -79,13 +79,16 @@ struct PointVoxelInfo
   PolarVoxelIndex voxel_idx;
   bool is_primary{false};
   bool meets_intensity_threshold{false};
+  uint8_t intensity{0};
 
   PointVoxelInfo() = default;
   explicit PointVoxelInfo(
-    const PolarVoxelIndex & voxel_idx, bool is_primary, bool meets_intensity_threshold)
+    const PolarVoxelIndex & voxel_idx, bool is_primary, bool meets_intensity_threshold,
+    uint8_t intensity)
   : voxel_idx(voxel_idx),
     is_primary(is_primary),
-    meets_intensity_threshold(meets_intensity_threshold)
+    meets_intensity_threshold(meets_intensity_threshold),
+    intensity(intensity)
   {
   }
 };
@@ -95,7 +98,24 @@ struct VoxelPointCounts
 {
   size_t primary_count{0};
   size_t secondary_count{0};
+  size_t secondary_return_count{0};
+  size_t intensity_sum{0};
   bool is_in_visibility_range{true};
+
+  [[nodiscard]] size_t point_count() const { return primary_count + secondary_return_count; }
+
+  [[nodiscard]] float average_intensity() const
+  {
+    const size_t count = point_count();
+    return count > 0 ? static_cast<float>(intensity_sum) / static_cast<float>(count) : 0.0F;
+  }
+
+  [[nodiscard]] float secondary_return_ratio() const
+  {
+    const size_t count = point_count();
+    return count > 0 ? static_cast<float>(secondary_return_count) / static_cast<float>(count)
+                     : 0.0F;
+  }
 
   // Threshold checks (inclusive)
   [[nodiscard]] bool meets_primary_threshold(int threshold) const
@@ -144,6 +164,32 @@ public:
     double anisotropy{0.0};
   };
 
+  struct LowVisibilityVoxelStats
+  {
+    GeometricShannonMetrics geometric_metrics;
+    size_t point_count{0};
+    float average_intensity{0.0F};
+    size_t secondary_return_count{0};
+    float secondary_return_ratio{0.0F};
+  };
+
+  struct GeometricStatsAccumulator
+  {
+    size_t point_count{0};
+    double sum_x{0.0};
+    double sum_y{0.0};
+    double sum_z{0.0};
+    double sum_xx{0.0};
+    double sum_xy{0.0};
+    double sum_xz{0.0};
+    double sum_yy{0.0};
+    double sum_yz{0.0};
+    double sum_zz{0.0};
+
+    void add(double x, double y, double z);
+    [[nodiscard]] GeometricShannonMetrics calculate_metrics() const;
+  };
+
 protected:
   // Parameter update helper methods
   void update_primary_return_types(const rclcpp::Parameter & param);
@@ -157,6 +203,10 @@ protected:
   using VoxelPointCountMap =
     std::unordered_map<PolarVoxelIndex, VoxelPointCounts, PolarVoxelIndexHash>;
   using VoxelIndexSet = std::unordered_set<PolarVoxelIndex, PolarVoxelIndexHash>;
+  using GeometricStatsMap =
+    std::unordered_map<PolarVoxelIndex, GeometricStatsAccumulator, PolarVoxelIndexHash>;
+  using GeometricMetricsMap =
+    std::unordered_map<PolarVoxelIndex, GeometricShannonMetrics, PolarVoxelIndexHash>;
   using PointVoxelInfoVector = std::vector<std::optional<PointVoxelInfo>>;
   using ValidPointsMask = std::vector<bool>;
 
@@ -174,10 +224,13 @@ protected:
   static void create_filtered_output(
     const PointCloud2 & input, const ValidPointsMask & valid_points_mask, PointCloud2 & output);
   void publish_noise_cloud(
-    const PointCloud2 & input, const ValidPointsMask & valid_points_mask) const;
+    const PointCloud2 & input, const ValidPointsMask & valid_points_mask,
+    const PointVoxelInfoVector & point_voxel_info, const VoxelPointCountMap & voxel_point_counts,
+    const GeometricMetricsMap & geometric_metrics) const;
   void publish_diagnostics(
     const VoxelPointCountMap & voxel_point_counts, const ValidPointsMask & valid_points_mask,
-    const PointCloud2 & input, const PointVoxelInfoVector & point_voxel_info);
+    const PointCloud2 & input, const PointVoxelInfoVector & point_voxel_info,
+    const GeometricMetricsMap & geometric_metrics);
 
   // Point processing helper methods
   void process_polar_points(const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info);
@@ -244,6 +297,7 @@ protected:
   int intensity_threshold_{};
   double low_visibility_entropy_threshold_{};
   double low_visibility_anisotropy_threshold_{};
+  double low_visibility_average_intensity_threshold_{};
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
   bool publish_low_visibility_voxels_{};
@@ -260,6 +314,8 @@ protected:
   std::optional<double> visibility_;
   std::optional<double> filter_ratio_;
   std::vector<PolarVoxelIndex> selected_low_visibility_voxels_;
+  std::unordered_map<PolarVoxelIndex, LowVisibilityVoxelStats, PolarVoxelIndexHash>
+    selected_low_visibility_voxel_stats_;
   std::mutex mutex_;
   std::shared_ptr<custom_diagnostic_tasks::HysteresisStateMachine> hysteresis_state_machine_;
 
@@ -281,8 +337,7 @@ protected:
 
   // Diagnostic helper methods
   void calculate_visibility_metric(
-    const VoxelPointCountMap & voxel_point_counts, const PointCloud2 & input,
-    const PointVoxelInfoVector & point_voxel_info);
+    const VoxelPointCountMap & voxel_point_counts, const GeometricMetricsMap & geometric_metrics);
   void calculate_filter_ratio_metric(const ValidPointsMask & valid_points_mask);
   void publish_visibility_metric();
   void publish_filter_ratio_metric();
@@ -300,11 +355,9 @@ protected:
   bool has_finite_coordinates(const PolarCoordinate & polar) const;
   bool is_within_radius_range(const PolarCoordinate & polar) const;
   bool has_sufficient_radius(const PolarCoordinate & polar) const;
-  std::vector<PolarVoxelIndex> collect_low_visibility_candidates(
-    const VoxelPointCountMap & voxel_point_counts) const;
-  GeometricShannonMetrics calculate_geometric_shannon_metrics(
+  GeometricMetricsMap calculate_geometric_shannon_metrics_by_voxel(
     const PointCloud2 & input, const PointVoxelInfoVector & point_voxel_info,
-    const PolarVoxelIndex & voxel_idx) const;
+    const VoxelPointCountMap & voxel_point_counts) const;
 
   // Point validation helper methods for mask creation
   bool is_point_valid_for_mask(
@@ -326,6 +379,8 @@ private:
   static bool validate_positive_int(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_non_negative_int(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_intensity_threshold(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_average_intensity_threshold(
+    const rclcpp::Parameter & param, std::string & reason);
   static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_normalized(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_zero_to_two_pi(const rclcpp::Parameter & param, std::string & reason);
