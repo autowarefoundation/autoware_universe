@@ -33,17 +33,6 @@ namespace autoware::minimum_rule_based_planner
 
 namespace
 {
-trajectory_optimizer::TrajectoryOptimizerData make_optimizer_data(
-  const MinimumRuleBasedPlannerNode::InputData & input_data)
-{
-  trajectory_optimizer::TrajectoryOptimizerData data;
-  data.current_odometry = *input_data.odometry_ptr;
-  if (input_data.acceleration_ptr) {
-    data.current_acceleration = *input_data.acceleration_ptr;
-  }
-  return data;
-}
-
 minimum_rule_based_planner::plugin::ModifierData make_modifier_data(
   const MinimumRuleBasedPlannerNode::InputData & input_data)
 {
@@ -99,16 +88,19 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
 
 void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
 {
-  // Create plugin loader for autoware_trajectory_optimizer
+  // Create plugin loader for trajectory processor optimizer plugins.
   plugin_loader_ = std::make_unique<OptimizerPluginLoader>(
-    "autoware_trajectory_optimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase");
+    "autoware_trajectory_processor", "autoware::trajectory_processor::plugin::PluginBase");
 
   auto try_load_optimizer_plugin = [&](const std::string & plugin_path, const std::string & name)
     -> std::shared_ptr<OptimizerPluginInterface> {
     try {
       auto plugin = plugin_loader_->createSharedInstance(plugin_path);
-      plugin->initialize(name, this, time_keeper_);
+      auto node_context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+      node_context->node_ptr = this;
+      node_context->time_keeper = time_keeper_;
+      node_context->vehicle_info = vehicle_info_;
+      plugin->initialize(name, node_context);
       pub_debug_optimizer_module_trajectories_[plugin->get_name()] =
         this->create_publisher<Trajectory>(
           "~/debug/optimizer/" + plugin->get_name() + "/trajectory", 1);
@@ -343,16 +335,19 @@ Trajectory MinimumRuleBasedPlannerNode::smooth_trajectory(
   const Trajectory & trajectory, const InputData & input_data) const
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  auto optimizer_data = make_optimizer_data(input_data);
 
-  trajectory_optimizer::TrajectoryOptimizerParams optimizer_params;
+  autoware::trajectory_optimizer::TrajectoryOptimizerParams optimizer_params;
   optimizer_params.use_eb_smoother = true;
 
   auto trajectory_points = trajectory.points;
   if (path_smoother_) {
     autoware_utils_debug::ScopedTimeTrack st_path_smoother(
       path_smoother_->get_name(), *time_keeper_);
-    path_smoother_->optimize_trajectory(trajectory_points, optimizer_params, optimizer_data);
+    autoware::trajectory_processor::plugin::InputData optimizer_input;
+    optimizer_input.current_odometry = input_data.odometry_ptr;
+    optimizer_input.current_acceleration = input_data.acceleration_ptr;
+    path_smoother_->update_params(optimizer_params);
+    path_smoother_->modify_trajectory(trajectory_points, optimizer_input);
     if (params_.debug.enable_optimizer_trajectory) {
       publish_debug_trajectory(path_smoother_->get_name(), trajectory_points);
     }
