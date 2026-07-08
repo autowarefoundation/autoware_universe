@@ -1,0 +1,58 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: MrmComfortableStopOperator.node
+
+package:
+  name: autoware_mrm_comfortable_stop_operator
+  provider: autoware
+
+launch:
+  plugin: autoware::mrm_comfortable_stop_operator::MrmComfortableStopOperator
+  executable: autoware_mrm_comfortable_stop_operator_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: driving_mode_request
+    message_type: tier4_system_msgs/msg/DrivingModeRequest
+    remap_target: ~/input/driving_mode_request
+  - name: driving_mode_info
+    message_type: tier4_system_msgs/msg/DrivingModeInfo
+    remap_target: ~/input/driving_mode_info
+
+publishers:
+  - name: status
+    message_type: tier4_system_msgs/msg/MrmBehaviorStatus
+    remap_target: ~/output/mrm/comfortable_stop/status
+  - name: velocity_limit
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+    remap_target: ~/output/velocity_limit
+  - name: velocity_limit_clear
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimitClearCommand
+    remap_target: ~/output/velocity_limit/clear
+  - name: mrm_state
+    message_type: tier4_system_msgs/msg/DrivingModeMrmState
+    remap_target: ~/output/mrm_state
+
+servers:
+  - name: operate
+    message_type: tier4_system_msgs/srv/OperateMrm
+    remap_target: ~/input/mrm/comfortable_stop/operate
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/mrm_comfortable_stop_operator.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: operate
+    trigger_conditions:
+      - on_input: driving_mode_request
+    outcomes:
+      - to_output: status
+      - to_output: velocity_limit
+      - to_output: mrm_state

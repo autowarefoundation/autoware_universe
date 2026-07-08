@@ -19,7 +19,7 @@
 #include "path_planner.hpp"
 #include "velocity_smoother.hpp"
 
-#include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
