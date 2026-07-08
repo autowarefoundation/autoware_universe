@@ -1,0 +1,86 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: MrmHandler.node
+
+package:
+  name: autoware_mrm_handler
+  provider: autoware
+
+launch:
+  plugin: autoware::mrm_handler::MrmHandler
+  executable: autoware_mrm_handler_node
+  node_output: screen
+
+# interfaces
+# orchestrates minimal-risk-maneuvers: watches operation mode / vehicle state and the
+# operator statuses, and calls the pull_over / comfortable_stop / emergency_stop
+# operators via OperateMrm.
+subscribers:
+  - name: operation_mode_availability
+    message_type: tier4_system_msgs/msg/OperationModeAvailability
+    remap_target: ~/input/operation_mode_availability
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: ~/input/odometry
+  - name: control_mode
+    message_type: autoware_vehicle_msgs/msg/ControlModeReport
+    remap_target: ~/input/control_mode
+  - name: pull_over_status
+    message_type: tier4_system_msgs/msg/MrmBehaviorStatus
+    remap_target: ~/input/mrm/pull_over/status
+  - name: comfortable_stop_status
+    message_type: tier4_system_msgs/msg/MrmBehaviorStatus
+    remap_target: ~/input/mrm/comfortable_stop/status
+  - name: emergency_stop_status
+    message_type: tier4_system_msgs/msg/MrmBehaviorStatus
+    remap_target: ~/input/mrm/emergency_stop/status
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    remap_target: ~/input/api/operation_mode/state
+  - name: gear
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: ~/input/gear
+
+publishers:
+  - name: turn_indicators
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: ~/output/turn_indicators
+  - name: hazard
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: ~/output/hazard
+  - name: gear
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: ~/output/gear
+  - name: mrm_state
+    message_type: autoware_adapi_v1_msgs/msg/MrmState
+    remap_target: ~/output/mrm/state
+  - name: emergency_holding
+    message_type: tier4_system_msgs/msg/EmergencyHoldingState
+    remap_target: ~/output/emergency_holding
+
+clients:
+  - name: pull_over_operate
+    message_type: tier4_system_msgs/srv/OperateMrm
+    remap_target: ~/output/mrm/pull_over/operate
+  - name: comfortable_stop_operate
+    message_type: tier4_system_msgs/srv/OperateMrm
+    remap_target: ~/output/mrm/comfortable_stop/operate
+  - name: emergency_stop_operate
+    message_type: tier4_system_msgs/srv/OperateMrm
+    remap_target: ~/output/mrm/emergency_stop/operate
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/mrm_handler.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: handle
+    trigger_conditions:
+      - on_input: operation_mode_availability
+    outcomes:
+      - to_output: mrm_state
