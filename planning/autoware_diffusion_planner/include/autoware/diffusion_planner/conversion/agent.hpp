@@ -49,7 +49,13 @@ using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
 constexpr size_t AGENT_STATE_DIM = 11;
 
-enum AgentLabel { VEHICLE = 0, PEDESTRIAN = 1, BICYCLE = 2 };
+enum class AgentLabel : u_char {
+  VEHICLE = 0,
+  PEDESTRIAN = 1,
+  BICYCLE = 2,
+  STATIC_OBJECT = 3,
+  UNKNOWN = 255
+};
 
 /**
  * @brief A class to represent a single state of an agent.
@@ -66,7 +72,7 @@ struct AgentState
   Eigen::Matrix4d pose{Eigen::Matrix4d::Identity()};
 
   const rclcpp::Time timestamp;
-  const AgentLabel label{AgentLabel::VEHICLE};
+  const AgentLabel label{AgentLabel::UNKNOWN};
   const std::string object_id;
   const TrackedObject original_info;
 };
