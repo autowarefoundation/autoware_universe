@@ -19,6 +19,8 @@
 
 #include <tf2/utils.hpp>
 
+#include <vector>
+
 namespace autoware::detection_by_tracker
 {
 
