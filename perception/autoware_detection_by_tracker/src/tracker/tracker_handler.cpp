@@ -27,6 +27,8 @@ void TrackerHandler::onTrackedObjects(
 {
   constexpr size_t max_buffer_size = 10;
 
+  std::lock_guard<std::mutex> lock(mutex_);
+
   // Add tracked objects to buffer
   objects_buffer_.push_front(*input_objects_msg);
 
@@ -39,25 +41,33 @@ void TrackerHandler::onTrackedObjects(
 bool TrackerHandler::estimateTrackedObjects(
   const rclcpp::Time & time, autoware_perception_msgs::msg::TrackedObjects & output)
 {
-  if (objects_buffer_.empty()) {
-    return false;
+  std::vector<autoware_perception_msgs::msg::TrackedObject> objects;
+  rclcpp::Duration dt(0, 0);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (objects_buffer_.empty()) {
+      return false;
+    }
+
+    // Get the objects closest to the target time.
+    const auto target_objects_iter = std::min_element(
+      objects_buffer_.cbegin(), objects_buffer_.cend(),
+      [&time](
+        autoware_perception_msgs::msg::TrackedObjects first,
+        autoware_perception_msgs::msg::TrackedObjects second) {
+        return std::fabs((time - first.header.stamp).seconds()) <
+               std::fabs((time - second.header.stamp).seconds());
+      });
+
+    dt = time - target_objects_iter->header.stamp;
+    output.header.frame_id = target_objects_iter->header.frame_id;
+    output.header.stamp = time;
+    objects = target_objects_iter->objects;
   }
 
-  // Get the objects closest to the target time.
-  const auto target_objects_iter = std::min_element(
-    objects_buffer_.cbegin(), objects_buffer_.cend(),
-    [&time](
-      autoware_perception_msgs::msg::TrackedObjects first,
-      autoware_perception_msgs::msg::TrackedObjects second) {
-      return std::fabs((time - first.header.stamp).seconds()) <
-             std::fabs((time - second.header.stamp).seconds());
-    });
-
-  // Estimate the pose of the object at the target time
-  const auto dt = time - target_objects_iter->header.stamp;
-  output.header.frame_id = target_objects_iter->header.frame_id;
-  output.header.stamp = time;
-  for (const auto & object : target_objects_iter->objects) {
+  // Estimate the pose of the object at the target time (outside the lock)
+  for (const auto & object : objects) {
     const auto & pose_with_covariance = object.kinematics.pose_with_covariance;
     const auto & x = pose_with_covariance.pose.position.x;
     const auto & y = pose_with_covariance.pose.position.y;

@@ -92,10 +92,17 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
   tf_listener_(tf_buffer_)
 {
   // Create publishers and subscribers
+  cb_group_trackers_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  rclcpp::SubscriptionOptions trackers_sub_options;
+  trackers_sub_options.callback_group = cb_group_trackers_;
   trackers_sub_ = create_subscription<autoware_perception_msgs::msg::TrackedObjects>(
     "~/input/tracked_objects", rclcpp::QoS{1},
-    std::bind(&TrackerHandler::onTrackedObjects, &tracker_handler_, std::placeholders::_1));
+    std::bind(&TrackerHandler::onTrackedObjects, &tracker_handler_, std::placeholders::_1),
+    trackers_sub_options);
+
+  cb_group_objects_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   AUTOWARE_SUBSCRIPTION_OPTIONS options;
+  options.callback_group = cb_group_objects_;
   initial_objects_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
     tier4_perception_msgs::msg::DetectedObjectsWithFeature, "~/input/initial_objects",
     rclcpp::QoS{1},

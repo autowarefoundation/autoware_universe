@@ -20,6 +20,7 @@
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
 
 #include <deque>
+#include <mutex>
 
 namespace autoware::detection_by_tracker
 {
@@ -28,6 +29,9 @@ class TrackerHandler
 {
 private:
   std::deque<autoware_perception_msgs::msg::TrackedObjects> objects_buffer_;
+  // protects objects_buffer_, written from the tracked_objects callback group and read from the
+  // initial_objects callback group
+  std::mutex mutex_;
 
 public:
   TrackerHandler() = default;

@@ -43,6 +43,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace autoware::detection_by_tracker
@@ -58,6 +59,11 @@ private:
   rclcpp::Subscription<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr trackers_sub_;
   AUTOWARE_SUBSCRIPTION_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature)
   initial_objects_sub_;
+
+  // callback groups: one per subscription, so trackers_sub_ and initial_objects_sub_
+  // can be scheduled without interfering with each other
+  rclcpp::CallbackGroup::SharedPtr cb_group_trackers_;
+  rclcpp::CallbackGroup::SharedPtr cb_group_objects_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
