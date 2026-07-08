@@ -1,11 +1,28 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Parameters for Lidar Centerpoint Node",
+  "$comment": "This schema is not considered in CI workflow due to a basename-prefix collision with sibling ml_package/common parameter files in this directory (see json-schema-check's glob matching in validate_json_schemas.py). See PR #12949 for details. Same pattern as centerpoint_common.schema.json's sibling, transfusion.schema.dummy.json.",
   "type": "object",
   "definitions": {
     "centerpoint": {
       "type": "object",
       "properties": {
+        "encoder_onnx_path": {
+          "type": "string",
+          "description": "Path to VoxelFeatureEncoder ONNX file."
+        },
+        "encoder_engine_path": {
+          "type": "string",
+          "description": "Path to VoxelFeatureEncoder TensorRT Engine file."
+        },
+        "head_onnx_path": {
+          "type": "string",
+          "description": "Path to DetectionHead ONNX file."
+        },
+        "head_engine_path": {
+          "type": "string",
+          "description": "Path to DetectionHead TensorRT Engine file."
+        },
         "trt_precision": {
           "type": "string",
           "description": "TensorRT inference precision.",
@@ -47,11 +64,6 @@
               "default": 0.1,
               "minimum": 0.0,
               "maximum": 1.0
-            },
-            "has_twist": {
-              "type": "boolean",
-              "description": "Indicates whether the model outputs twist value.",
-              "default": false
             }
           }
         },
