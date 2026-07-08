@@ -18,6 +18,7 @@
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_actuation_cmd.hpp"
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_delay_steer_acc.hpp"
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_delay_steer_acc_geared.hpp"
+#include "autoware/simple_planning_simulator/vehicle_model/sim_model_delay_steer_acc_geared_for_diffusion_planner.hpp"
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_delay_steer_acc_geared_wo_fall_guard.hpp"
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_delay_steer_map_acc_geared.hpp"
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_delay_steer_vel.hpp"

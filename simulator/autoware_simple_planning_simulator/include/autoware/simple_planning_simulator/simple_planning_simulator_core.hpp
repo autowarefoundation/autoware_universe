@@ -226,6 +226,7 @@ private:
     ACTUATION_CMD_VGR = 10,
     ACTUATION_CMD_MECHANICAL = 11,
     ACTUATION_CMD_STEER_MAP = 12,
+    DELAY_STEER_ACC_GEARED_FOR_DIFFUSION_PLANNER = 13,
   } vehicle_model_type_;  //!< @brief vehicle model type to decide the model dynamics
   std::shared_ptr<SimModelInterface> vehicle_model_ptr_;  //!< @brief vehicle model pointer
 

@@ -445,6 +445,7 @@ INSTANTIATE_TEST_SUITE_P(
     std::make_tuple(CommandType::Ackermann, "DELAY_STEER_ACC"),
     std::make_tuple(CommandType::Ackermann, "DELAY_STEER_ACC_GEARED"),
     std::make_tuple(CommandType::Ackermann, "DELAY_STEER_ACC_GEARED_WO_FALL_GUARD"),
+    std::make_tuple(CommandType::Ackermann, "DELAY_STEER_ACC_GEARED_FOR_DIFFUSION_PLANNER"),
     /* Actuation type */
     // NOTE: Just "ACTUATION_CMD" sim model converts only accel/brake actuation commands. The test
     // is performed for models that convert all accel/brake/steer commands, so the test for
