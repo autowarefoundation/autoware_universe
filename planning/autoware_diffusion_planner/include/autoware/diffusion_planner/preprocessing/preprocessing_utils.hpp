@@ -69,12 +69,9 @@ std::vector<float> create_ego_current_state(
 /**
  * @brief Creates ego agent past trajectory data from pose messages.
  *
- * When reference_time is provided, generates the trajectory by resampling poses at regular
- * time intervals (0.1s) backwards from the reference time. Within that resampling,
- * use_time_interpolation selects between interpolating each pose between the two bracketing
- * odometry messages (true) and taking the nearest message (false, match closest). When
- * reference_time is std::nullopt, uses the original behavior of taking the last num_timesteps
- * odometry messages directly.
+ * When reference_time is provided, resamples poses at regular 0.1s intervals backwards from it,
+ * with use_time_interpolation choosing per-sample interpolation vs. nearest message. When it is
+ * std::nullopt, takes the last num_timesteps odometry messages directly (legacy behavior).
  *
  * @param[in] odom_msgs           Deque of odometry messages
  * @param[in] num_timesteps       Number of timesteps to process

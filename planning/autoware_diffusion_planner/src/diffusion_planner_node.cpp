@@ -500,8 +500,7 @@ void DiffusionPlanner::on_timer()
     return;
   }
 
-  // Take data from subscribers. Odometry is drained as a buffer (All policy); the core selects the
-  // sample nearest the tracked-objects timestamp and stamps the frame with the object time.
+  // Take data from subscribers. Odometry drains as a buffer (All policy); see create_frame_context.
   auto objects = sub_tracked_objects_.take_data();
   auto ego_states = sub_current_odometry_.take_data();
   auto ego_acceleration = sub_current_acceleration_.take_data();
