@@ -41,7 +41,6 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 namespace control_diagnostics
@@ -83,23 +82,6 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
 {
   using std::placeholders::_1;
 
-  // Polling subscribers
-  odometry_sub_ = this->create_polling_subscriber<Odometry>("~/input/odometry", rclcpp::QoS{1});
-  accel_sub_ = this->create_polling_subscriber<AccelWithCovarianceStamped>(
-    "~/input/acceleration", rclcpp::QoS{1});
-  traj_sub_ = this->create_polling_subscriber<Trajectory>("~/input/trajectory", rclcpp::QoS{1});
-  namespace polling_policy = autoware::agnocast_wrapper::polling_policy;
-  route_subscriber_ = this->create_polling_subscriber<LaneletRoute, polling_policy::Newest>(
-    "~/input/route", rclcpp::QoS{1}.transient_local());
-  vector_map_subscriber_ = this->create_polling_subscriber<LaneletMapBin, polling_policy::Newest>(
-    "~/input/vector_map", rclcpp::QoS{1}.transient_local());
-  behavior_path_subscriber_ =
-    this->create_polling_subscriber<PathWithLaneId>("~/input/behavior_path", rclcpp::QoS{1});
-  steering_sub_ =
-    this->create_polling_subscriber<SteeringReport>("~/input/steering_status", rclcpp::QoS{1});
-  objects_sub_ =
-    this->create_polling_subscriber<PredictedObjects>("~/input/objects", rclcpp::QoS{1});
-
   // planning_factor subscribers
   std::vector<std::string> stop_deviation_modules_list =
     declare_parameter<std::vector<std::string>>(
@@ -111,8 +93,7 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
     declare_parameter<std::string>("planning_factor_metrics.topic_prefix");
   for (const auto & module_name : stop_deviation_modules_) {
     planning_factors_sub_.emplace(
-      module_name, this->create_polling_subscriber<PlanningFactorArray>(
-                     topic_prefix + module_name, rclcpp::QoS{1}));
+      module_name, this->create_polling_subscriber<PlanningFactorArray>(topic_prefix + module_name));
     stop_deviation_accumulators_.emplace(module_name, Accumulator<double>());
     stop_deviation_abs_accumulators_.emplace(module_name, Accumulator<double>());
   }
@@ -730,18 +711,16 @@ void ControlEvaluatorNode::onTimer()
     AddSteeringMetricMsg(*steering_status);
   }
 
-  // Publish metrics (zero-copy: borrow the output buffer, move the accumulated array into it)
-  auto metrics_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(metrics_pub_);
-  *metrics_out = std::move(metrics_msg_);
-  metrics_out->stamp = now();
-  metrics_pub_->publish(std::move(metrics_out));
+  // Publish metrics
+  metrics_msg_.stamp = now();
+  metrics_pub_->publish(metrics_msg_);
   metrics_msg_ = MetricArrayMsg{};
 
   // Publish processing time
-  auto processing_time_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(processing_time_pub_);
-  processing_time_msg->stamp = get_clock()->now();
-  processing_time_msg->data = stop_watch.toc();
-  processing_time_pub_->publish(std::move(processing_time_msg));
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
+  processing_time_msg.stamp = get_clock()->now();
+  processing_time_msg.data = stop_watch.toc();
+  processing_time_pub_->publish(processing_time_msg);
 }
 }  // namespace control_diagnostics
 
