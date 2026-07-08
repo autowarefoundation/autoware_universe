@@ -29,9 +29,10 @@
 #include "autoware/diffusion_planner/inference/onnxruntime_inference.hpp"
 #endif
 
+#include <autoware_utils_geometry/geometry.hpp>
+
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_internal_planning_msgs/msg/generator_info.hpp>
-#include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -77,8 +78,7 @@ namespace
 {
 // Linearly interpolate an ego odometry sample (pose and twist) between two buffered samples at the
 // given ratio in [0, 1], where ratio 0 returns `earlier` and ratio 1 returns `later`.
-Odometry interpolate_ego_state(
-  const Odometry & earlier, const Odometry & later, const double ratio)
+Odometry interpolate_ego_state(const Odometry & earlier, const Odometry & later, const double ratio)
 {
   Odometry interpolated = earlier;
   interpolated.pose.pose = autoware_utils_geometry::calc_interpolated_pose(
@@ -95,10 +95,11 @@ Odometry interpolate_ego_state(
   return interpolated;
 }
 
-// Select the current ego state from the buffered odometry, anchored at the frame (object) timestamp.
-// With time interpolation, interpolate the ego state between the two samples bracketing frame_time;
-// otherwise pick the nearest buffered sample (match closest). Returns the selected state together
-// with its absolute time offset from frame_time [s] (0 when interpolated within the buffer range).
+// Select the current ego state from the buffered odometry, anchored at the frame (object)
+// timestamp. With time interpolation, interpolate the ego state between the two samples bracketing
+// frame_time; otherwise pick the nearest buffered sample (match closest). Returns the selected
+// state together with its absolute time offset from frame_time [s] (0 when interpolated within the
+// buffer range).
 std::pair<Odometry, double> select_ego_state(
   const std::deque<Odometry> & ego_history, const rclcpp::Time & frame_time,
   const bool use_time_interpolation)
@@ -120,7 +121,8 @@ std::pair<Odometry, double> select_ego_state(
     return {*nearest, min_time_diff_s};
   }
 
-  // Interpolate at frame_time between the two bracketing samples, if frame_time is within the range.
+  // Interpolate at frame_time between the two bracketing samples, if frame_time is within the
+  // range.
   const double frame_sec = frame_time.seconds();
   for (size_t i = 0; i + 1 < ego_history.size(); ++i) {
     const double t0 = rclcpp::Time(ego_history[i].header.stamp).seconds();
@@ -441,8 +443,8 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   {
     // The ego history buffer is dense and time-shifted relative to the object timestamp, so it is
     // resampled at regular intervals anchored at the frame (object) timestamp. With time
-    // interpolation each sample is interpolated between the bracketing buffer entries; otherwise the
-    // nearest buffer entry is used (match closest).
+    // interpolation each sample is interpolated between the bracketing buffer entries; otherwise
+    // the nearest buffer entry is used (match closest).
     const std::optional<rclcpp::Time> reference_time = std::make_optional(frame_context.frame_time);
     // The buffer holds raw odometry; apply the same vehicle-center shift as the reference transform
     // so the past trajectory is expressed consistently with the current ego frame.

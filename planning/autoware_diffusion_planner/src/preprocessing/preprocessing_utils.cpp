@@ -199,8 +199,8 @@ std::vector<float> create_ego_agent_past(
           odom_msgs[search_start].pose.pose, odom_msgs[search_start + 1].pose.pose, ratio, false);
       } else {
         // Match closest: take whichever bracketing message is nearer to the target time.
-        interpolated_pose = (ratio < 0.5) ? odom_msgs[search_start].pose.pose
-                                          : odom_msgs[search_start + 1].pose.pose;
+        interpolated_pose =
+          (ratio < 0.5) ? odom_msgs[search_start].pose.pose : odom_msgs[search_start + 1].pose.pose;
       }
     }
 
