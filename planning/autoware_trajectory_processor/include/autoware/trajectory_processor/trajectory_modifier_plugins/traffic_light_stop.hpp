@@ -17,9 +17,10 @@
 
 #include "autoware/traffic_light_compliance_checker/structs.hpp"
 #include "autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp"
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -34,7 +35,7 @@ using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using visualization_msgs::msg::MarkerArray;
 
-class TrafficLightStop : public TrajectoryModifierPluginBase
+class TrafficLightStop : public PluginBase
 {
 public:
   TrafficLightStop() = default;
@@ -49,7 +50,7 @@ public:
   const TrajectoryModifierParams::TrafficLightStop & get_params() const { return params_; }
 
 protected:
-  void on_initialize(const TrajectoryModifierParams & params) override;
+  void set_up_params() override;
 
 private:
   TrajectoryModifierParams::TrafficLightStop params_;

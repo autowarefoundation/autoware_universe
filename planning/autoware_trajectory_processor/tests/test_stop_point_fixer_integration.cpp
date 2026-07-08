@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/stop_point_fixer.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
@@ -99,7 +100,13 @@ protected:
     params_.stop_point_fixer.velocity_threshold = 0.1;
     params_.stop_point_fixer.min_distance_threshold = 1.0;
     plugin_ = std::make_unique<StopPointFixer>();
-    plugin_->initialize("test_stop_point_fixer", node_.get(), time_keeper_, context_, params_);
+    auto node_context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+    node_context->node_ptr = node_.get();
+    node_context->time_keeper = time_keeper_;
+    node_context->vehicle_info = context_->vehicle_info;
+    node_context->tf_buffer = &context_->tf_buffer;
+    plugin_->initialize("test_stop_point_fixer", node_context);
+    plugin_->update_params(params_);
   }
 
   void TearDown() override

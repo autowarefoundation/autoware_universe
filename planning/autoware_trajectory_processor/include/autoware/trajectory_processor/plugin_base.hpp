@@ -41,11 +41,18 @@
 #include <utility>
 #include <vector>
 
+namespace trajectory_modifier_params
+{
+struct Params;
+}  // namespace trajectory_modifier_params
+
 namespace autoware::trajectory_processor::plugin
 {
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
+using TrajectoryModifierParams = trajectory_modifier_params::Params;
+using TrajectoryOptimizerParams = autoware::trajectory_optimizer::TrajectoryOptimizerParams;
 
 struct InputData
 {
@@ -82,9 +89,12 @@ public:
       return npos != std::string::npos ? name.substr(npos + 1) : name;
     });
     context_ = std::move(context);
+    set_up_params();
   }
 
   virtual bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) = 0;
+
+  virtual void set_up_params() {}
 
   virtual rcl_interfaces::msg::SetParametersResult on_parameter(
     [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
@@ -95,10 +105,12 @@ public:
     return result;
   }
 
-  virtual void update_params(
-    [[maybe_unused]] const autoware::trajectory_optimizer::TrajectoryOptimizerParams & params)
+  virtual void update_params([[maybe_unused]] const TrajectoryOptimizerParams & params)
   {
+    optimizer_params_ = params;
   }
+
+  virtual void update_params([[maybe_unused]] const TrajectoryModifierParams & params) {}
 
   virtual void publish_debug_data([[maybe_unused]] const std::string & ns) const {}
   virtual void publish_debug_markers() const {}
@@ -129,15 +141,60 @@ protected:
   }
   rclcpp::Clock::SharedPtr get_clock() const { return get_node_ptr()->get_clock(); }
 
+  template <class Optimizer>
+  bool run_optimizer(
+    Optimizer && optimizer, TrajectoryPoints & traj_points, const InputData & input)
+  {
+    if (!input.current_odometry || !input.current_acceleration) {
+      return false;
+    }
+
+    autoware::trajectory_optimizer::TrajectoryOptimizerData data;
+    data.current_odometry = *input.current_odometry;
+    data.current_acceleration = *input.current_acceleration;
+    if (input.semantic_speed_tracker) {
+      data.semantic_speed_tracker = *input.semantic_speed_tracker;
+    }
+
+    std::forward<Optimizer>(optimizer)(traj_points, optimizer_params_, data);
+
+    if (input.semantic_speed_tracker) {
+      *input.semantic_speed_tracker = data.semantic_speed_tracker;
+    }
+    return true;
+  }
+
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;
   std::shared_ptr<NodeContext> context_{nullptr};
   bool enabled_{true};
+  double trajectory_time_step_{0.1};
+  TrajectoryOptimizerParams optimizer_params_;
 
 private:
   std::string name_{"unnamed_plugin"};
   std::string short_name_{"unnamed_plugin"};
 };
 }  // namespace autoware::trajectory_processor::plugin
+
+namespace autoware::trajectory_modifier::plugin
+{
+using autoware::trajectory_processor::plugin::InputData;
+using autoware::trajectory_processor::plugin::NodeContext;
+using autoware::trajectory_processor::plugin::PlanningFactor;
+using autoware::trajectory_processor::plugin::PluginBase;
+using autoware::trajectory_processor::plugin::TrajectoryModifierParams;
+using autoware::trajectory_processor::plugin::TrajectoryPoint;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+}  // namespace autoware::trajectory_modifier::plugin
+
+namespace autoware::trajectory_optimizer::plugin
+{
+using autoware::trajectory_processor::plugin::InputData;
+using autoware::trajectory_processor::plugin::NodeContext;
+using autoware::trajectory_processor::plugin::PluginBase;
+using autoware::trajectory_processor::plugin::TrajectoryPoint;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+}  // namespace autoware::trajectory_optimizer::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__PLUGIN_BASE_HPP_

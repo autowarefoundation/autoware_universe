@@ -39,7 +39,10 @@ void TrajectoryMPTOptimizer::initialize(
   const std::string & name, rclcpp::Node * node_ptr,
   const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
-  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
+  auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+  context->node_ptr = node_ptr;
+  context->time_keeper = time_keeper;
+  PluginBase::initialize(name, context);
 
   RCLCPP_INFO(node_ptr->get_logger(), "MPT Optimizer plugin: Starting initialization...");
 
@@ -51,8 +54,6 @@ void TrajectoryMPTOptimizer::initialize(
     // Initialize debug data
     debug_data_ptr_ = std::make_shared<DebugData>();
 
-    // Set up parameters
-    set_up_params();
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: Parameters set up");
 
     // Create TimeKeeper for performance profiling
@@ -177,6 +178,16 @@ rcl_interfaces::msg::SetParametersResult TrajectoryMPTOptimizer::on_parameter(
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   return result;
+}
+
+bool TrajectoryMPTOptimizer::modify_trajectory(
+  TrajectoryPoints & traj_points, const InputData & input)
+{
+  return run_optimizer(
+    [this](
+      TrajectoryPoints & points, const TrajectoryOptimizerParams & params,
+      TrajectoryOptimizerData & data) { optimize_trajectory(points, params, data); },
+    traj_points, input);
 }
 
 void TrajectoryMPTOptimizer::optimize_trajectory(

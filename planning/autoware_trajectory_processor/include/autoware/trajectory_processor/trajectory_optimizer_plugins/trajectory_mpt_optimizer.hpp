@@ -17,8 +17,8 @@
 
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -65,21 +65,25 @@ struct MPTParams
     5};  // Moving average window size for acceleration smoothing
 };
 
-class TrajectoryMPTOptimizer : public TrajectoryOptimizerPluginBase
+class TrajectoryMPTOptimizer : public PluginBase
 {
 public:
   TrajectoryMPTOptimizer() = default;
 
   void initialize(
     const std::string & name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper) override;
+    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper);
   void initialize(
     const std::string & name,
     std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context) override;
 
+  bool modify_trajectory(
+
+    TrajectoryPoints & traj_points, const InputData & input) override;
+
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data);
 
   void set_up_params() override;
 

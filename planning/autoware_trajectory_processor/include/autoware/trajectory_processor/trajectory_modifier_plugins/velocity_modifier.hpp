@@ -15,15 +15,16 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__VELOCITY_MODIFIER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__VELOCITY_MODIFIER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 namespace autoware::trajectory_modifier::plugin
 {
 
-class VelocityModifier : public TrajectoryModifierPluginBase
+class VelocityModifier : public PluginBase
 {
 public:
   VelocityModifier() = default;
@@ -41,7 +42,7 @@ public:
   };
 
 protected:
-  void on_initialize(const TrajectoryModifierParams & params) override;
+  void set_up_params() override;
 
 private:
   TrajectoryModifierParams::StoppingConstraints params_;

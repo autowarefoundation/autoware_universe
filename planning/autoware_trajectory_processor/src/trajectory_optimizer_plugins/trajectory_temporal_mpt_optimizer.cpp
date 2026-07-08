@@ -99,8 +99,11 @@ void TrajectoryTemporalMPTOptimizer::initialize(
   const std::string & name, rclcpp::Node * node_ptr,
   const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
-  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
-  // set_up_params() already ran via TrajectoryOptimizerPluginBase::initialize()
+  auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+  context->node_ptr = node_ptr;
+  context->time_keeper = time_keeper;
+  PluginBase::initialize(name, context);
+  // set_up_params() already ran via PluginBase::initialize()
   create_or_reset_solver();
 }
 
@@ -176,6 +179,16 @@ rcl_interfaces::msg::SetParametersResult TrajectoryTemporalMPTOptimizer::on_para
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   return result;
+}
+
+bool TrajectoryTemporalMPTOptimizer::modify_trajectory(
+  TrajectoryPoints & traj_points, const InputData & input)
+{
+  return run_optimizer(
+    [this](
+      TrajectoryPoints & points, const TrajectoryOptimizerParams & params,
+      TrajectoryOptimizerData & data) { optimize_trajectory(points, params, data); },
+    traj_points, input);
 }
 
 void TrajectoryTemporalMPTOptimizer::optimize_trajectory(

@@ -139,6 +139,16 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
   return result;
 }
 
+bool TrajectoryQPSmoother::modify_trajectory(
+  TrajectoryPoints & traj_points, const InputData & input)
+{
+  return run_optimizer(
+    [this](
+      TrajectoryPoints & points, const TrajectoryOptimizerParams & params,
+      TrajectoryOptimizerData & data) { optimize_trajectory(points, params, data); },
+    traj_points, input);
+}
+
 void TrajectoryQPSmoother::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
   TrajectoryOptimizerData & data)

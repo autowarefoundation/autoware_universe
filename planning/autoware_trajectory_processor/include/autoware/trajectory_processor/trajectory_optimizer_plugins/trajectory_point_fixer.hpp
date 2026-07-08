@@ -14,7 +14,7 @@
 
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_HPP_
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -43,14 +43,17 @@ struct TrajectoryPointFixerParams
   double stop_detection_velocity_threshold_mps{0.3};  // Velocity threshold for stop detection [m/s]
 };
 
-class TrajectoryPointFixer : public TrajectoryOptimizerPluginBase
+class TrajectoryPointFixer : public PluginBase
 {
 public:
   TrajectoryPointFixer() = default;
   ~TrajectoryPointFixer() = default;
+  bool modify_trajectory(
+
+    TrajectoryPoints & traj_points, const InputData & input) override;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data);
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;

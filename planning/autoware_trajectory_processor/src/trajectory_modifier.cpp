@@ -174,14 +174,13 @@ void TrajectoryModifier::load_plugin(const std::string & name)
 
   if (plugin_loader_.isClassAvailable(name)) {
     auto plugin = plugin_loader_.createSharedInstance(name);
-    const auto modifier_plugin =
-      std::dynamic_pointer_cast<plugin::TrajectoryModifierPluginBase>(plugin);
-    if (!modifier_plugin) {
-      RCLCPP_ERROR(
-        this->get_logger(), "The plugin '%s' is not a trajectory modifier plugin", name.c_str());
-      return;
-    }
-    modifier_plugin->initialize(name, this, time_keeper_, context_, params_);
+    auto node_context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+    node_context->node_ptr = this;
+    node_context->time_keeper = time_keeper_;
+    node_context->vehicle_info = context_->vehicle_info;
+    node_context->tf_buffer = &context_->tf_buffer;
+    plugin->initialize(name, node_context);
+    plugin->update_params(params_);
     // register
     plugins_.push_back(plugin);
     RCLCPP_INFO(this->get_logger(), "The modifier plugin '%s' has been loaded", name.c_str());
@@ -213,11 +212,7 @@ void TrajectoryModifier::update_params()
     params_ = param_listener_->get_params();
 
     for (auto & plugin : plugins_) {
-      const auto modifier_plugin =
-        std::dynamic_pointer_cast<plugin::TrajectoryModifierPluginBase>(plugin);
-      if (modifier_plugin) {
-        modifier_plugin->update_params(params_);
-      }
+      plugin->update_params(params_);
     }
   } catch (const std::exception & e) {
     RCLCPP_WARN(this->get_logger(), "Failed to update parameters: %s", e.what());

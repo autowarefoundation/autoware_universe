@@ -17,8 +17,8 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_
 
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
@@ -58,7 +58,7 @@ struct TrajectoryVelocityOptimizerParams
   ContinuousJerkSmootherParams continuous_jerk_smoother_params;
 };
 
-class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
+class TrajectoryVelocityOptimizer : public PluginBase
 {
 public:
   TrajectoryVelocityOptimizer() = default;
@@ -66,13 +66,16 @@ public:
 
   void initialize(
     const std::string & name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper) override;
+    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper);
   void initialize(
     const std::string & name,
     std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context) override;
+  bool modify_trajectory(
+
+    TrajectoryPoints & traj_points, const InputData & input) override;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data);
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;

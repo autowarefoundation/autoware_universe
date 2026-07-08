@@ -41,7 +41,7 @@ using utils::obstacle_stop::get_trajectory_shape;
 using utils::obstacle_stop::PointCloud;
 using utils::obstacle_stop::PointCloud2;
 
-void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
+void ObstacleStop::set_up_params()
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
@@ -55,52 +55,6 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
   debug_viz_pub_ = node_ptr->create_publisher<visualization_msgs::msg::MarkerArray>(
     "~/obstacle_stop/debug/marker", 1);
   pub_debug_text_ = node_ptr->create_publisher<StringStamped>("~/obstacle_stop/debug/text", 1);
-
-  params_ = params.obstacle_stop;
-  stopping_params_ = params.stopping_constraints;
-  enabled_ = params.use_obstacle_stop;
-  trajectory_time_step_ = params.trajectory_time_step;
-
-  {
-    auto & p = params_.rss_params;
-    p.ego_decel = std::clamp(
-      p.ego_decel, stopping_params_.nominal_deceleration, stopping_params_.maximum_deceleration);
-  }
-
-  {
-    const auto & p = params_.pointcloud;
-    pointcloud_filter_ = std::make_unique<utils::obstacle_stop::PointCloudFilter>(
-      p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
-      p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
-      p.clustering.max_size);
-  }
-
-  {
-    const auto & p = params_.objects;
-    object_filter_ = std::make_unique<utils::obstacle_stop::ObjectFilter>(
-      p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
-      p.safety_buffer);
-  }
-
-  {
-    const auto & p = params_.obstacle_tracking;
-    obstacle_tracker_ = std::make_unique<utils::obstacle_stop::ObstacleTracker>(
-      p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th, p.pcd_distance_th,
-      p.grace_period);
-  }
-
-  {
-    const auto & p = params_.rss_params;
-    object_decel_map_ = {
-      {utils::obstacle_stop::ObjectType::CAR, p.object_decel.car},
-      {utils::obstacle_stop::ObjectType::TRUCK, p.object_decel.truck},
-      {utils::obstacle_stop::ObjectType::BUS, p.object_decel.bus},
-      {utils::obstacle_stop::ObjectType::TRAILER, p.object_decel.trailer},
-      {utils::obstacle_stop::ObjectType::MOTORCYCLE, p.object_decel.motorcycle},
-      {utils::obstacle_stop::ObjectType::BICYCLE, p.object_decel.bicycle},
-      {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian},
-      {utils::obstacle_stop::ObjectType::ANIMAL, p.object_decel.animal}};
-  }
 }
 
 void ObstacleStop::update_params(const TrajectoryModifierParams & params)
@@ -118,24 +72,43 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
 
   {
     const auto & p = params_.pointcloud;
-    pointcloud_filter_->set_params(
-      p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
-      p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
-      p.clustering.max_size);
+    if (pointcloud_filter_) {
+      pointcloud_filter_->set_params(
+        p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
+        p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
+        p.clustering.max_size);
+    } else {
+      pointcloud_filter_ = std::make_unique<utils::obstacle_stop::PointCloudFilter>(
+        p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
+        p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
+        p.clustering.max_size);
+    }
   }
 
   {
     const auto & p = params_.objects;
-    object_filter_->set_params(
-      p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
-      p.safety_buffer);
+    if (object_filter_) {
+      object_filter_->set_params(
+        p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
+        p.safety_buffer);
+    } else {
+      object_filter_ = std::make_unique<utils::obstacle_stop::ObjectFilter>(
+        p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
+        p.safety_buffer);
+    }
   }
 
   {
     const auto & p = params_.obstacle_tracking;
-    obstacle_tracker_->set_params(
-      p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th, p.pcd_distance_th,
-      p.grace_period);
+    if (obstacle_tracker_) {
+      obstacle_tracker_->set_params(
+        p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th,
+        p.pcd_distance_th, p.grace_period);
+    } else {
+      obstacle_tracker_ = std::make_unique<utils::obstacle_stop::ObstacleTracker>(
+        p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th,
+        p.pcd_distance_th, p.grace_period);
+    }
   }
 
   {

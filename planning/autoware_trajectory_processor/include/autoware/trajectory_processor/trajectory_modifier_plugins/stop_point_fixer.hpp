@@ -15,12 +15,14 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__STOP_POINT_FIXER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__STOP_POINT_FIXER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
+
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 
 namespace autoware::trajectory_modifier::plugin
 {
 
-class StopPointFixer : public TrajectoryModifierPluginBase
+class StopPointFixer : public PluginBase
 {
 public:
   StopPointFixer() = default;
@@ -37,12 +39,13 @@ public:
   {
     params_ = params.stop_point_fixer;
     enabled_ = params.use_stop_point_fixer;
+    trajectory_time_step_ = params.trajectory_time_step;
   }
 
   const TrajectoryModifierParams::StopPointFixer & get_params() const { return params_; }
 
 protected:
-  void on_initialize(const TrajectoryModifierParams & params) override;
+  void set_up_params() override;
 
 private:
   TrajectoryModifierParams::StopPointFixer params_;

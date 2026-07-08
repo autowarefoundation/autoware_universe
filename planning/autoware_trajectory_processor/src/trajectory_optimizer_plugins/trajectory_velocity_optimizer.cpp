@@ -33,9 +33,10 @@ void TrajectoryVelocityOptimizer::initialize(
   const std::string & name, rclcpp::Node * node_ptr,
   const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
-  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
-
-  set_up_params();
+  auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+  context->node_ptr = node_ptr;
+  context->time_keeper = time_keeper;
+  PluginBase::initialize(name, context);
 
   sub_planning_velocity_ =
     std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
@@ -56,6 +57,16 @@ void TrajectoryVelocityOptimizer::initialize(
   std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
 {
   initialize(name, context->node_ptr, context->time_keeper);
+}
+
+bool TrajectoryVelocityOptimizer::modify_trajectory(
+  TrajectoryPoints & traj_points, const InputData & input)
+{
+  return run_optimizer(
+    [this](
+      TrajectoryPoints & points, const TrajectoryOptimizerParams & params,
+      TrajectoryOptimizerData & data) { optimize_trajectory(points, params, data); },
+    traj_points, input);
 }
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(

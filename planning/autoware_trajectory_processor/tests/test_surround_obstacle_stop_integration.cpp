@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/surround_obstacle_stop.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -207,8 +208,13 @@ protected:
 
     context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
     plugin_ = std::make_unique<SurroundObstacleStop>();
-    plugin_->initialize(
-      "test_surround_obstacle_stop", node_.get(), time_keeper_, context_, params_);
+    auto node_context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+    node_context->node_ptr = node_.get();
+    node_context->time_keeper = time_keeper_;
+    node_context->vehicle_info = context_->vehicle_info;
+    node_context->tf_buffer = &context_->tf_buffer;
+    plugin_->initialize("test_surround_obstacle_stop", node_context);
+    plugin_->update_params(params_);
   }
 
   void TearDown() override

@@ -47,7 +47,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 namespace autoware::trajectory_modifier::plugin
 {
 
-void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryModifierParams & params)
+void TrafficLightStop::set_up_params()
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
@@ -55,14 +55,6 @@ void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryModifierPa
       node_ptr, "modifier_traffic_light_stop");
 
   pub_debug_text_ = node_ptr->create_publisher<StringStamped>("~/traffic_light_stop/debug/text", 1);
-
-  enabled_ = params.use_traffic_light_stop;
-  params_ = params.traffic_light_stop;
-  stopping_params_ = params.stopping_constraints;
-
-  checker_ =
-    std::make_unique<autoware::traffic_light_compliance_checker::TrafficLightComplianceChecker>(
-      to_checker_params(params), context_->vehicle_info);
 }
 
 void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryModifierParams & params)
@@ -70,7 +62,14 @@ void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryModifierPa
   enabled_ = params.use_traffic_light_stop;
   params_ = params.traffic_light_stop;
   stopping_params_ = params.stopping_constraints;
-  checker_->update_parameters(to_checker_params(params));
+  trajectory_time_step_ = params.trajectory_time_step;
+  if (checker_) {
+    checker_->update_parameters(to_checker_params(params));
+  } else {
+    checker_ =
+      std::make_unique<autoware::traffic_light_compliance_checker::TrafficLightComplianceChecker>(
+        to_checker_params(params), context_->vehicle_info);
+  }
 }
 
 bool TrafficLightStop::is_trajectory_modification_required(

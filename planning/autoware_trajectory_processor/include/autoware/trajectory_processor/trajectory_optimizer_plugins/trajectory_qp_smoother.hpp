@@ -17,7 +17,7 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_QP_SMOOTHER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <Eigen/Dense>
@@ -87,15 +87,19 @@ struct QPSmootherParams
  * Constraints: fixed initial position
  * Post-processing: velocity/acceleration derived from smoothed path geometry
  */
-class TrajectoryQPSmoother : public TrajectoryOptimizerPluginBase
+class TrajectoryQPSmoother : public PluginBase
 {
 public:
   TrajectoryQPSmoother() = default;
   ~TrajectoryQPSmoother() = default;
 
+  bool modify_trajectory(
+
+    TrajectoryPoints & traj_points, const InputData & input) override;
+
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data);
 
   void set_up_params() override;
 

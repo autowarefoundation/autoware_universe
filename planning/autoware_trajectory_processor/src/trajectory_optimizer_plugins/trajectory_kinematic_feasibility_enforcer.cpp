@@ -33,6 +33,16 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
+bool TrajectoryKinematicFeasibilityEnforcer::modify_trajectory(
+  TrajectoryPoints & traj_points, const InputData & input)
+{
+  return run_optimizer(
+    [this](
+      TrajectoryPoints & points, const TrajectoryOptimizerParams & params,
+      TrajectoryOptimizerData & data) { optimize_trajectory(points, params, data); },
+    traj_points, input);
+}
+
 void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
   TrajectoryOptimizerData & data)

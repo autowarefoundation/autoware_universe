@@ -19,7 +19,7 @@ The `autoware_trajectory_optimizer` package generates smooth and feasible trajec
 
 ## Architecture
 
-The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from `TrajectoryOptimizerPluginBase` and is loaded via the ROS 2 pluginlib system.
+The package uses a pluginlib-based architecture where trajectory processor plugins are dynamically loaded at startup. Each plugin inherits from `autoware::trajectory_processor::plugin::PluginBase` and is loaded via the ROS 2 pluginlib system.
 
 ### Plugin Loading and Execution
 
@@ -145,16 +145,15 @@ The `autoware_trajectory_modifier` package provides a plugin-based architecture 
 
 ### Architecture
 
-The trajectory modifier uses a plugin-based system where different modification algorithms can be implemented as plugins. Each plugin inherits from the `TrajectoryModifierPluginBase` class and implements the required interface.
+The trajectory modifier uses the shared trajectory processor plugin interface, where different modification algorithms can be implemented as plugins. Each plugin inherits from `autoware::trajectory_processor::plugin::PluginBase`.
 
 #### Plugin Interface
 
-All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implement:
+All modifier plugins must inherit from `autoware::trajectory_processor::plugin::PluginBase` and implement:
 
 - `modify_trajectory()` - Main method to modify trajectory points
-- `on_initialize()` - Initialize plugin members and parameters
+- `set_up_params()` - Initialize plugin members that depend on the node context
 - `update_params()` - Handle parameter updates
-- `is_trajectory_modification_required()` - Determine if modification is needed
 
 #### Current Plugins
 
@@ -204,7 +203,7 @@ Parameters can be set via YAML configuration files in the `config/` directory.
 To add a new modifier plugin:
 
 1. Create header and source files in `trajectory_modifier_plugins/`
-2. Inherit from `TrajectoryModifierPluginBase`
+2. Inherit from `autoware::trajectory_processor::plugin::PluginBase`
 3. Implement the required virtual methods
 4. Register the plugin in the main node's `initialize_modifiers()` method
 5. Add plugin-specific parameters to the schema and config files

@@ -16,7 +16,7 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_SPLINE_SMOOTHER_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_SPLINE_SMOOTHER_HPP_
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -41,14 +41,17 @@ struct TrajectorySplineSmootherParams
   bool preserve_input_trajectory_orientation{true};
 };
 
-class TrajectorySplineSmoother : public TrajectoryOptimizerPluginBase
+class TrajectorySplineSmoother : public PluginBase
 {
 public:
   TrajectorySplineSmoother() = default;
   ~TrajectorySplineSmoother() = default;
+  bool modify_trajectory(
+
+    TrajectoryPoints & traj_points, const InputData & input) override;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data);
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;

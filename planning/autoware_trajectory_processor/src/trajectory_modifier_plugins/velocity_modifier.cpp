@@ -29,11 +29,8 @@ using autoware::experimental::trajectory::interpolator::AkimaSpline;
 using InterpolationTrajectory =
   autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
 
-void VelocityModifier::on_initialize(const TrajectoryModifierParams & params)
+void VelocityModifier::set_up_params()
 {
-  enabled_ = params.use_velocity_modifier;
-  trajectory_time_step_ = params.trajectory_time_step;
-  params_ = params.stopping_constraints;
 }
 
 bool VelocityModifier::is_trajectory_modification_required(

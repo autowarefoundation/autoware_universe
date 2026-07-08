@@ -15,10 +15,11 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -43,7 +44,7 @@ using utils::obstacle_stop::DebugData;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
-class ObstacleStop : public TrajectoryModifierPluginBase
+class ObstacleStop : public PluginBase
 {
 public:
   ObstacleStop() = default;
@@ -60,7 +61,7 @@ public:
   void publish_debug_data([[maybe_unused]] const std::string & ns) const override;
 
 protected:
-  void on_initialize(const TrajectoryModifierParams & params) override;
+  void set_up_params() override;
 
 private:
   TrajectoryModifierParams::ObstacleStop params_;

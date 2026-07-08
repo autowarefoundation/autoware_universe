@@ -18,7 +18,7 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EB_SMOOTHER_OPTIMIZER_HPP_
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/plugin_base.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -39,15 +39,19 @@ using autoware::path_smoother::EgoNearestParam;
 using autoware::path_smoother::ReplanChecker;
 using SmootherTimekeeper = autoware::path_smoother::TimeKeeper;
 
-class TrajectoryEBSmootherOptimizer : public TrajectoryOptimizerPluginBase
+class TrajectoryEBSmootherOptimizer : public PluginBase
 {
 public:
   TrajectoryEBSmootherOptimizer() = default;
   ~TrajectoryEBSmootherOptimizer() = default;
 
+  bool modify_trajectory(
+
+    TrajectoryPoints & traj_points, const InputData & input) override;
+
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data);
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;

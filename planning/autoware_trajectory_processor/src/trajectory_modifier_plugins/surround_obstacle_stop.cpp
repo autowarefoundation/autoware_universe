@@ -100,7 +100,7 @@ Parameters to_proximity_checker_parameters(
 namespace autoware::trajectory_modifier::plugin
 {
 
-void SurroundObstacleStop::on_initialize(const TrajectoryModifierParams & params)
+void SurroundObstacleStop::set_up_params()
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
@@ -109,13 +109,6 @@ void SurroundObstacleStop::on_initialize(const TrajectoryModifierParams & params
 
   pub_debug_text_ =
     node_ptr->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
-
-  enabled_ = params.use_surround_obstacle_stop;
-  params_ = params.surround_obstacle_stop;
-  trajectory_time_step_ = params.trajectory_time_step;
-
-  proximity_checker_ = std::make_unique<obstacle_proximity_checker::ProximityChecker>(
-    to_proximity_checker_parameters(params_), context_->vehicle_info);
 }
 
 void SurroundObstacleStop::update_params(const TrajectoryModifierParams & params)
@@ -123,7 +116,12 @@ void SurroundObstacleStop::update_params(const TrajectoryModifierParams & params
   enabled_ = params.use_surround_obstacle_stop;
   params_ = params.surround_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
-  proximity_checker_->update_parameters(to_proximity_checker_parameters(params_));
+  if (proximity_checker_) {
+    proximity_checker_->update_parameters(to_proximity_checker_parameters(params_));
+  } else {
+    proximity_checker_ = std::make_unique<obstacle_proximity_checker::ProximityChecker>(
+      to_proximity_checker_parameters(params_), context_->vehicle_info);
+  }
 }
 
 bool SurroundObstacleStop::check_inputs(const InputData & input) const

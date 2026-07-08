@@ -15,6 +15,10 @@ ament_export_dependencies(acados)
 add_subdirectory(src/acados_mpt)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
+generate_parameter_library(trajectory_modifier_param
+  param/trajectory_modifier_parameter_struct.yaml
+)
+
 ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
   src/trajectory_optimizer.cpp
   src/utils.cpp
@@ -25,10 +29,6 @@ autoware_agnocast_wrapper_register_node(autoware_trajectory_optimizer_component
   EXECUTABLE autoware_trajectory_optimizer_node
   ROS2_EXECUTOR SingleThreadedExecutor
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
-)
-
-generate_parameter_library(trajectory_modifier_param
-  param/trajectory_modifier_parameter_struct.yaml
 )
 
 ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
