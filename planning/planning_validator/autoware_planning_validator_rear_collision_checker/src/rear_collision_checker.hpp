@@ -32,7 +32,7 @@ class RearCollisionChecker : public PluginInterface
 {
 public:
   void init(
-    rclcpp::Node & node, const std::string & name,
+    autoware::agnocast_wrapper::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
   void validate() override;
   void setup_diag() override;
@@ -78,14 +78,16 @@ private:
   void set_diag_status(
     DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_voxel_pointcloud_;
 
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_cluster_pointcloud_;
 
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_string_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_string_;
 
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
-    pub_debug_processing_time_detail_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils::ProcessingTimeDetail) pub_debug_processing_time_detail_;
+
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::PlanningFactorArray)
+  pub_planning_factors_;
 
   rclcpp::Time last_safe_time_;
 

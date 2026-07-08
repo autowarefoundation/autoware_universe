@@ -25,7 +25,7 @@ namespace autoware::planning_validator
 using autoware_utils::get_or_declare_parameter;
 
 void LatencyChecker::init(
-  rclcpp::Node & node, const std::string & name,
+  autoware::agnocast_wrapper::Node & node, const std::string & name,
   const std::shared_ptr<PlanningValidatorContext> & context)
 {
   module_name_ = name;

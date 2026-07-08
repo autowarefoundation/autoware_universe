@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::planning_validator
 {
@@ -55,8 +56,10 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
     manager_.load_plugin(*this, name, context_);
   }
 
-  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  logger_configure_ = std::make_unique<
+    autoware_utils_logging::BasicLoggerLevelConfigure<autoware::agnocast_wrapper::Node>>(this);
+  published_time_publisher_ = std::make_unique<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
 }
 
 void PlanningValidatorNode::setupParameters()
@@ -98,25 +101,47 @@ bool PlanningValidatorNode::isDataReady()
 void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
 {
   auto & data = context_->data;
-  data->current_kinematics = sub_kinematics_.take_data();
-  data->current_acceleration = sub_acceleration_.take_data();
-  data->obstacle_pointcloud = sub_pointcloud_.take_data();
-  data->traffic_signals = sub_traffic_signals_.take_data();
+  const auto kinematics = sub_kinematics_->take_data();
+  data->current_kinematics = kinematics ? std::make_shared<const Odometry>(*kinematics) : nullptr;
+  const auto acceleration = sub_acceleration_->take_data();
+  data->current_acceleration =
+    acceleration ? std::make_shared<const AccelWithCovarianceStamped>(*acceleration) : nullptr;
+  const auto pointcloud = sub_pointcloud_->take_data();
+  data->obstacle_pointcloud = pointcloud ? std::make_shared<const PointCloud2>(*pointcloud) : nullptr;
+  const auto traffic_signals = sub_traffic_signals_->take_data();
+  data->traffic_signals =
+    traffic_signals ? std::make_shared<const TrafficLightGroupArray>(*traffic_signals) : nullptr;
   data->set_current_trajectory(traj_msg);
-  data->set_route(sub_route_.take_data());
-  data->set_map(sub_lanelet_map_bin_.take_data());
+
+  if (data->current_kinematics) {
+    geometry_msgs::msg::TwistStamped twist;
+    twist.header = data->current_kinematics->header;
+    twist.twist = data->current_kinematics->twist.twist;
+    context_->vehicle_stop_checker_->addTwist(twist);
+  }
+
+  const auto route = sub_route_->take_data();
+  data->set_route(route ? std::make_shared<const LaneletRoute>(*route) : nullptr);
+  const auto map = sub_lanelet_map_bin_->take_data();
+  data->set_map(map ? std::make_shared<const LaneletMapBin>(*map) : nullptr);
 }
 
-void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj_msg)
+void PlanningValidatorNode::onTrajectory(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) & traj_in)
 {
   stop_watch_.tic(__func__);
+
+  const Trajectory::ConstSharedPtr traj_msg =
+    traj_in ? std::make_shared<const Trajectory>(*traj_in) : nullptr;
 
   setData(traj_msg);
 
   if (!isDataReady()) return;
 
   // Check operational mode state
-  OperationModeState::ConstSharedPtr operation_mode_msg = sub_operational_state_.take_data();
+  const auto operation_mode = sub_operational_state_->take_data();
+  const OperationModeState::ConstSharedPtr operation_mode_msg =
+    operation_mode ? std::make_shared<const OperationModeState>(*operation_mode) : nullptr;
   if (operation_mode_msg) {
     flag_autonomous_control_enabled_ = infer_autonomous_control_state(operation_mode_msg);
   }
