@@ -36,6 +36,12 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
     "~/input/trajectory", rclcpp::QoS{1},
     std::bind(&PlanningValidatorNode::onTrajectory, this, std::placeholders::_1));
 
+  // odometry subscriber that feeds the stop checker on every message (as the original
+  // VehicleStopChecker did with its own subscription)
+  sub_odometry_ = create_subscription<Odometry>(
+    "/localization/kinematic_state", rclcpp::QoS{1},
+    std::bind(&PlanningValidatorNode::onOdometry, this, std::placeholders::_1));
+
   // publishers
   pub_traj_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   pub_status_ = create_publisher<PlanningValidatorStatus>("~/output/validation_status", 1);
@@ -114,17 +120,18 @@ void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
     traffic_signals ? std::make_shared<const TrafficLightGroupArray>(*traffic_signals) : nullptr;
   data->set_current_trajectory(traj_msg);
 
-  if (data->current_kinematics) {
-    geometry_msgs::msg::TwistStamped twist;
-    twist.header = data->current_kinematics->header;
-    twist.twist = data->current_kinematics->twist.twist;
-    context_->vehicle_stop_checker_->addTwist(twist);
-  }
-
   const auto route = sub_route_->take_data();
   data->set_route(route ? std::make_shared<const LaneletRoute>(*route) : nullptr);
   const auto map = sub_lanelet_map_bin_->take_data();
   data->set_map(map ? std::make_shared<const LaneletMapBin>(*map) : nullptr);
+}
+
+void PlanningValidatorNode::onOdometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) & msg)
+{
+  geometry_msgs::msg::TwistStamped twist;
+  twist.header = msg->header;
+  twist.twist = msg->twist.twist;
+  context_->vehicle_stop_checker_->addTwist(twist);
 }
 
 void PlanningValidatorNode::onTrajectory(

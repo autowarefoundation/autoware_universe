@@ -65,6 +65,7 @@ public:
 
 private:
   void onTrajectory(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) & traj_msg);
+  void onOdometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) & msg);
   void setupParameters();
   void setData(const Trajectory::ConstSharedPtr & traj_msg);
   bool isDataReady();
@@ -78,6 +79,7 @@ private:
 
   // subscriber
   AUTOWARE_SUBSCRIPTION_PTR(Trajectory) sub_trajectory_;
+  AUTOWARE_SUBSCRIPTION_PTR(Odometry) sub_odometry_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest)
   sub_route_ =
     create_polling_subscriber<LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest>(
