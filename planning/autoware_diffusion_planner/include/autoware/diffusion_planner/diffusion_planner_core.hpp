@@ -123,7 +123,6 @@ struct DiffusionPlannerParams
   bool build_only;
   double planning_frequency_hz;
   bool ignore_neighbors;
-  bool ignore_unknown_neighbors;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
   std::vector<double> temperature_list;

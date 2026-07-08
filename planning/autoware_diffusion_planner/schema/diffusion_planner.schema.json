@@ -107,11 +107,6 @@
           "default": false,
           "description": "Ignore neighbor agents"
         },
-        "ignore_unknown_neighbors": {
-          "type": "boolean",
-          "default": true,
-          "description": "Ignore neighbor agents with unknown class"
-        },
         "traffic_light_group_msg_timeout_seconds": {
           "type": "number",
           "default": 0.2,

@@ -53,6 +53,10 @@ protected:
     tracked_object_.kinematics.pose_with_covariance.pose.orientation =
       autoware_utils::create_quaternion_from_yaw(0.0);
     tracked_object_.existence_probability = 0.9;
+    autoware_perception_msgs::msg::ObjectClassification classification;
+    classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+    classification.probability = 1.0;
+    tracked_object_.classification.push_back(classification);
   }
 
   TrackedObject tracked_object_;
@@ -68,7 +72,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_EmptyAgentData)
   empty_objects.header.stamp = rclcpp::Time(0);
 
   AgentData agent_data;
-  agent_data.update_histories(empty_objects, false);
+  agent_data.update_histories(empty_objects);
   rclcpp::Time stamp(123, 0);
   Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
@@ -98,7 +102,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_MorePredictionsTh
   objects.objects.push_back(tracked_object_);
 
   AgentData agent_data;
-  agent_data.update_histories(objects, false);
+  agent_data.update_histories(objects);
   rclcpp::Time stamp(123, 0);
   Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
