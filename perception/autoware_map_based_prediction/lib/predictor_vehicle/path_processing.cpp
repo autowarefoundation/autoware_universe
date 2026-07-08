@@ -158,7 +158,7 @@ double rearAxleRatioForLabel(const uint8_t label)
     case ObjectClassification::TRUCK:
     case ObjectClassification::TRAILER:
     default:
-      return 0.25;
+      return 0.16; // 1/3 of vehicle length, 1/6 from center to rear axle
   }
 }
 
