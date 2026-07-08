@@ -107,7 +107,8 @@ void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
   data->current_acceleration =
     acceleration ? std::make_shared<const AccelWithCovarianceStamped>(*acceleration) : nullptr;
   const auto pointcloud = sub_pointcloud_->take_data();
-  data->obstacle_pointcloud = pointcloud ? std::make_shared<const PointCloud2>(*pointcloud) : nullptr;
+  data->obstacle_pointcloud =
+    pointcloud ? std::make_shared<const PointCloud2>(*pointcloud) : nullptr;
   const auto traffic_signals = sub_traffic_signals_->take_data();
   data->traffic_signals =
     traffic_signals ? std::make_shared<const TrafficLightGroupArray>(*traffic_signals) : nullptr;
