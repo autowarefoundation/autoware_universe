@@ -54,6 +54,12 @@ public:
   /// Build an error response with the given message (type-specific).
   virtual std::shared_ptr<void> create_error_response(const std::string & message) const = 0;
 
+  /// Optional request formatter for detailed logs.
+  virtual std::string format_request(const void *) const { return ""; }
+
+  /// Optional response formatter for detailed logs.
+  virtual std::string format_response(const void *) const { return ""; }
+
   // --- Provided by base class ---
 
   /// Create GenericService / GenericClients from the plugin's configuration.

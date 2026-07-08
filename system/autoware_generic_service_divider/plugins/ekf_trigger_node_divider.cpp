@@ -31,14 +31,13 @@ public:
   {
     node_ = node;
     input_name_ = node_->declare_parameter<std::string>(
-      "trigger_node.input_service", "/localization/pose_twist_fusion_filter/trigger_node");
-
+      "ekf_trigger_node.input_service", "/localization/pose_twist_fusion_filter/trigger_node");
     const auto output_names = node_->declare_parameter<std::vector<std::string>>(
-      "trigger_node.output_services.names", std::vector<std::string>{});
+      "ekf_trigger_node.output_services.names", std::vector<std::string>{});
     const auto output_primaries = node_->declare_parameter<std::vector<bool>>(
-      "trigger_node.output_services.primaries", std::vector<bool>{});
+      "ekf_trigger_node.output_services.primaries", std::vector<bool>{});
     const auto output_timeouts = node_->declare_parameter<std::vector<int64_t>>(
-      "trigger_node.output_services.timeouts_ms", std::vector<int64_t>{});
+      "ekf_trigger_node.output_services.timeouts_ms", std::vector<int64_t>{});
 
     for (size_t i = 0; i < output_names.size(); ++i) {
       OutputServiceConfig cfg;
@@ -67,6 +66,19 @@ public:
     r->success = false;
     r->message = message;
     return r;
+  }
+
+  std::string format_request(const void * request) const override
+  {
+    const auto * req = static_cast<const std_srvs::srv::SetBool::Request *>(request);
+    return std::string("{data=") + (req->data ? "true" : "false") + "}";
+  }
+
+  std::string format_response(const void * response) const override
+  {
+    const auto * res = static_cast<const std_srvs::srv::SetBool::Response *>(response);
+    return std::string("{success=") + (res->success ? "true" : "false") + ", message='" +
+           res->message + "'}";
   }
 
 private:

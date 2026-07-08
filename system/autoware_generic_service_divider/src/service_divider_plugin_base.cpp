@@ -87,9 +87,20 @@ void ServiceDividerPluginBase::handle_request(
     pending_divisions_[pending_id] = pending;
   }
 
+  const auto request_detail = format_request(request.get());
+  RCLCPP_INFO(
+    node_->get_logger(), "Service divider[%ld]: call received on '%s'%s%s", pending_id,
+    input_service_name().c_str(), request_detail.empty() ? "" : " request=",
+    request_detail.empty() ? "" : request_detail.c_str());
+
   for (auto & entry : output_clients_) {
     const auto & name = entry.config.name;
     const int timeout_ms = entry.config.timeout_ms;
+
+    RCLCPP_INFO(
+      node_->get_logger(),
+      "Service divider[%ld]: forwarding call to '%s' (primary=%s, timeout_ms=%d)", pending_id,
+      name.c_str(), entry.config.primary ? "true" : "false", timeout_ms);
 
     auto timer = node_->create_wall_timer(
       std::chrono::milliseconds(timeout_ms), [this, pending, name, pending_id]() {
@@ -103,7 +114,8 @@ void ServiceDividerPluginBase::handle_request(
           pending->awaiting_count--;
         }
         RCLCPP_WARN(
-          node_->get_logger(), "Service divider: timeout waiting for response from '%s'",
+          node_->get_logger(),
+          "Service divider[%ld]: timeout waiting for response from '%s'", pending_id,
           name.c_str());
         try_finalize_response(pending);
       });
@@ -117,6 +129,7 @@ void ServiceDividerPluginBase::handle_request(
       entry.client->async_send_request(
         request, [this, pending, name, pending_id](GenericClient::SharedFuture future) {
           auto response = future.get();
+          const auto response_detail = format_response(response.get());
           {
             std::lock_guard<std::mutex> lock(pending->mutex);
             if (pending->completed[name]) {
@@ -126,12 +139,16 @@ void ServiceDividerPluginBase::handle_request(
             pending->completed[name] = true;
             pending->awaiting_count--;
           }
+          RCLCPP_INFO(
+            node_->get_logger(), "Service divider[%ld]: response from '%s'%s%s", pending_id,
+            name.c_str(), response_detail.empty() ? "" : " response=",
+            response_detail.empty() ? "" : response_detail.c_str());
           try_finalize_response(pending);
         });
     } catch (const std::exception & e) {
       RCLCPP_ERROR(
-        node_->get_logger(), "Service divider: failed to send request to '%s': %s", name.c_str(),
-        e.what());
+        node_->get_logger(), "Service divider[%ld]: failed to send request to '%s': %s",
+        pending_id, name.c_str(), e.what());
       {
         std::lock_guard<std::mutex> lock(pending->mutex);
         pending->completed[name] = true;
@@ -186,11 +203,20 @@ void ServiceDividerPluginBase::try_finalize_response(std::shared_ptr<PendingDivi
   }
 
   if (all_success && primary_response) {
+    RCLCPP_INFO(
+      node_->get_logger(), "Service divider: all outputs succeeded, returning primary response '%s'",
+      primary_name.c_str());
     pending->service->send_response(*pending->request_header, primary_response);
   } else if (primary_response && !all_success) {
+    RCLCPP_WARN(
+      node_->get_logger(),
+      "Service divider: at least one output failed/timed out, returning error response (primary='%s')",
+      primary_name.c_str());
     auto error_resp = create_error_response("One or more output services failed or timed out");
     pending->service->send_response(*pending->request_header, error_resp);
   } else {
+    RCLCPP_ERROR(
+      node_->get_logger(), "Service divider: primary service did not respond, returning error");
     auto error_resp = create_error_response("Primary service did not respond");
     pending->service->send_response(*pending->request_header, error_resp);
   }
