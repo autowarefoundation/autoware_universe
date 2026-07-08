@@ -56,17 +56,38 @@ rclcpp::Time make_time(double seconds)
   return rclcpp::Time(static_cast<int64_t>(seconds * 1e9));
 }
 
-TrafficSignal make_signal(lanelet::Id tl_id, uint8_t color, float confidence = 1.0)
+TrafficSignal make_signal(
+  lanelet::Id tl_id, uint8_t color, float confidence = 1.0,
+  uint8_t shape = TrafficSignalElement::CIRCLE)
 {
   TrafficSignal signal;
   signal.traffic_light_group_id = tl_id;
   TrafficSignalElement element;
   element.color = color;
-  element.shape = TrafficSignalElement::CIRCLE;
+  element.shape = shape;
   element.status = TrafficSignalElement::SOLID_ON;
   element.confidence = confidence;
   signal.elements.push_back(element);
   return signal;
+}
+
+TrafficSignal make_signal(lanelet::Id tl_id, const std::vector<TrafficSignalElement> & elements)
+{
+  TrafficSignal signal;
+  signal.traffic_light_group_id = tl_id;
+  signal.elements = elements;
+  return signal;
+}
+
+TrafficSignalElement make_signal_element(
+  uint8_t color, float confidence = 1.0, uint8_t shape = TrafficSignalElement::CIRCLE)
+{
+  TrafficSignalElement element;
+  element.color = color;
+  element.shape = shape;
+  element.status = TrafficSignalElement::SOLID_ON;
+  element.confidence = confidence;
+  return element;
 }
 
 TrafficSignalArray make_signal_array(const std::vector<TrafficSignal> & signals)
@@ -170,12 +191,22 @@ const TrafficSignal * find_signal(const TrafficSignalArray & array, lanelet::Id 
   return nullptr;
 }
 
-void assert_crosswalk_color(const TrafficSignalArray & result, uint8_t expected_color)
+void assert_estimated_linked_signal_color(const TrafficSignalArray & result, uint8_t expected_color)
 {
-  const auto * crosswalk_signal = find_signal(result, CROSSWALK_TL_REG_ELEM_ID);
-  ASSERT_NE(crosswalk_signal, nullptr);
-  ASSERT_FALSE(crosswalk_signal->elements.empty());
-  EXPECT_EQ(crosswalk_signal->elements.front().color, expected_color);
+  const auto * linked_signal = find_signal(result, CROSSWALK_TL_REG_ELEM_ID);
+  ASSERT_NE(linked_signal, nullptr);
+  ASSERT_FALSE(linked_signal->elements.empty());
+  EXPECT_EQ(linked_signal->elements.front().color, expected_color);
+}
+
+void assert_estimated_linked_signal(
+  const TrafficSignalArray & result, uint8_t expected_color, uint8_t expected_shape)
+{
+  const auto * linked_signal = find_signal(result, CROSSWALK_TL_REG_ELEM_ID);
+  ASSERT_NE(linked_signal, nullptr);
+  ASSERT_FALSE(linked_signal->elements.empty());
+  EXPECT_EQ(linked_signal->elements.front().color, expected_color);
+  EXPECT_EQ(linked_signal->elements.front().shape, expected_shape);
 }
 
 CrosswalkTrafficLightEstimator make_estimator_with_map()
@@ -278,7 +309,7 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_FirstCallWithGreenVehicle_Cros
   const auto result = estimator.estimate(green_msg, make_time(0.0));
 
   // Assert
-  assert_crosswalk_color(result, TrafficSignalElement::RED);
+  assert_estimated_linked_signal_color(result, TrafficSignalElement::RED);
 }
 
 TEST(CrosswalkTrafficLightEstimatorTest, Estimate_UnknownVehicleNoHistory_CrosswalkUnknown)
@@ -292,7 +323,7 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_UnknownVehicleNoHistory_Crossw
   const auto result = estimator.estimate(unknown_msg, make_time(0.0));
 
   // Assert
-  assert_crosswalk_color(result, TrafficSignalElement::UNKNOWN);
+  assert_estimated_linked_signal_color(result, TrafficSignalElement::UNKNOWN);
 }
 
 TEST(CrosswalkTrafficLightEstimatorTest, Estimate_StraightGreenVehicle_CrosswalkRed)
@@ -306,7 +337,7 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_StraightGreenVehicle_Crosswalk
   const auto result = estimator.estimate(green_msg, make_time(0.0));
 
   // Assert: straight green vehicle signal → crosswalk should be RED
-  assert_crosswalk_color(result, TrafficSignalElement::RED);
+  assert_estimated_linked_signal_color(result, TrafficSignalElement::RED);
 }
 
 TEST(CrosswalkTrafficLightEstimatorTest, Estimate_RedVehicle_CrosswalkUnknown)
@@ -320,7 +351,7 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_RedVehicle_CrosswalkUnknown)
   const auto result = estimator.estimate(red_msg, make_time(0.0));
 
   // Assert: vehicle is RED → crosswalk signal is UNKNOWN (cannot determine)
-  assert_crosswalk_color(result, TrafficSignalElement::UNKNOWN);
+  assert_estimated_linked_signal_color(result, TrafficSignalElement::UNKNOWN);
 }
 
 TEST(CrosswalkTrafficLightEstimatorTest, Estimate_EmptyInput_ReturnsEmpty)
@@ -351,7 +382,78 @@ TEST(
   const auto result = estimator.estimate(input, make_time(0.0));
 
   // Assert: override (GREEN) wins over normal estimation (RED)
-  assert_crosswalk_color(result, TrafficSignalElement::GREEN);
+  assert_estimated_linked_signal_color(result, TrafficSignalElement::GREEN);
+  assert_estimated_linked_signal(result, TrafficSignalElement::GREEN, TrafficSignalElement::CIRCLE);
+}
+
+TEST(
+  CrosswalkTrafficLightEstimatorTest,
+  ParseSignalEstimationRules_ValidGreenRightArrowToGreenRightArrow_OverridesShape)
+{
+  // Arrange: "green" without a shape suffix means CIRCLE, while "green_right_arrow" means
+  // GREEN/RIGHT_ARROW.
+  auto estimator =
+    make_estimator_with_rule("signal_color_relation:green_right_arrow:green_right_arrow");
+  TrafficSignalArray input = make_signal_array({make_signal(
+    VEHICLE_TL_REG_ELEM_ID, TrafficSignalElement::GREEN, 1.0, TrafficSignalElement::RIGHT_ARROW)});
+
+  // Act
+  const auto result = estimator.estimate(input, make_time(0.0));
+
+  // Assert
+  assert_estimated_linked_signal(
+    result, TrafficSignalElement::GREEN, TrafficSignalElement::RIGHT_ARROW);
+}
+
+TEST(
+  CrosswalkTrafficLightEstimatorTest,
+  Estimate_GreenRightArrowRelationPreferredOverHigherConfidenceRedCircleRelation)
+{
+  // Arrange: both relation tags match the ego-side signal. The arrow relation should be selected
+  // even though the red circle element has higher confidence.
+  lanelet::AttributeMap vehicle_tl_attrs;
+  vehicle_tl_attrs["signal_color_relation:green_right_arrow:red"] =
+    std::to_string(CROSSWALK_TL_REG_ELEM_ID);
+  vehicle_tl_attrs["signal_color_relation:red:green"] = std::to_string(CROSSWALK_TL_REG_ELEM_ID);
+
+  CrosswalkTrafficLightEstimator estimator(make_default_config());
+  estimator.update_map(create_test_map(vehicle_tl_attrs));
+
+  TrafficSignalArray input = make_signal_array({make_signal(
+    VEHICLE_TL_REG_ELEM_ID,
+    {make_signal_element(TrafficSignalElement::RED, 0.9, TrafficSignalElement::CIRCLE),
+     make_signal_element(TrafficSignalElement::GREEN, 0.1, TrafficSignalElement::RIGHT_ARROW)})});
+
+  // Act
+  const auto result = estimator.estimate(input, make_time(0.0));
+
+  // Assert: green_right_arrow:red wins over red:green.
+  assert_estimated_linked_signal(result, TrafficSignalElement::RED, TrafficSignalElement::CIRCLE);
+}
+
+TEST(
+  CrosswalkTrafficLightEstimatorTest,
+  Estimate_GreenCrossRelationPreferredOverHigherConfidenceRedCircleRelation)
+{
+  // Arrange: cross is prioritized in the same way as directional arrow shapes.
+  lanelet::AttributeMap vehicle_tl_attrs;
+  vehicle_tl_attrs["signal_color_relation:green_cross:red"] =
+    std::to_string(CROSSWALK_TL_REG_ELEM_ID);
+  vehicle_tl_attrs["signal_color_relation:red:green"] = std::to_string(CROSSWALK_TL_REG_ELEM_ID);
+
+  CrosswalkTrafficLightEstimator estimator(make_default_config());
+  estimator.update_map(create_test_map(vehicle_tl_attrs));
+
+  TrafficSignalArray input = make_signal_array({make_signal(
+    VEHICLE_TL_REG_ELEM_ID,
+    {make_signal_element(TrafficSignalElement::RED, 0.9, TrafficSignalElement::CIRCLE),
+     make_signal_element(TrafficSignalElement::GREEN, 0.1, TrafficSignalElement::CROSS)})});
+
+  // Act
+  const auto result = estimator.estimate(input, make_time(0.0));
+
+  // Assert: green_cross:red wins over red:green.
+  assert_estimated_linked_signal(result, TrafficSignalElement::RED, TrafficSignalElement::CIRCLE);
 }
 
 /// @brief Right-turn arrow scenario: only the right-turn TL (ID=300) reports GREEN,
@@ -372,7 +474,7 @@ TEST(
   const auto result = estimator.estimate(input, make_time(0.0));
 
   // Assert: crosswalk must be UNKNOWN, not RED
-  assert_crosswalk_color(result, TrafficSignalElement::UNKNOWN);
+  assert_estimated_linked_signal_color(result, TrafficSignalElement::UNKNOWN);
 }
 
 int main(int argc, char ** argv)

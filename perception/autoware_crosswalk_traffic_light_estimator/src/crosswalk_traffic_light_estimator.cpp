@@ -35,6 +35,12 @@ namespace autoware::crosswalk_traffic_light_estimator
 namespace
 {
 
+struct TrafficSignalState
+{
+  uint8_t color;
+  uint8_t shape;
+};
+
 bool has_merge_lane(
   const lanelet::ConstLanelet & lanelet_1, const lanelet::ConstLanelet & lanelet_2,
   const lanelet::routing::RoutingGraphPtr & routing_graph_ptr)
@@ -101,9 +107,71 @@ std::optional<uint8_t> str_to_color(std::string_view str)
   return std::nullopt;
 }
 
+/// @brief convert a string to the corresponding traffic signal shape
+std::optional<uint8_t> str_to_shape(std::string_view str)
+{
+  if (str == "circle") {
+    return TrafficSignalElement::CIRCLE;
+  }
+  if (str == "left_arrow") {
+    return TrafficSignalElement::LEFT_ARROW;
+  }
+  if (str == "right_arrow") {
+    return TrafficSignalElement::RIGHT_ARROW;
+  }
+  if (str == "up_arrow") {
+    return TrafficSignalElement::UP_ARROW;
+  }
+  if (str == "up_left_arrow") {
+    return TrafficSignalElement::UP_LEFT_ARROW;
+  }
+  if (str == "up_right_arrow") {
+    return TrafficSignalElement::UP_RIGHT_ARROW;
+  }
+  if (str == "down_arrow") {
+    return TrafficSignalElement::DOWN_ARROW;
+  }
+  if (str == "down_left_arrow") {
+    return TrafficSignalElement::DOWN_LEFT_ARROW;
+  }
+  if (str == "down_right_arrow") {
+    return TrafficSignalElement::DOWN_RIGHT_ARROW;
+  }
+  if (str == "cross") {
+    return TrafficSignalElement::CROSS;
+  }
+  return std::nullopt;
+}
+
+/// @brief convert a string to a traffic signal state
+/// @details "green" is interpreted as GREEN/CIRCLE, while "green_right_arrow" is interpreted as
+/// GREEN/RIGHT_ARROW.
+std::optional<TrafficSignalState> str_to_signal_state(std::string_view str)
+{
+  const auto shape_delimiter_pos = str.find('_');
+  const auto color_str = str.substr(0, shape_delimiter_pos);
+  const auto color = str_to_color(color_str);
+  if (!color) {
+    return std::nullopt;
+  }
+
+  if (shape_delimiter_pos == std::string_view::npos) {
+    return TrafficSignalState{*color, TrafficSignalElement::CIRCLE};
+  }
+
+  const auto shape_str = str.substr(shape_delimiter_pos + 1);
+  const auto shape = str_to_shape(shape_str);
+  if (!shape) {
+    return std::nullopt;
+  }
+
+  return TrafficSignalState{*color, *shape};
+}
+
 /// @brief parse the input string and extract a rule to estimate a traffic signal
-/// @details the string is expected to have format "signal_color_relation:color1:color2"
-std::optional<std::pair<uint8_t, uint8_t>> parse_signal_estimation_rules(std::string_view input)
+/// @details the string is expected to have format "signal_color_relation:state1:state2"
+std::optional<std::pair<TrafficSignalState, TrafficSignalState>> parse_signal_estimation_rules(
+  std::string_view input)
 {
   constexpr auto delimiter = ':';
   constexpr std::string_view prefix = "signal_color_relation:";
@@ -112,19 +180,19 @@ std::optional<std::pair<uint8_t, uint8_t>> parse_signal_estimation_rules(std::st
   }
   input.remove_prefix(prefix.length());
 
-  // extract the color mapping
+  // extract the signal state mapping
   const auto delimiter_pos = input.find(delimiter);
   if (delimiter_pos == std::string_view::npos) {
     return std::nullopt;
   }
 
-  std::string_view from_str = input.substr(0, delimiter_pos);
-  std::string_view to_str = input.substr(delimiter_pos + 1);
+  const std::string_view from_str = input.substr(0, delimiter_pos);
+  const std::string_view to_str = input.substr(delimiter_pos + 1);
 
-  if (const auto from_color = str_to_color(from_str)) {
-    if (const auto to_color = str_to_color(to_str)) {
-      return std::make_pair(*from_color, *to_color);
-    }
+  const auto from_state = str_to_signal_state(from_str);
+  const auto to_state = str_to_signal_state(to_str);
+  if (from_state && to_state) {
+    return std::make_pair(*from_state, *to_state);
   }
   return std::nullopt;
 }
@@ -189,6 +257,43 @@ std::optional<uint8_t> get_highest_confidence_traffic_signal(
   }
 
   return ret;
+}
+
+bool is_prioritized_relation_shape(const uint8_t shape)
+{
+  return shape == TrafficSignalElement::LEFT_ARROW || shape == TrafficSignalElement::RIGHT_ARROW ||
+         shape == TrafficSignalElement::UP_ARROW || shape == TrafficSignalElement::UP_LEFT_ARROW ||
+         shape == TrafficSignalElement::UP_RIGHT_ARROW ||
+         shape == TrafficSignalElement::DOWN_ARROW ||
+         shape == TrafficSignalElement::DOWN_LEFT_ARROW ||
+         shape == TrafficSignalElement::DOWN_RIGHT_ARROW || shape == TrafficSignalElement::CROSS;
+}
+
+bool has_matching_signal_state(
+  const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map,
+  const TrafficSignalState & state)
+{
+  if (traffic_light_id_map.count(id) == 0) {
+    return false;
+  }
+
+  for (const auto & element : traffic_light_id_map.at(id).first.elements) {
+    if (element.color == state.color && element.shape == state.shape) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+TrafficSignalElement make_solid_on_signal_element(const TrafficSignalState & state)
+{
+  TrafficSignalElement element;
+  element.color = state.color;
+  element.shape = state.shape;
+  element.status = TrafficSignalElement::SOLID_ON;
+  element.confidence = 1.0;
+  return element;
 }
 
 void remove_duplicate_ids(TrafficSignalArray & signal_array)
@@ -289,7 +394,7 @@ std::vector<lanelet::Id> CrosswalkTrafficLightEstimator::find_unregistered_traff
 }
 
 void CrosswalkTrafficLightEstimator::update_overrides_from_map(
-  std::unordered_map<lanelet::Id, uint8_t> & traffic_signal_overrides,
+  std::unordered_map<lanelet::Id, TrafficSignalElement> & traffic_signal_overrides,
   lanelet::Id traffic_light_group_id, const TrafficLightIdMap & traffic_light_id_map)
 {
   const auto traffic_light_it =
@@ -298,20 +403,42 @@ void CrosswalkTrafficLightEstimator::update_overrides_from_map(
     return;
   }
   const auto & traffic_light = *traffic_light_it;
-  const auto current_vehicle_traffic_light_color =
-    get_highest_confidence_traffic_signal(traffic_light->id(), traffic_light_id_map);
+
+  std::optional<std::pair<TrafficSignalState, TrafficSignalState>> selected_state_mapping{
+    std::nullopt};
+  lanelet::Ids selected_target_ids;
+  bool selected_has_prioritized_shape = false;
+
   for (const auto & attribute : traffic_light->attributes()) {
-    const auto & color_mapping = parse_signal_estimation_rules(attribute.first);
-    if (!color_mapping) {
+    const auto & state_mapping = parse_signal_estimation_rules(attribute.first);
+    if (!state_mapping) {
       continue;
     }
-    const auto & [from_color, to_color] = *color_mapping;
-    if (from_color != current_vehicle_traffic_light_color) {
+    const auto & [from_state, to_state] = *state_mapping;
+    if (!has_matching_signal_state(traffic_light->id(), traffic_light_id_map, from_state)) {
       continue;
     }
-    for (const auto id : parse_ids(attribute.second.value())) {
-      traffic_signal_overrides[id] = to_color;
+
+    const bool has_prioritized_shape = is_prioritized_relation_shape(from_state.shape);
+    if (selected_state_mapping && selected_has_prioritized_shape) {
+      continue;
     }
+    if (selected_state_mapping && !has_prioritized_shape) {
+      continue;
+    }
+
+    selected_state_mapping = *state_mapping;
+    selected_target_ids = parse_ids(attribute.second.value());
+    selected_has_prioritized_shape = has_prioritized_shape;
+  }
+
+  if (!selected_state_mapping) {
+    return;
+  }
+
+  const auto & to_state = selected_state_mapping->second;
+  for (const auto id : selected_target_ids) {
+    traffic_signal_overrides[id] = make_solid_on_signal_element(to_state);
   }
 }
 
@@ -322,7 +449,7 @@ TrafficSignalArray CrosswalkTrafficLightEstimator::estimate(
 
   TrafficLightIdMap traffic_light_id_map;
 
-  std::unordered_map<lanelet::Id, uint8_t> traffic_signal_overrides;
+  std::unordered_map<lanelet::Id, TrafficSignalElement> traffic_signal_overrides;
   for (const auto & traffic_signal : msg.traffic_light_groups) {
     traffic_light_id_map[traffic_signal.traffic_light_group_id] =
       std::pair<TrafficSignal, rclcpp::Time>(traffic_signal, current_time);
@@ -376,7 +503,7 @@ TrafficSignalArray CrosswalkTrafficLightEstimator::estimate(
 }
 
 void CrosswalkTrafficLightEstimator::update_intersection_overrides_from_map(
-  const std::unordered_map<lanelet::Id, uint8_t> & traffic_signal_overrides,
+  const std::unordered_map<lanelet::Id, TrafficSignalElement> & traffic_signal_overrides,
   TrafficSignalArray & output)
 {
   std::unordered_set<lanelet::Id> existing_ids;
@@ -384,15 +511,10 @@ void CrosswalkTrafficLightEstimator::update_intersection_overrides_from_map(
     existing_ids.insert(signal.traffic_light_group_id);
   }
 
-  for (const auto & [id, color] : traffic_signal_overrides) {
+  for (const auto & [id, element] : traffic_signal_overrides) {
     if (existing_ids.count(id)) {
       continue;
     }
-
-    TrafficSignalElement element;
-    element.color = color;
-    element.shape = TrafficSignalElement::CIRCLE;
-    element.confidence = 1.0;
 
     TrafficSignal new_signal;
     new_signal.traffic_light_group_id = id;
@@ -442,7 +564,7 @@ void CrosswalkTrafficLightEstimator::update_last_detected_signal(
 void CrosswalkTrafficLightEstimator::set_crosswalk_traffic_signal(
   const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
   TrafficSignalArray & output,
-  const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides,
+  const std::unordered_map<lanelet::Id, TrafficSignalElement> & crosswalk_traffic_signal_overrides,
   const rclcpp::Time & current_time)
 {
   const auto tl_reg_elems = crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
@@ -491,8 +613,7 @@ void CrosswalkTrafficLightEstimator::set_crosswalk_traffic_signal(
     // 1. Map-based override (highest priority)
     if (auto it = crosswalk_traffic_signal_overrides.find(id);
         it != crosswalk_traffic_signal_overrides.end()) {
-      replace_out_signal_elements(base_traffic_signal_element);
-      out_signal.elements[0].color = it->second;  // override color
+      replace_out_signal_elements(it->second);
       continue;
     }
     // 2. Use detected pedestrian signal if valid

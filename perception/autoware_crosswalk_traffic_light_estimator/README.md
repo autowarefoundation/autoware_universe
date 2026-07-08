@@ -140,6 +140,9 @@ For example, a rule to consider the crosswalk traffic light with id X to be `gre
 ```
 
 Colors `green`, `amber`, `red`, and `white` are currently supported.
+When the shape is omitted, `circle` is assumed.
+Shape-specific rules can be defined with a suffix such as `green_right_arrow`.
+Supported shapes are `circle`, `left_arrow`, `right_arrow`, `up_arrow`, `up_left_arrow`, `up_right_arrow`, `down_arrow`, `down_left_arrow`, `down_right_arrow`, and `cross`.
 Multiple crosswalk ids can be listed separated by a comma and without any whitespace (e.g., `v="1,2,3"`).
 
 ## Assumptions / Known limits
