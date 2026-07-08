@@ -31,3 +31,7 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/managed_transform_buffer.git
     version: main
+  vendor/mppi_generic_vendor:
+    type: git
+    url: https://github.com/tier4/mppi_generic_vendor.git
+    version: main

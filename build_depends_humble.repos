@@ -68,6 +68,10 @@ repositories:
     type: git
     url: https://github.com/tier4/agnocast.git
     version: backport-jazzy-support-v2.1.2
+  vendor/mppi_generic_vendor:
+    type: git
+    url: https://github.com/tier4/mppi_generic_vendor.git
+    version: main
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
