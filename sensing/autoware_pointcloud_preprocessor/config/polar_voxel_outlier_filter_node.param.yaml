@@ -17,11 +17,12 @@
     secondary_noise_threshold: 4
     low_visibility_entropy_threshold: 0.3
     low_visibility_anisotropy_threshold: 0.95
+    low_visibility_average_intensity_threshold: 2.0
     visibility_estimation_max_secondary_voxel_count: 500
     primary_return_types: [1, 6, 8, 10]
     visibility_estimation_only: false
     publish_noise_cloud: false
-    publish_low_visibility_voxels: flase
+    publish_low_visibility_voxels: false
     publish_area_marker: false
     filter_ratio_error_threshold: 0.5
     filter_ratio_warn_threshold: 0.7
