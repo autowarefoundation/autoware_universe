@@ -1,0 +1,43 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PipelineLatencyMonitor.node
+
+package:
+  name: autoware_pipeline_latency_monitor
+  provider: autoware
+
+launch:
+  plugin: autoware::system::pipeline_latency_monitor::PipelineLatencyMonitorNode
+  executable: autoware_pipeline_latency_monitor_node
+  node_output: screen
+
+# interfaces
+# subscribes the pipeline stage topics (name/type from the processing_steps config) via
+# generic subscriptions with no fixed message type, so only the fixed outputs are modeled:
+# latency to /diagnostics via diagnostic_updater plus the measured latency value.
+subscribers: []
+
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+  - name: latency
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: ~/latency
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/pipeline_latency_monitor.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: monitor
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: diagnostics
+      - to_output: latency
