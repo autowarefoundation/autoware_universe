@@ -23,7 +23,6 @@
 #include "autoware/diffusion_planner/inference/single_step_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
-#include "autoware/diffusion_planner/utils/ego_state.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
 #ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
@@ -35,7 +34,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <deque>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -248,23 +246,8 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     effective_objects = std::make_shared<TrackedObjects>(empty_object_list);
   }
 
-  // Append newly received odometry (raw, unshifted), then prune to the buffer window.
-  for (const auto & ego_state : ego_states) {
-    if (!ego_state) {
-      continue;
-    }
-    ego_history_.push_back(*ego_state);
-  }
-  if (!ego_history_.empty()) {
-    const rclcpp::Time newest_stamp(ego_history_.back().header.stamp);
-    while (ego_history_.size() > 1) {
-      const rclcpp::Time oldest_stamp(ego_history_.front().header.stamp);
-      if ((newest_stamp - oldest_stamp).seconds() <= constants::ODOMETRY_BUFFER_WINDOW_S) {
-        break;
-      }
-      ego_history_.pop_front();
-    }
-  }
+  // Ingest the newly received raw odometry; EgoHistory keeps the buffer monotonic and windowed.
+  ego_history_.update(ego_states);
 
   if (!effective_objects || ego_history_.empty() || !ego_acceleration || !turn_indicators) {
     return std::nullopt;
@@ -277,10 +260,10 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   // frame_time is the object-anchored sync time; when neighbors are ignored there may be no objects
   // message, so fall back to the newest odometry stamp. output_time stamps the published outputs.
   const rclcpp::Time frame_time =
-    objects ? rclcpp::Time(objects->header.stamp) : rclcpp::Time(ego_history_.back().header.stamp);
-  const rclcpp::Time output_time(ego_history_.back().header.stamp);
+    objects ? rclcpp::Time(objects->header.stamp) : ego_history_.newest_stamp();
+  const rclcpp::Time output_time = ego_history_.newest_stamp();
   const auto [kinematic_state, min_time_diff_s] =
-    utils::select_ego_state(ego_history_, frame_time, params_.use_time_interpolation);
+    ego_history_.select_state(frame_time, params_.use_time_interpolation);
 
   // shift_x moves base_link to the vehicle-center convention expected by the model.
   geometry_msgs::msg::Pose pose_for_transform = kinematic_state.pose.pose;
@@ -368,25 +351,13 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
     }
   }
 
-  // Ego history
+  // Ego history: resample the buffer at regular intervals anchored at frame_time, expressed in the
+  // current ego frame (EgoHistory applies the vehicle-center shift consistently with the
+  // transform).
   {
-    // Resample the dense buffer at regular intervals anchored at frame_time (see
-    // create_ego_agent_past).
-    const std::optional<rclcpp::Time> reference_time = std::make_optional(frame_context.frame_time);
-    // The buffer holds raw odometry; apply the same vehicle-center shift as the reference transform
-    // so the past trajectory is expressed in the current ego frame.
-    std::deque<nav_msgs::msg::Odometry> shifted_history;
-    const std::deque<nav_msgs::msg::Odometry> * history = &ego_history_;
-    if (params_.shift_x) {
-      shifted_history = ego_history_;
-      for (auto & odom : shifted_history) {
-        odom.pose.pose = utils::shift_x(odom.pose.pose, vehicle_spec_.base_link_to_center);
-      }
-      history = &shifted_history;
-    }
-    const std::vector<float> single_ego_agent_past = preprocess::create_ego_agent_past(
-      *history, EGO_HISTORY_SHAPE[1], map_to_ego_transform, reference_time,
-      params_.use_time_interpolation);
+    const std::vector<float> single_ego_agent_past = ego_history_.to_agent_past(
+      map_to_ego_transform, frame_context.frame_time, params_.use_time_interpolation,
+      params_.shift_x, vehicle_spec_.base_link_to_center);
     input_data_map["ego_agent_past"] =
       utils::replicate_for_batch(single_ego_agent_past, params_.batch_size);
   }

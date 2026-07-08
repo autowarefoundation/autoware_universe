@@ -21,6 +21,7 @@
 #include "autoware/diffusion_planner/inference/guidance/stop_guidance.hpp"
 #include "autoware/diffusion_planner/inference/inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/turn_indicator_manager.hpp"
+#include "autoware/diffusion_planner/preprocessing/ego_history.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 #include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
 #include "autoware/diffusion_planner/utils/arg_reader.hpp"
@@ -336,7 +337,7 @@ private:
   postprocess::TurnIndicatorManager turn_indicator_manager_;
 
   // History data
-  std::deque<nav_msgs::msg::Odometry> ego_history_;
+  preprocess::EgoHistory ego_history_;
   std::deque<TurnIndicatorsReport> turn_indicators_history_;
   AgentData agent_data_;
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;

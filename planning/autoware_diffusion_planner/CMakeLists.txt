@@ -76,11 +76,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/conversion/lanelet.cpp
     src/conversion/agent.cpp
     src/postprocessing/postprocessing_utils.cpp
+    src/preprocessing/ego_history.cpp
     src/preprocessing/lane_segments.cpp
     src/preprocessing/preprocessing_utils.cpp
     src/preprocessing/traffic_signals.cpp
     src/utils/utils.cpp
-    src/utils/ego_state.cpp
     src/utils/marker_utils.cpp
     src/utils/planning_factor_utils.cpp
     src/postprocessing/turn_indicator_manager.cpp
@@ -154,6 +154,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       test/lanelet_integration_test.cpp
       test/postprocessing_utils_edge_case_test.cpp
       test/preprocessing_utils_edge_case_test.cpp
+      test/ego_history_test.cpp
       test/agent_edge_case_test.cpp
       test/lanelet_edge_case_test.cpp
       test/diffusion_planner_integration_test.cpp

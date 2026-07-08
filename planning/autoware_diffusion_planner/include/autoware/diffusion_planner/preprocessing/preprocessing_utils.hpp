@@ -15,15 +15,10 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__PREPROCESSING_UTILS_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__PREPROCESSING_UTILS_HPP_
 
-#include <Eigen/Core>
-#include <rclcpp/time.hpp>
-
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <cassert>
-#include <deque>
-#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -65,27 +60,6 @@ void normalize_input_data(
 std::vector<float> create_ego_current_state(
   const nav_msgs::msg::Odometry & kinematic_state_msg,
   const geometry_msgs::msg::AccelWithCovarianceStamped & acceleration_msg, const float wheel_base);
-
-/**
- * @brief Creates ego agent past trajectory data from pose messages.
- *
- * When reference_time is provided, resamples poses at regular 0.1s intervals backwards from it,
- * with use_time_interpolation choosing per-sample interpolation vs. nearest message. When it is
- * std::nullopt, takes the last num_timesteps odometry messages directly (legacy behavior).
- *
- * @param[in] odom_msgs           Deque of odometry messages
- * @param[in] num_timesteps       Number of timesteps to process
- * @param[in] map_to_ego_transform Transformation matrix from map to ego frame
- * @param[in] reference_time      Reference time for resampling (nullopt for legacy behavior)
- * @param[in] use_time_interpolation Interpolate between bracketing messages (true) or take the
- *                                   nearest message (false); only used when reference_time is set
- * @return Vector of floats containing [x, y, cos_yaw, sin_yaw] for each timestep
- */
-std::vector<float> create_ego_agent_past(
-  const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
-  const Eigen::Matrix4d & map_to_ego_transform,
-  const std::optional<rclcpp::Time> & reference_time = std::nullopt,
-  bool use_time_interpolation = true);
 
 /**
  * @brief Creates random sampled trajectories for diffusion model input.
