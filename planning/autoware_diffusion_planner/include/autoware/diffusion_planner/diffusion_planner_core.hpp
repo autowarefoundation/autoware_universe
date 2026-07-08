@@ -106,6 +106,7 @@ struct FrameContext
   Eigen::Matrix4d ego_to_map_transform;
   std::vector<AgentHistory> ego_centric_neighbor_histories;
   rclcpp::Time frame_time;
+  rclcpp::Time output_time;
   // Absolute time difference between the matched odometry sample and the object timestamp [s].
   double ego_object_time_diff_s;
 };

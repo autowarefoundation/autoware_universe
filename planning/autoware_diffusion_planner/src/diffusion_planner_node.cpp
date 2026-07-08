@@ -545,7 +545,7 @@ void DiffusionPlanner::on_timer()
       "no traffic signal received. traffic light info will not be updated");
   }
 
-  const rclcpp::Time frame_time(frame_context->frame_time);
+  const rclcpp::Time frame_time(frame_context->output_time);
   InputDataMap input_data_map = core_->create_input_data(*frame_context);
 
   publish_debug_markers(input_data_map, frame_context->ego_to_map_transform, frame_time);

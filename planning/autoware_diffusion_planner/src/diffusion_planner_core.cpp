@@ -340,13 +340,13 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     return std::nullopt;
   }
 
-  // Tracked objects are the timing anchor: stamp the whole frame with the object timestamp and
-  // derive the current ego state from the buffered odometry at that time. With time interpolation
-  // the ego state is interpolated at the object timestamp; otherwise the nearest sample is used.
-  // When neighbors are ignored there may be no tracked-objects message at all; fall back to the
-  // newest odometry stamp in that case.
+  // Tracked objects are the timing anchor for syncing the ego state: derive the current ego state
+  // from the buffered odometry at the object timestamp. With time interpolation the ego state is
+  // interpolated at the object timestamp; otherwise the nearest sample is used. When neighbors are
+  // ignored there may be no tracked-objects message at all; fall back to the newest odometry stamp.
   const rclcpp::Time frame_time =
     objects ? rclcpp::Time(objects->header.stamp) : rclcpp::Time(ego_history_.back().header.stamp);
+  const rclcpp::Time output_time(ego_history_.back().header.stamp);
   // The selected (raw, unshifted) sample is the current ego state stored in the frame context.
   const auto [kinematic_state, min_time_diff_s] =
     select_ego_state(ego_history_, frame_time, params_.use_time_interpolation);
@@ -375,11 +375,16 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   preprocess::process_traffic_signals(
     traffic_signals, traffic_light_id_map_, current_time, traffic_light_msg_timeout_s);
 
-  // Create frame context. The frame is stamped with the object timestamp, and the ego state is
-  // derived from the buffered odometry at that time (see select_ego_state above).
-  const FrameContext frame_context{kinematic_state,      *ego_acceleration,
-                                   ego_to_map_transform, processed_neighbor_histories,
-                                   frame_time,           min_time_diff_s};
+  // Create frame context. The ego state is derived from the buffered odometry at the object
+  // timestamp (see select_ego_state above); frame_time is the object-anchored sync time while
+  // output_time (newest odometry) is what stamps the published outputs.
+  const FrameContext frame_context{kinematic_state,
+                                   *ego_acceleration,
+                                   ego_to_map_transform,
+                                   processed_neighbor_histories,
+                                   frame_time,
+                                   output_time,
+                                   min_time_diff_s};
 
   return frame_context;
 }
