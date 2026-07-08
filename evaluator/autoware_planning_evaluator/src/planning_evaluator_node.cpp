@@ -128,8 +128,7 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   const std::string topic_prefix = declare_parameter<std::string>("stop_decision.topic_prefix");
   for (const auto & module_name : stop_decision_modules_) {
     planning_factors_sub_.emplace(
-      module_name,
-      create_polling_subscriber<PlanningFactorArray>(topic_prefix + module_name, rclcpp::QoS{1}));
+      module_name, create_polling_subscriber<PlanningFactorArray>(topic_prefix + module_name));
   }
 
   // Publisher
