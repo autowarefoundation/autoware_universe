@@ -98,12 +98,12 @@ public:
   void onTimer();
 
 private:
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) odometry_sub_ =
-    create_polling_subscriber<Odometry>("~/input/odometry");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped) accel_sub_ =
-    create_polling_subscriber<AccelWithCovarianceStamped>("~/input/acceleration");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory) traj_sub_ =
-    create_polling_subscriber<Trajectory>("~/input/trajectory");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry)
+  odometry_sub_ = create_polling_subscriber<Odometry>("~/input/odometry");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped)
+  accel_sub_ = create_polling_subscriber<AccelWithCovarianceStamped>("~/input/acceleration");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
+  traj_sub_ = create_polling_subscriber<Trajectory>("~/input/trajectory");
   AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest)
   route_subscriber_ =
     create_polling_subscriber<LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest>(
@@ -112,12 +112,12 @@ private:
   vector_map_subscriber_ =
     create_polling_subscriber<LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest>(
       "~/input/vector_map", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PathWithLaneId) behavior_path_subscriber_ =
-    create_polling_subscriber<PathWithLaneId>("~/input/behavior_path");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(SteeringReport) steering_sub_ =
-    create_polling_subscriber<SteeringReport>("~/input/steering_status");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects) objects_sub_ =
-    create_polling_subscriber<PredictedObjects>("~/input/objects");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(PathWithLaneId)
+  behavior_path_subscriber_ = create_polling_subscriber<PathWithLaneId>("~/input/behavior_path");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(SteeringReport)
+  steering_sub_ = create_polling_subscriber<SteeringReport>("~/input/steering_status");
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects)
+  objects_sub_ = create_polling_subscriber<PredictedObjects>("~/input/objects");
   std::unordered_map<std::string, AUTOWARE_POLLING_SUBSCRIBER_PTR(PlanningFactorArray)>
     planning_factors_sub_;
   std::unordered_map<std::string, Accumulator<double>> stop_deviation_accumulators_;
