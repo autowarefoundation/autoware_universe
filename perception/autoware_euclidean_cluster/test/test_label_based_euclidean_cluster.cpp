@@ -247,7 +247,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
 // Probability Filtering Tests
 // ============================================================================
 
-TEST_F(LabelBasedEuclideanClusterTest, PointsBelowMinProbabilityAreFiltered)
+TEST_F(LabelBasedEuclideanClusterTest, ClusterBelowMinProbabilityIsFiltered)
 {
   // Arrange
   std::unordered_map<uint8_t, uint8_t> class_map;
@@ -257,22 +257,49 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsBelowMinProbabilityAreFiltered)
     class_map, 0.8f, ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
-  // Create points with varying probabilities
+  // A few high-confidence points are not enough when the cluster average is below the threshold.
   auto pc = create_pointcloud(
-    {0.0f, 0.1f, 0.2f, 0.3f},  // x
-    {0.0f, 0.0f, 0.0f, 0.0f},  // y
-    {0.0f, 0.0f, 0.0f, 0.0f},  // z
-    {0, 0, 0, 0},              // class_id
-    {0.5f, 0.9f, 0.7f, 0.95f}  // probability
+    {0.0f, 0.1f, 0.2f, 0.3f},   // x
+    {0.0f, 0.0f, 0.0f, 0.0f},   // y
+    {0.0f, 0.0f, 0.0f, 0.0f},   // z
+    {0, 0, 0, 0},               // class_id
+    {0.95f, 0.95f, 0.1f, 0.1f}  // probability
   );
 
   // Act
   auto result = cluster.process(pc);
 
-  // Assert - only points with prob >= 0.8 should be kept (indices 1, 3)
-  // These should form a cluster or be filtered out if too small
+  // Assert
   ASSERT_TRUE(result.has_value());
-  EXPECT_LE(result->objects.size(), 2U);
+  EXPECT_TRUE(result->objects.empty());
+}
+
+TEST_F(LabelBasedEuclideanClusterTest, ClusterAverageProbabilityIsUsedForThreshold)
+{
+  // Arrange
+  std::unordered_map<uint8_t, uint8_t> class_map;
+  class_map[0] = ObjectClassification::CAR;
+
+  LabelBasedEuclideanCluster cluster(
+    class_map, 0.8f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+
+  // The first point is below the threshold, but the cluster average is above 0.8.
+  auto pc = create_pointcloud(
+    {0.0f, 0.1f, 0.2f},   // x
+    {0.0f, 0.0f, 0.0f},   // y
+    {0.0f, 0.0f, 0.0f},   // z
+    {0, 0, 0},            // class_id
+    {0.7f, 0.85f, 0.95f}  // probability
+  );
+
+  // Act
+  auto result = cluster.process(pc);
+
+  // Assert
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->objects.size(), 1U);
+  EXPECT_NEAR(result->objects[0].existence_probability, 0.8333333f, 1e-5f);
 }
 
 TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)

@@ -55,7 +55,7 @@ public:
 
   /// @brief Construct with full configuration for clustering and shape estimation.
   /// @param class_id_to_object_label Mapping from input class ID to Autoware object label.
-  /// @param min_probability Minimum confidence threshold for points.
+  /// @param min_probability Minimum average semantic probability required for output clusters.
   /// @param shape_policy Strategy for shape estimation (ALL_POLYGON or LABEL_DEPEND).
   /// @param default_cluster Default cluster executer used when no per-label override exists.
   /// @param label_cluster_executers Optional per-label cluster executer overrides.

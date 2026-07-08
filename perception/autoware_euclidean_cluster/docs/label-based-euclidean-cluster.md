@@ -38,12 +38,12 @@ The packaged launch file remaps these by default to the following topics:
 1. Validate that the incoming pointcloud contains `x`, `y`, and `z`.
 2. Read the configured `class_names.*` mapping in YAML declaration order and treat that order as the incoming `class_id` index.
 3. Drop points whose mapped class is configured as `ignore`.
-4. If the pointcloud has a `probability` field, drop points with `probability < min_probability`.
-5. Split the remaining points into buckets keyed by the mapped Autoware object label.
-6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
-7. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
-8. Compute the average semantic probability for each output cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label filtered cloud, rather than rematching points by coordinate.
-9. Estimate a shape and pose for each cluster with `ShapeEstimator`.
+4. Split the remaining points into buckets keyed by the mapped Autoware object label.
+5. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
+6. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
+7. Compute the average semantic probability for each cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label cloud, rather than rematching points by coordinate.
+8. Drop clusters whose average semantic probability is below `min_probability`.
+9. Estimate a shape and pose for each remaining cluster with `ShapeEstimator`.
 10. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
 11. Publish one `DetectedObject` per cluster.
 
@@ -77,6 +77,7 @@ After clustering, the node converts each cluster into a `DetectedObject`.
 
 - The output classification label is the mapped object label for that bucket.
 - The output existence probability is the average of the clustered point probabilities for that object instance.
+- `min_probability` is applied to that cluster-average probability, not to individual points before clustering.
 - Shape estimation is delegated to `autoware::shape_estimation::ShapeEstimator`.
 - `shape_policy=0` (`ALL_POLYGON`) estimates whole shapes as polygon.
 - `shape_policy=1` (`LABEL_DEPEND`) estimates shapes with the mapped object label.

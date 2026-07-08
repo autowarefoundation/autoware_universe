@@ -49,7 +49,7 @@
         },
         "min_probability": {
           "type": "number",
-          "description": "Minimum semantic probability required for a point to be used.",
+          "description": "Minimum average semantic probability required for an output cluster.",
           "default": 0.3
         },
         "class_names": {
