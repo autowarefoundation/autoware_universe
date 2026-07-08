@@ -69,6 +69,8 @@ protected:
   rclcpp::Node::SharedPtr node_;
 
 private:
+  void try_start_input_service();
+
   struct OutputClientEntry
   {
     std::shared_ptr<GenericClient> client;
@@ -97,6 +99,9 @@ private:
   std::shared_ptr<GenericService> input_service_;
   std::vector<OutputClientEntry> output_clients_;
   rclcpp::CallbackGroup::SharedPtr service_callback_group_;
+  rclcpp::TimerBase::SharedPtr server_wait_timer_;
+  std::mutex service_start_mutex_;
+  bool input_service_started_{false};
 
   std::mutex pending_map_mutex_;
   std::map<int64_t, std::shared_ptr<PendingDivision>> pending_divisions_;

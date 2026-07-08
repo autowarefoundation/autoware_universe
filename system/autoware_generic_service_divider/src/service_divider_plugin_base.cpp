@@ -18,6 +18,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,7 +29,6 @@ namespace generic_service_divider
 void ServiceDividerPluginBase::setup_service_division()
 {
   const auto type = service_type();
-  const auto input_name = input_service_name();
   const auto outputs = output_services();
 
   service_callback_group_ = node_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
@@ -49,6 +49,51 @@ void ServiceDividerPluginBase::setup_service_division()
     output_clients_.push_back(std::move(entry));
   }
 
+  try_start_input_service();
+
+  if (!input_service_started_) {
+    server_wait_timer_ = node_->create_wall_timer(
+      std::chrono::milliseconds(500), [this]() { try_start_input_service(); });
+  }
+}
+
+void ServiceDividerPluginBase::try_start_input_service()
+{
+  std::lock_guard<std::mutex> lock(service_start_mutex_);
+  if (input_service_started_) {
+    return;
+  }
+
+  const auto type = service_type();
+  const auto input_name = input_service_name();
+
+  std::size_t ready_count = 0;
+  std::vector<std::string> not_ready_services;
+  not_ready_services.reserve(output_clients_.size());
+  for (const auto & entry : output_clients_) {
+    if (entry.client->service_is_ready()) {
+      ++ready_count;
+      continue;
+    }
+    not_ready_services.push_back(entry.config.name);
+  }
+
+  if (!not_ready_services.empty()) {
+    std::ostringstream oss;
+    for (std::size_t i = 0; i < not_ready_services.size(); ++i) {
+      if (i > 0) {
+        oss << ", ";
+      }
+      oss << not_ready_services[i];
+    }
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000,
+      "Service divider: waiting for output service servers before advertising '%s' "
+      "(ready=%zu/%zu, waiting=[%s])",
+      input_name.c_str(), ready_count, output_clients_.size(), oss.str().c_str());
+    return;
+  }
+
   rcl_service_options_t service_options = rcl_service_get_default_options();
   input_service_ = std::make_shared<GenericService>(
     node_->get_node_base_interface()->get_shared_rcl_node_handle(), input_name, type,
@@ -59,9 +104,15 @@ void ServiceDividerPluginBase::setup_service_division()
   node_->get_node_services_interface()->add_service(
     std::dynamic_pointer_cast<rclcpp::ServiceBase>(input_service_), service_callback_group_);
 
+  input_service_started_ = true;
+  if (server_wait_timer_) {
+    server_wait_timer_->cancel();
+    server_wait_timer_.reset();
+  }
+
   RCLCPP_INFO(
     node_->get_logger(), "Service divider: %s -> %zu outputs (type: %s)", input_name.c_str(),
-    outputs.size(), type.c_str());
+    output_clients_.size(), type.c_str());
 }
 
 void ServiceDividerPluginBase::handle_request(
