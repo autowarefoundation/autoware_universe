@@ -80,6 +80,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/preprocessing/preprocessing_utils.cpp
     src/preprocessing/traffic_signals.cpp
     src/utils/utils.cpp
+    src/utils/ego_state.cpp
     src/utils/marker_utils.cpp
     src/utils/planning_factor_utils.cpp
     src/postprocessing/turn_indicator_manager.cpp

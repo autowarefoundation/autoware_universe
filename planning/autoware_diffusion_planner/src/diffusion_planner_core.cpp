@@ -23,13 +23,12 @@
 #include "autoware/diffusion_planner/inference/single_step_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
+#include "autoware/diffusion_planner/utils/ego_state.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
 #ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 #include "autoware/diffusion_planner/inference/onnxruntime_inference.hpp"
 #endif
-
-#include <autoware_utils_geometry/geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_internal_planning_msgs/msg/generator_info.hpp>
@@ -73,63 +72,6 @@ std::string onnxruntime_execution_provider_from_backend(const std::string & back
 }
 }  // namespace
 #endif
-
-namespace
-{
-// Linearly interpolate pose and twist between two samples; ratio 0 returns `earlier`, 1 `later`.
-Odometry interpolate_ego_state(const Odometry & earlier, const Odometry & later, const double ratio)
-{
-  Odometry interpolated = earlier;
-  interpolated.pose.pose = autoware_utils_geometry::calc_interpolated_pose(
-    earlier.pose.pose, later.pose.pose, ratio, false);
-  const auto lerp = [ratio](const double a, const double b) { return a + (b - a) * ratio; };
-  auto & lin = interpolated.twist.twist.linear;
-  auto & ang = interpolated.twist.twist.angular;
-  lin.x = lerp(earlier.twist.twist.linear.x, later.twist.twist.linear.x);
-  lin.y = lerp(earlier.twist.twist.linear.y, later.twist.twist.linear.y);
-  lin.z = lerp(earlier.twist.twist.linear.z, later.twist.twist.linear.z);
-  ang.x = lerp(earlier.twist.twist.angular.x, later.twist.twist.angular.x);
-  ang.y = lerp(earlier.twist.twist.angular.y, later.twist.twist.angular.y);
-  ang.z = lerp(earlier.twist.twist.angular.z, later.twist.twist.angular.z);
-  return interpolated;
-}
-
-// Select the current ego state from the buffer at frame_time: interpolate between the bracketing
-// samples when use_time_interpolation is set, otherwise take the nearest sample. Returns the state
-// and its absolute time offset from frame_time [s] (0 when interpolated within the buffer range).
-std::pair<Odometry, double> select_ego_state(
-  const std::deque<Odometry> & ego_history, const rclcpp::Time & frame_time,
-  const bool use_time_interpolation)
-{
-  // Nearest sample: used when interpolation is off, and as the fallback outside the buffer range.
-  const Odometry * nearest = &ego_history.front();
-  double min_time_diff_s = std::numeric_limits<double>::max();
-  for (const auto & candidate : ego_history) {
-    const double time_diff_s =
-      std::abs((rclcpp::Time(candidate.header.stamp) - frame_time).seconds());
-    if (time_diff_s < min_time_diff_s) {
-      min_time_diff_s = time_diff_s;
-      nearest = &candidate;
-    }
-  }
-
-  if (!use_time_interpolation) {
-    return {*nearest, min_time_diff_s};
-  }
-
-  const double frame_sec = frame_time.seconds();
-  for (size_t i = 0; i + 1 < ego_history.size(); ++i) {
-    const double t0 = rclcpp::Time(ego_history[i].header.stamp).seconds();
-    const double t1 = rclcpp::Time(ego_history[i + 1].header.stamp).seconds();
-    if (frame_sec >= t0 && frame_sec <= t1) {
-      const double ratio = (t1 > t0) ? (frame_sec - t0) / (t1 - t0) : 0.0;
-      return {interpolate_ego_state(ego_history[i], ego_history[i + 1], ratio), 0.0};
-    }
-  }
-  // frame_time is outside the buffered range: fall back to the nearest sample.
-  return {*nearest, min_time_diff_s};
-}
-}  // namespace
 
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
@@ -338,7 +280,7 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     objects ? rclcpp::Time(objects->header.stamp) : rclcpp::Time(ego_history_.back().header.stamp);
   const rclcpp::Time output_time(ego_history_.back().header.stamp);
   const auto [kinematic_state, min_time_diff_s] =
-    select_ego_state(ego_history_, frame_time, params_.use_time_interpolation);
+    utils::select_ego_state(ego_history_, frame_time, params_.use_time_interpolation);
 
   // shift_x moves base_link to the vehicle-center convention expected by the model.
   geometry_msgs::msg::Pose pose_for_transform = kinematic_state.pose.pose;
