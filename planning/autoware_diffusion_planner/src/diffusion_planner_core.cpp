@@ -378,13 +378,9 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   // Create frame context. The ego state is derived from the buffered odometry at the object
   // timestamp (see select_ego_state above); frame_time is the object-anchored sync time while
   // output_time (newest odometry) is what stamps the published outputs.
-  const FrameContext frame_context{kinematic_state,
-                                   *ego_acceleration,
-                                   ego_to_map_transform,
-                                   processed_neighbor_histories,
-                                   frame_time,
-                                   output_time,
-                                   min_time_diff_s};
+  const FrameContext frame_context{
+    kinematic_state, *ego_acceleration, ego_to_map_transform, processed_neighbor_histories,
+    frame_time,      output_time,       min_time_diff_s};
 
   return frame_context;
 }
