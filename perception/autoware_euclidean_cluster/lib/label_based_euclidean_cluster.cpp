@@ -122,7 +122,7 @@ std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> split_pointcloud(
 }
 
 /// @brief Compute the average semantic probability for one clustered object instance.
-/// @details `indices` are relative to the per-label filtered cloud built from `points`.
+/// @details `indices` are relative to the per-label cloud built from `points`.
 float cluster_probability_from_indices(
   const std::vector<SemanticPoint> & points, const pcl::Indices & indices)
 {
@@ -196,23 +196,17 @@ std::pair<Shape, geometry_msgs::msg::Pose> create_fallback_shape_and_pose(
 
 LabelBasedEuclideanCluster::LabelBasedEuclideanCluster(
   const std::unordered_map<std::uint8_t, std::uint8_t> & class_id_to_object_label,
-  float min_probability, ShapePolicy shape_policy,
-  std::shared_ptr<EuclideanClusterInterface> default_cluster,
-  const std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>> &
-    label_cluster_executers,
+  ShapePolicy shape_policy, const ClusterOptions & default_options,
+  const std::unordered_map<std::uint8_t, ClusterOptions> & label_options,
   std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator,
   const std::vector<ConfusableLabelGroup> & confusable_groups)
 : class_id_to_object_label_(class_id_to_object_label),
-  min_probability_(min_probability),
   shape_policy_(shape_policy),
-  default_cluster_(std::move(default_cluster)),
-  label_cluster_executers_(label_cluster_executers),
+  default_options_(default_options),
+  label_options_(label_options),
   shape_estimator_(std::move(shape_estimator)),
   confusable_groups_(confusable_groups)
 {
-  if (!default_cluster_) {
-    throw std::invalid_argument("LabelBasedEuclideanCluster: default_cluster is null");
-  }
   if (!shape_estimator_) {
     throw std::invalid_argument("LabelBasedEuclideanCluster: shape_estimator is null");
   }
@@ -229,11 +223,10 @@ LabelBasedEuclideanCluster::LabelBasedEuclideanCluster(
   }
 }
 
-EuclideanClusterInterface & LabelBasedEuclideanCluster::get_cluster_executer(
-  const std::uint8_t label) const
+const ClusterOptions & LabelBasedEuclideanCluster::get_options(const std::uint8_t label) const
 {
-  const auto it = label_cluster_executers_.find(label);
-  return (it != label_cluster_executers_.end()) ? *it->second : *default_cluster_;
+  const auto it = label_options_.find(label);
+  return it != label_options_.end() ? it->second : default_options_;
 }
 
 LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
@@ -250,7 +243,7 @@ LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
     return tl::unexpected(std::string("Input pointcloud missing required float32 fields: x, y, z"));
   }
 
-  // 1. Split points by label and filter by probability
+  // 1. Split points by label while preserving per-point probability for cluster scoring.
   const auto split_points = split_pointcloud(input_msg, class_id_to_object_label_);
 
   // 2. Run per-label clustering and collect all cluster entries
@@ -263,14 +256,15 @@ LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
     }
 
     std::vector<IndexedCluster> clusters;
-    get_cluster_executer(label).cluster(label_cloud, clusters);
+    const auto & options = get_options(label);
+    options.executor->cluster(label_cloud, clusters);
 
     for (auto & cluster : clusters) {
       if (cluster.cloud.empty()) continue;
 
       const float cluster_probability =
         cluster_probability_from_indices(semantic_points, cluster.indices);
-      if (cluster_probability < min_probability_) continue;
+      if (cluster_probability < options.min_probability) continue;
 
       all_entries.push_back({std::move(cluster.cloud), label, cluster_probability});
     }

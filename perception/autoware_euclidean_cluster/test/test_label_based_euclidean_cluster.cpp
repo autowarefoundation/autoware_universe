@@ -58,6 +58,11 @@ protected:
   std::shared_ptr<VoxelGridBasedEuclideanCluster> default_cluster_;
   std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator_;
 
+  ClusterOptions make_default_options(const float min_probability = 0.0F) const
+  {
+    return ClusterOptions{default_cluster_, min_probability};
+  }
+
   /// @brief Create a minimal PointCloud2 message with xyz and optionally class_id/probability
   sensor_msgs::msg::PointCloud2 create_pointcloud(
     const std::vector<float> & x, const std::vector<float> & y, const std::vector<float> & z,
@@ -147,8 +152,7 @@ TEST_F(LabelBasedEuclideanClusterTest, EmptyPointCloudReturnsEmptyObjects)
   class_map[0] = ObjectClassification::UNKNOWN;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(), {}, shape_estimator_);
 
   auto pc = create_pointcloud({}, {}, {});
 
@@ -167,8 +171,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithoutClassIdUsesDefaultLabel)
   class_map[0] = ObjectClassification::CAR;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(), {}, shape_estimator_);
 
   // Create enough points to potentially form a cluster
   // Add more points in close proximity to exceed min_points_per_cluster
@@ -200,8 +203,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
   class_map[1] = ObjectClassification::PEDESTRIAN;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(), {}, shape_estimator_);
 
   // Create two well-separated clusters: car at origin and pedestrian at (5,0)
   std::vector<float> x_vals, y_vals, z_vals, class_vals, prob_vals;
@@ -254,8 +256,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ClusterBelowMinProbabilityIsFiltered)
   class_map[0] = ObjectClassification::CAR;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.8f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(0.8F), {}, shape_estimator_);
 
   // A few high-confidence points are not enough when the cluster average is below the threshold.
   auto pc = create_pointcloud(
@@ -281,8 +282,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ClusterAverageProbabilityIsUsedForThresho
   class_map[0] = ObjectClassification::CAR;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.8f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(0.8F), {}, shape_estimator_);
 
   // The first point is below the threshold, but the cluster average is above 0.8.
   auto pc = create_pointcloud(
@@ -302,6 +302,35 @@ TEST_F(LabelBasedEuclideanClusterTest, ClusterAverageProbabilityIsUsedForThresho
   EXPECT_NEAR(result->objects[0].existence_probability, 0.8333333f, 1e-5f);
 }
 
+TEST_F(LabelBasedEuclideanClusterTest, LabelMinProbabilityOverridesGlobalThreshold)
+{
+  // Arrange
+  std::unordered_map<uint8_t, uint8_t> class_map;
+  class_map[0] = ObjectClassification::CAR;
+  class_map[1] = ObjectClassification::PEDESTRIAN;
+
+  LabelBasedEuclideanCluster cluster(
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(0.3F),
+    {{ObjectClassification::CAR, make_default_options(0.8F)}}, shape_estimator_);
+
+  auto pc = create_pointcloud(
+    {0.0f, 0.1f, 0.2f, 5.0f, 5.1f, 5.2f},  // x
+    {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},  // y
+    {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},  // z
+    {0, 0, 0, 1, 1, 1},                    // class_id
+    {0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f}   // probability
+  );
+
+  // Act
+  auto result = cluster.process(pc);
+
+  // Assert
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->objects.size(), 1U);
+  EXPECT_EQ(result->objects[0].classification[0].label, ObjectClassification::PEDESTRIAN);
+  EXPECT_NEAR(result->objects[0].existence_probability, 0.7f, 1e-5f);
+}
+
 TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
 {
   // Arrange
@@ -309,8 +338,7 @@ TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
   class_map[0] = ObjectClassification::CAR;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(), {}, shape_estimator_);
 
   // Create cluster with known probabilities
   std::vector<float> x_vals, y_vals, z_vals, prob_vals;
@@ -347,8 +375,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ShapeIsPopulated)
   class_map[0] = ObjectClassification::CAR;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(), {}, shape_estimator_);
 
   // Create a reasonable cluster
   std::vector<float> x_vals, y_vals, z_vals;
@@ -388,8 +415,7 @@ TEST_F(LabelBasedEuclideanClusterTest, UnmappedLabelsAreIgnored)
   // class_id 1 is unmapped, should be ignored
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(), {}, shape_estimator_);
 
   // Create points: some mapped (0), some unmapped (1)
   auto pc = create_pointcloud(
@@ -416,8 +442,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenRequiredFieldsAreMissing)
   class_map[0] = ObjectClassification::CAR;
 
   LabelBasedEuclideanCluster cluster(
-    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+    class_map, ShapePolicy::ALL_POLYGON, make_default_options(), {}, shape_estimator_);
 
   sensor_msgs::msg::PointCloud2 pc;
   pc.height = 1;

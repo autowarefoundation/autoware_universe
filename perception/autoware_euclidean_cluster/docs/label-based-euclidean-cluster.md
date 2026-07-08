@@ -42,7 +42,7 @@ The packaged launch file remaps these by default to the following topics:
 5. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
 6. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
 7. Compute the average semantic probability for each cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label cloud, rather than rematching points by coordinate.
-8. Drop clusters whose average semantic probability is below `min_probability`.
+8. Drop clusters whose average semantic probability is below the label-specific threshold, or `min_probability` when no label-specific threshold is configured.
 9. Estimate a shape and pose for each remaining cluster with `ShapeEstimator`.
 10. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
 11. Publish one `DetectedObject` per cluster.
@@ -78,6 +78,7 @@ After clustering, the node converts each cluster into a `DetectedObject`.
 - The output classification label is the mapped object label for that bucket.
 - The output existence probability is the average of the clustered point probabilities for that object instance.
 - `min_probability` is applied to that cluster-average probability, not to individual points before clustering.
+- `label_cluster_params.<label>.min_probability` overrides `min_probability` for clusters with that output label.
 - Shape estimation is delegated to `autoware::shape_estimation::ShapeEstimator`.
 - `shape_policy=0` (`ALL_POLYGON`) estimates whole shapes as polygon.
 - `shape_policy=1` (`LABEL_DEPEND`) estimates shapes with the mapped object label.
@@ -95,27 +96,29 @@ Parameters are loaded from [config/label_based_euclidean_cluster.param.yaml](../
 
 {{ json_to_markdown("perception/autoware_euclidean_cluster/schema/label_based_euclidean_cluster.schema.json") }}
 
-## Per-Label Clustering Parameter Overrides
+## Per-Label Clustering And Filtering Parameter Overrides
 
 The clustering parameters at the top level (`use_height`, `tolerance_m`, `voxel_leaf_size_m`,
 `min_points_per_voxel`, `min_points_per_cluster`, `large_cluster_voxel_count_threshold`,
 `large_cluster_max_points_per_voxel`, `max_voxels_per_cluster`) define a single global
 `VoxelGridBasedEuclideanCluster` that is used for every label bucket by default.
 
-`label_cluster_params.<label>` lets each label run with its own tuned clustering instance instead.
+`label_cluster_params.<label>` lets each label run with its own tuned clustering and output filtering settings instead.
 This is useful because the spatial density and size of objects differ by class: pedestrians and
 hazards need a tighter tolerance and finer voxels than cars or trucks.
 
 - `<label>` must be one of the supported Autoware object labels (`unknown`, `car`, `bus`, `truck`,
   `trailer`, `motorcycle`, `bicycle`, `pedestrian`, `animal`, `hazard`).
-- Each override block accepts the same keys as the global clustering parameters.
+- Each override block accepts the same keys as the global clustering parameters, plus `min_probability`.
 - Any key omitted inside an override block falls back to the corresponding global value, so a block
   only needs to list the parameters that differ.
-- A label with no override block (or an empty one) keeps using the global default cluster.
-- When a label-specific cluster is created, the node logs `Using custom cluster params for label '<label>'` at startup.
+- A label with no override block keeps using the global options.
+- A label with an override block gets its own cluster executor. Omitted clustering keys are copied
+  from the global defaults.
+- When label-specific options are created, the node logs `Using per-label cluster options for label '<label>'` at startup.
 
-Example: give pedestrians a tighter tolerance and finer voxels while leaving everything else on the
-global defaults.
+Example: give pedestrians a tighter tolerance, finer voxels, and a higher output confidence
+threshold while leaving everything else on the global defaults.
 
 ```yaml
 tolerance_m: 0.65
@@ -130,6 +133,7 @@ label_cluster_params:
     large_cluster_voxel_count_threshold: 5
     large_cluster_max_points_per_voxel: 30
     max_voxels_per_cluster: 200
+    min_probability: 0.5
 ```
 
 ## Confusable-Label Merge

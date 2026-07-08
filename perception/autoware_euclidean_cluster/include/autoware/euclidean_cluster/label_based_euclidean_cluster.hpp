@@ -25,8 +25,10 @@
 
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::euclidean_cluster
@@ -34,6 +36,20 @@ namespace autoware::euclidean_cluster
 enum ShapePolicy : uint8_t {
   ALL_POLYGON = 0,
   LABEL_DEPEND = 1,
+};
+
+struct ClusterOptions
+{
+  ClusterOptions(std::shared_ptr<EuclideanClusterInterface> executor, const float min_probability)
+  : executor(std::move(executor)), min_probability(min_probability)
+  {
+    if (!this->executor) {
+      throw std::invalid_argument("ClusterOptions: executor is null");
+    }
+  }
+
+  std::shared_ptr<EuclideanClusterInterface> executor;
+  float min_probability{};
 };
 
 /// @brief Core clustering logic without ROS dependencies.
@@ -55,18 +71,15 @@ public:
 
   /// @brief Construct with full configuration for clustering and shape estimation.
   /// @param class_id_to_object_label Mapping from input class ID to Autoware object label.
-  /// @param min_probability Minimum average semantic probability required for output clusters.
   /// @param shape_policy Strategy for shape estimation (ALL_POLYGON or LABEL_DEPEND).
-  /// @param default_cluster Default cluster executer used when no per-label override exists.
-  /// @param label_cluster_executers Optional per-label cluster executer overrides.
+  /// @param default_options Default cluster options used when no per-label override exists.
+  /// @param label_options Optional effective per-label cluster options.
   /// @param shape_estimator Shape estimator for converting clusters to DetectedObjects.
   /// @param confusable_groups Optional label groups for post-clustering merge.
   LabelBasedEuclideanCluster(
     const std::unordered_map<std::uint8_t, std::uint8_t> & class_id_to_object_label,
-    float min_probability, ShapePolicy shape_policy,
-    std::shared_ptr<EuclideanClusterInterface> default_cluster,
-    const std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>> &
-      label_cluster_executers,
+    ShapePolicy shape_policy, const ClusterOptions & default_options,
+    const std::unordered_map<std::uint8_t, ClusterOptions> & label_options,
     std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator,
     const std::vector<ConfusableLabelGroup> & confusable_groups = {});
 
@@ -81,17 +94,15 @@ public:
 
 private:
   std::unordered_map<std::uint8_t, std::uint8_t> class_id_to_object_label_;
-  float min_probability_;
   ShapePolicy shape_policy_;
-  std::shared_ptr<EuclideanClusterInterface> default_cluster_;
-  std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>>
-    label_cluster_executers_;
+  ClusterOptions default_options_;
+  std::unordered_map<std::uint8_t, ClusterOptions> label_options_;
   std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator_;
   std::vector<ConfusableLabelGroup> confusable_groups_;
   std::unordered_map<std::uint8_t, std::size_t> label_to_group_idx_;
 
-  /// @brief Return the cluster executer for the given label, or default if no override exists.
-  EuclideanClusterInterface & get_cluster_executer(std::uint8_t label) const;
+  /// @brief Return the cluster options for the given label, or default if no override exists.
+  const ClusterOptions & get_options(std::uint8_t label) const;
 };
 
 }  // namespace autoware::euclidean_cluster
