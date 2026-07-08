@@ -16,8 +16,8 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
-#include "autoware/trajectory_modifier/trajectory_modifier_context.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/input_data.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/input_data.hpp"
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>

@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

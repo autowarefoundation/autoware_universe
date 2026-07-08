@@ -14,7 +14,7 @@
 
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EXTENDER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EXTENDER_HPP_
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>

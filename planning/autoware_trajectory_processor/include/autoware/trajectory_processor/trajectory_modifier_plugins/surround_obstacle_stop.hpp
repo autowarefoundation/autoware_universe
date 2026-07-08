@@ -16,7 +16,7 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__SURROUND_OBSTACLE_STOP_HPP_
 
 #include "autoware/obstacle_proximity_checker/obstacle_proximity_checker.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 

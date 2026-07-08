@@ -17,7 +17,7 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_UTILS_HPP_
 
-#include "autoware/trajectory_optimizer/acados_interface.hpp"
+#include "autoware/trajectory_processor/acados_interface.hpp"
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 

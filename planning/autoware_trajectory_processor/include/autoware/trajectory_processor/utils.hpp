@@ -17,7 +17,7 @@
 
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <rclcpp/logger.hpp>
 

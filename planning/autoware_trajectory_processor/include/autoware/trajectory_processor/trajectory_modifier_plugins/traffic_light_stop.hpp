@@ -17,8 +17,8 @@
 
 #include "autoware/traffic_light_compliance_checker/structs.hpp"
 #include "autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

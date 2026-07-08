@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_HPP_  // NOLINT
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_HPP_  // NOLINT
 
-#include "autoware/trajectory_optimizer/acados_interface.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/acados_interface.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

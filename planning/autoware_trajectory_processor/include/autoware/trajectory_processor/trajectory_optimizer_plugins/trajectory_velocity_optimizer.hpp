@@ -17,8 +17,8 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>

@@ -17,9 +17,9 @@
 
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>

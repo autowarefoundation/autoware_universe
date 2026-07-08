@@ -15,8 +15,8 @@
 #include "obstacle_stop.hpp"
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
-#include <autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp>
-#include <autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp>
+#include <autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp>
+#include <autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
