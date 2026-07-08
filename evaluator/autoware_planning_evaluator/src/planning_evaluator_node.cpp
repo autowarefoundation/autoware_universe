@@ -216,7 +216,8 @@ void PlanningEvaluatorNode::getRouteData()
   }
 }
 
-void PlanningEvaluatorNode::AddLaneletMetricMsg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr)
+void PlanningEvaluatorNode::AddLaneletMetricMsg(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr)
 {
   const auto & ego_pose = ego_state_ptr->pose.pose;
   const auto current_lanelets = [&]() {
@@ -262,7 +263,8 @@ void PlanningEvaluatorNode::AddLaneletMetricMsg(const AUTOWARE_MESSAGE_CONST_SHA
 }
 
 void PlanningEvaluatorNode::AddKinematicStateMetricMsg(
-  const AccelWithCovarianceStamped & accel_stamped, const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr)
+  const AccelWithCovarianceStamped & accel_stamped,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr)
 {
   const std::string base_name = "kinematic_state/";
   MetricMsg metric_msg;
@@ -389,7 +391,8 @@ void PlanningEvaluatorNode::onTimer()
 }
 
 void PlanningEvaluatorNode::onTrajectory(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) traj_msg, const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) traj_msg,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr)
 {
   if (!ego_state_ptr || !traj_msg) {
     return;
@@ -477,7 +480,8 @@ void PlanningEvaluatorNode::onModifiedGoal(
     runtime * 1e3);
 }
 
-void PlanningEvaluatorNode::onOdometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) odometry_msg)
+void PlanningEvaluatorNode::onOdometry(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) odometry_msg)
 {
   if (!odometry_msg) return;
   metrics_calculator_.setEgoPose(*odometry_msg);
@@ -496,7 +500,8 @@ void PlanningEvaluatorNode::onOdometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(O
   }
 }
 
-void PlanningEvaluatorNode::onReferenceTrajectory(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) traj_msg)
+void PlanningEvaluatorNode::onReferenceTrajectory(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) traj_msg)
 {
   if (!traj_msg) {
     return;
@@ -504,7 +509,8 @@ void PlanningEvaluatorNode::onReferenceTrajectory(const AUTOWARE_MESSAGE_CONST_S
   metrics_calculator_.setReferenceTrajectory(*traj_msg);
 }
 
-void PlanningEvaluatorNode::onObjects(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PredictedObjects) objects_msg)
+void PlanningEvaluatorNode::onObjects(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PredictedObjects) objects_msg)
 {
   if (!objects_msg) {
     return;
@@ -512,7 +518,8 @@ void PlanningEvaluatorNode::onObjects(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Pr
   obstacle_metrics_calculator_.setPredictedObjects(*objects_msg);
 }
 
-void PlanningEvaluatorNode::onSteering(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SteeringReport) steering_msg)
+void PlanningEvaluatorNode::onSteering(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SteeringReport) steering_msg)
 {
   if (!steering_msg) {
     return;
@@ -523,7 +530,8 @@ void PlanningEvaluatorNode::onSteering(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(S
   }
 }
 
-void PlanningEvaluatorNode::onBlinker(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TurnIndicatorsReport) blinker_msg)
+void PlanningEvaluatorNode::onBlinker(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TurnIndicatorsReport) blinker_msg)
 {
   if (!blinker_msg) {
     return;
@@ -535,7 +543,8 @@ void PlanningEvaluatorNode::onBlinker(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Tu
 }
 
 void PlanningEvaluatorNode::onPlanningFactors(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PlanningFactorArray) planning_factors, const std::string & module_name)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PlanningFactorArray) planning_factors,
+  const std::string & module_name)
 {
   if (!planning_factors || planning_factors->factors.empty()) {
     return;
