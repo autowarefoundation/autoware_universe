@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
+from dataclasses import field
+
 import launch
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
@@ -28,6 +31,50 @@ from launch_ros.substitutions import FindPackageShare
 import yaml
 
 
+@dataclass(frozen=True)
+class LaunchArgument:
+    """Represents a topic argument for the label based euclidean cluster node.
+
+    Attributes:
+        name (str): The name of the ROS parameter.
+        default (str | list): The default value of the parameter.
+    """
+
+    name: str
+    default: str | list
+    config: LaunchConfiguration = field(init=False)
+    remapping: tuple[str, LaunchConfiguration] = field(init=False)
+
+    def __post_init__(self):
+        object.__setattr__(self, "config", LaunchConfiguration(self.name, default=self.default))
+        object.__setattr__(self, "remapping", (self.name, self.config))
+
+    def declare(self) -> DeclareLaunchArgument:
+        return DeclareLaunchArgument(self.name, default_value=self.default)
+
+
+# === Node information ===
+PACKAGE_NAME = "autoware_euclidean_cluster"
+PLUGIN_NAME = "autoware::euclidean_cluster::LabelBasedEuclideanClusterNode"
+NODE_NAME = "label_based_euclidean_cluster"
+
+# === Launch arguments ===
+INPUT_POINTCLOUD = LaunchArgument("input/pointcloud", "~/input/segmented/pointcloud")
+OUTPUT_OBJECTS = LaunchArgument("output/objects", "~/output/objects")
+OUTPUT_POINTCLOUD = LaunchArgument("output/pointcloud", "~/output/pointcloud")
+
+PARAM_PATH = LaunchArgument(
+    "param_path",
+    [
+        FindPackageShare(PACKAGE_NAME),
+        "/config/label_based_euclidean_cluster.param.yaml",
+    ],
+)
+
+USE_POINTCLOUD_CONTAINER = LaunchArgument("use_pointcloud_container", "false")
+POINTCLOUD_CONTAINER_NAME = LaunchArgument("pointcloud_container_name", "pointcloud_container")
+
+
 def launch_setup(context, *args, **kwargs):
     def load_composable_node_param(param_path):
         with open(LaunchConfiguration(param_path).perform(context), "r") as f:
@@ -35,37 +82,34 @@ def launch_setup(context, *args, **kwargs):
 
     ns = ""
     component = ComposableNode(
-        package="autoware_euclidean_cluster",
+        package=PACKAGE_NAME,
         namespace=ns,
-        plugin="autoware::euclidean_cluster::LabelBasedEuclideanClusterNode",
-        name="label_based_euclidean_cluster",
+        plugin=PLUGIN_NAME,
+        name=NODE_NAME,
         remappings=[
-            ("input/pointcloud", LaunchConfiguration("input/pointcloud")),
-            ("output/objects", LaunchConfiguration("output/objects")),
-            ("output/pointcloud", LaunchConfiguration("output/pointcloud")),
+            INPUT_POINTCLOUD.remapping,
+            OUTPUT_OBJECTS.remapping,
+            OUTPUT_POINTCLOUD.remapping,
         ],
-        parameters=[
-            load_composable_node_param("param_path"),
-            {"shape_policy": LaunchConfiguration("shape_policy")},
-        ],
+        parameters=[load_composable_node_param(PARAM_PATH.name)],
     )
 
     container = ComposableNodeContainer(
-        name="label_based_euclidean_cluster_container",
+        name=NODE_NAME + "_container",
         namespace=ns,
         package=LaunchConfiguration("container_package"),
         executable=LaunchConfiguration("container_executable"),
         composable_node_descriptions=[],
         output="screen",
-        condition=UnlessCondition(LaunchConfiguration("use_pointcloud_container")),
+        condition=UnlessCondition(USE_POINTCLOUD_CONTAINER.config),
         additional_env={
             "LD_PRELOAD": LaunchConfiguration("ld_preload_value"),
         },
     )
 
     target_container = (
-        LaunchConfiguration("pointcloud_container_name")
-        if IfCondition(LaunchConfiguration("use_pointcloud_container")).evaluate(context)
+        POINTCLOUD_CONTAINER_NAME.config
+        if IfCondition(USE_POINTCLOUD_CONTAINER.config).evaluate(context)
         else container
     )
 
@@ -78,9 +122,6 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    def add_launch_arg(name: str, default_value=None):
-        return DeclareLaunchArgument(name, default_value=default_value)
-
     # Resolve LD_PRELOAD / container package / container executable based on ENABLE_AGNOCAST.
     agnocast_env = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -97,19 +138,15 @@ def generate_launch_description():
     return launch.LaunchDescription(
         [
             agnocast_env,
-            add_launch_arg("input/pointcloud", "~/input/segmented/pointcloud"),
-            add_launch_arg("output/objects", "~/output/objects"),
-            add_launch_arg("output/pointcloud", "~/output/pointcloud"),
-            add_launch_arg("use_pointcloud_container", "false"),
-            add_launch_arg("pointcloud_container_name", "pointcloud_container"),
-            add_launch_arg("shape_policy", "0"),
-            add_launch_arg(
-                "param_path",
-                [
-                    FindPackageShare("autoware_euclidean_cluster"),
-                    "/config/label_based_euclidean_cluster.param.yaml",
-                ],
-            ),
+            # I/O topics
+            INPUT_POINTCLOUD.declare(),
+            OUTPUT_OBJECTS.declare(),
+            OUTPUT_POINTCLOUD.declare(),
+            # Parameters
+            PARAM_PATH.declare(),
+            # Container
+            USE_POINTCLOUD_CONTAINER.declare(),
+            POINTCLOUD_CONTAINER_NAME.declare(),
             OpaqueFunction(function=launch_setup),
         ]
     )
