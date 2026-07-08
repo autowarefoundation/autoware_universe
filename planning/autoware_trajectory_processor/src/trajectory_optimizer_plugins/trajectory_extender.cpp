@@ -82,4 +82,4 @@ rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryExtender,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

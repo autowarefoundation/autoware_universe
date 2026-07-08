@@ -16,12 +16,11 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/input_data.hpp"
 
-#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
-#include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -38,8 +37,9 @@ using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using TrajectoryModifierParams = trajectory_modifier_params::Params;
+using NodeContext = autoware::trajectory_processor::plugin::NodeContext;
 
-class TrajectoryModifierPluginBase
+class TrajectoryModifierPluginBase : public autoware::trajectory_processor::plugin::PluginBase
 {
 public:
   TrajectoryModifierPluginBase() = default;
@@ -50,60 +50,27 @@ public:
     const std::shared_ptr<TrajectoryModifierContext> & context,
     [[maybe_unused]] const TrajectoryModifierParams & params)
   {
-    short_name_ = std::invoke([&name]() {
-      const auto npos = name.find_last_of(':');
-      return npos != std::string::npos ? name.substr(npos + 1) : name;
-    });
-    name_ = std::move(name);
-    node_ptr_ = node_ptr;
-    time_keeper_ = time_keeper;
-    context_ = context;
+    auto node_context = std::make_shared<NodeContext>();
+    node_context->node_ptr = node_ptr;
+    node_context->time_keeper = time_keeper;
+    node_context->vehicle_info = context->vehicle_info;
+    node_context->tf_buffer = &context->tf_buffer;
+    autoware::trajectory_processor::plugin::PluginBase::initialize(name, node_context);
+    modifier_context_ = context;
     RCLCPP_DEBUG(
-      node_ptr_->get_logger(), "instantiated TrajectoryModifierPluginBase: %s", name_.c_str());
+      node_ptr->get_logger(), "instantiated TrajectoryModifierPluginBase: %s", name.c_str());
     on_initialize(params);
   }
 
   virtual ~TrajectoryModifierPluginBase() = default;
-  virtual bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) = 0;
-  virtual bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & input) = 0;
-  std::string get_name() const { return name_; }
-  std::string get_short_name() const { return short_name_; }
-  rclcpp::Node * get_node_ptr() const { return node_ptr_; }
-  std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
+  using autoware::trajectory_processor::plugin::PluginBase::modify_trajectory;
   virtual void update_params(const TrajectoryModifierParams & params) = 0;
-
-  virtual void publish_debug_data([[maybe_unused]] const std::string & ns) const {}
-
-  virtual void publish_planning_factor()
-  {
-    if (planning_factor_interface_) {
-      planning_factor_interface_->publish();
-    }
-  }
-  std::vector<PlanningFactor> get_planning_factors() const
-  {
-    if (planning_factor_interface_ != nullptr) {
-      return planning_factor_interface_->get_factors();
-    }
-    return {};
-  }
 
 protected:
   virtual void on_initialize(const TrajectoryModifierParams & params) = 0;
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
-    planning_factor_interface_;
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  std::shared_ptr<TrajectoryModifierContext> modifier_context_;
   bool enabled_{true};
   double trajectory_time_step_{0.1};
-
-  rclcpp::Clock::SharedPtr get_clock() const { return node_ptr_->get_clock(); }
-
-private:
-  std::string name_;
-  std::string short_name_;
-  rclcpp::Node * node_ptr_;
-  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 }  // namespace autoware::trajectory_modifier::plugin
 

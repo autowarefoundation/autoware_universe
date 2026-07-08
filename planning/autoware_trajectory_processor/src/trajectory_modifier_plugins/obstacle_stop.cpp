@@ -371,7 +371,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   if (!clustered_points->empty()) {
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
-      transform_stamped = context_->tf_buffer.lookupTransform(
+      transform_stamped = context_->tf_buffer->lookupTransform(
         "map", input.obstacle_pointcloud->header.frame_id, tf2::TimePointZero);
     } catch (tf2::TransformException & e) {
       RCLCPP_WARN(get_node_ptr()->get_logger(), "no transform found for pointcloud: %s", e.what());
@@ -519,4 +519,4 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::ObstacleStop,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

@@ -16,6 +16,7 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_OPTIMIZER_PLUGIN_BASE_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_OPTIMIZER_PLUGIN_BASE_HPP_
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
@@ -27,6 +28,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin
@@ -34,7 +36,7 @@ namespace autoware::trajectory_optimizer::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
-class TrajectoryOptimizerPluginBase
+class TrajectoryOptimizerPluginBase : public autoware::trajectory_processor::plugin::PluginBase
 {
 public:
   TrajectoryOptimizerPluginBase() = default;
@@ -48,6 +50,29 @@ public:
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
     TrajectoryOptimizerData & data) = 0;
 
+  bool modify_trajectory(
+    autoware::trajectory_processor::plugin::TrajectoryPoints & traj_points,
+    const autoware::trajectory_processor::plugin::InputData & input) override
+  {
+    if (!input.current_odometry || !input.current_acceleration) {
+      return false;
+    }
+
+    TrajectoryOptimizerData data;
+    data.current_odometry = *input.current_odometry;
+    data.current_acceleration = *input.current_acceleration;
+    if (input.semantic_speed_tracker) {
+      data.semantic_speed_tracker = *input.semantic_speed_tracker;
+    }
+
+    optimize_trajectory(traj_points, params_, data);
+
+    if (input.semantic_speed_tracker) {
+      *input.semantic_speed_tracker = data.semantic_speed_tracker;
+    }
+    return true;
+  }
+
   // Plugin parameter setup - plugins declare their own parameters here
   virtual void set_up_params() = 0;
 
@@ -60,23 +85,31 @@ public:
     const std::string & name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
   {
-    name_ = name;
-    node_ptr_ = node_ptr;
-    time_keeper_ = time_keeper;
+    auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+    context->node_ptr = node_ptr;
+    context->time_keeper = time_keeper;
+    autoware::trajectory_processor::plugin::PluginBase::initialize(name, context);
     set_up_params();
-    std::cerr << "initialized TrajectoryOptimizerPlugin: " << name_ << std::endl;
+    std::cerr << "initialized TrajectoryOptimizerPlugin: " << get_name() << std::endl;
   }
 
-  std::string get_name() const { return name_; }
+  void initialize(
+    const std::string & name,
+    std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context) override
+  {
+    autoware::trajectory_processor::plugin::PluginBase::initialize(name, std::move(context));
+    set_up_params();
+    std::cerr << "initialized TrajectoryOptimizerPlugin: " << get_name() << std::endl;
+  }
+
+  void update_params(const TrajectoryOptimizerParams & params) override { params_ = params; }
 
 protected:
-  rclcpp::Node * get_node_ptr() const { return node_ptr_; }
-  std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
+  using autoware::trajectory_processor::plugin::PluginBase::get_node_ptr;
+  using autoware::trajectory_processor::plugin::PluginBase::get_time_keeper;
 
 private:
-  std::string name_{"unnamed_plugin"};
-  rclcpp::Node * node_ptr_{nullptr};
-  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
+  TrajectoryOptimizerParams params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

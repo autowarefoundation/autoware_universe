@@ -218,4 +218,4 @@ void TrafficLightStop::publish_debug_string() const
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::TrafficLightStop,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

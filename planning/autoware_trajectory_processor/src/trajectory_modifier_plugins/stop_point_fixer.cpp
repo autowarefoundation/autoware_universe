@@ -103,4 +103,4 @@ bool StopPointFixer::modify_trajectory(TrajectoryPoints & traj_points, const Inp
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::StopPointFixer,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

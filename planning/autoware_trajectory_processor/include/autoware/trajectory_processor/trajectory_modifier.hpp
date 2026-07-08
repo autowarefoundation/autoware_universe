@@ -97,8 +97,8 @@ private:
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_processing_time_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
-  pluginlib::ClassLoader<plugin::TrajectoryModifierPluginBase> plugin_loader_;
-  std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> plugins_;
+  pluginlib::ClassLoader<autoware::trajectory_processor::plugin::PluginBase> plugin_loader_;
+  std::vector<std::shared_ptr<autoware::trajectory_processor::plugin::PluginBase>> plugins_;
 
   std::shared_ptr<TrajectoryModifierContext> context_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;

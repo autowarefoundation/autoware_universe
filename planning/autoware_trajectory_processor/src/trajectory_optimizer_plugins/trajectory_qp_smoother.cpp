@@ -557,4 +557,4 @@ std::vector<double> TrajectoryQPSmoother::compute_velocity_based_weights(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

@@ -51,6 +51,13 @@ void TrajectoryVelocityOptimizer::initialize(
   pub_velocity_limit_->publish(max_vel_msg);
 }
 
+void TrajectoryVelocityOptimizer::initialize(
+  const std::string & name,
+  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
+{
+  initialize(name, context->node_ptr, context->time_keeper);
+}
+
 void TrajectoryVelocityOptimizer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
   TrajectoryOptimizerData & data)
@@ -253,4 +260,4 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

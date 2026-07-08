@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_HPP_
 
+#include "autoware/trajectory_processor/plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
@@ -65,8 +66,9 @@ private:
     const std::vector<rclcpp::Parameter> & parameters);
 
   // Pluginlib loader and plugin storage
-  std::unique_ptr<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>> plugin_loader_;
-  std::vector<std::shared_ptr<plugin::TrajectoryOptimizerPluginBase>> plugins_;
+  std::unique_ptr<pluginlib::ClassLoader<autoware::trajectory_processor::plugin::PluginBase>>
+    plugin_loader_;
+  std::vector<std::shared_ptr<autoware::trajectory_processor::plugin::PluginBase>> plugins_;
 
   // interface subscriber
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;

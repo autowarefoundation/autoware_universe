@@ -31,7 +31,7 @@ public:
   bool is_stop_point_close_to_ego(
     const TrajectoryPoints & traj_points, const InputData & input) const;
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & input) override;
+    const TrajectoryPoints & traj_points, const InputData & input);
 
   void update_params(const TrajectoryModifierParams & params) override
   {

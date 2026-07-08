@@ -79,6 +79,13 @@ void TrajectoryMPTOptimizer::initialize(
   }
 }
 
+void TrajectoryMPTOptimizer::initialize(
+  const std::string & name,
+  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
+{
+  initialize(name, context->node_ptr, context->time_keeper);
+}
+
 void TrajectoryMPTOptimizer::set_up_params()
 {
   auto node_ptr = get_node_ptr();
@@ -340,4 +347,4 @@ void TrajectoryMPTOptimizer::publish_debug_markers(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

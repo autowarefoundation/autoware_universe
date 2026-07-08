@@ -39,9 +39,8 @@ namespace autoware::trajectory_optimizer
 TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
 : Node("trajectory_optimizer", options),
   plugin_loader_(
-    std::make_unique<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>>(
-      "autoware_trajectory_processor",
-      "autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase"))
+    std::make_unique<pluginlib::ClassLoader<autoware::trajectory_processor::plugin::PluginBase>>(
+      "autoware_trajectory_processor", "autoware::trajectory_processor::plugin::PluginBase"))
 {
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
@@ -92,8 +91,11 @@ void TrajectoryOptimizer::load_plugin(const std::string & plugin_name)
       }
     }
 
-    // Initialize plugin with node context
-    plugin->initialize(plugin_name, this, time_keeper_);
+    auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
+    context->node_ptr = this;
+    context->time_keeper = time_keeper_;
+    plugin->initialize(plugin_name, context);
+    plugin->update_params(params_);
 
     plugins_.push_back(plugin);
 
@@ -129,6 +131,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
 
   // Forward parameter updates to all loaded plugins
   for (auto & plugin : plugins_) {
+    plugin->update_params(params_);
     plugin->on_parameter(parameters);
   }
 
@@ -197,20 +200,23 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
 
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
-    // Create a fresh data instance per trajectory so semantic_speed_tracker is reset each time
-    TrajectoryOptimizerData data;
-    data.current_odometry = *current_odometry_ptr_;
-    data.current_acceleration = *current_acceleration_ptr_;
+    // Create a fresh tracker per trajectory so semantic state is reset each time.
+    SemanticSpeedTracker semantic_speed_tracker;
+    autoware::trajectory_processor::plugin::InputData input;
+    input.current_odometry = current_odometry_ptr_;
+    input.current_acceleration = current_acceleration_ptr_;
+    input.semantic_speed_tracker = &semantic_speed_tracker;
+
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
-      plugin->optimize_trajectory(trajectory.points, params_, data);
+      plugin->modify_trajectory(trajectory.points, input);
     }
 
     // Downstream Autoware modules dont properly support trajectories with less than 3 points. So we
     // return a dummy stopped trajectory instead.
     if (trajectory.points.size() < 3) {
       trajectory.points =
-        utils::generate_three_point_stopped_trajectory(trajectory.points, data.current_odometry);
+        utils::generate_three_point_stopped_trajectory(trajectory.points, *current_odometry_ptr_);
     }
   }
 

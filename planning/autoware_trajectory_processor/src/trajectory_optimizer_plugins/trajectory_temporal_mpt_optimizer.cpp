@@ -104,6 +104,13 @@ void TrajectoryTemporalMPTOptimizer::initialize(
   create_or_reset_solver();
 }
 
+void TrajectoryTemporalMPTOptimizer::initialize(
+  const std::string & name,
+  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
+{
+  initialize(name, context->node_ptr, context->time_keeper);
+}
+
 void TrajectoryTemporalMPTOptimizer::set_up_params()
 {
   auto node_ptr = get_node_ptr();
@@ -504,4 +511,4 @@ void TrajectoryTemporalMPTOptimizer::publish_temporal_mpt_debug_io(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

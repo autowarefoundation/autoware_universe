@@ -34,8 +34,7 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   param_listener_{
     std::make_unique<trajectory_modifier_params::ParamListener>(get_node_parameters_interface())},
   plugin_loader_(
-    "autoware_trajectory_processor",
-    "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
+    "autoware_trajectory_processor", "autoware::trajectory_processor::plugin::PluginBase"),
   context_{std::make_shared<TrajectoryModifierContext>(this)}
 {
   sub_map_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
@@ -174,8 +173,15 @@ void TrajectoryModifier::load_plugin(const std::string & name)
   }
 
   if (plugin_loader_.isClassAvailable(name)) {
-    const auto plugin = plugin_loader_.createSharedInstance(name);
-    plugin->initialize(name, this, time_keeper_, context_, params_);
+    auto plugin = plugin_loader_.createSharedInstance(name);
+    const auto modifier_plugin =
+      std::dynamic_pointer_cast<plugin::TrajectoryModifierPluginBase>(plugin);
+    if (!modifier_plugin) {
+      RCLCPP_ERROR(
+        this->get_logger(), "The plugin '%s' is not a trajectory modifier plugin", name.c_str());
+      return;
+    }
+    modifier_plugin->initialize(name, this, time_keeper_, context_, params_);
     // register
     plugins_.push_back(plugin);
     RCLCPP_INFO(this->get_logger(), "The modifier plugin '%s' has been loaded", name.c_str());
@@ -207,7 +213,11 @@ void TrajectoryModifier::update_params()
     params_ = param_listener_->get_params();
 
     for (auto & plugin : plugins_) {
-      plugin->update_params(params_);
+      const auto modifier_plugin =
+        std::dynamic_pointer_cast<plugin::TrajectoryModifierPluginBase>(plugin);
+      if (modifier_plugin) {
+        modifier_plugin->update_params(params_);
+      }
     }
   } catch (const std::exception & e) {
     RCLCPP_WARN(this->get_logger(), "Failed to update parameters: %s", e.what());

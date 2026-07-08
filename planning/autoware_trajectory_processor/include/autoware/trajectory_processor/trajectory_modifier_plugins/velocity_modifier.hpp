@@ -31,7 +31,7 @@ public:
   bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input) override;
+    const TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input);
 
   void update_params(const TrajectoryModifierParams & params) override
   {

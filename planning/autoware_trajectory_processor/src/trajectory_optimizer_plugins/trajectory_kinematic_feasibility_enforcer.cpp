@@ -220,4 +220,4 @@ rcl_interfaces::msg::SetParametersResult TrajectoryKinematicFeasibilityEnforcer:
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

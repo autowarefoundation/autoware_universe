@@ -175,7 +175,7 @@ std::optional<geometry_msgs::msg::TransformStamped> SurroundObstacleStop::get_tr
   geometry_msgs::msg::TransformStamped transform_stamped;
 
   try {
-    transform_stamped = context_->tf_buffer.lookupTransform(
+    transform_stamped = context_->tf_buffer->lookupTransform(
       source, target, stamp, tf2::durationFromSec(duration_sec));
   } catch (const tf2::TransformException & ex) {
     return {};
@@ -287,4 +287,4 @@ void SurroundObstacleStop::publish_debug_string(const bool is_active) const
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::SurroundObstacleStop,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::PluginBase)

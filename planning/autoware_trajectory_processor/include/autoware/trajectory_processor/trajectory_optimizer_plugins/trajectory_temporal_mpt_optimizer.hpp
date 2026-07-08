@@ -57,6 +57,9 @@ public:
   void initialize(
     const std::string & name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper) override;
+  void initialize(
+    const std::string & name,
+    std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context) override;
 
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
