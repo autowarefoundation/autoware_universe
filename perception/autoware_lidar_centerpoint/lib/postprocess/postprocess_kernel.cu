@@ -49,6 +49,14 @@ __device__ inline float sigmoid(float x)
   return 1.0f / (1.0f + expf(-x));
 }
 
+__device__ inline float binary_entropy(float p)
+{
+  constexpr float eps = 1.0e-6f;
+  constexpr float inv_ln2 = 1.4426950408889634f;  // 1 / ln(2)
+  p = fminf(fmaxf(p, eps), 1.0f - eps);
+  return (-p * logf(p) - (1.0f - p) * logf(1.0f - p)) * inv_ln2;
+}
+
 __global__ void generateBoxes3D_kernel(
   const float * out_heatmap, const float * out_offset, const float * out_z, const float * out_dim,
   const float * out_rot, const float * out_vel, const float voxel_size_x, const float voxel_size_y,
@@ -72,8 +80,10 @@ __global__ void generateBoxes3D_kernel(
 
   int label = -1;
   float max_score = -1;
+  float entropy = 0.f;
   for (int ci = 0; ci < class_size; ci++) {
     float score = sigmoid(out_heatmap[down_grid_size * ci + idx]);
+    entropy += binary_entropy(out_heatmap[down_grid_size * ci + idx]);
     if (score > max_score) {
       label = ci;
       max_score = score;
@@ -132,6 +142,7 @@ __global__ void generateBoxes3D_kernel(
 
   det_boxes3d[idx].label = label;
   det_boxes3d[idx].score = yaw_norm >= yaw_norm_thresholds[label] ? max_score : 0.f;
+  det_boxes3d[idx].entropy = entropy;
 
   // If the score is 0, then we stop processing
   if (det_boxes3d[idx].score == 0.f) {
