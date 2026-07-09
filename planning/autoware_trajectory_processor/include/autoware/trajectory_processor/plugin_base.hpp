@@ -138,8 +138,6 @@ public:
 
   /// Publish plugin-specific debug data under the given namespace.
   virtual void publish_debug_data([[maybe_unused]] const std::string & ns) const {}
-  /// Publish plugin-specific debug markers.
-  virtual void publish_debug_markers() const {}
 
   /// Publish accumulated planning factors, if the plugin owns an interface.
   virtual void publish_planning_factor()
