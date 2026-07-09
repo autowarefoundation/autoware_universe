@@ -22939,8 +22939,8 @@
 <h3 id="signal-status-tracker-filtering">Signal Status Tracker Filtering<a class="headerlink" href="#signal-status-tracker-filtering" title="Permanent link">#</a></h3>
 <p>To prevent sudden, harsh emergency braking maneuvers caused by raw perception noise, the status tracker filters raw signals through three deterministic mechanisms before passing them to the validation layer:</p>
 <ul>
-<li><strong>State Persistence Buffering:</strong> Incoming state transitions (e.g., green to amber/red) must continuously persist for a minimum time window (<code>stable_duration_threshold_red</code> or <code>stable_duration_threshold_amber</code>) before the new state is considered valid. If a signal flips color or alters elements before this duration threshold is reached, its active elements array is cleared to suppress transient sensor noise.</li>
-<li><strong>History Eviction Buffer:</strong> If a traffic light group drops out of the incoming message matrix completely, the tracker retains its record for a brief clearing window. The duration an un-updated signal persists in memory is dynamically determined by its last recorded color state: <code>stable_duration_threshold_red</code> for red signals and <code>stable_duration_threshold_amber</code> for amber or other non-red conditions. If the signal remains un-detected beyond this frame timeout, its stale context is permanently erased from the tracking ledger.</li>
+<li><strong>State Persistence Buffering:</strong> Incoming state transitions (e.g., green to amber/red/unknown) must continuously persist for a minimum time window (<code>stable_duration_threshold_red</code>, <code>stable_duration_threshold_amber</code>, or <code>stable_duration_threshold_unknown</code>) before the new state is considered valid. If a signal flips color or alters elements before this duration threshold is reached, its active elements array is cleared to suppress transient sensor noise.</li>
+<li><strong>History Eviction Buffer:</strong> If a traffic light group drops out of the incoming message matrix completely, the tracker retains its record for a brief clearing window. The duration an un-updated signal persists in memory is dynamically determined by its last recorded color state: <code>stable_duration_threshold_red</code> for red signals, <code>stable_duration_threshold_amber</code> for amber signals, and <code>stable_duration_threshold_unknown</code> for other non-red, non-amber conditions. If the signal remains un-detected beyond this frame timeout, its stale context is permanently erased from the tracking ledger.</li>
 <li><strong>Ego-Stopped Pass-Through Gate:</strong> The tracker continuously evaluates the current motion of the ego vehicle via <code>is_ego_stopped</code>. When the vehicle has brought itself to a halt beneath the configured <code>ego_stopped_velocity_threshold</code>, the entire stability duration filtering logic is completely bypassed. This pass-through guarantees that the vehicle maintains maximum responsiveness to incoming state changes while stationary, eliminating filtering-induced latency during intersection departures.</li>
 </ul>
 <h3 id="safety-compliance-logic">Safety &amp; Compliance Logic<a class="headerlink" href="#safety-compliance-logic" title="Permanent link">#</a></h3>
@@ -23065,6 +23065,11 @@
 <td align="left"><code>stable_duration_threshold_amber</code></td>
 <td align="left"><code>double</code></td>
 <td align="left">Required continuous duration for an <code>AMBER</code> state to be confirmed as valid (seconds).</td>
+</tr>
+<tr>
+<td align="left"><code>stable_duration_threshold_unknown</code></td>
+<td align="left"><code>double</code></td>
+<td align="left">Required continuous duration for an <code>UNKNOWN</code> state to be confirmed as valid (seconds).</td>
 </tr>
 <tr>
 <td align="left"><code>amber_rejection_hysteresis_duration</code></td>

@@ -22895,7 +22895,7 @@
 <tr>
 <td><code>traffic_rule::TrafficLightFilter</code></td>
 <td><code>traffic_rule</code></td>
-<td>Rejects trajectories that cross a red or amber stop line when the vehicle could safely stop.</td>
+<td>Rejects trajectories that cross red, amber, or configured unknown traffic-light stop lines.</td>
 </tr>
 </tbody>
 </table>
@@ -23083,10 +23083,52 @@
 <td>N/A</td>
 </tr>
 <tr>
+<td>traffic_light.treat_unknown_light_as_red_light</td>
+<td>boolean</td>
+<td>When true, UNKNOWN lights are treated identically to red lights.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>traffic_light.stop_overshoot_margin</td>
 <td>float</td>
 <td>Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].</td>
 <td>0.5</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_light.stable_duration_threshold_red</td>
+<td>float</td>
+<td>Minimum duration a RED light must be seen before it is considered active (only when ego is moving) [s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_light.stable_duration_threshold_amber</td>
+<td>float</td>
+<td>Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving) [s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_light.stable_duration_threshold_unknown</td>
+<td>float</td>
+<td>Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving) [s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_light.amber_rejection_hysteresis_duration</td>
+<td>float</td>
+<td>Duration to persist an AMBER rejection state to prevent flipping [s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_light.ego_stopped_velocity_threshold</td>
+<td>float</td>
+<td>Velocity threshold below which stability and hysteresis filters are bypassed [m/s].</td>
+<td>0.01</td>
 <td>≥0.0</td>
 </tr>
 <tr>
