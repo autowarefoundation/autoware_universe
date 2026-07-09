@@ -16,6 +16,7 @@
 #define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_
 
 #include "Eigen/Dense"
+#include "autoware/diffusion_planner/conversion/agent_history_alignment.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
@@ -49,6 +50,10 @@ using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
 constexpr size_t AGENT_STATE_DIM = 11;
 
+// Raw-observation buffer depth for aligned neighbor histories. Larger than the 31-sample model
+// window so the ~3s history is spanned even with message jitter at ~10Hz.
+constexpr size_t NEIGHBOR_HISTORY_BUFFER_SIZE = 40;
+
 enum AgentLabel { VEHICLE = 0, PEDESTRIAN = 1, BICYCLE = 2, IGNORE = 3 };
 
 /**
@@ -77,6 +82,18 @@ struct AgentState
 struct AgentHistory
 {
   explicit AgentHistory(const size_t max_size) : max_size_(max_size) {}
+
+  // Build a history directly from an ordered list of states (oldest first). Used to construct a
+  // fresh, grid-aligned history during resampling. The states are pushed in order, subject to the
+  // usual max_size cap.
+  static AgentHistory from_states(const std::vector<AgentState> & states, const size_t max_size)
+  {
+    AgentHistory history(max_size);
+    for (const auto & state : states) {
+      history.push_back(state);
+    }
+    return history;
+  }
 
   void fill(const AgentState & state)
   {
@@ -109,6 +126,20 @@ struct AgentHistory
 
   [[nodiscard]] const AgentState & get_latest_state() const { return queue_.back(); }
 
+  [[nodiscard]] const std::deque<AgentState> & states() const { return queue_; }
+
+  [[nodiscard]] bool empty() const { return queue_.empty(); }
+
+  [[nodiscard]] size_t size() const { return queue_.size(); }
+
+  // Timestamp of the newest real observation held by this history.
+  [[nodiscard]] const rclcpp::Time & newest_stamp() const { return queue_.back().timestamp; }
+
+  // Whether the agent was present in the most recently processed message. Disappeared agents are
+  // retained (frozen) rather than erased so a re-identified agent does not teleport.
+  void set_live(const bool live) { live_ = live; }
+  [[nodiscard]] bool is_live() const { return live_; }
+
   void apply_transform(const Eigen::Matrix4d & transform)
   {
     for (auto & state : queue_) {
@@ -129,6 +160,7 @@ private:
 
   std::deque<AgentState> queue_;
   size_t max_size_{0};
+  bool live_{true};
 };
 
 /**
@@ -136,14 +168,36 @@ private:
  */
 struct AgentData
 {
+  // Legacy buffering: push unconditionally, fill new agents with copies, erase disappeared agents.
+  // Used when history alignment is disabled.
   void update_histories(const TrackedObjects & objects);
+
+  // Aligned buffering: dedup on advancing header stamp, retain disappeared agents (marked not
+  // live), grow histories without repeat-fill, and prune agents that have aged fully out of the
+  // window.
+  void update_histories(const TrackedObjects & objects, const HistoryAlignmentParams & params);
 
   // Transform histories, trim to max_num_agent, and return the processed vector.
   std::vector<AgentHistory> transformed_and_trimmed_histories(
     const Eigen::Matrix4d & transform, size_t max_num_agent) const;
 
+  // Re-time every retained history onto the odometry-anchored constant grid, then transform to the
+  // ego frame, sort by distance, and trim to max_num_agent. This is the aligned counterpart of
+  // transformed_and_trimmed_histories used when history alignment is enabled.
+  std::vector<AgentHistory> resampled_transformed_and_trimmed_histories(
+    const rclcpp::Time & frame_time, const Eigen::Matrix4d & transform, size_t max_num_agent,
+    const HistoryAlignmentParams & params) const;
+
 private:
+  // Re-time a single retained history onto the constant grid anchored at frame_time, returning a
+  // fresh history whose states sit on that grid (oldest first, newest at frame_time). Returns
+  // std::nullopt when the source history is empty.
+  std::optional<AgentHistory> resample_history(
+    const AgentHistory & history, const rclcpp::Time & frame_time,
+    const HistoryAlignmentParams & params) const;
+
   std::unordered_map<std::string, AgentHistory> histories_map_;
+  std::optional<rclcpp::Time> last_processed_stamp_;
 };
 
 // Convert histories to a flattened vector
