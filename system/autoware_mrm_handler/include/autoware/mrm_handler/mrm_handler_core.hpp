@@ -86,13 +86,6 @@ private:
     return this->create_polling_subscriber<MessageT>(topic_name, rclcpp::QoS{1});
   }
 
-  template <typename ServiceT>
-  AUTOWARE_CLIENT_PTR(ServiceT)
-  create_mrm_client(const std::string & service_name, rclcpp::CallbackGroup::SharedPtr group)
-  {
-    return this->create_client<ServiceT>(service_name, rclcpp::ServicesQoS(), group);
-  }
-
   // Subscribers with callback
   AUTOWARE_SUBSCRIPTION_PTR(tier4_system_msgs::msg::OperationModeAvailability)
   sub_operation_mode_availability_;
