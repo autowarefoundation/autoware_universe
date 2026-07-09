@@ -45,9 +45,7 @@ public:
   TrajectoryEBSmootherOptimizer() = default;
   ~TrajectoryEBSmootherOptimizer() = default;
 
-  bool modify_trajectory(
-
-    TrajectoryPoints & traj_points, const InputData & input) override;
+  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
 
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
