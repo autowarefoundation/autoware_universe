@@ -26,7 +26,6 @@ namespace
 HistoryResamplingParams make_params()
 {
   HistoryResamplingParams params;
-  params.yaw_rate_threshold = 0.01;
   params.max_extrapolation_time = 0.5;
   return params;
 }
@@ -44,16 +43,14 @@ TEST(AgentHistoryResamplerTest, PropagateConstantVelocityStraight)
   EXPECT_NEAR(out.yaw, 0.0, 1e-9);
 }
 
-// A yaw rate below the threshold is ignored (degenerates to straight constant velocity).
-TEST(AgentHistoryResamplerTest, PropagateBelowYawRateThresholdIsStraight)
+// A small yaw rate is applied as-is (no dead-band): yaw advances by yaw_rate*dt.
+TEST(AgentHistoryResamplerTest, PropagateSmallYawRateIsApplied)
 {
   const auto params = make_params();
   const MotionState start{0.0, 0.0, 0.0};
   const auto out = propagate_motion(start, 2.0, 0.005, 0.1, params);
 
-  EXPECT_NEAR(out.x, 0.2, 1e-9);
-  EXPECT_NEAR(out.y, 0.0, 1e-9);
-  EXPECT_NEAR(out.yaw, 0.0, 1e-9);
+  EXPECT_NEAR(out.yaw, 0.005 * 0.1, 1e-9);
 }
 
 // Constant-turn-rate: heading advances by yaw_rate*dt over a single sub-step.

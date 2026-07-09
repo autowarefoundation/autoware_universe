@@ -45,7 +45,6 @@ HistoryResamplingParams make_params()
 {
   HistoryResamplingParams params;
   params.enable = true;
-  params.yaw_rate_threshold = 0.01;
   params.max_extrapolation_time = 0.5;
   return params;
 }

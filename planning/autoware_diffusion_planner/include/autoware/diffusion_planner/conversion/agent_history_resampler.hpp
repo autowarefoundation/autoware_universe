@@ -36,15 +36,12 @@ struct HistoryResamplingParams
   // When false, histories are fed as buffered with no grid re-timing, retention, or dedup.
   bool enable{true};
 
-  // Below this |yaw rate| [rad/s] an agent is propagated straight (constant velocity).
-  double yaw_rate_threshold{0.01};
-
   // Maximum extrapolation horizon [s].
   double max_extrapolation_time{0.5};
 };
 
 /**
- * @brief A minimal planar motion state for the CV / CTRV core.
+ * @brief A minimal planar motion state for the CTRV core.
  */
 struct MotionState
 {
@@ -54,7 +51,7 @@ struct MotionState
 };
 
 /**
- * @brief Propagate a planar state by dt (CV when |yaw_rate| < yaw_rate_threshold, else CTRV). A
+ * @brief Propagate a planar state by dt with a constant-turn-rate (CTRV) model. A
  * positive dt extrapolates forward and is clamped to max_extrapolation_time; a negative dt
  * extrapolates backward (the caller bounds it to max_extrapolation_time); a zero dt is a no-op.
  * Sub-stepped in either direction with a fixed sub-step to bound forward-Euler error.

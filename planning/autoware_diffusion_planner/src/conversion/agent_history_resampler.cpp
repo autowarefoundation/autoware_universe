@@ -90,10 +90,6 @@ MotionState propagate_motion(
     dt = std::min(dt, params.max_extrapolation_time);
   }
 
-  // A near-zero yaw rate degenerates CTRV into straight constant velocity.
-  const double effective_yaw_rate =
-    (std::abs(yaw_rate) < params.yaw_rate_threshold) ? 0.0 : yaw_rate;
-
   // Sub-step to bound forward-Euler error, matching the tracker's dt_max sub-stepping. A negative
   // dt integrates the same equations backward; the step inherits its sign.
   const int num_steps =
@@ -104,7 +100,7 @@ MotionState propagate_motion(
   for (int i = 0; i < num_steps; ++i) {
     s.x += speed * std::cos(s.yaw) * step;
     s.y += speed * std::sin(s.yaw) * step;
-    s.yaw += effective_yaw_rate * step;
+    s.yaw += yaw_rate * step;
   }
   s.yaw = autoware_utils_math::normalize_radian(s.yaw);
   return s;

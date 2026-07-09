@@ -201,8 +201,6 @@ void DiffusionPlanner::set_up_params()
   params_.use_time_interpolation = this->declare_parameter<bool>("use_time_interpolation", false);
   params_.object_motion_resampling.enable =
     this->declare_parameter<bool>("object_motion_resampling.enable", true);
-  params_.object_motion_resampling.yaw_rate_threshold =
-    this->declare_parameter<double>("object_motion_resampling.yaw_rate_threshold", 0.01);
   params_.object_motion_resampling.max_extrapolation_time =
     this->declare_parameter<double>("object_motion_resampling.max_extrapolation_time", 0.5);
   params_.start_guidance_reference_distance_m =
@@ -320,9 +318,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<bool>(parameters, "use_time_interpolation", temp_params.use_time_interpolation);
     update_param<bool>(
       parameters, "object_motion_resampling.enable", temp_params.object_motion_resampling.enable);
-    update_param<double>(
-      parameters, "object_motion_resampling.yaw_rate_threshold",
-      temp_params.object_motion_resampling.yaw_rate_threshold);
     update_param<double>(
       parameters, "object_motion_resampling.max_extrapolation_time",
       temp_params.object_motion_resampling.max_extrapolation_time);
