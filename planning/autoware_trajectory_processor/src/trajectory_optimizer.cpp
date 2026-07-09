@@ -91,7 +91,8 @@ void TrajectoryOptimizer::load_plugin(const std::string & plugin_name)
       }
     }
 
-    auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>(*this);
+    auto context =
+      std::make_shared<autoware::trajectory_processor::plugin::NodeContext>(*this, time_keeper_);
     plugin->initialize(plugin_name, context);
     plugin->update_params(params_);
 

@@ -94,8 +94,7 @@ protected:
 
     node_ = std::make_shared<rclcpp::Node>("test_node", node_options);
     time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>();
-    context_ = std::make_shared<NodeContext>(*node_, true);
-    context_->time_keeper = time_keeper_;
+    context_ = std::make_shared<NodeContext>(*node_, time_keeper_, true);
     params_.use_stop_point_fixer = true;
     params_.stop_point_fixer.velocity_threshold = 0.1;
     params_.stop_point_fixer.min_distance_threshold = 1.0;

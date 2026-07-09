@@ -34,8 +34,7 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   param_listener_{
     std::make_unique<trajectory_modifier_params::ParamListener>(get_node_parameters_interface())},
   plugin_loader_(
-    "autoware_trajectory_processor", "autoware::trajectory_processor::plugin::PluginBase"),
-  context_{std::make_shared<autoware::trajectory_processor::plugin::NodeContext>(*this, true)}
+    "autoware_trajectory_processor", "autoware::trajectory_processor::plugin::PluginBase")
 {
   sub_map_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
@@ -53,7 +52,8 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
 
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
-  context_->time_keeper = time_keeper_;
+  context_ = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>(
+    *this, time_keeper_, true);
 
   params_ = param_listener_->get_params();
 

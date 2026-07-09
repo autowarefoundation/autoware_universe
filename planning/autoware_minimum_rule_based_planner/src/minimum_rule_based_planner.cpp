@@ -97,8 +97,7 @@ void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
     try {
       auto plugin = plugin_loader_->createSharedInstance(plugin_path);
       auto node_context =
-        std::make_shared<autoware::trajectory_processor::plugin::NodeContext>(*this);
-      node_context->time_keeper = time_keeper_;
+        std::make_shared<autoware::trajectory_processor::plugin::NodeContext>(*this, time_keeper_);
       plugin->initialize(name, node_context);
       pub_debug_optimizer_module_trajectories_[plugin->get_name()] =
         this->create_publisher<Trajectory>(

@@ -197,8 +197,7 @@ protected:
 
     set_up_default_params();
 
-    context_ = std::make_shared<NodeContext>(*node_, true);
-    context_->time_keeper = time_keeper_;
+    context_ = std::make_shared<NodeContext>(*node_, time_keeper_, true);
     plugin_ = std::make_unique<TrafficLightStop>();
     plugin_->initialize("test_traffic_light_stop", context_);
     plugin_->update_params(params_);

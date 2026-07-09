@@ -38,6 +38,7 @@
 
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -70,27 +71,32 @@ struct InputData
 
 struct NodeContext
 {
-  explicit NodeContext(rclcpp::Node & node, bool listen_tf = false)
+  explicit NodeContext(
+    rclcpp::Node & node, std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
+    bool listen_tf = false)
   : node_ptr{&node},
+    time_keeper{std::move(time_keeper)},
     vehicle_info{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
     tf_buffer{std::make_shared<tf2_ros::Buffer>(node.get_clock())}
   {
+    if (!this->time_keeper) {
+      throw std::invalid_argument{"NodeContext requires a valid TimeKeeper"};
+    }
     if (listen_tf) {
       tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, &node);
     }
   }
 
-  rclcpp::Node * node_ptr{nullptr};
-  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper{nullptr};
-  autoware::vehicle_info_utils::VehicleInfo vehicle_info{};
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer{nullptr};
+  rclcpp::Node * node_ptr;
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener{nullptr};
 };
 
 class PluginBase
 {
 public:
-  PluginBase() = default;
   virtual ~PluginBase() = default;
 
   virtual void initialize(const std::string & name, std::shared_ptr<NodeContext> context)

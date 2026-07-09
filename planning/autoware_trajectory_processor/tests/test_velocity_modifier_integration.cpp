@@ -111,8 +111,7 @@ protected:
 
     // Create the context and the plugin once. Tests build per-frame InputData inline,
     // and inject any required TF directly into context_->tf_buffer.
-    context_ = std::make_shared<NodeContext>(*node_, true);
-    context_->time_keeper = time_keeper_;
+    context_ = std::make_shared<NodeContext>(*node_, time_keeper_, true);
     plugin_ = std::make_unique<VelocityModifier>();
     plugin_->initialize("test_velocity_modifier", context_);
     plugin_->update_params(params_);
