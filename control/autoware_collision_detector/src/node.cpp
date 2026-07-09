@@ -157,6 +157,14 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
       this->declare_parameter<bool>("nearby_object_type_filters.filter_motorcycle");
     p.nearby_object_type_filters.filter_pedestrian =
       this->declare_parameter<bool>("nearby_object_type_filters.filter_pedestrian");
+    p.nearby_object_type_filters.filter_animal =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_animal");
+    p.nearby_object_type_filters.filter_hazard =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_hazard");
+    p.nearby_object_type_filters.filter_over_drivable =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_over_drivable");
+    p.nearby_object_type_filters.filter_under_drivable =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_under_drivable");
     p.ignore_behind_rear_axle = this->declare_parameter<bool>("ignore_behind_rear_axle");
     p.time_buffer.on = this->declare_parameter<double>("time_buffer.on_duration");
     p.time_buffer.off = this->declare_parameter<double>("time_buffer.off_duration");
@@ -214,7 +222,10 @@ PredictedObjects CollisionDetectorNode::filterObjects(const PredictedObjects & i
     const bool is_within_range = (object_distance <= node_param_.nearby_filter_radius);
 
     // Determine if the object should be excluded based on its classification
-    bool should_be_excluded = shouldBeExcluded(object.classification.front().label);
+    const auto classification = object.classification.empty()
+                                  ? autoware_perception_msgs::msg::ObjectClassification::UNKNOWN
+                                  : object.classification.front().label;
+    bool should_be_excluded = shouldBeExcluded(classification);
 
     const bool is_within_range_and_filtering_class = is_within_range && should_be_excluded;
 
@@ -318,6 +329,14 @@ bool CollisionDetectorNode::shouldBeExcluded(
       return node_param_.nearby_object_type_filters.filter_motorcycle;
     case autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN:
       return node_param_.nearby_object_type_filters.filter_pedestrian;
+    case autoware_perception_msgs::msg::ObjectClassification::ANIMAL:
+      return node_param_.nearby_object_type_filters.filter_animal;
+    case autoware_perception_msgs::msg::ObjectClassification::HAZARD:
+      return node_param_.nearby_object_type_filters.filter_hazard;
+    case autoware_perception_msgs::msg::ObjectClassification::OVER_DRIVABLE:
+      return node_param_.nearby_object_type_filters.filter_over_drivable;
+    case autoware_perception_msgs::msg::ObjectClassification::UNDER_DRIVABLE:
+      return node_param_.nearby_object_type_filters.filter_under_drivable;
     default:
       return false;
   }
