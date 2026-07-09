@@ -14,8 +14,6 @@
 
 #include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
-
 #include <cmath>
 
 namespace autoware::multi_object_tracker

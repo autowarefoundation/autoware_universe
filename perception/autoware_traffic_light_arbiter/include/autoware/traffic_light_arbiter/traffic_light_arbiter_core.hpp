@@ -16,7 +16,6 @@
 #define AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_CORE_HPP_
 
 #include <autoware/traffic_light_arbiter/signal_match_validator.hpp>
-#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
@@ -24,7 +23,7 @@
 #include <lanelet2_core/Forward.h>
 
 #include <memory>
-#include <tuple>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -40,67 +39,34 @@ public:
   using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
-  using TrafficLightConstPtr = lanelet::TrafficLightConstPtr;
 
   TrafficLightArbiterCore(
     SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
     double external_time_tolerance, double perception_time_tolerance);
 
-  // Load map-derived state from a parsed LaneletMap. Core extracts the
-  // regulatory-element IDs it needs (vehicle traffic lights and, when
-  // signal matching is enabled, pedestrian traffic lights) internally so
-  // callers don't have to know which subsets matter.
+  // Extracts and stores the regulatory-element IDs the Core needs from the map
+  // (vehicle traffic lights, plus pedestrian ones when signal matching is on).
   void set_map(const lanelet::LaneletMapConstPtr & map);
 
-  struct ExpiredExternalSignal
-  {
-    lanelet::Id id;
-    double age;
-  };
+  // Stores the latest perception msg, then evicts external cache entries that
+  // are stale relative to its stamp.
+  void ingest_perception(const TrafficSignalArray & msg);
 
-  // Update perception buffer, then sweep external cache against msg.stamp
-  // using external_time_tolerance_. Returns expired entries for caller logging.
-  std::vector<ExpiredExternalSignal> ingest_perception(const TrafficSignalArray & msg);
+  // Rejects the msg (returns false) when its stamp is too far from current_time;
+  // otherwise refreshes the external cache, sweeps stale entries, returns true.
+  bool ingest_external(const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
-  // Outcome of an external-msg ingest. `accepted == false` means the msg's
-  // stamp differed from current_time by more than external_delay_tolerance_
-  // and was rejected without touching internal state. When accepted,
-  // `expired` carries any cache entries that the bundled sweep evicted.
-  struct ExternalIngestResult
-  {
-    bool accepted;
-    std::vector<ExpiredExternalSignal> expired;
-  };
-
-  // Admission-control + update + sweep for an external msg:
-  //   1. Reject (return {false, {}}) when the msg arrival is too far from
-  //      current_time, using external_delay_tolerance_.
-  //   2. Otherwise update external cache entries with msg.stamp, sweep
-  //      external cache against current_time using external_delay_tolerance_,
-  //      and return expired entries.
-  // Perception staleness is evaluated non-destructively inside arbitrate()
-  // using perception_time_tolerance_; ingest_external no longer touches
-  // latest_perception_msg_.
-  ExternalIngestResult ingest_external(
-    const TrafficSignalArray & msg, const rclcpp::Time & current_time);
-
-  // Result of one arbitration cycle. arbitrate() writes the arbitrated signals
-  // into the caller-provided `output`. The arbiter intentionally does not stamp
-  // the output: stamp inheritance is an I/O concern owned by the Node (e.g.
-  // "publish carries the trigger msg's stamp"). The Node assigns
-  // `output.stamp` before publishing and compares its trigger stamp against
-  // `latest_input_time` for staleness logging.
-  //
-  // latest_input_time defaults to epoch on RCL_ROS_TIME so the Node can compare
-  // it against rclcpp::Time(msg->stamp) (also RCL_ROS_TIME) regardless of which
-  // arbitrate() branch was taken.
+  // Result of one arbitration cycle. `output` holds the arbitrated signals by
+  // value; std::nullopt means no map has arrived yet, so the Node skips the
+  // publish. The Core leaves output unstamped — the Node owns stamp inheritance
+  // and uses latest_input_time for staleness logging.
   struct ArbitrationResult
   {
-    bool has_output = false;  // false when no map yet (skip publish); true otherwise.
+    std::optional<TrafficSignalArray> output;  // stamp left default; Node fills it in.
     std::vector<lanelet::Id> off_map_signal_ids;
     rclcpp::Time latest_input_time{0, 0, RCL_ROS_TIME};
   };
-  ArbitrationResult arbitrate(TrafficSignalArray & output);
+  ArbitrationResult arbitrate() const;
 
 private:
   // True when |current_time - msg_stamp| exceeds external_delay_tolerance_.
@@ -109,12 +75,15 @@ private:
     const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
 
   // Sweeps external cache: removes every stored entry whose stamp deviates
-  // from `reference_time` beyond `tolerance`, returning the removed entries.
-  std::vector<ExpiredExternalSignal> sweep_expired_external_signals(
-    const rclcpp::Time & reference_time, double tolerance);
+  // from `reference_time` beyond `tolerance`.
+  void sweep_expired_external_signals(const rclcpp::Time & reference_time, double tolerance);
+
+  // Signal matching is on iff the validator exists: it is created in the
+  // constructor exactly when matching is enabled and never replaced afterward,
+  // so the pointer is the single source of truth for the mode.
+  bool is_signal_matching_enabled() const { return signal_match_validator_ != nullptr; }
 
   SourcePriority source_priority_;
-  bool enable_signal_matching_;
   double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
@@ -122,7 +91,7 @@ private:
   std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 
-  TrafficSignalArray latest_perception_msg_;
+  TrafficSignalArray perception_traffic_light_;
   std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
 };
 

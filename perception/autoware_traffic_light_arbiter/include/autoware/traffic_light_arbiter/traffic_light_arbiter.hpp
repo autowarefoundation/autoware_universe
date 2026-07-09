@@ -17,13 +17,13 @@
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/traffic_light_arbiter/traffic_light_arbiter_core.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
 #include <memory>
-#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -46,11 +46,6 @@ private:
   void on_perception_msg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg);
   void on_external_msg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg);
   void arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp);
-
-  // Emits one DEBUG line per expired entry; called from the on_*_msg
-  // handlers with the result of the corresponding ingest_*().
-  void log_expired_external_signals(
-    const std::vector<TrafficLightArbiterCore::ExpiredExternalSignal> & expired);
 
   std::unique_ptr<TrafficLightArbiterCore> core_;
 };

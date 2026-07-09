@@ -144,15 +144,27 @@
           "description": "Vehicle's ego frame.",
           "default": "base_link"
         },
-        "enable_delay_compensation": {
-          "type": "boolean",
-          "description": "If True, tracker uses timers to schedule publishers and uses prediction step to extrapolate object state at desired timestamp.",
-          "default": false
-        },
         "consider_odometry_uncertainty": {
           "type": "boolean",
           "description": "If True, consider odometry uncertainty in tracking.",
           "default": false
+        },
+        "ego_source": {
+          "type": "string",
+          "enum": ["tf", "odometry"],
+          "description": "Backend used to obtain the time-varying ego pose: 'tf' looks it up from the TF tree (legacy), 'odometry' interpolates it from the subscribed ~/input/odometry buffer (TF fallback on miss).",
+          "default": "tf"
+        },
+        "publish_on_timer": {
+          "type": "boolean",
+          "description": "Publish trigger, independent of delay_compensation. false publishes tracks on measurement; true publishes them from the periodic timer at publish_rate.",
+          "default": false
+        },
+        "delay_compensation": {
+          "type": "string",
+          "enum": ["none", "publish_delay", "odometry", "full"],
+          "description": "Object-export delay compensation applied to the published tracks (independent of publish_on_timer), ordered from least to most. 'none': no compensation, use the latest detection/update stamp; 'publish_delay': advance the detection stamp by the update->publish delay; 'odometry': compensate up to the newest buffered odometry stamp; 'full': full compensation to the current time.",
+          "default": "none"
         },
         "tracker_configs": {
           "$ref": "#/definitions/tracker_configs"
@@ -234,8 +246,10 @@
         "publish_rate",
         "world_frame_id",
         "ego_frame_id",
-        "enable_delay_compensation",
         "consider_odometry_uncertainty",
+        "ego_source",
+        "publish_on_timer",
+        "delay_compensation",
         "tracker_configs",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
