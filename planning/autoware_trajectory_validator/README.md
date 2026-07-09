@@ -18,7 +18,7 @@ For each input `CandidateTrajectories` message the library runs every loaded plu
 | -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
 | `safety::VehicleConstraintFilter`            | `safety`       | Rejects trajectories that exceed maximum speed, acceleration, deceleration, steering angle, or steering rate. |
 | `safety::UncrossableBoundaryDepartureFilter` | `safety`       | Rejects trajectories whose footprint crosses an uncrossable map boundary (e.g., road borders).                |
-| `traffic_rule::TrafficLightFilter`           | `traffic_rule` | Rejects trajectories that cross a red or amber stop line when the vehicle could safely stop.                  |
+| `traffic_rule::TrafficLightFilter`           | `traffic_rule` | Rejects trajectories that cross red, amber, or configured unknown traffic-light stop lines.                   |
 
 ## Interface
 

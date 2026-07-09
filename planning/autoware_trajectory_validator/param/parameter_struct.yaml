@@ -84,6 +84,11 @@ validator:
       default_value: 0.0
       description: Stability duration for AMBER signals (seconds)
       read_only: false
+    stable_duration_threshold_unknown:
+      type: double
+      default_value: 0.0
+      description: Minimum duration an UNKNOWN signal must be seen before it is considered active (seconds)
+      read_only: false
     amber_rejection_hysteresis_duration:
       type: double
       default_value: 0.0
