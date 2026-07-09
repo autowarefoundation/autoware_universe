@@ -36,7 +36,6 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -102,10 +101,10 @@ public:
   virtual void initialize(const std::string & name, std::shared_ptr<NodeContext> context)
   {
     name_ = name;
-    short_name_ = std::invoke([&name]() {
+    short_name_ = [&name]() {
       const auto npos = name.find_last_of(':');
       return npos != std::string::npos ? name.substr(npos + 1) : name;
-    });
+    }();
     context_ = std::move(context);
     set_up_params();
   }
@@ -140,7 +139,7 @@ public:
     }
   }
 
-  std::vector<PlanningFactor> get_planning_factors() const
+  [[nodiscard]] std::vector<PlanningFactor> get_planning_factors() const
   {
     if (planning_factor_interface_ != nullptr) {
       return planning_factor_interface_->get_factors();
@@ -148,16 +147,23 @@ public:
     return {};
   }
 
-  std::string get_name() const { return name_; }
-  std::string get_short_name() const { return short_name_; }
+  [[nodiscard]] std::string get_name() const { return name_; }
+  [[nodiscard]] std::string get_short_name() const { return short_name_; }
 
 protected:
-  rclcpp::Node * get_node_ptr() const { return context_ ? context_->node_ptr : nullptr; }
-  std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const
+  [[nodiscard]] rclcpp::Node * get_node_ptr() const
+  {
+    return context_ ? context_->node_ptr : nullptr;
+  }
+  [[nodiscard]] std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const
   {
     return context_ ? context_->time_keeper : nullptr;
   }
-  rclcpp::Clock::SharedPtr get_clock() const { return get_node_ptr()->get_clock(); }
+  [[nodiscard]] rclcpp::Clock::SharedPtr get_clock() const
+  {
+    const auto node = get_node_ptr();
+    return node ? node->get_clock() : nullptr;
+  }
 
   template <class Optimizer>
   bool run_optimizer(
