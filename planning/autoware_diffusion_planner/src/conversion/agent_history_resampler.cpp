@@ -75,18 +75,21 @@ MotionState propagate_motion(
   const MotionState & state, const double speed, const double yaw_rate, double dt,
   const HistoryResamplingParams & params)
 {
-  if (dt <= 0.0) {
+  if (dt == 0.0) {
     return state;
   }
-  dt = std::min(dt, params.max_extrapolation_time);
+  if (dt > 0.0) {
+    dt = std::min(dt, params.max_extrapolation_time);
+  }
 
   // A near-zero yaw rate degenerates CTRV into straight constant velocity.
   const double effective_yaw_rate =
     (std::abs(yaw_rate) < params.yaw_rate_threshold) ? 0.0 : yaw_rate;
 
-  // Sub-step to bound forward-Euler error, matching the tracker's dt_max sub-stepping.
+  // Sub-step to bound forward-Euler error, matching the tracker's dt_max sub-stepping. A negative
+  // dt integrates the same equations backward; the step inherits its sign.
   const double sub_step_max = std::max(params.dt_sub_step_max, 1e-3);
-  const int num_steps = std::max(1, static_cast<int>(std::ceil(dt / sub_step_max)));
+  const int num_steps = std::max(1, static_cast<int>(std::ceil(std::abs(dt) / sub_step_max)));
   const double step = dt / static_cast<double>(num_steps);
 
   MotionState s = state;
@@ -159,9 +162,16 @@ std::optional<AgentHistory> resample_history(
       frame_time - rclcpp::Duration::from_seconds(static_cast<double>(num_timesteps - 1 - k) * dt));
 
     if (target_sec <= obs_time[0]) {
-      // Front-clamp to the oldest observation, preserving its real twist.
+      // Before the oldest observation: extrapolate backward via the motion model so the synthesized
+      // past stays consistent with the oldest observation's velocity, rather than freezing at a
+      // fixed point (which would contradict a nonzero reported speed). At target_sec == obs_time[0]
+      // the dt is zero and this reduces to the oldest observation itself.
+      const MotionState start{obs_x[0], obs_y[0], obs_yaw[0]};
+      const MotionState propagated =
+        propagate_motion(start, obs_speed[0], obs_yaw_rate[0], target_sec - obs_time[0], params);
       grid_states.push_back(make_grid_state(
-        raw[0].original_info, obs_x[0], obs_y[0], obs_yaw[0], target_time, std::nullopt));
+        raw[0].original_info, propagated.x, propagated.y, propagated.yaw, target_time,
+        std::nullopt));
     } else if (target_sec <= newest_time) {
       // Within the observed history: interpolate position linearly, yaw along the shortest arc.
       while (search_start + 1 < n && obs_time[search_start + 1] < target_sec) {
@@ -176,17 +186,15 @@ std::optional<AgentHistory> resample_history(
       const double yaw = interpolate_yaw(obs_yaw[i0], obs_yaw[i1], ratio);
       const double speed = obs_speed[i0] + ratio * (obs_speed[i1] - obs_speed[i0]);
       grid_states.push_back(make_grid_state(raw[i1].original_info, x, y, yaw, target_time, speed));
-    } else if (history.is_live()) {
-      // Live agent past the newest observation: extrapolate the leading edge via the motion model.
+    } else {
+      // After the newest observation: extrapolate the leading edge forward via the motion model.
+      // Every retained history is current (disappeared agents are erased at ingestion), so there is
+      // no frozen branch here.
       const MotionState start{obs_x[n - 1], obs_y[n - 1], obs_yaw[n - 1]};
       const MotionState propagated = propagate_motion(
         start, obs_speed[n - 1], obs_yaw_rate[n - 1], target_sec - newest_time, params);
       grid_states.push_back(make_grid_state(
         newest_tmpl, propagated.x, propagated.y, propagated.yaw, target_time, std::nullopt));
-    } else {
-      // Disappeared agent: freeze at the newest observation so it can age out without teleporting.
-      grid_states.push_back(make_grid_state(
-        newest_tmpl, obs_x[n - 1], obs_y[n - 1], obs_yaw[n - 1], target_time, std::nullopt));
     }
   }
 

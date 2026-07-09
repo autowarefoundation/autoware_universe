@@ -49,7 +49,6 @@ HistoryResamplingParams make_params()
   params.yaw_rate_threshold = 0.01;
   params.max_extrapolation_time = 0.5;
   params.flip_yaw_threshold = 2.35619449;
-  params.prune_grace = 0.5;
   return params;
 }
 
@@ -149,46 +148,27 @@ TEST(AgentLifecycleTest, DedupOnNonAdvancingStamp)
   EXPECT_NEAR(latest_x(histories[0]), 0.0, 1e-6);  // stale x = 99 was ignored
 }
 
-// A disappeared agent is retained and frozen at its last observation (no forward extrapolation).
-TEST(AgentLifecycleTest, DisappearedAgentIsFrozenNotExtrapolated)
+// A disappeared agent is erased immediately (the tick after it is absent), leaving no dead history.
+TEST(AgentLifecycleTest, DisappearedAgentErasedImmediately)
 {
   const auto params = make_params();
   const UUID uuid = autoware_utils_uuid::generate_uuid();
   AgentData agent_data;
 
   agent_data.update_histories(make_msg({make_object(uuid, 0.0, 10.0)}, 100.0), params);
-  // Next tick: agent absent.
+  // Next tick (stamp advances): agent absent -> its history is dropped at once.
   agent_data.update_histories(make_msg({}, 100.1), params);
 
   const rclcpp::Time frame_time = to_time(100.1);
   const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
     frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
 
-  ASSERT_EQ(histories.size(), 1u);
-  // Frozen at x = 0, NOT extrapolated to ~1.0 that a live 10 m/s agent would reach in 0.1s.
-  EXPECT_NEAR(latest_x(histories[0]), 0.0, 1e-6);
-}
-
-// A disappeared agent is pruned once it has aged fully out of the history window plus grace.
-TEST(AgentLifecycleTest, PruneAfterAging)
-{
-  const auto params = make_params();
-  const UUID uuid = autoware_utils_uuid::generate_uuid();
-  AgentData agent_data;
-
-  agent_data.update_histories(make_msg({make_object(uuid, 0.0, 0.0)}, 100.0), params);
-  // Advance well beyond window (3.0s) + grace (0.5s).
-  agent_data.update_histories(make_msg({}, 104.0), params);
-
-  const rclcpp::Time frame_time = to_time(104.0);
-  const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
-    frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
-
   EXPECT_EQ(histories.size(), 0u);
 }
 
-// A re-identification (agent A vanishes, agent B appears elsewhere) does not teleport A onto B.
-TEST(AgentLifecycleTest, UuidTransitionNoTeleport)
+// A re-identification (agent A vanishes, agent B appears elsewhere) drops A immediately; only the
+// fresh B history remains, so A cannot teleport onto B.
+TEST(AgentLifecycleTest, DisappearedAgentDroppedOnReidentification)
 {
   const auto params = make_params();
   const UUID uuid_a = autoware_utils_uuid::generate_uuid();
@@ -203,10 +183,38 @@ TEST(AgentLifecycleTest, UuidTransitionNoTeleport)
   const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
     frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
 
-  ASSERT_EQ(histories.size(), 2u);
-  // Sorted by distance to origin: A (frozen near 0) first, B (near 50) second. Neither teleports.
-  EXPECT_NEAR(latest_x(histories[0]), 0.0, 1e-6);
-  EXPECT_NEAR(latest_x(histories[1]), 50.0, 1e-6);
+  ASSERT_EQ(histories.size(), 1u);
+  EXPECT_NEAR(latest_x(histories[0]), 50.0, 1e-6);  // only B; A was dropped, not frozen near 0
+}
+
+// A freshly seen agent has no real past; the pre-appearance grid slots are extrapolated backward by
+// motion (consistent with its velocity), not frozen at the first observation.
+TEST(AgentLifecycleTest, PastSlotsExtrapolatedBackwardForNewAgent)
+{
+  const auto params = make_params();
+  const UUID uuid = autoware_utils_uuid::generate_uuid();
+  AgentData agent_data;
+
+  // Single observation at x = 0 moving +10 m/s; frame time coincides with the observation.
+  agent_data.update_histories(make_msg({make_object(uuid, 0.0, 10.0)}, 100.0), params);
+
+  const rclcpp::Time frame_time = to_time(100.0);
+  const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
+    frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
+
+  ASSERT_EQ(histories.size(), 1u);
+  const auto & states = histories[0].states();
+  ASSERT_EQ(states.size(), static_cast<size_t>(INPUT_T_WITH_CURRENT));
+
+  // Newest slot sits at the observation; the oldest slot is a full window behind at constant speed.
+  EXPECT_NEAR(states.back().pose(0, 3), 0.0, 1e-6);
+  EXPECT_NEAR(
+    states.front().pose(0, 3), -10.0 * 0.1 * static_cast<double>(INPUT_T_WITH_CURRENT - 1), 1e-6);
+
+  // Strictly monotonic: each older slot is behind the next, i.e. no frozen cluster at the origin.
+  for (size_t i = 1; i < states.size(); ++i) {
+    EXPECT_LT(states[i - 1].pose(0, 3), states[i].pose(0, 3));
+  }
 }
 
 }  // namespace autoware::diffusion_planner::test

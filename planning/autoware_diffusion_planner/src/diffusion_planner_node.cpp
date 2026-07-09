@@ -208,8 +208,6 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("object_history.max_extrapolation_time", 0.5);
   params_.object_history.flip_yaw_threshold =
     this->declare_parameter<double>("object_history.flip_yaw_threshold", 2.35619449);
-  params_.object_history.prune_grace =
-    this->declare_parameter<double>("object_history.prune_grace", 0.5);
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
@@ -335,8 +333,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "object_history.flip_yaw_threshold",
       temp_params.object_history.flip_yaw_threshold);
-    update_param<double>(
-      parameters, "object_history.prune_grace", temp_params.object_history.prune_grace);
     update_param<double>(
       parameters, "guidance.start_guidance.reference_distance_m",
       temp_params.start_guidance_reference_distance_m);

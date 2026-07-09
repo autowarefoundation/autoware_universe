@@ -47,9 +47,6 @@ struct HistoryResamplingParams
 
   // A backward-in-time yaw jump larger than this [rad] is treated as a tracker heading flip.
   double flip_yaw_threshold{2.35619449};  // 135 deg
-
-  // Extra grace period [s] beyond the history window before a disappeared agent is pruned.
-  double prune_grace{0.5};
 };
 
 /**
@@ -63,8 +60,10 @@ struct MotionState
 };
 
 /**
- * @brief Propagate a planar state forward by dt (CV when |yaw_rate| < yaw_rate_threshold, else
- * CTRV). dt is clamped to max_extrapolation_time and sub-stepped; a non-positive dt is a no-op.
+ * @brief Propagate a planar state by dt (CV when |yaw_rate| < yaw_rate_threshold, else CTRV). A
+ * positive dt extrapolates forward and is clamped to max_extrapolation_time; a negative dt
+ * extrapolates backward (uncapped, to fill the pre-first-observation past); a zero dt is a no-op.
+ * Sub-stepped in either direction to bound forward-Euler error.
  */
 MotionState propagate_motion(
   const MotionState & state, double speed, double yaw_rate, double dt,

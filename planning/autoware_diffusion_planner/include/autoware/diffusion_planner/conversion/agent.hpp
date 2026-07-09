@@ -134,14 +134,6 @@ struct AgentHistory
 
   [[nodiscard]] size_t size() const { return queue_.size(); }
 
-  // Timestamp of the newest real observation held by this history.
-  [[nodiscard]] const rclcpp::Time & newest_stamp() const { return queue_.back().timestamp; }
-
-  // Whether the agent was present in the most recently processed message. Disappeared agents are
-  // retained (frozen) rather than erased so a re-identified agent does not teleport.
-  void set_live(const bool live) { live_ = live; }
-  [[nodiscard]] bool is_live() const { return live_; }
-
   void apply_transform(const Eigen::Matrix4d & transform)
   {
     for (auto & state : queue_) {
@@ -162,7 +154,6 @@ private:
 
   std::deque<AgentState> queue_;
   size_t max_size_{0};
-  bool live_{true};
 };
 
 /**

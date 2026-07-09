@@ -86,16 +86,27 @@ TEST(AgentHistoryResamplerTest, PropagateConstantTurnRateSubStepped)
   EXPECT_GT(out.y, 0.0);  // curved left
 }
 
-// A non-positive dt is a no-op.
-TEST(AgentHistoryResamplerTest, PropagateNonPositiveDtIsNoOp)
+// A zero dt is a no-op.
+TEST(AgentHistoryResamplerTest, PropagateZeroDtIsNoOp)
 {
   const auto params = make_params();
   const MotionState start{5.0, -3.0, 1.2};
-  EXPECT_EQ(propagate_motion(start, 4.0, 0.3, 0.0, params).x, start.x);
-  const auto neg = propagate_motion(start, 4.0, 0.3, -0.5, params);
-  EXPECT_EQ(neg.x, start.x);
-  EXPECT_EQ(neg.y, start.y);
-  EXPECT_EQ(neg.yaw, start.yaw);
+  const auto out = propagate_motion(start, 4.0, 0.3, 0.0, params);
+  EXPECT_EQ(out.x, start.x);
+  EXPECT_EQ(out.y, start.y);
+  EXPECT_EQ(out.yaw, start.yaw);
+}
+
+// A negative dt integrates the motion backward: a straight agent heading +x sits behind its start.
+TEST(AgentHistoryResamplerTest, PropagateNegativeDtGoesBackward)
+{
+  const auto params = make_params();
+  const MotionState start{1.0, 2.0, 0.0};
+  const auto out = propagate_motion(start, 3.0, 0.0, -0.2, params);
+
+  EXPECT_NEAR(out.x, 1.0 - 3.0 * 0.2, 1e-9);
+  EXPECT_NEAR(out.y, 2.0, 1e-9);
+  EXPECT_NEAR(out.yaw, 0.0, 1e-9);
 }
 
 // dt is clamped to max_extrapolation_time.

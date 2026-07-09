@@ -41,7 +41,6 @@
       yaw_rate_threshold: 0.01        # [rad/s]  below this, extrapolate with straight constant-velocity
       max_extrapolation_time: 0.5     # [s]  max forward extrapolation horizon from newest observation
       flip_yaw_threshold: 2.35619449  # [rad] (135 deg) backward yaw jump treated as a tracker heading flip
-      prune_grace: 0.5                # [s]  extra grace beyond the history window before a disappeared agent is pruned
     planning_factor:
       enable_stop: true
       enable_slowdown: false

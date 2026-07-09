@@ -14,7 +14,6 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
-#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
@@ -155,7 +154,7 @@ std::vector<AgentHistory> AgentData::transformed_and_trimmed_histories(
 }
 
 void AgentData::update_histories(
-  const TrackedObjects & objects, const HistoryResamplingParams & params)
+  const TrackedObjects & objects, [[maybe_unused]] const HistoryResamplingParams & params)
 {
   const rclcpp::Time objects_timestamp(objects.header.stamp);
 
@@ -178,29 +177,20 @@ void AgentData::update_histories(
     auto it = histories_map_.find(object_id);
     if (it != histories_map_.end()) {
       it->second.update(object, objects_timestamp);
-      it->second.set_live(true);
     } else {
       // New UUID: start a growing buffer with a single real observation. No repeat-fill; the
-      // resampling step front-clamps the grid to this observation until more arrive.
+      // resampling step extrapolates backward from this observation to fill the pre-appearance
+      // grid.
       auto [inserted, _] =
         histories_map_.emplace(object_id, AgentHistory(NEIGHBOR_HISTORY_BUFFER_SIZE));
       inserted->second.update(object, objects_timestamp);
-      inserted->second.set_live(true);
     }
     found_ids.push_back(object_id);
   }
 
-  // Retain agents absent from this message (mark not live) rather than erasing them, so a brief
-  // dropout or re-identification does not teleport. Prune only once fully aged out of the window.
-  const double max_age =
-    static_cast<double>(INPUT_T) * constants::PREDICTION_TIME_STEP_S + params.prune_grace;
+  // Erase any history whose agent is absent from this message immediately
   for (auto it = histories_map_.begin(); it != histories_map_.end();) {
-    const bool live = std::find(found_ids.begin(), found_ids.end(), it->first) != found_ids.end();
-    if (!live) {
-      it->second.set_live(false);
-    }
-    const double age = (objects_timestamp - it->second.newest_stamp()).seconds();
-    if (age > max_age) {
+    if (std::find(found_ids.begin(), found_ids.end(), it->first) == found_ids.end()) {
       it = histories_map_.erase(it);
     } else {
       ++it;
