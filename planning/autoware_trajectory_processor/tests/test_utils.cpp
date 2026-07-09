@@ -14,7 +14,7 @@
 
 #include "test_utils.hpp"
 
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
 #include <gtest/gtest.h>
 

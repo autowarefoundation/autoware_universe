@@ -119,7 +119,7 @@ install(FILES
   ${TEMPORAL_GEN_DIR}/acados_solver_${TEMPORAL_MODEL}.h
   ${TEMPORAL_GEN_DIR}/${TEMPORAL_MODEL}_model/${TEMPORAL_MODEL}_model.h
   ${TEMPORAL_GEN_DIR}/${TEMPORAL_MODEL}_constraints/${TEMPORAL_MODEL}_constraints.h
-  DESTINATION include/autoware/trajectory_optimizer/c_generated_code
+  DESTINATION include/autoware/trajectory_processor/c_generated_code
 )
 
 ament_auto_package(
