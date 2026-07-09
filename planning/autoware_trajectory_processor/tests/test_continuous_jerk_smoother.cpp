@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
 #include "test_utils.hpp"
 
 #include <gtest/gtest.h>

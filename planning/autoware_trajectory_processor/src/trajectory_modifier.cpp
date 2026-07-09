@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>

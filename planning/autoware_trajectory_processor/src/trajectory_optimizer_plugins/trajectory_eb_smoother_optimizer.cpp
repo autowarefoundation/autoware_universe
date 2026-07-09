@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.hpp"
 
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_processor/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>

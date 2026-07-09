@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/traffic_light_stop.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/traffic_light_stop.hpp"
 
 #include "autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
 #include <algorithm>
 #include <memory>

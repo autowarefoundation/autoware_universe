@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>

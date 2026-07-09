@@ -14,7 +14,7 @@
 
 #include "surround_obstacle_stop.hpp"
 
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/transform/transforms.hpp>
