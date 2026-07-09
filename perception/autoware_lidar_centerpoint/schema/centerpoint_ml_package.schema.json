@@ -16,10 +16,20 @@
               "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
               "uniqueItems": true
             },
+            "has_twist": {
+              "type": "boolean",
+              "description": "Indicates whether the model outputs twist value.",
+              "default": false
+            },
             "point_feature_size": {
               "type": "integer",
               "description": "A number of channels of point feature layer.",
               "default": 4
+            },
+            "has_variance": {
+              "type": "boolean",
+              "description": "Indicates whether the model outputs variance value.",
+              "default": false
             },
             "max_voxel_size": {
               "type": "integer",
@@ -36,7 +46,7 @@
               "description": "An array of voxel grid sizes for PointPainting, this must have same length with `paint_class_names`.",
               "default": [0.32, 0.32, 10.0]
             },
-            "down_sample_factor": {
+            "downsample_factor": {
               "type": "integer",
               "description": "A scale factor of downsampling points",
               "default": 1,

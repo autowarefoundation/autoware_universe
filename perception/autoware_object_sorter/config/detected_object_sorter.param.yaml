@@ -111,3 +111,29 @@
           min_x: -100.0 # [m]
           max_y: 100.0 # [m]
           min_y: -100.0 # [m]
+
+      ANIMAL:
+        publish: true
+        min_velocity_threshold: 0.0 # [m/s]
+        range_threshold:
+          # when range_thresholding_mode = distance
+          max_distance: 100.0 # [m]
+          min_distance: 30.0 # [m]
+          # when range_thresholding_mode = area
+          max_x: 100.0 # [m]
+          min_x: -100.0 # [m]
+          max_y: 100.0 # [m]
+          min_y: -100.0 # [m]
+
+      HAZARD:
+        publish: true
+        min_velocity_threshold: 0.0 # [m/s]
+        range_threshold:
+          # when range_thresholding_mode = distance
+          max_distance: 100.0 # [m]
+          min_distance: 30.0 # [m]
+          # when range_thresholding_mode = area
+          max_x: 100.0 # [m]
+          min_x: -100.0 # [m]
+          max_y: 100.0 # [m]
+          min_y: -100.0 # [m]

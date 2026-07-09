@@ -22,6 +22,7 @@
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -32,7 +33,6 @@
 #include <tf2_ros/buffer.h>
 
 #include <functional>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -47,22 +47,24 @@ struct MultiObjectTrackerParameters
   double publish_rate;
   std::string world_frame_id;
   std::string ego_frame_id;
-  bool enable_delay_compensation;
   bool enable_odometry_uncertainty;
   bool publish_processing_time_detail;
   bool publish_merged_objects;
 
+  // ego pose sourcing
+  EgoSource ego_source;
+  // publish-trigger side: false publishes on measurement, true publishes from the periodic timer
+  bool publish_on_timer;
+  // object-export side: which timestamp the published tracks are predicted to
+  DelayReference delay_compensation;
+
   std::vector<types::InputChannel> input_channels_config;
 
-  AssociatorConfig::LabelToTrackerAssociationParametersMap association_params_map;
-  std::map<std::string, std::string> tracker_type_map;
-  TrackedLabelThresholds pruning_giou_thresholds;
-  TrackedLabelThresholds pruning_distance_thresholds;
-
   // Induced parameters
+  TrackerConfigs tracker_configs;
   TrackerCreationConfig creation_config;
+  TrackerAssociationConfig association_config;
   TrackerOverlapManagerConfig tracker_overlap_manager_config;
-  AssociatorConfig associator_config;
 };
 
 struct MultiObjectTrackerInternalState
@@ -78,10 +80,8 @@ struct MultiObjectTrackerInternalState
   MultiObjectTrackerInternalState();
 
   void init(
-    const MultiObjectTrackerParameters & params, rclcpp::Node & node,
+    const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
     const std::function<void(size_t)> & trigger_function);
-
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer;
 };
 
 namespace core
@@ -132,7 +132,7 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
 //// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   TrackerDebugger & debugger);
 

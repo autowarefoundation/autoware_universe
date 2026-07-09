@@ -15,56 +15,39 @@
 #ifndef AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_HPP_
 #define AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_HPP_
 
-#include <autoware/traffic_light_arbiter/signal_match_validator.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/traffic_light_arbiter/traffic_light_arbiter_core.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
-#include <lanelet2_core/Forward.h>
-
 #include <memory>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 
 namespace autoware::traffic_light
 {
 
-class TrafficLightArbiter : public rclcpp::Node
+class TrafficLightArbiter : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit TrafficLightArbiter(const rclcpp::NodeOptions & options);
 
 private:
-  using Element = autoware_perception_msgs::msg::TrafficLightElement;
-  using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
   using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
-  using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
 
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr map_sub_;
-  rclcpp::Subscription<TrafficSignalArray>::SharedPtr perception_tlr_sub_;
-  rclcpp::Subscription<TrafficSignalArray>::SharedPtr external_tlr_sub_;
-  rclcpp::Publisher<TrafficSignalArray>::SharedPtr pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) map_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(TrafficSignalArray) perception_tlr_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(TrafficSignalArray) external_tlr_sub_;
+  AUTOWARE_PUBLISHER_PTR(TrafficSignalArray) pub_;
 
-  void onMap(const LaneletMapBin::ConstSharedPtr msg);
-  void onPerceptionMsg(const TrafficSignalArray::ConstSharedPtr msg);
-  void onExternalMsg(const TrafficSignalArray::ConstSharedPtr msg);
-  void arbitrateAndPublish(const builtin_interfaces::msg::Time & stamp);
-  void cleanupExpiredExternalSignals(const rclcpp::Time & current_time, double tolerance);
+  void on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg);
+  void on_perception_msg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg);
+  void on_external_msg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg);
+  void arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp);
 
-  std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
-
-  double external_delay_tolerance_;
-  double external_time_tolerance_;
-  double perception_time_tolerance_;
-  SourcePriority source_priority_;
-  bool enable_signal_matching_;
-
-  TrafficSignalArray latest_perception_msg_;
-  std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
-  std::unique_ptr<SignalMatchValidator> signal_match_validator_;
+  std::unique_ptr<TrafficLightArbiterCore> core_;
 };
 }  // namespace autoware::traffic_light
 

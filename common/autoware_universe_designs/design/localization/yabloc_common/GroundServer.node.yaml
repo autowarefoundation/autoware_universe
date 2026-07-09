@@ -1,0 +1,45 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: GroundServer.node
+package:
+  name: yabloc_common
+  provider: autoware
+launch:
+  plugin: yabloc::ground_server::GroundServer
+  executable: yabloc_ground_server_node
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: pose
+    message_type: geometry_msgs/msg/PoseStamped
+publishers:
+  - name: height
+    message_type: std_msgs/msg/Float32
+  - name: ground
+    message_type: std_msgs/msg/Float32MultiArray
+  - name: ground_markers
+    message_type: visualization_msgs/msg/Marker
+    remap_target: ~/debug/ground_markers
+  - name: ground_status
+    message_type: std_msgs/msg/String
+    remap_target: ~/debug/ground_status
+  - name: near_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/debug/near_cloud
+# parameters
+param_files:
+  - name: ground_server_param
+    default: config/ground_server.param.yaml
+param_values: []
+# processes
+processes:
+  - name: estimate_ground
+    trigger_conditions:
+      - on_input: pose
+    outcomes:
+      - to_output: height
+      - to_output: ground
+      - to_output: ground_markers
+      - to_output: ground_status
+      - to_output: near_cloud

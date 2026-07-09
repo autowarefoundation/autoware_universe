@@ -40,6 +40,9 @@ subscribers:
     message_type: autoware_perception_msgs/msg/DetectedObjects
   - name: detection12/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: input/odometry
+    message_type: nav_msgs/msg/Odometry
+
 publishers:
   - name: objects
     message_type: autoware_perception_msgs/msg/TrackedObjects
@@ -101,6 +104,9 @@ param_values:
   - name: publish_merged_objects
     type: boolean
     default: false
+  - name: ego_source
+    type: string
+    default: tf
 
 # processes
 processes:

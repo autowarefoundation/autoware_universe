@@ -18,7 +18,9 @@
 
 #include <rclcpp/node.hpp>
 
+#include <pcl/PointIndices.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
 #include <vector>
@@ -28,34 +30,42 @@ namespace autoware::euclidean_cluster
 class VoxelGridBasedEuclideanCluster : public EuclideanClusterInterface
 {
 public:
-  VoxelGridBasedEuclideanCluster();
-  VoxelGridBasedEuclideanCluster(bool use_height, int min_cluster_size, int max_cluster_size);
   VoxelGridBasedEuclideanCluster(
-    bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
-    float voxel_leaf_size, int min_points_number_per_voxel,
-    int min_voxel_cluster_size_for_filtering, int max_points_per_voxel_in_large_cluster,
-    int max_voxel_cluster_for_output);
+    bool use_height, int min_points_per_cluster, float tolerance, float voxel_leaf_size,
+    int min_points_per_voxel, int large_cluster_voxel_count_threshold,
+    int large_cluster_max_points_per_voxel, int max_voxels_per_cluster);
   bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) override;
+  bool cluster(
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+    std::vector<IndexedCluster> & clusters) override;
   bool cluster(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud,
     tier4_perception_msgs::msg::DetectedObjectsWithFeature & clusters) override;
   void setVoxelLeafSize(float voxel_leaf_size) { voxel_leaf_size_ = voxel_leaf_size; }
   void setTolerance(float tolerance) { tolerance_ = tolerance; }
-  void setMinPointsNumberPerVoxel(int min_points_number_per_voxel)
+  void setMinPointsNumberPerVoxel(int min_points_per_voxel)
   {
-    min_points_number_per_voxel_ = min_points_number_per_voxel;
+    min_points_per_voxel_ = min_points_per_voxel;
   }
 
 private:
+  // Recursively split any cluster whose voxel count exceeds max_voxels_per_cluster_ into
+  // smaller sub-clusters by bisecting along the principal (longest) axis of its 2D voxel centroids.
+  // Guarantees every returned group has at most max_voxels_per_cluster_ voxels without
+  // dropping any point. Indices in the returned groups index into `centroids`.
+  std::vector<pcl::PointIndices> splitOversizedClusters(
+    const std::vector<pcl::PointIndices> & cluster_indices,
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & centroids) const;
+
   pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
   float tolerance_;
   float voxel_leaf_size_;
-  int min_points_number_per_voxel_;
-  int min_voxel_cluster_size_for_filtering_;
-  int max_points_per_voxel_in_large_cluster_;
-  int max_voxel_cluster_for_output_;
+  int min_points_per_voxel_;
+  int large_cluster_voxel_count_threshold_;
+  int large_cluster_max_points_per_voxel_;
+  int max_voxels_per_cluster_;
 };
 
 }  // namespace autoware::euclidean_cluster

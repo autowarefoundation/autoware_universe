@@ -154,16 +154,13 @@ ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
   }
 
   for (const auto & result : evaluator_->results()) {
-    const auto candidate = autoware_internal_planning_msgs::build<
-                             autoware_internal_planning_msgs::msg::CandidateTrajectory>()
-                             .header(result->header())
-                             .generator_id(result->uuid())
-                             .points(*result->original());
-    const auto scored_trajectory =
-      autoware_internal_planning_msgs::build<
-        autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory>()
-        .candidate_trajectory(candidate)
-        .score(result->total());
+    autoware_internal_planning_msgs::msg::CandidateTrajectory candidate;
+    candidate.header = result->header();
+    candidate.generator_id = result->uuid();
+    candidate.points = *result->original();
+    autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory scored_trajectory;
+    scored_trajectory.candidate_trajectory = candidate;
+    scored_trajectory.score = result->total();
     trajectories.push_back(scored_trajectory);
   }
 

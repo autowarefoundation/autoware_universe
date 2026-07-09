@@ -65,6 +65,10 @@ public:
     bool filter_bicycle{false};
     bool filter_motorcycle{false};
     bool filter_pedestrian{false};
+    bool filter_animal{false};
+    bool filter_hazard{false};
+    bool filter_over_drivable{false};
+    bool filter_under_drivable{false};
   };
 
   struct NodeParam

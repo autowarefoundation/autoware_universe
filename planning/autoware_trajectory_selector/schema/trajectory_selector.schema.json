@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Selector",
+  "type": "object",
+  "definitions": {
+    "trajectory_selector": {
+      "type": "object",
+      "properties": {
+        "fallback_period_ms": {
+          "type": "integer",
+          "default": 150,
+          "minimum": 1,
+          "description": "fallback timer period in milliseconds",
+          "validation": {
+            "gt_eq<>": 100
+          }
+        }
+      },
+      "required": ["fallback_period_ms"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/trajectory_selector"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

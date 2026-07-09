@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    # SmootherBase parameters (required at top level for JerkFilteredSmoother)
+    normal:
+      max_acc: 1.0
+      min_acc: -1.0
+      max_jerk: 1.6
+      min_jerk: -1.6
+
+    stop_decel: 0.0
+    min_decel_for_lateral_acc_lim_filter: -2.5
+    min_curve_velocity: 2.74
+    decel_distance_before_curve: 3.5
+    decel_distance_after_curve: 2.0
+    resample_ds: 0.1
+    curvature_threshold: 0.02
+    curvature_calculation_distance: 5.0
+
+    lateral_acceleration_limits: [0.8, 0.8, 0.8, 0.8]
+    velocity_thresholds: [0.1, 0.3, 20.0, 30.0]
+    steering_angle_rate_limits: [57.0, 57.0, 57.0, 40.0]
+
+    max_trajectory_length: 200.0
+    min_trajectory_length: 150.0
+    resample_time: 2.0
+    dense_resample_dt: 0.2
+    dense_min_interval_distance: 0.1
+    sparse_resample_dt: 0.5
+    sparse_min_interval_distance: 4.0
+
+    # JerkFilteredSmoother parameters (required at top level)
+    jerk_weight: 10.0
+    over_v_weight: 100000.0
+    over_a_weight: 5000.0
+    over_j_weight: 2000.0
+    jerk_filter_ds: 0.1
