@@ -14,33 +14,10 @@
 
 #include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
-
-#include <cmath>
+#include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
 
 namespace autoware::multi_object_tracker
 {
-
-double calcAdaptiveGIoUThreshold(
-  const double object_speed, const double generalized_iou_threshold,
-  const double static_object_speed, const double moving_object_speed,
-  const double static_iou_threshold)
-{
-  // If the threshold is already larger than static threshold, just return it
-  if (generalized_iou_threshold > static_iou_threshold) {
-    return generalized_iou_threshold;
-  }
-  if (object_speed >= moving_object_speed) {
-    return generalized_iou_threshold;
-  }
-  if (object_speed > static_object_speed) {
-    // Linear interpolation between static and moving thresholds
-    const double speed_ratio =
-      (object_speed - static_object_speed) / (moving_object_speed - static_object_speed);
-    return static_iou_threshold + speed_ratio * (generalized_iou_threshold - static_iou_threshold);
-  }
-  return static_iou_threshold;
-}
 
 bool isRedundant(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
@@ -48,18 +25,12 @@ bool isRedundant(
   const float source_known_prob, const float target_known_prob,
   const TrackerOverlapManagerConfig & config)
 {
-  constexpr double min_union_iou_area = 1e-2;
   constexpr float min_known_prob = 0.2;
   constexpr double min_valid_iou = 1e-6;
   constexpr double precision_threshold = 0.;
   constexpr double recall_threshold = 0.5;
 
-  const auto generalized_iou_threshold_opt =
-    get_map_value_if_exists(config.pruning_giou_thresholds, source_label);
-  if (!generalized_iou_threshold_opt) {
-    return false;
-  }
-  const double generalized_iou_threshold = generalized_iou_threshold_opt->get();
+  const double generalized_iou_threshold = config.pruning_giou_threshold;
 
   const bool is_pedestrian =
     (source_label == classes::Label::PEDESTRIAN && target_label == classes::Label::PEDESTRIAN);
@@ -71,9 +42,26 @@ bool isRedundant(
     if (iou < min_valid_iou) return false;
     return iou > config.min_known_object_removal_iou;
   } else if (is_target_known && is_source_known) {
-    double iou = shapes::get2dIoU(source_object, target_object, min_union_iou_area);
-    if (iou < min_valid_iou) return false;
-    return iou > config.min_known_object_removal_iou;
+    // Both known. Plain IoU misses over-segmented fragments that carry a classification
+    // (e.g. semantic-segmentation clusters): a small fragment inside a full-size object has
+    // low IoU. Add a containment criterion limited to clearly smaller targets so two adjacent
+    // full-size objects are not merged by containment alone.
+    double precision = 0.0;
+    double recall = 0.0;
+    double generalized_iou = 0.0;
+    if (!shapes::get2dPrecisionRecallGIoU(
+          source_object, target_object, precision, recall, generalized_iou)) {
+      return false;
+    }
+    if (precision < min_valid_iou || recall < min_valid_iou) return false;
+    // IoU recovered from precision (I/src) and recall (I/tgt): U = I*(1/p + 1/r - 1)
+    const double iou = 1.0 / (1.0 / precision + 1.0 / recall - 1.0);
+    if (iou > config.min_known_object_removal_iou) return true;
+    // Containment: target mostly covered by source, and target area (= source area * p/r)
+    // less than half of source area
+    constexpr double containment_recall_threshold = 0.5;
+    constexpr double max_fragment_area_ratio = 0.5;
+    return recall > containment_recall_threshold && precision < max_fragment_area_ratio * recall;
   } else if (is_target_known || is_source_known) {
     // One object is unknown (typically the target)
     double precision = 0.0;
@@ -83,16 +71,8 @@ bool isRedundant(
           source_object, target_object, precision, recall, generalized_iou)) {
       return false;
     }
-    // Adjust threshold based on known partner's speed and static/moving status
-    const double known_object_speed =
-      is_target_known ? std::hypot(target_object.twist.linear.x, target_object.twist.linear.y)
-                      : std::hypot(source_object.twist.linear.x, source_object.twist.linear.y);
-    const double adaptive_threshold = calcAdaptiveGIoUThreshold(
-      known_object_speed, generalized_iou_threshold, config.pruning_static_object_speed,
-      config.pruning_moving_object_speed, config.pruning_static_iou_threshold);
-    return (
-      precision > precision_threshold || recall > recall_threshold ||
-      generalized_iou > adaptive_threshold);
+    // Any overlap (precision > 0) or a majority-covered target marks the unknown as redundant.
+    return precision > precision_threshold || recall > recall_threshold;
   } else {
     // Both are unknown: use generalized IoU
     double iou = shapes::get2dGeneralizedIoU(source_object, target_object);

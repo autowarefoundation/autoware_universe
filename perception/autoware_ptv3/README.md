@@ -25,6 +25,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 | `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.         |
 | `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                               |
 | `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`. |
+| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected 3D objects after score filtering and IoU NMS.  |
 | `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                       |
 | `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                             |
 | `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                        |
