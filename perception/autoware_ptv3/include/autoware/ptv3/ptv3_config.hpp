@@ -364,8 +364,8 @@ public:
     const auto ceil_shift = [cumulative_depth](const std::int64_t size) {
       return (size + (std::int64_t{1} << cumulative_depth) - 1) >> cumulative_depth;
     };
-    const auto grid_cells = ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) *
-                            ceil_shift(grid_z_size_);
+    const auto grid_cells =
+      ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) * ceil_shift(grid_z_size_);
     return std::min(max_num_voxels_, grid_cells);
   }
 

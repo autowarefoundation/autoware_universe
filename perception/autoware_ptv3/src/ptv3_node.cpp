@@ -59,8 +59,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     this->declare_parameter<std::vector<std::int64_t>>("encoder.voxels_num", descriptor);
   const auto point_cloud_range = to_float_vector(
     this->declare_parameter<std::vector<double>>("encoder.point_cloud_range", descriptor));
-  const auto voxel_size = to_float_vector(
-    this->declare_parameter<std::vector<double>>("encoder.voxel_size", descriptor));
+  const auto voxel_size =
+    to_float_vector(this->declare_parameter<std::vector<double>>("encoder.voxel_size", descriptor));
   const auto serialization_orders =
     this->declare_parameter<std::vector<std::string>>("encoder.serialization_orders", descriptor);
   const auto pooling_strides =
