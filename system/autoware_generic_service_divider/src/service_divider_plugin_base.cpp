@@ -26,6 +26,26 @@
 namespace generic_service_divider
 {
 
+ServiceDividerPluginBase::StartupDiagnosticInfo ServiceDividerPluginBase::get_startup_diagnostic_info()
+{
+  std::lock_guard<std::mutex> lock(service_start_mutex_);
+
+  StartupDiagnosticInfo info;
+  info.input_service_started = input_service_started_;
+  info.input_service_name = input_service_name();
+  info.total_output_service_count = output_clients_.size();
+
+  for (const auto & entry : output_clients_) {
+    if (entry.client->service_is_ready()) {
+      ++info.ready_output_service_count;
+    } else {
+      info.waiting_output_services.push_back(entry.config.name);
+    }
+  }
+
+  return info;
+}
+
 void ServiceDividerPluginBase::setup_service_division()
 {
   const auto type = service_type();

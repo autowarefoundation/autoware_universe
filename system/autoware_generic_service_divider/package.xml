@@ -16,6 +16,7 @@
   <depend>ament_index_cpp</depend>
   <depend>autoware_common_msgs</depend>
   <depend>autoware_system_msgs</depend>
+  <depend>diagnostic_updater</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

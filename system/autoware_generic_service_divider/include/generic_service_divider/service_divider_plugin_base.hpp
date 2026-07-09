@@ -32,6 +32,15 @@ namespace generic_service_divider
 class ServiceDividerPluginBase
 {
 public:
+  struct StartupDiagnosticInfo
+  {
+    bool input_service_started{false};
+    std::string input_service_name;
+    std::size_t ready_output_service_count{0};
+    std::size_t total_output_service_count{0};
+    std::vector<std::string> waiting_output_services;
+  };
+
   virtual ~ServiceDividerPluginBase() = default;
 
   // --- Plugin must override these ---
@@ -64,6 +73,9 @@ public:
 
   /// Create GenericService / GenericClients from the plugin's configuration.
   void setup_service_division();
+
+  /// Startup status for diagnostics.
+  StartupDiagnosticInfo get_startup_diagnostic_info();
 
 protected:
   rclcpp::Node::SharedPtr node_;
