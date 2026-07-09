@@ -22,10 +22,10 @@
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
-#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -1449,8 +1449,7 @@ bool CrosswalkModule::isVehicle(const PredictedObject & object)
     return false;
   }
 
-  const auto label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::CAR) {
     return true;
@@ -1481,8 +1480,7 @@ bool CrosswalkModule::isCrosswalkUserType(const PredictedObject & object) const
     return false;
   }
 
-  const auto label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::UNKNOWN && planner_param_.look_unknown) {
     return true;

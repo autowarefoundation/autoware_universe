@@ -19,8 +19,8 @@
 #include "occluded_crosswalk.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
-#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware/trajectory/path_point_with_lane_id.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
@@ -1695,8 +1695,7 @@ bool CrosswalkModule::isVehicle(const PredictedObject & object)
     return false;
   }
 
-  const auto label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::CAR) {
     return true;
@@ -1727,8 +1726,7 @@ bool CrosswalkModule::isCrosswalkUserType(const PredictedObject & object) const
     return false;
   }
 
-  const auto label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::UNKNOWN && planner_param_.look_unknown) {
     return true;
