@@ -23025,6 +23025,9 @@
 <p>Initial Recognition and Exclusion:</p>
 <ul>
 <li>The system checks if a newly recognized object's classification is listed in <code>nearby_object_type_filters</code>.</li>
+<li>Supported labels follow <code>autoware_perception_msgs/msg/ObjectClassification.msg</code>:
+   <code>UNKNOWN</code>, <code>CAR</code>, <code>TRUCK</code>, <code>BUS</code>, <code>TRAILER</code>, <code>MOTORCYCLE</code>, <code>BICYCLE</code>, <code>PEDESTRIAN</code>,
+   <code>ANIMAL</code>, <code>HAZARD</code>, <code>OVER_DRIVABLE</code>, and <code>UNDER_DRIVABLE</code>.</li>
 <li>If so, and the object is within the <code>nearby_filter_radius</code>, it is marked for exclusion.</li>
 </ul>
 </li>
@@ -23151,8 +23154,8 @@ To stop publishing the <code>ERROR</code> diagnostic, no collision must be detec
 <tr>
 <td align="left"><code>nearby_object_type_filters</code></td>
 <td align="left"><code>object of bool values</code></td>
-<td align="left">Specifies which object types to filter. Only objects with <code>true</code> value will be filtered.</td>
-<td align="left"><code>{unknown: true, others: false}</code></td>
+<td align="left">Specifies which object types to filter. Supported keys are <code>filter_unknown</code>, <code>filter_car</code>, <code>filter_truck</code>, <code>filter_bus</code>, <code>filter_trailer</code>, <code>filter_motorcycle</code>, <code>filter_bicycle</code>, <code>filter_pedestrian</code>, <code>filter_animal</code>, <code>filter_hazard</code>, <code>filter_over_drivable</code>, and <code>filter_under_drivable</code>. Only objects with <code>true</code> value will be filtered.</td>
+<td align="left"><code>{filter_unknown: true, filter_animal: true, filter_hazard: true, filter_over_drivable: true, filter_under_drivable: true, others: false}</code></td>
 </tr>
 <tr>
 <td align="left"><code>ignore_behind_rear_axle</code></td>
