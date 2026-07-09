@@ -75,7 +75,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/diffusion_planner_node.cpp
     src/conversion/lanelet.cpp
     src/conversion/agent.cpp
-    src/conversion/agent_history_alignment.cpp
+    src/conversion/agent_history_resampler.cpp
     src/postprocessing/postprocessing_utils.cpp
     src/preprocessing/lane_segments.cpp
     src/preprocessing/preprocessing_utils.cpp
@@ -145,7 +145,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   if(BUILD_TESTING)
     ament_add_ros_isolated_gtest(test_diffusion_planner
       test/agent_test.cpp
-      test/agent_history_alignment_test.cpp
+      test/agent_history_resampler_test.cpp
       test/agent_lifecycle_test.cpp
       test/lanelet_test.cpp
       test/lane_segments_test.cpp

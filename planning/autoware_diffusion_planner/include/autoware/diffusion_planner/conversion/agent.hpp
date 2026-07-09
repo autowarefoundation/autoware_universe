@@ -16,7 +16,6 @@
 #define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_
 
 #include "Eigen/Dense"
-#include "autoware/diffusion_planner/conversion/agent_history_alignment.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
@@ -48,6 +47,10 @@ namespace autoware::diffusion_planner
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
+
+// Defined in agent_history_resampler.hpp; referenced here only by const-ref.
+struct HistoryResamplingParams;
+
 constexpr size_t AGENT_STATE_DIM = 11;
 
 // Raw-observation buffer depth for aligned neighbor histories. Larger than the 31-sample model
@@ -83,9 +86,8 @@ struct AgentHistory
 {
   explicit AgentHistory(const size_t max_size) : max_size_(max_size) {}
 
-  // Build a history directly from an ordered list of states (oldest first). Used to construct a
-  // fresh, grid-aligned history during resampling. The states are pushed in order, subject to the
-  // usual max_size cap.
+  // Build a history from an ordered list of states (oldest first), subject to the max_size cap.
+  // Used to construct a fresh, grid-aligned history during resampling.
   static AgentHistory from_states(const std::vector<AgentState> & states, const size_t max_size)
   {
     AgentHistory history(max_size);
@@ -169,33 +171,23 @@ private:
 struct AgentData
 {
   // Legacy buffering: push unconditionally, fill new agents with copies, erase disappeared agents.
-  // Used when history alignment is disabled.
   void update_histories(const TrackedObjects & objects);
 
-  // Aligned buffering: dedup on advancing header stamp, retain disappeared agents (marked not
-  // live), grow histories without repeat-fill, and prune agents that have aged fully out of the
-  // window.
-  void update_histories(const TrackedObjects & objects, const HistoryAlignmentParams & params);
+  // Resampled buffering: dedup on advancing header stamp, retain disappeared agents (marked not
+  // live), grow histories without repeat-fill, and prune agents fully aged out of the window.
+  void update_histories(const TrackedObjects & objects, const HistoryResamplingParams & params);
 
   // Transform histories, trim to max_num_agent, and return the processed vector.
   std::vector<AgentHistory> transformed_and_trimmed_histories(
     const Eigen::Matrix4d & transform, size_t max_num_agent) const;
 
-  // Re-time every retained history onto the odometry-anchored constant grid, then transform to the
-  // ego frame, sort by distance, and trim to max_num_agent. This is the aligned counterpart of
-  // transformed_and_trimmed_histories used when history alignment is enabled.
+  // Resampled counterpart of transformed_and_trimmed_histories: re-time each retained history onto
+  // the odometry-anchored constant grid (see resample_history) before transform, sort, and trim.
   std::vector<AgentHistory> resampled_transformed_and_trimmed_histories(
     const rclcpp::Time & frame_time, const Eigen::Matrix4d & transform, size_t max_num_agent,
-    const HistoryAlignmentParams & params) const;
+    const HistoryResamplingParams & params) const;
 
 private:
-  // Re-time a single retained history onto the constant grid anchored at frame_time, returning a
-  // fresh history whose states sit on that grid (oldest first, newest at frame_time). Returns
-  // std::nullopt when the source history is empty.
-  std::optional<AgentHistory> resample_history(
-    const AgentHistory & history, const rclcpp::Time & frame_time,
-    const HistoryAlignmentParams & params) const;
-
   std::unordered_map<std::string, AgentHistory> histories_map_;
   std::optional<rclcpp::Time> last_processed_stamp_;
 };

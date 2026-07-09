@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/diffusion_planner/conversion/agent_history_alignment.hpp"
+#include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 
 #include <gtest/gtest.h>
 
@@ -23,9 +23,9 @@ namespace autoware::diffusion_planner::test
 
 namespace
 {
-HistoryAlignmentParams make_params()
+HistoryResamplingParams make_params()
 {
-  HistoryAlignmentParams params;
+  HistoryResamplingParams params;
   params.dt_sub_step_max = 0.11;
   params.yaw_rate_threshold = 0.01;
   params.max_extrapolation_time = 0.5;
@@ -34,7 +34,7 @@ HistoryAlignmentParams make_params()
 }  // namespace
 
 // Constant-velocity: a straight-moving agent advances speed*dt along its heading, yaw unchanged.
-TEST(AgentHistoryAlignmentTest, PropagateConstantVelocityStraight)
+TEST(AgentHistoryResamplerTest, PropagateConstantVelocityStraight)
 {
   const auto params = make_params();
   const MotionState start{1.0, 2.0, 0.0};
@@ -46,7 +46,7 @@ TEST(AgentHistoryAlignmentTest, PropagateConstantVelocityStraight)
 }
 
 // A yaw rate below the threshold is ignored (degenerates to straight constant velocity).
-TEST(AgentHistoryAlignmentTest, PropagateBelowYawRateThresholdIsStraight)
+TEST(AgentHistoryResamplerTest, PropagateBelowYawRateThresholdIsStraight)
 {
   const auto params = make_params();
   const MotionState start{0.0, 0.0, 0.0};
@@ -58,7 +58,7 @@ TEST(AgentHistoryAlignmentTest, PropagateBelowYawRateThresholdIsStraight)
 }
 
 // Constant-turn-rate: heading advances by yaw_rate*dt over a single sub-step.
-TEST(AgentHistoryAlignmentTest, PropagateConstantTurnRateSingleStep)
+TEST(AgentHistoryResamplerTest, PropagateConstantTurnRateSingleStep)
 {
   const auto params = make_params();
   const MotionState start{0.0, 0.0, 0.0};
@@ -73,7 +73,7 @@ TEST(AgentHistoryAlignmentTest, PropagateConstantTurnRateSingleStep)
 
 // Sub-stepping curves the path: a multi-step turn ends with the expected total heading change and
 // a laterally displaced position (y > 0 for a positive turn rate).
-TEST(AgentHistoryAlignmentTest, PropagateConstantTurnRateSubStepped)
+TEST(AgentHistoryResamplerTest, PropagateConstantTurnRateSubStepped)
 {
   const auto params = make_params();
   const MotionState start{0.0, 0.0, 0.0};
@@ -87,7 +87,7 @@ TEST(AgentHistoryAlignmentTest, PropagateConstantTurnRateSubStepped)
 }
 
 // A non-positive dt is a no-op.
-TEST(AgentHistoryAlignmentTest, PropagateNonPositiveDtIsNoOp)
+TEST(AgentHistoryResamplerTest, PropagateNonPositiveDtIsNoOp)
 {
   const auto params = make_params();
   const MotionState start{5.0, -3.0, 1.2};
@@ -99,7 +99,7 @@ TEST(AgentHistoryAlignmentTest, PropagateNonPositiveDtIsNoOp)
 }
 
 // dt is clamped to max_extrapolation_time.
-TEST(AgentHistoryAlignmentTest, PropagateClampsDt)
+TEST(AgentHistoryResamplerTest, PropagateClampsDt)
 {
   const auto params = make_params();  // max_extrapolation_time = 0.5
   const MotionState start{0.0, 0.0, 0.0};
@@ -109,14 +109,14 @@ TEST(AgentHistoryAlignmentTest, PropagateClampsDt)
 }
 
 // Yaw interpolation takes the shortest arc across the +/-pi discontinuity.
-TEST(AgentHistoryAlignmentTest, InterpolateYawShortestArcAcrossPi)
+TEST(AgentHistoryResamplerTest, InterpolateYawShortestArcAcrossPi)
 {
   const double y = interpolate_yaw(3.0, -3.0, 0.5);
   // 3.0 and -3.0 are 0.283 rad apart the short way; the midpoint sits near +/-pi, not 0.
   EXPECT_NEAR(std::abs(y), M_PI, 1e-6);
 }
 
-TEST(AgentHistoryAlignmentTest, InterpolateYawMidpoint)
+TEST(AgentHistoryResamplerTest, InterpolateYawMidpoint)
 {
   EXPECT_NEAR(interpolate_yaw(0.0, M_PI_2, 0.5), M_PI_4, 1e-9);
   EXPECT_NEAR(interpolate_yaw(0.0, M_PI_2, 0.0), 0.0, 1e-9);

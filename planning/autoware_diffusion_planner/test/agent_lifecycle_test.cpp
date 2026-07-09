@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
+#include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <Eigen/Dense>
@@ -40,9 +41,9 @@ using unique_identifier_msgs::msg::UUID;
 
 namespace
 {
-HistoryAlignmentParams make_params()
+HistoryResamplingParams make_params()
 {
-  HistoryAlignmentParams params;
+  HistoryResamplingParams params;
   params.enable = true;
   params.dt_sub_step_max = 0.11;
   params.yaw_rate_threshold = 0.01;

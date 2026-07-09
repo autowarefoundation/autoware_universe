@@ -15,12 +15,9 @@
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
 #include "autoware/diffusion_planner/constants.hpp"
+#include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
-
-#include <autoware_utils_geometry/geometry.hpp>
-#include <autoware_utils_math/normalization.hpp>
-#include <rclcpp/duration.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -54,50 +51,6 @@ AgentLabel get_model_label(const TrackedObject & object)
     default:
       return AgentLabel::IGNORE;
   }
-}
-
-// Heading of a pose matrix in its own frame.
-double get_yaw(const Eigen::Matrix4d & pose)
-{
-  return std::atan2(pose(1, 0), pose(0, 0));
-}
-
-// Longitudinal speed of an observation (magnitude of the linear twist).
-double get_speed(const AgentState & state)
-{
-  const auto & linear = state.original_info.kinematics.twist_with_covariance.twist.linear;
-  return std::hypot(linear.x, linear.y);
-}
-
-// Yaw rate of an observation.
-double get_yaw_rate(const AgentState & state)
-{
-  return state.original_info.kinematics.twist_with_covariance.twist.angular.z;
-}
-
-// Build a synthesized state on the grid from a template observation, overwriting its planar pose.
-// When speed_override is set, the linear twist is rewritten so its magnitude matches (direction is
-// irrelevant to the model, which derives the velocity heading from the pose). When it is unset the
-// template's real twist is preserved verbatim, which matters for the newest slot consumed by
-// postprocessing.
-AgentState make_grid_state(
-  const TrackedObject & tmpl, const double x, const double y, const double yaw,
-  const rclcpp::Time & timestamp, const std::optional<double> & speed_override)
-{
-  TrackedObject object = tmpl;
-  auto & pose = object.kinematics.pose_with_covariance.pose;
-  const double z = pose.position.z;
-  pose.position.x = x;
-  pose.position.y = y;
-  pose.position.z = z;
-  pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
-  if (speed_override.has_value()) {
-    auto & linear = object.kinematics.twist_with_covariance.twist.linear;
-    linear.x = *speed_override;
-    linear.y = 0.0;
-    linear.z = 0.0;
-  }
-  return AgentState(object, timestamp);
 }
 
 // Transform every history to the target frame, sort by distance to the frame origin (nearest
@@ -202,7 +155,7 @@ std::vector<AgentHistory> AgentData::transformed_and_trimmed_histories(
 }
 
 void AgentData::update_histories(
-  const TrackedObjects & objects, const HistoryAlignmentParams & params)
+  const TrackedObjects & objects, const HistoryResamplingParams & params)
 {
   const rclcpp::Time objects_timestamp(objects.header.stamp);
 
@@ -237,9 +190,8 @@ void AgentData::update_histories(
     found_ids.push_back(object_id);
   }
 
-  // Retain agents absent from this message (mark not live) instead of erasing them, so an agent
-  // that briefly drops out or is re-identified does not teleport. Prune only once fully aged out of
-  // the history window.
+  // Retain agents absent from this message (mark not live) rather than erasing them, so a brief
+  // dropout or re-identification does not teleport. Prune only once fully aged out of the window.
   const double max_age =
     static_cast<double>(INPUT_T) * constants::PREDICTION_TIME_STEP_S + params.prune_grace;
   for (auto it = histories_map_.begin(); it != histories_map_.end();) {
@@ -256,103 +208,9 @@ void AgentData::update_histories(
   }
 }
 
-std::optional<AgentHistory> AgentData::resample_history(
-  const AgentHistory & history, const rclcpp::Time & frame_time,
-  const HistoryAlignmentParams & params) const
-{
-  if (history.empty()) {
-    return std::nullopt;
-  }
-
-  const auto & raw = history.states();
-  const size_t n = raw.size();
-
-  // Snapshot per-observation kinematics (planar pose, speed, yaw rate). Yaw is corrected for
-  // tracker heading flips (R3) before any interpolation/extrapolation.
-  std::vector<double> obs_x(n);
-  std::vector<double> obs_y(n);
-  std::vector<double> obs_yaw(n);
-  std::vector<double> obs_speed(n);
-  std::vector<double> obs_yaw_rate(n);
-  std::vector<double> obs_time(n);
-  for (size_t i = 0; i < n; ++i) {
-    obs_x[i] = raw[i].pose(0, 3);
-    obs_y[i] = raw[i].pose(1, 3);
-    obs_yaw[i] = get_yaw(raw[i].pose);
-    obs_speed[i] = get_speed(raw[i]);
-    obs_yaw_rate[i] = get_yaw_rate(raw[i]);
-    obs_time[i] = raw[i].timestamp.seconds();
-  }
-
-  // R3 orientation-flip pre-pass: the newest observation is assumed best. Walking backward, if an
-  // older heading differs from its newer neighbor by more than the flip threshold, rotate it by pi
-  // (position and speed magnitude unchanged; the derived velocity direction follows the heading).
-  for (size_t idx = n - 1; idx-- > 0;) {
-    const double delta = autoware_utils_math::normalize_radian(obs_yaw[idx] - obs_yaw[idx + 1]);
-    if (std::abs(delta) > params.flip_yaw_threshold) {
-      obs_yaw[idx] = autoware_utils_math::normalize_radian(obs_yaw[idx] + M_PI);
-    }
-  }
-
-  const double newest_time = obs_time[n - 1];
-  const TrackedObject & newest_tmpl = raw[n - 1].original_info;
-
-  constexpr double dt = constants::PREDICTION_TIME_STEP_S;
-  const size_t num_timesteps = static_cast<size_t>(INPUT_T_WITH_CURRENT);
-  const double ref_sec = frame_time.seconds();
-
-  std::vector<AgentState> grid_states;
-  grid_states.reserve(num_timesteps);
-
-  size_t search_start = 0;  // obs times are ascending; carry the bracket search forward
-  for (size_t k = 0; k < num_timesteps; ++k) {
-    // k = 0 is the oldest slot, k = num_timesteps - 1 is anchored at frame_time.
-    const double target_sec = ref_sec - static_cast<double>(num_timesteps - 1 - k) * dt;
-    const rclcpp::Time target_time(
-      frame_time - rclcpp::Duration::from_seconds(static_cast<double>(num_timesteps - 1 - k) * dt));
-
-    if (target_sec <= obs_time[0]) {
-      // Before the first observation: front-clamp (repeat the oldest), preserving its real twist.
-      grid_states.push_back(make_grid_state(
-        raw[0].original_info, obs_x[0], obs_y[0], obs_yaw[0], target_time, std::nullopt));
-    } else if (target_sec <= newest_time) {
-      // Within the observed history: interpolate position linearly, yaw along the shortest arc.
-      while (search_start + 1 < n && obs_time[search_start + 1] < target_sec) {
-        ++search_start;
-      }
-      const size_t i0 = search_start;
-      const size_t i1 = search_start + 1;
-      const double span = obs_time[i1] - obs_time[i0];
-      const double ratio = (span > 0.0) ? (target_sec - obs_time[i0]) / span : 0.0;
-      const double x = obs_x[i0] + ratio * (obs_x[i1] - obs_x[i0]);
-      const double y = obs_y[i0] + ratio * (obs_y[i1] - obs_y[i0]);
-      const double yaw = interpolate_yaw(obs_yaw[i0], obs_yaw[i1], ratio);
-      const double speed = obs_speed[i0] + ratio * (obs_speed[i1] - obs_speed[i0]);
-      grid_states.push_back(make_grid_state(raw[i1].original_info, x, y, yaw, target_time, speed));
-    } else {
-      // After the newest observation.
-      if (history.is_live()) {
-        // Live agent: extrapolate the leading edge to the grid time via the motion model.
-        const MotionState start{obs_x[n - 1], obs_y[n - 1], obs_yaw[n - 1]};
-        const MotionState propagated = propagate_motion(
-          start, obs_speed[n - 1], obs_yaw_rate[n - 1], target_sec - newest_time, params);
-        grid_states.push_back(make_grid_state(
-          newest_tmpl, propagated.x, propagated.y, propagated.yaw, target_time, std::nullopt));
-      } else {
-        // Disappeared agent: freeze at the newest observation (no forward extrapolation). The
-        // frozen slots let the agent age out without a phantom or teleport.
-        grid_states.push_back(make_grid_state(
-          newest_tmpl, obs_x[n - 1], obs_y[n - 1], obs_yaw[n - 1], target_time, std::nullopt));
-      }
-    }
-  }
-
-  return AgentHistory::from_states(grid_states, num_timesteps);
-}
-
 std::vector<AgentHistory> AgentData::resampled_transformed_and_trimmed_histories(
   const rclcpp::Time & frame_time, const Eigen::Matrix4d & transform, size_t max_num_agent,
-  const HistoryAlignmentParams & params) const
+  const HistoryResamplingParams & params) const
 {
   std::vector<AgentHistory> histories;
   histories.reserve(histories_map_.size());
