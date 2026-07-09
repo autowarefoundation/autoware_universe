@@ -64,6 +64,12 @@ public:
     PITCH_LPF_RAD = 34,
     PITCH_LPF_DEG = 35,
     SMOOTH_STOP_MODE = 36,
+    TEMPORAL_PREDICTED_TIME = 37,
+    TEMPORAL_OBSERVED_TIME = 38,
+    TEMPORAL_FUSED_TIME = 39,
+    TEMPORAL_OBSERVATION_USED = 40,
+    TEMPORAL_WINDOW_MIN = 41,
+    TEMPORAL_WINDOW_MAX = 42,
 
     SIZE  // this is the number of enum elements
   };
