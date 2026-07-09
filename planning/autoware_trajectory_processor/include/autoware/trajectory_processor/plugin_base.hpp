@@ -70,6 +70,7 @@ struct InputData
 
 struct NodeContext
 {
+  /// Create shared plugin context from the owning node and a time keeper.
   explicit NodeContext(
     rclcpp::Node & node, std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
     bool listen_tf = false)
@@ -98,6 +99,7 @@ class PluginBase
 public:
   virtual ~PluginBase() = default;
 
+  /// Initialize the plugin name, shared context.
   virtual void initialize(const std::string & name, std::shared_ptr<NodeContext> context)
   {
     name_ = name;
@@ -109,10 +111,13 @@ public:
     set_up_params();
   }
 
+  /// Modify trajectory points in place using input data.
   virtual bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) = 0;
 
+  /// Declare and read plugin-specific ROS parameters.
   virtual void set_up_params() {}
 
+  /// Handle dynamic ROS parameter updates for the plugin.
   virtual rcl_interfaces::msg::SetParametersResult on_parameter(
     [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
   {
@@ -122,16 +127,21 @@ public:
     return result;
   }
 
+  /// Update optimizer-wide parameters shared by optimizer plugins.
   virtual void update_params([[maybe_unused]] const TrajectoryOptimizerParams & params)
   {
     optimizer_params_ = params;
   }
 
+  /// Update modifier-wide parameters shared by modifier plugins.
   virtual void update_params([[maybe_unused]] const TrajectoryModifierParams & params) {}
 
+  /// Publish plugin-specific debug data under the given namespace.
   virtual void publish_debug_data([[maybe_unused]] const std::string & ns) const {}
+  /// Publish plugin-specific debug markers.
   virtual void publish_debug_markers() const {}
 
+  /// Publish accumulated planning factors, if the plugin owns an interface.
   virtual void publish_planning_factor()
   {
     if (planning_factor_interface_) {
@@ -139,6 +149,7 @@ public:
     }
   }
 
+  /// Return accumulated planning factors, or an empty list when unused.
   [[nodiscard]] std::vector<PlanningFactor> get_planning_factors() const
   {
     if (planning_factor_interface_ != nullptr) {
@@ -147,24 +158,30 @@ public:
     return {};
   }
 
+  /// Return the full plugin name used at initialization.
   [[nodiscard]] std::string get_name() const { return name_; }
+  /// Return the short plugin name derived from the full name.
   [[nodiscard]] std::string get_short_name() const { return short_name_; }
 
 protected:
+  /// Return the owning ROS node.
   [[nodiscard]] rclcpp::Node * get_node_ptr() const
   {
     return context_ ? context_->node_ptr : nullptr;
   }
+  /// Return the shared timing utility.
   [[nodiscard]] std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const
   {
     return context_ ? context_->time_keeper : nullptr;
   }
+  /// Return the owning node clock.
   [[nodiscard]] rclcpp::Clock::SharedPtr get_clock() const
   {
     const auto node = get_node_ptr();
     return node ? node->get_clock() : nullptr;
   }
 
+  /// Run an optimizer-style callback after adapting shared input data.
   template <class Optimizer>
   bool run_optimizer(
     Optimizer && optimizer, TrajectoryPoints & traj_points, const InputData & input)
