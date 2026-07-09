@@ -22847,6 +22847,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#trajectory-reference-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trajectory Reference Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filtering" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23021,6 +23032,20 @@ The optimization of the control command is formulated as a Quadratic Program (QP
   algorithm (for more details see the related papers at
   the <a href="https://web.stanford.edu/~boyd/papers/admm_distr_stats.html">Citing OSQP</a> section):</li>
 </ul>
+<h3 id="trajectory-reference-mode">Trajectory Reference Mode<a class="headerlink" href="#trajectory-reference-mode" title="Permanent link">#</a></h3>
+<p>The <code>trajectory_reference_mode</code> parameter selects how the MPC tracks the reference trajectory:</p>
+<ul>
+<li><code>spatial</code> (default): the reference trajectory is indexed by distance, and the time step of each
+  prediction point is calculated from distance and velocity.</li>
+<li><code>temporal</code>: the reference trajectory's <code>time_from_start</code> field is used directly, and the ego's
+  position along the trajectory is estimated from a predicted time (based on the previous nearest
+  time and the control period) corrected by an observed nearest time from the current pose.</li>
+</ul>
+<p>This parameter is normally declared once at the <code>autoware_trajectory_follower_node</code> level (see
+<a href="../autoware_trajectory_follower_node/param/trajectory_follower_node.param.yaml">trajectory_follower_node.param.yaml</a>)
+and shared with the longitudinal controller. It is also declared here with the same <code>spatial</code>
+default so that this node keeps working when run standalone (e.g. in tests). The default value
+keeps the existing spatial behavior unchanged.</p>
 <h3 id="filtering">Filtering<a class="headerlink" href="#filtering" title="Permanent link">#</a></h3>
 <p>Filtering is required for good noise reduction.
 A <a href="https://en.wikipedia.org/wiki/Butterworth_filter">Butterworth filter</a> is employed for processing the yaw and lateral errors, which are used as inputs for the MPC, as well as for refining the output steering angle.
@@ -23101,15 +23126,22 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 <td>use_steer_prediction</td>
 <td>boolean</td>
 <td>flag for using steer prediction (do not use steer measurement)</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_delayed_initial_state</td>
 <td>boolean</td>
 <td>flag to use x0_delayed as initial state for predicted trajectory</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_reference_mode</td>
+<td>string</td>
+<td>trajectory tracking mode: "spatial" (indexes the trajectory by distance) or "temporal" (uses the trajectory's time_from_start directly). Normally set once at the <code>autoware_trajectory_follower_node</code> level; declared here as well only as a fallback default for standalone use of this node.</td>
+<td>spatial</td>
+<td>['spatial', 'temporal']</td>
 </tr>
 </tbody>
 </table>
@@ -23663,6 +23695,43 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 <td align="left">boolean</td>
 <td align="left">publish predicted trajectory and resampled reference trajectory for debug purpose</td>
 <td align="left">true</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>trajectory_reference_mode</code> is <code>temporal</code>, the <code>~/debug/nearest_info</code> topic and the
+diagnostic message additionally contain the following fields, which describe how the current
+nearest time on the trajectory was determined:</p>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">temporal_predicted_time</td>
+<td align="left">nearest time predicted from the previous nearest time and control period</td>
+</tr>
+<tr>
+<td align="left">temporal_observed_time</td>
+<td align="left">nearest time observed from the current ego pose, if found</td>
+</tr>
+<tr>
+<td align="left">temporal_fused_time</td>
+<td align="left">nearest time actually used, fusing the predicted and observed times</td>
+</tr>
+<tr>
+<td align="left">temporal_observation_used</td>
+<td align="left">whether an observed nearest time was found and used (1.0) or not (0.0)</td>
+</tr>
+<tr>
+<td align="left">temporal_window_min</td>
+<td align="left">lower bound of the time window used to search for the observed time</td>
+</tr>
+<tr>
+<td align="left">temporal_window_max</td>
+<td align="left">upper bound of the time window used to search for the observed time</td>
 </tr>
 </tbody>
 </table>

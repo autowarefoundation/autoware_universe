@@ -22947,6 +22947,15 @@ control_cmd_pub_-&gt;publish(out);
 </ul>
 <h4 id="parameter">Parameter<a class="headerlink" href="#parameter" title="Permanent link">#</a></h4>
 <ul>
+<li><code>trajectory_reference_mode</code>: <code>spatial</code> or <code>temporal</code> (default: <code>spatial</code>)<ul>
+<li><code>spatial</code>: the reference trajectory is tracked based on distance, calculating the time step of
+  each prediction point from distance and velocity.</li>
+<li><code>temporal</code>: the reference trajectory's <code>time_from_start</code> field is used directly to track the
+  trajectory based on time steps.</li>
+<li>This parameter is declared here and shared with the lateral (MPC) and longitudinal (PID)
+  controllers.</li>
+</ul>
+</li>
 <li><code>ctrl_period</code>: control commands publishing period</li>
 <li><code>timeout_thr_sec</code>: duration in second after which input messages are discarded.<ul>
 <li>Each time the node receives lateral and longitudinal commands from each controller, it publishes an <code>Control</code> if the following two conditions are met.<ol>
