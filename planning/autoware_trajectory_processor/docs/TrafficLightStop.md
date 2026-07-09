@@ -58,7 +58,7 @@ stop
 
 ### Context & Data
 
-The module utilizes the following data from `TrajectoryModifierContext` & `InputData`:
+The module utilizes the following data from `NodeContext` & `InputData`:
 
 - **Vehicle Info**: Used to account for the vehicle's dimensions (longitudinal offset) when checking for stop line intersections & computing stopping margin.
 - **Lanelet Map**: Used to find regulatory elements (traffic lights) and their associated stop lines.

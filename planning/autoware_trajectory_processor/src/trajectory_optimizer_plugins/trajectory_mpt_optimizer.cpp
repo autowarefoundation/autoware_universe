@@ -36,39 +36,32 @@ namespace autoware::trajectory_optimizer::plugin
 {
 
 void TrajectoryMPTOptimizer::initialize(
-  const std::string & name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+  const std::string & name,
+  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
 {
-  auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
-  context->node_ptr = node_ptr;
-  context->time_keeper = time_keeper;
   PluginBase::initialize(name, context);
 
+  auto node_ptr = get_node_ptr();
   RCLCPP_INFO(node_ptr->get_logger(), "MPT Optimizer plugin: Starting initialization...");
 
   try {
-    // Get vehicle info
-    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
+    vehicle_info_ = context_->vehicle_info;
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: Vehicle info loaded");
 
-    // Initialize debug data
     debug_data_ptr_ = std::make_shared<DebugData>();
 
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: Parameters set up");
 
-    // Create TimeKeeper for performance profiling
     auto debug_pub = node_ptr->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
       "~/debug/mpt_processing_time_detail_ms", 1);
     mpt_time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_pub);
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: TimeKeeper created");
 
-    // Initialize MPT optimizer
     mpt_optimizer_ptr_ = std::make_shared<MPTOptimizer>(
       node_ptr, mpt_params_.enable_debug_info, ego_nearest_param_, vehicle_info_, traj_param_,
       debug_data_ptr_, mpt_time_keeper_);
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: MPTOptimizer created");
 
-    // Create debug markers publisher
     debug_markers_pub_ = node_ptr->create_publisher<visualization_msgs::msg::MarkerArray>(
       "~/debug/mpt_bounds_markers", 1);
 
@@ -78,13 +71,6 @@ void TrajectoryMPTOptimizer::initialize(
       node_ptr->get_logger(), "MPT Optimizer plugin initialization FAILED: %s", e.what());
     throw;
   }
-}
-
-void TrajectoryMPTOptimizer::initialize(
-  const std::string & name,
-  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
-{
-  initialize(name, context->node_ptr, context->time_keeper);
 }
 
 void TrajectoryMPTOptimizer::set_up_params()

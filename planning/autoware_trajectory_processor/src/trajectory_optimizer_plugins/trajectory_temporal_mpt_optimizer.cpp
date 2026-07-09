@@ -96,22 +96,12 @@ std::string expand_user_path_string(const std::string & p)
 }  // namespace
 
 void TrajectoryTemporalMPTOptimizer::initialize(
-  const std::string & name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
-{
-  auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
-  context->node_ptr = node_ptr;
-  context->time_keeper = time_keeper;
-  PluginBase::initialize(name, context);
-  // set_up_params() already ran via PluginBase::initialize()
-  create_or_reset_solver();
-}
-
-void TrajectoryTemporalMPTOptimizer::initialize(
   const std::string & name,
   std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
 {
-  initialize(name, context->node_ptr, context->time_keeper);
+  PluginBase::initialize(name, context);
+  // set_up_params() already ran via PluginBase::initialize()
+  create_or_reset_solver();
 }
 
 void TrajectoryTemporalMPTOptimizer::set_up_params()

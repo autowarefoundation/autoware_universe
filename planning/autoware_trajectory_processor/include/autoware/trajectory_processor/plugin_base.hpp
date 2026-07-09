@@ -34,6 +34,7 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <functional>
 #include <memory>
@@ -69,10 +70,21 @@ struct InputData
 
 struct NodeContext
 {
+  explicit NodeContext(rclcpp::Node & node, bool listen_tf = false)
+  : node_ptr{&node},
+    vehicle_info{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
+    tf_buffer{std::make_shared<tf2_ros::Buffer>(node.get_clock())}
+  {
+    if (listen_tf) {
+      tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, &node);
+    }
+  }
+
   rclcpp::Node * node_ptr{nullptr};
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper{nullptr};
   autoware::vehicle_info_utils::VehicleInfo vehicle_info{};
-  tf2_ros::Buffer * tf_buffer{nullptr};
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer{nullptr};
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener{nullptr};
 };
 
 class PluginBase

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/surround_obstacle_stop.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -40,10 +39,10 @@
 
 namespace
 {
-using autoware::trajectory_modifier::TrajectoryModifierContext;
 using autoware::trajectory_modifier::plugin::InputData;
 using autoware::trajectory_modifier::plugin::SurroundObstacleStop;
 using autoware::trajectory_modifier::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::NodeContext;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -206,14 +205,10 @@ protected:
 
     set_up_default_params();
 
-    context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
+    context_ = std::make_shared<NodeContext>(*node_, true);
+    context_->time_keeper = time_keeper_;
     plugin_ = std::make_unique<SurroundObstacleStop>();
-    auto node_context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
-    node_context->node_ptr = node_.get();
-    node_context->time_keeper = time_keeper_;
-    node_context->vehicle_info = context_->vehicle_info;
-    node_context->tf_buffer = &context_->tf_buffer;
-    plugin_->initialize("test_surround_obstacle_stop", node_context);
+    plugin_->initialize("test_surround_obstacle_stop", context_);
     plugin_->update_params(params_);
   }
 
@@ -258,7 +253,7 @@ protected:
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<SurroundObstacleStop> plugin_;
   trajectory_modifier_params::Params params_;
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  std::shared_ptr<NodeContext> context_;
 };
 
 TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenDisabled)

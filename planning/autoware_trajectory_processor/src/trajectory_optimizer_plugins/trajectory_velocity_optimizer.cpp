@@ -30,14 +30,12 @@ namespace autoware::trajectory_optimizer::plugin
 {
 
 void TrajectoryVelocityOptimizer::initialize(
-  const std::string & name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+  const std::string & name,
+  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
 {
-  auto context = std::make_shared<autoware::trajectory_processor::plugin::NodeContext>();
-  context->node_ptr = node_ptr;
-  context->time_keeper = time_keeper;
   PluginBase::initialize(name, context);
 
+  auto node_ptr = get_node_ptr();
   sub_planning_velocity_ =
     std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
       node_ptr, "~/input/external_velocity_limit_mps", rclcpp::QoS{1});
@@ -50,13 +48,6 @@ void TrajectoryVelocityOptimizer::initialize(
   max_vel_msg.stamp = node_ptr->now();
   max_vel_msg.max_velocity = static_cast<float>(velocity_params_.default_max_velocity_mps);
   pub_velocity_limit_->publish(max_vel_msg);
-}
-
-void TrajectoryVelocityOptimizer::initialize(
-  const std::string & name,
-  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context)
-{
-  initialize(name, context->node_ptr, context->time_keeper);
 }
 
 bool TrajectoryVelocityOptimizer::modify_trajectory(

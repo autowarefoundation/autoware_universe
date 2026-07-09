@@ -16,7 +16,6 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_HPP_
 
 #include "autoware/trajectory_processor/plugin_base.hpp"
-#include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/input_data.hpp"
 
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
@@ -100,7 +99,7 @@ private:
   pluginlib::ClassLoader<autoware::trajectory_processor::plugin::PluginBase> plugin_loader_;
   std::vector<std::shared_ptr<autoware::trajectory_processor::plugin::PluginBase>> plugins_;
 
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  std::shared_ptr<autoware::trajectory_processor::plugin::NodeContext> context_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };
 
