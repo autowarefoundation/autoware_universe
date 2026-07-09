@@ -15,6 +15,7 @@
 #include "occluded_crosswalk.hpp"
 
 #include <autoware/grid_map_utils/polygon_iterator.hpp>
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <grid_map_ros/GridMapRosConverter.hpp>
 
@@ -91,7 +92,8 @@ std::vector<autoware_perception_msgs::msg::PredictedObject> select_and_inflate_o
 {
   std::vector<autoware_perception_msgs::msg::PredictedObject> selected_objects;
   for (const auto & o : objects) {
-    const auto vel_threshold = velocity_thresholds[o.classification.front().label];
+    const auto vel_threshold =
+      velocity_thresholds[autoware::object_recognition_utils::getHighestProbLabel(o.classification)];
     if (o.kinematics.initial_twist_with_covariance.twist.linear.x >= vel_threshold) {
       auto selected_object = o;
       selected_object.shape.dimensions.x += inflate_size;

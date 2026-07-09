@@ -19,6 +19,7 @@
 #include "occluded_crosswalk.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/trajectory/path_point_with_lane_id.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
@@ -1614,7 +1615,8 @@ void CrosswalkModule::updateObjectState(
       findEgoPassageDirectionAlongPath(ego_path);
     object_info_manager_.update(
       obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
-      is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,
+      is_ego_yielding, has_traffic_light, collision_point,
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification), p,
       crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
@@ -1693,7 +1695,8 @@ bool CrosswalkModule::isVehicle(const PredictedObject & object)
     return false;
   }
 
-  const auto & label = object.classification.front().label;
+  const auto label =
+    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::CAR) {
     return true;
@@ -1724,7 +1727,8 @@ bool CrosswalkModule::isCrosswalkUserType(const PredictedObject & object) const
     return false;
   }
 
-  const auto & label = object.classification.front().label;
+  const auto label =
+    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::UNKNOWN && planner_param_.look_unknown) {
     return true;
