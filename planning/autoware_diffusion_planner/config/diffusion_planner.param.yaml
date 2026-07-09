@@ -35,12 +35,10 @@
     delay_step: 0
     line_string_max_step_m: 5.0
     use_time_interpolation: false
-    object_history:
+    object_motion_resampling:
       enable: true                    # re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp
-      dt_sub_step_max: 0.11           # [s]  max integration sub-step for CTRV extrapolation
       yaw_rate_threshold: 0.01        # [rad/s]  below this, extrapolate with straight constant-velocity
-      max_extrapolation_time: 0.5     # [s]  max forward extrapolation horizon from newest observation
-      flip_yaw_threshold: 2.35619449  # [rad] (135 deg) backward yaw jump treated as a tracker heading flip
+      max_extrapolation_time: 0.5     # [s]  max extrapolation horizon (both forward from newest and backward from oldest observation)
     planning_factor:
       enable_stop: true
       enable_slowdown: false

@@ -135,7 +135,7 @@ struct DiffusionPlannerParams
   int64_t delay_step;
   double line_string_max_step_m;
   bool use_time_interpolation;
-  HistoryResamplingParams object_history;
+  HistoryResamplingParams object_motion_resampling;
   int dpm_solver_steps;
   double start_guidance_reference_distance_m;
   double start_guidance_max_scale;

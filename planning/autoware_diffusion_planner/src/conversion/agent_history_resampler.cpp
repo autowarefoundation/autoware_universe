@@ -32,6 +32,14 @@ namespace autoware::diffusion_planner
 namespace
 {
 
+// Fixed CTRV integration sub-step [s]; a larger extrapolation dt is split into steps no longer than
+// this to bound forward-Euler error (matches the tracker's dt_max sub-stepping).
+constexpr double CTRV_DT_SUB_STEP_MAX_S = 0.11;
+
+// A backward-in-time yaw jump larger than this [rad] (135 deg) is treated as a tracker heading
+// flip.
+constexpr double FLIP_YAW_THRESHOLD_RAD = 2.35619449;
+
 // Heading of a pose matrix in its own frame.
 double get_yaw(const Eigen::Matrix4d & pose)
 {
@@ -88,8 +96,8 @@ MotionState propagate_motion(
 
   // Sub-step to bound forward-Euler error, matching the tracker's dt_max sub-stepping. A negative
   // dt integrates the same equations backward; the step inherits its sign.
-  const double sub_step_max = std::max(params.dt_sub_step_max, 1e-3);
-  const int num_steps = std::max(1, static_cast<int>(std::ceil(std::abs(dt) / sub_step_max)));
+  const int num_steps =
+    std::max(1, static_cast<int>(std::ceil(std::abs(dt) / CTRV_DT_SUB_STEP_MAX_S)));
   const double step = dt / static_cast<double>(num_steps);
 
   MotionState s = state;
@@ -136,10 +144,10 @@ std::optional<AgentHistory> resample_history(
   }
 
   // R3 flip pre-pass: trusting the newest observation, walk backward and rotate any older heading
-  // that differs from its newer neighbor by more than flip_yaw_threshold by pi.
+  // that differs from its newer neighbor by more than FLIP_YAW_THRESHOLD_RAD by pi.
   for (size_t idx = n - 1; idx-- > 0;) {
     const double delta = autoware_utils_math::normalize_radian(obs_yaw[idx] - obs_yaw[idx + 1]);
-    if (std::abs(delta) > params.flip_yaw_threshold) {
+    if (std::abs(delta) > FLIP_YAW_THRESHOLD_RAD) {
       obs_yaw[idx] = autoware_utils_math::normalize_radian(obs_yaw[idx] + M_PI);
     }
   }
@@ -162,16 +170,20 @@ std::optional<AgentHistory> resample_history(
       frame_time - rclcpp::Duration::from_seconds(static_cast<double>(num_timesteps - 1 - k) * dt));
 
     if (target_sec <= obs_time[0]) {
-      // Before the oldest observation: extrapolate backward via the motion model so the synthesized
-      // past stays consistent with the oldest observation's velocity, rather than freezing at a
-      // fixed point (which would contradict a nonzero reported speed). At target_sec == obs_time[0]
-      // the dt is zero and this reduces to the oldest observation itself.
-      const MotionState start{obs_x[0], obs_y[0], obs_yaw[0]};
-      const MotionState propagated =
-        propagate_motion(start, obs_speed[0], obs_yaw_rate[0], target_sec - obs_time[0], params);
-      grid_states.push_back(make_grid_state(
-        raw[0].original_info, propagated.x, propagated.y, propagated.yaw, target_time,
-        std::nullopt));
+      // Before the oldest observation. Within the backward horizon, extrapolate via the motion
+      // model. Beyond the horizon, freeze at the oldest observation instead of fabricating an
+      const double back_dt = target_sec - obs_time[0];  // <= 0
+      if (-back_dt > params.max_extrapolation_time) {
+        grid_states.push_back(make_grid_state(
+          raw[0].original_info, obs_x[0], obs_y[0], obs_yaw[0], target_time, std::nullopt));
+      } else {
+        const MotionState start{obs_x[0], obs_y[0], obs_yaw[0]};
+        const MotionState propagated =
+          propagate_motion(start, obs_speed[0], obs_yaw_rate[0], back_dt, params);
+        grid_states.push_back(make_grid_state(
+          raw[0].original_info, propagated.x, propagated.y, propagated.yaw, target_time,
+          std::nullopt));
+      }
     } else if (target_sec <= newest_time) {
       // Within the observed history: interpolate position linearly, yaw along the shortest arc.
       while (search_start + 1 < n && obs_time[search_start + 1] < target_sec) {

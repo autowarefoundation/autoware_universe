@@ -26,7 +26,6 @@ namespace
 HistoryResamplingParams make_params()
 {
   HistoryResamplingParams params;
-  params.dt_sub_step_max = 0.11;
   params.yaw_rate_threshold = 0.01;
   params.max_extrapolation_time = 0.5;
   return params;
@@ -63,7 +62,7 @@ TEST(AgentHistoryResamplerTest, PropagateConstantTurnRateSingleStep)
   const auto params = make_params();
   const MotionState start{0.0, 0.0, 0.0};
   const double w = 0.5;
-  const double dt = 0.1;  // within dt_sub_step_max -> one sub-step
+  const double dt = 0.1;  // one fixed sub-step (0.1 s)
   const auto out = propagate_motion(start, 1.0, w, dt, params);
 
   EXPECT_NEAR(out.yaw, w * dt, 1e-9);
@@ -78,7 +77,7 @@ TEST(AgentHistoryResamplerTest, PropagateConstantTurnRateSubStepped)
   const auto params = make_params();
   const MotionState start{0.0, 0.0, 0.0};
   const double w = 1.0;
-  const double dt = 0.5;  // ceil(0.5 / 0.11) = 5 sub-steps
+  const double dt = 0.5;  // ceil(0.5 / 0.1) = 5 sub-steps
   const auto out = propagate_motion(start, 2.0, w, dt, params);
 
   EXPECT_NEAR(out.yaw, w * dt, 1e-9);

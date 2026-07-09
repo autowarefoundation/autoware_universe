@@ -36,17 +36,11 @@ struct HistoryResamplingParams
   // When false, histories are fed as buffered with no grid re-timing, retention, or dedup.
   bool enable{true};
 
-  // Maximum CTRV integration sub-step [s]; a larger extrapolation dt is split to bound Euler error.
-  double dt_sub_step_max{0.11};
-
   // Below this |yaw rate| [rad/s] an agent is propagated straight (constant velocity).
   double yaw_rate_threshold{0.01};
 
-  // Maximum forward extrapolation horizon [s] from the newest observation to the frame time.
+  // Maximum extrapolation horizon [s].
   double max_extrapolation_time{0.5};
-
-  // A backward-in-time yaw jump larger than this [rad] is treated as a tracker heading flip.
-  double flip_yaw_threshold{2.35619449};  // 135 deg
 };
 
 /**
@@ -62,8 +56,8 @@ struct MotionState
 /**
  * @brief Propagate a planar state by dt (CV when |yaw_rate| < yaw_rate_threshold, else CTRV). A
  * positive dt extrapolates forward and is clamped to max_extrapolation_time; a negative dt
- * extrapolates backward (uncapped, to fill the pre-first-observation past); a zero dt is a no-op.
- * Sub-stepped in either direction to bound forward-Euler error.
+ * extrapolates backward (the caller bounds it to max_extrapolation_time); a zero dt is a no-op.
+ * Sub-stepped in either direction with a fixed sub-step to bound forward-Euler error.
  */
 MotionState propagate_motion(
   const MotionState & state, double speed, double yaw_rate, double dt,

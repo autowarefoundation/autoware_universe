@@ -45,10 +45,8 @@ HistoryResamplingParams make_params()
 {
   HistoryResamplingParams params;
   params.enable = true;
-  params.dt_sub_step_max = 0.11;
   params.yaw_rate_threshold = 0.01;
   params.max_extrapolation_time = 0.5;
-  params.flip_yaw_threshold = 2.35619449;
   return params;
 }
 
@@ -187,16 +185,18 @@ TEST(AgentLifecycleTest, DisappearedAgentDroppedOnReidentification)
   EXPECT_NEAR(latest_x(histories[0]), 50.0, 1e-6);  // only B; A was dropped, not frozen near 0
 }
 
-// A freshly seen agent has no real past; the pre-appearance grid slots are extrapolated backward by
-// motion (consistent with its velocity), not frozen at the first observation.
-TEST(AgentLifecycleTest, PastSlotsExtrapolatedBackwardForNewAgent)
+// A freshly seen agent has no real past. Within the backward extrapolation horizon the
+// pre-appearance slots are extrapolated by motion (consistent with its velocity); beyond the
+// horizon they are frozen at the oldest observation rather than receding indefinitely.
+TEST(AgentLifecycleTest, PastSlotsExtrapolatedThenFrozenBeyondHorizonForNewAgent)
 {
-  const auto params = make_params();
+  const auto params = make_params();  // max_extrapolation_time = 0.5 s
   const UUID uuid = autoware_utils_uuid::generate_uuid();
   AgentData agent_data;
 
   // Single observation at x = 0 moving +10 m/s; frame time coincides with the observation.
-  agent_data.update_histories(make_msg({make_object(uuid, 0.0, 10.0)}, 100.0), params);
+  constexpr double speed = 10.0;
+  agent_data.update_histories(make_msg({make_object(uuid, 0.0, speed)}, 100.0), params);
 
   const rclcpp::Time frame_time = to_time(100.0);
   const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
@@ -206,15 +206,24 @@ TEST(AgentLifecycleTest, PastSlotsExtrapolatedBackwardForNewAgent)
   const auto & states = histories[0].states();
   ASSERT_EQ(states.size(), static_cast<size_t>(INPUT_T_WITH_CURRENT));
 
-  // Newest slot sits at the observation; the oldest slot is a full window behind at constant speed.
-  EXPECT_NEAR(states.back().pose(0, 3), 0.0, 1e-6);
-  EXPECT_NEAR(
-    states.front().pose(0, 3), -10.0 * 0.1 * static_cast<double>(INPUT_T_WITH_CURRENT - 1), 1e-6);
-
-  // Strictly monotonic: each older slot is behind the next, i.e. no frozen cluster at the origin.
-  for (size_t i = 1; i < states.size(); ++i) {
-    EXPECT_LT(states[i - 1].pose(0, 3), states[i].pose(0, 3));
+  constexpr double dt = 0.1;  // PREDICTION_TIME_STEP_S
+  for (size_t i = 0; i < states.size(); ++i) {
+    // Time [s] each slot sits before the observation (newest slot -> 0).
+    const double back_s = static_cast<double>(states.size() - 1 - i) * dt;
+    const double x = states[i].pose(0, 3);
+    if (back_s <= params.max_extrapolation_time + 1e-9) {
+      // Within horizon: back-propagated at constant speed (older slot sits further behind).
+      EXPECT_NEAR(x, -speed * back_s, 1e-6);
+    } else {
+      // Beyond horizon: frozen at the oldest observation (x = 0), not further back-propagated.
+      EXPECT_NEAR(x, 0.0, 1e-6);
+    }
   }
+
+  // Newest slot sits at the observation; the oldest slot is frozen there too (well beyond the 0.5 s
+  // horizon), while the horizon edge reaches -speed * max_extrapolation_time.
+  EXPECT_NEAR(states.back().pose(0, 3), 0.0, 1e-6);
+  EXPECT_NEAR(states.front().pose(0, 3), 0.0, 1e-6);
 }
 
 }  // namespace autoware::diffusion_planner::test

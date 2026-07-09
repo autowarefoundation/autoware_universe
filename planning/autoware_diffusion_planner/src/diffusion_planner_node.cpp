@@ -199,15 +199,12 @@ void DiffusionPlanner::set_up_params()
   params_.delay_step = this->declare_parameter<int64_t>("delay_step", 0);
   params_.line_string_max_step_m = this->declare_parameter<double>("line_string_max_step_m", 5.0);
   params_.use_time_interpolation = this->declare_parameter<bool>("use_time_interpolation", false);
-  params_.object_history.enable = this->declare_parameter<bool>("object_history.enable", true);
-  params_.object_history.dt_sub_step_max =
-    this->declare_parameter<double>("object_history.dt_sub_step_max", 0.11);
-  params_.object_history.yaw_rate_threshold =
-    this->declare_parameter<double>("object_history.yaw_rate_threshold", 0.01);
-  params_.object_history.max_extrapolation_time =
-    this->declare_parameter<double>("object_history.max_extrapolation_time", 0.5);
-  params_.object_history.flip_yaw_threshold =
-    this->declare_parameter<double>("object_history.flip_yaw_threshold", 2.35619449);
+  params_.object_motion_resampling.enable =
+    this->declare_parameter<bool>("object_motion_resampling.enable", true);
+  params_.object_motion_resampling.yaw_rate_threshold =
+    this->declare_parameter<double>("object_motion_resampling.yaw_rate_threshold", 0.01);
+  params_.object_motion_resampling.max_extrapolation_time =
+    this->declare_parameter<double>("object_motion_resampling.max_extrapolation_time", 0.5);
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
@@ -321,18 +318,14 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(parameters, "delay_step", temp_params.delay_step);
     update_param<double>(parameters, "line_string_max_step_m", temp_params.line_string_max_step_m);
     update_param<bool>(parameters, "use_time_interpolation", temp_params.use_time_interpolation);
-    update_param<bool>(parameters, "object_history.enable", temp_params.object_history.enable);
+    update_param<bool>(
+      parameters, "object_motion_resampling.enable", temp_params.object_motion_resampling.enable);
     update_param<double>(
-      parameters, "object_history.dt_sub_step_max", temp_params.object_history.dt_sub_step_max);
+      parameters, "object_motion_resampling.yaw_rate_threshold",
+      temp_params.object_motion_resampling.yaw_rate_threshold);
     update_param<double>(
-      parameters, "object_history.yaw_rate_threshold",
-      temp_params.object_history.yaw_rate_threshold);
-    update_param<double>(
-      parameters, "object_history.max_extrapolation_time",
-      temp_params.object_history.max_extrapolation_time);
-    update_param<double>(
-      parameters, "object_history.flip_yaw_threshold",
-      temp_params.object_history.flip_yaw_threshold);
+      parameters, "object_motion_resampling.max_extrapolation_time",
+      temp_params.object_motion_resampling.max_extrapolation_time);
     update_param<double>(
       parameters, "guidance.start_guidance.reference_distance_m",
       temp_params.start_guidance_reference_distance_m);
