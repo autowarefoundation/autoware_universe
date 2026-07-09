@@ -135,17 +135,19 @@ protected:
     optimizer_options.append_parameter_override("use_sim_time", true);
     test_options.append_parameter_override("use_sim_time", true);
 
-    const auto modifier_dir =
+    const auto processor_dir =
       ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
-    const auto optimizer_dir =
-      ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
+    const auto path_optimizer_dir =
+      ament_index_cpp::get_package_share_directory("autoware_path_optimizer");
+    const auto core_planning_dir =
+      ament_index_cpp::get_package_share_directory("autoware_core_planning");
     const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
     optimizer_options.append_parameter_override(
       "trajectory_velocity_optimizer.smooth_velocities", true);
 
     // Remap modifier output to optimizer input and load param files
     modifier_options.arguments(
-      {"--ros-args", "--params-file", modifier_dir + "/config/trajectory_modifier.param.yaml",
+      {"--ros-args", "--params-file", processor_dir + "/config/trajectory_modifier.param.yaml",
        "--params-file", test_utils_dir + "/config/test_vehicle_info.param.yaml", "-r",
        "~/output/candidate_trajectories:=/combined/trajectories", "-r",
        "~/input/odometry:=/localization/kinematic_state", "-r",
@@ -155,25 +157,31 @@ protected:
     optimizer_options.arguments(
       {"--ros-args",
        "--params-file",
-       optimizer_dir + "/config/trajectory_optimizer.param.yaml",
+       processor_dir + "/config/trajectory_optimizer.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_qp_smoother.param.yaml",
+       processor_dir + "/config/plugins/trajectory_qp_smoother.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_point_fixer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_point_fixer.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_extender.param.yaml",
+       processor_dir + "/config/plugins/trajectory_extender.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_spline_smoother.param.yaml",
+       processor_dir + "/config/plugins/trajectory_spline_smoother.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml",
+       "--params-file",
+       processor_dir + "/config/trajectory_smoothing/elastic_band_smoother.param.yaml",
+       "--params-file",
+       path_optimizer_dir + "/config/path_optimizer.param.yaml",
        "--params-file",
        test_utils_dir + "/config/test_vehicle_info.param.yaml",
+       "--params-file",
+       core_planning_dir + "/config/common.param.yaml",
        "-r",
        "~/input/trajectories:=/combined/trajectories",
        "-r",
