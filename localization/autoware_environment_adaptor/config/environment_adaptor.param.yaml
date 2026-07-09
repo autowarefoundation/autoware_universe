@@ -1,0 +1,46 @@
+/**:
+  ros__parameters:
+    # Default environment ID when the pose is not within any designated area polygon
+    default_environment_id: 0
+
+    # Area subtype to environment ID mapping
+    # The lanelet2 polygon type must be "degenerate_area"
+    # Environment ID definitions:
+    #   0: Normal environment
+    #   1: Uniform road (e.g., tunnel straight sections)
+    #   2: Feature-poor road
+    area_subtype_uniform_road:
+      environment_id: 1
+    area_subtype_feature_poor_road:
+      environment_id: 2
+
+    # --- pose covariance ---
+    # When no environment_<id>_output_pose_covariance is defined for the classified
+    # environment_id, the input pose covariance is passed through unchanged.
+
+    # Covariance for environment_id=1 (uniform road / tunnel)
+    environment_1_output_pose_covariance:
+      [1.0, 0.0,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0225,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0,   0.0225, 0.0,     0.0,      0.0,
+       0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
+       0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,
+       0.0,   0.0,   0.0,   0.0,      0.0,      0.000625]
+
+    # Covariance for environment_id=2 (feature-poor road)
+    environment_2_output_pose_covariance:
+      [1.0,  0.0,  0.0,   0.0,      0.0,      0.0,
+       0.0,   1.0,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0,   0.0225, 0.0,     0.0,      0.0,
+       0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
+       0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,
+       0.0,   0.0,   0.0,   0.0,      0.0,      0.000625]
+
+    # --- twist velocity scale ---
+    # The scale factor is read from the "longitudinal_scale_factor" attribute on each
+    # degenerate_area polygon. When a polygon has no such attribute,
+    # default_longitudinal_scale_factor is applied instead.
+    # Outside all degenerate_area polygons (or before the map is ready),
+    # no scaling is applied (equivalent to a factor of 1.0), regardless of this value.
+    default_longitudinal_scale_factor: 1.0
+    map_longitudinal_scale_factor_attribute: longitudinal_scale_factor

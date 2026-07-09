@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Environment Adaptor Node Parameters",
+  "type": "object",
+  "definitions": {
+    "environment_adaptor": {
+      "type": "object",
+      "properties": {
+        "default_environment_id": {
+          "type": "integer",
+          "default": 0,
+          "description": "Environment ID used when the pose is outside all degenerate_area polygons, or when map is not ready"
+        },
+        "default_longitudinal_scale_factor": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Longitudinal velocity scale factor applied only inside a degenerate_area polygon that has no per-polygon map attribute. Outside all polygons (or before the map is ready), no scaling is applied. Applied as v_out = v_in * factor"
+        },
+        "map_longitudinal_scale_factor_attribute": {
+          "type": "string",
+          "default": "longitudinal_scale_factor",
+          "description": "Lanelet2 polygon attribute name for per-area longitudinal scale factor override"
+        }
+      },
+      "patternProperties": {
+        "^area_subtype_[a-zA-Z0-9_]+$": {
+          "type": "object",
+          "properties": {
+            "environment_id": {
+              "type": "integer",
+              "description": "Environment ID assigned to Lanelet2 polygons with matching subtype attribute"
+            }
+          },
+          "required": ["environment_id"],
+          "additionalProperties": false
+        },
+        "^environment_[0-9]+_output_pose_covariance$": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 36,
+          "maxItems": 36,
+          "description": "6x6 pose covariance (row-major, 36 elements) in body frame for the specified environment ID"
+        }
+      },
+      "required": [
+        "default_environment_id",
+        "default_longitudinal_scale_factor",
+        "map_longitudinal_scale_factor_attribute"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/environment_adaptor"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
