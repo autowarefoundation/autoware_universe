@@ -79,28 +79,32 @@ private:
   // type
   enum RequestType { CALL, CANCEL };
 
-  template <typename MessageT>
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT)
-  create_polling_sub(const std::string & topic_name)
-  {
-    return this->create_polling_subscriber<MessageT>(topic_name, rclcpp::QoS{1});
-  }
-
   // Subscribers with callback
   AUTOWARE_SUBSCRIPTION_PTR(tier4_system_msgs::msg::OperationModeAvailability)
   sub_operation_mode_availability_;
   // Subscribers without callback
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(nav_msgs::msg::Odometry) sub_odom_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::ControlModeReport) sub_control_mode_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(nav_msgs::msg::Odometry) sub_odom_{
+    create_polling_subscriber<nav_msgs::msg::Odometry>("~/input/odometry")};
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::ControlModeReport) sub_control_mode_{
+    create_polling_subscriber<autoware_vehicle_msgs::msg::ControlModeReport>(
+      "~/input/control_mode")};
   AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
-  sub_mrm_pull_over_status_;
+  sub_mrm_pull_over_status_{create_polling_subscriber<tier4_system_msgs::msg::MrmBehaviorStatus>(
+    "~/input/mrm/pull_over/status")};
   AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
-  sub_mrm_comfortable_stop_status_;
+  sub_mrm_comfortable_stop_status_{
+    create_polling_subscriber<tier4_system_msgs::msg::MrmBehaviorStatus>(
+      "~/input/mrm/comfortable_stop/status")};
   AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
-  sub_mrm_emergency_stop_status_;
+  sub_mrm_emergency_stop_status_{
+    create_polling_subscriber<tier4_system_msgs::msg::MrmBehaviorStatus>(
+      "~/input/mrm/emergency_stop/status")};
   AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_adapi_v1_msgs::msg::OperationModeState)
-  sub_operation_mode_state_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::GearCommand) sub_gear_cmd_;
+  sub_operation_mode_state_{
+    create_polling_subscriber<autoware_adapi_v1_msgs::msg::OperationModeState>(
+      "~/input/api/operation_mode/state")};
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::GearCommand) sub_gear_cmd_{
+    create_polling_subscriber<autoware_vehicle_msgs::msg::GearCommand>("~/input/gear")};
 
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_system_msgs::msg::OperationModeAvailability)
   operation_mode_availability_;
