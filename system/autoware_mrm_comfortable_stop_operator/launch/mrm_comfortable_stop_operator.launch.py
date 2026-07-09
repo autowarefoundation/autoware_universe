@@ -19,8 +19,7 @@ from launch.actions import OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
-from launch_ros.actions import ComposableNodeContainer
-from launch_ros.descriptions import ComposableNode
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 import yaml
 
@@ -30,9 +29,9 @@ def launch_setup(context, *args, **kwargs):
     with open(config_file_path, "r") as f:
         params = yaml.safe_load(f)["/**"]["ros__parameters"]
 
-    component = ComposableNode(
+    node = Node(
         package="autoware_mrm_comfortable_stop_operator",
-        plugin="autoware::mrm_comfortable_stop_operator::MrmComfortableStopOperator",
+        executable="autoware_mrm_comfortable_stop_operator_node",
         name="mrm_comfortable_stop_operator",
         parameters=[
             params,
@@ -42,28 +41,18 @@ def launch_setup(context, *args, **kwargs):
             ("~/output/mrm/comfortable_stop/status", "/system/mrm/comfortable_stop/status"),
             ("~/output/velocity_limit", "/planning/scenario_planning/max_velocity_candidates"),
             ("~/output/velocity_limit/clear", "/planning/scenario_planning/clear_velocity_limit"),
-        ],
-    )
-
-    container = ComposableNodeContainer(
-        name="mrm_comfortable_stop_operator_container",
-        namespace="mrm_comfortable_stop_operator",
-        package=LaunchConfiguration("container_package"),
-        executable=LaunchConfiguration("container_executable"),
-        composable_node_descriptions=[
-            component,
+            ("~/input/driving_mode_request", "/system/driving_mode/request"),
+            ("~/input/driving_mode_info", "/system/driving_mode/info"),
+            ("~/output/mrm_state", "/system/driving_mode/mrm_state"),
         ],
         additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
         output="screen",
     )
 
-    return [container]
+    return [node]
 
 
 def generate_launch_description():
-    # Resolves the component container (rclcpp_components vs agnocast_components) and the
-    # LD_PRELOAD value based on the ENABLE_AGNOCAST environment variable. Stays backward
-    # compatible when Agnocast is disabled.
     agnocast_env = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(

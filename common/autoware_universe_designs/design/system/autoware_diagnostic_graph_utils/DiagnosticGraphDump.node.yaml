@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: DiagnosticGraphDump.node
+
+package:
+  name: autoware_diagnostic_graph_utils
+  provider: autoware
+
+launch:
+  plugin: autoware::diagnostic_graph_utils::DumpNode
+  executable: dump_node
+  node_output: screen
+
+# interfaces
+# subscribes the diagnostic graph (struct + status) and dumps it to the console.
+subscribers:
+  - name: diag_graph_struct
+    message_type: tier4_system_msgs/msg/DiagGraphStruct
+    global: /diagnostics_graph/struct
+  - name: diag_graph_status
+    message_type: tier4_system_msgs/msg/DiagGraphStatus
+    global: /diagnostics_graph/status
+
+publishers: []
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: dump
+    trigger_conditions:
+      - on_input: diag_graph_status
+    outcomes: []

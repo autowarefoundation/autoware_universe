@@ -38,6 +38,7 @@ namespace autoware::ptv3
 {
 
 using autoware::cuda_utils::CudaUniquePtr;
+using autoware::cuda_utils::CudaUniquePtrHost;
 
 class PTV3_PUBLIC PTv3TRT
 {
@@ -63,6 +64,10 @@ public:
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
   void setPublishFilteredPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+
+  /// CUDA stream used for pointcloud processing and inference.
+  /// Enables stream-ordered producer/consumer lifetime handling.
+  cudaStream_t stream() const { return stream_; }
 
 protected:
   void initPtr();
@@ -134,7 +139,7 @@ protected:
 
   std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
   CudaUniquePtr<std::int64_t[]> serialized_pooling_num_voxels_d_{nullptr};
-  std::vector<std::int64_t> serialized_pooling_num_voxels_;
+  CudaUniquePtrHost<std::int64_t[]> serialized_pooling_num_voxels_;
   std::vector<std::int64_t> serialized_pooling_depths_;
 
   // Preprocess outputs

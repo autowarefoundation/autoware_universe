@@ -11,17 +11,6 @@
     # publish color mask for result visualization
     is_publish_color_mask: false
 
-    roi_overlay_segmentation_label:
-      UNKNOWN : true
-      CAR : false
-      TRUCK : false
-      BUS : false
-      MOTORCYCLE : true
-      BICYCLE : true
-      PEDESTRIAN : true
-      ANIMAL: true
-      HAZARD: true
-
     score_threshold: 0.35
     nms_threshold: 0.7
 

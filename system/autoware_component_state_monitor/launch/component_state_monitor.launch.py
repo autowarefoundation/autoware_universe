@@ -20,10 +20,11 @@ import launch
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
-from launch_ros.descriptions import ComposableNode
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.utilities import make_namespace_absolute
 from launch_ros.utilities import prefix_namespace
@@ -70,22 +71,35 @@ def launch_setup(context, *args, **kwargs):
         topic_monitor_param[row["type"]][row["module"]].append(create_topic_monitor_name(row))
     topic_monitor_param = {name: dict(module) for name, module in topic_monitor_param.items()}
 
-    # create component
-    component = ComposableNode(
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        ),
+    )
+    state_monitor_node = Node(
         namespace="component_state_monitor",
         name="component",
         package="autoware_component_state_monitor",
-        plugin="autoware::component_state_monitor::StateMonitor",
+        executable="component_state_monitor_node",
         parameters=[{"topic_monitor_names": topic_monitor_names}, topic_monitor_param],
+        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
+        output="screen",
     )
+    # The topic_state_monitor nodes remain composable nodes loaded into this container by name.
     container = ComposableNodeContainer(
         namespace="component_state_monitor",
         name="container",
         package="rclcpp_components",
         executable="component_container",
-        composable_node_descriptions=[component],
+        composable_node_descriptions=[],
     )
-    return [container, *topic_monitor_nodes]
+    return [agnocast_env, state_monitor_node, container, *topic_monitor_nodes]
 
 
 def generate_launch_description():

@@ -1,0 +1,41 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ProcessingTimeChecker.node
+
+package:
+  name: autoware_processing_time_checker
+  provider: autoware
+
+launch:
+  plugin: autoware::processing_time_checker::ProcessingTimeChecker
+  executable: processing_time_checker_node
+  node_output: screen
+
+# interfaces
+# subscribes each topic in processing_time_topic_name_list (Float64Stamped);
+# a representative processing_time input is shown.
+subscribers:
+  - name: processing_time
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: input/processing_time
+
+publishers:
+  - name: metrics
+    message_type: tier4_metric_msgs/msg/MetricArray
+    remap_target: ~/metrics
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/processing_time_checker.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: check
+    trigger_conditions:
+      - on_input: processing_time
+    outcomes:
+      - to_output: metrics
