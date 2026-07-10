@@ -39,36 +39,15 @@ void SmoothStop::init(
   m_strong_acc = std::max(std::min(m_strong_acc, m_params.max_strong_acc), m_params.min_strong_acc);
 }
 
-void SmoothStop::setParams(
-  double max_strong_acc, double min_strong_acc, double weak_acc, double weak_stop_acc,
-  double strong_stop_acc, double min_fast_vel, double min_running_vel, double min_running_acc,
-  double weak_stop_time, double weak_stop_dist, double strong_stop_dist)
+void SmoothStop::setParams(const Params & params)
 {
-  m_params.max_strong_acc = max_strong_acc;
-  m_params.min_strong_acc = min_strong_acc;
-  m_params.weak_acc = weak_acc;
-  m_params.weak_stop_acc = weak_stop_acc;
-  m_params.strong_stop_acc = strong_stop_acc;
-
-  m_params.min_fast_vel = min_fast_vel;
-  m_params.min_running_vel = min_running_vel;
-  m_params.min_running_acc = min_running_acc;
-  m_params.weak_stop_time = weak_stop_time;
-
-  m_params.weak_stop_dist = weak_stop_dist;
-  m_params.strong_stop_dist = strong_stop_dist;
-
-  m_is_set_params = true;
+  m_params = params;
 }
 
 std::experimental::optional<double> SmoothStop::calcTimeToStop(
   const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
   const rclcpp::Time & current_time) const
 {
-  if (!m_is_set_params) {
-    throw std::runtime_error("Trying to calculate uninitialized SmoothStop");
-  }
-
   // return when vel_hist is empty
   const double vel_hist_size = static_cast<double>(vel_hist.size());
   if (vel_hist_size == 0.0) {
@@ -120,10 +99,6 @@ double SmoothStop::calculate(
   const std::vector<std::pair<rclcpp::Time, double>> & vel_hist, const double delay_time,
   const rclcpp::Time & current_time, DebugValues & debug_values)
 {
-  if (!m_is_set_params) {
-    throw std::runtime_error("Trying to calculate uninitialized SmoothStop");
-  }
-
   // predict time to stop
   const auto time_to_stop = calcTimeToStop(vel_hist, current_time);
 

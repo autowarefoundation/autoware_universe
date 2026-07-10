@@ -35,6 +35,25 @@ namespace autoware::motion::control::pid_longitudinal_controller
 class SmoothStop
 {
 public:
+  struct Params
+  {
+    double max_strong_acc;
+    double min_strong_acc;
+    double weak_acc;
+    double weak_stop_acc;
+    double strong_stop_acc;
+
+    double min_fast_vel;
+    double min_running_vel;
+    double min_running_acc;
+    double weak_stop_time;
+
+    double weak_stop_dist;
+    double strong_stop_dist;
+  };
+
+  explicit SmoothStop(const Params & params) : m_params(params) {}
+
   /**
    * @brief initialize the state of the smooth stop
    * @param [in] pred_vel_in_target predicted ego velocity when the stop command will be executed
@@ -46,31 +65,16 @@ public:
     const rclcpp::Time & current_time);
 
   /**
-   * @brief set the parameters of this smooth stop
-   * @param [in] max_strong_acc maximum strong acceleration value [m/s²]
-   * @param [in] min_strong_acc minumum strong acceleration value [m/s²]
-   * @param [in] weak_acc weak acceleration value [m/s²]
-   * @param [in] weak_stop_acc weak stopping acceleration value [m/s²]
-   * @param [in] strong_stop_acc strong stopping acceleration value [m/s²]
-   * @param [in] min_fast_vel minumum velocity to consider ego to be running fast [m/s]
-   * @param [in] min_running_vel minimum velocity to consider ego to be running [m/s]
-   * @param [in] min_running_acc minimum acceleration to consider ego to be running [m/s]
-   * @param [in] weak_stop_time time allowed for stopping with a weak acceleration [s]
-   * @param [in] weak_stop_dist distance to the stop point bellow which a weak accel is applied [m]
-   * @param [in] strong_stop_dist distance to the stop point bellow which a strong accel is applied
-   * [m]
+   * @brief update the parameters of this smooth stop, e.g. on a dynamic reconfiguration
+   * @param [in] params new parameters to apply
    */
-  void setParams(
-    double max_strong_acc, double min_strong_acc, double weak_acc, double weak_stop_acc,
-    double strong_stop_acc, double min_fast_vel, double min_running_vel, double min_running_acc,
-    double weak_stop_time, double weak_stop_dist, double strong_stop_dist);
+  void setParams(const Params & params);
 
   /**
    * @brief predict time when car stops by fitting some latest observed velocity history
    *        with linear function (v = at + b)
    * @param [in] vel_hist history of previous ego velocities as (rclcpp::Time, double[m/s]) pairs
    * @param [in] current_time time used as the reference point for the velocity history deltas
-   * @throw std::runtime_error if parameters have not been set
    */
   std::experimental::optional<double> calcTimeToStop(
     const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
@@ -88,7 +92,6 @@ public:
    * @param [in] vel_hist history of previous ego velocities as (rclcpp::Time, double[m/s]) pairs
    * @param [in] delay_time assumed time delay when the stop command will actually be executed
    * @param [in] current_time time at which this calculation occurs
-   * @throw std::runtime_error if parameters have not been set
    */
   double calculate(
     const double stop_dist, const double current_vel, const double current_acc,
@@ -96,29 +99,12 @@ public:
     const rclcpp::Time & current_time, DebugValues & debug_values);
 
 private:
-  struct Params
-  {
-    double max_strong_acc;
-    double min_strong_acc;
-    double weak_acc;
-    double weak_stop_acc;
-    double strong_stop_acc;
-
-    double min_fast_vel;
-    double min_running_vel;
-    double min_running_acc;
-    double weak_stop_time;
-
-    double weak_stop_dist;
-    double strong_stop_dist;
-  };
   Params m_params;
 
   enum class Mode { STRONG = 0, WEAK, WEAK_STOP, STRONG_STOP };
 
   double m_strong_acc;
   rclcpp::Time m_weak_acc_time;
-  bool m_is_set_params = false;
 };
 }  // namespace autoware::motion::control::pid_longitudinal_controller
 

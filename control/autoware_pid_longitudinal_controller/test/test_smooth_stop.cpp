@@ -41,18 +41,13 @@ TEST(TestSmoothStop, calculate_stopping_acceleration)
 
   const double delay_time = 0.17;
 
-  SmoothStop ss;
+  SmoothStop ss{SmoothStop::Params{
+    max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
+    min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist}};
   DebugValues debug_values;
 
   // fake, fully-controlled clock: no real sleeping and no dependency on wall-clock time
   Time now(0, 0, RCL_ROS_TIME);
-
-  // Cannot calculate before setting parameters
-  EXPECT_THROW(ss.calculate(0.0, 0.0, 0.0, {}, delay_time, now, debug_values), std::runtime_error);
-
-  ss.setParams(
-    max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
-    min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist);
 
   double vel_in_target;
   double stop_dist;
