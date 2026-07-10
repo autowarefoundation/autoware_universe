@@ -459,13 +459,50 @@ struct FirstOrderDubinsMppiInterface::Impl
       cost_params.boundary_threshold, cost_params.obstacle_collision_margin);
   }
 
-  void resetWarmStart()
+  void resetTrackingState()
   {
     step_count = 0;
-    u_nom.setZero();
     u_opt.setZero();
     arc_length = kInitArcLength;
     sim_time = 0.0F;
+  }
+
+  void seedNominalControlFromDiffusionReference(
+    const Trajectory & reference, const size_t start_idx)
+  {
+    if (reference.points.empty()) {
+      u_nom.setZero();
+      return;
+    }
+
+    const int accel_idx =
+      static_cast<int>(FirstOrderDubinsBicycleParams::ControlIndex::ACCELERATION_CMD);
+    const int steer_idx = static_cast<int>(FirstOrderDubinsBicycleParams::ControlIndex::STEER_CMD);
+    const float min_accel = vehicle_params.min_accel();
+    const float max_accel = vehicle_params.max_accel();
+    const float max_steer = vehicle_params.max_steer_angle;
+    const float wheel_base = vehicle_params.wheel_base;
+
+    for (int t = 0; t < kMppiHorizon; ++t) {
+      const size_t idx = std::min(start_idx + static_cast<size_t>(t), reference.points.size() - 1U);
+      const auto & point = reference.points[idx];
+      u_nom(accel_idx, t) = std::clamp(point.acceleration_mps2, min_accel, max_accel);
+
+      float steer = point.front_wheel_angle_rad;
+      if (std::abs(steer) <= 1.0E-6F && idx + 1U < reference.points.size()) {
+        const auto & next = reference.points[idx + 1U];
+        const float dx = static_cast<float>(next.pose.position.x - point.pose.position.x);
+        const float dy = static_cast<float>(next.pose.position.y - point.pose.position.y);
+        const float ds = std::hypot(dx, dy);
+        if (ds > 1.0E-6F) {
+          const float yaw0 = static_cast<float>(tf2::getYaw(point.pose.orientation));
+          const float yaw1 = static_cast<float>(tf2::getYaw(next.pose.orientation));
+          const float dyaw = std::atan2(std::sin(yaw1 - yaw0), std::cos(yaw1 - yaw0));
+          steer = std::atan(wheel_base * (dyaw / ds));
+        }
+      }
+      u_nom(steer_idx, t) = std::clamp(steer, -max_steer, max_steer);
+    }
   }
 
   void updateDiffusionReference(
@@ -488,9 +525,10 @@ struct FirstOrderDubinsMppiInterface::Impl
       step_count > 0 && (new_start_idx > tracking_start_idx + kTrackingIndexResetThreshold ||
                          tracking_start_idx > new_start_idx + kTrackingIndexResetThreshold);
     if (step_count == 0 || large_index_jump) {
-      resetWarmStart();
+      resetTrackingState();
     }
     tracking_start_idx = new_start_idx;
+    seedNominalControlFromDiffusionReference(reference, tracking_start_idx);
 
     const float ego_yaw = yawFromOdometry(odometry);
     const float ego_v = static_cast<float>(odometry.twist.twist.linear.x);
@@ -519,11 +557,6 @@ struct FirstOrderDubinsMppiInterface::Impl
 
   FirstOrderDubinsMppiControl runStep()
   {
-    if (step_count > 0) {
-      u_nom.leftCols(kMppiHorizon - 1) = u_opt.rightCols(kMppiHorizon - 1);
-      u_nom.rightCols(1) = u_opt.rightCols(1);
-    }
-
     const std::vector<mppi::path::PathReferenceSample> ref =
       buildDiffusionReferenceHorizon(diffusion_reference, tracking_start_idx, path);
     mppi::cost::fillFirstOrderDubinsBicycleCostFromPathReference<kRefHorizon>(cost, ref);
@@ -700,12 +733,17 @@ FirstOrderDubinsMppiOptimizationResult FirstOrderDubinsMppiInterface::optimizeTr
   const FirstOrderDubinsMppiControl control = impl_->runStep();
 
   const auto state_trajectory = impl_->controller->getActualStateSeq();
+  const Mppi::control_trajectory u_opt_traj = impl_->controller->getControlSeq();
   Trajectory output = input;
 
   const int pos_x_idx = static_cast<int>(FirstOrderDubinsBicycleParams::StateIndex::POS_X);
   const int pos_y_idx = static_cast<int>(FirstOrderDubinsBicycleParams::StateIndex::POS_Y);
   const int yaw_idx = static_cast<int>(FirstOrderDubinsBicycleParams::StateIndex::YAW);
   const int vel_x_idx = static_cast<int>(FirstOrderDubinsBicycleParams::StateIndex::VEL_X);
+  const int accel_cmd_idx =
+    static_cast<int>(FirstOrderDubinsBicycleParams::ControlIndex::ACCELERATION_CMD);
+  const int steer_cmd_idx =
+    static_cast<int>(FirstOrderDubinsBicycleParams::ControlIndex::STEER_CMD);
 
   const size_t num_points = std::min(output.points.size(), static_cast<size_t>(kMppiHorizon));
 
@@ -735,6 +773,8 @@ FirstOrderDubinsMppiOptimizationResult FirstOrderDubinsMppiInterface::optimizeTr
     out_point.pose.position.z = in_point.pose.position.z;
     out_point.pose.orientation = quaternionFromYaw(tracked_yaw);
     out_point.longitudinal_velocity_mps = tracked_v;
+    out_point.acceleration_mps2 = u_opt_traj(accel_cmd_idx, col);
+    out_point.front_wheel_angle_rad = u_opt_traj(steer_cmd_idx, col);
     ++i;
   }
 

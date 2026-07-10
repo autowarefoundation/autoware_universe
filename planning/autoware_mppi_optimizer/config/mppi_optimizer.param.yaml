@@ -4,7 +4,7 @@
 
     # FirstOrderDubinsBicycleCostParams (see first_order_dubins_bicycle_cost.cuh)
     desired_speed: 2.5
-    speed_coeff: 100.0
+    speed_coeff: 500.0
     track_coeff: 1000.0
     heading_coeff: 500.0
     crash_coeff: 100000.0
@@ -12,10 +12,10 @@
     boundary_threshold_left: -1.0
     boundary_threshold_right: -1.0
     lateral_acceleration_coeff: 300.0
-    lateral_jerk_coeff: 1000.0
+    lateral_jerk_coeff: 3000.0
     longitudinal_jerk_coeff: 10.0
     accel_cmd_coeff: 0.0
-    steer_cmd_coeff: 500.0
+    steer_cmd_coeff: 1000.0
     goal_pos_coeff: 1000.0
     goal_speed_coeff: 200.0
     goal_yaw_coeff: 500.0

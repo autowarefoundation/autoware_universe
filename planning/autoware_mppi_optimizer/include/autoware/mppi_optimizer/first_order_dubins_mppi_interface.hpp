@@ -111,8 +111,8 @@ public:
    * @brief Track a diffusion-planner reference (poses + velocities) with one MPPI step.
    *
    * Uses the diffusion trajectory directly as the MPPI reference horizon (x, y, yaw, v),
-   * keeps warm-started controls between calls, and returns the MPPI-predicted feasible
-   * state rollout that best tracks that reference.
+   * seeds u_nom from the reference trajectory controls each cycle, and returns the MPPI-predicted
+   * feasible state rollout that best tracks that reference.
    *
    * @param input Reference trajectory from the diffusion planner (map frame).
    * @param odometry Current ego odometry in the same frame as the trajectory.

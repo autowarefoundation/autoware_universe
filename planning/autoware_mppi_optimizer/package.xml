@@ -13,6 +13,7 @@
   <build_depend>eigen3_cmake_module</build_depend>
 
   <depend>MPPI-Generic</depend>
+  <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_utils</depend>
