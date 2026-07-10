@@ -172,20 +172,14 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   traj_points.back().pose.orientation = traj_points[traj_points.size() - 2].pose.orientation;
 }
 
-void TrajectoryKinematicFeasibilityEnforcer::set_up_params()
+void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
 
   // Get vehicle info
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
 
-  // Plugin-specific parameter
-  feasibility_params_.max_yaw_rate_rad_s = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s");
-
-  feasibility_params_.time_step_s =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_kinematic_feasibility.time_step_s");
+  feasibility_params_ = params.trajectory_kinematic_feasibility;
 
   // Log configuration
   RCLCPP_INFO(
@@ -197,22 +191,9 @@ void TrajectoryKinematicFeasibilityEnforcer::set_up_params()
     vehicle_info_.max_steer_angle_rad * 180.0 / M_PI);
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryKinematicFeasibilityEnforcer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryKinematicFeasibilityEnforcer::update_params(const TrajectoryOptimizerParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<double>(
-    parameters, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s",
-    feasibility_params_.max_yaw_rate_rad_s);
-
-  update_param<double>(
-    parameters, "trajectory_kinematic_feasibility.time_step_s", feasibility_params_.time_step_s);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  feasibility_params_ = params.trajectory_kinematic_feasibility;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

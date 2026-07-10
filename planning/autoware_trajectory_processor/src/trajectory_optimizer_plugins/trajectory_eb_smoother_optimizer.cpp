@@ -40,7 +40,7 @@ void TrajectoryEBSmootherOptimizer::optimize_trajectory(
     traj_points, data.current_odometry.pose.pose.position);
 }
 
-void TrajectoryEBSmootherOptimizer::set_up_params()
+void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParams &)
 {
   auto node_ptr = get_node_ptr();
   ego_nearest_param_ = EgoNearestParam(node_ptr);
@@ -52,25 +52,10 @@ void TrajectoryEBSmootherOptimizer::set_up_params()
   eb_path_smoother_ptr_->resetPreviousData();
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryEBSmootherOptimizer::on_parameter(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryOptimizerParams &)
 {
-  {  // parameters for ego nearest search
-    ego_nearest_param_.onParam(parameters);
-
-    // parameters for trajectory
-    common_param_.onParam(parameters);
-
-    // parameters for core algorithms
-    eb_path_smoother_ptr_->onParam(parameters);
-    eb_path_smoother_ptr_->initialize(false, common_param_);
-    eb_path_smoother_ptr_->resetPreviousData();
-  }
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  // EBPathSmoother manages its own parameter updates via node callbacks
+  // No schema-generated params to propagate for this plugin
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

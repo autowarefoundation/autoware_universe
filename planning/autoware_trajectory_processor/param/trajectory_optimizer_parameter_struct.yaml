@@ -52,6 +52,11 @@ trajectory_optimizer_node_params:
     default_value: false
     description: Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds
     read_only: false
+  use_temporal_mpt_optimizer:
+    type: bool
+    default_value: false
+    description: Enable Temporal MPT optimizer plugin (acados-based kinematic bicycle MPC for combined geometry and velocity optimization)
+    read_only: false
 
   trajectory_point_fixer:
     resample_close_points:

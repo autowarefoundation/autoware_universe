@@ -48,28 +48,26 @@ public:
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
     TrajectoryOptimizerData & data) = 0;
 
-  // Plugin parameter setup - plugins declare their own parameters here
-  virtual void set_up_params() = 0;
-
-  // Plugin parameter update callback - plugins update their own parameters here
-  virtual rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) = 0;
+  // Plugin parameter update callback
+  virtual void update_params(const TrajectoryOptimizerParams & params) = 0;
 
   // Initialize plugin with node context (for pluginlib-loaded plugins)
   virtual void initialize(
     const std::string & name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper,
+    const TrajectoryOptimizerParams & params)
   {
     name_ = name;
     node_ptr_ = node_ptr;
     time_keeper_ = time_keeper;
-    set_up_params();
+    on_initialize(params);
     std::cerr << "initialized TrajectoryOptimizerPlugin: " << name_ << std::endl;
   }
 
   std::string get_name() const { return name_; }
 
 protected:
+  virtual void on_initialize(const TrajectoryOptimizerParams & params) = 0;
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
 

@@ -29,13 +29,52 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryVelocityOptimizer::initialize(
-  const std::string & name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+void TrajectoryVelocityOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
 {
-  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
+  auto node_ptr = get_node_ptr();
+  using autoware_utils_rclcpp::get_or_declare_parameter;
 
-  set_up_params();
+  // 1. Copy parameters defined in generated TrajectoryOptimizerParams
+  velocity_params_.nearest_dist_threshold_m =
+    params.trajectory_velocity_optimizer.nearest_dist_threshold_m;
+  velocity_params_.nearest_yaw_threshold_deg =
+    params.trajectory_velocity_optimizer.nearest_yaw_threshold_deg;
+  velocity_params_.target_pull_out_speed_mps =
+    params.trajectory_velocity_optimizer.target_pull_out_speed_mps;
+  velocity_params_.target_pull_out_acc_mps2 =
+    params.trajectory_velocity_optimizer.target_pull_out_acc_mps2;
+  velocity_params_.max_lateral_accel_mps2 =
+    params.trajectory_velocity_optimizer.max_lateral_accel_mps2;
+  velocity_params_.set_engage_speed = params.trajectory_velocity_optimizer.set_engage_speed;
+  velocity_params_.limit_speed = params.trajectory_velocity_optimizer.limit_speed;
+  velocity_params_.limit_lateral_acceleration =
+    params.trajectory_velocity_optimizer.limit_lateral_acceleration;
+  velocity_params_.smooth_velocities = params.trajectory_velocity_optimizer.smooth_velocities;
+
+  // 2. Fetch parameters not in generated parameters manually
+  velocity_params_.min_limited_speed_mps = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.min_limited_speed_mps");
+  velocity_params_.default_max_velocity_mps =
+    get_or_declare_parameter<double>(*node_ptr, "max_vel");
+
+  auto & cjs = velocity_params_.continuous_jerk_smoother_params;
+  cjs.jerk_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight");
+  cjs.over_v_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight");
+  cjs.over_a_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight");
+  cjs.over_j_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight");
+  cjs.velocity_tracking_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight");
+  cjs.accel_tracking_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight");
+
+  cjs.max_accel = get_or_declare_parameter<double>(*node_ptr, "limit.max_acc");
+  cjs.min_decel = get_or_declare_parameter<double>(*node_ptr, "limit.min_acc");
+  cjs.max_jerk = get_or_declare_parameter<double>(*node_ptr, "limit.max_jerk");
+  cjs.min_jerk = get_or_declare_parameter<double>(*node_ptr, "limit.min_jerk");
 
   sub_planning_velocity_ =
     std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
@@ -125,127 +164,54 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   }
 }
 
-void TrajectoryVelocityOptimizer::set_up_params()
+void TrajectoryVelocityOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
+  velocity_params_.nearest_dist_threshold_m =
+    params.trajectory_velocity_optimizer.nearest_dist_threshold_m;
+  velocity_params_.nearest_yaw_threshold_deg =
+    params.trajectory_velocity_optimizer.nearest_yaw_threshold_deg;
+  velocity_params_.target_pull_out_speed_mps =
+    params.trajectory_velocity_optimizer.target_pull_out_speed_mps;
+  velocity_params_.target_pull_out_acc_mps2 =
+    params.trajectory_velocity_optimizer.target_pull_out_acc_mps2;
+  velocity_params_.max_lateral_accel_mps2 =
+    params.trajectory_velocity_optimizer.max_lateral_accel_mps2;
+  velocity_params_.set_engage_speed = params.trajectory_velocity_optimizer.set_engage_speed;
+  velocity_params_.limit_speed = params.trajectory_velocity_optimizer.limit_speed;
+  velocity_params_.limit_lateral_acceleration =
+    params.trajectory_velocity_optimizer.limit_lateral_acceleration;
+  velocity_params_.smooth_velocities = params.trajectory_velocity_optimizer.smooth_velocities;
 
-  velocity_params_.nearest_dist_threshold_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.nearest_dist_threshold_m");
-  velocity_params_.nearest_yaw_threshold_deg = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.nearest_yaw_threshold_deg");
-  velocity_params_.target_pull_out_speed_mps = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.target_pull_out_speed_mps");
-  velocity_params_.target_pull_out_acc_mps2 = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.target_pull_out_acc_mps2");
-  velocity_params_.max_lateral_accel_mps2 = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.max_lateral_accel_mps2");
-  velocity_params_.min_limited_speed_mps = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.min_limited_speed_mps");
-  velocity_params_.default_max_velocity_mps =
-    get_or_declare_parameter<double>(*node_ptr, "max_vel");
-  velocity_params_.set_engage_speed =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.set_engage_speed");
-  velocity_params_.limit_speed =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.limit_speed");
-  velocity_params_.limit_lateral_acceleration = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_velocity_optimizer.limit_lateral_acceleration");
-  velocity_params_.smooth_velocities =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.smooth_velocities");
+  node_ptr->get_parameter(
+    "trajectory_velocity_optimizer.min_limited_speed_mps", velocity_params_.min_limited_speed_mps);
+  node_ptr->get_parameter("max_vel", velocity_params_.default_max_velocity_mps);
 
-  // Continuous jerk smoother parameters - QP weights
   auto & cjs = velocity_params_.continuous_jerk_smoother_params;
-  cjs.jerk_weight = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight");
-  cjs.over_v_weight = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight");
-  cjs.over_a_weight = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight");
-  cjs.over_j_weight = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight");
-  cjs.velocity_tracking_weight = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight");
-  cjs.accel_tracking_weight = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight");
-
-  // Kinematic limits - loaded from common namespace (limit.*)
-  cjs.max_accel = get_or_declare_parameter<double>(*node_ptr, "limit.max_acc");
-  cjs.min_decel = get_or_declare_parameter<double>(*node_ptr, "limit.min_acc");
-  cjs.max_jerk = get_or_declare_parameter<double>(*node_ptr, "limit.max_jerk");
-  cjs.min_jerk = get_or_declare_parameter<double>(*node_ptr, "limit.min_jerk");
-}
-
-rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
-{
-  using autoware_utils_rclcpp::update_param;
-
-  update_param(
-    parameters, "trajectory_velocity_optimizer.nearest_dist_threshold_m",
-    velocity_params_.nearest_dist_threshold_m);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.nearest_yaw_threshold_deg",
-    velocity_params_.nearest_yaw_threshold_deg);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.target_pull_out_speed_mps",
-    velocity_params_.target_pull_out_speed_mps);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.target_pull_out_acc_mps2",
-    velocity_params_.target_pull_out_acc_mps2);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.max_lateral_accel_mps2",
-    velocity_params_.max_lateral_accel_mps2);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.min_limited_speed_mps",
-    velocity_params_.min_limited_speed_mps);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.set_engage_speed",
-    velocity_params_.set_engage_speed);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.limit_speed", velocity_params_.limit_speed);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.limit_lateral_acceleration",
-    velocity_params_.limit_lateral_acceleration);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.smooth_velocities",
-    velocity_params_.smooth_velocities);
-
-  // Continuous jerk smoother parameters - QP weights
-  auto & cjs = velocity_params_.continuous_jerk_smoother_params;
-  update_param(
-    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight",
-    cjs.jerk_weight);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight",
-    cjs.over_v_weight);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight",
-    cjs.over_a_weight);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight",
-    cjs.over_j_weight);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight",
+  node_ptr->get_parameter(
+    "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight", cjs.jerk_weight);
+  node_ptr->get_parameter(
+    "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight", cjs.over_v_weight);
+  node_ptr->get_parameter(
+    "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight", cjs.over_a_weight);
+  node_ptr->get_parameter(
+    "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight", cjs.over_j_weight);
+  node_ptr->get_parameter(
+    "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight",
     cjs.velocity_tracking_weight);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight",
+  node_ptr->get_parameter(
+    "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight",
     cjs.accel_tracking_weight);
 
-  // Kinematic limits - from common namespace (limit.*)
-  update_param(parameters, "limit.max_acc", cjs.max_accel);
-  update_param(parameters, "limit.min_acc", cjs.min_decel);
-  update_param(parameters, "limit.max_jerk", cjs.max_jerk);
-  update_param(parameters, "limit.min_jerk", cjs.min_jerk);
+  node_ptr->get_parameter("limit.max_acc", cjs.max_accel);
+  node_ptr->get_parameter("limit.min_acc", cjs.min_decel);
+  node_ptr->get_parameter("limit.max_jerk", cjs.max_jerk);
+  node_ptr->get_parameter("limit.min_jerk", cjs.min_jerk);
 
   // Update smoother parameters if it exists
   if (continuous_jerk_smoother_) {
     continuous_jerk_smoother_->set_params(cjs);
   }
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

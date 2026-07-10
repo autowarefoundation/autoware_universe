@@ -43,38 +43,14 @@ void TrajectorySplineSmoother::optimize_trajectory(
     traj_points, data.current_odometry.pose.pose.position);
 }
 
-void TrajectorySplineSmoother::set_up_params()
+void TrajectorySplineSmoother::on_initialize(const TrajectoryOptimizerParams & params)
 {
-  auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-
-  spline_params_.interpolation_resolution_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_spline_smoother.interpolation_resolution_m");
-  spline_params_.max_distance_discrepancy_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_spline_smoother.max_distance_discrepancy_m");
-  spline_params_.preserve_input_trajectory_orientation = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_spline_smoother.preserve_input_trajectory_orientation");
+  spline_params_ = params.trajectory_spline_smoother;
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectorySplineSmoother::update_params(const TrajectoryOptimizerParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param(
-    parameters, "trajectory_spline_smoother.interpolation_resolution_m",
-    spline_params_.interpolation_resolution_m);
-  update_param(
-    parameters, "trajectory_spline_smoother.max_distance_discrepancy_m",
-    spline_params_.max_distance_discrepancy_m);
-  update_param(
-    parameters, "trajectory_spline_smoother.preserve_input_trajectory_orientation",
-    spline_params_.preserve_input_trajectory_orientation);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  spline_params_ = params.trajectory_spline_smoother;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

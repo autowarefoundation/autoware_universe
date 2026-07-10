@@ -43,38 +43,14 @@ void TrajectoryExtender::optimize_trajectory(
     traj_points, past_ego_state_trajectory_.points, data.current_odometry);
 }
 
-void TrajectoryExtender::set_up_params()
+void TrajectoryExtender::on_initialize(const TrajectoryOptimizerParams & params)
 {
-  auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-
-  extender_params_.nearest_dist_threshold_m =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_dist_threshold_m");
-  extender_params_.nearest_yaw_threshold_deg =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_yaw_threshold_deg");
-  extender_params_.backward_trajectory_extension_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_extender.backward_trajectory_extension_m");
+  extender_params_ = params.trajectory_extender;
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryExtender::update_params(const TrajectoryOptimizerParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<double>(
-    parameters, "trajectory_extender.nearest_dist_threshold_m",
-    extender_params_.nearest_dist_threshold_m);
-  update_param<double>(
-    parameters, "trajectory_extender.nearest_yaw_threshold_deg",
-    extender_params_.nearest_yaw_threshold_deg);
-  update_param<double>(
-    parameters, "trajectory_extender.backward_trajectory_extension_m",
-    extender_params_.backward_trajectory_extension_m);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  extender_params_ = params.trajectory_extender;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

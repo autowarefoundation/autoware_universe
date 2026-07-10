@@ -63,6 +63,11 @@
           "default": false,
           "description": "Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds"
         },
+        "use_temporal_mpt_optimizer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Temporal MPT optimizer plugin (acados-based kinematic bicycle MPC for combined geometry and velocity optimization)"
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
@@ -559,7 +564,8 @@
         "use_trajectory_extender",
         "use_velocity_optimizer",
         "use_kinematic_feasibility_enforcer",
-        "use_mpt_optimizer"
+        "use_mpt_optimizer",
+        "use_temporal_mpt_optimizer"
       ]
     }
   },

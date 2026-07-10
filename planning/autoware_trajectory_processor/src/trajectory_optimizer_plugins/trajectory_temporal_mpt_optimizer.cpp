@@ -95,16 +95,7 @@ std::string expand_user_path_string(const std::string & p)
 }
 }  // namespace
 
-void TrajectoryTemporalMPTOptimizer::initialize(
-  const std::string & name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
-{
-  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
-  // set_up_params() already ran via TrajectoryOptimizerPluginBase::initialize()
-  create_or_reset_solver();
-}
-
-void TrajectoryTemporalMPTOptimizer::set_up_params()
+void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
   using autoware_utils_rclcpp::get_or_declare_parameter;
@@ -136,39 +127,38 @@ void TrajectoryTemporalMPTOptimizer::set_up_params()
       "generators/example_trajectory_file_xyv.py)",
       expand_user_path_string(mpt_params_.replay_fixture_directory).c_str());
   }
+
+  // params argument is ignored: temporal_mpt parameters are not in the central schema
+  (void)params;
+
+  create_or_reset_solver();
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryTemporalMPTOptimizer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryTemporalMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
+  auto node_ptr = get_node_ptr();
 
   int min_points_for_optimization = static_cast<int>(mpt_params_.min_points_for_optimization);
-  if (update_param(
-        parameters, "trajectory_temporal_mpt_optimizer.min_points_for_optimization",
-        min_points_for_optimization)) {
-    mpt_params_.min_points_for_optimization =
-      static_cast<size_t>(std::max(2, min_points_for_optimization));
-  }
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.enable_debug_info",
-    mpt_params_.enable_debug_info);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.publish_debug_topics",
-    mpt_params_.publish_debug_topics);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.write_replay_fixture",
-    mpt_params_.write_replay_fixture);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.replay_fixture_directory",
+  node_ptr->get_parameter(
+    "trajectory_temporal_mpt_optimizer.min_points_for_optimization", min_points_for_optimization);
+  mpt_params_.min_points_for_optimization =
+    static_cast<size_t>(std::max(2, min_points_for_optimization));
+
+  node_ptr->get_parameter(
+    "trajectory_temporal_mpt_optimizer.enable_debug_info", mpt_params_.enable_debug_info);
+  node_ptr->get_parameter(
+    "trajectory_temporal_mpt_optimizer.publish_debug_topics", mpt_params_.publish_debug_topics);
+  node_ptr->get_parameter(
+    "trajectory_temporal_mpt_optimizer.write_replay_fixture", mpt_params_.write_replay_fixture);
+  node_ptr->get_parameter(
+    "trajectory_temporal_mpt_optimizer.replay_fixture_directory",
     mpt_params_.replay_fixture_directory);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console",
+  node_ptr->get_parameter(
+    "trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console",
     mpt_params_.log_replay_fixture_to_console);
 
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  return result;
+  // params argument is ignored: temporal_mpt parameters are not in the central schema
+  (void)params;
 }
 
 void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
