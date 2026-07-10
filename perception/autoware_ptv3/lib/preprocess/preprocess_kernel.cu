@@ -632,7 +632,8 @@ std::size_t PreprocessCuda::generateFeatures(
     config_.min_x_range_, config_.min_y_range_, config_.min_z_range_, config_.max_x_range_,
     config_.max_y_range_, config_.max_z_range_, config_.voxel_x_size_, config_.voxel_y_size_,
     config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z,
-    static_cast<std::int32_t>(config_.grid_x_size_), static_cast<std::int32_t>(config_.grid_y_size_),
+    static_cast<std::int32_t>(config_.grid_x_size_),
+    static_cast<std::int32_t>(config_.grid_y_size_),
     static_cast<std::int32_t>(config_.grid_z_size_));
 
   CHECK_CUDA_ERROR(
