@@ -41,18 +41,17 @@ TEST(TestSmoothStop, calculate_stopping_acceleration)
 
   const double delay_time = 0.17;
 
+  DebugValues debug_values;
+
   SmoothStop ss{SmoothStop::Params{
     max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
     min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist}};
-  DebugValues debug_values;
-
-  // fake, fully-controlled clock: no real sleeping and no dependency on wall-clock time
-  Time now(0, 0, RCL_ROS_TIME);
 
   double vel_in_target;
   double stop_dist;
   double current_vel;
   double current_acc = 0.0;
+  Time now(0, 0, RCL_ROS_TIME);
   const std::vector<std::pair<Time, double>> velocity_history = {
     {now - Duration(3, 0), 3.0}, {now - Duration(2, 0), 2.0}, {now - Duration(1, 0), 1.0}};
   double accel;
