@@ -1,0 +1,460 @@
+trajectory_optimizer_node_params:
+  plugin_names:
+    type: string_array
+    default_value:
+      - autoware::trajectory_optimizer::plugin::TrajectoryPointFixer
+      - autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer
+      - autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother
+      - autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer
+      - autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother
+      - autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer
+      - autoware::trajectory_optimizer::plugin::TrajectoryExtender
+      - autoware::trajectory_optimizer::plugin::TrajectoryPointFixer
+    description: List of plugin class names to load in execution order. Plugins will be loaded dynamically at startup and executed in the order specified.
+    read_only: false
+  use_akima_spline_interpolation:
+    type: bool
+    default_value: false
+    description: Enable Akima spline interpolation for trajectory smoothing
+    read_only: false
+  use_eb_smoother:
+    type: bool
+    default_value: false
+    description: Enable Elastic Band smoother for trajectory smoothing
+    read_only: false
+  use_qp_smoother:
+    type: bool
+    default_value: true
+    description: Enable QP-based trajectory smoothing with explicit jerk constraints
+    read_only: false
+  use_trajectory_point_fixer:
+    type: bool
+    default_value: true
+    description: Remove repeated or invalid points, or points that go against the general trajectory direction
+    read_only: false
+  use_trajectory_extender:
+    type: bool
+    default_value: false
+    description: Enable trajectory extender to extend trajectory backward using ego pose history
+    read_only: false
+  use_velocity_optimizer:
+    type: bool
+    default_value: true
+    description: Enable velocity profile optimization with jerk filtering and constraint enforcement
+    read_only: false
+  use_kinematic_feasibility_enforcer:
+    type: bool
+    default_value: false
+    description: Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)
+    read_only: false
+  use_mpt_optimizer:
+    type: bool
+    default_value: false
+    description: Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds
+    read_only: false
+
+  trajectory_point_fixer:
+    resample_close_points:
+      type: bool
+      default_value: true
+      description: Enable resampling of close proximity points
+      read_only: false
+    min_dist_to_remove_m:
+      type: double
+      default_value: 0.01
+      description: Minimum distance threshold for removing close proximity points [m]
+      validation:
+        bounds<>: [0.0, 1.0]
+      read_only: false
+    min_dist_to_resample_m:
+      type: double
+      default_value: 0.05
+      description: Minimum distance threshold for merging close proximity points [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    stop_detection_velocity_threshold_mps:
+      type: double
+      default_value: 0.3
+      description: "Velocity threshold used by the stop-detection logic: points whose speed falls below this value while decelerating are treated as stop candidates by both the cluster-based and velocity-profile-based detectors [m/s]"
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+
+  trajectory_kinematic_feasibility:
+    max_yaw_rate_rad_s:
+      type: double
+      default_value: 0.7
+      description: Maximum yaw rate [rad/s].
+      validation:
+        bounds<>: [0.1, 2.0]
+      read_only: false
+    time_step_s:
+      type: double
+      default_value: 0.1
+      description: Time step for kinematic feasibility enforcement [s].
+      validation:
+        bounds<>: [0.01, 1.0]
+      read_only: false
+
+  trajectory_mpt_optimizer:
+    corridor_width_m:
+      type: double
+      default_value: 3.5
+      description: Base corridor width for adaptive bounds generation [m]. Defines the lateral distance from trajectory centerline to left/right bounds.
+      validation:
+        bounds<>: [2.0, 10.0]
+      read_only: false
+    enable_adaptive_width:
+      type: bool
+      default_value: true
+      description: Enable adaptive corridor width based on curvature and velocity. When true, corridor widens in curves and at low speeds.
+      read_only: false
+    curvature_width_factor:
+      type: double
+      default_value: 0.5
+      description: Factor for curvature-based corridor widening [m/rad]. Higher values provide more space in curves.
+      validation:
+        bounds<>: [0.0, 2.0]
+      read_only: false
+    velocity_width_factor:
+      type: double
+      default_value: 0.3
+      description: Factor for velocity-based corridor widening [m]. Higher values provide more maneuvering room at low speeds.
+      validation:
+        bounds<>: [0.0, 2.0]
+      read_only: false
+    min_clearance_m:
+      type: double
+      default_value: 0.5
+      description: Minimum clearance from vehicle edges to corridor bounds [m]. Ensures minimum safe distance.
+      validation:
+        bounds<>: [0.0, 2.0]
+      read_only: false
+    reset_previous_data_each_iteration:
+      type: bool
+      default_value: true
+      description: Reset MPT's previous optimization data each cycle. Should be true for diffusion planner (new trajectories each cycle), false for incremental planners.
+      read_only: false
+    enable_debug_info:
+      type: bool
+      default_value: false
+      description: Enable debug visualization markers for bounds and reference trajectory.
+      read_only: false
+    output_delta_arc_length_m:
+      type: double
+      default_value: 1.0
+      description: Spacing between trajectory points in MPT optimization [m]. Smaller values provide finer resolution but increase computation.
+      validation:
+        bounds<>: [0.1, 5.0]
+      read_only: false
+    output_backward_traj_length_m:
+      type: double
+      default_value: 5.0
+      description: Length of trajectory extension backward from ego pose [m].
+      validation:
+        bounds<>: [0.0, 20.0]
+      read_only: false
+    ego_nearest_dist_threshold_m:
+      type: double
+      default_value: 3.0
+      description: Distance threshold for finding nearest trajectory point to ego [m].
+      validation:
+        bounds<>: [0.5, 10.0]
+      read_only: false
+    ego_nearest_yaw_threshold_deg:
+      type: double
+      default_value: 45.0
+      description: Yaw threshold for finding nearest trajectory point to ego [degrees].
+      validation:
+        bounds<>: [10.0, 90.0]
+      read_only: false
+    acceleration_moving_average_window:
+      type: int
+      default_value: 5
+      description: Moving average window size for acceleration smoothing. Larger values produce smoother acceleration but increase lag. Window of 1 = no smoothing.
+      validation:
+        bounds<>: [1, 20]
+      read_only: false
+
+  trajectory_extender:
+    nearest_dist_threshold_m:
+      type: double
+      default_value: 1.5
+      description: Distance threshold for trajectory matching [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    nearest_yaw_threshold_deg:
+      type: double
+      default_value: 60.0
+      description: Yaw threshold for trajectory matching [deg]
+      validation:
+        bounds<>: [0.0, 360.0]
+      read_only: false
+    backward_trajectory_extension_m:
+      type: double
+      default_value: 5.0
+      description: Length to extend trajectory backward using ego history [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+
+  trajectory_spline_smoother:
+    interpolation_resolution_m:
+      type: double
+      default_value: 0.5
+      description: Interpolation resolution for Akima spline [m]
+      validation:
+        bounds<>: [0.01, 10.0]
+      read_only: false
+    max_distance_discrepancy_m:
+      type: double
+      default_value: 5.0
+      description: Maximum position deviation allowed for orientation copying [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    preserve_input_trajectory_orientation:
+      type: bool
+      default_value: true
+      description: Copy orientations from input trajectory to spline output
+      read_only: false
+
+  trajectory_qp_smoother:
+    weight_smoothness:
+      type: double
+      default_value: 10.0
+      description: Weight for path curvature minimization (geometric smoothness) [dimensionless]
+      validation:
+        bounds<>: [0.0, 1000.0]
+      read_only: false
+    weight_fidelity:
+      type: double
+      default_value: 1.0
+      description: Weight for path fidelity (staying close to original path) [dimensionless]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    time_step_s:
+      type: double
+      default_value: 0.1
+      description: Fixed time step for velocity/acceleration calculations [s]
+      validation:
+        bounds<>: [0.001, 10.0]
+      read_only: false
+    osqp_eps_abs:
+      type: double
+      default_value: 0.0001
+      description: OSQP absolute convergence tolerance
+      validation:
+        bounds<>: [0.00000001, 1.0]
+      read_only: false
+    osqp_eps_rel:
+      type: double
+      default_value: 0.0001
+      description: OSQP relative convergence tolerance
+      validation:
+        bounds<>: [0.00000001, 1.0]
+      read_only: false
+    osqp_max_iter:
+      type: int
+      default_value: 100
+      description: OSQP maximum solver iterations
+      validation:
+        bounds<>: [1, 10000]
+      read_only: false
+    osqp_verbose:
+      type: bool
+      default_value: false
+      description: Enable OSQP verbose solver output
+      read_only: false
+    preserve_input_trajectory_orientation:
+      type: bool
+      default_value: true
+      description: Copy orientations from input trajectory to smoothed output
+      read_only: false
+    max_distance_for_orientation_m:
+      type: double
+      default_value: 5.0
+      description: Max distance for nearest neighbor matching when copying orientations [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    use_velocity_based_fidelity:
+      type: bool
+      default_value: true
+      description: Enable velocity-dependent fidelity weighting (lower fidelity at low speeds)
+      read_only: false
+    velocity_threshold_mps:
+      type: double
+      default_value: 0.3
+      description: Velocity threshold at sigmoid midpoint for velocity-based fidelity [m/s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    sigmoid_sharpness:
+      type: double
+      default_value: 50.0
+      description: Sigmoid steepness for velocity-based fidelity transition (higher = sharper)
+      validation:
+        bounds<>: [1.0, 1000.0]
+      read_only: false
+    min_fidelity_weight:
+      type: double
+      default_value: 0.01
+      description: Minimum fidelity weight at very low speeds [dimensionless]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    max_fidelity_weight:
+      type: double
+      default_value: 1.0
+      description: Maximum fidelity weight at high speeds [dimensionless]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    num_constrained_points_start:
+      type: int
+      default_value: 3
+      description: Number of points from the start of the trajectory to constrain as hard constraints (preserves initial state)
+      validation:
+        bounds<>: [0, 100]
+      read_only: false
+    num_constrained_points_end:
+      type: int
+      default_value: 3
+      description: Number of points from the end of the trajectory to constrain as hard constraints
+      validation:
+        bounds<>: [0, 100]
+      read_only: false
+
+  trajectory_velocity_optimizer:
+    nearest_dist_threshold_m:
+      type: double
+      default_value: 1.5
+      description: Distance threshold for trajectory matching [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    nearest_yaw_threshold_deg:
+      type: double
+      default_value: 60.0
+      description: Yaw threshold for trajectory matching [deg]
+      validation:
+        bounds<>: [0.0, 360.0]
+      read_only: false
+    target_pull_out_speed_mps:
+      type: double
+      default_value: 1.0
+      description: Target speed during pull-out maneuver [m/s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    target_pull_out_acc_mps2:
+      type: double
+      default_value: 1.0
+      description: Target acceleration during pull-out maneuver [m/s²]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    max_lateral_accel_mps2:
+      type: double
+      default_value: 1.5
+      description: Maximum lateral acceleration [m/s²]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    set_engage_speed:
+      type: bool
+      default_value: false
+      description: Set minimum speed during engage
+      read_only: false
+    limit_speed:
+      type: bool
+      default_value: true
+      description: Enable speed limiting
+      read_only: false
+    limit_lateral_acceleration:
+      type: bool
+      default_value: false
+      description: Enable lateral acceleration limiting
+      read_only: false
+    smooth_velocities:
+      type: bool
+      default_value: false
+      description: Enable jerk-filtered velocity smoothing
+      read_only: false
+
+  elastic_band_params:
+    common:
+      output_delta_arc_length:
+        type: double
+        default_value: 0.5
+        description: Delta arc length for output trajectory [m]
+        validation:
+          bounds<>: [0.01, 10.0]
+        read_only: false
+      output_backward_traj_length:
+        type: double
+        default_value: 5.0
+        description: Backward length for backward trajectory from base_link [m]
+        validation:
+          bounds<>: [0.0, 100.0]
+        read_only: false
+    elastic_band:
+      option:
+        enable_warm_start:
+          type: bool
+          default_value: true
+          description: Enable warm start for optimization
+          read_only: false
+        enable_optimization_validation:
+          type: bool
+          default_value: false
+          description: Enable optimization validation
+          read_only: false
+      common:
+        num_points:
+          type: int
+          default_value: 100
+          description: Number of points for optimization
+          validation:
+            bounds<>: [1, 1000]
+          read_only: false
+        delta_arc_length:
+          type: double
+          default_value: 1.0
+          description: Delta arc length for optimization [m]
+          validation:
+            bounds<>: [0.01, 10.0]
+          read_only: false
+      weight:
+        smooth_weight:
+          type: double
+          default_value: 1.0
+          description: Weight for smoothness constraint
+          validation:
+            bounds<>: [0.0, 1000.0]
+          read_only: false
+        lat_error_weight:
+          type: double
+          default_value: 0.001
+          description: Weight for lateral error constraint
+          validation:
+            bounds<>: [0.0, 1000.0]
+          read_only: false
+    ego_nearest_dist_threshold:
+      type: double
+      default_value: 3.0
+      description: Distance threshold for ego nearest search [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    ego_nearest_yaw_threshold:
+      type: double
+      default_value: 1.046
+      description: Yaw threshold for ego nearest search [rad]
+      validation:
+        bounds<>: [0.0, 3.14]
+      read_only: false
