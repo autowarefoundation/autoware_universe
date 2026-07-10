@@ -39,9 +39,10 @@ namespace
 autoware::traffic_light_compliance_checker::StatusTrackerParameters to_status_tracker_parameters(
   const autoware::traffic_light_compliance_checker::Parameters & parameters)
 {
-  autoware::traffic_light_compliance_checker::StatusTrackerParameters p;
+  autoware::traffic_light_compliance_checker::StatusTrackerParameters p{};
   p.stable_duration_threshold_red = parameters.stable_duration_threshold_red;
   p.stable_duration_threshold_amber = parameters.stable_duration_threshold_amber;
+  p.stable_duration_threshold_unknown = parameters.stable_duration_threshold_unknown;
   return p;
 }
 

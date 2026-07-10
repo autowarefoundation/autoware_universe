@@ -60,6 +60,7 @@ protected:
     node_->declare_parameter("traffic_light.treat_unknown_light_as_red_light", false);
     node_->declare_parameter("traffic_light.stable_duration_threshold_red", 0.0);
     node_->declare_parameter("traffic_light.stable_duration_threshold_amber", 0.0);
+    node_->declare_parameter("traffic_light.stable_duration_threshold_unknown", 0.0);
     node_->declare_parameter("traffic_light.amber_rejection_hysteresis_duration", 0.0);
     node_->declare_parameter("traffic_light.ego_stopped_velocity_threshold", 0.01);
     node_->declare_parameter("traffic_light.checked_trajectory_length.deceleration_limit", 999.9);
@@ -74,6 +75,7 @@ protected:
     params.traffic_light.treat_unknown_light_as_red_light = false;
     params.traffic_light.stable_duration_threshold_red = 0.0;
     params.traffic_light.stable_duration_threshold_amber = 0.0;
+    params.traffic_light.stable_duration_threshold_unknown = 0.0;
     params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
     params.traffic_light.ego_stopped_velocity_threshold = 0.01;
     params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
@@ -389,6 +391,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
   params.traffic_light.treat_amber_light_as_red_light = true;
   params.traffic_light.stable_duration_threshold_red = 0.0;
   params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 0.0;
   params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
   params.traffic_light.ego_stopped_velocity_threshold = 0.01;
   params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
@@ -419,6 +422,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithUnknownLightAsRedLight)
   params.traffic_light.treat_unknown_light_as_red_light = true;
   params.traffic_light.stable_duration_threshold_red = 0.0;
   params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 0.0;
   params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
   params.traffic_light.ego_stopped_velocity_threshold = 0.01;
   params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
@@ -440,6 +444,186 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithUnknownLightAsRedLight)
     "Should return true for unknown light when treat_unknown_light_as_red_light is false");
 }
 
+TEST_F(TrafficLightFilterTest, IsFeasibleWithUnknownStabilityFiltering)
+{
+  const lanelet::Id light_id = 302;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_unknown_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+  auto points = create_trajectory(0.0, 10.0, 5.0);
+
+  expect_feasibility(points, true, "Should be feasible because UNKNOWN signal is not stable yet");
+
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  expect_feasibility(points, false, "Should be infeasible after UNKNOWN stability threshold");
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleAfterUnknownStableDurationThreshold)
+{
+  const lanelet::Id light_id = 303;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_unknown_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 5.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+  auto points = create_trajectory(0.0, 10.0, 5.0);
+  expect_feasibility(points, true, "Should be feasible before UNKNOWN signal is stable");
+
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  expect_feasibility(points, false, "Should reject after UNKNOWN threshold");
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleAfterUnknownStableDurationThresholdFromStateChange)
+{
+  const lanelet::Id light_id = 304;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_unknown_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  auto points = create_trajectory(0.0, 10.0, 5.0);
+  expect_feasibility(points, true);
+
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.5);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+  expect_feasibility(points, true, "Should be feasible immediately after changing to UNKNOWN");
+
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.9);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  expect_feasibility(points, true, "Should still be feasible before UNKNOWN threshold");
+
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.2);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  expect_feasibility(points, false, "Should reject after UNKNOWN is stable from state change");
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithUnknownStabilityFilteringWhenEgoStopped)
+{
+  const lanelet::Id light_id = 305;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_unknown_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.twist.twist.linear.x = 0.0;
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+  auto points = create_trajectory(0.0, 10.0, 5.0);
+
+  expect_feasibility(
+    points, false, "UNKNOWN stability filtering should be bypassed when ego is stopped");
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithUnknownSignalHistoryCleanup)
+{
+  const lanelet::Id light_id = 306;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_unknown_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 5.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  auto points = create_trajectory(0.0, 10.0, 5.0);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+  expect_feasibility(points, true, "Should be feasible because UNKNOWN signal is not stable yet");
+
+  context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  expect_feasibility(points, true);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+  expect_feasibility(points, true, "Should be feasible because UNKNOWN history was cleaned up");
+}
+
 TEST_F(TrafficLightFilterTest, IsFeasibleWithStabilityFiltering)
 {
   const lanelet::Id light_id = 400;
@@ -454,6 +638,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithStabilityFiltering)
   params.traffic_light.treat_amber_light_as_red_light = false;
   params.traffic_light.stable_duration_threshold_red = 1.0;  // 1 second stability
   params.traffic_light.stable_duration_threshold_amber = 1.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
   params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
   params.traffic_light.ego_stopped_velocity_threshold = 0.01;
   params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
@@ -539,6 +724,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalHistoryCleanup)
   validator::Params params;
   params.traffic_light.stable_duration_threshold_red = 1.0;
   params.traffic_light.stable_duration_threshold_amber = 1.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
   params.traffic_light.ego_stopped_velocity_threshold = 0.01;
   params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
   params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
@@ -573,6 +759,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalStateChange)
   validator::Params params;
   params.traffic_light.stable_duration_threshold_red = 1.0;
   params.traffic_light.stable_duration_threshold_amber = 1.0;
+  params.traffic_light.stable_duration_threshold_unknown = 1.0;
   params.traffic_light.ego_stopped_velocity_threshold = 0.01;
   params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
   params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
