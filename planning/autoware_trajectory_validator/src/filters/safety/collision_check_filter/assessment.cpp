@@ -366,8 +366,7 @@ RssDetail assess_required_acceleration(
 
 RssArtifact assess(
   const trajectory::EgoTrajectoryCache & ego_trajectory_cache, const FilterContext & context,
-  const RssParamMap & rss_param_map, const GlobalParams & global_params,
-  const VehicleInfo & vehicle_info)
+  const RssParamMap & rss_param_map, const VehicleInfo & vehicle_info)
 {
   if (!context.predicted_objects || context.predicted_objects->objects.empty()) {
     return {};
