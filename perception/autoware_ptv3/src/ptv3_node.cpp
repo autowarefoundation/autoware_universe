@@ -85,7 +85,6 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   std::string filter_output_format;
   std::string source_reconstruction = "none";
   std::vector<std::int64_t> dec_depths;
-  std::vector<std::int64_t> dec_patch_size;
   if (use_seg3d_head) {
     const std::string seg3d_head_onnx_path =
       this->declare_parameter<std::string>("segmentation3d.onnx_path", descriptor);
@@ -106,8 +105,6 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       this->declare_parameter<std::string>("segmentation3d.source_reconstruction", descriptor);
     dec_depths =
       this->declare_parameter<std::vector<std::int64_t>>("segmentation3d.dec_depths", descriptor);
-    dec_patch_size = this->declare_parameter<std::vector<std::int64_t>>(
-      "segmentation3d.dec_patch_size", descriptor);
     seg3d_head_trt_config.emplace(
       seg3d_head_onnx_path, trt_precision, seg3d_head_engine_path, seg3d_head_workspace_size);
   }
@@ -196,7 +193,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     use_seg3d_head, use_det3d_head, plugins_path, cloud_capacity, voxels_num, point_cloud_range,
     voxel_size, segmentation_class_names, serialization_orders, pooling_strides, enc_channels,
     palette, filter_class_probability_threshold, filter_classes, filter_output_format,
-    source_reconstruction, dec_depths, dec_patch_size, detection_class_names_, bbox_voxel_size,
+    source_reconstruction, dec_depths, detection_class_names_, bbox_voxel_size,
     distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds, has_twist_,
     num_proposals, post_center_range);
 

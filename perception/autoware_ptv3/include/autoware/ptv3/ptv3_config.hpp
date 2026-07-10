@@ -51,7 +51,6 @@ public:
     const std::vector<std::string> & filter_classes = {},
     const std::string & filter_output_format = {}, const std::string & source_reconstruction = {},
     const std::vector<std::int64_t> & dec_depths = {},
-    const std::vector<std::int64_t> & dec_patch_size = {},
     const std::vector<std::string> & detection_class_names = {},
     const std::vector<float> & bbox_voxel_size = {},
     const std::vector<float> & distance_bin_upper_limits = {},
@@ -127,30 +126,18 @@ public:
       source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
 
       // dec_depths drives the seg-head engine input set: block stages consume their
-      // serialization metadata (see docs/models/ptv3.md split-export contract in autoware-ml).
       if (dec_depths.size() != pooling_strides_.size()) {
         throw std::runtime_error(
           "dec_depths must contain one entry per decoder stage (pooling_strides size = " +
           std::to_string(pooling_strides_.size()) + "), got " + std::to_string(dec_depths.size()) +
           ".");
       }
-      if (dec_patch_size.size() != pooling_strides_.size()) {
-        throw std::runtime_error(
-          "dec_patch_size must contain one entry per decoder stage (pooling_strides size = " +
-          std::to_string(pooling_strides_.size()) + "), got " +
-          std::to_string(dec_patch_size.size()) + ".");
-      }
       for (std::size_t stage = 0; stage < dec_depths.size(); ++stage) {
         if (dec_depths[stage] < 0) {
           throw std::runtime_error("dec_depths entries must be non-negative.");
         }
-        if (dec_depths[stage] > 0 && dec_patch_size[stage] < 1) {
-          throw std::runtime_error(
-            "dec_patch_size must be positive for stages with decoder blocks.");
-        }
       }
       dec_depths_ = dec_depths;
-      dec_patch_size_ = dec_patch_size;
     }
 
     if (use_det3d_head_) {
@@ -395,8 +382,7 @@ public:
   std::vector<std::int64_t> enc_channels_;  // per encoder stage, finest to deepest
 
   // Segmentation head
-  std::vector<std::int64_t> dec_depths_;      // decoder block counts per stage
-  std::vector<std::int64_t> dec_patch_size_;  // decoder attention window per stage
+  std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage
   std::vector<float> colors_rgb_;
   float filter_class_probability_threshold_{};
   std::vector<std::uint32_t> filter_class_indices_;

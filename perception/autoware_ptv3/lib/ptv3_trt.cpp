@@ -447,8 +447,7 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
       nvinfer1::Dims{1, {counts[2]}});
   }
 
-  // Stages with decoder blocks additionally consume their serialization metadata, under the
-  // same names the encoder graph uses (autoware-ml split-export contract).
+  // Stages with decoder blocks additionally consume their serialization metadata
   const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
   for (std::size_t stage = 0; stage + 1 < stage_count; ++stage) {
     if (config_.dec_depths_[stage] == 0) {
@@ -1006,17 +1005,6 @@ bool PTv3TRT::inferenceSeg3dHead()
       continue;
     }
     const auto stage_count_voxels = serialized_pooling_num_voxels_[stage];
-    // The exported attention windows assume at least patch_size voxels at every block stage
-    // (training adapts the window, the baked graph does not). Skip the frame instead of
-    // silently diverging from training behavior.
-    if (stage_count_voxels < config_.dec_patch_size_[stage]) {
-      RCLCPP_ERROR_STREAM(
-        rclcpp::get_logger("ptv3"), "Seg decoder stage "
-                                      << stage << " has " << stage_count_voxels
-                                      << " voxels, below its attention patch size "
-                                      << config_.dec_patch_size_[stage] << ". Skipping frame.");
-      return false;
-    }
     if (stage == 0) {
       success &= seg3d_head_trt_ptr_->setInputShape(
         "serialized_code", nvinfer1::Dims{2, {num_orders, stage_count_voxels}});
