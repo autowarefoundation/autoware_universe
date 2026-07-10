@@ -43,9 +43,10 @@ void SmoothStop::setParams(const Params & params)
   m_params = params;
 }
 
-std::optional<double> SmoothStop::calcTimeToStop(
-  const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
-  const rclcpp::Time & current_time) const
+namespace
+{
+std::optional<double> calcTimeToStop(
+  const std::vector<std::pair<rclcpp::Time, double>> & vel_hist, const rclcpp::Time & current_time)
 {
   // return when vel_hist is empty
   const double vel_hist_size = static_cast<double>(vel_hist.size());
@@ -92,6 +93,7 @@ std::optional<double> SmoothStop::calcTimeToStop(
 
   return {};
 }
+}  // namespace
 
 double SmoothStop::calculate(
   const double stop_dist, const double current_vel, const double current_acc,

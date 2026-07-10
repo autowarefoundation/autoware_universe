@@ -70,16 +70,6 @@ public:
   void setParams(const Params & params);
 
   /**
-   * @brief predict time when car stops by fitting some latest observed velocity history
-   *        with linear function (v = at + b)
-   * @param [in] vel_hist history of previous ego velocities as (rclcpp::Time, double[m/s]) pairs
-   * @param [in] current_time time used as the reference point for the velocity history deltas
-   */
-  std::optional<double> calcTimeToStop(
-    const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
-    const rclcpp::Time & current_time) const;
-
-  /**
    * @brief calculate accel command while stopping
    *        Decrease velocity with m_strong_acc,
    *        then loose brake pedal with m_params.weak_acc to stop smoothly
