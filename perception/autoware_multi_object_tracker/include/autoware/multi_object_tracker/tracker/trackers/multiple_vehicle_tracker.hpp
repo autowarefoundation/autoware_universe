@@ -71,6 +71,14 @@ public:
   void mergeFootprintFrom(
     const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
     const geometry_msgs::msg::Pose & dst_pose) override;
+  // Store on the base and forward to BOTH inner trackers so their range-dependent update logic
+  // (far-range axle-covariance blend) sees the ego position.
+  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos) override
+  {
+    Tracker::setEgoPose(ego_pos);
+    normal_vehicle_tracker_.setEgoPose(ego_pos);
+    big_vehicle_tracker_.setEgoPose(ego_pos);
+  }
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;

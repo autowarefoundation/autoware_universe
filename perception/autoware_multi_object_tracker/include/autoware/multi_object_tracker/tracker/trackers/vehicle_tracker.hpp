@@ -53,6 +53,12 @@ private:
     const UpdateStrategy & strategy, const types::DynamicObject & measurement,
     const types::DynamicObject & prediction);
 
+  // Before an EKF pose update, attenuate the bicycle model's front/rear covariance asymmetry so a
+  // localization-induced common lateral bias (~range * ego-yaw-stddev) translates the box instead
+  // of levering into yaw. The blend ramps in with the expected bias and is a no-op at close range
+  // or when the ego position is unknown. `center` is the tracked/measured body center in map frame.
+  void applyFarRangeAxleBlend(const geometry_msgs::msg::Point & center);
+
 public:
   VehicleTracker(
     const object_model::ObjectModel & object_model, const rclcpp::Time & time,
