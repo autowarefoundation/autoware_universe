@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/rclcpp.hpp>
