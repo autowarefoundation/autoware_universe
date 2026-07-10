@@ -91,9 +91,12 @@ public:
       voxel_z_size_ = voxel_size[2];
     }
 
-    grid_x_size_ = static_cast<std::int64_t>((max_x_range_ - min_x_range_) / voxel_x_size_);
-    grid_y_size_ = static_cast<std::int64_t>((max_y_range_ - min_y_range_) / voxel_y_size_);
-    grid_z_size_ = static_cast<std::int64_t>((max_z_range_ - min_z_range_) / voxel_z_size_);
+    const auto grid_cells = [](const float min_range, const float max_range, const float size) {
+      return static_cast<std::int64_t>(std::round((max_range - min_range) / size));
+    };
+    grid_x_size_ = grid_cells(min_x_range_, max_x_range_, voxel_x_size_);
+    grid_y_size_ = grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
+    grid_z_size_ = grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
     auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
