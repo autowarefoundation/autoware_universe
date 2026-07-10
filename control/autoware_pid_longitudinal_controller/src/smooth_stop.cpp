@@ -24,9 +24,10 @@
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
-void SmoothStop::init(const double pred_vel_in_target, const double pred_stop_dist)
+void SmoothStop::init(
+  const double pred_vel_in_target, const double pred_stop_dist, const rclcpp::Time & current_time)
 {
-  m_weak_acc_time = rclcpp::Clock{RCL_ROS_TIME}.now();
+  m_weak_acc_time = current_time;
 
   // when distance to stopline is near the car
   if (pred_stop_dist < std::numeric_limits<double>::epsilon()) {
@@ -61,7 +62,8 @@ void SmoothStop::setParams(
 }
 
 std::experimental::optional<double> SmoothStop::calcTimeToStop(
-  const std::vector<std::pair<rclcpp::Time, double>> & vel_hist) const
+  const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
+  const rclcpp::Time & current_time) const
 {
   if (!m_is_set_params) {
     throw std::runtime_error("Trying to calculate uninitialized SmoothStop");
@@ -74,13 +76,12 @@ std::experimental::optional<double> SmoothStop::calcTimeToStop(
   }
 
   // calculate some variables for fitting
-  const rclcpp::Time current_ros_time = rclcpp::Clock{RCL_ROS_TIME}.now();
   double mean_t = 0.0;
   double mean_v = 0.0;
   double sum_tv = 0.0;
   double sum_tt = 0.0;
   for (const auto & vel : vel_hist) {
-    const double t = (vel.first - current_ros_time).seconds();
+    const double t = (vel.first - current_time).seconds();
     const double v = vel.second;
 
     mean_t += t / vel_hist_size;
@@ -117,14 +118,14 @@ std::experimental::optional<double> SmoothStop::calcTimeToStop(
 double SmoothStop::calculate(
   const double stop_dist, const double current_vel, const double current_acc,
   const std::vector<std::pair<rclcpp::Time, double>> & vel_hist, const double delay_time,
-  DebugValues & debug_values)
+  const rclcpp::Time & current_time, DebugValues & debug_values)
 {
   if (!m_is_set_params) {
     throw std::runtime_error("Trying to calculate uninitialized SmoothStop");
   }
 
   // predict time to stop
-  const auto time_to_stop = calcTimeToStop(vel_hist);
+  const auto time_to_stop = calcTimeToStop(vel_hist, current_time);
 
   // calculate some flags
   const bool is_fast_vel = std::abs(current_vel) > m_params.min_fast_vel;
@@ -151,13 +152,13 @@ double SmoothStop::calculate(
       return m_strong_acc;
     }
 
-    m_weak_acc_time = rclcpp::Clock{RCL_ROS_TIME}.now();
+    m_weak_acc_time = current_time;
     debug_values.setValues(DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::WEAK));
     return m_params.weak_acc;
   }
 
   // for 0.5 seconds after the car stopped
-  if ((rclcpp::Clock{RCL_ROS_TIME}.now() - m_weak_acc_time).seconds() < 0.5) {
+  if ((current_time - m_weak_acc_time).seconds() < 0.5) {
     debug_values.setValues(DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::WEAK));
     return m_params.weak_acc;
   }

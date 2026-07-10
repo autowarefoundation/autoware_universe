@@ -39,8 +39,11 @@ public:
    * @brief initialize the state of the smooth stop
    * @param [in] pred_vel_in_target predicted ego velocity when the stop command will be executed
    * @param [in] pred_stop_dist predicted stop distance when the stop command will be executed
+   * @param [in] current_time time at which this initialization occurs
    */
-  void init(const double pred_vel_in_target, const double pred_stop_dist);
+  void init(
+    const double pred_vel_in_target, const double pred_stop_dist,
+    const rclcpp::Time & current_time);
 
   /**
    * @brief set the parameters of this smooth stop
@@ -66,10 +69,12 @@ public:
    * @brief predict time when car stops by fitting some latest observed velocity history
    *        with linear function (v = at + b)
    * @param [in] vel_hist history of previous ego velocities as (rclcpp::Time, double[m/s]) pairs
+   * @param [in] current_time time used as the reference point for the velocity history deltas
    * @throw std::runtime_error if parameters have not been set
    */
   std::experimental::optional<double> calcTimeToStop(
-    const std::vector<std::pair<rclcpp::Time, double>> & vel_hist) const;
+    const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
+    const rclcpp::Time & current_time) const;
 
   /**
    * @brief calculate accel command while stopping
@@ -82,12 +87,13 @@ public:
    * @param [in] current_acc current acceleration of ego [m/s²]
    * @param [in] vel_hist history of previous ego velocities as (rclcpp::Time, double[m/s]) pairs
    * @param [in] delay_time assumed time delay when the stop command will actually be executed
+   * @param [in] current_time time at which this calculation occurs
    * @throw std::runtime_error if parameters have not been set
    */
   double calculate(
     const double stop_dist, const double current_vel, const double current_acc,
     const std::vector<std::pair<rclcpp::Time, double>> & vel_hist, const double delay_time,
-    DebugValues & debug_values);
+    const rclcpp::Time & current_time, DebugValues & debug_values);
 
 private:
   struct Params
