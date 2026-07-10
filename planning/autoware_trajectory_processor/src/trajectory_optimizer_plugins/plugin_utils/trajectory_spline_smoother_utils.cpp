@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_spline_smoother_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_spline_smoother_utils.hpp"
 
 #include "autoware/trajectory/interpolator/akima_spline.hpp"
 #include "autoware/trajectory/interpolator/interpolator.hpp"
 #include "autoware/trajectory/pose.hpp"
 #include "autoware/trajectory/trajectory_point.hpp"
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_processor/utils.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>

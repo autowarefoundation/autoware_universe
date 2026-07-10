@@ -51,7 +51,6 @@ protected:
        {"turn_indicator_onnx_model_path", "/tmp/test_turn_indicator.onnx"},
        {"args_path", "/tmp/test_args.json"},
        {"timer_period", 0.1},
-       {"ignore_unknown_neighbors", true},
        {"publish_debug_markers", false}});
 
     // Note: This will fail to initialize ONNX Runtime without a valid model

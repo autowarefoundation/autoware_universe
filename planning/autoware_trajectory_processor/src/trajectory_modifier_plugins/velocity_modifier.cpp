@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/velocity_modifier.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/velocity_modifier.hpp"
 
 #include <autoware/trajectory/interpolator/akima_spline.hpp>
 #include <autoware/trajectory/interpolator/interpolator.hpp>
