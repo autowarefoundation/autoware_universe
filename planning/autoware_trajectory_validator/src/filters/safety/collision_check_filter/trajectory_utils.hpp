@@ -52,7 +52,7 @@ class TrajectoryData
 private:
   TrajectoryIdentification identification_;
   TimeTrajectory times_;
-  TravelDistanceTrajectory distances_;
+  TravelDistanceTrajectory distances_;  // todo(takagi): obsolete
   PoseTrajectory poses_;
   FootprintTrajectory footprints_;
   mutable std::map<IndexRange, Box2d> envelope_cache_;
@@ -328,6 +328,10 @@ Polygon2d to_polygon2d(
 
 namespace autoware::trajectory_validator::plugin::safety::trajectory
 {
+
+TimeTrajectory serialize_times(const CandidateTrajectory & candidate_trajectory);
+TravelDistanceTrajectory serialize_distances(const CandidateTrajectory & candidate_trajectory);
+
 namespace footprint
 {
 struct EgoDimensions
@@ -337,6 +341,9 @@ struct EgoDimensions
   double vehicle_width{0.0};
 };
 
+EgoDimensions make_ego_dimensions(
+  const VehicleInfo & vehicle_info, const EgoFootprintMargin & ego_footprint_margin);
+
 FootprintTrajectory compute_footprint_trajectory(
   const PoseTrajectory & pose_trajectory,
   const autoware_perception_msgs::msg::Shape & object_shape);
@@ -345,15 +352,84 @@ FootprintTrajectory compute_footprint_trajectory(
   const PoseTrajectory & pose_trajectory, const EgoDimensions & ego_dimensions);
 }  // namespace footprint
 
+struct EgoTrajectoryGenerationParams
+{
+  double braking_lag{0.0};
+  double assumed_acceleration{0.0};
+  footprint::EgoDimensions ego_dimensions{};
+
+  bool operator<(const EgoTrajectoryGenerationParams & rhs) const
+  {
+    return std::tie(
+             braking_lag, assumed_acceleration, ego_dimensions.front_offset,
+             ego_dimensions.rear_overhang, ego_dimensions.vehicle_width) <
+           std::tie(
+             rhs.braking_lag, rhs.assumed_acceleration, rhs.ego_dimensions.front_offset,
+             rhs.ego_dimensions.rear_overhang, rhs.ego_dimensions.vehicle_width);
+  }
+};
+
+struct InterpolatedState
+{
+  // double time_from_start;
+  double distance;
+  geometry_msgs::msg::Pose pose;
+  double longitudinal_velocity;
+};
+
+class TrajectoryInterpolator
+{
+public:
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> trajectory_points_{};
+  const rclcpp::Time reference_time_{};
+  const std::vector<double> time_from_refs_{};
+  const std::vector<double> dist_from_fronts_{};
+
+  explicit TrajectoryInterpolator(const CandidateTrajectory & candidate_traj)
+  : trajectory_points_(candidate_traj.points),
+    reference_time_(rclcpp::Time(candidate_traj.header.stamp)),
+    time_from_refs_(serialize_times(candidate_traj)),
+    dist_from_fronts_(serialize_distances(candidate_traj))
+  {
+    if (trajectory_points_.empty()) {
+      throw std::invalid_argument("points must not be empty");
+    }
+  };
+  InterpolatedState interpolate_state_from_time(const rclcpp::Time & target_time) const;
+  InterpolatedState interpolate_state_from_dist(const double target_dist) const;
+};
+
 namespace detail
 {
-double to_seconds(const builtin_interfaces::msg::Duration & duration);
-
 double project_current_pose_on_trajectory(
   const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & current_pose);
 
 TravelDistanceTrajectory compute_cumulative_distances(const PoseTrajectory & pose_trajectory);
 }  // namespace detail
+
+// todo(takagi): reuse for object trajectory generation
+class EgoTrajectoryCache
+{
+private:
+  const TrajectoryInterpolator trajectory_interpolator_;
+  rclcpp::Time sampling_reference_time_;
+  rclcpp::Time current_time_;
+  double time_resolution_;
+  mutable std::map<EgoTrajectoryGenerationParams, TrajectoryData> trajectory_data_cache_;
+
+public:
+  EgoTrajectoryCache(
+    const CandidateTrajectory & candidate_traj, const rclcpp::Time & sampling_reference_time,
+    const rclcpp::Time & current_time, double time_resolution);
+
+  const TrajectoryData & get_or_compute_trajectory_data(
+    const EgoTrajectoryGenerationParams & params) const;
+};
+
+TrajectoryData generate_ego_trajectory(
+  const CandidateTrajectory & candidate_traj, const rclcpp::Time & sampling_reference_time,
+  const rclcpp::Time & current_time, double time_resolution,
+  const EgoTrajectoryGenerationParams & params);
 
 TrajectoryData generate_ego_trajectory(
   const geometry_msgs::msg::Twist & initial_twist, double braking_lag, double assumed_acceleration,

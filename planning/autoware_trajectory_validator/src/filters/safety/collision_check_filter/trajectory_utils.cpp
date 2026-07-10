@@ -29,6 +29,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -205,52 +206,6 @@ PoseTrajectory compute(
 }
 }  // namespace constant_curvature_predictor
 
-PoseTrajectory compute_pose_trajectory_from_time(
-  const TrajectoryPoints & traj_points, const TimeTrajectory & time_trajectory)
-{
-  if (traj_points.empty()) {
-    throw std::invalid_argument("points must not be empty");
-  }
-
-  std::vector<double> point_times;
-  point_times.reserve(traj_points.size());
-  for (const auto & point : traj_points) {
-    point_times.push_back(rclcpp::Duration(point.time_from_start).seconds());
-  }
-
-  PoseTrajectory pose_trajectory;
-  pose_trajectory.reserve(time_trajectory.size());
-
-  for (const auto target_time : time_trajectory) {
-    size_t lower_idx = 0;
-    size_t upper_idx = 0;
-    if (traj_points.size() == 1) {
-      pose_trajectory.push_back(traj_points.front().pose);
-      continue;
-    }
-    if (target_time <= point_times.front()) {
-      lower_idx = 0;
-      upper_idx = 1;
-    } else if (target_time >= point_times.back()) {
-      lower_idx = traj_points.size() - 2;
-      upper_idx = traj_points.size() - 1;
-    } else {
-      const auto upper_it = std::lower_bound(point_times.begin(), point_times.end(), target_time);
-      upper_idx = static_cast<size_t>(std::distance(point_times.begin(), upper_it));
-      lower_idx = upper_idx - 1;
-    }
-
-    const double lower_time = point_times.at(lower_idx);
-    const double upper_time = point_times.at(upper_idx);
-    const double denom = upper_time - lower_time;
-    const double ratio = denom > 1e-6 ? (target_time - lower_time) / denom : 0.0;
-
-    pose_trajectory.push_back(
-      interpolate_pose(traj_points.at(lower_idx).pose, traj_points.at(upper_idx).pose, ratio));
-  }
-
-  return pose_trajectory;
-}
 }  // namespace autoware::trajectory_validator::plugin::safety::trajectory::pose
 
 namespace autoware::trajectory_validator::plugin::safety::geometry
@@ -330,6 +285,15 @@ namespace autoware::trajectory_validator::plugin::safety::trajectory
 {
 namespace footprint
 {
+EgoDimensions make_ego_dimensions(
+  const VehicleInfo & vehicle_info, const EgoFootprintMargin & ego_footprint_margin)
+{
+  return EgoDimensions{
+    vehicle_info.max_longitudinal_offset_m + ego_footprint_margin.front,
+    -vehicle_info.min_longitudinal_offset_m + ego_footprint_margin.rear,
+    vehicle_info.vehicle_width_m + 2.0 * ego_footprint_margin.lateral};
+}
+
 FootprintTrajectory compute_footprint_trajectory(
   const PoseTrajectory & pose_trajectory, const std::vector<Point2d> & base_poly)
 {
@@ -382,61 +346,136 @@ FootprintTrajectory compute_footprint_trajectory(
 }
 }  // namespace footprint
 
+std::tuple<size_t, size_t, double> resolve_interpolation(
+  const std::vector<double> & values, const double target_value)
+{
+  size_t lower_idx = 0;
+  size_t upper_idx = 1;
+  double ratio = 0.0;
+
+  if (target_value <= values.front()) {
+    lower_idx = 0;
+    upper_idx = 1;
+  } else if (target_value >= values.back()) {
+    lower_idx = values.size() - 2;
+    upper_idx = values.size() - 1;
+  } else {
+    const auto upper_it = std::lower_bound(values.begin(), values.end(), target_value);
+    upper_idx = static_cast<size_t>(std::distance(values.begin(), upper_it));
+    lower_idx = upper_idx - 1;
+  }
+
+  const double denom = values.at(upper_idx) - values.at(lower_idx);
+  ratio = denom > 1e-6 ? (target_value - values.at(lower_idx)) / denom : 0.0;
+
+  return {lower_idx, upper_idx, ratio};
+}
+
 namespace detail
 {
-double to_seconds(const builtin_interfaces::msg::Duration & duration)
-{
-  return rclcpp::Duration(duration).seconds();
-}
 
-double project_current_pose_on_trajectory(
-  const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & current_pose)
+struct BrakingProfile
 {
-  if (traj_points.empty()) {
-    throw std::invalid_argument("points must not be empty");
+  rclcpp::Time start_time;
+  rclcpp::Time end_time;
+  InterpolatedState start_state;
+};
+
+std::optional<BrakingProfile> compute_braking_profile(
+  const TrajectoryInterpolator & trajectory_interpolator, const rclcpp::Time & current_time,
+  const EgoTrajectoryGenerationParams & params)
+{
+  if (params.assumed_acceleration >= 0.0) {
+    return std::nullopt;
   }
 
-  if (traj_points.size() == 1) {
-    return to_seconds(traj_points.front().time_from_start);
-  }
+  const rclcpp::Time braking_start_time =
+    current_time + rclcpp::Duration::from_seconds(params.braking_lag);
+  const auto braking_start_state =
+    trajectory_interpolator.interpolate_state_from_time(braking_start_time);
 
-  const auto project_on_segment = [&](const size_t start_idx, const size_t end_idx) {
-    const auto & start_pose = traj_points.at(start_idx).pose;
-    const auto & end_pose = traj_points.at(end_idx).pose;
-    const double current_x = current_pose.position.x;
-    const double current_y = current_pose.position.y;
+  const double braking_initial_velocity = std::max(0.0, braking_start_state.longitudinal_velocity);
+  const rclcpp::Duration braking_time_duration =
+    rclcpp::Duration::from_seconds(braking_initial_velocity / -params.assumed_acceleration);
+  const rclcpp::Time braking_end_time = braking_start_time + braking_time_duration;
 
-    const double dx = end_pose.position.x - start_pose.position.x;
-    const double dy = end_pose.position.y - start_pose.position.y;
-    const double segment_length_sq = dx * dx + dy * dy;
-
-    double ratio = 0.0;
-    if (segment_length_sq > 1e-6) {
-      ratio =
-        ((current_x - start_pose.position.x) * dx + (current_y - start_pose.position.y) * dy) /
-        segment_length_sq;
-    }
-
-    return interpolation::lerp(
-      to_seconds(traj_points.at(start_idx).time_from_start),
-      to_seconds(traj_points.at(end_idx).time_from_start), ratio);
-  };
-
-  const size_t nearest_segment_idx =
-    autoware::motion_utils::findNearestSegmentIndex(traj_points, current_pose.position);
-  return project_on_segment(nearest_segment_idx, nearest_segment_idx + 1);
+  return BrakingProfile{braking_start_time, braking_end_time, braking_start_state};
 }
 
-TravelDistanceTrajectory compute_cumulative_distances(const PoseTrajectory & pose_trajectory)
-{
-  TravelDistanceTrajectory distances;
-  distances.reserve(pose_trajectory.size());
+}  // namespace detail
 
+InterpolatedState TrajectoryInterpolator::interpolate_state_from_time(
+  const rclcpp::Time & target_time) const
+{
+  if (trajectory_points_.size() == 1) {
+    const auto & point = trajectory_points_.front();
+    return InterpolatedState{0.0, point.pose, point.longitudinal_velocity_mps};
+  }
+
+  if (time_from_refs_.empty()) {
+    throw std::invalid_argument(
+      "reference_time_ must be set before calling interpolate_state_from_time");
+  }
+
+  const double target_time_from_ref = (target_time - reference_time_).seconds();
+  const auto [lower_idx, upper_idx, ratio] =
+    resolve_interpolation(time_from_refs_, target_time_from_ref);
+
+  const auto pose = pose::interpolate_pose(
+    trajectory_points_.at(lower_idx).pose, trajectory_points_.at(upper_idx).pose, ratio);
+
+  return InterpolatedState{
+    motion_utils::calcSignedArcLength(trajectory_points_, 0U, pose.position), pose,
+    interpolation::lerp(
+      static_cast<double>(trajectory_points_.at(lower_idx).longitudinal_velocity_mps),
+      static_cast<double>(trajectory_points_.at(upper_idx).longitudinal_velocity_mps), ratio)};
+}
+
+InterpolatedState TrajectoryInterpolator::interpolate_state_from_dist(
+  const double target_dist) const
+{
+  if (trajectory_points_.size() == 1) {
+    const auto & point = trajectory_points_.front();
+    return InterpolatedState{0.0, point.pose, point.longitudinal_velocity_mps};
+  }
+
+  if (dist_from_fronts_.empty()) {
+    throw std::invalid_argument(
+      "dist_from_fronts_ must be set before calling interpolate_state_from_dist");
+  }
+
+  const auto [lower_idx, upper_idx, ratio] = resolve_interpolation(dist_from_fronts_, target_dist);
+
+  const auto pose = pose::interpolate_pose(
+    trajectory_points_.at(lower_idx).pose, trajectory_points_.at(upper_idx).pose, ratio);
+
+  return InterpolatedState{
+    motion_utils::calcSignedArcLength(trajectory_points_, 0U, pose.position), pose,
+    interpolation::lerp(
+      static_cast<double>(trajectory_points_.at(lower_idx).longitudinal_velocity_mps),
+      static_cast<double>(trajectory_points_.at(upper_idx).longitudinal_velocity_mps), ratio)};
+}
+
+std::vector<double> serialize_times(const CandidateTrajectory & candidate_trajectory)
+{
+  std::vector<double> times;
+  times.reserve(candidate_trajectory.points.size());
+  for (const auto & point : candidate_trajectory.points) {
+    times.push_back(rclcpp::Duration(point.time_from_start).seconds());
+  }
+  return times;
+}
+
+std::vector<double> serialize_distances(const CandidateTrajectory & candidate_trajectory)
+{
+  const auto & points = candidate_trajectory.points;
+  std::vector<double> distances;
+  distances.reserve(points.size());
   double cumulative_distance = 0.0;
-  for (size_t i = 0; i < pose_trajectory.size(); ++i) {
+  for (size_t i = 0; i < points.size(); ++i) {
     if (i > 0) {
       cumulative_distance += autoware_utils_geometry::calc_distance2d(
-        pose_trajectory.at(i - 1).position, pose_trajectory.at(i).position);
+        points.at(i - 1).pose.position, points.at(i).pose.position);
     }
     distances.push_back(cumulative_distance);
   }
@@ -444,58 +483,103 @@ TravelDistanceTrajectory compute_cumulative_distances(const PoseTrajectory & pos
   return distances;
 }
 
-}  // namespace detail
-
 TrajectoryData generate_ego_trajectory(
-  const geometry_msgs::msg::Twist & initial_twist, double braking_lag, double assumed_acceleration,
-  double max_time, double time_resolution, const TrajectoryPoints & traj_points,
-  const footprint::EgoDimensions & ego_dimensions)
+  const TrajectoryInterpolator & trajectory_interpolator,
+  const rclcpp::Time & sampling_reference_time, const rclcpp::Time & current_time,
+  const double time_resolution, const EgoTrajectoryGenerationParams & params)
 {
-  auto [times, distances] = time_distance::compute_motion_profile_1d(
-    initial_twist, braking_lag, assumed_acceleration, 0.0, max_time, time_resolution);
+  const rclcpp::Time trajectory_start_time =
+    trajectory_interpolator.reference_time_ +
+    rclcpp::Duration::from_seconds(trajectory_interpolator.time_from_refs_.front());
+  const rclcpp::Time trajectory_end_time =
+    trajectory_interpolator.reference_time_ +
+    rclcpp::Duration::from_seconds(trajectory_interpolator.time_from_refs_.back());
 
-  double distance_offset =
-    autoware::motion_utils::calcSignedArcLength(traj_points, traj_points.front().pose.position, 0);
-  for (double & val : distances) {
-    val += distance_offset;
+  const auto braking_profile =
+    detail::compute_braking_profile(trajectory_interpolator, current_time, params);
+
+  TimeTrajectory times;
+  TravelDistanceTrajectory distances;
+  PoseTrajectory poses;
+
+  const auto append_sample = [&](
+                               const double time_from_reference, const InterpolatedState & sample) {
+    times.push_back(time_from_reference);
+    distances.push_back(sample.distance);
+    poses.push_back(sample.pose);
+  };
+
+  for (uint64_t n = 0;; ++n) {
+    const auto time_from_sampling_reference =
+      rclcpp::Duration::from_seconds(static_cast<double>(n) * time_resolution);
+    const auto sampling_time = sampling_reference_time + time_from_sampling_reference;
+
+    if (!braking_profile.has_value() || sampling_time < braking_profile->start_time) {
+      auto sample_state = trajectory_interpolator.interpolate_state_from_time(sampling_time);
+      append_sample(time_from_sampling_reference.seconds(), sample_state);
+      if (sampling_time > trajectory_end_time) {
+        break;
+      }
+    } else {
+      const double sample_distance = [&]() {
+        const double elapsed_time = (sampling_time - braking_profile->start_time).seconds();
+        if (elapsed_time <= 0.0) {
+          return 0.0;
+        }
+        return braking_profile->start_state.distance +
+               braking_profile->start_state.longitudinal_velocity * elapsed_time +
+               0.5 * params.assumed_acceleration * elapsed_time * elapsed_time;
+      }();
+      auto sample_state = trajectory_interpolator.interpolate_state_from_dist(sample_distance);
+      append_sample(time_from_sampling_reference.seconds(), sample_state);
+      if (sampling_time > braking_profile->end_time && sampling_time > trajectory_end_time) {
+        break;
+      }
+    }
   }
-  auto poses = pose::compute_pose_trajectory(traj_points, distances);
-  auto footprints = footprint::compute_footprint_trajectory(poses, ego_dimensions);
+
+  if (times.empty()) {
+    // append_sample() is executed before break.
+    throw std::invalid_argument("no samples are available for the requested time range");
+  }
+
+  auto footprints = footprint::compute_footprint_trajectory(poses, params.ego_dimensions);
 
   return TrajectoryData(
     TrajectoryIdentification{"EGO"}, std::move(times), std::move(distances), std::move(poses),
     std::move(footprints));
 }
 
-TrajectoryData generate_ego_trajectory(
-  const TrajectoryPoints & traj_points, const FilterContext & context, double max_time,
-  double time_resolution, const footprint::EgoDimensions & ego_dimensions)
+EgoTrajectoryCache::EgoTrajectoryCache(
+  const CandidateTrajectory & candidate_traj, const rclcpp::Time & sampling_reference_time,
+  const rclcpp::Time & current_time, const double time_resolution)
+: trajectory_interpolator_(candidate_traj),
+  sampling_reference_time_(sampling_reference_time),
+  current_time_(current_time),
+  time_resolution_(time_resolution)
 {
-  if (traj_points.empty()) {
+  if (candidate_traj.points.empty()) {
     throw std::invalid_argument("points must not be empty");
   }
+  if (time_resolution <= 0.0) {
+    throw std::invalid_argument("time_resolution must be positive");
+  }
+}
 
-  const double start_time =
-    detail::project_current_pose_on_trajectory(traj_points, context.odometry->pose.pose);
-  const double end_time =
-    std::min(detail::to_seconds(traj_points.back().time_from_start), start_time + max_time);
-
-  TimeTrajectory relative_times{0.0};
-  TimeTrajectory absolute_times{start_time};
-  for (double sample_time = time_resolution; start_time + sample_time < end_time;
-       sample_time =
-         std::floor((sample_time + time_resolution + 1e-6) / time_resolution) * time_resolution) {
-    relative_times.push_back(sample_time);
-    absolute_times.push_back(start_time + sample_time);
+const TrajectoryData & EgoTrajectoryCache::get_or_compute_trajectory_data(
+  const EgoTrajectoryGenerationParams & params) const
+{
+  const auto it = trajectory_data_cache_.find(params);
+  if (it != trajectory_data_cache_.end()) {
+    return it->second;
   }
 
-  auto poses = pose::compute_pose_trajectory_from_time(traj_points, absolute_times);
-  auto distances = detail::compute_cumulative_distances(poses);
-  auto footprints = footprint::compute_footprint_trajectory(poses, ego_dimensions);
-
-  return TrajectoryData(
-    TrajectoryIdentification{"EGO"}, std::move(relative_times), std::move(distances),
-    std::move(poses), std::move(footprints));
+  const auto [inserted_it, inserted] = trajectory_data_cache_.emplace(
+    params,
+    generate_ego_trajectory(
+      trajectory_interpolator_, sampling_reference_time_, current_time_, time_resolution_, params));
+  static_cast<void>(inserted);
+  return inserted_it->second;
 }
 
 TrajectoryData generate_predicted_path_trajectory(

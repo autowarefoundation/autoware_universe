@@ -114,10 +114,14 @@ CollisionCheckFilter::result_t CollisionCheckFilter::is_feasible(
     return {};  // No trajectory to check
   }
 
+  trajectory::EgoTrajectoryCache ego_trajectory_cache(
+    candidate_trajectory, rclcpp::Time(context.predicted_objects->header.stamp),
+    rclcpp::Time(context.odometry->header.stamp), global_params_.time_resolution);
+
   const auto drac_artifact = collision_timing_assessment::assess(
-    traj_points, context, drac_param_map_, global_params_, *vehicle_info_ptr_);
+    ego_trajectory_cache, context, drac_param_map_, global_params_, *vehicle_info_ptr_);
   const auto rss_artifact = rss_deceleration::assess(
-    traj_points, context, rss_param_map_, global_params_, *vehicle_info_ptr_);
+    ego_trajectory_cache, context, rss_param_map_, global_params_, *vehicle_info_ptr_);
 
   auto planning_factors = reporter::process_collision_artifacts(
     *context.odometry, drac_artifact, drac_continuous_times_, rss_artifact, rss_continuous_times_,
