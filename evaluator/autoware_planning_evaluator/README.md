@@ -304,6 +304,7 @@ Metrics are calculated and published only when the node receives a message on `~
   - Parameters:
     - `trajectory_validation.count_warn_as_error`: if `true`, both WARN and ERROR count as error; if `false`, only ERROR.
   - Sub-metrics to publish (value-based):
+    - `/{scope}/value`: instantaneous `MetricReport.metric_value` for metric-row scopes (`/{generator_name}/{validator_name}/{metric_name}` only).
     - `/{scope}/error_duration`: current accumulated duration of the active error span for that scope (seconds).
     - `/{scope}/error_count`: number of error episodes (transitions into error) for that scope.
   - Sub-metrics to output:
