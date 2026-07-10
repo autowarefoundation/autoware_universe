@@ -18,11 +18,10 @@
 #include "autoware/pid_longitudinal_controller/debug_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-#include <experimental/optional>  // NOLINT
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -76,7 +75,7 @@ public:
    * @param [in] vel_hist history of previous ego velocities as (rclcpp::Time, double[m/s]) pairs
    * @param [in] current_time time used as the reference point for the velocity history deltas
    */
-  std::experimental::optional<double> calcTimeToStop(
+  std::optional<double> calcTimeToStop(
     const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
     const rclcpp::Time & current_time) const;
 

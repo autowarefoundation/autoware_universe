@@ -14,11 +14,10 @@
 
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
 
-#include <experimental/optional>  // NOLINT
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -44,7 +43,7 @@ void SmoothStop::setParams(const Params & params)
   m_params = params;
 }
 
-std::experimental::optional<double> SmoothStop::calcTimeToStop(
+std::optional<double> SmoothStop::calcTimeToStop(
   const std::vector<std::pair<rclcpp::Time, double>> & vel_hist,
   const rclcpp::Time & current_time) const
 {
