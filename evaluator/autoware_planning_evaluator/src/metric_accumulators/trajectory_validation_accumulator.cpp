@@ -130,6 +130,35 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
   }
 }
 
+void TrajectoryValidationAccumulator::addInstantMetricMsgs(
+  const ValidationReportArray & msg, MetricArrayMsg & metrics_msg)
+{
+  if (msg.reports.empty()) {
+    return;
+  }
+
+  const std::string base = metric_to_str.at(Metric::trajectory_validation) + "/";
+  MetricMsg m;
+
+  for (const auto & report : msg.reports) {
+    const std::string & gen = report.generator_name;
+    // Last row wins if the same scope appears more than once.
+    std::unordered_map<std::string, double> value_by_scope;
+    for (const auto & row : report.metrics) {
+      if (!shouldCollectMetricRow(row.validator_name, row.metric_name)) {
+        continue;
+      }
+      const std::string scope = makeMetricScopeKey(gen, row.validator_name, row.metric_name);
+      value_by_scope[scope] = row.metric_value;
+    }
+    for (const auto & [scope, value] : value_by_scope) {
+      m.name = base + scope + "/value";
+      m.value = std::to_string(value);
+      metrics_msg.metric_array.push_back(m);
+    }
+  }
+}
+
 bool TrajectoryValidationAccumulator::addMetricMsg(
   const Metric & metric, MetricArrayMsg & metrics_msg)
 {

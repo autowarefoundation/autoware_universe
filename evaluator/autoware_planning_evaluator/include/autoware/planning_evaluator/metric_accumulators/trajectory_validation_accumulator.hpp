@@ -80,6 +80,11 @@ public:
   bool addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg);
 
   /**
+   * @brief Append instantaneous MetricReport.metric_value for publishing (/{scope}/value).
+   */
+  void addInstantMetricMsgs(const ValidationReportArray & msg, MetricArrayMsg & metrics_msg);
+
+  /**
    * @brief Final statistics for output.json (min/max/mean/total error_duration, error_count, etc.).
    */
   json getOutputJson(const OutputMetric & output_metric);

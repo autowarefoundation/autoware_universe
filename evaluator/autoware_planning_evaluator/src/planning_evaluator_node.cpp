@@ -568,6 +568,8 @@ void PlanningEvaluatorNode::onValidationReports(
   }
   metrics_accumulator_.trajectory_validation_accumulator.update(*reports_msg);
   if (metrics_for_publish_.count(Metric::trajectory_validation) != 0) {
+    metrics_accumulator_.trajectory_validation_accumulator.addInstantMetricMsgs(
+      *reports_msg, metrics_msg_);
     metrics_accumulator_.addMetricMsg(Metric::trajectory_validation, metrics_msg_);
   }
 }
