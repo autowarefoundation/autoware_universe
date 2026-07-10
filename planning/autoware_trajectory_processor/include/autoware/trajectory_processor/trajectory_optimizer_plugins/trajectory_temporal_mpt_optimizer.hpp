@@ -67,6 +67,8 @@ private:
   std::unique_ptr<temporal_mpt::AcadosInterface> acados_interface_;
   TemporalMPTParams mpt_params_;
 
+  void set_mpt_params(
+    const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params);
   void create_or_reset_solver();
   void update_bicycle_geometry_from_vehicle();
   void apply_solver_model_parameters();

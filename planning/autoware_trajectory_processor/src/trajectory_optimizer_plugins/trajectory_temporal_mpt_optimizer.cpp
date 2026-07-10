@@ -17,7 +17,6 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_temporal_mpt_optimizer_utils.hpp"
 
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
-#include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -32,6 +31,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -95,30 +95,28 @@ std::string expand_user_path_string(const std::string & p)
 }
 }  // namespace
 
+void TrajectoryTemporalMPTOptimizer::set_mpt_params(
+  const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params)
+{
+  mpt_params_.cg_distance_from_rear_axle_ratio = params.cg_distance_from_rear_axle_ratio;
+  mpt_params_.min_points_for_optimization =
+    static_cast<size_t>(std::max<int64_t>(2, params.min_points_for_optimization));
+  mpt_params_.enable_debug_info = params.enable_debug_info;
+  mpt_params_.publish_debug_topics = params.publish_debug_topics;
+  mpt_params_.write_replay_fixture = params.write_replay_fixture;
+  mpt_params_.replay_fixture_directory = params.replay_fixture_directory;
+  mpt_params_.log_replay_fixture_to_console = params.log_replay_fixture_to_console;
+}
+
 void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
 
   // SQP max_iter / tol: from codegen (generators/path_tracking_mpc_temporal.py → acados_ocp.json),
   // applied inside kinematic_bicycle_temporal_acados_create — not overridden in C++.
 
-  mpt_params_.cg_distance_from_rear_axle_ratio = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.cg_distance_from_rear_axle_ratio");
+  set_mpt_params(params.trajectory_temporal_mpt_optimizer);
   update_bicycle_geometry_from_vehicle();
-
-  mpt_params_.min_points_for_optimization = static_cast<size_t>(get_or_declare_parameter<int>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.min_points_for_optimization"));
-  mpt_params_.enable_debug_info = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.enable_debug_info");
-  mpt_params_.publish_debug_topics = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.publish_debug_topics");
-  mpt_params_.write_replay_fixture = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.write_replay_fixture");
-  mpt_params_.replay_fixture_directory = get_or_declare_parameter<std::string>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.replay_fixture_directory");
-  mpt_params_.log_replay_fixture_to_console = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console");
 
   if (mpt_params_.write_replay_fixture && !mpt_params_.replay_fixture_directory.empty()) {
     RCLCPP_INFO(
@@ -128,37 +126,12 @@ void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerPara
       expand_user_path_string(mpt_params_.replay_fixture_directory).c_str());
   }
 
-  // params argument is ignored: temporal_mpt parameters are not in the central schema
-  (void)params;
-
   create_or_reset_solver();
 }
 
 void TrajectoryTemporalMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
-  auto node_ptr = get_node_ptr();
-
-  int min_points_for_optimization = static_cast<int>(mpt_params_.min_points_for_optimization);
-  node_ptr->get_parameter(
-    "trajectory_temporal_mpt_optimizer.min_points_for_optimization", min_points_for_optimization);
-  mpt_params_.min_points_for_optimization =
-    static_cast<size_t>(std::max(2, min_points_for_optimization));
-
-  node_ptr->get_parameter(
-    "trajectory_temporal_mpt_optimizer.enable_debug_info", mpt_params_.enable_debug_info);
-  node_ptr->get_parameter(
-    "trajectory_temporal_mpt_optimizer.publish_debug_topics", mpt_params_.publish_debug_topics);
-  node_ptr->get_parameter(
-    "trajectory_temporal_mpt_optimizer.write_replay_fixture", mpt_params_.write_replay_fixture);
-  node_ptr->get_parameter(
-    "trajectory_temporal_mpt_optimizer.replay_fixture_directory",
-    mpt_params_.replay_fixture_directory);
-  node_ptr->get_parameter(
-    "trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console",
-    mpt_params_.log_replay_fixture_to_console);
-
-  // params argument is ignored: temporal_mpt parameters are not in the central schema
-  (void)params;
+  set_mpt_params(params.trajectory_temporal_mpt_optimizer);
 }
 
 void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
