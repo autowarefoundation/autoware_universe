@@ -49,6 +49,7 @@ void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & par
     debug_data_ptr_ = std::make_shared<DebugData>();
 
     // Set up parameters
+    enabled_ = params.use_mpt_optimizer;
     mpt_params_.corridor_width_m = params.trajectory_mpt_optimizer.corridor_width_m;
     mpt_params_.enable_adaptive_width = params.trajectory_mpt_optimizer.enable_adaptive_width;
     mpt_params_.curvature_width_factor = params.trajectory_mpt_optimizer.curvature_width_factor;
@@ -98,6 +99,7 @@ void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & par
 
 void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_mpt_optimizer;
   mpt_params_.corridor_width_m = params.trajectory_mpt_optimizer.corridor_width_m;
   mpt_params_.enable_adaptive_width = params.trajectory_mpt_optimizer.enable_adaptive_width;
   mpt_params_.curvature_width_factor = params.trajectory_mpt_optimizer.curvature_width_factor;
@@ -151,13 +153,12 @@ void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & par
 }
 
 void TrajectoryMPTOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
   // Skip if MPT optimizer is disabled
-  if (!params.use_mpt_optimizer) {
+  if (!enabled_) {
     return;
   }
 

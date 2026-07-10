@@ -156,7 +156,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     data.current_acceleration = *current_acceleration_ptr_;
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
-      plugin->optimize_trajectory(trajectory.points, params_, data);
+      plugin->optimize_trajectory(trajectory.points, data);
     }
 
     // Downstream Autoware modules dont properly support trajectories with less than 3 points. So we

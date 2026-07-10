@@ -26,10 +26,9 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectorySplineSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
-  if (!params.use_akima_spline_interpolation) {
+  if (!enabled_) {
     return;
   }
   trajectory_spline_smoother_utils::apply_spline(
@@ -45,11 +44,13 @@ void TrajectorySplineSmoother::optimize_trajectory(
 
 void TrajectorySplineSmoother::on_initialize(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_akima_spline_interpolation;
   spline_params_ = params.trajectory_spline_smoother;
 }
 
 void TrajectorySplineSmoother::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_akima_spline_interpolation;
   spline_params_ = params.trajectory_spline_smoother;
 }
 

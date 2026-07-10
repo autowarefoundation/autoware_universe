@@ -54,9 +54,7 @@ class TrajectoryTemporalMPTOptimizer : public TrajectoryOptimizerPluginBase
 public:
   TrajectoryTemporalMPTOptimizer() = default;
 
-  void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
 
   void update_params(const TrajectoryOptimizerParams & params) override;
 

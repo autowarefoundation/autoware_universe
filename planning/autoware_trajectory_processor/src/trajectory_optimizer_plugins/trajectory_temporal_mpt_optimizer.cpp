@@ -115,6 +115,7 @@ void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerPara
   // SQP max_iter / tol: from codegen (generators/path_tracking_mpc_temporal.py → acados_ocp.json),
   // applied inside kinematic_bicycle_temporal_acados_create — not overridden in C++.
 
+  enabled_ = params.use_temporal_mpt_optimizer;
   set_mpt_params(params.trajectory_temporal_mpt_optimizer);
   update_bicycle_geometry_from_vehicle();
 
@@ -131,15 +132,15 @@ void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerPara
 
 void TrajectoryTemporalMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_temporal_mpt_optimizer;
   set_mpt_params(params.trajectory_temporal_mpt_optimizer);
 }
 
 void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
-  if (!params.use_temporal_mpt_optimizer) {
+  if (!enabled_) {
     return;
   }
 

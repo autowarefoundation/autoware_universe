@@ -35,6 +35,7 @@ void TrajectoryVelocityOptimizer::on_initialize(const TrajectoryOptimizerParams 
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
   // 1. Copy parameters defined in generated TrajectoryOptimizerParams
+  enabled_ = params.use_velocity_optimizer;
   velocity_params_.nearest_dist_threshold_m =
     params.trajectory_velocity_optimizer.nearest_dist_threshold_m;
   velocity_params_.nearest_yaw_threshold_deg =
@@ -91,10 +92,9 @@ void TrajectoryVelocityOptimizer::on_initialize(const TrajectoryOptimizerParams 
 }
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
-  if (!params.use_velocity_optimizer) {
+  if (!enabled_) {
     return;
   }
 
@@ -167,6 +167,7 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
 void TrajectoryVelocityOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
+  enabled_ = params.use_velocity_optimizer;
   velocity_params_.nearest_dist_threshold_m =
     params.trajectory_velocity_optimizer.nearest_dist_threshold_m;
   velocity_params_.nearest_yaw_threshold_deg =

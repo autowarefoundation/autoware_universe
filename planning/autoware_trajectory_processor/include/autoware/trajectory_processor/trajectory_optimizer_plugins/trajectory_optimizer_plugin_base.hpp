@@ -42,11 +42,9 @@ public:
   virtual ~TrajectoryOptimizerPluginBase() = default;
 
   // Main optimization function
-  // params: Contains activation flags and shared configuration
   // data: Contains runtime vehicle state (odometry, acceleration)
   virtual void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) = 0;
+    TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) = 0;
 
   // Plugin parameter update callback
   virtual void update_params(const TrajectoryOptimizerParams & params) = 0;
@@ -70,6 +68,7 @@ protected:
   virtual void on_initialize(const TrajectoryOptimizerParams & params) = 0;
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
+  bool enabled_{true};
 
 private:
   std::string name_{"unnamed_plugin"};

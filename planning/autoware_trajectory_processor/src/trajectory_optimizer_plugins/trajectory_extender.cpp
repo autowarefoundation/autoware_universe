@@ -25,10 +25,9 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryExtender::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
-  if (!params.use_trajectory_extender) {
+  if (!enabled_) {
     return;
   }
   // Note: This function adds the current ego state to a history trajectory. Note that it is ok to
@@ -45,11 +44,13 @@ void TrajectoryExtender::optimize_trajectory(
 
 void TrajectoryExtender::on_initialize(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_trajectory_extender;
   extender_params_ = params.trajectory_extender;
 }
 
 void TrajectoryExtender::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_trajectory_extender;
   extender_params_ = params.trajectory_extender;
 }
 

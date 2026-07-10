@@ -25,10 +25,9 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryPointFixer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
-  if (!params.use_trajectory_point_fixer) {
+  if (!enabled_) {
     return;
   }
   auto & semantic_speed_tracker = data.semantic_speed_tracker;
@@ -56,11 +55,13 @@ void TrajectoryPointFixer::optimize_trajectory(
 
 void TrajectoryPointFixer::on_initialize(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_trajectory_point_fixer;
   fixer_params_ = params.trajectory_point_fixer;
 }
 
 void TrajectoryPointFixer::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_trajectory_point_fixer;
   fixer_params_ = params.trajectory_point_fixer;
 }
 

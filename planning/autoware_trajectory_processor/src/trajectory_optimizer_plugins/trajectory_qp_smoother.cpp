@@ -36,6 +36,7 @@ namespace autoware::trajectory_optimizer::plugin
 void TrajectoryQPSmoother::on_initialize(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
+  enabled_ = params.use_qp_smoother;
   qp_params_ = params.trajectory_qp_smoother;
 
   // Log configuration at startup
@@ -57,16 +58,16 @@ void TrajectoryQPSmoother::on_initialize(const TrajectoryOptimizerParams & param
 
 void TrajectoryQPSmoother::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_qp_smoother;
   qp_params_ = params.trajectory_qp_smoother;
 }
 
 void TrajectoryQPSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
-  if (!params.use_qp_smoother) {
+  if (!enabled_) {
     return;
   }
 

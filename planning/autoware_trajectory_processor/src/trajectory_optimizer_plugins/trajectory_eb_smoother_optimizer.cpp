@@ -27,10 +27,9 @@ namespace autoware::trajectory_optimizer::plugin
 {
 
 void TrajectoryEBSmootherOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
-  if (!params.use_eb_smoother) {
+  if (!enabled_) {
     return;
   }
   utils::smooth_trajectory_with_elastic_band(
@@ -40,9 +39,10 @@ void TrajectoryEBSmootherOptimizer::optimize_trajectory(
     traj_points, data.current_odometry.pose.pose.position);
 }
 
-void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParams &)
+void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
+  enabled_ = params.use_eb_smoother;
   ego_nearest_param_ = EgoNearestParam(node_ptr);
   common_param_ = CommonParam(node_ptr);
   smoother_time_keeper_ptr_ = std::make_shared<SmootherTimekeeper>();
@@ -52,8 +52,9 @@ void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParam
   eb_path_smoother_ptr_->resetPreviousData();
 }
 
-void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryOptimizerParams &)
+void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_eb_smoother;
   // EBPathSmoother manages its own parameter updates via node callbacks
   // No schema-generated params to propagate for this plugin
 }

@@ -34,11 +34,10 @@ namespace autoware::trajectory_optimizer::plugin
 {
 
 void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
   // Check if plugin is enabled
-  if (!params.use_kinematic_feasibility_enforcer) {
+  if (!enabled_) {
     return;
   }
 
@@ -179,6 +178,7 @@ void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryOptim
   // Get vehicle info
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
 
+  enabled_ = params.use_kinematic_feasibility_enforcer;
   feasibility_params_ = params.trajectory_kinematic_feasibility;
 
   // Log configuration
@@ -193,6 +193,7 @@ void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryOptim
 
 void TrajectoryKinematicFeasibilityEnforcer::update_params(const TrajectoryOptimizerParams & params)
 {
+  enabled_ = params.use_kinematic_feasibility_enforcer;
   feasibility_params_ = params.trajectory_kinematic_feasibility;
 }
 
