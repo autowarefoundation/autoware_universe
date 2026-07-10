@@ -14,6 +14,7 @@
 
 #include "autoware/map_based_prediction/priority_predictor/traffic_signal_stop_predictor.hpp"
 
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
@@ -311,10 +312,28 @@ double weakenConfidenceInLaneChange(const Maneuver & maneuver, const double stop
 namespace
 {
 
+bool can_stop_before_stop_line(
+  const TrackedObject & object, const PosePath & predicted_path,
+  const lanelet::ConstLineString3d & stop_line,
+  const path_cut::MaxDecelerationParams & max_decel_params)
+{
+  const auto distance_to_line = arcLengthToStopLine(predicted_path, stop_line);
+  if (!distance_to_line) {
+    return false;
+  }
+  const auto & twist = object.kinematics.twist_with_covariance.twist;
+  const double object_speed = std::hypot(twist.linear.x, twist.linear.y);
+  const double max_deceleration = path_cut::max_deceleration_for_label(
+    max_decel_params,
+    autoware::object_recognition_utils::getHighestProbLabel(object.classification));
+  return path_cut::can_stop_before_the_line(*distance_to_line, object_speed, max_deceleration);
+}
+
 std::vector<PredictedPath> addTrafficSignalStopHypotheses(
   const ObjectPrediction & prediction,
   const std::unordered_map<lanelet::Id, TrafficLightGroup> & traffic_signal_id_map,
-  const LaneletRTree & road_lanelet_rtree, StopHypothesisDebug & debug)
+  const LaneletRTree & road_lanelet_rtree, const path_cut::MaxDecelerationParams & max_decel_params,
+  StopHypothesisDebug & debug)
 {
   const TrackedObject & object = prediction.object;
   const std::vector<PredictedPath> & predicted_paths = prediction.predicted_paths;
@@ -354,6 +373,12 @@ std::vector<PredictedPath> addTrafficSignalStopHypotheses(
     debug.counter.stopline_found += stop_line_ahead ? 1 : 0;
 
     if (!shouldAddStopHypothesis(signal_requires_stop, stop_line_ahead)) {
+      continue;
+    }
+
+    // Keep the constant-velocity path when the object cannot brake in time (it runs the light).
+    if (!can_stop_before_stop_line(
+          object, predicted_path.path, *related_stop_line, max_decel_params)) {
       continue;
     }
 
@@ -428,7 +453,7 @@ std::vector<PredictedPath> TrafficSignalStopPredictor::addStopHypotheses(
   debug::populateUsedSignalColors(stabilized_traffic_signal_id_map_, debug_.used_signal_colors);
 
   return addTrafficSignalStopHypotheses(
-    prediction, stabilized_traffic_signal_id_map_, *road_lanelet_rtree_, debug_);
+    prediction, stabilized_traffic_signal_id_map_, *road_lanelet_rtree_, max_decel_params_, debug_);
 }
 
 }  // namespace autoware::map_based_prediction::priority_predictor

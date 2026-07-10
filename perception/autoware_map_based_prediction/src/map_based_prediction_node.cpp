@@ -15,6 +15,7 @@
 #include "map_based_prediction_node.hpp"
 
 #include "autoware/map_based_prediction/params.hpp"
+#include "autoware/map_based_prediction/path_cut/path_cut_utils.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
 
@@ -108,6 +109,14 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     declare_parameter<double>("priority_prediction.signal_observation_timeout");
   state_.priority_predictor = std::make_shared<priority_predictor::TrafficSignalStopPredictor>();
   state_.priority_predictor->setParameters(priority_params, signal_observation_timeout);
+
+  // --- Deceleration-aware path cut (per class max deceleration) ---
+  path_cut::MaxDecelerationParams max_decel_params;
+  max_decel_params.vehicle = declare_parameter<double>("path_cut.max_deceleration.vehicle");
+  max_decel_params.pedestrian = declare_parameter<double>("path_cut.max_deceleration.pedestrian");
+  max_decel_params.bicycle = declare_parameter<double>("path_cut.max_deceleration.bicycle");
+  max_decel_params.motorcycle = declare_parameter<double>("path_cut.max_deceleration.motorcycle");
+  state_.priority_predictor->set_max_deceleration(max_decel_params);
 
   // --- VRU predictor ---
   state_.predictor_vru = std::make_shared<PredictorVru>(*this);

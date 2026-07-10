@@ -216,6 +216,27 @@ TEST(PriorityUtils, ArcLengthToStopLineNoneWhenBehindPathStart)
   EXPECT_FALSE(arcLengthToStopLine(ref_path, stop_line).has_value());
 }
 
+// The deceleration gate composes the real arcLengthToStopLine (distance to the stop line)
+// with can_stop_before_the_line: it clips only when the object can stop within its class
+// deceleration.
+TEST(PriorityUtils, DecelerationGateClipsOnlyWhenObjectCanStop)
+{
+  lanelet::Id id = 5500;
+  const auto ref_path = makeRefPath(20.0);
+  const auto stop_line = makeStopLine(id, 10.0);
+  const auto distance_to_line = arcLengthToStopLine(ref_path, stop_line);
+  ASSERT_TRUE(distance_to_line.has_value());
+  EXPECT_NEAR(*distance_to_line, 10.0, 1e-6);
+
+  constexpr double vehicle_max_deceleration = 5.0;
+  // Low speed: v=5 -> stopping distance = 25 / 10 = 2.5 m <= 10 m -> clip at the stop line.
+  EXPECT_TRUE(path_cut::can_stop_before_the_line(*distance_to_line, 5.0, vehicle_max_deceleration));
+  // High speed: v=15 -> stopping distance = 225 / 10 = 22.5 m > 10 m -> keep constant-velocity
+  // path.
+  EXPECT_FALSE(
+    path_cut::can_stop_before_the_line(*distance_to_line, 15.0, vehicle_max_deceleration));
+}
+
 TEST(PriorityUtils, HasStopLineAheadByObjectPosition)
 {
   lanelet::Id id = 5500;

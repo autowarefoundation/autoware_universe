@@ -65,6 +65,14 @@
       signal_retention_timeout: 15.0
       signal_observation_timeout: 20.0
 
+    # per-class max deceleration [m/s^2] for deceleration-aware path cut (stop-line clip)
+    path_cut:
+      max_deceleration:
+        vehicle: 3.0 #m/s^2
+        pedestrian: 0.5
+        bicycle: 1.0
+        motorcycle: 2.0
+
     # debug parameters
     publish_processing_time: false
     publish_processing_time_detail: false

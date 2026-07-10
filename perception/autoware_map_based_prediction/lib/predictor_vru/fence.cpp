@@ -14,6 +14,8 @@
 
 #include "autoware/map_based_prediction/predictor_vru/fence.hpp"
 
+#include "autoware/map_based_prediction/path_cut/path_cut_utils.hpp"
+
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
 #include <boost/geometry.hpp>
@@ -116,12 +118,7 @@ PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_p
   if (!closest_cross_index) {
     return predicted_path;
   }
-  auto trimmed_path = predicted_path;
-  trimmed_path.path.clear();
-  for (unsigned i = 0; i <= closest_cross_index.value(); ++i) {
-    trimmed_path.path.push_back(path.at(i));
-  }
-  return trimmed_path;
+  return path_cut::force_cut_at_index(predicted_path, closest_cross_index.value());
 }
 
 }  // namespace autoware::map_based_prediction

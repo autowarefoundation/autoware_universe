@@ -16,6 +16,7 @@
 #define AUTOWARE__MAP_BASED_PREDICTION__PRIORITY_PREDICTOR__TRAFFIC_SIGNAL_STOP_PREDICTOR_HPP_
 
 #include "autoware/map_based_prediction/data_structure.hpp"
+#include "autoware/map_based_prediction/path_cut/path_cut_utils.hpp"
 #include "autoware/map_based_prediction/priority_predictor/debug_priority_pred.hpp"
 #include "autoware/map_based_prediction/priority_predictor/signal_stop_hysteresis.hpp"
 
@@ -104,6 +105,11 @@ public:
     signal_observation_timeout_ = signal_observation_timeout;
   }
 
+  void set_max_deceleration(const path_cut::MaxDecelerationParams & max_decel_params)
+  {
+    max_decel_params_ = max_decel_params;
+  }
+
   void setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
 
   void setTrafficSignal(const TrafficLightGroupArray & traffic_signals, const rclcpp::Time & now);
@@ -123,6 +129,7 @@ private:
   std::unordered_map<lanelet::Id, SignalStabilizeState> signal_stabilize_state_;
   std::optional<rclcpp::Time> latest_traffic_signal_time_;
   PriorityPredictionParams params_;
+  path_cut::MaxDecelerationParams max_decel_params_;
   double signal_observation_timeout_{0.0};
   StopHypothesisDebug debug_;
 };
