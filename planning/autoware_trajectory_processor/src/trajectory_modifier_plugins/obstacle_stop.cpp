@@ -44,9 +44,7 @@ using utils::obstacle_stop::PointCloud2;
 void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
 {
   const auto node_ptr = get_node_ptr();
-  planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "modifier_obstacle_stop");
+  init_planning_factor_interface("modifier_obstacle_stop");
 
   pub_clustered_pointcloud_ =
     node_ptr->create_publisher<PointCloud2>("~/obstacle_stop/debug/cluster_points", 1);

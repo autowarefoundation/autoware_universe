@@ -19,11 +19,13 @@
 #include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/input_data.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
@@ -45,7 +47,7 @@ public:
   TrajectoryModifierPluginBase() = default;
 
   void initialize(
-    std::string name, rclcpp::Node * node_ptr,
+    std::string name, autoware::agnocast_wrapper::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
     const std::shared_ptr<TrajectoryModifierContext> & context,
     [[maybe_unused]] const TrajectoryModifierParams & params)
@@ -69,7 +71,7 @@ public:
     const TrajectoryPoints & traj_points, const InputData & input) = 0;
   std::string get_name() const { return name_; }
   std::string get_short_name() const { return short_name_; }
-  rclcpp::Node * get_node_ptr() const { return node_ptr_; }
+  autoware::agnocast_wrapper::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
   virtual void update_params(const TrajectoryModifierParams & params) = 0;
 
@@ -77,8 +79,12 @@ public:
 
   virtual void publish_planning_factor()
   {
-    if (planning_factor_interface_) {
-      planning_factor_interface_->publish();
+    if (planning_factor_interface_ && planning_factor_pub_) {
+      auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(planning_factor_pub_);
+      msg->header.frame_id = "map";
+      msg->header.stamp = node_ptr_->now();
+      msg->factors = planning_factor_interface_->take_factors();
+      planning_factor_pub_->publish(std::move(msg));
     }
   }
   std::vector<PlanningFactor> get_planning_factors() const
@@ -91,8 +97,20 @@ public:
 
 protected:
   virtual void on_initialize(const TrajectoryModifierParams & params) = 0;
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+
+  void init_planning_factor_interface(const std::string & name)
+  {
+    planning_factor_interface_ =
+      std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceBase>(name);
+    planning_factor_pub_ =
+      node_ptr_->create_publisher<autoware_internal_planning_msgs::msg::PlanningFactorArray>(
+        planning_factor_interface_->topic_name(), 1);
+  }
+
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterfaceBase>
     planning_factor_interface_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::PlanningFactorArray)
+  planning_factor_pub_;
   std::shared_ptr<TrajectoryModifierContext> context_;
   bool enabled_{true};
   double trajectory_time_step_{0.1};
@@ -102,7 +120,7 @@ protected:
 private:
   std::string name_;
   std::string short_name_;
-  rclcpp::Node * node_ptr_;
+  autoware::agnocast_wrapper::Node * node_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 }  // namespace autoware::trajectory_modifier::plugin

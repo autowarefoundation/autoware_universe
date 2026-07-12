@@ -50,9 +50,7 @@ namespace autoware::trajectory_modifier::plugin
 void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryModifierParams & params)
 {
   const auto node_ptr = get_node_ptr();
-  planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "modifier_traffic_light_stop");
+  init_planning_factor_interface("modifier_traffic_light_stop");
 
   pub_debug_text_ = node_ptr->create_publisher<StringStamped>("~/traffic_light_stop/debug/text", 1);
 

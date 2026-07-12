@@ -103,9 +103,7 @@ namespace autoware::trajectory_modifier::plugin
 void SurroundObstacleStop::on_initialize(const TrajectoryModifierParams & params)
 {
   const auto node_ptr = get_node_ptr();
-  planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "modifier_surround_obstacle_stop");
+  init_planning_factor_interface("modifier_surround_obstacle_stop");
 
   pub_debug_text_ =
     node_ptr->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
@@ -147,7 +145,11 @@ obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_in
 {
   obstacle_proximity_checker::Inputs checker_inputs;
   checker_inputs.ego_pose = input.current_odometry->pose.pose;
-  checker_inputs.objects = input.predicted_objects;
+  if (input.predicted_objects) {
+    checker_inputs.objects =
+      std::make_shared<const autoware_perception_msgs::msg::PredictedObjects>(
+        *input.predicted_objects);
+  }
 
   if (!input.obstacle_pointcloud) return checker_inputs;
 
