@@ -17,18 +17,18 @@
 #include "parameters.hpp"
 #include "types.hpp"
 
+#include <autoware/interpolation/linear_interpolation.hpp>
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware/universe_utils/ros/uuid_helper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
-#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
-#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/predicted_path.hpp>
-#include <geometry_msgs/msg/detail/point__struct.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/detail/overlaps/interface.hpp>
@@ -80,7 +80,7 @@ void calculate_current_footprint(
 }
 
 bool skip_object_condition(
-  Object & object, const std::optional<DecisionHistory> & prev_decisions,
+  Object & object, const std::optional<DecisionHistory> & prev_decisions, const bool is_uncertain,
   const universe_utils::Segment2d & ego_rear_segment, const FilteringData & filtering_data,
   const Parameters & parameters)
 {
@@ -104,7 +104,7 @@ bool skip_object_condition(
   if (is_previous_target) {
     return !skip_object;
   }
-  if (params.ignore_if_stopped && object.is_stopped) {
+  if (params.ignore_if_stopped && object.is_stopped && !is_uncertain) {
     return skip_object;
   }
   if (!filtering_data.ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(
@@ -140,8 +140,7 @@ std::vector<autoware_perception_msgs::msg::PredictedPath> filter_by_confidence(
 }
 
 void calculate_predicted_path_footprints(
-  Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  const Parameters & params)
+  Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object)
 {
   auto width = 0.0;
   auto half_length = 0.0;
@@ -158,8 +157,7 @@ void calculate_predicted_path_footprints(
     half_length = width / 2.0;
   }
   // calculate footprint
-  for (const auto & path :
-       filter_by_confidence(predicted_object.kinematics.predicted_paths, object.label, params)) {
+  for (const auto & path : predicted_object.kinematics.predicted_paths) {
     ObjectPredictedPathFootprint footprint;
     footprint.time_step = rclcpp::Duration(path.time_step).seconds();
     for (const auto & p : path.path) {
@@ -174,6 +172,42 @@ void calculate_predicted_path_footprints(
         object_polygon.outer()[3]);
     }
     object.predicted_path_footprints.push_back(footprint);
+  }
+}
+
+void recalculate_predicted_paths(
+  autoware_perception_msgs::msg::PredictedObject & object, const double min_vel)
+{
+  for (auto & path : object.kinematics.predicted_paths) {
+    auto base_path = path.path;
+    path.path.clear();
+    std::vector<double> arc_lengths = {0.0};
+    std::vector<double> recalculated_arc_lengths = {0.0};
+    arc_lengths.reserve(base_path.size());
+    const auto min_ds = min_vel * rclcpp::Duration(path.time_step).seconds();
+    for (size_t i = 0; i + 1 < base_path.size(); ++i) {
+      const auto ds = autoware_utils_geometry::calc_distance2d(base_path[i], base_path[i + 1]);
+      arc_lengths.push_back(arc_lengths.back() + ds);
+      recalculated_arc_lengths.push_back(recalculated_arc_lengths.back() + std::max(min_ds, ds));
+    }
+    if (recalculated_arc_lengths.back() > arc_lengths.back()) {
+      const auto last_ds = arc_lengths.back() - arc_lengths[arc_lengths.size() - 2];
+      const auto ratio = (last_ds + recalculated_arc_lengths.back() - arc_lengths.back()) / last_ds;
+      const auto extended_x = autoware::interpolation::lerp(
+        base_path[base_path.size() - 2].position.x, base_path[base_path.size() - 1].position.y,
+        ratio);
+      const auto extended_y = autoware::interpolation::lerp(
+        base_path[base_path.size() - 2].position.y, base_path[base_path.size() - 1].position.y,
+        ratio);
+      auto extended_pose = base_path.back();
+      extended_pose.position.x = extended_x;
+      extended_pose.position.y = extended_y;
+      base_path.push_back(extended_pose);
+      arc_lengths.push_back(recalculated_arc_lengths.back());
+    }
+    for (const auto s : recalculated_arc_lengths) {
+      path.path.push_back(autoware::motion_utils::calcInterpolatedPose(base_path, s));
+    }
   }
 }
 
@@ -276,7 +310,8 @@ void filter_predicted_paths(
 std::vector<Object> prepare_dynamic_objects(
   const std::vector<std::shared_ptr<motion_velocity_planner::PlannerData::Object>> & objects,
   const TrajectoryCornerFootprint & ego_trajectory,
-  const ObjectDecisionsTracker & previous_decisions, const FilteringDataPerLabel & filtering_data,
+  const ObjectDecisionsTracker & previous_decisions,
+  const ObjectDetectionTracker & detection_tracker, const FilteringDataPerLabel & filtering_data,
   const Parameters & params)
 {
   std::vector<Object> filtered_objects;
@@ -292,13 +327,24 @@ std::vector<Object> prepare_dynamic_objects(
         .to_2d();
     classify(filtered_object, object->predicted_object, target_labels, params);
     calculate_current_footprint(filtered_object, object->predicted_object);
+    const auto & detection_duration =
+      detection_tracker.get_detection_duration(filtered_object.uuid);
+    const auto is_uncertain =
+      detection_duration &&
+      *detection_duration < params.objects_uncertain_mode_detection_duration_threshold;
     const auto & previous_object_decisions = previous_decisions.get(filtered_object.uuid);
     if (skip_object_condition(
-          filtered_object, previous_object_decisions, ego_rear_segment,
+          filtered_object, previous_object_decisions, is_uncertain, ego_rear_segment,
           filtering_data[filtered_object.label], params)) {
       continue;
     }
-    calculate_predicted_path_footprints(filtered_object, object->predicted_object, params);
+    auto predicted_object = object->predicted_object;
+    predicted_object.kinematics.predicted_paths = filter_by_confidence(
+      predicted_object.kinematics.predicted_paths, filtered_object.label, params);
+    if (is_uncertain) {
+      recalculate_predicted_paths(predicted_object, params.objects_uncertain_mode_min_velocity);
+    }
+    calculate_predicted_path_footprints(filtered_object, predicted_object);
     filter_predicted_paths(
       filtered_object, filtering_data[filtered_object.label],
       params.object_parameters_per_label[filtered_object.label]);

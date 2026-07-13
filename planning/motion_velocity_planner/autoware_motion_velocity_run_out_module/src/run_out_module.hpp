@@ -81,6 +81,7 @@ private:
   std::optional<double> unfeasible_stop_deceleration_;
 
   run_out::ObjectDecisionsTracker decisions_tracker_;
+  run_out::ObjectDetectionTracker detection_tracker_;
   run_out::Parameters params_{};
 
   /// @brief update whether we are currently inserting a stop that breaks the deceleration limit
