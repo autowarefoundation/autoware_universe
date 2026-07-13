@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_avoidance_target_detector</name>
+  <version>0.0.0</version>
+  <description>Experimental package for avoidance target detection</description>
+
+  <maintainer email="taikiyamada@example.com">Taiki Yamada</maintainer>
+  <license>Apache License 2.0</license>
+
+  <author email="taikiyamada@example.com">Taiki Yamada</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_map_msgs</depend>
+  <depend>autoware_marker_utils</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_route_handler</depend>
+  <depend>autoware_trajectory</depend>
+  <depend>autoware_utils</depend>
+  <depend>autoware_utils_geometry</depend>
+  <depend>autoware_utils_visualization</depend>
+  <depend>lanelet2_core</depend>
+  <depend>lanelet2_io</depend>
+  <depend>lanelet2_routing</depend>
+  <depend>lanelet2_traffic_rules</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>visualization_msgs</depend>
+
+  <exec_depend>j6_gen2_description</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
