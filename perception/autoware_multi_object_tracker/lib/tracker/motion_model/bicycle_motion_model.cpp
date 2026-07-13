@@ -601,17 +601,19 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw_sq + q_cov_lat2 * cos_yaw_sq);
 
-  // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
-  constexpr double cross_coefficient =
-    0.1;  // [m^2] coefficient for covariance between front and rear axle
-  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * cross_coefficient;
-  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * cross_coefficient;
-  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
-  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
+  // Front/rear position process noise splits into a common-mode part C (whole-body translation from
+  // longitudinal/lateral acceleration, shared identically by both axle points) and a differential
+  // part D (wheel-base growth + heading swing) that acts on the front point only:
+  //   Q_pos = [[ C , C   ],
+  //            [ C , C+D ]]
+  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1);
+  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1);
+  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1);
+  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1);
+  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1);
 
   // covariance of velocity
   const double q_cov_vel_long = motion_params_.q_cov_acc_long * dt2;

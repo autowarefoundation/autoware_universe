@@ -16,6 +16,7 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/update/vehicle_update_strategy.hpp"
 
+#include <Eigen/Eigenvalues>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 
 #include <gtest/gtest.h>
@@ -231,6 +232,86 @@ TEST(BlendAxleCovariance, CommonLateralBiasDoesNotRotate)
   EXPECT_GT(std::abs(yaw_unblended - yaw_pre), 5e-3);
   // With a full blend the same bias leaves the heading essentially untouched (pure translation).
   EXPECT_NEAR(yaw_blended, yaw_pre, 1e-6);
+}
+
+// ---------------------------------------------------------------------------------------------
+// BicycleMotionModel process noise — common/differential front/rear structure.
+// A single predict step from a zero covariance isolates the process noise: P_next = A*0*A^T + Q =
+// Q, so the front/rear position blocks of the predicted covariance ARE the process-noise blocks.
+// ---------------------------------------------------------------------------------------------
+namespace
+{
+constexpr double kQStepSeconds = 0.1;  // single sub-step (< dt_max = 0.11)
+
+// Predict one step from P = 0 and return the full state covariance (= process noise Q of that
+// step).
+BicycleMotionModel::StateMat processNoiseFromZero(const double yaw)
+{
+  BicycleMotionModel model;
+  model.setMotionParams(
+    object_model::normal_vehicle.process_noise, object_model::normal_vehicle.bicycle_state,
+    object_model::normal_vehicle.process_limit);
+
+  const std::array<double, 36> zero_cov{};  // zero pose + velocity covariance -> P = 0
+  model.initialize(
+    startTime(), 0.0, 0.0, yaw, zero_cov, 5.0 /*vel_long*/, 0.0 /*vel_long_cov*/, 0.0 /*vel_lat*/,
+    0.0 /*vel_lat_cov*/, kVehicleLength);
+
+  BicycleMotionModel::StateVec x;
+  BicycleMotionModel::StateMat p;
+  // Base overload returning the raw 6x6 covariance (hidden by the derived pose/twist overload).
+  model.MotionModel<6>::getPredictedState(
+    startTime() + rclcpp::Duration::from_seconds(kQStepSeconds), x, p);
+  return p;
+}
+
+// 2x2 position block for axle points anchored at state indices (a, a+1) x (b, b+1).
+Eigen::Matrix2d axleBlock(const BicycleMotionModel::StateMat & p, const int a, const int b)
+{
+  Eigen::Matrix2d block;
+  block << p(a, b), p(a, b + 1), p(a + 1, b), p(a + 1, b + 1);
+  return block;
+}
+}  // namespace
+
+// The front/rear cross-covariance equals the common (rear) block, so whole-body translation noise
+// stays out of the difference vector d = p2 - p1: Cov(d) = Cov(front) - Cov(rear) = D (differential
+// heading/length noise only) instead of the old (2 - 2*kappa)*C + D leak.
+TEST(ProcessNoiseAxleStructure, CrossBlockEqualsCommonBlock)
+{
+  for (const double yaw : {0.0, 0.7, -1.3}) {
+    const auto p = processNoiseFromZero(yaw);
+    const Eigen::Matrix2d rear = axleBlock(p, BicycleMotionModel::X1, BicycleMotionModel::X1);
+    const Eigen::Matrix2d front = axleBlock(p, BicycleMotionModel::X2, BicycleMotionModel::X2);
+    const Eigen::Matrix2d cross = axleBlock(p, BicycleMotionModel::X1, BicycleMotionModel::X2);
+
+    // Common-mode translation is fully shared: cross block == rear (common) block C.
+    EXPECT_TRUE(cross.isApprox(rear, 1e-12)) << "yaw=" << yaw << "\ncross:\n"
+                                             << cross << "\nrear:\n"
+                                             << rear;
+
+    // Cov(d) = Cov(rear) + Cov(front) - cross - cross^T, which must equal the pure differential D.
+    const Eigen::Matrix2d cov_d = rear + front - cross - cross.transpose();
+    const Eigen::Matrix2d differential = front - rear;
+    EXPECT_TRUE(cov_d.isApprox(differential, 1e-12)) << "yaw=" << yaw << "\nCov(d):\n"
+                                                     << cov_d << "\nD:\n"
+                                                     << differential;
+
+    // The differential is genuinely non-zero, so real heading/length noise still grows Cov(d).
+    EXPECT_GT(differential.trace(), 0.0) << "yaw=" << yaw;
+  }
+}
+
+// The common/differential split is a sum of PSD blocks ([[C, C],[C, C+D]] has Schur complement
+// D >= 0), so the predicted covariance stays positive semi-definite.
+TEST(ProcessNoiseAxleStructure, PositiveSemiDefinite)
+{
+  for (const double yaw : {0.0, 0.7, -1.3}) {
+    const auto p = processNoiseFromZero(yaw);
+    Eigen::SelfAdjointEigenSolver<BicycleMotionModel::StateMat> solver(p);
+    ASSERT_EQ(solver.info(), Eigen::Success) << "yaw=" << yaw;
+    EXPECT_GE(solver.eigenvalues().minCoeff(), -1e-9) << "yaw=" << yaw;
+  }
 }
 
 }  // namespace autoware::multi_object_tracker
