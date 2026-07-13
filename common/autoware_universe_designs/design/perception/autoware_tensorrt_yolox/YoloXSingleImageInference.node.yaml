@@ -1,0 +1,31 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: YoloXSingleImageInference.node
+
+package:
+  name: autoware_tensorrt_yolox
+  provider: autoware
+
+launch:
+  plugin: autoware::tensorrt_yolox::YoloXSingleImageInferenceNode
+  executable: yolox_single_image_inference
+  node_output: screen
+
+# interfaces
+# standalone debug tool: loads an image from the image_path parameter, runs detection,
+# and writes/displays the result. no ROS topic interface.
+subscribers: []
+
+publishers: []
+
+# parameters
+param_files: []
+
+param_values:
+  - name: image_path
+    type: string
+    default: ""
+
+# processes
+processes: []
