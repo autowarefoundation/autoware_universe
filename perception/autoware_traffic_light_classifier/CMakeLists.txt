@@ -182,6 +182,18 @@ if(BUILD_TESTING)
       ${OpenCV_LIBRARIES}
       ${CUDA_LIBRARIES}
     )
+
+    # CNNClassifier adapter test (images/signals size guard): ROS-isolated, and self-skips
+    # without a GPU/model since the ctor builds the engine. TIMEOUT covers that build.
+    ament_add_ros_isolated_gtest(test_cnn_classifier_adapter
+      test/test_cnn_classifier_adapter.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_classifier_adapter
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
   endif()
 endif()
 
