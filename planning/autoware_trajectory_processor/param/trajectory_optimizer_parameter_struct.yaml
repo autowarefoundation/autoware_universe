@@ -57,6 +57,43 @@ trajectory_optimizer_node_params:
     default_value: false
     description: Enable Temporal MPT optimizer plugin (acados-based kinematic bicycle MPC for combined geometry and velocity optimization)
     read_only: false
+  max_vel:
+    type: double
+    default_value: 11.1
+    description: Default maximum velocity used when no external velocity limit is available [m/s]
+    validation:
+      bounds<>: [0.0, 100.0]
+    read_only: false
+
+  limit:
+    max_acc:
+      type: double
+      default_value: 1.0
+      description: Maximum acceleration limit for velocity smoothing [m/s^2]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    min_acc:
+      type: double
+      default_value: -2.5
+      description: Minimum acceleration limit for velocity smoothing [m/s^2]
+      validation:
+        bounds<>: [-10.0, 0.0]
+      read_only: false
+    max_jerk:
+      type: double
+      default_value: 1.5
+      description: Maximum jerk limit for velocity smoothing [m/s^3]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    min_jerk:
+      type: double
+      default_value: -1.5
+      description: Minimum jerk limit for velocity smoothing [m/s^3]
+      validation:
+        bounds<>: [-10.0, 0.0]
+      read_only: false
 
   trajectory_point_fixer:
     resample_close_points:
@@ -411,6 +448,13 @@ trajectory_optimizer_node_params:
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
+    min_limited_speed_mps:
+      type: double
+      default_value: 3.0
+      description: Minimum speed when applying lateral acceleration limit [m/s]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
     set_engage_speed:
       type: bool
       default_value: false
@@ -431,6 +475,49 @@ trajectory_optimizer_node_params:
       default_value: false
       description: Enable jerk-filtered velocity smoothing
       read_only: false
+    continuous_jerk_smoother:
+      jerk_weight:
+        type: double
+        default_value: 30.0
+        description: Weight for jerk minimization in velocity smoothing
+        validation:
+          bounds<>: [0.0, 10000.0]
+        read_only: false
+      over_v_weight:
+        type: double
+        default_value: 3000.0
+        description: Weight for velocity limit violation slack
+        validation:
+          bounds<>: [0.0, 100000.0]
+        read_only: false
+      over_a_weight:
+        type: double
+        default_value: 30.0
+        description: Weight for acceleration limit violation slack
+        validation:
+          bounds<>: [0.0, 10000.0]
+        read_only: false
+      over_j_weight:
+        type: double
+        default_value: 10.0
+        description: Weight for jerk limit violation slack
+        validation:
+          bounds<>: [0.0, 10000.0]
+        read_only: false
+      velocity_tracking_weight:
+        type: double
+        default_value: 1.0
+        description: Weight for tracking reference velocity
+        validation:
+          bounds<>: [0.0, 10000.0]
+        read_only: false
+      accel_tracking_weight:
+        type: double
+        default_value: 300.0
+        description: Weight for tracking reference acceleration
+        validation:
+          bounds<>: [0.0, 10000.0]
+        read_only: false
 
   elastic_band_params:
     common:

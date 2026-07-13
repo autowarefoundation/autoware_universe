@@ -68,6 +68,42 @@
           "default": false,
           "description": "Enable Temporal MPT optimizer plugin (acados-based kinematic bicycle MPC for combined geometry and velocity optimization)"
         },
+        "max_vel": {
+          "type": "number",
+          "default": 11.1,
+          "minimum": 0,
+          "description": "Default maximum velocity used when no external velocity limit is available [m/s]"
+        },
+        "limit": {
+          "type": "object",
+          "properties": {
+            "max_acc": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Maximum acceleration limit for velocity smoothing [m/s^2]"
+            },
+            "min_acc": {
+              "type": "number",
+              "default": -2.5,
+              "maximum": 0,
+              "description": "Minimum acceleration limit for velocity smoothing [m/s^2]"
+            },
+            "max_jerk": {
+              "type": "number",
+              "default": 1.5,
+              "minimum": 0,
+              "description": "Maximum jerk limit for velocity smoothing [m/s^3]"
+            },
+            "min_jerk": {
+              "type": "number",
+              "default": -1.5,
+              "maximum": 0,
+              "description": "Minimum jerk limit for velocity smoothing [m/s^3]"
+            }
+          },
+          "required": ["max_acc", "min_acc", "max_jerk", "min_jerk"]
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
@@ -476,6 +512,12 @@
               "minimum": 0,
               "description": "Maximum lateral acceleration [m/s²]"
             },
+            "min_limited_speed_mps": {
+              "type": "number",
+              "default": 3.0,
+              "minimum": 0,
+              "description": "Minimum speed when applying lateral acceleration limit [m/s]"
+            },
             "set_engage_speed": {
               "type": "boolean",
               "default": false,
@@ -495,6 +537,55 @@
               "type": "boolean",
               "default": false,
               "description": "Enable jerk-filtered velocity smoothing"
+            },
+            "continuous_jerk_smoother": {
+              "type": "object",
+              "properties": {
+                "jerk_weight": {
+                  "type": "number",
+                  "default": 30.0,
+                  "minimum": 0,
+                  "description": "Weight for jerk minimization in velocity smoothing"
+                },
+                "over_v_weight": {
+                  "type": "number",
+                  "default": 3000.0,
+                  "minimum": 0,
+                  "description": "Weight for velocity limit violation slack"
+                },
+                "over_a_weight": {
+                  "type": "number",
+                  "default": 30.0,
+                  "minimum": 0,
+                  "description": "Weight for acceleration limit violation slack"
+                },
+                "over_j_weight": {
+                  "type": "number",
+                  "default": 10.0,
+                  "minimum": 0,
+                  "description": "Weight for jerk limit violation slack"
+                },
+                "velocity_tracking_weight": {
+                  "type": "number",
+                  "default": 1.0,
+                  "minimum": 0,
+                  "description": "Weight for tracking reference velocity"
+                },
+                "accel_tracking_weight": {
+                  "type": "number",
+                  "default": 300.0,
+                  "minimum": 0,
+                  "description": "Weight for tracking reference acceleration"
+                }
+              },
+              "required": [
+                "jerk_weight",
+                "over_v_weight",
+                "over_a_weight",
+                "over_j_weight",
+                "velocity_tracking_weight",
+                "accel_tracking_weight"
+              ]
             }
           },
           "required": [
@@ -503,10 +594,12 @@
             "target_pull_out_speed_mps",
             "target_pull_out_acc_mps2",
             "max_lateral_accel_mps2",
+            "min_limited_speed_mps",
             "set_engage_speed",
             "limit_speed",
             "limit_lateral_acceleration",
-            "smooth_velocities"
+            "smooth_velocities",
+            "continuous_jerk_smoother"
           ]
         },
         "elastic_band_params": {
