@@ -27,10 +27,10 @@ control/autoware_control_validator/** kyoichi.sugahara@tier4.jp makoto.kurihara@
 control/autoware_external_cmd_selector/** fumiya.watanabe@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
 control/autoware_joy_controller/** fumiya.watanabe@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
 control/autoware_lane_departure_checker/** kyoichi.sugahara@tier4.jp makoto.kurihara@tier4.jp zulfaqar.azmi@tier4.jp
-control/autoware_mpc_lateral_controller/** alqudah.mohammad@tier4.jp arjun.ram@tier4.jp kyoichi.sugahara@tier4.jp
+control/autoware_mpc_lateral_controller/** alqudah.mohammad@tier4.jp arjun.ram@tier4.jp kyoichi.sugahara@tier4.jp takumi.odashima@tier4.jp
 control/autoware_obstacle_collision_checker/** fumiya.watanabe@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
 control/autoware_operation_mode_transition_manager/** isamu.takagi@tier4.jp taiki.yamada@tier4.jp
-control/autoware_pid_longitudinal_controller/** arjun.ram@tier4.jp kyoichi.sugahara@tier4.jp yuki.takagi@tier4.jp
+control/autoware_pid_longitudinal_controller/** arjun.ram@tier4.jp kyoichi.sugahara@tier4.jp takumi.odashima@tier4.jp yuki.takagi@tier4.jp
 control/autoware_predicted_path_checker/** berkay@leodrive.ai junya.sasaki@tier4.jp
 control/autoware_pure_pursuit/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_shift_decider/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
