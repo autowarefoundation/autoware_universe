@@ -29,117 +29,16 @@ diffusion_planner.onnx diffusion_planner.param.json
 
 This can be downloaded by following [Download artifacts](https://github.com/autowarefoundation/autoware/blob/main/ansible/roles/artifacts/README.md#download-artifacts).
 
-### (2) Modify launch files
+### (2) Launch the planning simulator
 
-Currently, some launch files must be changed to run the planning simulator with `autoware_diffusion_planner`.
-
-```diff
-diff --git a/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml b/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml
---- a/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml
-+++ b/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml
-@@ -6,7 +6,7 @@
-     enable_overshoot_emergency: false
-     enable_large_tracking_error_emergency: true
-     enable_slope_compensation: true
--    enable_keep_stopped_until_steer_convergence: true
-+    enable_keep_stopped_until_steer_convergence: false
-
-     # state transition
-     drive_state_stop_dist: 0.5
-diff --git a/autoware_launch/config/planning/scenario_planning/common/common.param.yaml b/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
---- a/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
-+++ b/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
-@@ -1,6 +1,6 @@
- /**:
-   ros__parameters:
--    max_vel: 4.17           # max velocity limit [m/s]
-+    max_vel: 22.2           # max velocity limit [m/s]
-
-     # constraints param for normal driving
-     normal:
-diff --git a/autoware_launch/config/system/diagnostics/planning.yaml b/autoware_launch/config/system/diagnostics/planning.yaml
---- a/autoware_launch/config/system/diagnostics/planning.yaml
-+++ b/autoware_launch/config/system/diagnostics/planning.yaml
-@@ -11,19 +11,7 @@ units:
-           - { type: link, link: /autoware/planning/trajectory_validation }
-
-   - path: /autoware/planning/trajectory_validation
--    type: and
--    list:
--      - { type: link, link: /autoware/planning/trajectory_validation/finite }
--      - { type: link, link: /autoware/planning/trajectory_validation/interval }
--      - { type: link, link: /autoware/planning/trajectory_validation/curvature }
--      - { type: link, link: /autoware/planning/trajectory_validation/angle }
--      - { type: link, link: /autoware/planning/trajectory_validation/lateral_acceleration }
--      - { type: link, link: /autoware/planning/trajectory_validation/acceleration }
--      - { type: link, link: /autoware/planning/trajectory_validation/deceleration }
--      - { type: link, link: /autoware/planning/trajectory_validation/steering }
--      - { type: link, link: /autoware/planning/trajectory_validation/steering_rate }
--      - { type: link, link: /autoware/planning/trajectory_validation/velocity_deviation }
--      - { type: link, link: /autoware/planning/trajectory_validation/trajectory_shift }
-+    type: ok
-
-   - path: /autoware/planning/routing/state
-     type: diag
-diff --git a/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml b/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml
---- a/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml
-+++ b/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml
-@@ -47,12 +47,34 @@
-       </include>
-     </group>
-
-+    <!-- trajectory generator -->
-+    <group>
-+      <push-ros-namespace namespace="trajectory_generator"/>
-+      <include file="$(find-pkg-share autoware_diffusion_planner)/launch/diffusion_planner.launch.xml">
-+        <arg name="input_odometry" value="/localization/kinematic_state"/>
-+        <arg name="input_acceleration" value="/localization/acceleration"/>
-+        <arg name="input_route" value="/planning/mission_planning/route"/>
-+        <arg name="input_traffic_signals" value="/perception/traffic_light_recognition/traffic_signals"/>
-+        <arg name="input_tracked_objects" value="/perception/object_recognition/tracking/objects"/>
-+        <arg name="input_vector_map" value="/map/vector_map"/>
-+        <arg name="input_turn_indicators" value="/vehicle/status/turn_indicators_status"/>
-+        <arg name="output_trajectories" value="/planning/generator/diffusion_planner/candidate_trajectories"/>
-+        <arg name="output_turn_indicators" value="/planning/turn_indicators_cmd"/>
-+      </include>
-+      <include file="$(find-pkg-share autoware_trajectory_optimizer)/launch/trajectory_optimizer.launch.xml">
-+        <arg name="input_trajectories" value="/planning/generator/diffusion_planner/candidate_trajectories"/>
-+        <arg name="output_traj" value="/planning/trajectory"/>
-+        <arg name="output_trajectories" value="/planning/generator/trajectory_optimizer/candidate_trajectories"/>
-+      </include>
-+    </group>
-+
-     <!-- planning validator -->
-     <group>
-       <include file="$(find-pkg-share autoware_planning_validator)/launch/planning_validator.launch.xml">
-         <arg name="container_type" value="component_container_mt"/>
-         <arg name="input_trajectory" value="/planning/scenario_planning/velocity_smoother/trajectory"/>
--        <arg name="output_trajectory" value="/planning/trajectory"/>
-+        <arg name="output_trajectory" value="/planning/trajectory/unused"/>
-         <arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/>
-         <arg name="input_pointcloud_topic_name" value="$(var input_pointcloud_topic_name)"/>
-         <arg name="planning_validator_param_path" value="$(var planning_validator_param_path)"/>
-diff --git a/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml b/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml
---- a/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml
-+++ b/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml
-@@ -240,7 +240,7 @@
-         <remap from="~/input/accel" to="/localization/acceleration"/>
-         <remap from="~/input/scenario" to="/planning/scenario_planning/scenario"/>
-         <remap from="~/output/path" to="path_with_lane_id"/>
--        <remap from="~/output/turn_indicators_cmd" to="/planning/turn_indicators_cmd"/>
-+        <remap from="~/output/turn_indicators_cmd" to="/planning/turn_indicators_cmd/unused"/>
-         <remap from="~/output/hazard_lights_cmd" to="/planning/behavior_path_planner/hazard_lights_cmd"/>
-         <remap from="~/output/modified_goal" to="/planning/scenario_planning/modified_goal"/>
-         <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
-```
-
-### (3) Launch the planning simulator
+Pass `planning_setting:=diffusion_planner` to switch the planning stack from the rule-based scenario planner to the diffusion planner. This argument automatically swaps the trajectory generator, the planning validator input topic, and the diagnostics graph, so no additional launch-file edits are required.
 
 ```bash
 ros2 launch autoware_launch planning_simulator.launch.xml \
   map_path:=/path/to/your/map \
   vehicle_model:=sample_vehicle \
-  sensor_model:=sample_sensor_kit
+  sensor_model:=sample_sensor_kit \
+  planning_setting:=diffusion_planner
 ```
 
 ## Features

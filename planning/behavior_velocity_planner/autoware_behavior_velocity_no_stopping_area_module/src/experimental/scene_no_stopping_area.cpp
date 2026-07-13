@@ -151,6 +151,11 @@ bool NoStoppingAreaModule::modifyPathVelocity(
   const auto & predicted_obj_arr_ptr = planner_data.predicted_objects;
   const auto & current_pose = planner_data.current_odometry->pose;
 
+  if (!predicted_obj_arr_ptr) {
+    setSafe(true);
+    return true;
+  }
+
   // Reset data
   debug_data_ = no_stopping_area::DebugData();
   debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;

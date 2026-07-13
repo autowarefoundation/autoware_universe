@@ -25,21 +25,28 @@
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 #include <rclcpp/timer.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <std_msgs/msg/float32_multi_array.hpp>
+#include <std_msgs/msg/float64.hpp>
+#include <std_srvs/srv/set_bool.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::diffusion_planner
@@ -55,6 +62,7 @@ using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_utils_diagnostics::DiagnosticsInterface;
 using geometry_msgs::msg::Pose;
 using rcl_interfaces::msg::SetParametersResult;
+using std_srvs::srv::SetBool;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;
 
@@ -123,9 +131,9 @@ private:
   /**
    * @brief Load TensorRT model and normalization statistics.
    *
-   * Updates the normalization_map_ and tensorrt_inference_ member variables.
+   * Updates the normalization_map_ and diffusion_planner_inference_ member variables.
    *
-   * @throws std::runtime_error if args_path or model_path are invalid, if the
+   * @throws std::runtime_error if args_path or model paths are invalid, if the
    *         model version is incompatible, or if TensorRT engine setup fails.
    */
   void load_model();
@@ -163,11 +171,38 @@ private:
   void publish_planning_factor(const Trajectory & trajectory);
 
   /**
+   * @brief Publish guidance triggered status as a debug message.
+   * @param guidance_triggered Map of guidance name to triggered flags per batch.
+   * @param timestamp Timestamp of the current frame.
+   */
+  void publish_guidance_status(
+    const std::unordered_map<std::string, std::vector<bool>> & guidance_triggered,
+    const rclcpp::Time & timestamp);
+
+  /**
    * @brief Callback for dynamic parameter updates.
    * @param parameters Updated parameters.
    * @return Result of parameter update.
    */
   SetParametersResult on_parameter(const std::vector<rclcpp::Parameter> & parameters);
+
+  /**
+   * @brief Enable or disable start guidance.
+   */
+  void on_set_start_guidance_enabled(
+    const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response);
+
+  /**
+   * @brief Enable or disable stop guidance.
+   */
+  void on_set_stop_guidance_enabled(
+    const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response);
+
+  /**
+   * @brief Enable or disable centerline guidance.
+   */
+  void on_set_centerline_guidance_enabled(
+    const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response);
 
   // Core logic instance
   std::unique_ptr<DiffusionPlannerCore> core_;
@@ -181,6 +216,8 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    debug_processing_time_pub_;
   rclcpp::Publisher<Trajectory>::SharedPtr pub_trajectory_{nullptr};
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_{nullptr};
   rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects_{nullptr};
@@ -190,6 +227,13 @@ private:
   rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_{nullptr};
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr
     pub_traffic_signal_{nullptr};
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_inference_time_{nullptr};
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr pub_denoising_steps_{nullptr};
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr
+    pub_guidance_status_{nullptr};
+  rclcpp::Service<SetBool>::SharedPtr set_start_guidance_enabled_service_{nullptr};
+  rclcpp::Service<SetBool>::SharedPtr set_stop_guidance_enabled_service_{nullptr};
+  rclcpp::Service<SetBool>::SharedPtr set_centerline_guidance_enabled_service_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
@@ -214,6 +258,8 @@ private:
 
   std::unique_ptr<DiagnosticsInterface> diagnostics_inference_;
   std::shared_ptr<const lanelet::LaneletMap> lanelet_map_ptr_{nullptr};
+
+  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;

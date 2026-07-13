@@ -508,6 +508,21 @@ void MissionPlanner::change_route(const LaneletRoute & route)
   goal.pose = route.goal_pose;
   goal.uuid = route.uuid;
 
+  {
+    size_t n_area = 0;
+    size_t n_lane = 0;
+    for (const auto & seg : route.segments) {
+      if (seg.preferred_primitive.primitive_type == "area") {
+        ++n_area;
+      } else {
+        ++n_lane;
+      }
+    }
+    RCLCPP_INFO(
+      get_logger(), "[MissionPlanner] Publishing route: segments=%zu (lane=%zu, area=%zu)",
+      route.segments.size(), n_lane, n_area);
+  }
+
   current_route_ = std::make_shared<LaneletRoute>(route);
   planner_->updateRoute(route);
   arrival_checker_.set_goal(goal);

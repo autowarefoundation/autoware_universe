@@ -2,6 +2,68 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(diffusion_planner): update model to v5 (`#12701 <https://github.com/autowarefoundation/autoware_universe/issues/12701>`_)
+  * update model version and num_neighbors
+  * feat(diffusion_planner): add DPM Solver and Guidance
+  * feat: add onnxruntime and model consistency validation tool
+  * fix: remove onnxruntime dependency from package.xml
+  * Update planning/autoware_diffusion_planner/src/inference/single_step_inference.cpp
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  * Update planning/autoware_diffusion_planner/src/inference/guidance/start_guidance.cpp
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  * style(pre-commit): autofix
+  * feat: add set_config method to StartGuidance and update configuration in DiffusionPlannerCore
+  * style: remove unused iostream include from start_guidance.cpp
+  * style: remove unused algorithm include from stop_guidance.cpp
+  * fix: update model backend and parameters in diffusion_planner.param.yaml
+  * style: update copyright information and licensing in cnpy.cpp and cnpy.h
+  * fix: refactor trajectory sampling logic and update input data loading in validate_inference_mode_consistency.cpp
+  * style: update formatting and copyright information in cnpy.cpp and cnpy.h
+  * refactor: remove unused string include from guidance.hpp
+  * refactor: remove unused batch_size parameter and simplify input handling in inference classes
+  * refactor: update error messages in npy_save function to use 'cnpy' prefix
+  * refactor: adjust preprocessor directives for ONNX Runtime backend functions
+  * refactor: remove redundant line in ONNX Runtime backend check
+  * refactor: clean up ONNX Runtime backend check by removing redundant namespace and preprocessor directive
+  * refactor: remove redundant engine_file_path overload in inference utils
+  * refactor: enable CUDA graph usage and increase max scale for guidance parameters
+  * Remove cnpy header and validate_inference_mode_consistency implementation
+  - Deleted the cnpy.h header file, which provided functionality for handling NPY and NPZ file formats.
+  - Removed the validate_inference_mode_consistency.cpp file, which contained logic for validating inference mode consistency in the diffusion planner.
+  * fix: update WEIGHT_MAJOR_VERSION to match the latest configuration
+  * Update planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml
+  Co-authored-by: SakodaShintaro <rgbygscrsedppbwg@gmail.com>
+  * fix: change model type to multi_step and disable CUDA graph usage
+  ---------
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: SakodaShintaro <rgbygscrsedppbwg@gmail.com>
+* feat(planning): apply autoware_agnocast_wrapper to diffussion planner trajectory pipeline nodes for CIE (`#12779 <https://github.com/autowarefoundation/autoware_universe/issues/12779>`_)
+  * feat(autoware_diffusion_planner): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_optimizer): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_adapter): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_ranker): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_selector): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_modifier): apply autoware_agnocast_wrapper for CIE
+  ---------
+* fix(diffusion_planner): add `vehicle_info_param_path` to fix `build_only` (`#12602 <https://github.com/autowarefoundation/autoware_universe/issues/12602>`_)
+  Added `vehicle_info_param_path`
+* feat(diffusion_planner): add `compute_file_hash_hex` (`#12579 <https://github.com/autowarefoundation/autoware_universe/issues/12579>`_)
+  Added `compute_file_hash_hex`
+* docs(diffusion_planner): fix README.md (`#12577 <https://github.com/autowarefoundation/autoware_universe/issues/12577>`_)
+  * Fixed README.md
+  * Removed modifying `enable_keep_stopped_until_steer_convergence`
+  ---------
+* feat(processing_time_cheker): add neural_network_based_planner node `processing_time_ms` (`#12529 <https://github.com/autowarefoundation/autoware_universe/issues/12529>`_)
+  * feat(diffusion_planner, trajectory_optimizer): add processing_time_ms topic
+  * feat: processing_time_checker
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* Contributors: Kazunori-Nakajima, SakodaShintaro, Yukinari Hisaki, atsushi yano, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -14,7 +14,6 @@
 
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 
-#include "acados_mpc/include/acados_interface.hpp"
 #include "autoware/interpolation/spline_interpolation.hpp"
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"

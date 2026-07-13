@@ -1,0 +1,43 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RadarScanToPointcloud2.node
+
+package:
+  name: autoware_radar_scan_to_pointcloud2
+  provider: autoware
+
+launch:
+  plugin: autoware::radar_scan_to_pointcloud2::RadarScanToPointcloud2Node
+  executable: radar_scan_to_pointcloud2_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: radar
+    message_type: radar_msgs/msg/RadarScan
+    remap_target: ~/input/radar
+
+publishers:
+  - name: amplitude_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/amplitude_pointcloud
+  - name: doppler_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/doppler_pointcloud
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/radar_scan_to_pointcloud2.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - on_input: radar
+    outcomes:
+      - to_output: amplitude_pointcloud
+      - to_output: doppler_pointcloud

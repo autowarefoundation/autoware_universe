@@ -1371,8 +1371,7 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
     return std::make_pair(original_bound, false);
   }
 
-  const auto footprint = planner_data->parameters.vehicle_info.createFootprint();
-  const auto vehicle_polygon = transform_vector(footprint, pose2transform(ego_pose));
+  const auto vehicle_polygon = planner_data->parameters.vehicle_info.createFootprint(0.0, ego_pose);
   const auto is_driving_freespace =
     !boost::geometry::disjoint(vehicle_polygon, to2D(polygon).basicPolygon());
 
@@ -1570,7 +1569,13 @@ std::vector<geometry_msgs::msg::Point> postProcess(
   }
 
   if (!is_driving_forward) {
-    std::reverse(tmp_bound.begin(), tmp_bound.end());
+    const bool has_direction_change_tag =
+      std::any_of(lanelets.begin(), lanelets.end(), [](const lanelet::ConstLanelet & lanelet) {
+        return lanelet.attributeOr("direction_change", "none") == std::string("yes");
+      });
+    if (!has_direction_change_tag) {
+      std::reverse(tmp_bound.begin(), tmp_bound.end());
+    }
   }
 
   const auto start_idx = [&]() {
