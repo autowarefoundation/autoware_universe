@@ -214,10 +214,7 @@ __global__ void points2FeaturesKernel<CloudPointTypeXYZIRADRT>(
 
 __global__ void cropKernel(
   float4 * __restrict__ points, std::uint32_t * __restrict__ mask, int num_points, float min_x,
-  float min_y, float min_z, float max_x, float max_y, float max_z, float voxel_size_x,
-  float voxel_size_y, float voxel_size_z, std::int32_t coord_min_x, std::int32_t coord_min_y,
-  std::int32_t coord_min_z, std::int32_t grid_x_size, std::int32_t grid_y_size,
-  std::int32_t grid_z_size)
+  float min_y, float min_z, float max_x, float max_y, float max_z)
 {
   auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -227,14 +224,7 @@ __global__ void cropKernel(
   const float & y = points[idx].y;
   const float & z = points[idx].z;
 
-  // The range crop is inclusive at max_*, so a boundary point floors to coordinate grid_*_size,
-  // one past the last cell
-  const auto coord_x = static_cast<std::int32_t>(std::floor(x / voxel_size_x)) - coord_min_x;
-  const auto coord_y = static_cast<std::int32_t>(std::floor(y / voxel_size_y)) - coord_min_y;
-  const auto coord_z = static_cast<std::int32_t>(std::floor(z / voxel_size_z)) - coord_min_z;
-
-  mask[idx] = x >= min_x && x <= max_x && y >= min_y && y <= max_y && z >= min_z && z <= max_z &&
-              coord_x < grid_x_size && coord_y < grid_y_size && coord_z < grid_z_size;
+  mask[idx] = x >= min_x && x < max_x && y >= min_y && y < max_y && z >= min_z && z < max_z;
 }
 
 template <typename scalar_t, typename mask_t>
@@ -620,21 +610,10 @@ std::size_t PreprocessCuda::generateFeatures(
       stream_);
   }
 
-  const auto coord_min_x =
-    static_cast<std::int32_t>(std::floor(config_.min_x_range_ / config_.voxel_x_size_));
-  const auto coord_min_y =
-    static_cast<std::int32_t>(std::floor(config_.min_y_range_ / config_.voxel_y_size_));
-  const auto coord_min_z =
-    static_cast<std::int32_t>(std::floor(config_.min_z_range_ / config_.voxel_z_size_));
-
   cropKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), num_points,
     config_.min_x_range_, config_.min_y_range_, config_.min_z_range_, config_.max_x_range_,
-    config_.max_y_range_, config_.max_z_range_, config_.voxel_x_size_, config_.voxel_y_size_,
-    config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z,
-    static_cast<std::int32_t>(config_.grid_x_size_),
-    static_cast<std::int32_t>(config_.grid_y_size_),
-    static_cast<std::int32_t>(config_.grid_z_size_));
+    config_.max_y_range_, config_.max_z_range_);
 
   CHECK_CUDA_ERROR(
     cub::DeviceScan::InclusiveSum(
@@ -722,6 +701,13 @@ std::size_t PreprocessCuda::generateFeatures(
     return 0;
   }
   *output_num_cropped_points = *num_cropped_points_;
+
+  const auto coord_min_x =
+    static_cast<std::int32_t>(std::floor(config_.min_x_range_ / config_.voxel_x_size_));
+  const auto coord_min_y =
+    static_cast<std::int32_t>(std::floor(config_.min_y_range_ / config_.voxel_y_size_));
+  const auto coord_min_z =
+    static_cast<std::int32_t>(std::floor(config_.min_z_range_ / config_.voxel_z_size_));
 
   const auto num_cropped_blocks = divup(*num_cropped_points_, config_.threads_per_block_);
 
