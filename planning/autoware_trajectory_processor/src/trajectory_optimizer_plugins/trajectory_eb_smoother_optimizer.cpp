@@ -55,8 +55,7 @@ void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParam
 void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
   enabled_ = params.use_eb_smoother;
-  // EBPathSmoother manages its own parameter updates via node callbacks
-  // No schema-generated params to propagate for this plugin
+  // TODO(Maxime): support parameter updates of internal objects
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin
