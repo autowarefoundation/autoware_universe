@@ -34,8 +34,7 @@ namespace autoware::multi_object_tracker
 namespace
 {
 
-// Open-loop prediction time over which the front/rear axle-covariance blend reaches full (1.0)
-// front/rear decoupling.
+// Prediction time over which the axle-covariance blend reaches full decoupling.
 constexpr double kAxleBlendTimeConstant = 1.0;  // [s]
 
 types::DynamicObject normalizeYaw(const types::DynamicObject & object, const double reference_yaw)
@@ -150,18 +149,16 @@ VehicleTracker::VehicleTracker(
 
 bool VehicleTracker::predict(const rclcpp::Time & time)
 {
-  // Capture the open-loop interval before predictState() advances the model; the blend applied at
-  // update time scales with how long the front/rear covariance has been accruing asymmetry.
+  // Capture the interval before predictState() advances the model; the update-time blend scales
+  // with how long the front/rear covariance has been accruing asymmetry.
   last_predict_dt_ = motion_model_.getDeltaTime(time);
   return motion_model_.predictState(time);
 }
 
 void VehicleTracker::applyAxleCovarianceBlend()
 {
-  // Blend proportional to the elapsed prediction step: dt / time-constant, capped at full
-  // decoupling.
   const double blend_ratio = std::clamp(last_predict_dt_ / kAxleBlendTimeConstant, 0.0, 1.0);
-  if (blend_ratio <= 0.0) return;  // no time elapsed: nothing to re-symmetrize
+  if (blend_ratio <= 0.0) return;  // no time elapsed
 
   motion_model_.blendAxleCovariance(blend_ratio);
 }
@@ -169,8 +166,8 @@ void VehicleTracker::applyAxleCovarianceBlend()
 bool VehicleTracker::updateKinematics(
   const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
-  // Relax the front/rear covariance asymmetry (accrued during open-loop prediction) before the EKF
-  // pose update so a common-mode lateral bias translates the box rather than rotating it.
+  // Re-symmetrize the axle covariance so a common-mode lateral bias translates the box to absorb
+  // localization error.
   applyAxleCovarianceBlend();
 
   // Use measurement length only when the channel and shape are trustworthy.

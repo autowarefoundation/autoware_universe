@@ -185,10 +185,6 @@ protected:
   types::ObjectKinematics kinematics_{};  // output metadata flags (orientation_availability, ...)
   bool trust_extension_{false};
 
-  // Latest ego position (map frame), refreshed by the processor before each measurement update.
-  // Used by range-dependent update logic (e.g. VehicleTracker's far-range axle-covariance blend).
-  std::optional<geometry_msgs::msg::Point> ego_pos_;
-
   types::TrackerType tracker_type_{types::TrackerType::POLYGON};
 
   // Fill the persistent (non-kinematic, non-shape) fields of `object`. getTrackedObject() overlays
@@ -282,7 +278,6 @@ public:
 
   virtual void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos)
   {
-    ego_pos_ = ego_pos;
     getShapeModel().setEgoPose(ego_pos);
   }
 

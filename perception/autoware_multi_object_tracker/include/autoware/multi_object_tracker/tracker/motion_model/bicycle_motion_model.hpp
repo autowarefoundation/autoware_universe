@@ -120,12 +120,8 @@ public:
 
   bool adjustPosition(const double & delta_x, const double & delta_y);
 
-  // Blend (persymmetrize) the rear/front axle position covariance to attenuate the coupling that
-  // lets a common-mode lateral position error (e.g. a localization heading bias at long range)
-  // lever into yaw. With S the swap of (X1,Y1)<->(X2,Y2): P' = (1 - blend_ratio/2) P +
-  // (blend_ratio/2) S P S^T. blend_ratio in [0,1]; 0 is a no-op, 1 fully decouples the mean
-  // position from the axle difference. Preserves the center-position and yaw marginals exactly and
-  // stays positive semi-definite (convex combination of PSD matrices).
+  // Persymmetrize the rear/front axle position covariance to weaken the coupling that levers a
+  // common-mode lateral error into yaw. blend_ratio in [0,1]: 0 is a no-op, 1 fully decouples.
   bool blendAxleCovariance(const double blend_ratio);
 
   bool limitStates();

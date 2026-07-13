@@ -439,10 +439,7 @@ bool BicycleMotionModel::adjustPosition(const double & delta_x, const double & d
 
 bool BicycleMotionModel::blendAxleCovariance(const double blend_ratio)
 {
-  // check if the state is initialized
   if (!checkInitialized()) return false;
-
-  // nothing to do below the near-range no-op threshold
   if (blend_ratio <= 0.0) return true;
   const double alpha = std::min(blend_ratio, 1.0);
 
@@ -451,20 +448,19 @@ bool BicycleMotionModel::blendAxleCovariance(const double blend_ratio)
   ekf_.getX(X_t);
   ekf_.getP(P_t);
 
-  // Build S P S^T, where S swaps the rear and front axle points (X1,Y1)<->(X2,Y2) and leaves the
-  // velocities (U,V) untouched, by swapping the corresponding rows and columns.
+  // S P S^T, where S swaps the rear/front axle points (X1,Y1)<->(X2,Y2) and leaves velocities
+  // alone.
   StateMat P_swapped = P_t;
   P_swapped.row(IDX::X1).swap(P_swapped.row(IDX::X2));
   P_swapped.row(IDX::Y1).swap(P_swapped.row(IDX::Y2));
   P_swapped.col(IDX::X1).swap(P_swapped.col(IDX::X2));
   P_swapped.col(IDX::Y1).swap(P_swapped.col(IDX::Y2));
 
-  // Convex combination toward the persymmetric average: PSD-preserving, keeps the center-position
-  // and yaw marginals unchanged, and scales the mean<->difference coupling by (1 - alpha).
+  // Convex combination toward the persymmetric average: PSD-preserving, leaves the center-position
+  // and yaw marginals unchanged, scales the mean<->difference coupling by (1 - alpha).
   const StateMat P_new = (1.0 - 0.5 * alpha) * P_t + (0.5 * alpha) * P_swapped;
 
-  // covariance-only update; the state vector is unchanged
-  ekf_.init(X_t, P_new);
+  ekf_.init(X_t, P_new);  // covariance-only update
 
   return true;
 }

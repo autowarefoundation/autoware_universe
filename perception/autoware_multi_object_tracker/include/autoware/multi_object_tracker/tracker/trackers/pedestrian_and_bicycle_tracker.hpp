@@ -77,14 +77,6 @@ public:
     pedestrian_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
     bicycle_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
   }
-  // Store on the base and forward to both inner trackers so the bicycle tracker's range-dependent
-  // update logic (far-range axle-covariance blend) sees the ego position.
-  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos) override
-  {
-    Tracker::setEgoPose(ego_pos);
-    pedestrian_tracker_.setEgoPose(ego_pos);
-    bicycle_tracker_.setEgoPose(ego_pos);
-  }
   virtual ~PedestrianAndBicycleTracker() {}
 
 private:

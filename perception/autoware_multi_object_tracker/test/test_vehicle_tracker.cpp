@@ -124,7 +124,7 @@ TEST(CorrectWheelAnchorLateral, SignSymmetry)
 }
 
 // ---------------------------------------------------------------------------------------------
-// BicycleMotionModel::blendAxleCovariance — far-range front/rear covariance blend.
+// BicycleMotionModel::blendAxleCovariance — front/rear covariance blend.
 // ---------------------------------------------------------------------------------------------
 namespace
 {
@@ -143,10 +143,9 @@ rclcpp::Time evolvedTime()
   return startTime() + rclcpp::Duration::from_seconds(kPredictSeconds);
 }
 
-// A straight-moving normal vehicle whose covariance has evolved for kPredictSeconds. Because
-// predictStateStep adds extra (heading + length) process noise to the front axle point only, the
-// front/rear position covariance ends up asymmetric — the condition that lets a common lateral
-// bias lever into yaw.
+// A straight-moving normal vehicle whose covariance has evolved for kPredictSeconds. Process noise
+// hits the front axle point only, so the front/rear position covariance ends up asymmetric — the
+// condition that lets a common lateral bias lever into yaw.
 BicycleMotionModel makeEvolvedVehicle()
 {
   BicycleMotionModel model;
