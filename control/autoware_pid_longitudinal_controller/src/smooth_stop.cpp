@@ -105,54 +105,46 @@ std::optional<double> calcTimeToStop(const std::vector<std::pair<rclcpp::Time, d
 }
 }  // namespace
 
-double SmoothStop::calculate(
-  const double stop_dist, const double delay_time, DebugValues & debug_values)
+SmoothStop::Result SmoothStop::calculate(const double stop_dist, const double delay_time)
 {
   // recordMotion() is called every cycle before calculate(), so the latest sample
   // always reflects the current velocity, acceleration and time.
   const auto & [current_time, current_vel] = m_vel_hist.back();
 
-  // predict time to stop
-  const auto time_to_stop = calcTimeToStop(m_vel_hist);
-
   // calculate some flags
-  const bool is_fast_vel = std::abs(current_vel) > m_params.min_fast_vel;
   const bool is_running = std::abs(current_vel) > m_params.min_running_vel ||
                           std::abs(m_current_acc) > m_params.min_running_acc;
 
   // when exceeding the stopline (stop_dist is negative in these cases.)
   if (stop_dist < m_params.strong_stop_dist) {  // when exceeding the stopline much
-    debug_values.setValues(
-      DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::STRONG_STOP));
-    return m_params.strong_stop_acc;
+    return Result{m_params.strong_stop_acc, Mode::STRONG_STOP};
   } else if (stop_dist < m_params.weak_stop_dist) {  // when exceeding the stopline a bit
-    debug_values.setValues(DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::WEAK_STOP));
-    return m_params.weak_stop_acc;
+    return Result{m_params.weak_stop_acc, Mode::WEAK_STOP};
   }
 
   // when the car is running
   if (is_running) {
+    // predict time to stop
+    const auto time_to_stop = calcTimeToStop(m_vel_hist);
+    const bool is_fast_vel = std::abs(current_vel) > m_params.min_fast_vel;
+
     // when the car will not stop in a certain time
     if (
       (time_to_stop && *time_to_stop > m_params.weak_stop_time + delay_time) ||
       (!time_to_stop && is_fast_vel)) {
-      debug_values.setValues(DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::STRONG));
-      return m_strong_acc;
+      return Result{m_strong_acc, Mode::STRONG};
     }
 
     m_weak_acc_time = current_time;
-    debug_values.setValues(DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::WEAK));
-    return m_params.weak_acc;
+    return Result{m_params.weak_acc, Mode::WEAK};
   }
 
   // for 0.5 seconds after the car stopped
   if ((current_time - m_weak_acc_time).seconds() < 0.5) {
-    debug_values.setValues(DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::WEAK));
-    return m_params.weak_acc;
+    return Result{m_params.weak_acc, Mode::WEAK};
   }
 
   // when the car is not running
-  debug_values.setValues(DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(Mode::STRONG_STOP));
-  return m_params.strong_stop_acc;
+  return Result{m_params.strong_stop_acc, Mode::STRONG_STOP};
 }
 }  // namespace autoware::motion::control::pid_longitudinal_controller

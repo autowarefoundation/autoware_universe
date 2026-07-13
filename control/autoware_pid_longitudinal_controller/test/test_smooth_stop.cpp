@@ -20,7 +20,6 @@
 
 TEST(TestSmoothStop, calculate_stopping_acceleration)
 {
-  using ::autoware::motion::control::pid_longitudinal_controller::DebugValues;
   using ::autoware::motion::control::pid_longitudinal_controller::SmoothStop;
   using rclcpp::Time;
 
@@ -41,7 +40,6 @@ TEST(TestSmoothStop, calculate_stopping_acceleration)
   SmoothStop ss{SmoothStop::Params{
     max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
     min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist}};
-  DebugValues debug_values;
 
   double vel_in_target;
   double stop_dist;
@@ -52,7 +50,7 @@ TEST(TestSmoothStop, calculate_stopping_acceleration)
   // motion sample, so record one before every call below. A zero time window keeps only that
   // latest sample, which is enough to exercise every branch under test.
   const double vel_hist_time_window = 0.0;
-  double accel;
+  SmoothStop::Result result;
 
   // strong stop when the stop distance is below the threshold
   vel_in_target = 5.0;
@@ -60,41 +58,41 @@ TEST(TestSmoothStop, calculate_stopping_acceleration)
   current_vel = 2.0;
   ss.init(vel_in_target, stop_dist, now);
   ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_EQ(accel, strong_stop_acc);
-  EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 3);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_EQ(result.acc, strong_stop_acc);
+  EXPECT_EQ(result.mode, SmoothStop::Mode::STRONG_STOP);
 
   // weak stop when the stop distance is below the threshold (but not bellow the strong_stop_dist)
   stop_dist = weak_stop_dist - 0.1;
   current_vel = 2.0;
   ss.init(vel_in_target, stop_dist, now);
   ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_EQ(accel, weak_stop_acc);
-  EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 2);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_EQ(result.acc, weak_stop_acc);
+  EXPECT_EQ(result.mode, SmoothStop::Mode::WEAK_STOP);
 
   // if not running, weak accel for 0.5 seconds after the previous init or previous weak_acc
   stop_dist = 0.0;
   current_vel = 0.0;
   ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_EQ(accel, weak_acc);
-  EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 1);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_EQ(result.acc, weak_acc);
+  EXPECT_EQ(result.mode, SmoothStop::Mode::WEAK);
   now = now + std::chrono::milliseconds(250);
   ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_EQ(accel, weak_acc);
-  EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 1);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_EQ(result.acc, weak_acc);
+  EXPECT_EQ(result.mode, SmoothStop::Mode::WEAK);
   now = now + std::chrono::milliseconds(500);
   ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_NE(accel, weak_acc);
-  EXPECT_NE(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 1);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_NE(result.acc, weak_acc);
+  EXPECT_NE(result.mode, SmoothStop::Mode::WEAK);
 
   // strong stop when the car is not running (and is at least 0.5seconds after initialization)
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_EQ(accel, strong_stop_acc);
-  EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 3);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_EQ(result.acc, strong_stop_acc);
+  EXPECT_EQ(result.mode, SmoothStop::Mode::STRONG_STOP);
 
   // accel between min/max_strong_acc when the car is running:
   // not predicted to exceed the stop line and is predicted to stop after weak_stop_time + delay
@@ -103,22 +101,22 @@ TEST(TestSmoothStop, calculate_stopping_acceleration)
   vel_in_target = 1.0;
   ss.init(vel_in_target, stop_dist, now);
   ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_EQ(accel, max_strong_acc);
-  EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 0);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_EQ(result.acc, max_strong_acc);
+  EXPECT_EQ(result.mode, SmoothStop::Mode::STRONG);
 
   vel_in_target = std::sqrt(2.0);
   ss.init(vel_in_target, stop_dist, now);
   ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-  accel = ss.calculate(stop_dist, delay_time, debug_values);
-  EXPECT_EQ(accel, min_strong_acc);
-  EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 0);
+  result = ss.calculate(stop_dist, delay_time);
+  EXPECT_EQ(result.acc, min_strong_acc);
+  EXPECT_EQ(result.mode, SmoothStop::Mode::STRONG);
 
   for (double vel_in_target = 1.1; vel_in_target < std::sqrt(2.0); vel_in_target += 0.1) {
     ss.init(vel_in_target, stop_dist, now);
     ss.recordMotion(now, current_vel, current_acc, vel_hist_time_window);
-    accel = ss.calculate(stop_dist, delay_time, debug_values);
-    EXPECT_GT(accel, min_strong_acc);
-    EXPECT_LT(accel, max_strong_acc);
+    result = ss.calculate(stop_dist, delay_time);
+    EXPECT_GT(result.acc, min_strong_acc);
+    EXPECT_LT(result.acc, max_strong_acc);
   }
 }

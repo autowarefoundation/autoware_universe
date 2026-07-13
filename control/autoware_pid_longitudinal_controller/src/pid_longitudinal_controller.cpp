@@ -917,9 +917,12 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
             .longitudinal_velocity_mps,
           raw_ctrl_cmd.acc);
       } else if (m_control_state == ControlState::STOPPING) {
-        raw_ctrl_cmd.acc = m_smooth_stop->calculate(
-          control_data.stop_dist, m_delay_compensation_time, m_debug_values);
+        const auto smooth_stop_result =
+          m_smooth_stop->calculate(control_data.stop_dist, m_delay_compensation_time);
+        raw_ctrl_cmd.acc = smooth_stop_result.acc;
         raw_ctrl_cmd.vel = m_stopped_state_params.vel;
+        m_debug_values.setValues(
+          DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(smooth_stop_result.mode));
 
         RCLCPP_DEBUG(
           logger_, "[smooth stop]: Smooth stopping. vel: %3.3f, acc: %3.3f", raw_ctrl_cmd.vel,

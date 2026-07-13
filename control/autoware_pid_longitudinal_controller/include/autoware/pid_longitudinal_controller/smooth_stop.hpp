@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__PID_LONGITUDINAL_CONTROLLER__SMOOTH_STOP_HPP_
 #define AUTOWARE__PID_LONGITUDINAL_CONTROLLER__SMOOTH_STOP_HPP_
 
-#include "autoware/pid_longitudinal_controller/debug_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <algorithm>
@@ -34,6 +33,14 @@ namespace autoware::motion::control::pid_longitudinal_controller
 class SmoothStop
 {
 public:
+  enum class Mode { STRONG = 0, WEAK, WEAK_STOP, STRONG_STOP };
+
+  struct Result
+  {
+    double acc;
+    Mode mode;
+  };
+
   struct Params
   {
     double max_strong_acc;
@@ -92,12 +99,10 @@ public:
    * @param [in] stop_dist distance left to travel before stopping [m]
    * @param [in] delay_time assumed time delay when the stop command will actually be executed
    */
-  double calculate(const double stop_dist, const double delay_time, DebugValues & debug_values);
+  Result calculate(const double stop_dist, const double delay_time);
 
 private:
   Params m_params;
-
-  enum class Mode { STRONG = 0, WEAK, WEAK_STOP, STRONG_STOP };
 
   double m_strong_acc;
   rclcpp::Time m_weak_acc_time;
