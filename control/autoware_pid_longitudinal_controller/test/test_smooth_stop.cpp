@@ -14,7 +14,7 @@
 
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
 #include "gtest/gtest.h"
-#include "rclcpp/rclcpp.hpp"
+#include "rclcpp/time.hpp"
 
 #include <chrono>
 #include <cmath>
