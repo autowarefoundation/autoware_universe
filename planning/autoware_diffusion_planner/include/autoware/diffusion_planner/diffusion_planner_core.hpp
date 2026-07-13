@@ -94,7 +94,7 @@ struct PlannerOutput
   Trajectory trajectory;
   CandidateTrajectories candidate_trajectories;
   PredictedObjects predicted_objects;
-  TurnIndicatorsCommand turn_indicator_command;
+  TurnIndicatorsCommand turn_indicators_command;
   Float32MultiArray denoising_steps;
   std::unordered_map<std::string, std::vector<bool>> guidance_triggered;
 };
@@ -330,7 +330,13 @@ private:
   bool centerline_guidance_enabled_{false};
 
   // Postprocessing
-  postprocess::TurnIndicatorManager turn_indicator_manager_;
+  std::vector<postprocess::TurnIndicatorManager> turn_indicator_managers_;
+
+  /**
+   * @brief Resize the per-trajectory turn indicator managers to the current batch size and
+   *        apply the latest hold duration / keep offset parameters to each of them.
+   */
+  void sync_turn_indicator_managers();
 
   // History data
   std::deque<nav_msgs::msg::Odometry> ego_history_;
