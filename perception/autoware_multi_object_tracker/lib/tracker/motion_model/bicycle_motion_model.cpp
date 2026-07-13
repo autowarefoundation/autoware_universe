@@ -645,9 +645,6 @@ bool BicycleMotionModel::getPredictedState(
   const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
   const double sin_yaw = (X(IDX::Y2) - X(IDX::Y1)) * wheel_base_inv;
   const double cos_yaw = (X(IDX::X2) - X(IDX::X1)) * wheel_base_inv;
-  const double sin_yaw_sq = sin_yaw * sin_yaw;
-  const double cos_yaw_sq = cos_yaw * cos_yaw;
-  const double sin_cos_yaw = sin_yaw * cos_yaw;
 
   // set position
   pose.position.x = (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) *
@@ -674,19 +671,31 @@ bool BicycleMotionModel::getPredictedState(
 
   constexpr double default_cov = 0.1 * 0.1;
   // set pose covariance
-  pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
-  pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
-  // Jacobian: d(yaw)/d[X1,Y1,X2,Y2] = (1/L)*[sin_yaw, -cos_yaw, -sin_yaw, cos_yaw]
-  // YAW_YAW = J * P_sub * J^T (full 4x4 block, P symmetric so off-diag terms double)
-  pose_cov[XYZRPY_COV_IDX::YAW_YAW] =
-    wheel_base_inv_sq *
-    (sin_yaw_sq * P(IDX::X1, IDX::X1) - 2.0 * sin_cos_yaw * P(IDX::X1, IDX::Y1) -
-     2.0 * sin_yaw_sq * P(IDX::X1, IDX::X2) + 2.0 * sin_cos_yaw * P(IDX::X1, IDX::Y2) +
-     cos_yaw_sq * P(IDX::Y1, IDX::Y1) + 2.0 * sin_cos_yaw * P(IDX::Y1, IDX::X2) -
-     2.0 * cos_yaw_sq * P(IDX::Y1, IDX::Y2) + sin_yaw_sq * P(IDX::X2, IDX::X2) -
-     2.0 * sin_cos_yaw * P(IDX::X2, IDX::Y2) + cos_yaw_sq * P(IDX::Y2, IDX::Y2));
+  // The exported pose (center position + yaw) is a smooth function of the four axle coordinates
+  // [X1, Y1, X2, Y2]. Propagate their covariance block through a single Jacobian G so the whole
+  // (x, y, yaw) block is mutually consistent, correctly correlated, and PSD by construction:
+  //   center = w_rear * p1 + w_front * p2   (w_rear + w_front = 1)
+  //   yaw    = atan2(Y2 - Y1, X2 - X1),  d(yaw)/d[X1,Y1,X2,Y2] = (1/L)*[sin, -cos, -sin, cos]
+  // M = G * P_sub * G^T reproduces the exact linearized YAW_YAW and adds the position<->yaw
+  // cross-covariance that a single-axle-point copy dropped.
+  const double w_rear = motion_params_.lf_ratio * motion_params_.wheel_base_ratio_inv;
+  const double w_front = motion_params_.lr_ratio * motion_params_.wheel_base_ratio_inv;
+  Eigen::Matrix<double, 3, 4> G;
+  G << w_rear, 0.0, w_front, 0.0,  // center_x
+    0.0, w_rear, 0.0, w_front,     // center_y
+    sin_yaw * wheel_base_inv, -cos_yaw * wheel_base_inv, -sin_yaw * wheel_base_inv,
+    cos_yaw * wheel_base_inv;  // yaw
+  const Eigen::Matrix3d M = G * P.topLeftCorner<4, 4>() * G.transpose();
+
+  pose_cov[XYZRPY_COV_IDX::X_X] = M(0, 0);
+  pose_cov[XYZRPY_COV_IDX::X_Y] = M(0, 1);
+  pose_cov[XYZRPY_COV_IDX::Y_X] = M(1, 0);
+  pose_cov[XYZRPY_COV_IDX::Y_Y] = M(1, 1);
+  pose_cov[XYZRPY_COV_IDX::X_YAW] = M(0, 2);
+  pose_cov[XYZRPY_COV_IDX::YAW_X] = M(2, 0);
+  pose_cov[XYZRPY_COV_IDX::Y_YAW] = M(1, 2);
+  pose_cov[XYZRPY_COV_IDX::YAW_Y] = M(2, 1);
+  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = M(2, 2);
   pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
   pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
