@@ -43,6 +43,10 @@ private:
   // Consumed by setObjectShape() so UnstableShapeFilter commits the new length correctly.
   BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;
 
+  // Time step [s] of the most recent predict() (open-loop interval since the previous update).
+  // Drives the axle-covariance blend amount in applyAxleCovarianceBlend().
+  double last_predict_dt_{0.0};
+
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
@@ -53,11 +57,9 @@ private:
     const UpdateStrategy & strategy, const types::DynamicObject & measurement,
     const types::DynamicObject & prediction);
 
-  // Before an EKF pose update, attenuate the bicycle model's front/rear covariance asymmetry so a
-  // localization-induced common lateral bias (~range * ego-yaw-stddev) translates the box instead
-  // of levering into yaw. The blend ramps in with the expected bias and is a no-op at close range
-  // or when the ego position is unknown. `center` is the tracked/measured body center in map frame.
-  void applyFarRangeAxleBlend(const geometry_msgs::msg::Point & center);
+  // Before an EKF pose update, relax the bicycle model's front/rear covariance asymmetry toward its
+  // persymmetric (front<->rear symmetric) average.
+  void applyAxleCovarianceBlend();
 
 public:
   VehicleTracker(

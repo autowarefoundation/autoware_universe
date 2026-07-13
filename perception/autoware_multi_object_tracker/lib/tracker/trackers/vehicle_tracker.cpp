@@ -34,13 +34,9 @@ namespace autoware::multi_object_tracker
 namespace
 {
 
-// Localization heading uncertainty that laterally biases far-range detections by ~range * this.
-constexpr double kEgoYawStddev = 0.8 * M_PI / 180.0;  // [rad] (~0.8 deg)
-// Expected-lateral-bias band over which the far-range axle-covariance blend ramps from 0 (off) to
-// 1 (full front/rear decoupling). Below kBiasBlendStart the systematic bias is at detector-noise
-// level and the bicycle model is left untouched.
-constexpr double kBiasBlendStart = 0.30;  // [m] (~21 m range at kEgoYawStddev)
-constexpr double kBiasBlendFull = 1.00;   // [m] (~72 m range at kEgoYawStddev)
+// Open-loop prediction time over which the front/rear axle-covariance blend reaches full (1.0)
+// front/rear decoupling.
+constexpr double kAxleBlendTimeConstant = 1.0;  // [s]
 
 types::DynamicObject normalizeYaw(const types::DynamicObject & object, const double reference_yaw)
 {
@@ -154,20 +150,18 @@ VehicleTracker::VehicleTracker(
 
 bool VehicleTracker::predict(const rclcpp::Time & time)
 {
+  // Capture the open-loop interval before predictState() advances the model; the blend applied at
+  // update time scales with how long the front/rear covariance has been accruing asymmetry.
+  last_predict_dt_ = motion_model_.getDeltaTime(time);
   return motion_model_.predictState(time);
 }
 
-void VehicleTracker::applyFarRangeAxleBlend(const geometry_msgs::msg::Point & center)
+void VehicleTracker::applyAxleCovarianceBlend()
 {
-  // No ego pose (e.g. TF-only / replay without odometry) -> leave the model untouched.
-  if (!ego_pos_) return;
-
-  const double range = std::hypot(center.x - ego_pos_->x, center.y - ego_pos_->y);
-  // Expected lateral (tangential) detection bias from the ego heading error at this range.
-  const double expected_lateral_bias = range * kEgoYawStddev;
-  const double blend_ratio = std::clamp(
-    (expected_lateral_bias - kBiasBlendStart) / (kBiasBlendFull - kBiasBlendStart), 0.0, 1.0);
-  if (blend_ratio <= 0.0) return;  // close range: bicycle model behaves normally
+  // Blend proportional to the elapsed prediction step: dt / time-constant, capped at full
+  // decoupling.
+  const double blend_ratio = std::clamp(last_predict_dt_ / kAxleBlendTimeConstant, 0.0, 1.0);
+  if (blend_ratio <= 0.0) return;  // no time elapsed: nothing to re-symmetrize
 
   motion_model_.blendAxleCovariance(blend_ratio);
 }
@@ -175,9 +169,9 @@ void VehicleTracker::applyFarRangeAxleBlend(const geometry_msgs::msg::Point & ce
 bool VehicleTracker::updateKinematics(
   const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
-  // Weaken the front/rear covariance asymmetry before the EKF pose update so a far-range
-  // localization bias translates the box rather than rotating it (no-op at close range).
-  applyFarRangeAxleBlend(object.pose.position);
+  // Relax the front/rear covariance asymmetry (accrued during open-loop prediction) before the EKF
+  // pose update so a common-mode lateral bias translates the box rather than rotating it.
+  applyAxleCovarianceBlend();
 
   // Use measurement length only when the channel and shape are trustworthy.
   const bool is_bbox = (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
@@ -235,10 +229,8 @@ bool VehicleTracker::updateWheelKinematics(
   const UpdateStrategy & strategy, const types::DynamicObject & measurement,
   const types::DynamicObject & prediction)
 {
-  // Weaken the front/rear covariance asymmetry before the wheel-anchor EKF update; the wheel path
-  // infers yaw purely from a lateral face position, so it is especially prone to the far-range
-  // localization-bias lever (no-op at close range).
-  applyFarRangeAxleBlend(prediction.pose.position);
+  // Relax the front/rear covariance asymmetry before the wheel-anchor EKF update.
+  applyAxleCovarianceBlend();
 
   // When polygon and tracked widths disagree, the observed edge center is a biased lateral
   // measurement that the wheel-base lever amplifies into yaw. correctWheelAnchor() nudges the
