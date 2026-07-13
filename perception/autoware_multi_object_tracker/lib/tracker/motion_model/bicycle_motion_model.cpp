@@ -674,10 +674,10 @@ bool BicycleMotionModel::getPredictedState(
 
   constexpr double default_cov = 0.1 * 0.1;
   // set pose covariance
-  pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
-  pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
+  pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X2, IDX::X2);
+  pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X2, IDX::Y2);
+  pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y2, IDX::X2);
+  pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y2, IDX::Y2);
   // Jacobian: d(yaw)/d[X1,Y1,X2,Y2] = (1/L)*[sin_yaw, -cos_yaw, -sin_yaw, cos_yaw]
   // YAW_YAW = J * P_sub * J^T (full 4x4 block, P symmetric so off-diag terms double)
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] =
