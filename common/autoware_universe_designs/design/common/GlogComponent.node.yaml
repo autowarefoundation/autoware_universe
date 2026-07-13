@@ -1,0 +1,20 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: GlogComponent.node
+package:
+  name: autoware_glog_component
+  provider: autoware
+launch:
+  plugin: autoware::glog_component::GlogComponent
+  executable: autoware_glog_component_node
+  node_output: screen
+# interfaces
+# NOTE: this component only initializes Google Logging (glog) on load; it has no
+# ROS subscriptions, publications, services, or parameters.
+subscribers: []
+publishers: []
+# parameters
+param_files: []
+param_values: []
+# processes
+processes: []
