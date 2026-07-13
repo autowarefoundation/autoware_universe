@@ -185,7 +185,7 @@ private:
   double m_brake_keeping_acc;
 
   // smooth stop
-  SmoothStop m_smooth_stop;
+  std::optional<SmoothStop> m_smooth_stop;
 
   // stop
   struct StoppedStateParams
