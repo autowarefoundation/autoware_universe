@@ -18,7 +18,7 @@
       source_reconstruction: "full"
       filter:
         class_probability_threshold: 0.05
-        classes: ["drivable_flat", "non_drivable_flat", "noise"]
+        classes: ["drivable_flat"]
         output_format: ""
     detection3d:
       use_head: $(var use_det3d_head)
