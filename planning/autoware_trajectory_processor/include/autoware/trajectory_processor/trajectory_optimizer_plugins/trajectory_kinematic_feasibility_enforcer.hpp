@@ -36,6 +36,21 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using nav_msgs::msg::Odometry;
 
+/**
+ * @brief Plugin that enforces Ackermann steering geometry and yaw rate constraints
+ *
+ * This plugin implements a forward-propagating algorithm that adjusts trajectory points
+ * to ensure kinematic feasibility. Starting from the current ego pose as anchor, it
+ * progressively adjusts each point's position and heading so that:
+ * 1. Ackermann steering geometry constraint: Δψ_geom = s * tan(δ_max) / L
+ * 2. Maximum yaw rate constraint: Δψ_rate = ψ_dot_max * Δt
+ *
+ * The algorithm maintains segment distances (preserving time structure) while adjusting
+ * positions and headings. This ensures compatibility with downstream QP smoother which
+ * requires constant time intervals.
+ *
+ * Based on: "Ackermann + Yaw Rate Feasibility Filtering for Trajectory Points"
+ */
 class TrajectoryKinematicFeasibilityEnforcer : public TrajectoryOptimizerPluginBase
 {
 public:

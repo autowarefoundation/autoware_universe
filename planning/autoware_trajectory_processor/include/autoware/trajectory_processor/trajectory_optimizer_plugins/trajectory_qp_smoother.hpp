@@ -38,6 +38,19 @@ namespace autoware::trajectory_optimizer::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
+/**
+ * @brief QP-based trajectory smoother for path geometry optimization
+ *
+ * This plugin smooths trajectories using quadratic programming optimization
+ * that minimizes path curvature while maintaining path fidelity to the original trajectory.
+ * After path smoothing, velocities and accelerations are recalculated from the smoothed
+ * positions to ensure kinematic consistency.
+ *
+ * Decision variables: [x_0, y_0, ..., x_{N-1}, y_{N-1}] (path-only optimization)
+ * Cost function: weighted sum of path curvature minimization and path fidelity
+ * Constraints: fixed initial position
+ * Post-processing: velocity/acceleration derived from smoothed path geometry
+ */
 class TrajectoryQPSmoother : public TrajectoryOptimizerPluginBase
 {
 public:
