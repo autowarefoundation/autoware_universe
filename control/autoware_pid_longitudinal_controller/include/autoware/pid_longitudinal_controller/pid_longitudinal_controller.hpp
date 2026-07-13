@@ -185,7 +185,7 @@ private:
   double m_brake_keeping_acc;
 
   // smooth stop
-  SmoothStop m_smooth_stop;
+  std::optional<SmoothStop> m_smooth_stop;
 
   // stop
   struct StoppedStateParams
@@ -247,7 +247,6 @@ private:
   // diff limit
   Motion m_prev_ctrl_cmd{};      // with slope compensation
   Motion m_prev_raw_ctrl_cmd{};  // without slope compensation
-  std::vector<std::pair<rclcpp::Time, double>> m_vel_hist;
 
   // debug values
   DebugValues m_debug_values;
@@ -334,10 +333,8 @@ private:
   /**
    * @brief publish control command
    * @param [in] ctrl_cmd calculated control command to control velocity
-   * @param [in] current_vel current velocity of the vehicle
    */
-  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(
-    const Motion & ctrl_cmd, const double & current_vel);
+  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(const Motion & ctrl_cmd);
 
   /**
    * @brief publish debug data

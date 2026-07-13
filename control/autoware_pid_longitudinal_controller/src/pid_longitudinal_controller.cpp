@@ -159,9 +159,10 @@ PidLongitudinalController::PidLongitudinalController(
     const double strong_stop_dist{
       node.declare_parameter<double>("smooth_stop_strong_stop_dist")};  // [m]
 
-    m_smooth_stop.setParams(
-      max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
-      min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist);
+    m_smooth_stop.emplace(
+      SmoothStop::Params{
+        max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
+        min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist});
   }
 
   // parameters for stop state
@@ -373,9 +374,10 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
     update_param("smooth_stop_weak_stop_time", weak_stop_time);
     update_param("smooth_stop_weak_stop_dist", weak_stop_dist);
     update_param("smooth_stop_strong_stop_dist", strong_stop_dist);
-    m_smooth_stop.setParams(
-      max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
-      min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist);
+    m_smooth_stop->setParams(
+      SmoothStop::Params{
+        max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
+        min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist});
   }
 
   // stop state
@@ -445,7 +447,7 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   const Motion ctrl_cmd = calcCtrlCmd(control_data);
 
   // create control command
-  const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, control_data.current_motion.vel);
+  const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd);
   trajectory_follower::LongitudinalOutput output;
   output.control_cmd = cmd_msg;
 
@@ -760,7 +762,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
         const double pred_stop_dist =
           control_data.stop_dist -
           0.5 * (pred_vel_in_target + current_vel) * m_delay_compensation_time;
-        m_smooth_stop.init(pred_vel_in_target, pred_stop_dist);
+        m_smooth_stop->init(pred_vel_in_target, pred_stop_dist, clock_->now());
         return changeControlState(ControlState::STOPPING);
       }
     } else {
@@ -860,6 +862,11 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
 PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
   const ControlData & control_data)
 {
+  // store current velocity history
+  m_smooth_stop->recordMotion(
+    clock_->now(), control_data.current_motion.vel, control_data.current_motion.acc,
+    m_delay_compensation_time);
+
   const size_t target_idx = control_data.target_idx;
 
   // velocity and acceleration command
@@ -910,10 +917,12 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
             .longitudinal_velocity_mps,
           raw_ctrl_cmd.acc);
       } else if (m_control_state == ControlState::STOPPING) {
-        raw_ctrl_cmd.acc = m_smooth_stop.calculate(
-          control_data.stop_dist, control_data.current_motion.vel, control_data.current_motion.acc,
-          m_vel_hist, m_delay_compensation_time, m_debug_values);
+        const auto smooth_stop_result =
+          m_smooth_stop->calculate(control_data.stop_dist, m_delay_compensation_time);
+        raw_ctrl_cmd.acc = smooth_stop_result.acc;
         raw_ctrl_cmd.vel = m_stopped_state_params.vel;
+        m_debug_values.setValues(
+          DebugValues::TYPE::SMOOTH_STOP_MODE, static_cast<int>(smooth_stop_result.mode));
 
         RCLCPP_DEBUG(
           logger_, "[smooth stop]: Smooth stopping. vel: %3.3f, acc: %3.3f", raw_ctrl_cmd.vel,
@@ -969,20 +978,13 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
 
 // Do not use nearest_idx here
 autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCmdMsg(
-  const Motion & ctrl_cmd, const double & current_vel)
+  const Motion & ctrl_cmd)
 {
   // publish control command
   autoware_control_msgs::msg::Longitudinal cmd{};
   cmd.stamp = clock_->now();
   cmd.velocity = static_cast<decltype(cmd.velocity)>(ctrl_cmd.vel);
   cmd.acceleration = static_cast<decltype(cmd.acceleration)>(ctrl_cmd.acc);
-
-  // store current velocity history
-  m_vel_hist.emplace_back(clock_->now(), current_vel);
-  while (m_vel_hist.size() >
-         static_cast<size_t>(m_delay_compensation_time / m_longitudinal_ctrl_period)) {
-    m_vel_hist.erase(m_vel_hist.begin());
-  }
 
   m_prev_ctrl_cmd = ctrl_cmd;
 
