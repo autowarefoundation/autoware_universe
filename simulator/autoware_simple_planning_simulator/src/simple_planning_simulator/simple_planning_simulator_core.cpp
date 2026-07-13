@@ -571,6 +571,7 @@ void SimplePlanningSimulator::on_initialpose(const PoseWithCovarianceStamped::Co
   initial_pose.header = msg->header;
   initial_pose.pose = msg->pose.pose;
   set_initial_state_with_transform(initial_pose, initial_twist);
+  latch_initial_pose_z(initial_pose);
 
   initial_pose_ = msg;
   current_odometry_.pose = msg->pose;
@@ -597,6 +598,7 @@ void SimplePlanningSimulator::on_set_pose(
   initial_pose.header = request->pose.header;
   initial_pose.pose = request->pose.pose.pose;
   set_initial_state_with_transform(initial_pose, initial_twist);
+  latch_initial_pose_z(initial_pose);
   response->status = tier4_api_utils::response_success();
 }
 
@@ -686,6 +688,14 @@ void SimplePlanningSimulator::on_hazard_lights_cmd(const HazardLightsCommand::Co
 
 void SimplePlanningSimulator::on_trajectory(const Trajectory::ConstSharedPtr msg)
 {
+  // After re-init, keep map-fitted Z from /initialpose3d until planning publishes a newer
+  // trajectory. Older trajectory messages still carry the previous route's Z profile.
+  if (
+    use_latched_initial_pose_z_ && latched_initial_pose_time_.has_value() &&
+    rclcpp::Time(msg->header.stamp) > latched_initial_pose_time_.value()) {
+    use_latched_initial_pose_z_ = false;
+    latched_initial_pose_time_.reset();
+  }
   current_trajectory_ptr_ = msg;
 }
 
@@ -741,6 +751,14 @@ void SimplePlanningSimulator::set_initial_state_with_transform(
   set_initial_state(pose, twist);
 }
 
+void SimplePlanningSimulator::latch_initial_pose_z(const PoseStamped & pose_stamped)
+{
+  const auto transform = get_transform_msg(origin_frame_id_, pose_stamped.header.frame_id);
+  latched_initial_pose_z_ = pose_stamped.pose.position.z + transform.transform.translation.z;
+  latched_initial_pose_time_.emplace(pose_stamped.header.stamp);
+  use_latched_initial_pose_z_ = true;
+}
+
 void SimplePlanningSimulator::set_initial_state(const Pose & pose, const Twist & twist)
 {
   const double x = pose.position.x;
@@ -788,6 +806,10 @@ void SimplePlanningSimulator::set_initial_state(const Pose & pose, const Twist &
 double SimplePlanningSimulator::get_z_pose_from_trajectory(
   const double x, const double y, const Odometry & prev_odometry)
 {
+  if (use_latched_initial_pose_z_) {
+    return latched_initial_pose_z_;
+  }
+
   // calculate closest point on trajectory
   if (!current_trajectory_ptr_) {
     return prev_odometry.pose.pose.position.z;
