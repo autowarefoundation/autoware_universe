@@ -43,8 +43,8 @@
         },
         "stop_state_steer_hold_duration": {
           "type": "number",
-          "description": "duration [s] to freeze steering command in stop state; after this elapsed time while kinematically stopped, MPC output is used again so steering can restore",
-          "default": 5.0
+          "description": "shared duration [s]: (1) stop eligibility must last longer than this before isStoppedState() is true; (2) low-confidence soft hold expires after this without a confident refresh",
+          "default": 2.0
         }
       },
       "required": [

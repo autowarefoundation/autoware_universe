@@ -75,7 +75,7 @@ MpcLateralController::MpcLateralController(
   m_mpc_converged_threshold_rps = dp_double("mpc_converged_threshold_rps");  // [rad/s]
   m_stop_state_steer_hold_duration = dp_double("stop_state_steer_hold_duration");
 
-  /* reference-confidence steer slew limit */
+  /* reference-confidence steer soft hold */
   m_enable_confidence_steer_slew_limit = dp_bool("enable_confidence_steer_slew_limit");
   m_reference_confidence_L_ahead_min = dp_double("reference_confidence_L_ahead_min");
   m_reference_confidence_L_ahead_ref = dp_double("reference_confidence_L_ahead_ref");
@@ -353,21 +353,18 @@ trajectory_follower::LateralOutput MpcLateralController::run(
 
   updateStopStateHoldTimer();
 
+  // Confirmed full stop only (elapsed > duration). Until then stay in control.
   if (isStoppedState()) {
-    // Reset input buffer
-    debug_throttle("Stopped state detected, use previous control command");
-    for (auto & value : m_mpc->m_input_buffer) {
-      value = m_ctrl_cmd_prev.steering_tire_angle;
-    }
-    // Use previous command value as previous raw steer command
-    m_mpc->m_raw_steer_cmd_prev = m_ctrl_cmd_prev.steering_tire_angle;
+    syncMpcSteerStateToCommand(m_ctrl_cmd_prev.steering_tire_angle);
     return createLateralOutput(m_ctrl_cmd_prev, false, ctrl_cmd_horizon);
   }
 
   if (!mpc_solved_status.result) {
     debug_throttle("MPC is not solved, use stop control command");
     ctrl_cmd = getStopControlCommand();
+    syncMpcSteerStateToCommand(ctrl_cmd.steering_tire_angle);
   } else if (m_enable_confidence_steer_slew_limit && applyConfidenceSteerSlewLimit(ctrl_cmd)) {
+    // Low-confidence / flicker: soft-slew (not stop). Sync LPF to published output.
     syncMpcSteerStateToCommand(ctrl_cmd.steering_tire_angle);
   }
 
@@ -533,12 +530,10 @@ void MpcLateralController::updateStopStateHoldTimer()
 
 bool MpcLateralController::isStoppedState() const
 {
-  if (!isStopStateSteerHoldEligible()) {
+  // Confirmed full stop only after eligibility lasts longer than the hold duration.
+  // Until then the system is still in control. Flickering short trajectories are not stop.
+  if (!isStopStateSteerHoldEligible() || !m_stop_state_hold_started_at.has_value()) {
     return false;
-  }
-
-  if (!m_stop_state_hold_started_at.has_value()) {
-    return true;
   }
 
   const double elapsed = (clock_->now() - m_stop_state_hold_started_at.value()).seconds();
@@ -767,17 +762,31 @@ double MpcLateralController::computeReferenceConfidenceWeight() const
   return std::clamp((L_ahead - m_reference_confidence_L_ahead_min) / L_span, 0.0, 1.0);
 }
 
-bool MpcLateralController::applyConfidenceSteerSlewLimit(Lateral & ctrl_cmd) const
+bool MpcLateralController::isReferenceFullyConfident() const
 {
-  // Full stop: same kinematic judgement as stop state (without steer-convergence gate).
-  // Allow MPC / downstream controllers to restore steering instead of soft-holding on a
-  // spatially collapsed trajectory.
-  if (isEgoAndTrajectoryStopped()) {
+  return computeReferenceConfidenceWeight() >= 1.0 - 1.0e-6;
+}
+
+bool MpcLateralController::applyConfidenceSteerSlewLimit(Lateral & ctrl_cmd)
+{
+  // Confident: accept MPC and refresh the low-confidence hold timer.
+  if (isReferenceFullyConfident()) {
+    m_confidence_hold_started_at.reset();
+    return false;
+  }
+
+  // Low confidence / flicker: not a stop. Soft-limit |Δsteer| toward MPC until confidence
+  // returns (timer refresh) or hold duration expires (allow full MPC restore).
+  if (!m_confidence_hold_started_at.has_value()) {
+    m_confidence_hold_started_at = clock_->now();
+  }
+
+  const double elapsed = (clock_->now() - m_confidence_hold_started_at.value()).seconds();
+  if (elapsed > m_stop_state_steer_hold_duration) {
     return false;
   }
 
   const double confidence_weight = computeReferenceConfidenceWeight();
-
   const double ds =
     static_cast<double>(ctrl_cmd.steering_tire_angle - m_ctrl_cmd_prev.steering_tire_angle);
   const double ds_abs = std::abs(ds);
@@ -794,16 +803,16 @@ bool MpcLateralController::applyConfidenceSteerSlewLimit(Lateral & ctrl_cmd) con
   const double ds_clamped = std::clamp(ds, -ds_max, ds_max);
   ctrl_cmd.steering_tire_angle =
     m_ctrl_cmd_prev.steering_tire_angle + static_cast<float>(ds_clamped);
-  ctrl_cmd.steering_tire_rotation_rate = static_cast<float>(ds_clamped / m_ctrl_period);
+  ctrl_cmd.steering_tire_rotation_rate =
+    m_ctrl_period > 0.0 ? static_cast<float>(ds_clamped / m_ctrl_period) : 0.0f;
   return true;
 }
 
 void MpcLateralController::syncMpcSteerStateToCommand(const float steering_tire_angle)
 {
-  m_mpc->m_raw_steer_cmd_prev = steering_tire_angle;
-  for (auto & value : m_mpc->m_input_buffer) {
-    value = steering_tire_angle;
-  }
+  // Align delay buffer and steering LPF with the published command so soft hold / stop freeze
+  // is not undone by LPF state that tracked raw Uex.
+  m_mpc->resetSteeringCmdFilter(static_cast<double>(steering_tire_angle));
 }
 
 bool MpcLateralController::isTrajectoryShapeChanged() const

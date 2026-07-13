@@ -63,6 +63,14 @@ double Butterworth2dFilter::filter(const double & u0)
   return y0;
 }
 
+void Butterworth2dFilter::resetState(const double value)
+{
+  m_y1 = value;
+  m_y2 = value;
+  m_u1 = value;
+  m_u2 = value;
+}
+
 void Butterworth2dFilter::filt_vector(const std::vector<double> & t, std::vector<double> & u) const
 {
   u.resize(t.size());

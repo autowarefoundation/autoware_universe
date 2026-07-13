@@ -57,7 +57,7 @@
     steering_lpf_cutoff_hz: 3.0 # cutoff frequency of lowpass filter for steering command [Hz]
     error_deriv_lpf_cutoff_hz: 5.0
 
-    # stop state: steering command is kept in the previous value in the stop state.
+    # stop state: confirmed full stop freezes previous steer; until then stay in control.
     stop_state_entry_ego_speed: 0.001
     stop_state_entry_target_speed: 0.001
     converged_steer_rad: 0.1
@@ -65,9 +65,9 @@
     new_traj_duration_time: 1.0
     new_traj_end_dist: 0.3
     mpc_converged_threshold_rps:  0.01 # threshold of mpc convergence check [rad/s]
-    stop_state_steer_hold_duration: 1.0
+    stop_state_steer_hold_duration: 2.0
 
-    # reference-confidence steer slew limit (post-MPC, outside QP)
+    # reference-confidence steer soft hold (post-MPC): flicker is low confidence, not stop
     enable_confidence_steer_slew_limit: true
     reference_confidence_L_ahead_min: 0.5
     reference_confidence_L_ahead_ref: 1.0
