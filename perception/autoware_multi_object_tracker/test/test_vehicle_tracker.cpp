@@ -314,4 +314,91 @@ TEST(ProcessNoiseAxleStructure, PositiveSemiDefinite)
   }
 }
 
+// ---------------------------------------------------------------------------------------------
+// BicycleMotionModel::getPredictedState — exported pose covariance conversion.
+// The exported (x, y, yaw) block is the axle covariance propagated through the single Jacobian G of
+// [center, yaw] = f(X1, Y1, X2, Y2). It must use the center blend for position (not one axle
+// point), carry the position<->yaw cross-covariance, and stay symmetric and PSD.
+// ---------------------------------------------------------------------------------------------
+namespace
+{
+std::array<double, 36> exportedPoseCov(const BicycleMotionModel & model)
+{
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::array<double, 36> pose_cov{};
+  std::array<double, 36> twist_cov{};
+  model.getPredictedState(evolvedTime(), pose, pose_cov, twist, twist_cov);
+  return pose_cov;
+}
+
+// Exported 3x3 (x, y, yaw) block as an Eigen matrix.
+Eigen::Matrix3d exportedPoseBlock(const BicycleMotionModel & model)
+{
+  const auto c = exportedPoseCov(model);
+  Eigen::Matrix3d block;
+  block << c[XYZRPY_COV_IDX::X_X], c[XYZRPY_COV_IDX::X_Y], c[XYZRPY_COV_IDX::X_YAW],
+    c[XYZRPY_COV_IDX::Y_X], c[XYZRPY_COV_IDX::Y_Y], c[XYZRPY_COV_IDX::Y_YAW],
+    c[XYZRPY_COV_IDX::YAW_X], c[XYZRPY_COV_IDX::YAW_Y], c[XYZRPY_COV_IDX::YAW_YAW];
+  return block;
+}
+}  // namespace
+
+// End-to-end: the exported block equals G * P_sub * G^T rebuilt from the raw axle covariance, so
+// position rides the center blend and yaw the difference vector, from one consistent Jacobian.
+TEST(ExportedPoseCovariance, MatchesJacobianPropagation)
+{
+  const BicycleMotionModel model = makeEvolvedVehicle();
+
+  BicycleMotionModel::StateVec x;
+  BicycleMotionModel::StateMat p;
+  model.MotionModel<6>::getPredictedState(evolvedTime(), x, p);
+
+  const double dx = x(BicycleMotionModel::X2) - x(BicycleMotionModel::X1);
+  const double dy = x(BicycleMotionModel::Y2) - x(BicycleMotionModel::Y1);
+  const double wheel_base = std::hypot(dx, dy);
+  const double sin_yaw = dy / wheel_base;
+  const double cos_yaw = dx / wheel_base;
+
+  // normal_vehicle axle ratios (wheel_pos_ratio_front / _rear)
+  const auto & bicycle_state = object_model::normal_vehicle.bicycle_state;
+  const double lf_ratio = bicycle_state.wheel_pos_ratio_front;
+  const double lr_ratio = bicycle_state.wheel_pos_ratio_rear;
+  const double inv_wheel_base_ratio = 1.0 / (lf_ratio + lr_ratio);
+  const double w_rear = lf_ratio * inv_wheel_base_ratio;
+  const double w_front = lr_ratio * inv_wheel_base_ratio;
+
+  Eigen::Matrix<double, 3, 4> g;
+  g << w_rear, 0.0, w_front, 0.0, 0.0, w_rear, 0.0, w_front, sin_yaw / wheel_base,
+    -cos_yaw / wheel_base, -sin_yaw / wheel_base, cos_yaw / wheel_base;
+  const Eigen::Matrix3d expected = g * p.topLeftCorner<4, 4>() * g.transpose();
+
+  EXPECT_TRUE(exportedPoseBlock(model).isApprox(expected, 1e-12))
+    << "exported:\n"
+    << exportedPoseBlock(model) << "\nexpected:\n"
+    << expected;
+}
+
+// Position <-> yaw is genuinely correlated once the front/rear covariance is asymmetric (it was
+// hard-coded to zero before), and the exported block is symmetric. For straight motion at yaw = 0
+// the coupling lives in the lateral (y) <-> yaw term.
+TEST(ExportedPoseCovariance, PositionYawCorrelated)
+{
+  const auto c = exportedPoseCov(makeEvolvedVehicle());
+
+  EXPECT_GT(std::abs(c[XYZRPY_COV_IDX::X_YAW]) + std::abs(c[XYZRPY_COV_IDX::Y_YAW]), 1e-6);
+
+  EXPECT_DOUBLE_EQ(c[XYZRPY_COV_IDX::X_YAW], c[XYZRPY_COV_IDX::YAW_X]);
+  EXPECT_DOUBLE_EQ(c[XYZRPY_COV_IDX::Y_YAW], c[XYZRPY_COV_IDX::YAW_Y]);
+  EXPECT_DOUBLE_EQ(c[XYZRPY_COV_IDX::X_Y], c[XYZRPY_COV_IDX::Y_X]);
+}
+
+// The assembled (x, y, yaw) block is positive semi-definite: G * P_sub * G^T with P_sub PSD.
+TEST(ExportedPoseCovariance, PositiveSemiDefinite)
+{
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(exportedPoseBlock(makeEvolvedVehicle()));
+  ASSERT_EQ(solver.info(), Eigen::Success);
+  EXPECT_GE(solver.eigenvalues().minCoeff(), -1e-12);
+}
+
 }  // namespace autoware::multi_object_tracker
