@@ -363,9 +363,9 @@ TEST(ExportedPoseCovariance, MatchesJacobianPropagation)
   // normal_vehicle axle ratios (wheel_pos_ratio_front / _rear)
   constexpr double lf_ratio = 0.3;
   constexpr double lr_ratio = 0.25;
-  const double wbri = 1.0 / (lf_ratio + lr_ratio);
-  const double w_rear = lf_ratio * wbri;
-  const double w_front = lr_ratio * wbri;
+  const double inv_wheel_base_ratio = 1.0 / (lf_ratio + lr_ratio);
+  const double w_rear = lf_ratio * inv_wheel_base_ratio;
+  const double w_front = lr_ratio * inv_wheel_base_ratio;
 
   Eigen::Matrix<double, 3, 4> g;
   g << w_rear, 0.0, w_front, 0.0, 0.0, w_rear, 0.0, w_front, sin_yaw / wheel_base,
