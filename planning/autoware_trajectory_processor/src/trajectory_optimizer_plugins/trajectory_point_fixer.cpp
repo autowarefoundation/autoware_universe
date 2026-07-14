@@ -33,8 +33,10 @@ void TrajectoryPointFixer::optimize_trajectory(
   auto & semantic_speed_tracker = data.semantic_speed_tracker;
   trajectory_point_fixer_utils::remove_invalid_points(traj_points);
 
-  trajectory_point_fixer_utils::remove_close_proximity_points(
-    traj_points, semantic_speed_tracker, fixer_params_.min_dist_to_remove_m);
+  if (fixer_params_.remove_close_points) {
+    trajectory_point_fixer_utils::remove_close_proximity_points(
+      traj_points, semantic_speed_tracker, fixer_params_.min_dist_to_remove_m);
+  }
 
   if (fixer_params_.resample_close_points) {
     trajectory_point_fixer_utils::resample_close_proximity_points(

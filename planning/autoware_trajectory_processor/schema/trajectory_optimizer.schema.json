@@ -107,6 +107,11 @@
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
+            "remove_close_points": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable removal of close proximity points"
+            },
             "resample_close_points": {
               "type": "boolean",
               "default": true,
@@ -132,6 +137,7 @@
             }
           },
           "required": [
+            "remove_close_points",
             "resample_close_points",
             "min_dist_to_remove_m",
             "min_dist_to_resample_m",

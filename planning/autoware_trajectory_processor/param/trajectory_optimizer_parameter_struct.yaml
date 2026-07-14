@@ -96,6 +96,11 @@ trajectory_optimizer_node_params:
       read_only: false
 
   trajectory_point_fixer:
+    remove_close_points:
+      type: bool
+      default_value: true
+      description: Enable removal of close proximity points
+      read_only: false
     resample_close_points:
       type: bool
       default_value: true
