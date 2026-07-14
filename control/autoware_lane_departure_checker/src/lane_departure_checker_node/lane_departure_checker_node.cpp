@@ -27,6 +27,7 @@
 
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -152,6 +153,8 @@ LaneDepartureCheckerNode::LaneDepartureCheckerNode(const rclcpp::NodeOptions & o
   boundary_departure_checker_ = std::make_unique<BoundaryDepartureChecker>(param_, vehicle_info);
 
   // Publisher
+  processing_diag_publisher_ = this->create_publisher<diagnostic_msgs::msg::DiagnosticStatus>(
+    "~/debug/processing_time_ms_diag", 1);
   processing_time_publisher_ =
     this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/debug/processing_time_ms", 1);
@@ -340,11 +343,27 @@ void LaneDepartureCheckerNode::onTimer()
   }
 
   processing_time_map["Total"] = stop_watch.toc("Total");
-  processing_diag_publisher_.publish(processing_time_map);
+  publishProcessingTimeDiag(processing_time_map);
   auto processing_time_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(processing_time_publisher_);
   processing_time_msg->stamp = get_clock()->now();
   processing_time_msg->data = processing_time_map["Total"];
   processing_time_publisher_->publish(std::move(processing_time_msg));
+}
+
+void LaneDepartureCheckerNode::publishProcessingTimeDiag(
+  const std::map<std::string, double> & processing_time_map)
+{
+  auto status_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(processing_diag_publisher_);
+  for (const auto & m : processing_time_map) {
+    diagnostic_msgs::msg::KeyValue key_value;
+    key_value.key = m.first;
+    std::ostringstream oss;
+    oss.precision(3);
+    oss << std::fixed << m.second;
+    key_value.value = oss.str();
+    status_msg->values.push_back(key_value);
+  }
+  processing_diag_publisher_->publish(std::move(status_msg));
 }
 
 rcl_interfaces::msg::SetParametersResult LaneDepartureCheckerNode::onParameter(

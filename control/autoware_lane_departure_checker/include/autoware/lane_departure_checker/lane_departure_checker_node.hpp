@@ -21,7 +21,6 @@
 #include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
-#include <autoware_utils/ros/processing_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -31,6 +30,7 @@
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -96,10 +96,12 @@ private:
   // Publisher
   autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node> debug_publisher_{
     this, "~/debug"};
-  autoware_utils::BasicProcessingTimePublisher<autoware::agnocast_wrapper::Node>
-    processing_diag_publisher_{this, "~/debug/processing_time_ms_diag"};
+  AUTOWARE_PUBLISHER_PTR(diagnostic_msgs::msg::DiagnosticStatus)
+  processing_diag_publisher_;
   AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped)
   processing_time_publisher_;
+
+  void publishProcessingTimeDiag(const std::map<std::string, double> & processing_time_map);
 
   // Timer
   AUTOWARE_TIMER_PTR timer_;
