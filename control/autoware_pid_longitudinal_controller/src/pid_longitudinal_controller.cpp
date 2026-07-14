@@ -58,8 +58,6 @@ PidLongitudinalController::PidLongitudinalController(
   }
 
   m_wheel_base = autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo().wheel_base_m;
-  m_vehicle_width =
-    autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo().vehicle_width_m;
   m_front_overhang =
     autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo().front_overhang_m;
 

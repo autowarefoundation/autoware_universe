@@ -118,7 +118,6 @@ private:
 
   // vehicle info
   double m_wheel_base{0.0};
-  double m_vehicle_width{0.0};
   double m_front_overhang{0.0};
   bool m_prev_vehicle_is_under_control{false};
   std::shared_ptr<rclcpp::Time> m_under_control_starting_time{nullptr};
