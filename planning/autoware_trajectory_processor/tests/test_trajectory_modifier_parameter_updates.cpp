@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "parameter_update_test_accessor.hpp"
+// These tests update modifier parameters through the ROS parameter services, publish the mandatory
+// inputs and a candidate trajectory to activate the node's lazy parameter-refresh path, and inspect
+// the node and loaded plugin caches through a test-only accessor. Unsupported runtime updates are
+// retained as complete DISABLED_ regression tests.
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
-#include <rcl_interfaces/msg/parameter_descriptor.hpp>
+#include "parameter_update_test_accessor.hpp"
+#include "test_utils.hpp"
+
 #include <rclcpp/parameter_client.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -24,7 +28,6 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -37,28 +40,14 @@ using autoware::trajectory_modifier::TrajectoryModifier;
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
-
-struct ParameterCase
-{
-  std::string name;
-  rclcpp::Parameter value;
-};
-
-rclcpp::NodeOptions make_modifier_node_options()
-{
-  auto options = rclcpp::NodeOptions{};
-  options.append_parameter_override("use_sim_time", true);
-
-  const auto package_dir =
-    ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
-  const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
-
-  options.arguments(
-    {"--ros-args", "--params-file", package_dir + "/config/trajectory_modifier.param.yaml",
-     "--params-file", test_utils_dir + "/config/test_vehicle_info.param.yaml"});
-
-  return options;
-}
+using trajectory_optimizer_test_utils::is_plugin_list_parameter;
+using trajectory_optimizer_test_utils::is_read_only;
+using trajectory_optimizer_test_utils::list_declared_parameters;
+using trajectory_optimizer_test_utils::make_modifier_node_options;
+using trajectory_optimizer_test_utils::make_updated_parameter;
+using trajectory_optimizer_test_utils::ParameterCase;
+using trajectory_optimizer_test_utils::set_parameter_atomically;
+using trajectory_optimizer_test_utils::set_parameters_atomically;
 
 class ModifierParameterServiceFixture : public ::testing::Test
 {
@@ -139,22 +128,6 @@ protected:
     return future.get();
   }
 
-  void set_parameter_atomically(const rclcpp::Parameter & parameter)
-  {
-    auto future = client_->set_parameters_atomically({parameter});
-    ASSERT_EQ(spin_until_complete(future), rclcpp::FutureReturnCode::SUCCESS);
-    const auto result = future.get();
-    EXPECT_TRUE(result.successful) << parameter.get_name() << ": " << result.reason;
-  }
-
-  void set_parameters_atomically(const std::vector<rclcpp::Parameter> & parameters)
-  {
-    auto future = client_->set_parameters_atomically(parameters);
-    ASSERT_EQ(spin_until_complete(future), rclcpp::FutureReturnCode::SUCCESS);
-    const auto result = future.get();
-    ASSERT_TRUE(result.successful) << result.reason;
-  }
-
   void trigger_parameter_update()
   {
     const auto old_stamp = ParameterUpdateTestAccessor::params(*node_).__stamp;
@@ -190,72 +163,6 @@ protected:
   rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr acceleration_pub_;
 };
 
-bool is_plugin_list_parameter(const std::string & name)
-{
-  return name == "plugin_names";
-}
-
-bool is_read_only(const rcl_interfaces::msg::ParameterDescriptor & descriptor)
-{
-  return descriptor.read_only;
-}
-
-std::optional<rclcpp::Parameter> make_updated_parameter(
-  const rclcpp::Parameter & current, const rcl_interfaces::msg::ParameterDescriptor & descriptor)
-{
-  const auto & name = current.get_name();
-  switch (current.get_type()) {
-    case rclcpp::ParameterType::PARAMETER_BOOL:
-      return rclcpp::Parameter{name, !current.as_bool()};
-    case rclcpp::ParameterType::PARAMETER_INTEGER: {
-      const auto current_value = static_cast<int64_t>(current.as_int());
-      if (!descriptor.integer_range.empty()) {
-        const auto & range = descriptor.integer_range.front();
-        const auto step = static_cast<int64_t>(range.step == 0 ? 1 : range.step);
-        const auto from_value = static_cast<int64_t>(range.from_value);
-        const auto to_value = static_cast<int64_t>(range.to_value);
-        const auto next = current_value + step <= to_value ? current_value + step : from_value;
-        if (next != current_value) {
-          return rclcpp::Parameter{name, next};
-        }
-        return std::nullopt;
-      }
-      return rclcpp::Parameter{name, current_value == 0 ? 1 : current_value + 1};
-    }
-    case rclcpp::ParameterType::PARAMETER_DOUBLE: {
-      const auto current_value = current.as_double();
-      if (!descriptor.floating_point_range.empty()) {
-        const auto & range = descriptor.floating_point_range.front();
-        const auto mid = (range.from_value + range.to_value) * 0.5;
-        if (mid != current_value) {
-          return rclcpp::Parameter{name, mid};
-        }
-        const auto next = current_value + (range.step == 0.0 ? 1.0e-3 : range.step);
-        if (next <= range.to_value && next != current_value) {
-          return rclcpp::Parameter{name, next};
-        }
-        return std::nullopt;
-      }
-      const auto delta = current_value == 0.0 ? 1.0e-3 : current_value * 0.01;
-      return rclcpp::Parameter{name, current_value + delta};
-    }
-    case rclcpp::ParameterType::PARAMETER_STRING:
-      return rclcpp::Parameter{name, current.as_string() + "_updated_by_test"};
-    default:
-      return std::nullopt;
-  }
-}
-
-std::vector<std::string> list_declared_parameters(
-  rclcpp::AsyncParametersClient & client, rclcpp::executors::SingleThreadedExecutor & executor)
-{
-  auto future = client.list_parameters({}, 10);
-  EXPECT_EQ(
-    executor.spin_until_future_complete(future, std::chrono::seconds{5}),
-    rclcpp::FutureReturnCode::SUCCESS);
-  return future.get().names;
-}
-
 }  // namespace
 
 TEST_F(ModifierParameterServiceFixture, UpdatesWritableScalarParametersThroughParameterService)
@@ -281,7 +188,7 @@ TEST_F(ModifierParameterServiceFixture, UpdatesWritableScalarParametersThroughPa
 
   ASSERT_FALSE(cases.empty());
   for (const auto & test_case : cases) {
-    set_parameter_atomically(test_case.value);
+    set_parameter_atomically(*client_, executor_, test_case.value);
     const auto stored = get_parameters({test_case.name});
     ASSERT_EQ(stored.size(), 1U);
     EXPECT_EQ(stored.front(), test_case.value) << test_case.name;
@@ -297,6 +204,7 @@ TEST_F(ModifierParameterServiceFixture, UpdatesNodeAndPluginParameterCachesAfter
   using autoware::trajectory_modifier::plugin::VelocityModifier;
 
   set_parameters_atomically(
+    *client_, executor_,
     {rclcpp::Parameter{"use_stop_point_fixer", false},
      rclcpp::Parameter{"stop_point_fixer.force_stop_long_stopped_trajectories", false},
      rclcpp::Parameter{"stop_point_fixer.velocity_threshold", 0.2},
@@ -406,7 +314,7 @@ TEST_F(ModifierParameterServiceFixture, DISABLED_UpdatesPluginListAtRuntime)
   const std::vector<std::string> expected_names = {
     "autoware::trajectory_modifier::plugin::VelocityModifier",
     "autoware::trajectory_modifier::plugin::StopPointFixer"};
-  set_parameter_atomically(rclcpp::Parameter{"plugin_names", expected_names});
+  set_parameter_atomically(*client_, executor_, rclcpp::Parameter{"plugin_names", expected_names});
   trigger_parameter_update();
 
   EXPECT_EQ(ParameterUpdateTestAccessor::params(*node_).plugin_names, expected_names);
@@ -422,7 +330,7 @@ TEST_F(ModifierParameterServiceFixture, DISABLED_UpdatesTrajectoryTimeStepInAllP
   using autoware::trajectory_modifier::plugin::StopPointFixer;
   using autoware::trajectory_modifier::plugin::TrafficLightStop;
 
-  set_parameter_atomically(rclcpp::Parameter{"trajectory_time_step", 0.2});
+  set_parameter_atomically(*client_, executor_, rclcpp::Parameter{"trajectory_time_step", 0.2});
   trigger_parameter_update();
 
   const auto stop_point_fixer = find_plugin<StopPointFixer>();
