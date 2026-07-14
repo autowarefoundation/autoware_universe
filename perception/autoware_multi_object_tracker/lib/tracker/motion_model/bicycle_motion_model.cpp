@@ -688,10 +688,9 @@ bool BicycleMotionModel::getPredictedState(
   twist.angular.z = X(IDX::V) * wheel_base_inv;
 
   constexpr double default_cov = 0.1 * 0.1;
-  // set pose covariance
-  // The exported pose (center position + yaw) is a smooth function of the four axle coordinates
-  // [X1, Y1, X2, Y2]. Propagate their covariance block through a single Jacobian G so the whole
-  // (x, y, yaw) block is mutually consistent, correctly correlated, and PSD by construction:
+  // Set pose covariance
+  // Propagate the axle-coordinate covariance [X1, Y1, X2, Y2] through a single Jacobian G so the
+  // exported (x, y, yaw) block stays consistent, correctly correlated, and PSD by construction:
   //   center = w_rear * p1 + w_front * p2   (w_rear + w_front = 1)
   //   yaw    = atan2(Y2 - Y1, X2 - X1),  d(yaw)/d[X1,Y1,X2,Y2] = (1/L)*[sin, -cos, -sin, cos]
   // M = G * P_sub * G^T reproduces the exact linearized YAW_YAW and adds the position<->yaw
@@ -701,8 +700,8 @@ bool BicycleMotionModel::getPredictedState(
   Eigen::Matrix<double, 3, 4> G;
   G << w_rear, 0.0, w_front, 0.0,  // center_x
     0.0, w_rear, 0.0, w_front,     // center_y
-    sin_yaw * wheel_base_inv, -cos_yaw * wheel_base_inv, -sin_yaw * wheel_base_inv,
-    cos_yaw * wheel_base_inv;  // yaw
+    sin_yaw * wheel_base_inv, -cos_yaw * wheel_base_inv,
+   -sin_yaw * wheel_base_inv,  cos_yaw * wheel_base_inv;  // yaw
   const Eigen::Matrix3d M = G * P.topLeftCorner<4, 4>() * G.transpose();
 
   pose_cov[XYZRPY_COV_IDX::X_X] = M(0, 0);
