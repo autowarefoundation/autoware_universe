@@ -217,19 +217,19 @@ TEST(BlendAxleCovariance, PreservesYawVariance)
 // asymmetric (no blend), but only translates it after a full blend.
 TEST(BlendAxleCovariance, CommonLateralBiasDoesNotRotate)
 {
-  BicycleMotionModel unblended = makeEvolvedVehicle();
+  BicycleMotionModel no_blend = makeEvolvedVehicle();
   BicycleMotionModel blended = makeEvolvedVehicle();
 
-  const double yaw_pre = unblended.getYawState();
+  const double yaw_pre = no_blend.getYawState();
   ASSERT_NEAR(yaw_pre, 0.0, 1e-9);  // straight-line motion keeps the pre-update heading at zero
 
   EXPECT_TRUE(blended.blendAxleCovariance(1.0));
 
-  const double yaw_unblended = yawAfterCommonLateralBias(unblended);
+  const double yaw_no_blend = yawAfterCommonLateralBias(no_blend);
   const double yaw_blended = yawAfterCommonLateralBias(blended);
 
   // Without the blend the asymmetry levers the common bias into a clear spurious rotation.
-  EXPECT_GT(std::abs(yaw_unblended - yaw_pre), 5e-3);
+  EXPECT_GT(std::abs(yaw_no_blend - yaw_pre), 5e-3);
   // With a full blend the same bias leaves the heading essentially untouched (pure translation).
   EXPECT_NEAR(yaw_blended, yaw_pre, 1e-6);
 }
