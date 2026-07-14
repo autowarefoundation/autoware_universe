@@ -361,8 +361,9 @@ TEST(ExportedPoseCovariance, MatchesJacobianPropagation)
   const double cos_yaw = dx / wheel_base;
 
   // normal_vehicle axle ratios (wheel_pos_ratio_front / _rear)
-  constexpr double lf_ratio = 0.3;
-  constexpr double lr_ratio = 0.25;
+  const auto & bicycle_state = object_model::normal_vehicle.bicycle_state;
+  const double lf_ratio = bicycle_state.wheel_pos_ratio_front;
+  const double lr_ratio = bicycle_state.wheel_pos_ratio_rear;
   const double inv_wheel_base_ratio = 1.0 / (lf_ratio + lr_ratio);
   const double w_rear = lf_ratio * inv_wheel_base_ratio;
   const double w_front = lr_ratio * inv_wheel_base_ratio;
