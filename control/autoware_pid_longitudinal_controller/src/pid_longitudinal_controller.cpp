@@ -273,7 +273,7 @@ void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg:
     return;
   }
 
-  m_trajectory = msg;
+  m_last_valid_trajectory = msg;
 }
 
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
@@ -472,7 +472,7 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   // current velocity and acceleration
   control_data.current_motion.vel = m_current_kinematic_state.twist.twist.linear.x;
   control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
-  control_data.interpolated_traj = m_trajectory;
+  control_data.interpolated_traj = m_last_valid_trajectory;
   if (control_data.interpolated_traj.points.size() < 2) {
     RCLCPP_ERROR_THROTTLE(
       logger_, *clock_, 3000, "Trajectory size is less than 2. Cannot calculate control data.");
@@ -487,7 +487,7 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   autoware_planning_msgs::msg::TrajectoryPoint target_point;
 
   if (m_use_temporal_trajectory) {
-    const rclcpp::Time traj_stamp(m_trajectory.header.stamp);
+    const rclcpp::Time traj_stamp(m_last_valid_trajectory.header.stamp);
     const double elapsed_time = (clock_->now() - traj_stamp).seconds();
     const double nearest_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
     control_data.temporal_predicted_time = nearest_time;
@@ -714,7 +714,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
       : false;
 
   // ==========================================================================================
-  // NOTE: due to removeOverlapPoints() in getControlData() m_trajectory and
+  // NOTE: due to removeOverlapPoints() in getControlData() m_last_valid_trajectory and
   // control_data.interpolated_traj have different size.
   // ==========================================================================================
   const double current_vel_cmd = std::fabs(

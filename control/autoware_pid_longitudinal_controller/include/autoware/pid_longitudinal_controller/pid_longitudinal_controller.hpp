@@ -119,7 +119,7 @@ private:
   // pointers for ros topic
   nav_msgs::msg::Odometry m_current_kinematic_state;
   geometry_msgs::msg::AccelWithCovarianceStamped m_current_accel;
-  autoware_planning_msgs::msg::Trajectory m_trajectory;
+  autoware_planning_msgs::msg::Trajectory m_last_valid_trajectory;
   OperationModeState m_current_operation_mode;
 
   // vehicle info
