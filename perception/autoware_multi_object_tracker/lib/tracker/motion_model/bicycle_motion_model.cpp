@@ -253,12 +253,22 @@ bool BicycleMotionModel::updateStatePoseWheel(
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  constexpr int DIM_Y = 2;
-  Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x, y;
+  // Derive the pre-update wheelbase and heading straight from the axle points (one hypot, no trig):
+  // t_hat = (p2 - p1) / wheelbase.
+  const double dx = getStateElement(IDX::X2) - getStateElement(IDX::X1);
+  const double dy = getStateElement(IDX::Y2) - getStateElement(IDX::Y1);
+  const double wheel_base = std::hypot(dx, dy);
+  const double cos_yaw = dx / wheel_base;
+  const double sin_yaw = dy / wheel_base;
 
-  // Measure the edge face center as an exact linear blend of the two endpoints:
-  // face = (1 + gamma) * p_near - gamma * p_far
+  // Measure the edge face center as an exact linear blend of the two endpoints, plus a wheelbase-
+  // lock row that pins the length to its current value:
+  //   row 0,1: face = (1 + gamma) * p_near - gamma * p_far
+  //   row 2:   wheelbase = (p2 - p1) . t_hat  ->  current value
+  constexpr int DIM_Y = 3;
+  Eigen::Matrix<double, DIM_Y, 1> Y;
+  Y << x, y, wheel_base;
+
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   if (measure_front) {
     // The front face anchors on p2 = (X2, Y2) with gamma_front
@@ -275,12 +285,20 @@ bool BicycleMotionModel::updateStatePoseWheel(
     C(1, IDX::Y1) = 1.0 + gamma;
     C(1, IDX::Y2) = -gamma;
   }
+  // wheelbase-lock row: holds the length so a partial cluster cannot stretch the body (which the
+  // wheel-base lever would otherwise turn into yaw).
+  C(2, IDX::X1) = -cos_yaw;
+  C(2, IDX::Y1) = -sin_yaw;
+  C(2, IDX::X2) = cos_yaw;
+  C(2, IDX::Y2) = sin_yaw;
 
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
+  constexpr double length_lock_var = 1.0e-4;  // [m^2] ~1 cm std: hold the wheelbase near-constant
+  R(2, 2) = length_lock_var;
 
   return ekf_.update(Y, C, R);
 }
