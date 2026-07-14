@@ -21,6 +21,7 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
+#include <autoware_trajectory_processor/trajectory_optimizer_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -88,7 +89,7 @@ private:
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
   // Parameter structs
-  MPTParams mpt_params_;
+  trajectory_optimizer_node_params::Params::TrajectoryMptOptimizer mpt_params_;
   EgoNearestParam ego_nearest_param_;
   TrajectoryParam traj_param_;
   std::shared_ptr<DebugData> debug_data_ptr_;

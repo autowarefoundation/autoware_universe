@@ -100,25 +100,14 @@ void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & par
 void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
   enabled_ = params.use_mpt_optimizer;
-  mpt_params_.corridor_width_m = params.trajectory_mpt_optimizer.corridor_width_m;
-  mpt_params_.enable_adaptive_width = params.trajectory_mpt_optimizer.enable_adaptive_width;
-  mpt_params_.curvature_width_factor = params.trajectory_mpt_optimizer.curvature_width_factor;
-  mpt_params_.velocity_width_factor = params.trajectory_mpt_optimizer.velocity_width_factor;
-  mpt_params_.min_clearance_m = params.trajectory_mpt_optimizer.min_clearance_m;
-  mpt_params_.reset_previous_data_each_iteration =
-    params.trajectory_mpt_optimizer.reset_previous_data_each_iteration;
-  mpt_params_.enable_debug_info = params.trajectory_mpt_optimizer.enable_debug_info;
+  mpt_params_ = params.trajectory_mpt_optimizer;
 
   traj_param_.output_delta_arc_length = params.trajectory_mpt_optimizer.output_delta_arc_length_m;
-  traj_param_.output_backward_traj_length =
-    params.trajectory_mpt_optimizer.output_backward_traj_length_m;
+  traj_param_.output_backward_traj_length = mpt_params_.output_backward_traj_length_m;
 
-  ego_nearest_param_.dist_threshold = params.trajectory_mpt_optimizer.ego_nearest_dist_threshold_m;
+  ego_nearest_param_.dist_threshold = mpt_params_.ego_nearest_dist_threshold_m;
   ego_nearest_param_.yaw_threshold =
-    autoware_utils_math::deg2rad(params.trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg);
-
-  mpt_params_.acceleration_moving_average_window =
-    params.trajectory_mpt_optimizer.acceleration_moving_average_window;
+    autoware_utils_math::deg2rad(mpt_params_.ego_nearest_yaw_threshold_deg);
 
   if (mpt_optimizer_ptr_) {
     std::vector<rclcpp::Parameter> parameters = {
@@ -144,7 +133,7 @@ void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & par
         "trajectory_mpt_optimizer.ego_nearest_dist_threshold_m", ego_nearest_param_.dist_threshold),
       rclcpp::Parameter(
         "trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg",
-        params.trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg),
+        mpt_params_.ego_nearest_yaw_threshold_deg),
       rclcpp::Parameter(
         "trajectory_mpt_optimizer.acceleration_moving_average_window",
         mpt_params_.acceleration_moving_average_window)};
