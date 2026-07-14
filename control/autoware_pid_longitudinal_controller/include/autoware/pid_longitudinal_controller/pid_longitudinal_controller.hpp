@@ -97,11 +97,7 @@ private:
     double slope_angle{0.0};
     double dt{0.0};
     double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
-    double temporal_observed_time{std::numeric_limits<double>::quiet_NaN()};
     double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
-    double temporal_window_min{std::numeric_limits<double>::quiet_NaN()};
-    double temporal_window_max{std::numeric_limits<double>::quiet_NaN()};
-    bool temporal_observation_used{false};
   };
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
   rclcpp::Clock::SharedPtr clock_;

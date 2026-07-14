@@ -990,16 +990,14 @@ void PidLongitudinalController::publishDebugData(
   m_debug_values.setValues(
     DebugValues::TYPE::TEMPORAL_PREDICTED_TIME, control_data.temporal_predicted_time);
   m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_OBSERVED_TIME, control_data.temporal_observed_time);
+    DebugValues::TYPE::TEMPORAL_OBSERVED_TIME, std::numeric_limits<double>::quiet_NaN());
   m_debug_values.setValues(
     DebugValues::TYPE::TEMPORAL_FUSED_TIME, control_data.temporal_fused_time);
+  m_debug_values.setValues(DebugValues::TYPE::TEMPORAL_OBSERVATION_USED, 0.0);
   m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_OBSERVATION_USED,
-    control_data.temporal_observation_used ? 1.0 : 0.0);
+    DebugValues::TYPE::TEMPORAL_WINDOW_MIN, std::numeric_limits<double>::quiet_NaN());
   m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_WINDOW_MIN, control_data.temporal_window_min);
-  m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_WINDOW_MAX, control_data.temporal_window_max);
+    DebugValues::TYPE::TEMPORAL_WINDOW_MAX, std::numeric_limits<double>::quiet_NaN());
 
   // publish debug values
   autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
