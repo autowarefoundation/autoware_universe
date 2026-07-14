@@ -41,6 +41,8 @@ using SmootherTimekeeper = autoware::path_smoother::TimeKeeper;
 
 class TrajectoryEBSmootherOptimizer : public TrajectoryOptimizerPluginBase
 {
+  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
+
 public:
   TrajectoryEBSmootherOptimizer() = default;
   ~TrajectoryEBSmootherOptimizer() = default;

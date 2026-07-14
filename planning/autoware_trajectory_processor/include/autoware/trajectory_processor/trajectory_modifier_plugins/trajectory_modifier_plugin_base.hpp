@@ -32,6 +32,11 @@
 #include <utility>
 #include <vector>
 
+namespace autoware::trajectory_modifier
+{
+class ParameterUpdateTestAccessor;
+}
+
 namespace autoware::trajectory_modifier::plugin
 {
 using autoware_internal_planning_msgs::msg::PlanningFactor;
@@ -41,6 +46,8 @@ using TrajectoryModifierParams = trajectory_modifier_params::Params;
 
 class TrajectoryModifierPluginBase
 {
+  friend class autoware::trajectory_modifier::ParameterUpdateTestAccessor;
+
 public:
   TrajectoryModifierPluginBase() = default;
 

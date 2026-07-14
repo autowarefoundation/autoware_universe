@@ -45,6 +45,8 @@ using visualization_msgs::msg::MarkerArray;
 
 class ObstacleStop : public TrajectoryModifierPluginBase
 {
+  friend class autoware::trajectory_modifier::ParameterUpdateTestAccessor;
+
 public:
   ObstacleStop() = default;
 

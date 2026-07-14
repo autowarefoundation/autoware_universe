@@ -35,7 +35,6 @@ namespace autoware::trajectory_optimizer::plugin
 {
 
 using autoware::path_optimizer::DebugData;
-using autoware::path_optimizer::EgoNearestParam;
 using autoware::path_optimizer::MPTOptimizer;
 using autoware::path_optimizer::PlannerData;
 using autoware::path_optimizer::TrajectoryParam;
@@ -68,6 +67,8 @@ struct MPTParams
 
 class TrajectoryMPTOptimizer : public TrajectoryOptimizerPluginBase
 {
+  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
+
 public:
   TrajectoryMPTOptimizer() = default;
 
@@ -90,7 +91,8 @@ private:
 
   // Parameter structs
   trajectory_optimizer_node_params::Params::TrajectoryMptOptimizer mpt_params_;
-  EgoNearestParam ego_nearest_param_;
+
+  autoware::path_optimizer::EgoNearestParam ego_nearest_param_;
   TrajectoryParam traj_param_;
   std::shared_ptr<DebugData> debug_data_ptr_;
   std::shared_ptr<autoware_utils::TimeKeeper> mpt_time_keeper_;

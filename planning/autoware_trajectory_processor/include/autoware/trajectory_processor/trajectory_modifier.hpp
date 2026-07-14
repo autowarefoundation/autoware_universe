@@ -44,6 +44,8 @@
 namespace autoware::trajectory_modifier
 {
 
+class ParameterUpdateTestAccessor;
+
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -56,6 +58,8 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class TrajectoryModifier : public rclcpp::Node
 {
+  friend class ParameterUpdateTestAccessor;
+
 public:
   explicit TrajectoryModifier(const rclcpp::NodeOptions & options);
 

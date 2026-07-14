@@ -35,6 +35,8 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class TrajectorySplineSmoother : public TrajectoryOptimizerPluginBase
 {
+  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
+
 public:
   TrajectorySplineSmoother() = default;
   ~TrajectorySplineSmoother() = default;

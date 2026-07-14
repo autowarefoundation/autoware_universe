@@ -38,6 +38,8 @@
 namespace autoware::trajectory_optimizer
 {
 
+class ParameterUpdateTestAccessor;
+
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_planning_msgs::msg::Trajectory;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
@@ -45,6 +47,8 @@ using nav_msgs::msg::Odometry;
 
 class TrajectoryOptimizer : public rclcpp::Node
 {
+  friend class ParameterUpdateTestAccessor;
+
 public:
   explicit TrajectoryOptimizer(const rclcpp::NodeOptions & options);
 

@@ -22,6 +22,8 @@ namespace autoware::trajectory_modifier::plugin
 
 class StopPointFixer : public TrajectoryModifierPluginBase
 {
+  friend class autoware::trajectory_modifier::ParameterUpdateTestAccessor;
+
 public:
   StopPointFixer() = default;
 

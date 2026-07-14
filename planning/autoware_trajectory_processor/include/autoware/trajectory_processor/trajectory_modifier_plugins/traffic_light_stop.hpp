@@ -36,6 +36,8 @@ using visualization_msgs::msg::MarkerArray;
 
 class TrafficLightStop : public TrajectoryModifierPluginBase
 {
+  friend class autoware::trajectory_modifier::ParameterUpdateTestAccessor;
+
 public:
   TrafficLightStop() = default;
 
