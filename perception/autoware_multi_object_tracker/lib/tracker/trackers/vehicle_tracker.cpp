@@ -149,15 +149,19 @@ VehicleTracker::VehicleTracker(
 
 bool VehicleTracker::predict(const rclcpp::Time & time)
 {
-  // Capture the interval before predictState() advances the model; the update-time blend scales
-  // with how long the front/rear covariance has been accruing asymmetry.
-  last_predict_dt_ = motion_model_.getDeltaTime(time);
+  // Capture the interval since the last measurement correction; the axle blend scales with how
+  // long the front/rear covariance has been accruing asymmetry uncorrected. Measured from the
+  // last correction (not the last predict) so a tracker that coasts through several cycles
+  // without an associated measurement is re-symmetrized by the full accrued amount, not just one
+  // predict step. predict() runs before update() each cycle, so this holds the previous
+  // correction's interval when the blend consumes it.
+  time_since_correction_ = getElapsedTimeFromLastUpdate(time);
   return motion_model_.predictState(time);
 }
 
 void VehicleTracker::applyAxleCovarianceBlend()
 {
-  const double blend_ratio = std::clamp(last_predict_dt_ / kAxleBlendTimeConstant, 0.0, 1.0);
+  const double blend_ratio = std::clamp(time_since_correction_ / kAxleBlendTimeConstant, 0.0, 1.0);
   if (blend_ratio <= 0.0) return;  // no time elapsed
 
   motion_model_.blendAxleCovariance(blend_ratio);

@@ -43,8 +43,10 @@ private:
   // Consumed by setObjectShape() so UnstableShapeFilter commits the new length correctly.
   BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;
 
-  // Open-loop interval [s] of the most recent predict(); drives the axle-covariance blend amount.
-  double last_predict_dt_{0.0};
+  // Interval [s] since the last measurement correction, captured at predict(); drives the
+  // axle-covariance blend amount so it reflects the full uncorrected asymmetry-accrual window
+  // rather than a single predict step.
+  double time_since_correction_{0.0};
 
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
@@ -57,7 +59,7 @@ private:
     const types::DynamicObject & prediction);
 
   // Relax the front/rear covariance asymmetry before an EKF pose update, scaled by
-  // last_predict_dt_.
+  // time_since_correction_.
   void applyAxleCovarianceBlend();
 
 public:
