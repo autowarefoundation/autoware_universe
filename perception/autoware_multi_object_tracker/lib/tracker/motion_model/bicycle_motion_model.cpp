@@ -700,8 +700,8 @@ bool BicycleMotionModel::getPredictedState(
   Eigen::Matrix<double, 3, 4> G;
   G << w_rear, 0.0, w_front, 0.0,  // center_x
     0.0, w_rear, 0.0, w_front,     // center_y
-    sin_yaw * wheel_base_inv, -cos_yaw * wheel_base_inv,
-   -sin_yaw * wheel_base_inv,  cos_yaw * wheel_base_inv;  // yaw
+    sin_yaw * wheel_base_inv, -cos_yaw * wheel_base_inv, -sin_yaw * wheel_base_inv,
+    cos_yaw * wheel_base_inv;  // yaw
   const Eigen::Matrix3d M = G * P.topLeftCorner<4, 4>() * G.transpose();
 
   pose_cov[XYZRPY_COV_IDX::X_X] = M(0, 0);
