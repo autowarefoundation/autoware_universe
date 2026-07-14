@@ -31,6 +31,18 @@
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
+namespace
+{
+std::string toStr(const ControlState state)
+{
+  if (state == ControlState::DRIVE) return "DRIVE";
+  if (state == ControlState::STOPPING) return "STOPPING";
+  if (state == ControlState::STOPPED) return "STOPPED";
+  if (state == ControlState::EMERGENCY) return "EMERGENCY";
+  return "UNDEFINED";
+}
+}  // namespace
+
 PidLongitudinalController::PidLongitudinalController(
   rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
 : node_parameters_(node.get_node_parameters_interface()),

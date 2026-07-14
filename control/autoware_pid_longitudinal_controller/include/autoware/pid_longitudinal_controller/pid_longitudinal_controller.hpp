@@ -56,6 +56,8 @@ using visualization_msgs::msg::MarkerArray;
 
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 
+enum class ControlState { DRIVE = 0, STOPPING, STOPPED, EMERGENCY };
+
 /// \class PidLongitudinalController
 /// \brief The node class used for generating longitudinal control commands (velocity/acceleration)
 class PidLongitudinalController : public trajectory_follower::LongitudinalControllerBase
@@ -123,16 +125,7 @@ private:
   std::shared_ptr<rclcpp::Time> m_under_control_starting_time{nullptr};
 
   // control state
-  enum class ControlState { DRIVE = 0, STOPPING, STOPPED, EMERGENCY };
   ControlState m_control_state{ControlState::STOPPED};
-  std::string toStr(const ControlState s)
-  {
-    if (s == ControlState::DRIVE) return "DRIVE";
-    if (s == ControlState::STOPPING) return "STOPPING";
-    if (s == ControlState::STOPPED) return "STOPPED";
-    if (s == ControlState::EMERGENCY) return "EMERGENCY";
-    return "UNDEFINED";
-  };
 
   // control period
   double m_longitudinal_ctrl_period;
