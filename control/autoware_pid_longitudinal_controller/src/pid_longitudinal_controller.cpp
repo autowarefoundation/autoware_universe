@@ -447,6 +447,9 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   // publish debug data
   publishDebugData(ctrl_cmd, control_data);
 
+  // publish virtual wall marker if created during this cycle
+  publishVirtualWallMarker();
+
   return output;
 }
 
@@ -644,10 +647,9 @@ PidLongitudinalController::Motion PidLongitudinalController::calcEmergencyCtrlCm
     longitudinal_utils::applyDiffLimitFilter(raw_ctrl_cmd.acc, m_prev_raw_ctrl_cmd.acc, dt, p.jerk);
   m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_JERK_LIMITED, raw_ctrl_cmd.acc);
 
-  const auto virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
+  m_virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
     control_data.current_pose, "velocity control\n (emergency)", clock_->now(), 0,
     m_wheel_base + m_front_overhang);
-  m_pub_virtual_wall_marker->publish(virtual_wall_marker);
 
   return raw_ctrl_cmd;
 }
@@ -815,12 +817,11 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
           debug_msg_once("target speed > 0, but keep stop condition is met. Keep STOPPED.");
         }
 
-        // publish debug marker
+        // create debug marker
         if (is_under_control) {
-          const auto virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
+          m_virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
             control_data.current_pose, "velocity control\n(steering not converged)", clock_->now(),
             0, m_wheel_base + m_front_overhang);
-          m_pub_virtual_wall_marker->publish(virtual_wall_marker);
         }
 
         // keep STOPPED
@@ -1023,6 +1024,15 @@ void PidLongitudinalController::publishDebugData(
   slope_msg.data.push_back(
     static_cast<decltype(slope_msg.data)::value_type>(control_data.slope_angle));
   m_pub_slope->publish(slope_msg);
+}
+
+void PidLongitudinalController::publishVirtualWallMarker()
+{
+  if (!m_virtual_wall_marker) {
+    return;
+  }
+  m_pub_virtual_wall_marker->publish(*m_virtual_wall_marker);
+  m_virtual_wall_marker.reset();
 }
 
 double PidLongitudinalController::getDt()

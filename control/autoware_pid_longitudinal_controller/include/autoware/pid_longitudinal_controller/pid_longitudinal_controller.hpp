@@ -110,6 +110,7 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
     m_pub_debug;
   rclcpp::Publisher<MarkerArray>::SharedPtr m_pub_virtual_wall_marker;
+  std::optional<MarkerArray> m_virtual_wall_marker{std::nullopt};
 
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
   rcl_interfaces::msg::SetParametersResult paramCallback(
@@ -311,6 +312,11 @@ private:
    * @param [in] control_data data for control calculation
    */
   void publishDebugData(const Motion & ctrl_cmd, const ControlData & control_data);
+
+  /**
+   * @brief publish the virtual wall marker created during this cycle, if any
+   */
+  void publishVirtualWallMarker();
 
   /**
    * @brief calculate time between current and previous one
