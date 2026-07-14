@@ -437,6 +437,34 @@ bool BicycleMotionModel::adjustPosition(const double & delta_x, const double & d
   return true;
 }
 
+bool BicycleMotionModel::blendAxleCovariance(const double blend_ratio)
+{
+  if (!checkInitialized()) return false;
+  if (blend_ratio <= 0.0) return true;
+  const double alpha = std::min(blend_ratio, 1.0);
+
+  StateVec X_t;
+  StateMat P_t;
+  ekf_.getX(X_t);
+  ekf_.getP(P_t);
+
+  // S P S^T, where S swaps the rear/front axle points (X1,Y1)<->(X2,Y2) and leaves velocities
+  // alone.
+  StateMat P_swapped = P_t;
+  P_swapped.row(IDX::X1).swap(P_swapped.row(IDX::X2));
+  P_swapped.row(IDX::Y1).swap(P_swapped.row(IDX::Y2));
+  P_swapped.col(IDX::X1).swap(P_swapped.col(IDX::X2));
+  P_swapped.col(IDX::Y1).swap(P_swapped.col(IDX::Y2));
+
+  // Convex combination toward the persymmetric average: PSD-preserving, leaves the center-position
+  // and yaw marginals unchanged, scales the mean<->difference coupling by (1 - alpha).
+  const StateMat P_new = (1.0 - 0.5 * alpha) * P_t + (0.5 * alpha) * P_swapped;
+
+  ekf_.init(X_t, P_new);  // covariance-only update
+
+  return true;
+}
+
 bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) const
 {
   /*  Motion model: static bicycle model (constant turn rate, constant velocity)
@@ -573,17 +601,19 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw_sq + q_cov_lat2 * cos_yaw_sq);
 
-  // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
-  constexpr double cross_coefficient =
-    0.1;  // [m^2] coefficient for covariance between front and rear axle
-  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * cross_coefficient;
-  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * cross_coefficient;
-  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
-  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
+  // Front/rear position process noise splits into a common-mode part C (whole-body translation from
+  // longitudinal/lateral acceleration, shared identically by both axle points) and a differential
+  // part D (wheel-base growth + heading swing) that acts on the front point only:
+  //   Q_pos = [[ C , C   ],
+  //            [ C , C+D ]]
+  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1);
+  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1);
+  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1);
+  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1);
+  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1);
 
   // covariance of velocity
   const double q_cov_vel_long = motion_params_.q_cov_acc_long * dt2;
