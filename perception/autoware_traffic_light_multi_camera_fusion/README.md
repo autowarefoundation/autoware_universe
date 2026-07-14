@@ -118,6 +118,31 @@ The validated output is shown in the following table:
 | Enabled                  | Disabled                       | `(UNKNOWN, UNKNOWN)`: fail-safe signal                       |
 | Enabled                  | Enabled                        | `(RED, CIRCLE)`: common signal                               |
 
+## Map-based Signal Filter
+
+The node includes an optional rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's `light_bulbs` linestring in the [lanelet2 vector map](https://docs.pilot.auto/reference-design/common/map-requirements/vector-map-requirements/category_traffic_light).
+
+Setting `map_based_signal_filter.enable` to true activates the filter. When active, for each traffic light the node reads the map's `light_bulbs` points (their `color` and optional `arrow` attributes) and builds a per-traffic-light-id set of allowed (color, shape) pairs. Any ML-predicted element whose (color, shape) is not in that set is dropped **before** Bayesian group fusion, so an obviously wrong prediction cannot outvote a correct one. `UNKNOWN` color/shape elements are never filtered out.
+
+If every element of a traffic light's signal is filtered out, the node emits an UNKNOWN fail-safe for that traffic light. If the map has no `light_bulbs` for a given traffic light id, the filter is a no-op for that id — we cannot filter what the map does not describe.
+
+The vector map is always subscribed (the node needs it to map traffic-light-ids to regulatory-element-ids); the `enable` flag only controls whether the filter runs.
+
+> **NOTE:** The correctness of this filter depends **entirely on the quality of the vector map**. If a traffic light's `light_bulbs` in the map is incomplete or wrong (e.g. an arrow bulb is missing, or `color`/`arrow` attributes are stale), the filter will incorrectly reject valid ML predictions and the node will publish UNKNOWN for that light. Before enabling this option, verify that every relevant traffic light in your map has accurate `light_bulbs` points with correct `color` and `arrow` attributes — see the [vector map requirements](https://docs.pilot.auto/reference-design/common/map-requirements/vector-map-requirements/category_traffic_light) for the expected format.
+
+### Example
+
+Map for traffic light A declares bulbs: `{(red, circle), (yellow, circle), (green, circle)}` — no arrows.
+
+Inputs:
+
+- Traffic light A: `{(RED, CIRCLE), (GREEN, LEFT_ARROW)}` from ML
+
+| map_based_signal_filter.enable | output                                                      |
+| ------------------------------ | ----------------------------------------------------------- |
+| Disabled                       | `(RED, CIRCLE)`, `(GREEN, LEFT_ARROW)`: raw ML prediction   |
+| Enabled                        | `(RED, CIRCLE)`: arrow dropped because the map disallows it |
+
 ## Input topics
 
 For every camera, the following three topics are subscribed:

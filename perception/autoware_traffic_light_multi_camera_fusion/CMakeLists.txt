@@ -13,6 +13,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/multi_camera_fusion.cpp
   src/traffic_light_multi_camera_fusion_process.cpp
   src/signal_validator.cpp
+  src/map_based_signal_filter.cpp
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
@@ -29,6 +30,7 @@ if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
     test/test_utils.cpp
     test/test_signal_validator.cpp
     test/test_multi_camera_fusion.cpp
+    test/test_map_based_signal_filter.cpp
   )
   ament_add_ros_isolated_gtest(${PROJECT_NAME}_node_test
     test/test_traffic_light_multi_camera_fusion_node.cpp

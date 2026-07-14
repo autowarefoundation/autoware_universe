@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
@@ -174,6 +175,9 @@ MultiCameraFusion::MultiCameraFusion(const MultiCameraFusionConfig & config)
   traffic_light_id_to_regulatory_ele_id_(
     build_traffic_light_id_to_regulatory_ele_id(config.lanelet_map_ptr))
 {
+  if (config_.use_map_based_signal_filter && config_.lanelet_map_ptr) {
+    map_based_signal_filter_ = std::make_unique<MapBasedSignalFilter>(config_.lanelet_map_ptr);
+  }
 }
 
 MultiCameraFusionResult MultiCameraFusion::fuse(
@@ -190,6 +194,17 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
     multi_camera_fusion(record_arr_set_, config_.message_lifespan);
   result.unmapped_traffic_light_ids =
     find_unmapped_traffic_light_ids(fused_record_map, traffic_light_id_to_regulatory_ele_id_);
+  if (map_based_signal_filter_) {
+    for (auto & [traffic_light_id, record] : fused_record_map) {
+      map_based_signal_filter_->filter_elements(traffic_light_id, record.signal.elements);
+      if (record.signal.elements.empty()) {
+        // every element was rejected by the map filter — replace with an UNKNOWN element so
+        // downstream group fusion still emits a group (via the failsafe path) instead of
+        // silently dropping the traffic light.
+        record = utils::generate_failsafe_record(record);
+      }
+    }
+  }
   GroupFusionResult group_result = group_fusion(fused_record_map);
   result.conflicted_regulatory_element_status = group_result.conflicts;
 
