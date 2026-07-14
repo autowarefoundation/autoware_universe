@@ -174,7 +174,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       include
       ${CUDA_INCLUDE_DIRS}
     )
-        
+
   endif()
 
   ament_auto_package(
