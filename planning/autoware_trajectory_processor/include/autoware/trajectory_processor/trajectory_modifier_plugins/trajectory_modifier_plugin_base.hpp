@@ -25,7 +25,6 @@
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
@@ -40,6 +39,8 @@ using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using TrajectoryModifierParams = trajectory_modifier_params::Params;
+using PlanningFactorInterface =
+  autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>;
 
 class TrajectoryModifierPluginBase
 {
@@ -79,12 +80,8 @@ public:
 
   virtual void publish_planning_factor()
   {
-    if (planning_factor_interface_ && planning_factor_pub_) {
-      auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(planning_factor_pub_);
-      msg->header.frame_id = "map";
-      msg->header.stamp = node_ptr_->now();
-      msg->factors = planning_factor_interface_->take_factors();
-      planning_factor_pub_->publish(std::move(msg));
+    if (planning_factor_interface_) {
+      planning_factor_interface_->publish();
     }
   }
   std::vector<PlanningFactor> get_planning_factors() const
@@ -97,20 +94,7 @@ public:
 
 protected:
   virtual void on_initialize(const TrajectoryModifierParams & params) = 0;
-
-  void init_planning_factor_interface(const std::string & name)
-  {
-    planning_factor_interface_ =
-      std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceBase>(name);
-    planning_factor_pub_ =
-      node_ptr_->create_publisher<autoware_internal_planning_msgs::msg::PlanningFactorArray>(
-        planning_factor_interface_->topic_name(), 1);
-  }
-
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterfaceBase>
-    planning_factor_interface_;
-  AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::PlanningFactorArray)
-  planning_factor_pub_;
+  std::unique_ptr<PlanningFactorInterface> planning_factor_interface_;
   std::shared_ptr<TrajectoryModifierContext> context_;
   bool enabled_{true};
   double trajectory_time_step_{0.1};

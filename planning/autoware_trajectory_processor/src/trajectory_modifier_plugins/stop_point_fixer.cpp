@@ -25,7 +25,8 @@ namespace autoware::trajectory_modifier::plugin
 
 void StopPointFixer::on_initialize(const TrajectoryModifierParams & params)
 {
-  init_planning_factor_interface("stop_point_fixer");
+  planning_factor_interface_ =
+    std::make_unique<PlanningFactorInterface>(get_node_ptr(), "stop_point_fixer");
 
   params_ = params.stop_point_fixer;
   enabled_ = params.use_stop_point_fixer;
