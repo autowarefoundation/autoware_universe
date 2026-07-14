@@ -25,19 +25,12 @@
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "diagnostic_updater/diagnostic_updater.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
-
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <tf2/utils.hpp>
 
 #include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
 #include "autoware_control_msgs/msg/longitudinal.hpp"
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "tf2_msgs/msg/tf_message.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 
 #include <deque>
