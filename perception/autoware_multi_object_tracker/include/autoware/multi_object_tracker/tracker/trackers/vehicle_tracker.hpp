@@ -43,9 +43,7 @@ private:
   // Consumed by setObjectShape() so UnstableShapeFilter commits the new length correctly.
   BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;
 
-  // Interval [s] since the last measurement correction, captured at predict(); drives the
-  // axle-covariance blend amount so it reflects the full uncorrected asymmetry-accrual window
-  // rather than a single predict step.
+  // Interval [s] since the last measurement update.
   double time_since_correction_{0.0};
 
   // EKF kinematic update — selects update variant based on data availability.
