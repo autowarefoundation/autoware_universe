@@ -49,15 +49,15 @@ add_custom_command(
 # Create a logical target for the generation to ensure proper dependency tracking
 add_custom_target(generate_acados_code_temporal DEPENDS ${GENERATED_TEMPORAL_MPC_FILES})
 
-# Stage generated headers under include/autoware/trajectory_optimizer/ so installed-style
+# Stage generated headers under include/autoware/trajectory_processor/ so installed-style
 # includes resolve at build time (matches install DESTINATION layout).
 set(STAGING_INCLUDE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/include")
-set(STAGING_GEN_LINK "${STAGING_INCLUDE_ROOT}/autoware/trajectory_optimizer/c_generated_code")
+set(STAGING_GEN_LINK "${STAGING_INCLUDE_ROOT}/autoware/trajectory_processor/c_generated_code")
 set(STAGING_GEN_STAMP "${CMAKE_CURRENT_BINARY_DIR}/staged_c_generated_code.stamp")
 add_custom_command(
   OUTPUT ${STAGING_GEN_STAMP}
   COMMAND ${CMAKE_COMMAND} -E make_directory
-    "${STAGING_INCLUDE_ROOT}/autoware/trajectory_optimizer"
+    "${STAGING_INCLUDE_ROOT}/autoware/trajectory_processor"
   COMMAND ${CMAKE_COMMAND} -E rm -rf "${STAGING_GEN_LINK}"
   COMMAND ${CMAKE_COMMAND} -E create_symlink "${GEN_DIR}" "${STAGING_GEN_LINK}"
   COMMAND ${CMAKE_COMMAND} -E touch "${STAGING_GEN_STAMP}"

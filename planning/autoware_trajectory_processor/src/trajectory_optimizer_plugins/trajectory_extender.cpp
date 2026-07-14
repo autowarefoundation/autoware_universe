@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_extender.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_extender.hpp"
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_extender_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_extender_utils.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>

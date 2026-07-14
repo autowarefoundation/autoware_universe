@@ -1,0 +1,48 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: CompareElevationMap.node
+
+package:
+  name: autoware_compare_map_segmentation
+  provider: autoware
+
+launch:
+  plugin: autoware::compare_map_segmentation::CompareElevationMapFilterComponent
+  executable: compare_elevation_map_filter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: input
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: input
+  - name: elevation_map
+    message_type: grid_map_msgs/msg/GridMap
+    remap_target: input/elevation_map
+
+publishers:
+  - name: output
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: output
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/compare_elevation_map_filter.param.yaml
+
+param_values:
+  - name: input_frame
+    type: string
+    default: base_link
+  - name: output_frame
+    type: string
+    default: base_link
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: input
+    outcomes:
+      - to_output: output

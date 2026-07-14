@@ -42,8 +42,10 @@
 #include "visualization_msgs/msg/marker.hpp"
 
 #include <deque>
+#include <limits>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,6 +95,12 @@ private:
     double stop_dist{0.0};  // signed distance that is positive when car is before the stopline
     double slope_angle{0.0};
     double dt{0.0};
+    double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_observed_time{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_window_min{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_window_max{std::numeric_limits<double>::quiet_NaN()};
+    bool temporal_observation_used{false};
   };
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
   rclcpp::Clock::SharedPtr clock_;
@@ -138,6 +146,8 @@ private:
 
   // delay compensation
   double m_delay_compensation_time;
+  bool m_use_temporal_trajectory{false};
+  std::optional<double> m_prev_nearest_time{std::nullopt};
 
   // enable flags
   bool m_enable_smooth_stop;
@@ -175,7 +185,7 @@ private:
   double m_brake_keeping_acc;
 
   // smooth stop
-  SmoothStop m_smooth_stop;
+  std::optional<SmoothStop> m_smooth_stop;
 
   // stop
   struct StoppedStateParams
@@ -237,7 +247,6 @@ private:
   // diff limit
   Motion m_prev_ctrl_cmd{};      // with slope compensation
   Motion m_prev_raw_ctrl_cmd{};  // without slope compensation
-  std::vector<std::pair<rclcpp::Time, double>> m_vel_hist;
 
   // debug values
   DebugValues m_debug_values;
@@ -324,10 +333,8 @@ private:
   /**
    * @brief publish control command
    * @param [in] ctrl_cmd calculated control command to control velocity
-   * @param [in] current_vel current velocity of the vehicle
    */
-  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(
-    const Motion & ctrl_cmd, const double & current_vel);
+  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(const Motion & ctrl_cmd);
 
   /**
    * @brief publish debug data
