@@ -69,8 +69,8 @@ public:
     geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
   rclcpp::Time getStateTime() const override
   {
-    return enable_velocity_estimation_ ? motion_model_.getLastUpdateTime()
-                                       : static_motion_model_.getLastUpdateTime();
+    return enable_velocity_estimation_ ? motion_model_.getLastPredictionTime()
+                                       : static_motion_model_.getLastPredictionTime();
   }
 
   ShapeModelBase & getShapeModel() override { return shape_model_; }
