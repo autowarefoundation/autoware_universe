@@ -81,7 +81,7 @@ public:
   bool getMotionState(
     const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
     geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
-  rclcpp::Time getStateTime() const override { return motion_model_.getLastUpdateTime(); }
+  rclcpp::Time getStateTime() const override { return motion_model_.getLastPredictionTime(); }
 
   ShapeModelBase & getShapeModel() override { return shape_model_; }
   const ShapeModelBase & getShapeModel() const override { return shape_model_; }
