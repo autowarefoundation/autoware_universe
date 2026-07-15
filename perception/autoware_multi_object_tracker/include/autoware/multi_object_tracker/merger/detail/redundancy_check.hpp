@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__REDUNDANCY_CHECK_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__REDUNDANCY_CHECK_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__DETAIL__REDUNDANCY_CHECK_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__DETAIL__REDUNDANCY_CHECK_HPP_
 
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
-namespace autoware::multi_object_tracker
+namespace autoware::multi_object_tracker::detail
 {
 
 /// Returns true when source and target trackers are spatially redundant and should be merged.
@@ -28,6 +28,6 @@ bool isRedundant(
   const classes::Label source_label, const classes::Label target_label, float source_known_prob,
   float target_known_prob, const TrackerOverlapManagerConfig & config);
 
-}  // namespace autoware::multi_object_tracker
+}  // namespace autoware::multi_object_tracker::detail
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__REDUNDANCY_CHECK_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__DETAIL__REDUNDANCY_CHECK_HPP_

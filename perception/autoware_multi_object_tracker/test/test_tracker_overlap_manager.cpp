@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
-#include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
+#include "autoware/multi_object_tracker/merger/detail/redundancy_check.hpp"
+#include "autoware/multi_object_tracker/merger/tracker_overlap_manager.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/polygon_tracker.hpp"
@@ -39,6 +39,7 @@ namespace
 {
 
 namespace mot = autoware::multi_object_tracker;
+namespace mot_detail = autoware::multi_object_tracker::detail;
 using std::chrono_literals::operator""ms;
 
 constexpr int kSpinStrong = 12;
@@ -205,7 +206,7 @@ TEST_F(TrackerOverlapManagerTest, PolygonOnlyPairsDoNotMerge)
     ++idx;
   }
   ASSERT_TRUE(
-    mot::isRedundant(
+    mot_detail::isRedundant(
       exported[0], exported[1], mot::classes::Label::UNKNOWN, mot::classes::Label::UNKNOWN,
       trackers.front()->getKnownObjectProbability(), trackers.back()->getKnownObjectProbability(),
       config_));

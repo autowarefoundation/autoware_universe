@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
+#include "autoware/multi_object_tracker/merger/detail/redundancy_check.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
 
-namespace autoware::multi_object_tracker
+namespace autoware::multi_object_tracker::detail
 {
 
 bool isRedundant(
@@ -80,4 +80,4 @@ bool isRedundant(
   }
 }
 
-}  // namespace autoware::multi_object_tracker
+}  // namespace autoware::multi_object_tracker::detail
