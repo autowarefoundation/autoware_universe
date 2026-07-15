@@ -58,6 +58,10 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   total_no_measurement_count_(0),
   total_measurement_count_(1),
   last_update_with_measurement_time_(time),
+  // Count the spawn as a full measurement only if it came from a trustworthy full-box channel.
+  // Cluster/partial-spawned trackers start stale so they yield to a later bbox-spawned tracker.
+  last_fully_measured_time_(
+    detected_object.trust_extension ? time : rclcpp::Time(0, 0, time.get_clock_type())),
   channel_index_(detected_object.channel_index),
   existence_probability_(detected_object.existence_probability),
   kinematics_(detected_object.kinematics),
@@ -209,6 +213,11 @@ bool Tracker::updateWithMeasurement(
     unstable_shape_filter_.processNormalMeasurement(object);
     measure(object, measurement_time, channel_info);
     trust_extension_ = object.trust_extension;
+    // A trustworthy full-box update refreshes the full-measurement clock; partial (cluster/corner)
+    // updates leave it stale so overlap pruning can prefer a fresh, fully-measured tracker.
+    if (channel_info.trust_extension) {
+      last_fully_measured_time_ = measurement_time;
+    }
 
   } else if (path == UpdatePath::TRY_EXTENSION) {
     unstable_shape_filter_.processNoisyMeasurement(object);
@@ -220,6 +229,8 @@ bool Tracker::updateWithMeasurement(
       smoothed_object.shape = smoothed_shape;
       measure(smoothed_object, measurement_time, channel_info);
       trust_extension_ = smoothed_object.trust_extension;
+      // The stabilized extension update consumes a trustworthy full box.
+      last_fully_measured_time_ = measurement_time;
       unstable_shape_filter_.clear();
     } else {
       // Filter not yet stable — fall back to conditioned update.

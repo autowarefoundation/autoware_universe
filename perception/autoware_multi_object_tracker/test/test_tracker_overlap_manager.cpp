@@ -304,6 +304,118 @@ TEST_F(TrackerOverlapManagerTest, ChainDoesNotBridgeWithinOneCycle)
     std::any_of(trackers.begin(), trackers.end(), [&](const auto & t) { return t == tracker_a; }));
 }
 
+TEST_F(TrackerOverlapManagerTest, FreshBboxTrackerOutranksStalePartialVehicle)
+{
+  const auto time = baseTime();
+
+  // A vehicle tracker fed only partial (cluster, trust_extension=false) measurements: it never
+  // takes the NORMAL path, so it is never "fully measured" and must not absorb a fresh bbox tracker
+  // even though it is confident and long-lived.
+  mot::types::InputChannel cluster_channel = channel_;
+  cluster_channel.index = 1;
+  cluster_channel.trust_extension = false;
+
+  auto partial_obj = makeBboxObject(0.5, 0.0, 4.5, 1.8, mot::classes::Label::CAR, time);
+  partial_obj.trust_extension = false;  // cluster-origin: not a trustworthy full box
+  auto stale_partial = makeVehicleTracker(partial_obj, time, kSpinStrong, cluster_channel);
+
+  // A fresh, fully-measured (trust_extension=true) bbox tracker updated up to just before merge.
+  const auto fresh_obj = makeBboxObject(0.0, 0.0, 4.5, 1.8, mot::classes::Label::CAR, time);
+  auto fresh_bbox = makeVehicleTracker(fresh_obj, time, kSpinStrong, channel_);
+
+  // Sanity: the partial tracker is stale on full measurements, the fresh one is not.
+  ASSERT_GT(stale_partial->getElapsedTimeFromFullMeasurement(mergeTime()), 0.5);
+  ASSERT_LT(fresh_bbox->getElapsedTimeFromFullMeasurement(mergeTime()), 0.5);
+  ASSERT_TRUE(fresh_bbox->isConfident(cache_, std::nullopt, mergeTime()));
+
+  std::list<std::shared_ptr<mot::Tracker>> trackers{stale_partial, fresh_bbox};
+  runMerge(trackers, mergeTime());
+
+  // The fresh, fully-measured tracker wins and absorbs the stale partial one.
+  ASSERT_EQ(trackers.size(), 1U);
+  EXPECT_EQ(trackers.front(), fresh_bbox);
+}
+
+TEST_F(TrackerOverlapManagerTest, StalePartialVehicleDoesNotAbsorbImmatureFreshTracker)
+{
+  const auto time = baseTime();
+
+  mot::types::InputChannel cluster_channel = channel_;
+  cluster_channel.index = 1;
+  cluster_channel.trust_extension = false;
+
+  auto partial_obj = makeBboxObject(0.5, 0.0, 4.5, 1.8, mot::classes::Label::CAR, time);
+  partial_obj.trust_extension = false;
+  auto stale_partial = makeVehicleTracker(partial_obj, time, kSpinStrong, cluster_channel);
+
+  // A just-spawned bbox tracker: fully measured at spawn but not yet confident (count < 2).
+  const auto fresh_time = mergeTime() - rclcpp::Duration(100ms);
+  const auto fresh_obj = makeBboxObject(0.0, 0.0, 4.5, 1.8, mot::classes::Label::CAR, fresh_time);
+  auto fresh_new = makeVehicleTracker(fresh_obj, fresh_time, 0, channel_);
+
+  ASSERT_LT(fresh_new->getElapsedTimeFromFullMeasurement(mergeTime()), 0.5);
+  ASSERT_FALSE(fresh_new->isConfident(cache_, std::nullopt, mergeTime()));
+
+  std::list<std::shared_ptr<mot::Tracker>> trackers{stale_partial, fresh_new};
+  runMerge(trackers, mergeTime());
+
+  // The stale partial tracker outranks-loses to the fresh one, but the fresh one is not yet
+  // confident, so the winner-eligibility check defers the merge: both trackers survive. The stale
+  // tracker must never absorb the fresh detection.
+  EXPECT_EQ(trackers.size(), 2U);
+  EXPECT_TRUE(
+    std::any_of(trackers.begin(), trackers.end(), [&](const auto & t) { return t == fresh_new; }));
+}
+
+TEST_F(TrackerOverlapManagerTest, ChainConflictAppliesStrongerMergeFirst)
+{
+  const auto time = baseTime();
+  // A <- B <- C chain; the star-forest rule defers one edge. The stronger edge applies: fresh bbox
+  // A absorbs stale partial B, deferring the stale C-into-B edge. B is absorbed; A and C survive.
+  mot::types::InputChannel cluster_channel = channel_;
+  cluster_channel.index = 1;
+  cluster_channel.trust_extension = false;
+
+  auto obj_a =
+    makeBboxObject(0.0, 0.0, 4.0, 2.0, mot::classes::Label::CAR, time);  // fresh full box
+  auto obj_b = makeBboxObject(1.5, 0.0, 2.0, 2.0, mot::classes::Label::CAR, time);
+  auto obj_c = makeBboxObject(2.8, 0.0, 2.0, 2.0, mot::classes::Label::CAR, time);
+  obj_b.trust_extension = false;  // stale partial
+  obj_c.trust_extension = false;  // stale partial
+
+  auto fresh_a = makeVehicleTracker(obj_a, time, kSpinStrong, channel_);
+  auto stale_b = makeVehicleTracker(obj_b, time, kSpinStrong, cluster_channel);
+  auto stale_c = makeVehicleTracker(obj_c, time, kSpinMedium, cluster_channel);
+
+  // Sanity: A is fresh, B and C are stale; B outranks C on covariance (more updates).
+  ASSERT_LT(fresh_a->getElapsedTimeFromFullMeasurement(mergeTime()), 0.35);
+  ASSERT_GT(stale_b->getElapsedTimeFromFullMeasurement(mergeTime()), 0.35);
+  ASSERT_GT(stale_c->getElapsedTimeFromFullMeasurement(mergeTime()), 0.35);
+
+  std::list<std::shared_ptr<mot::Tracker>> trackers{stale_c, fresh_a, stale_b};
+  runMerge(trackers, mergeTime());
+
+  // Star-forest leaves two trackers, but the fresh edge (B into A) wins the conflict: B is gone,
+  // A and C survive.
+  ASSERT_EQ(trackers.size(), 2U);
+  EXPECT_TRUE(
+    std::any_of(trackers.begin(), trackers.end(), [&](const auto & t) { return t == fresh_a; }));
+  EXPECT_TRUE(
+    std::any_of(trackers.begin(), trackers.end(), [&](const auto & t) { return t == stale_c; }));
+  EXPECT_FALSE(
+    std::any_of(trackers.begin(), trackers.end(), [&](const auto & t) { return t == stale_b; }));
+}
+
+TEST_F(TrackerOverlapManagerTest, NonVehicleTrackersAlwaysCountFullyMeasured)
+{
+  const auto time = baseTime();
+  const auto obj = makePolygonObject(0.0, 0.0, 1.0, time);
+  auto tracker = makePolygonTracker(obj, time, kSpinWeak, channel_);
+
+  // Freshness on full measurements is a vehicle-tracker concept; other trackers never go stale.
+  EXPECT_DOUBLE_EQ(tracker->getElapsedTimeFromFullMeasurement(mergeTime()), 0.0);
+}
+
 TEST_F(TrackerOverlapManagerTest, OutcomeIsIndependentOfListOrder)
 {
   // Three separated cars, each over-segmented into a polygon fragment, plus one isolated

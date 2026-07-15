@@ -49,6 +49,7 @@ struct TrackerSnapshot
   float known_prob{0.0f};
   double cov_det{0.0};
   int measurement_count{0};
+  bool fully_measured_stale{true};
   std::array<uint8_t, 16> uuid{};
   std::vector<types::ExistenceProbability> existence_probs;
   // Filled lazily for trackers that appear in a gated pair.

@@ -63,6 +63,12 @@ int compareByPriority(const TrackerSnapshot & a, const TrackerSnapshot & b)
   return a.priority < b.priority ? 1 : -1;  // lower TrackerType value outranks
 }
 
+int compareByFreshFullMeasurement(const TrackerSnapshot & a, const TrackerSnapshot & b)
+{
+  if (a.fully_measured_stale == b.fully_measured_stale) return 0;
+  return a.fully_measured_stale ? -1 : 1;  // the fresh (non-stale) one survives
+}
+
 int compareByKnownProbability(const TrackerSnapshot & a, const TrackerSnapshot & b)
 {
   const bool a_known = a.known_prob >= min_known_prob;
@@ -117,6 +123,7 @@ const types::DynamicObject * ensureObject(TrackerSnapshot & snap, const rclcpp::
 int compareForSurvival(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx)
 {
   if (const int r = compareByPriority(a, b)) return r;
+  if (const int r = compareByFreshFullMeasurement(a, b)) return r;
   {
     const bool a_confident = ensureConfident(a, ctx);
     const bool b_confident = ensureConfident(b, ctx);
@@ -132,6 +139,7 @@ int compareForSurvival(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionC
 int compareWinnerSubstance(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx)
 {
   if (const int r = compareByPriority(a, b)) return r;
+  if (const int r = compareByFreshFullMeasurement(a, b)) return r;
   {
     const bool a_confident = ensureConfident(a, ctx);
     const bool b_confident = ensureConfident(b, ctx);

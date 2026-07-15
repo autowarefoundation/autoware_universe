@@ -57,6 +57,9 @@ namespace
 // Shared types live in detail/overlap_types; the spatial gate in detail/overlap_gate; the survival
 // and winner ranking in detail/survival_ranking.
 
+// Elapsed time above which a tracker counts as stale on full (trust_extension) measurements.
+constexpr double full_measure_stale_threshold = 0.35;  // [sec]
+
 // Deadband for the distance tie-break between equally-strong winners.
 constexpr double dist_sq_relative_tol = 1e-3;
 constexpr double dist_sq_absolute_tol = 1e-6;  // [m^2]
@@ -96,6 +99,8 @@ std::vector<TrackerSnapshot> buildSnapshots(
     snap.known_prob = tracker->getKnownObjectProbability();
     snap.cov_det = tracker->getPositionCovarianceDeterminant();
     snap.measurement_count = tracker->getTotalMeasurementCount();
+    snap.fully_measured_stale =
+      tracker->getElapsedTimeFromFullMeasurement(time) > full_measure_stale_threshold;
     snap.uuid = tracker->getUUID().uuid;
     snap.existence_probs = tracker->getExistenceProbabilityVector();
     snapshots.push_back(std::move(snap));
