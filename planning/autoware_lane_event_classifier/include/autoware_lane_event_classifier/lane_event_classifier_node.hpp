@@ -22,6 +22,7 @@
 #include <autoware_lane_event_classifier/lane_event_classifier_base.hpp>
 #include <autoware_lane_event_classifier/lane_event_classifier_parameters.hpp>
 #include <autoware_lane_event_classifier/lane_following/checker.hpp>
+#include <autoware_lane_event_classifier/lane_tracker.hpp>
 #include <autoware_lane_event_classifier/msg/driving_factor.hpp>
 #include <autoware_lane_event_classifier/types.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
@@ -92,7 +93,8 @@ private:
   // PR; until then the map is only held so the subscription surface is in place.
   autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr map_msg_ptr_;
 
-  // Lane-following check — evaluated here (outside any classifier) and reported alongside the state.
+  // Lane-following check — evaluated here (outside any classifier) and reported alongside the
+  // state.
   LaneFollowingChecker lane_following_checker_;
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
