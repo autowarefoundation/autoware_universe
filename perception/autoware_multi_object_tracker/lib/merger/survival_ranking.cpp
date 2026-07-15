@@ -125,4 +125,17 @@ int compareForSurvival(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionC
   return compareByUuid(a, b);
 }
 
+int compareWinnerSubstance(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx)
+{
+  if (const int r = compareByPriority(a, b)) return r;
+  {
+    const bool a_confident = ensureConfident(a, ctx);
+    const bool b_confident = ensureConfident(b, ctx);
+    if (a_confident != b_confident) return a_confident ? 1 : -1;
+  }
+  if (const int r = compareByKnownProbability(a, b)) return r;
+  if (a.cov_det != b.cov_det) return a.cov_det < b.cov_det ? 1 : -1;  // tighter estimate survives
+  return compareByMeasurementCount(a, b);
+}
+
 }  // namespace autoware::multi_object_tracker::detail

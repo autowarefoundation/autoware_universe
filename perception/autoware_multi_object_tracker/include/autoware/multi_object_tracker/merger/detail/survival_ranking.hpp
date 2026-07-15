@@ -33,6 +33,9 @@ const types::DynamicObject * ensureObject(TrackerSnapshot & snap, const rclcpp::
 // Returns +1 (a survives), -1 (b survives).
 int compareForSurvival(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx);
 
+// Ranks two winners by strength; a strict weak ordering that returns 0 on ties.
+int compareWinnerSubstance(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx);
+
 }  // namespace autoware::multi_object_tracker::detail
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__DETAIL__SURVIVAL_RANKING_HPP_

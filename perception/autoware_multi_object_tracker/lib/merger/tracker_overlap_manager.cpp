@@ -36,6 +36,7 @@ namespace autoware::multi_object_tracker
 {
 
 using detail::compareForSurvival;
+using detail::compareWinnerSubstance;
 using detail::DecisionContext;
 using detail::ensureConfident;
 using detail::ensureObject;
@@ -173,34 +174,50 @@ struct MergeCandidate
   double dist_sq;
 };
 
-// A loser may be beaten by several winners; keep its nearest (lowest winner UUID on an exact
-// distance tie).
+// A loser may be beaten by several winners; keep its best: highest-ranked, then nearest, then
+// lowest UUID.
 std::unordered_map<size_t, MergeCandidate> groupBestWinnerPerLoser(
-  const std::vector<MergeEdge> & edges, const std::vector<TrackerSnapshot> & snapshots)
+  const std::vector<MergeEdge> & edges, std::vector<TrackerSnapshot> & snapshots,
+  const DecisionContext & ctx)
 {
   std::unordered_map<size_t, MergeCandidate> best_winner_of_loser;
   for (const auto & edge : edges) {
     const auto it = best_winner_of_loser.find(edge.loser_idx);
-    if (
-      it == best_winner_of_loser.end() || edge.dist_sq < it->second.dist_sq ||
-      (edge.dist_sq == it->second.dist_sq &&
-       snapshots[edge.winner_idx].uuid < snapshots[it->second.winner_idx].uuid)) {
+    if (it == best_winner_of_loser.end()) {
       best_winner_of_loser[edge.loser_idx] = MergeCandidate{edge.winner_idx, edge.dist_sq};
+      continue;
+    }
+    auto & incumbent = snapshots[it->second.winner_idx];
+    const int rank = compareWinnerSubstance(snapshots[edge.winner_idx], incumbent, ctx);
+    if (rank > 0) {
+      it->second = MergeCandidate{edge.winner_idx, edge.dist_sq};  // stronger substance
+      continue;
+    }
+    if (rank < 0) {
+      continue;  // incumbent is intrinsically stronger; keep it
+    }
+    // Equal substance: the nearer winner wins; on an exact distance tie, the lower UUID wins.
+    const bool tie = edge.dist_sq == it->second.dist_sq;
+    const bool prefer_new =
+      tie ? snapshots[edge.winner_idx].uuid < incumbent.uuid : edge.dist_sq < it->second.dist_sq;
+    if (prefer_new) {
+      it->second = MergeCandidate{edge.winner_idx, edge.dist_sq};
     }
   }
   return best_winner_of_loser;
 }
 
 // ---------------------------------------------------------------------------
-// Stage 3 — apply the star-forest merges, prune
+// Stage 3 — order strongest-first, apply the star-forest merges, prune
 // ---------------------------------------------------------------------------
 
-// Apply merges greedily in loser-UUID order. A tracker may not both absorb and be absorbed in one
-// cycle (star forest); skipped merges re-enter next cycle, so chains converge over several cycles.
-// All tracker mutation happens here.
+// Apply merges greedily, strongest edge first (winner rank, then loser UUID). A tracker may not
+// both absorb and be absorbed in one cycle (star forest); skipped merges re-enter next cycle, so
+// chains converge over several cycles. All tracker mutation happens here.
 void applyMerges(
   const std::unordered_map<size_t, MergeCandidate> & best_winner_of_loser,
-  std::vector<TrackerSnapshot> & snapshots, std::list<std::shared_ptr<Tracker>> & tracker_list)
+  std::vector<TrackerSnapshot> & snapshots, std::list<std::shared_ptr<Tracker>> & tracker_list,
+  const DecisionContext & ctx)
 {
   std::vector<size_t> loser_indices;
   loser_indices.reserve(best_winner_of_loser.size());
@@ -208,6 +225,11 @@ void applyMerges(
     loser_indices.push_back(loser_idx);
   }
   std::sort(loser_indices.begin(), loser_indices.end(), [&](const size_t a, const size_t b) {
+    const size_t winner_a = best_winner_of_loser.at(a).winner_idx;
+    const size_t winner_b = best_winner_of_loser.at(b).winner_idx;
+    if (const int r = compareWinnerSubstance(snapshots[winner_a], snapshots[winner_b], ctx)) {
+      return r > 0;
+    }
     return snapshots[a].uuid < snapshots[b].uuid;
   });
 
@@ -280,10 +302,10 @@ void TrackerOverlapManager::merge(
 
   // Stage 2 — Group the edges into one best winner per loser.
   const std::unordered_map<size_t, MergeCandidate> best_winner_of_loser =
-    groupBestWinnerPerLoser(edges, snapshots);
+    groupBestWinnerPerLoser(edges, snapshots, ctx);
 
-  // Stage 3 — Apply the star-forest merges, prune absorbed trackers.
-  applyMerges(best_winner_of_loser, snapshots, tracker_list);
+  // Stage 3 — Order by winner strength, apply the star-forest merges, prune absorbed trackers.
+  applyMerges(best_winner_of_loser, snapshots, tracker_list, ctx);
 }
 
 }  // namespace autoware::multi_object_tracker
