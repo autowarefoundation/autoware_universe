@@ -63,25 +63,21 @@ std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
         .risk(risk));
   };
 
+  // DRAC
   static constexpr std::array<const char *, 2> kCanonicalTrajectoryTypes = {
     "map_based_predicted_path",
     "constant_curvature_path",
   };
-
-  // DRAC
   for (const auto * type : kCanonicalTrajectoryTypes) {
-    bool has_finding = false;
-    for (const auto & evaluation : drac_artifact.object_evaluations) {
-      if (evaluation.detail.object_identification.trajectory_type.find(type) != std::string::npos) {
-        has_finding = true;
-        break;
+    RiskLevel::_level_type risk{RiskLevel::SAFE};
+    for (const auto & evaluation : drac_artifact.evaluations) {
+      if (
+        evaluation.detail.object_identification.trajectory_type.find(type) != std::string::npos &&
+        evaluation.risk > risk) {
+        risk = evaluation.risk;
       }
     }
-    const double drac_val = has_finding && drac_artifact.required_acceleration.has_value()
-                              ? drac_artifact.required_acceleration.value()
-                              : std::numeric_limits<double>::quiet_NaN();
-    const RiskLevel::_level_type drac_risk = has_finding ? drac_artifact.risk : RiskLevel::SAFE;
-    add_report(fmt::format("DRAC_{}", type), drac_val, drac_risk);
+    add_report(fmt::format("DRAC_{}", type), std::numeric_limits<double>::quiet_NaN(), risk);
   }
 
   // RSS
@@ -116,19 +112,20 @@ CollisionCheckFilter::result_t CollisionCheckFilter::is_feasible(
 
   trajectory::EgoTrajectoryCache ego_trajectory_cache(
     candidate_trajectory, rclcpp::Time(context.predicted_objects->header.stamp),
-    rclcpp::Time(context.odometry->header.stamp), global_params_.time_resolution);
+    rclcpp::Time(context.odometry->header.stamp), global_params_.time_resolution,
+    *vehicle_info_ptr_);
 
   const auto drac_artifact = collision_timing_assessment::assess(
-    ego_trajectory_cache, context, drac_param_map_, global_params_, *vehicle_info_ptr_);
-  const auto rss_artifact =
-    rss_deceleration::assess(ego_trajectory_cache, context, rss_param_map_, *vehicle_info_ptr_);
+    ego_trajectory_cache, candidate_trajectory.turn_indicators_command, context, drac_param_map_,
+    global_params_);
+  const auto rss_artifact = rss_deceleration::assess(ego_trajectory_cache, context, rss_param_map_);
 
   auto planning_factors = reporter::process_collision_artifacts(
     *context.odometry, drac_artifact, drac_continuous_times_, rss_artifact, rss_continuous_times_,
     debug_markers_, global_params_.time_resolution);
 
   return ValidationResult{
-    calc_worst_risk({drac_artifact.risk, rss_artifact.risk}) != RiskLevel::DANGER,
+    calc_worst_risk({drac_artifact.risk, rss_artifact.risk}) < RiskLevel::DANGER,
     generate_metric_reports(drac_artifact, rss_artifact), std::move(planning_factors)};
 }
 
