@@ -14,6 +14,8 @@
 
 #include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
 
+#include "autoware/trajectory_validator/detail/risk_utils.hpp"
+
 #include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
@@ -61,21 +63,32 @@ TrajectoryValidatorReport TrajectoryValidator::process(
       stop_watch.tic(evaluation.plugin_name);
       const auto res = plugin->is_feasible(candidate_trajectory, context);
 
+      RiskLevel risk_level;
       if (!res) {
         evaluation.is_feasible = false;
         evaluation.reason = res.error();
+        // NOTE: If the plugin fails unexpectedly, treat it as a DANGER risk level.
+        risk_level.level = RiskLevel::DANGER;
       } else {
         const auto & val = res.value();
         evaluation.is_feasible = val.is_feasible;
         if (!val.is_feasible) {
           evaluation.reason = "Found failed metrics";
         }
+        risk_level.level = worst_risk_level(val.metrics);
         combined_metrics.insert(combined_metrics.end(), val.metrics.begin(), val.metrics.end());
         report.planning_factors.factors.insert(
           report.planning_factors.factors.end(), val.planning_factors.factors.begin(),
           val.planning_factors.factors.end());
       }
 
+      combined_metrics.push_back(
+        autoware_trajectory_validator::build<autoware_trajectory_validator::msg::MetricReport>()
+          .validator_name(plugin->get_name())
+          .validator_category(plugin->category())
+          .metric_name("trajectory_feasibility")
+          .metric_value(evaluation.is_feasible ? 1.0 : 0.0)
+          .risk(risk_level));
       report.processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
 
       table.plugin_evaluations.push_back(evaluation);
@@ -87,8 +100,7 @@ TrajectoryValidatorReport TrajectoryValidator::process(
       report.valid_trajectories.candidate_trajectories.push_back(candidate_trajectory);
     }
 
-    const bool all_feasible = table.all_feasible();
-    if (all_feasible) {
+    if (table.all_feasible()) {
       report.num_feasible_trajectories++;
     }
 
@@ -100,7 +112,7 @@ TrajectoryValidatorReport TrajectoryValidator::process(
       combined_metrics.end());
 
     RiskLevel risk_level;
-    risk_level.level = all_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
+    risk_level.level = worst_risk_level(combined_metrics);
     report.validation_reports.push_back(
       autoware_trajectory_validator::build<autoware_trajectory_validator::msg::ValidationReport>()
         .trajectory_stamp(candidate_trajectory.header.stamp)
