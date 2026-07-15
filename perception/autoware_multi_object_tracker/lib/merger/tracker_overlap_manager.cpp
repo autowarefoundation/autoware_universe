@@ -75,8 +75,7 @@ double yawFromQuaternion(const geometry_msgs::msg::Quaternion & q)
 void setGateExtents(const autoware_perception_msgs::msg::Shape & shape, TrackerSnapshot & snap)
 {
   if (
-    shape.type != autoware_perception_msgs::msg::Shape::POLYGON ||
-    shape.footprint.points.empty()) {
+    shape.type != autoware_perception_msgs::msg::Shape::POLYGON || shape.footprint.points.empty()) {
     snap.length = shape.dimensions.x;
     snap.width = shape.dimensions.y;
     return;
