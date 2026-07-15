@@ -15,12 +15,6 @@ aborted, or drifted.
 
 The node does not control the vehicle. It only observes and labels.
 
-> **Scope of this PR.** This is the first PR for the package: it lands the **node skeleton** — the
-> input/output surface and the classifier-loading architecture — with the per-event logic stubbed
-> out. The lane-tracking, lane-following gate, lane-change, and lane-crossing logic each arrive in
-> their own follow-up PR. Until then the node always publishes `LANE_FOLLOWING`. See
-> [What's implemented now](#whats-implemented-now).
-
 ---
 
 ## Inputs and output
