@@ -43,6 +43,7 @@ using detail::ensureObject;
 using detail::findCandidatePairs;
 using detail::isRedundant;
 using detail::TrackerSnapshot;
+using detail::withinDeadband;
 
 namespace
 {
@@ -55,6 +56,10 @@ namespace
 //
 // Shared types live in detail/overlap_types; the spatial gate in detail/overlap_gate; the survival
 // and winner ranking in detail/survival_ranking.
+
+// Deadband for the distance tie-break between equally-strong winners.
+constexpr double dist_sq_relative_tol = 1e-3;
+constexpr double dist_sq_absolute_tol = 1e-6;  // [m^2]
 
 // Heading angle about +z from a quaternion.
 double yawFromQuaternion(const geometry_msgs::msg::Quaternion & q)
@@ -196,8 +201,9 @@ std::unordered_map<size_t, MergeCandidate> groupBestWinnerPerLoser(
     if (rank < 0) {
       continue;  // incumbent is intrinsically stronger; keep it
     }
-    // Equal substance: the nearer winner wins; on an exact distance tie, the lower UUID wins.
-    const bool tie = edge.dist_sq == it->second.dist_sq;
+    // Equal substance: the nearer winner wins; inside the distance deadband, the lower UUID wins.
+    const bool tie =
+      withinDeadband(edge.dist_sq, it->second.dist_sq, dist_sq_relative_tol, dist_sq_absolute_tol);
     const bool prefer_new =
       tie ? snapshots[edge.winner_idx].uuid < incumbent.uuid : edge.dist_sq < it->second.dist_sq;
     if (prefer_new) {

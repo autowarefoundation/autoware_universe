@@ -29,6 +29,10 @@ namespace
 
 constexpr float min_known_prob = 0.2f;
 
+// Deadbands for the ranking tiers that compare continuous quantities.
+constexpr double cov_det_relative_tol = 0.05;
+constexpr double cov_det_absolute_tol = 1e-9;
+
 // True when lhs significantly outperforms rhs on at least one input channel.
 // A channel missing from rhs counts as near-zero probability.
 bool dominatesOnAnyChannel(
@@ -77,7 +81,7 @@ int compareByChannelDominance(const TrackerSnapshot & a, const TrackerSnapshot &
 
 int compareByPositionCovariance(const TrackerSnapshot & a, const TrackerSnapshot & b)
 {
-  if (a.cov_det == b.cov_det) return 0;
+  if (withinDeadband(a.cov_det, b.cov_det, cov_det_relative_tol, cov_det_absolute_tol)) return 0;
   return a.cov_det < b.cov_det ? 1 : -1;  // tighter position estimate survives
 }
 

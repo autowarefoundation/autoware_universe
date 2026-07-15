@@ -65,6 +65,14 @@ struct DecisionContext
   const TrackerOverlapManagerConfig & config;
 };
 
+// True when |a - b| is within a relative-or-absolute tolerance band.
+inline bool withinDeadband(
+  const double a, const double b, const double relative_tol, const double absolute_tol)
+{
+  const double diff = std::abs(a - b);
+  return diff <= std::max(absolute_tol, relative_tol * std::max(std::abs(a), std::abs(b)));
+}
+
 }  // namespace autoware::multi_object_tracker::detail
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__DETAIL__OVERLAP_TYPES_HPP_
