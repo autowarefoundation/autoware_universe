@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    reposition_jump_margin_m: 0.5
+    lane_departure_reset_distance_m: 5.0

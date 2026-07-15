@@ -1,0 +1,13 @@
+lane_event_classifier:
+  reposition_jump_margin_m:
+    type: double
+    default_value: 0.5
+    description: Localization-noise margin added to the speed-explained step (speed * dt); a per-cycle ego step beyond that is treated as a reposition jump and resets the tracking state. Catches small jumps (e.g. a backward nudge at a standstill) that a fixed distance threshold would miss.
+    validation:
+      gt<>: [0.0]
+  lane_departure_reset_distance_m:
+    type: double
+    default_value: 5.0
+    description: While the reference lane is held, distance from the ego to that lane above which the tracking state is reset (countermeasure for a manual takeover that drives away from the route)
+    validation:
+      gt<>: [0.0]

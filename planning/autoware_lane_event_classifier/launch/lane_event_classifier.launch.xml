@@ -1,0 +1,7 @@
+<launch>
+  <arg name="param_path" default="$(find-pkg-share autoware_lane_event_classifier)/param/lane_event_classifier.param.yaml"/>
+
+  <node pkg="autoware_lane_event_classifier" exec="autoware_lane_event_classifier_node" name="lane_event_classifier" namespace="" launch-prefix="konsole -e gdb -ex run --args" output="screen">
+    <param from="$(var param_path)"/>
+  </node>
+</launch>
