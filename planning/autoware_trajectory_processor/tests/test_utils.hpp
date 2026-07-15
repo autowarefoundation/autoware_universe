@@ -15,20 +15,12 @@
 #ifndef PLANNING__AUTOWARE_TRAJECTORY_PROCESSOR__TESTS__TEST_UTILS_HPP_
 #define PLANNING__AUTOWARE_TRAJECTORY_PROCESSOR__TESTS__TEST_UTILS_HPP_
 
-#include <rcl_interfaces/msg/parameter_descriptor.hpp>
-#include <rclcpp/executors/single_threaded_executor.hpp>
-#include <rclcpp/node_options.hpp>
-#include <rclcpp/parameter.hpp>
-#include <rclcpp/parameter_client.hpp>
-
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <tf2/LinearMath/Quaternion.h>
 
-#include <optional>
-#include <string>
 #include <vector>
 
 namespace trajectory_optimizer_test_utils
@@ -36,78 +28,6 @@ namespace trajectory_optimizer_test_utils
 
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using nav_msgs::msg::Odometry;
-
-/**
- * @brief A named parameter value selected for a parameter-service test.
- */
-struct ParameterCase
-{
-  std::string name;
-  rclcpp::Parameter value;
-};
-
-/**
- * @brief Create options for an optimizer node used by parameter-update tests.
- *
- * Loads the optimizer, plugin, legacy EB/MPT, and vehicle parameter files and configures a
- * deterministic list containing every optimizer plugin under test.
- */
-rclcpp::NodeOptions make_optimizer_node_options();
-
-/**
- * @brief Create options for a modifier node used by parameter-update tests.
- *
- * Loads the modifier and vehicle parameter files required to initialize every modifier plugin.
- */
-rclcpp::NodeOptions make_modifier_node_options();
-
-/**
- * @brief Return whether a parameter controls the loaded plugin list.
- *
- * Plugin-list updates are tested separately because runtime plugin reconciliation is not yet
- * implemented.
- */
-bool is_plugin_list_parameter(const std::string & name);
-
-/**
- * @brief Return whether a parameter descriptor marks the parameter as read-only.
- */
-bool is_read_only(const rcl_interfaces::msg::ParameterDescriptor & descriptor);
-
-/**
- * @brief Create a valid value different from the current scalar parameter value.
- *
- * Descriptor ranges are respected when present. Unsupported parameter types and parameters with
- * no alternative value return std::nullopt.
- */
-std::optional<rclcpp::Parameter> make_updated_parameter(
-  const rclcpp::Parameter & current, const rcl_interfaces::msg::ParameterDescriptor & descriptor);
-
-/**
- * @brief List parameters declared by a remote node through its parameter services.
- *
- * The supplied executor is spun until the asynchronous request completes or times out.
- */
-std::vector<std::string> list_declared_parameters(
-  rclcpp::AsyncParametersClient & client, rclcpp::executors::SingleThreadedExecutor & executor);
-
-/**
- * @brief Set one remote parameter atomically after verifying its value will change.
- *
- * The supplied executor services both the initial-value request and the atomic set request.
- */
-void set_parameter_atomically(
-  rclcpp::AsyncParametersClient & client, rclcpp::executors::SingleThreadedExecutor & executor,
-  const rclcpp::Parameter & parameter);
-
-/**
- * @brief Set multiple remote parameters atomically after verifying every value will change.
- *
- * The supplied executor services both the initial-value request and the atomic set request.
- */
-void set_parameters_atomically(
-  rclcpp::AsyncParametersClient & client, rclcpp::executors::SingleThreadedExecutor & executor,
-  const std::vector<rclcpp::Parameter> & parameters);
 
 /**
  * @brief Creates a simple sample trajectory with uniformly spaced points.

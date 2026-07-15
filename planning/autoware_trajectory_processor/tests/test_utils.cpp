@@ -16,207 +16,10 @@
 
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
-
 #include <gtest/gtest.h>
 
-#include <chrono>
 #include <cmath>
-#include <cstdint>
-#include <string>
 #include <vector>
-
-namespace trajectory_optimizer_test_utils
-{
-
-rclcpp::NodeOptions make_optimizer_node_options()
-{
-  auto options = rclcpp::NodeOptions{};
-  options.append_parameter_override("use_sim_time", true);
-  options.append_parameter_override("trajectory_velocity_optimizer.smooth_velocities", true);
-
-  const auto package_dir =
-    ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
-  const auto path_optimizer_dir =
-    ament_index_cpp::get_package_share_directory("autoware_path_optimizer");
-  const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
-
-  options.arguments(
-    {"--ros-args",
-     "--params-file",
-     package_dir + "/config/trajectory_optimizer.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_qp_smoother.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_point_fixer.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_extender.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_spline_smoother.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml",
-     "--params-file",
-     package_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml",
-     "--params-file",
-     package_dir + "/config/trajectory_smoothing/elastic_band_smoother.param.yaml",
-     "--params-file",
-     path_optimizer_dir + "/config/path_optimizer.param.yaml",
-     "--params-file",
-     test_utils_dir + "/config/test_vehicle_info.param.yaml"});
-
-  options.append_parameter_override(
-    "plugin_names",
-    std::vector<std::string>{
-      "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
-      "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
-      "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
-      "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
-      "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
-      "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
-      "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
-      "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer",
-      "autoware::trajectory_optimizer::plugin::TrajectoryExtender"});
-
-  return options;
-}
-
-rclcpp::NodeOptions make_modifier_node_options()
-{
-  auto options = rclcpp::NodeOptions{};
-  options.append_parameter_override("use_sim_time", true);
-
-  const auto package_dir =
-    ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
-  const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
-
-  options.arguments(
-    {"--ros-args", "--params-file", package_dir + "/config/trajectory_modifier.param.yaml",
-     "--params-file", test_utils_dir + "/config/test_vehicle_info.param.yaml"});
-
-  return options;
-}
-
-bool is_plugin_list_parameter(const std::string & name)
-{
-  return name == "plugin_names";
-}
-
-bool is_read_only(const rcl_interfaces::msg::ParameterDescriptor & descriptor)
-{
-  return descriptor.read_only;
-}
-
-std::optional<rclcpp::Parameter> make_updated_parameter(
-  const rclcpp::Parameter & current, const rcl_interfaces::msg::ParameterDescriptor & descriptor)
-{
-  const auto & name = current.get_name();
-  switch (current.get_type()) {
-    case rclcpp::ParameterType::PARAMETER_BOOL:
-      return rclcpp::Parameter{name, !current.as_bool()};
-    case rclcpp::ParameterType::PARAMETER_INTEGER: {
-      const auto current_value = static_cast<int64_t>(current.as_int());
-      if (!descriptor.integer_range.empty()) {
-        const auto & range = descriptor.integer_range.front();
-        const auto step = static_cast<int64_t>(range.step == 0 ? 1 : range.step);
-        const auto from_value = static_cast<int64_t>(range.from_value);
-        const auto to_value = static_cast<int64_t>(range.to_value);
-        const auto next = current_value + step <= to_value ? current_value + step : from_value;
-        if (next != current_value) {
-          return rclcpp::Parameter{name, next};
-        }
-        return std::nullopt;
-      }
-      return rclcpp::Parameter{name, current_value == 0 ? 1 : current_value + 1};
-    }
-    case rclcpp::ParameterType::PARAMETER_DOUBLE: {
-      const auto current_value = current.as_double();
-      if (!descriptor.floating_point_range.empty()) {
-        const auto & range = descriptor.floating_point_range.front();
-        const auto mid = (range.from_value + range.to_value) * 0.5;
-        if (mid != current_value) {
-          return rclcpp::Parameter{name, mid};
-        }
-        const auto next = current_value + (range.step == 0.0 ? 1.0e-3 : range.step);
-        if (next <= range.to_value && next != current_value) {
-          return rclcpp::Parameter{name, next};
-        }
-        return std::nullopt;
-      }
-      const auto delta = current_value == 0.0 ? 1.0e-3 : current_value * 0.01;
-      return rclcpp::Parameter{name, current_value + delta};
-    }
-    case rclcpp::ParameterType::PARAMETER_STRING:
-      return rclcpp::Parameter{name, current.as_string() + "_updated_by_test"};
-    default:
-      return std::nullopt;
-  }
-}
-
-std::vector<std::string> list_declared_parameters(
-  rclcpp::AsyncParametersClient & client, rclcpp::executors::SingleThreadedExecutor & executor)
-{
-  auto future = client.list_parameters({}, 10);
-  EXPECT_EQ(
-    executor.spin_until_future_complete(future, std::chrono::seconds{5}),
-    rclcpp::FutureReturnCode::SUCCESS);
-  return future.get().names;
-}
-
-void set_parameter_atomically(
-  rclcpp::AsyncParametersClient & client, rclcpp::executors::SingleThreadedExecutor & executor,
-  const rclcpp::Parameter & parameter)
-{
-  auto initial_future = client.get_parameters({parameter.get_name()});
-  ASSERT_EQ(
-    executor.spin_until_future_complete(initial_future, std::chrono::seconds{5}),
-    rclcpp::FutureReturnCode::SUCCESS);
-  const auto & initial = initial_future.get();
-  ASSERT_EQ(initial.size(), 1U);
-  ASSERT_FALSE(initial.front() == parameter)
-    << parameter.get_name() << " must be changed to test parameter propagation";
-
-  auto future = client.set_parameters_atomically({parameter});
-  ASSERT_EQ(
-    executor.spin_until_future_complete(future, std::chrono::seconds{5}),
-    rclcpp::FutureReturnCode::SUCCESS);
-  const auto & result = future.get();
-  EXPECT_TRUE(result.successful) << parameter.get_name() << ": " << result.reason;
-}
-
-void set_parameters_atomically(
-  rclcpp::AsyncParametersClient & client, rclcpp::executors::SingleThreadedExecutor & executor,
-  const std::vector<rclcpp::Parameter> & parameters)
-{
-  std::vector<std::string> names;
-  names.reserve(parameters.size());
-  for (const auto & parameter : parameters) {
-    names.push_back(parameter.get_name());
-  }
-
-  auto initial_future = client.get_parameters(names);
-  ASSERT_EQ(
-    executor.spin_until_future_complete(initial_future, std::chrono::seconds{5}),
-    rclcpp::FutureReturnCode::SUCCESS);
-  const auto & initial = initial_future.get();
-  ASSERT_EQ(initial.size(), parameters.size());
-  for (size_t i = 0; i < parameters.size(); ++i) {
-    ASSERT_FALSE(initial.at(i) == parameters.at(i))
-      << parameters.at(i).get_name() << " must be changed to test parameter propagation";
-  }
-
-  auto future = client.set_parameters_atomically(parameters);
-  ASSERT_EQ(
-    executor.spin_until_future_complete(future, std::chrono::seconds{5}),
-    rclcpp::FutureReturnCode::SUCCESS);
-  const auto & result = future.get();
-  ASSERT_TRUE(result.successful) << result.reason;
-}
-
-}  // namespace trajectory_optimizer_test_utils
 
 using autoware::trajectory_modifier::utils::TrajectoryPoints;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -227,7 +30,7 @@ protected:
   void SetUp() override {}
   void TearDown() override {}
 
-  static TrajectoryPoint create_trajectory_point(double x, double y, float velocity = 1.0)
+  TrajectoryPoint create_trajectory_point(double x, double y, double velocity = 1.0)
   {
     TrajectoryPoint point;
     point.pose.position.x = x;
@@ -241,7 +44,7 @@ protected:
     return point;
   }
 
-  static geometry_msgs::msg::Pose create_pose(double x, double y)
+  geometry_msgs::msg::Pose create_pose(double x, double y)
   {
     geometry_msgs::msg::Pose pose;
     pose.position.x = x;
@@ -254,7 +57,7 @@ protected:
     return pose;
   }
 
-  static geometry_msgs::msg::Twist create_twist(double vx, double vy = 0.0, double vz = 0.0)
+  geometry_msgs::msg::Twist create_twist(double vx, double vy = 0.0, double vz = 0.0)
   {
     geometry_msgs::msg::Twist twist;
     twist.linear.x = vx;
