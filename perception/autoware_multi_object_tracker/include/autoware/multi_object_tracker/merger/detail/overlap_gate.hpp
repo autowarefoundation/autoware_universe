@@ -24,12 +24,13 @@
 namespace autoware::multi_object_tracker::detail
 {
 
-// Discover every tracker pair whose centers fall within the per-label pruning distance, via an
-// R-tree over tracker positions. Each tracker queries with its own label radius; pairs are
-// deduplicated, so the effective gate is dist <= max(radius_a, radius_b) regardless of which side
-// discovers the pair.
+// Discover every tracker pair whose bounding boxes could overlap, via the multi-circle gate.
+// The gate covers each tracker's oriented bounding box with a chain of equal circles along its
+// longer axis; a pair whose circles stay farther apart than (radius_a + radius_b + gate_margin)
+// cannot overlap. The circle union is a superset of the box, so the gate admits every pair the
+// geometric redundancy test could accept.
 std::vector<std::pair<size_t, size_t>> findCandidatePairs(
-  const std::vector<TrackerSnapshot> & snapshots, const TrackerOverlapManagerConfig & config);
+  const std::vector<TrackerSnapshot> & snapshots);
 
 }  // namespace autoware::multi_object_tracker::detail
 

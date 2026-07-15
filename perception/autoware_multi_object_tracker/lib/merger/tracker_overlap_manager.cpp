@@ -70,6 +70,33 @@ double yawFromQuaternion(const geometry_msgs::msg::Quaternion & q)
   return std::atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z));
 }
 
+// Gate-cover extents: parametric shapes carry them in dimensions; polygon shapes carry them in
+// the footprint (dimensions are zero), as its axis-aligned bounds in the object frame.
+void setGateExtents(const autoware_perception_msgs::msg::Shape & shape, TrackerSnapshot & snap)
+{
+  if (
+    shape.type != autoware_perception_msgs::msg::Shape::POLYGON ||
+    shape.footprint.points.empty()) {
+    snap.length = shape.dimensions.x;
+    snap.width = shape.dimensions.y;
+    return;
+  }
+  double min_x = shape.footprint.points.front().x;
+  double max_x = min_x;
+  double min_y = shape.footprint.points.front().y;
+  double max_y = min_y;
+  for (const auto & point : shape.footprint.points) {
+    min_x = std::min(min_x, static_cast<double>(point.x));
+    max_x = std::max(max_x, static_cast<double>(point.x));
+    min_y = std::min(min_y, static_cast<double>(point.y));
+    max_y = std::max(max_y, static_cast<double>(point.y));
+  }
+  snap.length = max_x - min_x;
+  snap.width = max_y - min_y;
+  snap.local_center_x = 0.5 * (min_x + max_x);
+  snap.local_center_y = 0.5 * (min_y + max_y);
+}
+
 // ---------------------------------------------------------------------------
 // Stage 0 — snapshot
 // ---------------------------------------------------------------------------
@@ -93,6 +120,11 @@ std::vector<TrackerSnapshot> buildSnapshots(
     snap.tracker = tracker;
     snap.position = pose.position;
     snap.yaw = yawFromQuaternion(pose.orientation);
+    // Gate-cover extents for the size-aware gate.
+    types::DynamicObject shape_scratch;
+    shape_scratch.time = tracker->getLatestMeasurementTime();
+    tracker->assembleShapeTo(shape_scratch, false);
+    setGateExtents(shape_scratch.shape, snap);
     snap.label = tracker->getHighestProbLabel();
     snap.is_unknown = (snap.label == classes::Label::UNKNOWN);
     snap.priority = tracker->getTrackerPriority();
@@ -155,8 +187,7 @@ struct MergeEdge
 std::vector<MergeEdge> decideMergeEdges(
   std::vector<TrackerSnapshot> & snapshots, const DecisionContext & ctx)
 {
-  const std::vector<std::pair<size_t, size_t>> candidate_pairs =
-    findCandidatePairs(snapshots, ctx.config);
+  const std::vector<std::pair<size_t, size_t>> candidate_pairs = findCandidatePairs(snapshots);
 
   std::vector<MergeEdge> edges;
   edges.reserve(candidate_pairs.size());

@@ -416,6 +416,24 @@ TEST_F(TrackerOverlapManagerTest, NonVehicleTrackersAlwaysCountFullyMeasured)
   EXPECT_DOUBLE_EQ(tracker->getElapsedTimeFromFullMeasurement(mergeTime()), 0.0);
 }
 
+TEST_F(TrackerOverlapManagerTest, GateAdmitsLargePolygonByFootprintExtent)
+{
+  const auto time = baseTime();
+  // A wide unknown cluster whose footprint reaches over the car while its center sits well beyond
+  // the car's own cover; the gate sizes the cluster by its footprint (its dimensions are zero).
+  const auto car_obj = makeBboxObject(0.0, 0.0, 4.5, 1.8, mot::classes::Label::CAR, time);
+  const auto cluster_obj = makePolygonObject(5.0, 0.0, 4.5, time);
+
+  auto car = makeVehicleTracker(car_obj, time, kSpinStrong, channel_);
+  auto cluster = makePolygonTracker(cluster_obj, time, kSpinMedium, channel_);
+
+  std::list<std::shared_ptr<mot::Tracker>> trackers{car, cluster};
+  runMerge(trackers, mergeTime());
+
+  ASSERT_EQ(trackers.size(), 1U);
+  EXPECT_EQ(trackers.front(), car);
+}
+
 TEST_F(TrackerOverlapManagerTest, OutcomeIsIndependentOfListOrder)
 {
   // Three separated cars, each over-segmented into a polygon fragment, plus one isolated

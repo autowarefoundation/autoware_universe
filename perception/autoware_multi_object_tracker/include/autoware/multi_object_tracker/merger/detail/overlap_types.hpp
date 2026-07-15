@@ -42,7 +42,11 @@ struct TrackerSnapshot
 {
   std::shared_ptr<Tracker> tracker;
   geometry_msgs::msg::Point position;
-  double yaw{0.0};  // heading [rad]
+  double yaw{0.0};             // heading [rad]
+  double length{0.0};          // gate-cover extent along the heading axis [m]
+  double width{0.0};           // gate-cover extent across the heading axis [m]
+  double local_center_x{0.0};  // gate-cover center in the object frame [m]
+  double local_center_y{0.0};
   classes::Label label{classes::Label::UNKNOWN};
   bool is_unknown{true};
   int priority{0};

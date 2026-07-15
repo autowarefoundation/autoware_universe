@@ -168,21 +168,11 @@ autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociatio
 autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlapManagerConfig()
 {
   autoware::multi_object_tracker::TrackerOverlapManagerConfig config;
-  using Label = autoware::multi_object_tracker::classes::Label;
 
   config.min_known_object_removal_iou = 0.1;      // [ratio]
   config.min_unknown_object_removal_iou = 0.001;  // [ratio]
 
   config.pruning_giou_threshold = -0.3;  // [ratio]
-
-  config.pruning_distance_thresholds = {{Label::UNKNOWN, 9.0}, {Label::CAR, 5.0},
-                                        {Label::TRUCK, 9.0},   {Label::BUS, 9.0},
-                                        {Label::TRAILER, 9.0}, {Label::MOTORCYCLE, 4.0},
-                                        {Label::BICYCLE, 3.0}, {Label::PEDESTRIAN, 2.0}};
-  config.pruning_distance_thresholds_sq = {
-    {Label::UNKNOWN, 9.0 * 9.0}, {Label::CAR, 5.0 * 5.0},       {Label::TRUCK, 9.0 * 9.0},
-    {Label::BUS, 9.0 * 9.0},     {Label::TRAILER, 9.0 * 9.0},   {Label::MOTORCYCLE, 4.0 * 4.0},
-    {Label::BICYCLE, 3.0 * 3.0}, {Label::PEDESTRIAN, 2.0 * 2.0}};
 
   return config;
 }

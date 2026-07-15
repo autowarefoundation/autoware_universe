@@ -218,24 +218,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_overlap_manager_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
-  const auto parse_label_double_map = [this](const std::string & ns) -> LabelDoubleMap {
-    LabelDoubleMap result;
-    for (const auto label : classes::trackedLabels()) {
-      result[label] = declare_parameter<double>(ns + "." + classes::toString(label));
-    }
-    return result;
-  };
-
   // pruning parameters
   params_.tracker_overlap_manager_config.pruning_giou_threshold =
     declare_parameter<double>("pruning_generalized_iou_threshold");
-
-  params_.tracker_overlap_manager_config.pruning_distance_thresholds =
-    parse_label_double_map("pruning_distance_thresholds");
-  for (const auto & [label, dist] :
-       params_.tracker_overlap_manager_config.pruning_distance_thresholds) {
-    params_.tracker_overlap_manager_config.pruning_distance_thresholds_sq[label] = dist * dist;
-  }
   // Per-tracker-type configuration (tracker_configs.<tracker>.<member>)
   params_.tracker_configs.polygon_tracker.enable_velocity_estimation =
     declare_parameter<bool>("tracker_configs.polygon_tracker.enable_velocity_estimation");

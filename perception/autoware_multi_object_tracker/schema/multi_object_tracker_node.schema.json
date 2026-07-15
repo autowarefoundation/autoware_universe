@@ -3,65 +3,6 @@
   "title": "Parameters for Multi Object Tracker Node",
   "type": "object",
   "definitions": {
-    "pruning_distance_thresholds": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "unknown": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "car": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "truck": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "bus": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "trailer": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "motorcycle": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "bicycle": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "pedestrian": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "animal": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "hazard": {
-          "type": "number",
-          "minimum": 0.0
-        }
-      },
-      "required": [
-        "unknown",
-        "car",
-        "truck",
-        "bus",
-        "trailer",
-        "motorcycle",
-        "bicycle",
-        "pedestrian",
-        "animal",
-        "hazard"
-      ],
-      "description": "Overlap distance threshold for each tracked class."
-    },
     "enable_motion_output": {
       "type": "object",
       "additionalProperties": false,
@@ -186,21 +127,6 @@
           "description": "Generalized IoU threshold applied to all tracked classes.",
           "default": 0.1
         },
-        "pruning_distance_thresholds": {
-          "$ref": "#/definitions/pruning_distance_thresholds",
-          "default": {
-            "unknown": 9.0,
-            "car": 5.0,
-            "truck": 9.0,
-            "bus": 9.0,
-            "trailer": 9.0,
-            "motorcycle": 4.0,
-            "bicycle": 3.0,
-            "pedestrian": 2.0,
-            "animal": 2.0,
-            "hazard": 2.0
-          }
-        },
         "publish_processing_time": {
           "type": "boolean",
           "description": "Enable to publish debug message of process time information.",
@@ -254,7 +180,6 @@
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
         "pruning_generalized_iou_threshold",
-        "pruning_distance_thresholds",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",

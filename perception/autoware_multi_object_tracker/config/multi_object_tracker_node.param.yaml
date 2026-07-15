@@ -38,17 +38,6 @@
     min_known_object_removal_iou: 0.1  # [ratio]
     min_unknown_object_removal_iou: 0.001  # [ratio]
     pruning_generalized_iou_threshold: 0.1  # [ratio]
-    pruning_distance_thresholds:
-      unknown: 9.0
-      car: 5.0
-      truck: 9.0
-      bus: 9.0
-      trailer: 9.0
-      motorcycle: 4.0
-      bicycle: 3.0
-      pedestrian: 2.0
-      animal: 2.0
-      hazard: 2.0
 
     # debug parameters
     publish_processing_time: false

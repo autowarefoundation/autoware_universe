@@ -35,49 +35,106 @@ namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
 using OmPoint = bg::model::point<double, 2, bg::cs::cartesian>;
-using OmValue = std::pair<OmPoint, size_t>;  // (position, index into snapshots)
+using OmBox = bg::model::box<OmPoint>;
+using OmValue = std::pair<OmBox, size_t>;  // (circle bounding box, index into the gate-circle list)
+
+namespace
+{
+
+// Extra distance beyond geometric touching within which a pair still gates.
+constexpr double gate_margin = 1.0;  // [m]
+
+// Most circles a single tracker's cover may use.
+constexpr int max_gate_circles = 8;
+
+// One circle of a tracker's multi-circle cover: world-frame center, radius, and the snapshot it
+// belongs to.
+struct GateCircle
+{
+  double x;
+  double y;
+  double radius;
+  size_t snapshot_idx;
+};
+
+// Tile a tracker's bounding box with equal circles along its longer axis, each circumscribing one
+// segment of the split; a square-ish box yields a single circumscribing circle.
+void appendGateCircles(
+  const TrackerSnapshot & snap, const size_t snapshot_idx, std::vector<GateCircle> & out)
+{
+  const double length = std::max(snap.length, 0.0);
+  const double width = std::max(snap.width, 0.0);
+  const bool elongated_along_heading = length >= width;
+  const double long_side = std::max(length, width);
+  const double short_side = std::min(length, width);
+
+  int circle_count = 1;
+  if (short_side > 1e-3) {
+    circle_count =
+      std::clamp(static_cast<int>(std::ceil(long_side / short_side)), 1, max_gate_circles);
+  }
+  const double segment = long_side / circle_count;
+  const double radius = 0.5 * std::hypot(short_side, segment);
+  const double cos_yaw = std::cos(snap.yaw);
+  const double sin_yaw = std::sin(snap.yaw);
+  for (int k = 0; k < circle_count; ++k) {
+    const double axis_offset = -0.5 * long_side + (k + 0.5) * segment;
+    const double local_x = snap.local_center_x + (elongated_along_heading ? axis_offset : 0.0);
+    const double local_y = snap.local_center_y + (elongated_along_heading ? 0.0 : axis_offset);
+    out.push_back(
+      GateCircle{
+        snap.position.x + cos_yaw * local_x - sin_yaw * local_y,
+        snap.position.y + sin_yaw * local_x + cos_yaw * local_y, radius, snapshot_idx});
+  }
+}
+
+}  // namespace
 
 std::vector<std::pair<size_t, size_t>> findCandidatePairs(
-  const std::vector<TrackerSnapshot> & snapshots, const TrackerOverlapManagerConfig & config)
+  const std::vector<TrackerSnapshot> & snapshots)
 {
-  bgi::rtree<OmValue, bgi::quadratic<16>> rtree;
-  {
-    std::vector<OmValue> rtree_points;
-    rtree_points.reserve(snapshots.size());
-    for (size_t i = 0; i < snapshots.size(); ++i) {
-      rtree_points.emplace_back(OmPoint(snapshots[i].position.x, snapshots[i].position.y), i);
-    }
-    rtree.insert(rtree_points.begin(), rtree_points.end());
+  std::vector<GateCircle> circles;
+  circles.reserve(snapshots.size() * 2);
+  for (size_t i = 0; i < snapshots.size(); ++i) {
+    appendGateCircles(snapshots[i], i, circles);
   }
+  if (circles.empty()) {
+    return {};
+  }
+
+  const auto circle_box = [](const GateCircle & circle) {
+    const double half = circle.radius + 0.5 * gate_margin;
+    return OmBox(
+      OmPoint(circle.x - half, circle.y - half), OmPoint(circle.x + half, circle.y + half));
+  };
+
+  std::vector<OmValue> rtree_entries;
+  rtree_entries.reserve(circles.size());
+  for (size_t ci = 0; ci < circles.size(); ++ci) {
+    rtree_entries.emplace_back(circle_box(circles[ci]), ci);
+  }
+  // The range constructor bulk-loads the tree via the packing algorithm.
+  const bgi::rtree<OmValue, bgi::quadratic<16>> rtree(rtree_entries.begin(), rtree_entries.end());
 
   std::vector<std::pair<size_t, size_t>> candidate_pairs;
   std::vector<OmValue> nearby;
-  for (size_t i = 0; i < snapshots.size(); ++i) {
-    const auto max_search_dist_sq_opt =
-      get_map_value_if_exists(config.pruning_distance_thresholds_sq, snapshots[i].label);
-    if (!max_search_dist_sq_opt) {
-      continue;
-    }
-    const double max_search_dist_sq = max_search_dist_sq_opt->get();
-    const double max_search_dist = std::sqrt(max_search_dist_sq);
-    const double x = snapshots[i].position.x;
-    const double y = snapshots[i].position.y;
+  for (size_t ci = 0; ci < circles.size(); ++ci) {
+    const GateCircle & circle = circles[ci];
     // The box predicate lets the R-tree prune subtrees; satisfies alone would scan linearly.
-    const bg::model::box<OmPoint> search_box(
-      OmPoint(x - max_search_dist, y - max_search_dist),
-      OmPoint(x + max_search_dist, y + max_search_dist));
-
     nearby.clear();
     rtree.query(
-      bgi::intersects(search_box) && bgi::satisfies([&](const OmValue & v) {
-        if (v.second == i) return false;
-        const double dx = bg::get<0>(v.first) - x;
-        const double dy = bg::get<1>(v.first) - y;
-        return dx * dx + dy * dy <= max_search_dist_sq;
+      bgi::intersects(circle_box(circle)) && bgi::satisfies([&](const OmValue & v) {
+        const GateCircle & other = circles[v.second];
+        // Emit each undirected pair once, from the lower-index tracker; skip sibling circles.
+        if (other.snapshot_idx <= circle.snapshot_idx) return false;
+        const double dx = other.x - circle.x;
+        const double dy = other.y - circle.y;
+        const double gate = circle.radius + other.radius + gate_margin;
+        return dx * dx + dy * dy <= gate * gate;
       }),
       std::back_inserter(nearby));
-    for (const auto & [point, j] : nearby) {
-      candidate_pairs.emplace_back(std::min(i, j), std::max(i, j));
+    for (const auto & [box, other_ci] : nearby) {
+      candidate_pairs.emplace_back(circle.snapshot_idx, circles[other_ci].snapshot_idx);
     }
   }
   std::sort(candidate_pairs.begin(), candidate_pairs.end());
