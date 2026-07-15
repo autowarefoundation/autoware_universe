@@ -14,6 +14,7 @@
 
 #include "autoware/diffusion_planner/diffusion_planner_core.hpp"
 
+#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/inference/guidance/centerline_guidance.hpp"
@@ -84,6 +85,7 @@ DiffusionPlannerCore::DiffusionPlannerCore(
 void DiffusionPlannerCore::load_model()
 {
   last_agent_poses_map_.clear();
+  last_ego_to_map_transform_.reset();
   diffusion_planner_inference_.reset();
   utils::check_weight_version(params_.args_path);
   observation_normalization_ = utils::load_observation_normalization(params_.args_path);
@@ -260,6 +262,88 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
       utils::shift_x(kinematic_state.pose.pose, vehicle_spec_.base_link_to_center);
   }
 
+  // Snap the ego pose onto the previous planning trajectory. The previous trajectory is the
+  // polyline formed by the previous planning start pose (last_ego_to_map_transform_) followed by
+  // the previous prediction (last_agent_poses_map_[0][0]), i.e. OUTPUT_T + 1 points forming
+  // OUTPUT_T segments. The foot of the perpendicular to the closest segment becomes the next ego
+  // pose. Note that kinematic_state here is already in the model frame (center frame when shift_x
+  // is enabled), which matches the frame the previous trajectory was generated in.
+  std::optional<Eigen::Matrix4d> snapped_pose_opt;
+  std::optional<double> snapped_interpolation_time_s_opt;
+  if (
+    params_.ego_snap_to_prev_trajectory && last_ego_to_map_transform_.has_value() &&
+    !last_agent_poses_map_.empty() && !last_agent_poses_map_[0].empty() &&
+    !last_agent_poses_map_[0][0].empty()) {
+    constexpr int64_t batch_idx = 0;
+    constexpr int64_t agent_idx = 0;
+    const auto & prev_poses = last_agent_poses_map_[batch_idx][agent_idx];
+
+    std::vector<Eigen::Matrix4d> prev_trajectory;
+    prev_trajectory.reserve(prev_poses.size() + 1);
+    prev_trajectory.push_back(last_ego_to_map_transform_.value());
+    prev_trajectory.insert(prev_trajectory.end(), prev_poses.begin(), prev_poses.end());
+
+    // If the first few points of the previous trajectory are very close together, the projection
+    // can be unstable. If so, force them to be the same point to avoid this issue.
+    bool all_close = true;
+    constexpr int64_t num_check = 10;
+    for (int64_t i = 0; i < num_check; ++i) {
+      const auto p0 = prev_trajectory[i];
+      const auto p1 = prev_trajectory[i + 1];
+      const auto dist = std::hypot(p1(0, 3) - p0(0, 3), p1(1, 3) - p0(1, 3));
+      if (dist > 1.0) {
+        all_close = false;
+        break;
+      }
+    }
+    if (all_close) {
+      for (int64_t i = 0; i < num_check; ++i) {
+        prev_trajectory[i + 1](0, 3) = prev_trajectory[i](0, 3);
+      }
+    }
+
+    const utils::PolylineProjection projection = utils::project_pose_onto_polyline(
+      kinematic_state.pose.pose.position.x, kinematic_state.pose.pose.position.y, prev_trajectory);
+    const Eigen::Matrix4d & snapped_pose = projection.pose;
+
+    // Reject the snap when the actual ego pose is too far (in position or heading) from the
+    // snapped pose. In that case the previous planning trajectory no longer reflects reality
+    // (e.g. large tracking error or a disturbance), so keeping the raw ego pose is safer than
+    // forcing it onto a stale trajectory.
+    const double position_error_m = std::hypot(
+      kinematic_state.pose.pose.position.x - snapped_pose(0, 3),
+      kinematic_state.pose.pose.position.y - snapped_pose(1, 3));
+    const Eigen::Quaterniond current_q(
+      kinematic_state.pose.pose.orientation.w, kinematic_state.pose.pose.orientation.x,
+      kinematic_state.pose.pose.orientation.y, kinematic_state.pose.pose.orientation.z);
+    const double current_yaw =
+      std::atan2(current_q.toRotationMatrix()(1, 0), current_q.toRotationMatrix()(0, 0));
+    const double snapped_yaw = std::atan2(snapped_pose(1, 0), snapped_pose(0, 0));
+    const double yaw_error_rad = std::abs(
+      std::atan2(std::sin(current_yaw - snapped_yaw), std::cos(current_yaw - snapped_yaw)));
+
+    const double yaw_error_deg = yaw_error_rad * 180.0 / M_PI;
+
+    if (
+      position_error_m <= params_.ego_snap_max_position_error_m &&
+      yaw_error_deg <= params_.ego_snap_max_yaw_error_deg) {
+      kinematic_state.pose.pose.position.x = snapped_pose(0, 3);
+      kinematic_state.pose.pose.position.y = snapped_pose(1, 3);
+      const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));
+      kinematic_state.pose.pose.orientation.x = q.x();
+      kinematic_state.pose.pose.orientation.y = q.y();
+      kinematic_state.pose.pose.orientation.z = q.z();
+      kinematic_state.pose.pose.orientation.w = q.w();
+
+      // The polyline's first vertex is the previous planning start (t = 0) and each subsequent
+      // vertex advances by one prediction time step, so the interpolation index (segment index +
+      // intra-segment ratio) maps to time via the per-step duration.
+      snapped_pose_opt = snapped_pose;
+      snapped_interpolation_time_s_opt =
+        projection.interpolation_index * constants::PREDICTION_TIME_STEP_S;
+    }
+  }
+
   // Get transforms
   const geometry_msgs::msg::Pose & pose_base_link = kinematic_state.pose.pose;
   const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4d(pose_base_link);
@@ -287,11 +371,20 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   preprocess::process_traffic_signals(
     traffic_signals, traffic_light_id_map_, current_time, traffic_light_msg_timeout_s);
 
-  // Create frame context
+  // Create frame context. create_input_data re-applies shift_x to
+  // frame_context.ego_kinematic_state, so store the base_link-frame pose (undo the shift applied
+  // above) to keep the (possibly snapped) pose consistent across the whole frame.
+  Odometry frame_kinematic_state = kinematic_state;
+  if (params_.shift_x) {
+    frame_kinematic_state.pose.pose =
+      utils::shift_x(kinematic_state.pose.pose, -vehicle_spec_.base_link_to_center);
+  }
+
   const rclcpp::Time frame_time(ego_kinematic_state->header.stamp);
   const FrameContext frame_context{
-    *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, processed_neighbor_histories,
-    frame_time};
+    frame_kinematic_state,           *ego_acceleration, ego_to_map_transform,
+    processed_neighbor_histories,    frame_time,        snapped_pose_opt,
+    snapped_interpolation_time_s_opt};
 
   return frame_context;
 }
@@ -508,6 +601,7 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
   const auto agent_poses =
     postprocess::parse_predictions(denormalized_predictions, frame_context.ego_to_map_transform);
   last_agent_poses_map_ = agent_poses;
+  last_ego_to_map_transform_ = frame_context.ego_to_map_transform;
 
   const bool enable_force_stop =
     frame_context.ego_kinematic_state.twist.twist.linear.x > std::numeric_limits<double>::epsilon();

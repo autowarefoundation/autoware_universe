@@ -106,6 +106,11 @@ struct FrameContext
   Eigen::Matrix4d ego_to_map_transform;
   std::vector<AgentHistory> ego_centric_neighbor_histories;
   rclcpp::Time frame_time;
+  // Ego pose snapped onto the previous planning trajectory (map frame) and the interpolation time
+  // of the snapped foot along that trajectory. Set only when ego_snap_to_prev_trajectory actually
+  // snapped this frame; nullopt otherwise.
+  std::optional<Eigen::Matrix4d> snapped_pose;
+  std::optional<double> snapped_interpolation_time_s;
 };
 
 struct DiffusionPlannerParams
@@ -134,6 +139,9 @@ struct DiffusionPlannerParams
   int64_t delay_step;
   double line_string_max_step_m;
   bool use_time_interpolation;
+  bool ego_snap_to_prev_trajectory;
+  double ego_snap_max_position_error_m;
+  double ego_snap_max_yaw_error_deg;
   int dpm_solver_steps;
   double start_guidance_reference_distance_m;
   double start_guidance_max_scale;
@@ -336,6 +344,7 @@ private:
   AgentData agent_data_;
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
+  std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;

@@ -18,6 +18,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -121,6 +122,71 @@ geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const do
   shifted_pose.position.z += shift_global.z();
 
   return shifted_pose;
+}
+
+PolylineProjection project_pose_onto_polyline(
+  const double query_x, const double query_y, const std::vector<Eigen::Matrix4d> & polyline)
+{
+  if (polyline.size() < 2) {
+    throw std::runtime_error("project_pose_onto_polyline requires at least two poses");
+  }
+
+  const Eigen::Vector2d query(query_x, query_y);
+
+  double best_dist_sq = std::numeric_limits<double>::max();
+  Eigen::Vector2d best_foot = query;
+  Eigen::Quaterniond best_orientation = Eigen::Quaterniond::Identity();
+  // (closest segment index + intra-segment ratio); position of the foot along the polyline.
+  double best_interpolation_index = 0.0;
+
+  // Because the diffusion planner runs at 10Hz, we only need to consider the first few segments of
+  // the polyline for snapping.
+  const size_t max_index = 5;
+
+  for (size_t i = 0; i + 1 <= max_index && i + 1 < polyline.size(); ++i) {
+    // Endpoints of the i-th line segment in the xy-plane.
+    const Eigen::Vector2d segment_start(polyline[i](0, 3), polyline[i](1, 3));
+    const Eigen::Vector2d segment_end(polyline[i + 1](0, 3), polyline[i + 1](1, 3));
+
+    // Direction vector of the segment (start -> end) and the vector from the start to the query.
+    const Eigen::Vector2d segment_vector = segment_end - segment_start;
+    const Eigen::Vector2d start_to_query = query - segment_start;
+
+    // Squared length of the segment. Also used to guard against a degenerate (zero-length) segment.
+    const double segment_length_sq = segment_vector.squaredNorm();
+
+    // Projection ratio of the query point onto the infinite line through the segment:
+    //   raw_ratio = dot(start_to_query, segment_vector) / |segment_vector|^2
+    // raw_ratio == 0 -> foot at segment_start, raw_ratio == 1 -> foot at segment_end.
+    // Clamping to [0, 1] keeps the foot ON the segment: if the perpendicular foot would land beyond
+    // an endpoint (raw_ratio < 0 or > 1), it is pulled back to the nearest endpoint.
+    constexpr double eps = 1e-9;
+    double ratio = 0.0;
+    if (segment_length_sq >= eps) {
+      const double projection = start_to_query.dot(segment_vector);
+      const double raw_ratio = projection / segment_length_sq;
+      ratio = std::clamp(raw_ratio, 0.0, 1.0);
+    }
+
+    // Foot of the perpendicular (already clamped onto the segment) and its distance to the query.
+    const Eigen::Vector2d foot = segment_start + ratio * segment_vector;
+    const double dist_sq = (query - foot).squaredNorm();
+
+    if (dist_sq < best_dist_sq) {
+      best_dist_sq = dist_sq;
+      best_foot = foot;
+      const Eigen::Quaterniond start_orientation(polyline[i].block<3, 3>(0, 0));
+      const Eigen::Quaterniond end_orientation(polyline[i + 1].block<3, 3>(0, 0));
+      best_orientation = start_orientation.slerp(ratio, end_orientation);
+      best_interpolation_index = static_cast<double>(i) + ratio;
+    }
+  }
+
+  Eigen::Matrix4d projected = Eigen::Matrix4d::Identity();
+  projected.block<3, 3>(0, 0) = best_orientation.normalized().toRotationMatrix();
+  projected(0, 3) = best_foot.x();
+  projected(1, 3) = best_foot.y();
+  return PolylineProjection{projected, best_interpolation_index};
 }
 
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)
