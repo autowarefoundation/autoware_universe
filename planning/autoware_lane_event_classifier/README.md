@@ -60,19 +60,31 @@ The node does not control the vehicle. It only observes and labels.
 ## How the node decides the state (per cycle)
 
 ```mermaid
+---
+config:
+  layout: elk
+---
 flowchart TD
     A[trajectory arrives] --> B{inputs ready?}
-    B -- no --> U[publish UNKNOWN]
-    B -- yes --> E[lane-following gate: following?]
+    B -->|no| U[publish UNKNOWN]
+    B -->|yes| E[lane-following gate: following?]
     E --> F[run each classifier]
     F --> G{any classifier<br/>confirmed an event?}
-    G -- yes --> H[state = first confirmed classifier]
-    G -- no --> I{gate says following?}
-    I -- yes --> J[state = LANE_FOLLOWING]
-    I -- no --> K[state = UNKNOWN]
+    G -->|yes| H[state = first confirmed classifier]
+    G -->|no| I{gate says following?}
+    I -->|yes| J[state = LANE_FOLLOWING]
+    I -->|no| K[state = UNKNOWN]
     H --> P[publish state]
     J --> P
     K --> P
+
+    classDef decision stroke:#818cf8,fill:#eef2ff
+    classDef process stroke:#2dd4bf,fill:#f0fdfa
+    classDef output stroke:#f87171,fill:#fef2f2
+
+    class B,G,I decision
+    class E,F,H,J,K process
+    class A,U,P output
 ```
 
 The order of resolution:
