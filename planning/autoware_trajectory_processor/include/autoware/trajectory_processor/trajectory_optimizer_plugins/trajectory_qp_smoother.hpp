@@ -53,8 +53,6 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
  */
 class TrajectoryQPSmoother : public TrajectoryOptimizerPluginBase
 {
-  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
-
 public:
   TrajectoryQPSmoother() = default;
   ~TrajectoryQPSmoother() = default;

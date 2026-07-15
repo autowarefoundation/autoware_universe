@@ -33,8 +33,6 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class TrajectoryPointFixer : public TrajectoryOptimizerPluginBase
 {
-  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
-
 public:
   TrajectoryPointFixer() = default;
   ~TrajectoryPointFixer() = default;

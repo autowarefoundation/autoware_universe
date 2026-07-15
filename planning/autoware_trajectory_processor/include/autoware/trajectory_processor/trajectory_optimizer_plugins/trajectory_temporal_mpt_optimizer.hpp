@@ -51,8 +51,6 @@ struct TemporalMPTParams
 
 class TrajectoryTemporalMPTOptimizer : public TrajectoryOptimizerPluginBase
 {
-  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
-
 public:
   TrajectoryTemporalMPTOptimizer() = default;
 

@@ -34,8 +34,6 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class TrajectoryExtender : public TrajectoryOptimizerPluginBase
 {
-  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
-
 public:
   TrajectoryExtender() = default;
   ~TrajectoryExtender() = default;

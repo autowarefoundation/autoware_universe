@@ -25,8 +25,6 @@ namespace autoware::trajectory_modifier::plugin
 
 class VelocityModifier : public TrajectoryModifierPluginBase
 {
-  friend class autoware::trajectory_modifier::ParameterUpdateTestAccessor;
-
 public:
   VelocityModifier() = default;
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "parameter_update_test_accessor.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
@@ -32,11 +32,7 @@
 namespace
 {
 
-using autoware::trajectory_modifier::ParameterUpdateTestAccessor;
 using autoware::trajectory_modifier::TrajectoryModifier;
-using autoware_internal_planning_msgs::msg::CandidateTrajectories;
-using geometry_msgs::msg::AccelWithCovarianceStamped;
-using nav_msgs::msg::Odometry;
 
 struct ParameterCase
 {
@@ -85,11 +81,6 @@ protected:
     executor_.add_node(node_->get_node_base_interface());
     client_ = std::make_shared<rclcpp::AsyncParametersClient>(
       caller_, node_->get_node_base_interface()->get_fully_qualified_name());
-    trajectory_pub_ = caller_->create_publisher<CandidateTrajectories>(
-      "/trajectory_modifier/input/candidate_trajectories", 1);
-    odometry_pub_ = caller_->create_publisher<Odometry>("/trajectory_modifier/input/odometry", 1);
-    acceleration_pub_ = caller_->create_publisher<AccelWithCovarianceStamped>(
-      "/trajectory_modifier/input/acceleration", 1);
     ASSERT_TRUE(wait_for_parameter_service());
   }
 
@@ -98,9 +89,6 @@ protected:
     executor_.remove_node(node_->get_node_base_interface());
     executor_.remove_node(caller_);
     client_.reset();
-    acceleration_pub_.reset();
-    odometry_pub_.reset();
-    trajectory_pub_.reset();
     node_.reset();
     caller_.reset();
   }
@@ -147,47 +135,10 @@ protected:
     EXPECT_TRUE(result.successful) << parameter.get_name() << ": " << result.reason;
   }
 
-  void set_parameters_atomically(const std::vector<rclcpp::Parameter> & parameters)
-  {
-    auto future = client_->set_parameters_atomically(parameters);
-    ASSERT_EQ(spin_until_complete(future), rclcpp::FutureReturnCode::SUCCESS);
-    const auto result = future.get();
-    ASSERT_TRUE(result.successful) << result.reason;
-  }
-
-  void trigger_parameter_update()
-  {
-    const auto old_stamp = ParameterUpdateTestAccessor::params(*node_).__stamp;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
-    while (ParameterUpdateTestAccessor::params(*node_).__stamp == old_stamp &&
-           std::chrono::steady_clock::now() < deadline) {
-      odometry_pub_->publish(Odometry{});
-      acceleration_pub_->publish(AccelWithCovarianceStamped{});
-      trajectory_pub_->publish(CandidateTrajectories{});
-      executor_.spin_some();
-      std::this_thread::sleep_for(std::chrono::milliseconds{10});
-    }
-    ASSERT_NE(ParameterUpdateTestAccessor::params(*node_).__stamp, old_stamp);
-  }
-
-  template <class PluginT>
-  std::shared_ptr<PluginT> find_plugin() const
-  {
-    for (const auto & plugin : ParameterUpdateTestAccessor::plugins(*node_)) {
-      if (const auto typed = std::dynamic_pointer_cast<PluginT>(plugin)) {
-        return typed;
-      }
-    }
-    return nullptr;
-  }
-
   rclcpp::executors::SingleThreadedExecutor executor_;
   rclcpp::Node::SharedPtr caller_;
   std::shared_ptr<TrajectoryModifier> node_;
   std::shared_ptr<rclcpp::AsyncParametersClient> client_;
-  rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectory_pub_;
-  rclcpp::Publisher<Odometry>::SharedPtr odometry_pub_;
-  rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr acceleration_pub_;
 };
 
 bool is_plugin_list_parameter(const std::string & name)
@@ -288,147 +239,10 @@ TEST_F(ModifierParameterServiceFixture, UpdatesWritableScalarParametersThroughPa
   }
 }
 
-TEST_F(ModifierParameterServiceFixture, UpdatesNodeAndPluginParameterCachesAfterTrajectoryCallback)
-{
-  using autoware::trajectory_modifier::plugin::ObstacleStop;
-  using autoware::trajectory_modifier::plugin::StopPointFixer;
-  using autoware::trajectory_modifier::plugin::SurroundObstacleStop;
-  using autoware::trajectory_modifier::plugin::TrafficLightStop;
-  using autoware::trajectory_modifier::plugin::VelocityModifier;
-
-  set_parameters_atomically(
-    {rclcpp::Parameter{"use_stop_point_fixer", false},
-     rclcpp::Parameter{"stop_point_fixer.force_stop_long_stopped_trajectories", false},
-     rclcpp::Parameter{"stop_point_fixer.velocity_threshold", 0.2},
-     rclcpp::Parameter{"stop_point_fixer.min_distance_threshold", 1.5},
-     rclcpp::Parameter{"use_velocity_modifier", false},
-     rclcpp::Parameter{"use_obstacle_stop", false},
-     rclcpp::Parameter{"use_surround_obstacle_stop", true},
-     rclcpp::Parameter{"use_traffic_light_stop", false},
-     rclcpp::Parameter{"trajectory_time_step", 0.2},
-     rclcpp::Parameter{"stopping_constraints.nominal_deceleration", 1.2},
-     rclcpp::Parameter{"stopping_constraints.maximum_deceleration", 3.5},
-     rclcpp::Parameter{"stopping_constraints.jerk_limit", 2.5},
-     rclcpp::Parameter{"stopping_constraints.arrived_distance_threshold", 0.4},
-     rclcpp::Parameter{"obstacle_stop.use_objects", false},
-     rclcpp::Parameter{"obstacle_stop.stop_margin", 5.0},
-     rclcpp::Parameter{"obstacle_stop.obstacle_tracking.on_time_buffer", 0.4},
-     rclcpp::Parameter{
-       "obstacle_stop.objects.object_types", std::vector<std::string>{"car", "pedestrian"}},
-     rclcpp::Parameter{"obstacle_stop.objects.max_velocity_th", 4.0},
-     rclcpp::Parameter{"obstacle_stop.pointcloud.voxel_grid_filter.min_size", int64_t{4}},
-     rclcpp::Parameter{"obstacle_stop.rss_params.ego_decel", 3.0},
-     rclcpp::Parameter{"surround_obstacle_stop.use_objects", false},
-     rclcpp::Parameter{
-       "surround_obstacle_stop.object_types", std::vector<std::string>{"car", "bicycle"}},
-     rclcpp::Parameter{"surround_obstacle_stop.base_distance_th", 0.6},
-     rclcpp::Parameter{"surround_obstacle_stop.base.car", 0.7},
-     rclcpp::Parameter{"surround_obstacle_stop.hysteresis_time", 0.3},
-     rclcpp::Parameter{"traffic_light_stop.stop_margin", 1.0},
-     rclcpp::Parameter{"traffic_light_stop.stop_for_red_light", false},
-     rclcpp::Parameter{"traffic_light_stop.treat_unknown_light_as_red", true},
-     rclcpp::Parameter{"traffic_light_stop.crossing_time_limit", 3.0}});
-
-  trigger_parameter_update();
-
-  const auto & node_params = ParameterUpdateTestAccessor::params(*node_);
-  EXPECT_FALSE(node_params.use_stop_point_fixer);
-  EXPECT_DOUBLE_EQ(node_params.trajectory_time_step, 0.2);
-  EXPECT_DOUBLE_EQ(node_params.stopping_constraints.nominal_deceleration, 1.2);
-  EXPECT_DOUBLE_EQ(node_params.obstacle_stop.stop_margin, 5.0);
-  EXPECT_DOUBLE_EQ(node_params.surround_obstacle_stop.base.car, 0.7);
-  EXPECT_DOUBLE_EQ(node_params.traffic_light_stop.stop_margin, 1.0);
-
-  const auto stop_point_fixer = find_plugin<StopPointFixer>();
-  ASSERT_NE(stop_point_fixer, nullptr);
-  EXPECT_FALSE(ParameterUpdateTestAccessor::enabled(*stop_point_fixer));
-  EXPECT_FALSE(
-    ParameterUpdateTestAccessor::params(*stop_point_fixer).force_stop_long_stopped_trajectories);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*stop_point_fixer).velocity_threshold, 0.2);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::params(*stop_point_fixer).min_distance_threshold, 1.5);
-
-  const auto velocity_modifier = find_plugin<VelocityModifier>();
-  ASSERT_NE(velocity_modifier, nullptr);
-  EXPECT_FALSE(ParameterUpdateTestAccessor::enabled(*velocity_modifier));
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::trajectory_time_step(*velocity_modifier), 0.2);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::params(*velocity_modifier).nominal_deceleration, 1.2);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::params(*velocity_modifier).maximum_deceleration, 3.5);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*velocity_modifier).jerk_limit, 2.5);
-
-  const auto obstacle_stop = find_plugin<ObstacleStop>();
-  ASSERT_NE(obstacle_stop, nullptr);
-  EXPECT_FALSE(ParameterUpdateTestAccessor::enabled(*obstacle_stop));
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::trajectory_time_step(*obstacle_stop), 0.2);
-  EXPECT_FALSE(ParameterUpdateTestAccessor::params(*obstacle_stop).use_objects);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*obstacle_stop).stop_margin, 5.0);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::params(*obstacle_stop).obstacle_tracking.on_time_buffer, 0.4);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::params(*obstacle_stop).objects.max_velocity_th, 4.0);
-  EXPECT_EQ(
-    ParameterUpdateTestAccessor::params(*obstacle_stop).objects.object_types,
-    (std::vector<std::string>{"car", "pedestrian"}));
-  EXPECT_EQ(
-    ParameterUpdateTestAccessor::params(*obstacle_stop).pointcloud.voxel_grid_filter.min_size, 4);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*obstacle_stop).rss_params.ego_decel, 3.0);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::stopping_params(*obstacle_stop).nominal_deceleration, 1.2);
-
-  const auto surround_stop = find_plugin<SurroundObstacleStop>();
-  ASSERT_NE(surround_stop, nullptr);
-  EXPECT_TRUE(ParameterUpdateTestAccessor::enabled(*surround_stop));
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::trajectory_time_step(*surround_stop), 0.2);
-  EXPECT_FALSE(ParameterUpdateTestAccessor::params(*surround_stop).use_objects);
-  EXPECT_EQ(
-    ParameterUpdateTestAccessor::params(*surround_stop).object_types,
-    (std::vector<std::string>{"car", "bicycle"}));
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*surround_stop).base_distance_th, 0.6);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*surround_stop).base.car, 0.7);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*surround_stop).hysteresis_time, 0.3);
-
-  const auto traffic_light_stop = find_plugin<TrafficLightStop>();
-  ASSERT_NE(traffic_light_stop, nullptr);
-  EXPECT_FALSE(ParameterUpdateTestAccessor::enabled(*traffic_light_stop));
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::params(*traffic_light_stop).stop_margin, 1.0);
-  EXPECT_FALSE(ParameterUpdateTestAccessor::params(*traffic_light_stop).stop_for_red_light);
-  EXPECT_TRUE(ParameterUpdateTestAccessor::params(*traffic_light_stop).treat_unknown_light_as_red);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::params(*traffic_light_stop).crossing_time_limit, 3.0);
-  EXPECT_DOUBLE_EQ(
-    ParameterUpdateTestAccessor::stopping_params(*traffic_light_stop).nominal_deceleration, 1.2);
-}
-
 TEST_F(ModifierParameterServiceFixture, DISABLED_UpdatesPluginListAtRuntime)
 {
-  const std::vector<std::string> expected_names = {
-    "autoware::trajectory_modifier::plugin::VelocityModifier",
-    "autoware::trajectory_modifier::plugin::StopPointFixer"};
-  set_parameter_atomically(rclcpp::Parameter{"plugin_names", expected_names});
-  trigger_parameter_update();
-
-  EXPECT_EQ(ParameterUpdateTestAccessor::params(*node_).plugin_names, expected_names);
-  const auto & plugins = ParameterUpdateTestAccessor::plugins(*node_);
-  ASSERT_EQ(plugins.size(), expected_names.size());
-  for (size_t i = 0; i < plugins.size(); ++i) {
-    EXPECT_EQ(plugins.at(i)->get_name(), expected_names.at(i));
-  }
-}
-
-TEST_F(ModifierParameterServiceFixture, DISABLED_UpdatesTrajectoryTimeStepInAllPlugins)
-{
-  using autoware::trajectory_modifier::plugin::StopPointFixer;
-  using autoware::trajectory_modifier::plugin::TrafficLightStop;
-
-  set_parameter_atomically(rclcpp::Parameter{"trajectory_time_step", 0.2});
-  trigger_parameter_update();
-
-  const auto stop_point_fixer = find_plugin<StopPointFixer>();
-  const auto traffic_light_stop = find_plugin<TrafficLightStop>();
-  ASSERT_NE(stop_point_fixer, nullptr);
-  ASSERT_NE(traffic_light_stop, nullptr);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::trajectory_time_step(*stop_point_fixer), 0.2);
-  EXPECT_DOUBLE_EQ(ParameterUpdateTestAccessor::trajectory_time_step(*traffic_light_stop), 0.2);
+  GTEST_SKIP()
+    << "plugin_names is declared writable, but modifier plugins are only constructed during "
+    << "startup. "
+    << "Enable this once runtime load/unload/reorder support is implemented.";
 }

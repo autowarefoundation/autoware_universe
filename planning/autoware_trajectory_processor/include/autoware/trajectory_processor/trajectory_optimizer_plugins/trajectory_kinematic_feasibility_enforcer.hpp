@@ -53,8 +53,6 @@ using nav_msgs::msg::Odometry;
  */
 class TrajectoryKinematicFeasibilityEnforcer : public TrajectoryOptimizerPluginBase
 {
-  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
-
 public:
   TrajectoryKinematicFeasibilityEnforcer() = default;
   ~TrajectoryKinematicFeasibilityEnforcer() = default;

@@ -29,11 +29,6 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer
-{
-class ParameterUpdateTestAccessor;
-}
-
 namespace autoware::trajectory_optimizer::plugin
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -41,8 +36,6 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class TrajectoryOptimizerPluginBase
 {
-  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
-
 public:
   TrajectoryOptimizerPluginBase() = default;
 

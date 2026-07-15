@@ -30,8 +30,6 @@ using autoware_internal_debug_msgs::msg::StringStamped;
 
 class SurroundObstacleStop : public TrajectoryModifierPluginBase
 {
-  friend class autoware::trajectory_modifier::ParameterUpdateTestAccessor;
-
 public:
   SurroundObstacleStop() = default;
 

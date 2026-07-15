@@ -60,8 +60,6 @@ struct TrajectoryVelocityOptimizerParams
 
 class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
 {
-  friend class autoware::trajectory_optimizer::ParameterUpdateTestAccessor;
-
 public:
   TrajectoryVelocityOptimizer() = default;
   ~TrajectoryVelocityOptimizer() = default;
