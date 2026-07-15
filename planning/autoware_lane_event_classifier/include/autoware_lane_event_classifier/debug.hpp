@@ -57,7 +57,7 @@ public:
    * @brief Logs state transitions and accumulating departures.
    * @param current_state Latest published DrivingState.
    * @param input Per-cycle input.
-   * @param lane_following_result Lane-following gate verdict for the cycle.
+   * @param lane_following_result Lane-following check verdict for the cycle.
    * @param classifiers Active classifiers, for their debug reasons.
    */
   void log_state(

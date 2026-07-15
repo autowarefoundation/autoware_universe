@@ -42,12 +42,12 @@ struct LaneFollowingResult
 [[nodiscard]] std::string_view to_string(LaneFollowingReason reason);
 
 /**
- * @brief Evaluates the lane-following gate and reports which rule decided the outcome.
+ * @brief Evaluates the lane-following check and reports which rule decided the outcome.
  *
  * @note Stub: the classification logic (and its parameters) are added in a follow-up PR. Every
  * call currently reports the ego as following (LaneFollowingReason::no_reference_lane), so the
  * node always publishes LANE_FOLLOWING. The interface is kept stable so the node/debug wiring does
- * not change when the real gate lands.
+ * not change when the real logic lands.
  */
 class LaneFollowingChecker
 {
@@ -55,9 +55,9 @@ public:
   LaneFollowingChecker() = default;
 
   /**
-   * @brief Evaluates the lane-following gate for the current cycle.
+   * @brief Evaluates the lane-following check for the current cycle.
    *
-   * @note Stub: always reports the ego as following. The real gate (added in a follow-up PR)
+   * @note Stub: always reports the ego as following. The real logic (added in a follow-up PR)
    * queries the reference lane / connected sequence from the tracker, so this signature will gain
    * those inputs then.
    */

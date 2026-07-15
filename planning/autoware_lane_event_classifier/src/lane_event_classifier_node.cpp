@@ -173,7 +173,8 @@ void LaneEventClassifierNode::on_trajectory(
     }
     is_any_event_active = true;
   }
-  // No confirmed event: fall back to the gate. A departure with no classified event is UNKNOWN.
+  // No confirmed event: fall back to the lane-following check. A departure with no classified event
+  // is UNKNOWN.
   if (!is_any_event_active && !lane_following_result.is_following) {
     current_state_val = DrivingState::UNKNOWN;
   }

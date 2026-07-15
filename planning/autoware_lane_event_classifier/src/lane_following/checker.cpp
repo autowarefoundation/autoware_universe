@@ -25,8 +25,8 @@ std::string_view to_string(LaneFollowingReason reason)
   return magic_enum::enum_name(reason);
 }
 
-// Stub: the gate logic is added in a follow-up PR. Until then the ego is always reported as
-// following, so the node publishes LANE_FOLLOWING every cycle.
+// Stub: the lane-following check logic is added in a follow-up PR. Until then the ego is always
+// reported as following, so the node publishes LANE_FOLLOWING every cycle.
 LaneFollowingResult LaneFollowingChecker::evaluate() const
 {
   return {true, LaneFollowingReason::no_reference_lane};

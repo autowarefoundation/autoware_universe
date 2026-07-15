@@ -92,7 +92,7 @@ private:
   // PR; until then the map is only held so the subscription surface is in place.
   autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr map_msg_ptr_;
 
-  // Lane-following gate — evaluated here (outside any classifier) and reported alongside the state.
+  // Lane-following check — evaluated here (outside any classifier) and reported alongside the state.
   LaneFollowingChecker lane_following_checker_;
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
