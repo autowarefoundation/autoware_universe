@@ -6,14 +6,14 @@ Classifies lane events — lane change, intentional lane crossing — for event 
 
 ## What this node does
 
-Every cycle the node looks at the ego vehicle and publishes **one** state: what the ego is doing
-with respect to its lane right now.
+Every cycle, the node publishes **one** state describing what the ego is doing with respect to its
+lane.
 
 The state is published on `/planning/driving_factor` as a `DrivingState`. A downstream event recorder
-stores every frame, so the log can later show _when_ and _for how long_ the vehicle changed lanes,
-aborted, or drifted.
+stores every frame, so the log can later show when the vehicle changed lanes, aborted, or drifted,
+and for how long.
 
-The node does not control the vehicle. It only observes and labels.
+The node does not control the vehicle; it only observes and labels it.
 
 ---
 
@@ -23,14 +23,14 @@ The node does not control the vehicle. It only observes and labels.
 
 ### Subscriptions
 
-| Topic                      | Type                   | Role                                                                                                   |
-| -------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
-| `/planning/trajectory`     | `Trajectory`           | Per-cycle trigger; also the predictive signal for lane change.                                         |
-| `/map/vector_map`          | `LaneletMapBin`        | The lanelet map (latched, taken once).                                                                 |
-| _(polled)_ odometry        | `Odometry`             | Ego pose; its stamp drives all timers (determinism).                                                   |
-| _(polled)_ route           | `LaneletRoute`         | The mission and its preferred primitives.                                                              |
-| _(polled)_ objects         | `PredictedObjects`     | Perceived objects (used by crossing logic).                                                            |
-| _(polled)_ turn indicators | `TurnIndicatorsReport` | Optional hint for the lane-change confidence booster. Never a gate — if missing, the cycle still runs. |
+| Topic                      | Type                   | Role                                                                                                           |
+| -------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `/planning/trajectory`     | `Trajectory`           | Per-cycle trigger; also the predictive signal for lane change.                                                 |
+| `/map/vector_map`          | `LaneletMapBin`        | The lanelet map (latched, taken once).                                                                         |
+| _(polled)_ odometry        | `Odometry`             | Ego pose; its stamp drives all timers (determinism).                                                           |
+| _(polled)_ route           | `LaneletRoute`         | The mission and its preferred primitives.                                                                      |
+| _(polled)_ objects         | `PredictedObjects`     | Perceived objects (used by crossing logic).                                                                    |
+| _(polled)_ turn indicators | `TurnIndicatorsReport` | Optional hint for the lane-change confidence booster. Never a precondition — if missing, the cycle still runs. |
 
 ### Publication
 
@@ -43,7 +43,7 @@ The node does not control the vehicle. It only observes and labels.
 | State                                | Value | Meaning                                                                             |
 | ------------------------------------ | ----- | ----------------------------------------------------------------------------------- |
 | `UNKNOWN`                            | 0     | Inputs not ready, **or** the ego left its lane but no classifier claimed the event. |
-| `LANE_FOLLOWING`                     | 1     | The gate says the ego is still in its lane and no event is active.                  |
+| `LANE_FOLLOWING`                     | 1     | The ego is still in its lane and no event is active.                                |
 | `LANE_CHANGING`                      | 2     | The lane-change classifier confirmed a change in progress.                          |
 | `ABORTING_LANE_CHANGE`               | 3     | A committed lane change is reversing back to the reference lane.                    |
 | `INTENTIONAL_LANE_CROSSING`          | 4     | The intentional-crossing classifier confirmed a crossing.                           |
@@ -53,6 +53,12 @@ The node does not control the vehicle. It only observes and labels.
 
 ## How the node decides the state (per cycle)
 
+> **The lane-following check.** `LaneFollowingChecker` answers one yes/no question: _is the ego
+> still inside the lane it is supposed to be following?_ Its result is
+> the **default label**: when no classifier claims an event, the check passing gives `LANE_FOLLOWING`,
+> and the check failing (the ego left its lane, unexplained) gives `UNKNOWN`. It runs alongside the
+> classifiers, not before them — they run every cycle regardless.
+
 ```mermaid
 ---
 config:
@@ -61,11 +67,11 @@ config:
 flowchart TD
     A[trajectory arrives] --> B{inputs ready?}
     B -->|no| U[publish UNKNOWN]
-    B -->|yes| E[lane-following gate: following?]
+    B -->|yes| E[lane-following check: following?]
     E --> F[run each classifier]
     F --> G{any classifier<br/>confirmed an event?}
     G -->|yes| H[state = first confirmed classifier]
-    G -->|no| I{gate says following?}
+    G -->|no| I{check says following?}
     I -->|yes| J[state = LANE_FOLLOWING]
     I -->|no| K[state = UNKNOWN]
     H --> P[publish state]
@@ -87,8 +93,9 @@ The order of resolution:
    `UNKNOWN` counts as "no event".
 2. **First confirmed classifier wins.** Classifiers are checked in a fixed priority order
    (lane change, then intentional crossing).
-3. **No event → fall back to the gate.** If the gate says following, the state is `LANE_FOLLOWING`.
-   If the gate says the ego departed but no classifier explained it, the state is `UNKNOWN`.
+3. **No event → fall back to the lane-following check.** If the check says following, the state is
+   `LANE_FOLLOWING`. If the check says the ego departed but no classifier explained it, the state is
+   `UNKNOWN`.
 
 ---
 
@@ -102,7 +109,7 @@ cycle. Adding a classifier is: implement the interface, then register it in `bui
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `LaneEventClassifierNode`       | Owns the subscriptions/publisher, runs the per-cycle sequence above, and arbitrates the winning state.                 |
 | `LaneEventClassifierBase`       | The classifier interface: `update()`, `get_state()`, `is_enabled()`, `name()` (+ optional `debug_reason()` / markers). |
-| `LaneFollowingChecker`          | The lane-following gate. Node-owned, separate from the classifiers.                                                    |
+| `LaneFollowingChecker`          | The lane-following check. Node-owned, separate from the classifiers.                                                   |
 | `LaneChangeClassifier`          | The lane-change recogniser (a `LaneEventClassifierBase`).                                                              |
 | `IntentionalCrossingClassifier` | The intentional-crossing recogniser (a `LaneEventClassifierBase`).                                                     |
 
@@ -110,14 +117,14 @@ cycle. Adding a classifier is: implement the interface, then register it in `bui
 
 ## What's implemented now
 
-| Piece                              | State in this PR                                                          |
-| ---------------------------------- | ------------------------------------------------------------------------- |
-| Node I/O (subscriptions/publisher) | ✅ implemented                                                            |
-| Classifier loading + aggregation   | ✅ implemented                                                            |
-| `LaneFollowingChecker` (gate)      | 🚧 stub — always reports following                                        |
-| `LaneChangeClassifier`             | 🚧 stub — reports no event                                                |
-| `IntentionalCrossingClassifier`    | 🚧 stub — reports no event                                                |
-| `LaneTracker` (map/reference lane) | ⏭️ follow-up PR — the map is subscribed and stashed, but not yet consumed |
+| Piece                              | Status                                                           |
+| ---------------------------------- | ---------------------------------------------------------------- |
+| Node I/O (subscriptions/publisher) | ✅ implemented                                                   |
+| Classifier loading + aggregation   | ✅ implemented                                                   |
+| `LaneFollowingChecker`             | 🚧 stub — always reports following                               |
+| `LaneChangeClassifier`             | 🚧 stub — reports no event                                       |
+| `IntentionalCrossingClassifier`    | 🚧 stub — reports no event                                       |
+| `LaneTracker` (map/reference lane) | ⏭️ TBA — the map is subscribed and stashed, but not yet consumed |
 
 ---
 
@@ -139,5 +146,6 @@ Each classifier gains its own enable flag and parameters when its logic lands.
 
 - **Determinism.** All timers use the message timestamp (`odometry.header.stamp`), never wall-clock
   time. Replaying the same rosbag gives the same output.
-- **The gate and the classifiers are independent.** The gate is a stateless "am I in my lane?" check;
-  the classifiers are stateful event recognisers. The node combines them; neither drives the other.
+- **The lane-following check and the classifiers are independent.** The check is a stateless "am I in
+  my lane?" test; the classifiers are stateful event recognisers. The node combines them; neither
+  drives the other.
