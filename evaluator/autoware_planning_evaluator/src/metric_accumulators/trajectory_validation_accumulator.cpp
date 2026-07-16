@@ -14,6 +14,7 @@
 
 #include "autoware/planning_evaluator/metric_accumulators/trajectory_validation_accumulator.hpp"
 
+#include <cmath>
 #include <regex>
 
 namespace planning_diagnostics
@@ -106,17 +107,24 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
 
     // Rows in this report (last row wins if the same scope appears more than once).
     std::unordered_map<std::string, bool> present_error_by_scope;
+    std::unordered_map<std::string, double> value_by_scope;
     for (const auto & row : report.metrics) {
       if (!shouldCollectMetricRow(row.validator_name, row.metric_name)) {
         continue;
       }
       const std::string scope = gen + "/" + row.validator_name + "/" + row.metric_name;
-      present_error_by_scope[scope] =
-        levelIndicatesError(row.risk.level, other_than_safe_as_err);
+      present_error_by_scope[scope] = levelIndicatesError(row.risk.level, other_than_safe_as_err);
+      if (row.metric_name != "trajectory_feasibility" && std::isfinite(row.metric_value)) {
+        value_by_scope[scope] = row.metric_value;
+      }
     }
 
     for (const auto & [scope, m_err] : present_error_by_scope) {
       stats_by_scope_[scope].update(m_err, report_time_s, initial_span_duration_s);
+    }
+
+    for (const auto & [scope, value] : value_by_scope) {
+      value_stats_by_scope_[scope].add(value);
     }
 
     for (const auto & entry : stats_by_scope_) {
@@ -148,6 +156,9 @@ void TrajectoryValidationAccumulator::addInstantMetricMsgs(
     std::unordered_map<std::string, double> value_by_scope;
     for (const auto & row : report.metrics) {
       if (!shouldCollectMetricRow(row.validator_name, row.metric_name)) {
+        continue;
+      }
+      if (row.metric_name == "trajectory_feasibility" || !std::isfinite(row.metric_value)) {
         continue;
       }
       const std::string scope = makeMetricScopeKey(gen, row.validator_name, row.metric_name);
@@ -202,6 +213,19 @@ json TrajectoryValidationAccumulator::getOutputJson(const OutputMetric & output_
     }
     if (st.error_count > 0) {
       j[scope + "/error_count"] = st.error_count;
+    }
+  }
+  for (const auto & [scope, acc] : value_stats_by_scope_) {
+    if (acc.count() == 0) {
+      continue;
+    }
+    j[scope + "/value/min"] = acc.min();
+    j[scope + "/value/max"] = acc.max();
+    j[scope + "/value/count"] = acc.count();
+    const auto slash = scope.rfind('/');
+    const std::string metric_name = slash == std::string::npos ? scope : scope.substr(slash + 1);
+    if (metric_name.rfind("check_", 0) != 0) {
+      j[scope + "/value/mean"] = acc.mean();
     }
   }
   return j;
