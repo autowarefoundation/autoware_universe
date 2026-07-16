@@ -236,7 +236,7 @@ MarkerArray create_debug_markers(
         side_value, footprints, curr_time, base_link_z, ++virtual_wall_id),
       &marker_array);
     autoware_utils_visualization::append_marker_array(
-      create_virtual_wall_marker(side_value, curr_time, base_link_z, ++virtual_wall_id),
+      create_virtual_wall_marker(side_value, curr_time, base_link_z, virtual_wall_id),
       &marker_array);
   });
 
