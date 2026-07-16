@@ -612,9 +612,7 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
     }
     m_previous_slope_angle = control_data.slope_angle;
   } else {
-    RCLCPP_ERROR_THROTTLE(
-      logger_, *clock_, 3000, "Slope source is not valid. Using raw_pitch option as default");
-    control_data.slope_angle = m_lpf_pitch->getValue();
+    // m_slope_source is validated in the constructor, so this branch is unreachable.
   }
 
   updatePitchDebugValues(control_data.slope_angle, traj_pitch, raw_pitch, m_lpf_pitch->getValue());
