@@ -250,7 +250,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 - **low_visibility_entropy_threshold**: Minimum normalized geometric entropy for low-visibility candidate selection when `use_return_type_classification=true` (default: 0.3)
 - **low_visibility_anisotropy_threshold**: Maximum geometric anisotropy for low-visibility candidate selection when `use_return_type_classification=true` (default: 0.95)
 - **low_visibility_average_intensity_threshold**: Maximum voxel average intensity for visibility candidate selection when `use_return_type_classification=true`
-- **low-visibility voxels**: In-range secondary-noise candidate voxels are constrained by entropy, anisotropy, and average intensity thresholds. Sparse in-range voxels with fewer than 10 points, `voxel_secondary_return_ratio > 0.2`, and average intensity below `low_visibility_average_intensity_threshold` are also selected as low-visibility voxels
+- **low-visibility voxels**: In-range secondary-noise candidate voxels are constrained by entropy, anisotropy, and average intensity thresholds. Sparse in-range voxels with fewer than `low_visibility_sparse_voxel_point_count_threshold` points, `voxel_secondary_return_ratio > low_visibility_sparse_voxel_secondary_return_ratio_threshold`, and average intensity below `low_visibility_average_intensity_threshold` are also selected as low-visibility voxels
 - **visibility_estimation_max_secondary_voxel_count**: Only used when `use_return_type_classification=true`, limits secondary voxel counting in visibility calculations
 - **primary_return_types**: Only used when `use_return_type_classification=true`
 - **visibility_estimation_max_range_m**: Limits visibility calculation to reliable sensor range (advanced mode only)
@@ -272,6 +272,8 @@ secondary_noise_threshold: 4
 low_visibility_entropy_threshold: 0.3
 low_visibility_anisotropy_threshold: 0.95
 low_visibility_average_intensity_threshold: 2.0
+low_visibility_sparse_voxel_point_count_threshold: 10
+low_visibility_sparse_voxel_secondary_return_ratio_threshold: 0.2
 visibility_estimation_max_secondary_voxel_count: 500
 visibility_estimation_max_range_m: 20.0
 primary_return_types: [1, 6, 8, 10]
@@ -305,6 +307,8 @@ secondary_noise_threshold: 4 # Secondary return threshold
 low_visibility_entropy_threshold: 0.3 # Min normalized geometric entropy for visibility candidates
 low_visibility_anisotropy_threshold: 0.95 # Max geometric anisotropy for visibility candidates
 low_visibility_average_intensity_threshold: 255.0 # Max voxel average intensity for visibility candidates
+low_visibility_sparse_voxel_point_count_threshold: 10 # Sparse voxel point count threshold
+low_visibility_sparse_voxel_secondary_return_ratio_threshold: 0.2 # Sparse voxel secondary return ratio threshold
 visibility_estimation_max_secondary_voxel_count: 500 # Max secondary voxels for visibility
 primary_return_types: [1, 6, 8, 10] # Primary return types
 filter_secondary_returns: false # Include secondary returns in output
@@ -334,6 +338,8 @@ visibility_estimation_max_secondary_voxel_count: 500 # Allow secondary voxels in
 low_visibility_entropy_threshold: 0.3 # Entropy threshold for low-visibility detection
 low_visibility_anisotropy_threshold: 0.95 # Anisotropy threshold for low-visibility detection
 low_visibility_average_intensity_threshold: 255.0 # Average intensity threshold for low-visibility detection
+low_visibility_sparse_voxel_point_count_threshold: 10 # Sparse voxel point count threshold
+low_visibility_sparse_voxel_secondary_return_ratio_threshold: 0.2 # Sparse voxel secondary return ratio threshold
 publish_low_visibility_voxels: true # Monitor voxels used for visibility estimation
 visibility_estimation_only: false # Normal filtering with debug output
 publish_noise_cloud: true # Enable noise cloud for analysis

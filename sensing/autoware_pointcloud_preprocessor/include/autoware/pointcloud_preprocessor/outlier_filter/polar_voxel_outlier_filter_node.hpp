@@ -298,6 +298,8 @@ protected:
   double low_visibility_entropy_threshold_{};
   double low_visibility_anisotropy_threshold_{};
   double low_visibility_average_intensity_threshold_{};
+  int low_visibility_sparse_voxel_point_count_threshold_{};
+  double low_visibility_sparse_voxel_secondary_return_ratio_threshold_{};
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
   bool publish_low_visibility_voxels_{};
