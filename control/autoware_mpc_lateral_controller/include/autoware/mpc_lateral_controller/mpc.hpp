@@ -501,6 +501,12 @@ public:
   void resetPrevResult(const SteeringReport & current_steer);
 
   /**
+   * @brief Reset steering-command LPF internal state to a published command value.
+   * Keeps the filter tracking post-MPC output (soft hold / stop freeze) instead of raw Uex.
+   */
+  void resetSteeringCmdFilter(const double steering_tire_angle);
+
+  /**
    * @brief Set the vehicle model for this MPC.
    * @param vehicle_model_ptr Pointer to the vehicle model.
    */

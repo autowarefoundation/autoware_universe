@@ -8,17 +8,17 @@
       "properties": {
         "enable_confidence_steer_slew_limit": {
           "type": "boolean",
-          "description": "when enabled, limit published steering rate when reference spatial extent ahead of ego is short (soft hold on curves during planner hesitation)",
+          "description": "when enabled, soft-limit published steering rate when remaining spatial extent ahead of ego is short; timer refreshes only when confidence returns",
           "default": false
         },
         "reference_confidence_L_ahead_min": {
           "type": "number",
-          "description": "spatial arc length [m] below which reference curvature is treated as low-confidence",
+          "description": "spatial arc length [m] below which reference is treated as low-confidence",
           "default": 0.4
         },
         "reference_confidence_L_ahead_ref": {
           "type": "number",
-          "description": "spatial arc length [m] at or above which reference is fully trusted and slew limiting is disabled",
+          "description": "spatial arc length [m] at or above which reference is fully trusted and the low-confidence hold timer is refreshed",
           "default": 2.0
         },
         "steer_slew_rate_min_rad_s": {

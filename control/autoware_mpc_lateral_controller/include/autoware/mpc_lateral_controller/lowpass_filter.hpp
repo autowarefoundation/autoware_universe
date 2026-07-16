@@ -75,6 +75,12 @@ public:
   double filter(const double & u);
 
   /**
+   * @brief Force filter internal state (y,u history) to a value without changing coefficients.
+   * Used so the steering LPF tracks the published command after post-MPC soft hold / stop freeze.
+   */
+  void resetState(const double value);
+
+  /**
    * @brief filtering for time-series data
    * @param [in] t time-series data for input vector
    * @param [out] u object vector

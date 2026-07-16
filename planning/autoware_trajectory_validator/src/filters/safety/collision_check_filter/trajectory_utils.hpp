@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -70,15 +71,6 @@ private:
     const auto it = std::lower_bound(times_.begin(), times_.end(), t - TIME_INDEX_EPSILON);
     if (it == times_.end()) return times_.size() - 1;
     return std::distance(times_.begin(), it);
-  }
-
-  IndexRange resolve_covering_index_range(const TimeRange & key_time) const
-  {
-    assert(key_time.first <= key_time.second);
-
-    auto start_index = get_same_or_earlier_time_index(key_time.first);
-    auto end_index = get_same_or_later_time_index(key_time.second);
-    return {start_index, end_index};
   }
 
   Box2d compute_envelope(const IndexRange & key) const
@@ -153,6 +145,12 @@ public:
         "Trajectory sizes mismatch (times vs footprints) classification: " +
         identification_.classification);
     }
+
+    if (!std::is_sorted(times_.begin(), times_.end())) {
+      throw std::invalid_argument(
+        "Trajectory times must be in ascending order classification: " +
+        identification_.classification);
+    }
   }
 
   TrajectoryData() = delete;
@@ -165,6 +163,21 @@ public:
 
   size_t size() const { return times_.size(); }
 
+  std::optional<IndexRange> resolve_covering_index_range(const TimeRange & time_range) const
+  {
+    assert(time_range.first <= time_range.second);
+
+    const bool has_no_overlap =
+      time_range.second < times_.front() || time_range.first > times_.back();
+    if (has_no_overlap) {
+      return std::nullopt;
+    }
+
+    const auto start_index = get_same_or_earlier_time_index(time_range.first);
+    const auto end_index = get_same_or_later_time_index(time_range.second);
+    return IndexRange{start_index, end_index};
+  }
+
   const Box2d & get_or_compute_envelope(const IndexRange & key) const
   {
     assert(key.first <= key.second);
@@ -174,11 +187,6 @@ public:
       it->second = compute_envelope(key);
     }
     return it->second;
-  }
-
-  const Box2d & get_or_compute_envelope(const TimeRange & key_time) const
-  {
-    return get_or_compute_envelope(resolve_covering_index_range(key_time));
   }
 
   const Box2d & get_or_compute_overall_envelope() const
@@ -195,11 +203,6 @@ public:
       it->second = compute_convex(key);
     }
     return it->second;
-  }
-
-  const Polygon2d & get_or_compute_convex(const TimeRange & key_time) const
-  {
-    return get_or_compute_convex(resolve_covering_index_range(key_time));
   }
 };
 }  // namespace autoware::trajectory_validator::plugin::safety
@@ -341,9 +344,6 @@ struct EgoDimensions
   double vehicle_width{0.0};
 };
 
-EgoDimensions make_ego_dimensions(
-  const VehicleInfo & vehicle_info, const EgoFootprintMargin & ego_footprint_margin);
-
 FootprintTrajectory compute_footprint_trajectory(
   const PoseTrajectory & pose_trajectory,
   const autoware_perception_msgs::msg::Shape & object_shape);
@@ -356,16 +356,16 @@ struct EgoTrajectoryGenerationParams
 {
   double braking_lag{0.0};
   double assumed_acceleration{0.0};
-  footprint::EgoDimensions ego_dimensions{};
+  EgoFootprintMargin ego_footprint_margin{};
 
   bool operator<(const EgoTrajectoryGenerationParams & rhs) const
   {
     return std::tie(
-             braking_lag, assumed_acceleration, ego_dimensions.front_offset,
-             ego_dimensions.rear_overhang, ego_dimensions.vehicle_width) <
+             braking_lag, assumed_acceleration, ego_footprint_margin.front,
+             ego_footprint_margin.rear, ego_footprint_margin.lateral) <
            std::tie(
-             rhs.braking_lag, rhs.assumed_acceleration, rhs.ego_dimensions.front_offset,
-             rhs.ego_dimensions.rear_overhang, rhs.ego_dimensions.vehicle_width);
+             rhs.braking_lag, rhs.assumed_acceleration, rhs.ego_footprint_margin.front,
+             rhs.ego_footprint_margin.rear, rhs.ego_footprint_margin.lateral);
   }
 };
 
@@ -412,6 +412,7 @@ class EgoTrajectoryCache
 {
 private:
   const TrajectoryInterpolator trajectory_interpolator_;
+  const VehicleInfo vehicle_info_;
   rclcpp::Time sampling_reference_time_;
   rclcpp::Time current_time_;
   double time_resolution_;
@@ -420,28 +421,15 @@ private:
 public:
   EgoTrajectoryCache(
     const CandidateTrajectory & candidate_traj, const rclcpp::Time & sampling_reference_time,
-    const rclcpp::Time & current_time, double time_resolution);
+    const rclcpp::Time & current_time, double time_resolution, const VehicleInfo & vehicle_info);
 
   const TrajectoryData & get_or_compute_trajectory_data(
     const EgoTrajectoryGenerationParams & params) const;
 };
 
-TrajectoryData generate_ego_trajectory(
-  const CandidateTrajectory & candidate_traj, const rclcpp::Time & sampling_reference_time,
-  const rclcpp::Time & current_time, double time_resolution,
-  const EgoTrajectoryGenerationParams & params);
-
-TrajectoryData generate_ego_trajectory(
-  const geometry_msgs::msg::Twist & initial_twist, double braking_lag, double assumed_acceleration,
-  double max_time, double time_resolution, const TrajectoryPoints & traj_points,
-  const footprint::EgoDimensions & ego_dimensions);
-
-TrajectoryData generate_ego_trajectory(
-  const TrajectoryPoints & traj_points, const FilterContext & context, double max_time,
-  double time_resolution, const footprint::EgoDimensions & ego_dimensions);
-
 TrajectoryData generate_predicted_path_trajectory(
-  const autoware_perception_msgs::msg::PredictedObject & predicted_object, double braking_lag,
+  const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+  const autoware_perception_msgs::msg::PredictedPath & predicted_path, double braking_lag,
   double assumed_acceleration, rclcpp::Duration start_time, double max_time,
   const builtin_interfaces::msg::Time & stamp, double time_resolution);
 
@@ -449,10 +437,6 @@ TrajectoryData generate_constant_curvature_trajectory(
   const autoware_perception_msgs::msg::PredictedObject & predicted_object, double braking_lag,
   double assumed_acceleration, rclcpp::Duration start_time, double max_time,
   const builtin_interfaces::msg::Time & stamp, double time_resolution);
-
-TrajectoryData generate_object_trajectory(
-  const FilterContext & context, unique_identifier_msgs::msg::UUID object_id,
-  const std::string & traj_type_str, double acc, double time_resolution, double time_horizon);
 }  // namespace autoware::trajectory_validator::plugin::safety::trajectory
 
 #endif  // FILTERS__SAFETY__COLLISION_CHECK_FILTER__TRAJECTORY_UTILS_HPP_
