@@ -2,6 +2,13 @@
 Changelog for package autoware_behavior_velocity_no_stopping_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(behavior_velocity_no_stopping_area): declare predicted_objects subscription and guard null deref (`#12860 <https://github.com/autowarefoundation/autoware_universe/issues/12860>`_)
+  feat(behavior_velocity_planner): update required subscriptions and handle predicted objects in no stopping area module
+* Contributors: Taekjin LEE, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

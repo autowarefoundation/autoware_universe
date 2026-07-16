@@ -2,6 +2,57 @@
 Changelog for package autoware_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(object_merger): fix to improve readability beside copy (`#12782 <https://github.com/autowarefoundation/autoware_universe/issues/12782>`_)
+  fix to improve readability
+* fix(autoware_object_merger): disable test when agnocast enabled (`#12773 <https://github.com/autowarefoundation/autoware_universe/issues/12773>`_)
+  disable test when agnocast enabled
+* feat(object_merger): apply `agnocast_wrapper::Node` to object_merger (`#12704 <https://github.com/autowarefoundation/autoware_universe/issues/12704>`_)
+  * apply agnocast
+  * style(pre-commit): autofix
+  * apply to fusion_merger
+  * style(pre-commit): autofix
+  * delete unnecessary comments
+  * delete unnecessary
+  * fix for non-copy
+  * delete unnecessary blank space
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_object_merger): add parameter for new added classes ANIMAL and HAZARD (`#12736 <https://github.com/autowarefoundation/autoware_universe/issues/12736>`_)
+  * fix(autoware_object_merger): add parameter for new added classes ANIMAL and HAZARD
+  * fix: update overloap judge
+  ---------
+* feat(perception): add new cluster and merger (`#12682 <https://github.com/autowarefoundation/autoware_universe/issues/12682>`_)
+  * feat: add label-based clustering algorithm
+  * feat: update cluster
+  * feat: update cluster
+  * feat(object_merger): add a new merger (`#2906 <https://github.com/autowarefoundation/autoware_universe/issues/2906>`_)
+  * fix: missign mapped_label
+  * chore: move shape policy to launch
+  * fix: label_based_EU node name
+  * fix: using voxel_based EC
+  * feat: add support of keeping dimensions option
+  * feat: replace convex hull by union
+  * style(pre-commit): autofix
+  * refactor: shape fitting
+  * refactor: min/max computation
+  * refactor: define UnionGeometry
+  * refactor: separate grouping sub objects and building fused objects into two functions
+  * refactor: seprate functions
+  * feat: add support of hazard
+  * docs: add document for LabelBasedEuclideanCluster
+  * chore: fix spell check
+  * chore: fix launcher
+  * chore: modify pushable_pullable to pedestrian
+  * chore: add schema file for label_based_euclidean_cluster
+  * chore: add schema file for object_fusion_merger
+  ---------
+  Co-authored-by: badai-nguyen <dai.nguyen@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Kotaro Uetake, badai nguyen, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

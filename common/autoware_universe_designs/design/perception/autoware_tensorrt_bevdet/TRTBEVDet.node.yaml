@@ -1,0 +1,77 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: TRTBEVDet.node
+
+package:
+  name: autoware_tensorrt_bevdet
+  provider: autoware
+
+launch:
+  plugin: autoware::tensorrt_bevdet::TRTBEVDetNode
+  executable: autoware_tensorrt_bevdet_node
+  node_output: screen
+
+# interfaces
+# six fixed surround-view cameras (image + camera_info each), message_filters-synced.
+subscribers:
+  - name: image_front
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_front
+  - name: camera_info_front
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_front/camera_info
+  - name: image_front_left
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_front_left
+  - name: camera_info_front_left
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_front_left/camera_info
+  - name: image_front_right
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_front_right
+  - name: camera_info_front_right
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_front_right/camera_info
+  - name: image_back
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_back
+  - name: camera_info_back
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_back/camera_info
+  - name: image_back_left
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_back_left
+  - name: camera_info_back_left
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_back_left/camera_info
+  - name: image_back_right
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_back_right
+  - name: camera_info_back_right
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_back_right/camera_info
+
+publishers:
+  - name: boxes
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/boxes
+  - name: bboxes_markers
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/output_bboxes
+
+# parameters
+param_files: []
+
+param_values:
+  - name: model_config
+    type: string
+    default: ""
+
+# processes
+processes:
+  - name: detect
+    trigger_conditions:
+      - on_input: image_front
+    outcomes:
+      - to_output: boxes

@@ -13,6 +13,10 @@
       filter_bicycle: false
       filter_motorcycle: false
       filter_pedestrian: false
+      filter_animal: true
+      filter_hazard: true
+      filter_over_drivable: true
+      filter_under_drivable: true
       filter_unknown: true
     ignore_behind_rear_axle: true  # If true, collisions detected behind the rear axle of the ego vehicle are ignored
     time_buffer:  # buffer to start or stop publishing the ERROR diagnostic

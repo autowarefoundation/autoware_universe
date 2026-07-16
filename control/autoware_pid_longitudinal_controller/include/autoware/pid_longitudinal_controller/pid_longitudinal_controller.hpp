@@ -25,25 +25,19 @@
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "diagnostic_updater/diagnostic_updater.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
-
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <tf2/utils.hpp>
 
 #include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
 #include "autoware_control_msgs/msg/longitudinal.hpp"
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "nav_msgs/msg/odometry.hpp"
-#include "tf2_msgs/msg/tf_message.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 
 #include <deque>
+#include <limits>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -54,6 +48,8 @@ using autoware_adapi_v1_msgs::msg::OperationModeState;
 using visualization_msgs::msg::MarkerArray;
 
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
+
+enum class ControlState { DRIVE = 0, STOPPING, STOPPED, EMERGENCY };
 
 /// \class PidLongitudinalController
 /// \brief The node class used for generating longitudinal control commands (velocity/acceleration)
@@ -89,10 +85,14 @@ private:
     size_t target_idx{0};
     StateAfterDelay state_after_delay{0.0, 0.0, 0.0};
     Motion current_motion{};
+    geometry_msgs::msg::Pose current_pose{};
+    OperationModeState operation_mode{};
     Shift shift{Shift::Forward};  // shift is used only to calculate the sign of pitch compensation
     double stop_dist{0.0};  // signed distance that is positive when car is before the stopline
     double slope_angle{0.0};
     double dt{0.0};
+    double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
   };
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
   rclcpp::Clock::SharedPtr clock_;
@@ -103,41 +103,31 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
     m_pub_debug;
   rclcpp::Publisher<MarkerArray>::SharedPtr m_pub_virtual_wall_marker;
+  std::optional<MarkerArray> m_virtual_wall_marker{std::nullopt};
 
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
   rcl_interfaces::msg::SetParametersResult paramCallback(
     const std::vector<rclcpp::Parameter> & parameters);
 
   // pointers for ros topic
-  nav_msgs::msg::Odometry m_current_kinematic_state;
-  geometry_msgs::msg::AccelWithCovarianceStamped m_current_accel;
-  autoware_planning_msgs::msg::Trajectory m_trajectory;
-  OperationModeState m_current_operation_mode;
+  autoware_planning_msgs::msg::Trajectory m_last_valid_trajectory;
 
   // vehicle info
   double m_wheel_base{0.0};
-  double m_vehicle_width{0.0};
   double m_front_overhang{0.0};
   bool m_prev_vehicle_is_under_control{false};
   std::shared_ptr<rclcpp::Time> m_under_control_starting_time{nullptr};
 
   // control state
-  enum class ControlState { DRIVE = 0, STOPPING, STOPPED, EMERGENCY };
   ControlState m_control_state{ControlState::STOPPED};
-  std::string toStr(const ControlState s)
-  {
-    if (s == ControlState::DRIVE) return "DRIVE";
-    if (s == ControlState::STOPPING) return "STOPPING";
-    if (s == ControlState::STOPPED) return "STOPPED";
-    if (s == ControlState::EMERGENCY) return "EMERGENCY";
-    return "UNDEFINED";
-  };
 
   // control period
   double m_longitudinal_ctrl_period;
 
   // delay compensation
   double m_delay_compensation_time;
+  bool m_use_temporal_trajectory{false};
+  std::optional<double> m_prev_nearest_time{std::nullopt};
 
   // enable flags
   bool m_enable_smooth_stop;
@@ -175,7 +165,7 @@ private:
   double m_brake_keeping_acc;
 
   // smooth stop
-  SmoothStop m_smooth_stop;
+  std::optional<SmoothStop> m_smooth_stop;
 
   // stop
   struct StoppedStateParams
@@ -237,7 +227,6 @@ private:
   // diff limit
   Motion m_prev_ctrl_cmd{};      // with slope compensation
   Motion m_prev_raw_ctrl_cmd{};  // without slope compensation
-  std::vector<std::pair<rclcpp::Time, double>> m_vel_hist;
 
   // debug values
   DebugValues m_debug_values;
@@ -259,24 +248,6 @@ private:
   };
 
   /**
-   * @brief set current and previous velocity with received message
-   * @param [in] msg current state message
-   */
-  void setKinematicState(const nav_msgs::msg::Odometry & msg);
-
-  /**
-   * @brief set current acceleration with received message
-   * @param [in] msg trajectory message
-   */
-  void setCurrentAcceleration(const geometry_msgs::msg::AccelWithCovarianceStamped & msg);
-
-  /**
-   * @brief set current operation mode with received message
-   * @param [in] msg operation mode report message
-   */
-  void setCurrentOperationMode(const OperationModeState & msg);
-
-  /**
    * @brief set reference trajectory with received message
    * @param [in] msg trajectory message
    */
@@ -292,15 +263,16 @@ private:
 
   /**
    * @brief calculate data for controllers whose type is ControlData
-   * @param [in] current_pose current ego pose
+   * @param [in] input_data input data containing current odometry, acceleration, and operation
+   * mode
    */
-  ControlData getControlData(const geometry_msgs::msg::Pose & current_pose);
+  ControlData getControlData(const trajectory_follower::InputData & input_data);
 
   /**
    * @brief calculate control command in emergency state
-   * @param [in] dt time between previous and current one
+   * @param [in] control_data data for control calculation
    */
-  Motion calcEmergencyCtrlCmd(const double dt);
+  Motion calcEmergencyCtrlCmd(const ControlData & control_data);
 
   /**
    * @brief change control state
@@ -324,10 +296,8 @@ private:
   /**
    * @brief publish control command
    * @param [in] ctrl_cmd calculated control command to control velocity
-   * @param [in] current_vel current velocity of the vehicle
    */
-  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(
-    const Motion & ctrl_cmd, const double & current_vel);
+  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(const Motion & ctrl_cmd);
 
   /**
    * @brief publish debug data
@@ -335,6 +305,11 @@ private:
    * @param [in] control_data data for control calculation
    */
   void publishDebugData(const Motion & ctrl_cmd, const ControlData & control_data);
+
+  /**
+   * @brief publish the virtual wall marker created during this cycle, if any
+   */
+  void publishVirtualWallMarker();
 
   /**
    * @brief calculate time between current and previous one
@@ -395,11 +370,11 @@ private:
 
   /**
    * @brief calculate predicted velocity after time delay based on past control commands
-   * @param [in] current_motion current velocity and acceleration of the vehicle
+   * @param [in] control_data data for control calculation
    * @param [in] delay_compensation_time predicted time delay
    */
   StateAfterDelay predictedStateAfterDelay(
-    const Motion current_motion, const double delay_compensation_time) const;
+    const ControlData & control_data, const double delay_compensation_time) const;
 
   /**
    * @brief calculate velocity feedback with feed forward and pid controller
