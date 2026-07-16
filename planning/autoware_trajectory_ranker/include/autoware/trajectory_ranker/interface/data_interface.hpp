@@ -123,6 +123,11 @@ public:
 
   UUID uuid() const { return core_data_->generator_id; }
 
+  TurnIndicatorsCommand turn_indicators_command() const
+  {
+    return core_data_->turn_indicators_command;
+  }
+
   std::string tag() const { return core_data_->tag; }
 
 private:

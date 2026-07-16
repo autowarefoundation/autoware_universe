@@ -17,7 +17,6 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_temporal_mpt_optimizer_utils.hpp"
 
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
-#include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -32,6 +31,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -95,39 +95,29 @@ std::string expand_user_path_string(const std::string & p)
 }
 }  // namespace
 
-void TrajectoryTemporalMPTOptimizer::initialize(
-  const std::string & name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+void TrajectoryTemporalMPTOptimizer::set_mpt_params(
+  const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params)
 {
-  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
-  // set_up_params() already ran via TrajectoryOptimizerPluginBase::initialize()
-  create_or_reset_solver();
+  mpt_params_.cg_distance_from_rear_axle_ratio = params.cg_distance_from_rear_axle_ratio;
+  mpt_params_.min_points_for_optimization =
+    static_cast<size_t>(std::max<int64_t>(2, params.min_points_for_optimization));
+  mpt_params_.enable_debug_info = params.enable_debug_info;
+  mpt_params_.publish_debug_topics = params.publish_debug_topics;
+  mpt_params_.write_replay_fixture = params.write_replay_fixture;
+  mpt_params_.replay_fixture_directory = params.replay_fixture_directory;
+  mpt_params_.log_replay_fixture_to_console = params.log_replay_fixture_to_console;
 }
 
-void TrajectoryTemporalMPTOptimizer::set_up_params()
+void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
 
   // SQP max_iter / tol: from codegen (generators/path_tracking_mpc_temporal.py → acados_ocp.json),
   // applied inside kinematic_bicycle_temporal_acados_create — not overridden in C++.
 
-  mpt_params_.cg_distance_from_rear_axle_ratio = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.cg_distance_from_rear_axle_ratio");
+  enabled_ = params.use_temporal_mpt_optimizer;
+  set_mpt_params(params.trajectory_temporal_mpt_optimizer);
   update_bicycle_geometry_from_vehicle();
-
-  mpt_params_.min_points_for_optimization = static_cast<size_t>(get_or_declare_parameter<int>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.min_points_for_optimization"));
-  mpt_params_.enable_debug_info = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.enable_debug_info");
-  mpt_params_.publish_debug_topics = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.publish_debug_topics");
-  mpt_params_.write_replay_fixture = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.write_replay_fixture");
-  mpt_params_.replay_fixture_directory = get_or_declare_parameter<std::string>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.replay_fixture_directory");
-  mpt_params_.log_replay_fixture_to_console = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console");
 
   if (mpt_params_.write_replay_fixture && !mpt_params_.replay_fixture_directory.empty()) {
     RCLCPP_INFO(
@@ -136,47 +126,21 @@ void TrajectoryTemporalMPTOptimizer::set_up_params()
       "generators/example_trajectory_file_xyv.py)",
       expand_user_path_string(mpt_params_.replay_fixture_directory).c_str());
   }
+
+  create_or_reset_solver();
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryTemporalMPTOptimizer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryTemporalMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  int min_points_for_optimization = static_cast<int>(mpt_params_.min_points_for_optimization);
-  if (update_param(
-        parameters, "trajectory_temporal_mpt_optimizer.min_points_for_optimization",
-        min_points_for_optimization)) {
-    mpt_params_.min_points_for_optimization =
-      static_cast<size_t>(std::max(2, min_points_for_optimization));
-  }
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.enable_debug_info",
-    mpt_params_.enable_debug_info);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.publish_debug_topics",
-    mpt_params_.publish_debug_topics);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.write_replay_fixture",
-    mpt_params_.write_replay_fixture);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.replay_fixture_directory",
-    mpt_params_.replay_fixture_directory);
-  update_param(
-    parameters, "trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console",
-    mpt_params_.log_replay_fixture_to_console);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  return result;
+  enabled_ = params.use_temporal_mpt_optimizer;
+  set_mpt_params(params.trajectory_temporal_mpt_optimizer);
 }
 
 void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
-  if (!params.use_temporal_mpt_optimizer) {
+  if (!enabled_) {
     return;
   }
 
