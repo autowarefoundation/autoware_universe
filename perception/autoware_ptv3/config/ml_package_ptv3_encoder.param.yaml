@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
-    backbone:
-      voxels_num: [16000, 128000, 192000]
+    encoder:
       point_cloud_range: [-122.88, -122.88, -3.0, 122.88, 122.88, 5.0]
       voxel_size: [0.12, 0.12, 0.12]
       serialization_orders: ["z", "z-trans"]
       pooling_strides: [2, 2, 2, 2]
+      enc_channels: [32, 64, 128, 256, 512]

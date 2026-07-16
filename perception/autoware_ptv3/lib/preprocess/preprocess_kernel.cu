@@ -224,7 +224,7 @@ __global__ void cropKernel(
   const float & y = points[idx].y;
   const float & z = points[idx].z;
 
-  mask[idx] = x >= min_x && x <= max_x && y >= min_y && y <= max_y && z >= min_z && z <= max_z;
+  mask[idx] = x >= min_x && x < max_x && y >= min_y && y < max_y && z >= min_z && z < max_z;
 }
 
 template <typename scalar_t, typename mask_t>
