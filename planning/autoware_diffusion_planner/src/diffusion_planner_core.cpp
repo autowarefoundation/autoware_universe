@@ -278,7 +278,7 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   }
 
   // Update neighbor agent data
-  agent_data_.update_histories(*effective_objects, params_.ignore_unknown_neighbors);
+  agent_data_.update_histories(*effective_objects);
   const auto processed_neighbor_histories =
     agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
 
@@ -533,19 +533,17 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
       output.trajectory = trajectory;
     }
 
-    const auto candidate_trajectory = autoware_internal_planning_msgs::build<
-                                        autoware_internal_planning_msgs::msg::CandidateTrajectory>()
-                                        .header(trajectory.header)
-                                        .generator_id(generator_uuid)
-                                        .points(trajectory.points);
+    autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
+    candidate_trajectory.header = trajectory.header;
+    candidate_trajectory.generator_id = generator_uuid;
+    candidate_trajectory.points = trajectory.points;
 
     std_msgs::msg::String generator_name_msg;
     generator_name_msg.data = std::string("DiffusionPlanner_batch_") + std::to_string(i);
 
-    const auto generator_info =
-      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
-        .generator_id(generator_uuid)
-        .generator_name(generator_name_msg);
+    autoware_internal_planning_msgs::msg::GeneratorInfo generator_info;
+    generator_info.generator_id = generator_uuid;
+    generator_info.generator_name = generator_name_msg;
 
     output.candidate_trajectories.candidate_trajectories.push_back(candidate_trajectory);
     output.candidate_trajectories.generator_info.push_back(generator_info);

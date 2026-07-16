@@ -120,6 +120,11 @@ public:
 
   bool adjustPosition(const double & delta_x, const double & delta_y);
 
+  // cspell:ignore Persymmetrize
+  // Persymmetrize the rear/front axle position covariance to weaken the coupling that levers a
+  // common-mode lateral error into yaw. blend_ratio in [0,1]: 0 is a no-op, 1 fully decouples.
+  bool blendAxleCovariance(const double blend_ratio);
+
   bool limitStates();
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
