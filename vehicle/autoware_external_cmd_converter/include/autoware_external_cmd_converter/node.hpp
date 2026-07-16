@@ -86,9 +86,13 @@ private:
   AUTOWARE_TIMER_PTR rate_check_timer_;
 
   // Parameter
+  // cppcheck-suppress unusedStructMember
   double ref_vel_gain_;  // reference velocity = current velocity + desired acceleration * gain
+  // cppcheck-suppress unusedStructMember
   bool wait_for_first_topic_;
+  // cppcheck-suppress unusedStructMember
   double control_command_timeout_;
+  // cppcheck-suppress unusedStructMember
   double emergency_stop_timeout_;
 
   // Diagnostics
@@ -102,6 +106,7 @@ private:
   // Algorithm
   AccelMap accel_map_;
   BrakeMap brake_map_;
+  // cppcheck-suppress unusedStructMember
   bool acc_map_initialized_;
 
   double calculate_acc(const PedalsCommand & cmd, const double vel);
