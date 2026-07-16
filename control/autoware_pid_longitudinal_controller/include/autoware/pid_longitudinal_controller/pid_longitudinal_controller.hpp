@@ -93,6 +93,7 @@ private:
     double dt{0.0};
     double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
     double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
+    rclcpp::Time current_time{};  // time captured once per control cycle in run()
   };
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
   rclcpp::Clock::SharedPtr clock_;
@@ -265,8 +266,10 @@ private:
    * @brief calculate data for controllers whose type is ControlData
    * @param [in] input_data input data containing current odometry, acceleration, and operation
    * mode
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  ControlData getControlData(const trajectory_follower::InputData & input_data);
+  ControlData getControlData(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time);
 
   /**
    * @brief calculate control command in emergency state
@@ -296,8 +299,10 @@ private:
   /**
    * @brief publish control command
    * @param [in] ctrl_cmd calculated control command to control velocity
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(const Motion & ctrl_cmd);
+  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(
+    const Motion & ctrl_cmd, const rclcpp::Time & current_time);
 
   /**
    * @brief publish debug data
@@ -313,8 +318,9 @@ private:
 
   /**
    * @brief calculate time between current and previous one
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  double getDt();
+  double getDt(const rclcpp::Time & current_time);
 
   /**
    * @brief calculate current velocity and acceleration
@@ -338,8 +344,9 @@ private:
   /**
    * @brief store acceleration command before slope compensation
    * @param [in] accel command before slope compensation
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  void storeAccelCmd(const double accel);
+  void storeAccelCmd(const double accel, const rclcpp::Time & current_time);
 
   /**
    * @brief add acceleration to compensate for slope
@@ -400,7 +407,11 @@ private:
    */
   void updateDebugVelAcc(const ControlData & control_data);
 
-  double getTimeUnderControl();
+  /**
+   * @brief calculate elapsed time since the vehicle entered autoware control
+   * @param [in] current_time time captured once per control cycle in run()
+   */
+  double getTimeUnderControl(const rclcpp::Time & current_time);
 };
 }  // namespace autoware::motion::control::pid_longitudinal_controller
 
