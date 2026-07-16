@@ -117,6 +117,7 @@ private:
   };
 
   std::unordered_map<std::string, ErrorSpanStats> stats_by_scope_;
+  std::unordered_map<std::string, Accumulator<double>> value_stats_by_scope_;
 };
 
 }  // namespace planning_diagnostics

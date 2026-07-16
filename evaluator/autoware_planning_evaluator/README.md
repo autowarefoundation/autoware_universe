@@ -304,13 +304,15 @@ Metrics are calculated and published only when the node receives a message on `~
   - Parameters:
     - `trajectory_validation.count_other_than_safe_as_error`: if `true`, any level other than SAFE (including LOW_CAUTION) counts as error; if `false`, HIGH_CAUTION and above count as error.
   - Sub-metrics to publish (value-based):
-    - `/{scope}/value`: instantaneous `MetricReport.metric_value` for metric-row scopes (`/{generator_name}/{validator_name}/{metric_name}` only).
+    - `/{scope}/value`: instantaneous `MetricReport.metric_value` for metric-row scopes (`trajectory_feasibility` excluded; use `error_duration` instead).
     - `/{scope}/error_duration`: current accumulated duration of the active error span for that scope (seconds).
     - `/{scope}/error_count`: number of error episodes (transitions into error) for that scope.
   - Sub-metrics to output:
     - `/{scope}/error_duration/min`, `/{scope}/error_duration/max`, `/{scope}/error_duration/mean`: statistics over completed error-span durations.
     - `/{scope}/error_duration/total`: sum of all completed error-span durations (seconds).
     - `/{scope}/error_count`: total error episodes.
+    - `/{scope}/value/min`, `/{scope}/value/max`, `/{scope}/value/count`: session statistics over published `metric_value` samples.
+    - `/{scope}/value/mean`: also output for non-`check_*` metrics (e.g. speed, DRAC, RSS).
 
 ### Other Information
 
