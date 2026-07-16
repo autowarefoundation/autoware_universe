@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: PcdMapTFGenerator.node
+package:
+  name: autoware_map_tf_generator
+  provider: autoware
+launch:
+  plugin: autoware::map_tf_generator::PcdMapTFGeneratorNode
+  executable: autoware_pcd_map_tf_generator
+  node_output: screen
+# interfaces
+subscribers:
+  - name: pointcloud_map
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: pointcloud_map
+publishers:
+  - name: ros_transform_static
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf_static
+# parameters
+param_files:
+  - name: map_tf_generator_param
+    default: $(find-pkg-share autoware_map_tf_generator)/config/map_tf_generator.param.yaml
+param_values:
+  - name: map_frame
+    type: string
+    default: map
+  - name: viewer_frame
+    type: string
+    default: viewer
+# processes
+processes:
+  - name: broadcast_map_tf
+    trigger_conditions:
+      - on_input: pointcloud_map
+    outcomes:
+      - to_output: ros_transform_static
