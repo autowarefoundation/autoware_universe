@@ -507,3 +507,17 @@ trajectory_modifier_params:
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
+    crossing_commitment_distance:
+      type: double
+      default_value: 0.0
+      description: Maximum distance at which an accepted stop-line crossing is remembered [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    crossing_commitment_duration:
+      type: double
+      default_value: 0.0
+      description: Duration to remember an accepted stop-line crossing [s]
+      validation:
+        bounds<>: [0.0, 60.0]
+      read_only: false

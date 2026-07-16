@@ -139,3 +139,5 @@
       th_stable_duration_amber: 0.2 # [s]
       th_amber_rejection_hysteresis: 0.5 # [s]
       crossing_time_limit: 2.75 # [s]
+      crossing_commitment_distance: 0.0 # [m] zero disables
+      crossing_commitment_duration: 0.0 # [s] zero disables

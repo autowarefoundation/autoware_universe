@@ -22,6 +22,8 @@
       jerk_limit: 5.0  # [m/s^3] trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
       delay_response_time: 0.5 # [s] delay response time used to estimate the minimum ego stopping distance
       crossing_time_limit: 2.75 # [s] trajectories crossing an amber light are rejected if they cannot cross before this time
+      crossing_commitment_distance: 0.0 # [m] maximum distance at which an accepted crossing is remembered; zero disables
+      crossing_commitment_duration: 0.0 # [s] duration to remember an accepted crossing; zero disables
       treat_amber_light_as_red_light: true # [-] when true, amber lights are handled like red lights
       treat_unknown_light_as_red_light: false # [-] when true, unknown lights are handled like red lights
       stop_overshoot_margin: 0.5 # [m] maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible

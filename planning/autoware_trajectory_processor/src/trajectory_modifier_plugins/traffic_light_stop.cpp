@@ -32,6 +32,8 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.deceleration_limit = stopping_params.maximum_deceleration;
   p.jerk_limit = stopping_params.jerk_limit;
   p.crossing_time_limit = tl_stop_p.crossing_time_limit;
+  p.crossing_commitment_distance = tl_stop_p.crossing_commitment_distance;
+  p.crossing_commitment_duration = tl_stop_p.crossing_commitment_duration;
   p.treat_amber_light_as_red_light = tl_stop_p.treat_amber_light_as_red;
   p.treat_unknown_light_as_red_light = tl_stop_p.treat_unknown_light_as_red;
   p.stop_overshoot_margin = tl_stop_p.overshoot_tolerance;
@@ -199,13 +201,19 @@ void TrafficLightStop::publish_debug_string() const
 {
   std::ostringstream ss;
   ss << std::fixed << std::setprecision(2) << std::boolalpha;
-  ss << "TRAFFIC LIGHT STOP MODIFIER: " << "\n";
-  ss << "\t\t" << "ACTIVE: " << debug_data_.active << "\n";
+  ss << "TRAFFIC LIGHT STOP MODIFIER: "
+     << "\n";
+  ss << "\t\t"
+     << "ACTIVE: " << debug_data_.active << "\n";
   if (debug_data_.active) {
-    ss << "\t\t" << "VIOLATIONS: " << debug_data_.violations_count << "\n";
-    ss << "\t\t" << "NEAREST VIOLATION: " << debug_data_.nearest_violation_arc_length << " m"
+    ss << "\t\t"
+       << "VIOLATIONS: " << debug_data_.violations_count << "\n";
+    ss << "\t\t"
+       << "NEAREST VIOLATION: " << debug_data_.nearest_violation_arc_length << " m"
        << "\n";
-    ss << "\t\t" << "STOP POINT: " << debug_data_.stop_point_arc_length << " m" << "\n";
+    ss << "\t\t"
+       << "STOP POINT: " << debug_data_.stop_point_arc_length << " m"
+       << "\n";
   }
   StringStamped string_stamp;
   string_stamp.stamp = get_clock()->now();

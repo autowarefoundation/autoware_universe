@@ -80,6 +80,8 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.jerk_limit = params.jerk_limit;
   p.delay_response_time = params.delay_response_time;
   p.crossing_time_limit = params.crossing_time_limit;
+  p.crossing_commitment_distance = params.crossing_commitment_distance;
+  p.crossing_commitment_duration = params.crossing_commitment_duration;
   p.treat_amber_light_as_red_light = params.treat_amber_light_as_red_light;
   p.treat_unknown_light_as_red_light = params.treat_unknown_light_as_red_light;
   p.stop_overshoot_margin = params.stop_overshoot_margin;

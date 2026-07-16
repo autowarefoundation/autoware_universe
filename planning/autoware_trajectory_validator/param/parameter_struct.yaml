@@ -59,6 +59,16 @@ validator:
       default_value: 2.75
       description: trajectories crossing an amber light are rejected if they cannot cross before this time
       read_only: false
+    crossing_commitment_distance:
+      type: double
+      default_value: 0.0
+      description: Maximum distance to a stop line at which an accepted crossing trajectory commits ego to crossing (m); zero disables the feature
+      read_only: false
+    crossing_commitment_duration:
+      type: double
+      default_value: 0.0
+      description: Duration for which a stop-line crossing commitment remains valid (seconds); zero disables the feature
+      read_only: false
     treat_amber_light_as_red_light:
       type: bool
       default_value: true

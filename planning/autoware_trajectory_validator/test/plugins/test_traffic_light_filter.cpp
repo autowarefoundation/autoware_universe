@@ -56,6 +56,8 @@ protected:
     node_->declare_parameter("traffic_light.jerk_limit", 5.0);
     node_->declare_parameter("traffic_light.delay_response_time", 0.5);
     node_->declare_parameter("traffic_light.crossing_time_limit", 2.75);
+    node_->declare_parameter("traffic_light.crossing_commitment_distance", 0.0);
+    node_->declare_parameter("traffic_light.crossing_commitment_duration", 0.0);
     node_->declare_parameter("traffic_light.treat_amber_light_as_red_light", false);
     node_->declare_parameter("traffic_light.treat_unknown_light_as_red_light", false);
     node_->declare_parameter("traffic_light.stable_duration_threshold_red", 0.0);
@@ -66,21 +68,22 @@ protected:
     node_->declare_parameter("traffic_light.checked_trajectory_length.deceleration_limit", 999.9);
     node_->declare_parameter("traffic_light.checked_trajectory_length.jerk_limit", 999.9);
 
-    validator::Params params;
-    params.traffic_light.deceleration_limit = 2.8;
-    params.traffic_light.jerk_limit = 5.0;
-    params.traffic_light.delay_response_time = 0.5;
-    params.traffic_light.crossing_time_limit = 2.75;
-    params.traffic_light.treat_amber_light_as_red_light = false;
-    params.traffic_light.treat_unknown_light_as_red_light = false;
-    params.traffic_light.stable_duration_threshold_red = 0.0;
-    params.traffic_light.stable_duration_threshold_amber = 0.0;
-    params.traffic_light.stable_duration_threshold_unknown = 0.0;
-    params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
-    params.traffic_light.ego_stopped_velocity_threshold = 0.01;
-    params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
-    params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
-    filter_->update_parameters(params);
+    params_.traffic_light.deceleration_limit = 2.8;
+    params_.traffic_light.jerk_limit = 5.0;
+    params_.traffic_light.delay_response_time = 0.5;
+    params_.traffic_light.crossing_time_limit = 2.75;
+    params_.traffic_light.crossing_commitment_distance = 0.0;
+    params_.traffic_light.crossing_commitment_duration = 0.0;
+    params_.traffic_light.treat_amber_light_as_red_light = false;
+    params_.traffic_light.treat_unknown_light_as_red_light = false;
+    params_.traffic_light.stable_duration_threshold_red = 0.0;
+    params_.traffic_light.stable_duration_threshold_amber = 0.0;
+    params_.traffic_light.stable_duration_threshold_unknown = 0.0;
+    params_.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+    params_.traffic_light.ego_stopped_velocity_threshold = 0.01;
+    params_.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+    params_.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+    filter_->update_parameters(params_);
 
     context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
     context_.route = std::make_shared<autoware_planning_msgs::msg::LaneletRoute>();
@@ -186,9 +189,25 @@ protected:
     EXPECT_EQ(res->is_feasible, expected_feasible) << message;
   }
 
+  void set_crossing_commitment_parameters(const double distance, const double duration)
+  {
+    params_.traffic_light.crossing_commitment_distance = distance;
+    params_.traffic_light.crossing_commitment_duration = duration;
+    filter_->update_parameters(params_);
+  }
+
+  void advance_time(const double duration)
+  {
+    auto odometry = *context_.odometry;
+    odometry.header.stamp =
+      rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(duration);
+    context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  }
+
   std::shared_ptr<TrafficLightFilter> filter_;
   std::shared_ptr<rclcpp::Node> node_;
   FilterContext context_;
+  validator::Params params_;
 };
 
 TEST_F(TrafficLightFilterTest, IsFeasibleEmptyInput)
@@ -272,6 +291,125 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithGreenLight)
   auto points = create_trajectory(0.0, 10.0);
 
   expect_feasibility(points, true, "Should return true for green light");
+}
+
+TEST_F(TrafficLightFilterTest, AcceptedCrossingRemainsFeasibleAfterSignalTurnsRed)
+{
+  constexpr lanelet::Id light_id = 110;
+  constexpr double stop_x = 5.0;
+  set_crossing_commitment_parameters(6.0, 2.0);
+  create_and_set_map(light_id, stop_x);
+
+  const auto crossing_trajectory = create_trajectory(0.0, 10.0);
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  expect_feasibility(crossing_trajectory, true, "The green-light crossing should be accepted");
+
+  advance_time(1.0);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(
+    crossing_trajectory, true,
+    "An accepted nearby crossing should remain feasible while its commitment is active");
+}
+
+TEST_F(TrafficLightFilterTest, CrossingCommitmentExpiresAfterConfiguredDuration)
+{
+  constexpr lanelet::Id light_id = 111;
+  constexpr double stop_x = 5.0;
+  set_crossing_commitment_parameters(6.0, 2.0);
+  create_and_set_map(light_id, stop_x);
+
+  const auto crossing_trajectory = create_trajectory(0.0, 10.0);
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  expect_feasibility(crossing_trajectory, true);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  advance_time(2.0);
+  expect_feasibility(
+    crossing_trajectory, true,
+    "The commitment should remain active at exactly the configured duration");
+
+  advance_time(0.001);
+  expect_feasibility(
+    crossing_trajectory, false,
+    "A red-light crossing should be rejected once the commitment duration has elapsed");
+}
+
+TEST_F(TrafficLightFilterTest, AcceptedCrossingOutsideCommitmentDistanceIsNotRemembered)
+{
+  constexpr lanelet::Id light_id = 112;
+  constexpr double stop_x = 5.0;
+  set_crossing_commitment_parameters(4.0, 2.0);
+  create_and_set_map(light_id, stop_x);
+
+  const auto crossing_trajectory = create_trajectory(0.0, 10.0);
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  expect_feasibility(crossing_trajectory, true);
+
+  advance_time(0.1);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(
+    crossing_trajectory, false,
+    "A crossing farther away than the configured distance should not create a commitment");
+}
+
+TEST_F(TrafficLightFilterTest, NonCrossingTrajectoryDoesNotCreateCrossingCommitment)
+{
+  constexpr lanelet::Id light_id = 113;
+  constexpr double stop_x = 5.0;
+  set_crossing_commitment_parameters(6.0, 2.0);
+  create_and_set_map(light_id, stop_x);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  expect_feasibility(create_trajectory(0.0, 4.0), true);
+
+  advance_time(0.1);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(
+    create_trajectory(0.0, 10.0), false,
+    "A previously accepted trajectory that did not cross the line should not grant permission");
+}
+
+TEST_F(TrafficLightFilterTest, TrajectoryStoppingBeforeLineDoesNotCreateCrossingCommitment)
+{
+  constexpr lanelet::Id light_id = 114;
+  constexpr double stop_x = 5.0;
+  set_crossing_commitment_parameters(6.0, 2.0);
+  create_and_set_map(light_id, stop_x);
+
+  auto stopping_trajectory = create_trajectory(0.0, 10.0);
+  auto stop_point = stopping_trajectory.front();
+  stop_point.pose.position.x = 4.0;
+  stop_point.longitudinal_velocity_mps = 0.0;
+  stop_point.time_from_start = rclcpp::Duration::from_seconds(0.8);
+  stopping_trajectory.insert(stopping_trajectory.begin() + 1, stop_point);
+
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  expect_feasibility(stopping_trajectory, true);
+
+  advance_time(0.1);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(
+    create_trajectory(0.0, 10.0), false,
+    "A trajectory stopping before the line should not create a crossing commitment");
+}
+
+TEST_F(TrafficLightFilterTest, AcceptedAmberCrossingCreatesCrossingCommitment)
+{
+  constexpr lanelet::Id light_id = 115;
+  constexpr double stop_x = 5.0;
+  set_crossing_commitment_parameters(6.0, 2.0);
+  create_and_set_map(light_id, stop_x);
+
+  const auto crossing_trajectory = create_trajectory(0.0, 10.0, 10.0);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+  expect_feasibility(
+    crossing_trajectory, true, "The nearby amber crossing is safe because ego cannot stop");
+
+  advance_time(0.1);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(
+    crossing_trajectory, true,
+    "A safe amber crossing should create the same commitment as a green crossing");
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithRedLightNoIntersection)

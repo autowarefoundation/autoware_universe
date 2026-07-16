@@ -99,6 +99,8 @@ struct Parameters
   double jerk_limit;
   double delay_response_time;
   double crossing_time_limit;
+  double crossing_commitment_distance;
+  double crossing_commitment_duration;
   bool treat_amber_light_as_red_light;
   bool treat_unknown_light_as_red_light;
   double stop_overshoot_margin;
