@@ -142,6 +142,18 @@
               },
               "required": [],
               "additionalProperties": false
+            },
+            "crossing_commitment_distance": {
+              "type": "number",
+              "description": "Maximum distance at which an accepted stop-line crossing is remembered [m]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "crossing_commitment_duration": {
+              "type": "number",
+              "description": "Duration for which an accepted stop-line crossing remains valid (seconds); zero disables the feature.",
+              "default": 0.0,
+              "minimum": 0.0
             }
           },
           "required": [],
