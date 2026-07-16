@@ -130,7 +130,8 @@ ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
 
     auto core_data = std::make_shared<CoreData>(
       original_points, sampled_points, previous_points_, objects_ptr, preferred_lanes,
-      candidate.header, candidate.generator_id, trajectory_history_ptr);
+      candidate.header, candidate.generator_id, trajectory_history_ptr,
+      candidate.turn_indicators_command);
 
     evaluator_->add(core_data);
   }
@@ -158,6 +159,7 @@ ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
     candidate.header = result->header();
     candidate.generator_id = result->uuid();
     candidate.points = *result->original();
+    candidate.turn_indicators_command = result->turn_indicators_command();
     autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory scored_trajectory;
     scored_trajectory.candidate_trajectory = candidate;
     scored_trajectory.score = result->total();

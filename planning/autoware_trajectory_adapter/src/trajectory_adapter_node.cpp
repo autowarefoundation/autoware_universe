@@ -24,7 +24,8 @@ TrajectoryAdapterNode::TrajectoryAdapterNode(const rclcpp::NodeOptions & node_op
   sub_trajectories_{this->create_subscription<ScoredCandidateTrajectories>(
     "~/input/trajectories", 1,
     std::bind(&TrajectoryAdapterNode::process, this, std::placeholders::_1))},
-  pub_trajectory_{this->create_publisher<Trajectory>("~/output/trajectory", 1)}
+  pub_trajectory_{this->create_publisher<Trajectory>("~/output/trajectory", 1)},
+  pub_turn_indicators_{this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1)}
 {
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/trajectory_adapter", 1);
@@ -62,6 +63,8 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
                             .points(trajectory_itr->candidate_trajectory.points);
 
   pub_trajectory_->publish(trajectory);
+
+  pub_turn_indicators_->publish(trajectory_itr->candidate_trajectory.turn_indicators_command);
 }
 
 }  // namespace autoware::trajectory_adapter
