@@ -14,18 +14,20 @@
 
 #include "autoware/planning_evaluator/metric_accumulators/trajectory_validation_accumulator.hpp"
 
+#include <cmath>
 #include <regex>
 
 namespace planning_diagnostics
 {
 namespace
 {
-bool levelIndicatesError(const RiskLevel::_level_type level, const bool count_warn_as_error)
+bool levelIndicatesError(
+  const RiskLevel::_level_type level, const bool count_other_than_safe_as_error)
 {
-  if (level >= RiskLevel::DANGER) {
+  if (level >= RiskLevel::HIGH_CAUTION) {
     return true;
   }
-  return count_warn_as_error && level > RiskLevel::LOW_CAUTION;
+  return count_other_than_safe_as_error && level > RiskLevel::SAFE;
 }
 
 /// Skip one-off object-id rows: metric_name like check_<prefix>_<32-hex> or
@@ -98,23 +100,31 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
     const double report_time_s =
       static_cast<double>(stamp.sec) + static_cast<double>(stamp.nanosec) * 1e-9;
 
-    const bool warn_as_err = parameters.count_warn_as_error;
+    const bool other_than_safe_as_err = parameters.count_other_than_safe_as_error;
     const double initial_span_duration_s = parameters.initial_span_duration_s;
-    const bool traj_err = levelIndicatesError(report.risk.level, warn_as_err);
+    const bool traj_err = levelIndicatesError(report.risk.level, other_than_safe_as_err);
     stats_by_scope_[gen].update(traj_err, report_time_s, initial_span_duration_s);
 
     // Rows in this report (last row wins if the same scope appears more than once).
     std::unordered_map<std::string, bool> present_error_by_scope;
+    std::unordered_map<std::string, double> value_by_scope;
     for (const auto & row : report.metrics) {
       if (!shouldCollectMetricRow(row.validator_name, row.metric_name)) {
         continue;
       }
       const std::string scope = gen + "/" + row.validator_name + "/" + row.metric_name;
-      present_error_by_scope[scope] = levelIndicatesError(row.risk.level, warn_as_err);
+      present_error_by_scope[scope] = levelIndicatesError(row.risk.level, other_than_safe_as_err);
+      if (row.metric_name != "trajectory_feasibility" && std::isfinite(row.metric_value)) {
+        value_by_scope[scope] = row.metric_value;
+      }
     }
 
     for (const auto & [scope, m_err] : present_error_by_scope) {
       stats_by_scope_[scope].update(m_err, report_time_s, initial_span_duration_s);
+    }
+
+    for (const auto & [scope, value] : value_by_scope) {
+      value_stats_by_scope_[scope].add(value);
     }
 
     for (const auto & entry : stats_by_scope_) {
@@ -126,6 +136,38 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
         continue;
       }
       stats_by_scope_[scope].update(false, report_time_s, initial_span_duration_s);
+    }
+  }
+}
+
+void TrajectoryValidationAccumulator::addInstantMetricMsgs(
+  const ValidationReportArray & msg, MetricArrayMsg & metrics_msg)
+{
+  if (msg.reports.empty()) {
+    return;
+  }
+
+  const std::string base = metric_to_str.at(Metric::trajectory_validation) + "/";
+  MetricMsg m;
+
+  for (const auto & report : msg.reports) {
+    const std::string & gen = report.generator_name;
+    // Last row wins if the same scope appears more than once.
+    std::unordered_map<std::string, double> value_by_scope;
+    for (const auto & row : report.metrics) {
+      if (!shouldCollectMetricRow(row.validator_name, row.metric_name)) {
+        continue;
+      }
+      if (row.metric_name == "trajectory_feasibility" || !std::isfinite(row.metric_value)) {
+        continue;
+      }
+      const std::string scope = makeMetricScopeKey(gen, row.validator_name, row.metric_name);
+      value_by_scope[scope] = row.metric_value;
+    }
+    for (const auto & [scope, value] : value_by_scope) {
+      m.name = base + scope + "/value";
+      m.value = std::to_string(value);
+      metrics_msg.metric_array.push_back(m);
     }
   }
 }
@@ -171,6 +213,19 @@ json TrajectoryValidationAccumulator::getOutputJson(const OutputMetric & output_
     }
     if (st.error_count > 0) {
       j[scope + "/error_count"] = st.error_count;
+    }
+  }
+  for (const auto & [scope, acc] : value_stats_by_scope_) {
+    if (acc.count() == 0) {
+      continue;
+    }
+    j[scope + "/value/min"] = acc.min();
+    j[scope + "/value/max"] = acc.max();
+    j[scope + "/value/count"] = acc.count();
+    const auto slash = scope.rfind('/');
+    const std::string metric_name = slash == std::string::npos ? scope : scope.substr(slash + 1);
+    if (metric_name.rfind("check_", 0) != 0) {
+      j[scope + "/value/mean"] = acc.mean();
     }
   }
   return j;
