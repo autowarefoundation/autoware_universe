@@ -199,8 +199,12 @@ void DiffusionPlanner::set_up_params()
   params_.delay_step = this->declare_parameter<int64_t>("delay_step", 0);
   params_.line_string_max_step_m = this->declare_parameter<double>("line_string_max_step_m", 5.0);
   params_.use_time_interpolation = this->declare_parameter<bool>("use_time_interpolation", false);
-  params_.object_motion_resampling.enable =
-    this->declare_parameter<bool>("object_motion_resampling.enable", true);
+  // Read-only: the resampling and legacy paths keep incompatible history buffers, so the mode is
+  // fixed for the node's lifetime.
+  rcl_interfaces::msg::ParameterDescriptor resampling_enable_descriptor;
+  resampling_enable_descriptor.read_only = true;
+  params_.object_motion_resampling.enable = this->declare_parameter<bool>(
+    "object_motion_resampling.enable", true, resampling_enable_descriptor);
   params_.object_motion_resampling.max_extrapolation_time =
     this->declare_parameter<double>("object_motion_resampling.max_extrapolation_time", 0.5);
   params_.start_guidance_reference_distance_m =
@@ -316,8 +320,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(parameters, "delay_step", temp_params.delay_step);
     update_param<double>(parameters, "line_string_max_step_m", temp_params.line_string_max_step_m);
     update_param<bool>(parameters, "use_time_interpolation", temp_params.use_time_interpolation);
-    update_param<bool>(
-      parameters, "object_motion_resampling.enable", temp_params.object_motion_resampling.enable);
     update_param<double>(
       parameters, "object_motion_resampling.max_extrapolation_time",
       temp_params.object_motion_resampling.max_extrapolation_time);
