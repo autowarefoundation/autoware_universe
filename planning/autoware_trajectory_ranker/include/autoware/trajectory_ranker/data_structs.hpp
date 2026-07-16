@@ -20,6 +20,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <autoware_vehicle_msgs/msg/steering_report.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <std_msgs/msg/header.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
@@ -37,6 +38,7 @@ using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::SteeringReport;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using std_msgs::msg::Header;
 using unique_identifier_msgs::msg::UUID;
 
@@ -65,7 +67,8 @@ struct CoreData
     const std::shared_ptr<PredictedObjects> & objects,
     const std::shared_ptr<lanelet::ConstLanelets> & preferred_lanes, const Header & header,
     const UUID & generator_id,
-    const std::shared_ptr<std::deque<Trajectory>> & trajectory_history = nullptr)
+    const std::shared_ptr<std::deque<Trajectory>> & trajectory_history = nullptr,
+    const TurnIndicatorsCommand & turn_indicators_command = TurnIndicatorsCommand{})
   : original{original},
     points{points},
     previous_points{previous_points},
@@ -74,7 +77,8 @@ struct CoreData
     tag{"__anon"},
     header{header},
     generator_id{generator_id},
-    trajectory_history{trajectory_history}
+    trajectory_history{trajectory_history},
+    turn_indicators_command{turn_indicators_command}
   {
   }
 
@@ -88,6 +92,7 @@ struct CoreData
   Header header;
   UUID generator_id;
   std::shared_ptr<std::deque<Trajectory>> trajectory_history;
+  TurnIndicatorsCommand turn_indicators_command;
 };
 
 struct EvaluatorParameters
@@ -120,6 +125,7 @@ struct EvaluationResult
   UUID uuid() const { return data->generator_id; }
   std::shared_ptr<TrajectoryPoints> original() const { return data->original; }
   std::shared_ptr<TrajectoryPoints> points() const { return data->points; }
+  TurnIndicatorsCommand turn_indicators_command() const { return data->turn_indicators_command; }
   float total() const { return total_score; }
 };
 
