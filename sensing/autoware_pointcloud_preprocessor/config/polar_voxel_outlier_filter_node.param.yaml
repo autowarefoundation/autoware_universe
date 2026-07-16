@@ -18,6 +18,8 @@
     low_visibility_entropy_threshold: 0.3
     low_visibility_anisotropy_threshold: 0.95
     low_visibility_average_intensity_threshold: 2.0
+    low_visibility_sparse_voxel_point_count_threshold: 10
+    low_visibility_sparse_voxel_secondary_return_ratio_threshold: 0.2
     visibility_estimation_max_secondary_voxel_count: 500
     primary_return_types: [1, 6, 8, 10]
     visibility_estimation_only: false
