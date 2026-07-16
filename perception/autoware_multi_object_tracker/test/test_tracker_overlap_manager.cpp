@@ -359,9 +359,9 @@ TEST_F(TrackerOverlapManagerTest, StalePartialVehicleDoesNotAbsorbImmatureFreshT
   std::list<std::shared_ptr<mot::Tracker>> trackers{stale_partial, fresh_new};
   runMerge(trackers, mergeTime());
 
-  // The stale partial tracker outranks-loses to the fresh one, but the fresh one is not yet
-  // confident, so the winner-eligibility check defers the merge: both trackers survive. The stale
-  // tracker must never absorb the fresh detection.
+  // The fresh tracker outranks the stale partial one but is not yet confident, so the
+  // winner-eligibility check defers the merge: both trackers survive. The stale tracker must
+  // never absorb the fresh detection.
   EXPECT_EQ(trackers.size(), 2U);
   EXPECT_TRUE(
     std::any_of(trackers.begin(), trackers.end(), [&](const auto & t) { return t == fresh_new; }));

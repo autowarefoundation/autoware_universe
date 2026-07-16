@@ -53,10 +53,9 @@ private:
   int total_no_measurement_count_;
   int total_measurement_count_;
   rclcpp::Time last_update_with_measurement_time_;
-  // Time of the last "full" measurement: one from a channel that provides a trustworthy full box
-  // (channel_info.trust_extension). Partial observations (clusters/corners, trust_extension=false)
-  // do NOT refresh this. Used by overlap pruning to demote a tracker that has been coasting on
-  // partial updates so it cannot absorb a fresh bbox-spawned tracker.
+  // Time of the last measurement from a channel providing a trustworthy full box
+  // (channel_info.trust_extension); partial observations (clusters/corners) leave it unchanged.
+  // Overlap pruning demotes trackers that are stale on full measurements.
   rclcpp::Time last_fully_measured_time_;
   std::vector<types::ExistenceProbability> existence_probabilities_;
   float total_existence_probability_;
@@ -213,8 +212,7 @@ protected:
     object.trust_extension = trust_extension_;
   }
 
-  // Elapsed seconds from last_fully_measured_time_; backs the vehicle-tracker overrides of
-  // getElapsedTimeFromFullMeasurement().
+  // Shared implementation for the getElapsedTimeFromFullMeasurement() overrides.
   double elapsedSinceLastFullMeasurement(const rclcpp::Time & current_time) const
   {
     return (current_time - last_fully_measured_time_).seconds();

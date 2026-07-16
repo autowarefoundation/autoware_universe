@@ -29,7 +29,7 @@ namespace
 
 constexpr float min_known_prob = 0.2f;
 
-// Deadbands for the ranking tiers that compare continuous quantities.
+// Dead-bands for the ranking tiers that compare continuous quantities.
 constexpr double cov_det_relative_tol = 0.05;
 constexpr double cov_det_absolute_tol = 1e-9;
 

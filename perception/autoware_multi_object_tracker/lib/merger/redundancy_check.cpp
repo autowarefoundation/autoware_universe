@@ -72,8 +72,8 @@ bool isRedundant(
     // Any overlap (precision > 0) or a majority-covered target marks the unknown as redundant.
     return precision > precision_threshold || recall > recall_threshold;
   } else {
-    // Both are unknown: generalized IoU, with disjoint pairs (GIoU <= 0, reachable under a
-    // negative threshold) merge-eligible only within the boundary-gap bound.
+    // Both are unknown: generalized IoU, where a disjoint pair (GIoU <= 0, admitted by a
+    // negative threshold) is redundant only within the boundary-gap bound.
     double iou = shapes::get2dGeneralizedIoU(source_object, target_object);
     if (iou <= config.unknown_pair_min_giou) return false;
     return iou > 0.0 ||
