@@ -9,13 +9,6 @@ launch:
   executable: vad_node
   node_output: screen
 # interfaces
-# NOTE: the camera image (sensor_msgs/msg/Image, via image_transport) and
-# camera_info (sensor_msgs/msg/CameraInfo) subscriptions are created dynamically,
-# one pair per camera, for i in [0, node_params.num_cameras). Representative
-# sockets image0/camera_info0 are shown; additional cameras follow the same
-# ~/input/image<i> / ~/input/camera_info<i> pattern (the CARLA-tiny launcher
-# enumerates 6: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT).
-# Deployment-specific configuration is carried by the param files below.
 subscribers:
   - name: kinematic_state
     message_type: nav_msgs/msg/Odometry
@@ -26,7 +19,27 @@ subscribers:
     global: /tf_static
   - name: image0
     message_type: sensor_msgs/msg/Image
+  - name: image1
+    message_type: sensor_msgs/msg/Image
+  - name: image2
+    message_type: sensor_msgs/msg/Image
+  - name: image3
+    message_type: sensor_msgs/msg/Image
+  - name: image4
+    message_type: sensor_msgs/msg/Image
+  - name: image5
+    message_type: sensor_msgs/msg/Image
   - name: camera_info0
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info1
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info2
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info3
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info4
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info5
     message_type: sensor_msgs/msg/CameraInfo
 publishers:
   - name: trajectory
