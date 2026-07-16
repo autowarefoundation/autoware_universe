@@ -825,8 +825,8 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
     return;
   }
 
-  RCLCPP_FATAL(logger_, "invalid state found.");
-  return;
+  // NOTE: unreachable. ControlState has only DRIVE, STOPPING, STOPPED, and EMERGENCY, and every
+  // branch above returns.
 }
 
 PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
