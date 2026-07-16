@@ -15,11 +15,14 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import LoadComposableNodes
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
-from launch_ros.descriptions import ComposableNode
+from launch_ros.substitutions import FindPackageShare
 import yaml
 
 
@@ -31,51 +34,49 @@ def launch_setup(context, *args, **kwargs):
     with open(LaunchConfiguration("external_cmd_selector_param_path").perform(context), "r") as f:
         external_cmd_selector_param = yaml.safe_load(f)["/**"]["ros__parameters"]
 
-    component = ComposableNode(
+    remappings = [
+        _create_mapping_tuple("service/select_external_command"),
+        _create_mapping_tuple("output/current_selector_mode"),
+        _create_mapping_tuple("input/local/pedals_cmd"),
+        _create_mapping_tuple("input/local/steering_cmd"),
+        _create_mapping_tuple("input/local/heartbeat"),
+        _create_mapping_tuple("input/local/gear_cmd"),
+        _create_mapping_tuple("input/local/turn_indicators_cmd"),
+        _create_mapping_tuple("input/local/hazard_lights_cmd"),
+        _create_mapping_tuple("input/remote/pedals_cmd"),
+        _create_mapping_tuple("input/remote/steering_cmd"),
+        _create_mapping_tuple("input/remote/heartbeat"),
+        _create_mapping_tuple("input/remote/gear_cmd"),
+        _create_mapping_tuple("input/remote/turn_indicators_cmd"),
+        _create_mapping_tuple("input/remote/hazard_lights_cmd"),
+        _create_mapping_tuple("output/pedals_cmd"),
+        _create_mapping_tuple("output/steering_cmd"),
+        _create_mapping_tuple("output/heartbeat"),
+        _create_mapping_tuple("output/gear_cmd"),
+        _create_mapping_tuple("output/turn_indicators_cmd"),
+        _create_mapping_tuple("output/hazard_lights_cmd"),
+    ]
+
+    # external_cmd_selector runs as autoware::agnocast_wrapper::Node, which does not
+    # support being loaded into any component container (agnocast-aware or not), so it
+    # is always launched standalone. The heaphook must be preloaded when Agnocast is
+    # enabled (ld_preload_value is provided by agnocast_env.launch.py).
+    node = Node(
         package="autoware_external_cmd_selector",
-        plugin="autoware::external_cmd_selector::ExternalCmdSelector",
+        executable="autoware_external_cmd_selector",
         name="external_cmd_selector",
-        remappings=[
-            _create_mapping_tuple("service/select_external_command"),
-            _create_mapping_tuple("output/current_selector_mode"),
-            _create_mapping_tuple("input/local/pedals_cmd"),
-            _create_mapping_tuple("input/local/steering_cmd"),
-            _create_mapping_tuple("input/local/heartbeat"),
-            _create_mapping_tuple("input/local/gear_cmd"),
-            _create_mapping_tuple("input/local/turn_indicators_cmd"),
-            _create_mapping_tuple("input/local/hazard_lights_cmd"),
-            _create_mapping_tuple("input/remote/pedals_cmd"),
-            _create_mapping_tuple("input/remote/steering_cmd"),
-            _create_mapping_tuple("input/remote/heartbeat"),
-            _create_mapping_tuple("input/remote/gear_cmd"),
-            _create_mapping_tuple("input/remote/turn_indicators_cmd"),
-            _create_mapping_tuple("input/remote/hazard_lights_cmd"),
-            _create_mapping_tuple("output/pedals_cmd"),
-            _create_mapping_tuple("output/steering_cmd"),
-            _create_mapping_tuple("output/heartbeat"),
-            _create_mapping_tuple("output/gear_cmd"),
-            _create_mapping_tuple("output/turn_indicators_cmd"),
-            _create_mapping_tuple("output/hazard_lights_cmd"),
-        ],
+        remappings=remappings,
         parameters=[
             external_cmd_selector_param,
         ],
-        extra_arguments=[
-            {
-                "use_intra_process_comms": LaunchConfiguration("use_intra_process"),
-            }
-        ],
-    )
-
-    loader = LoadComposableNodes(
-        composable_node_descriptions=[component],
-        target_container=LaunchConfiguration("target_container"),
+        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
+        output="screen",
     )
 
     group = GroupAction(
         [
             PushRosNamespace(""),
-            loader,
+            node,
         ]
     )
 
@@ -85,9 +86,6 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     # fmt: off
     arguments = [
-        # component
-        DeclareLaunchArgument("use_intra_process"),
-        DeclareLaunchArgument("target_container"),
         # mode select
         DeclareLaunchArgument("service/select_external_command", default_value="~/select_external_command"),
         DeclareLaunchArgument("output/current_selector_mode", default_value="~/current_selector_mode"),
@@ -115,4 +113,19 @@ def generate_launch_description():
     ]
     # fmt: on
 
-    return LaunchDescription(arguments + [OpaqueFunction(function=launch_setup)])
+    # Resolves use_agnocast/ld_preload_value (heaphook + existing LD_PRELOAD) from the
+    # ENABLE_AGNOCAST environment variable, and spawns the per-launch Agnocast discovery
+    # agent when enabled. No-op when Agnocast is disabled.
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        )
+    )
+
+    return LaunchDescription(arguments + [agnocast_env, OpaqueFunction(function=launch_setup)])
