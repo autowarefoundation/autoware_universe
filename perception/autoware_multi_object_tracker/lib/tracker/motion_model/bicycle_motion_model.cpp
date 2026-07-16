@@ -474,9 +474,11 @@ bool BicycleMotionModel::blendAxleCovariance(const double blend_ratio)
   P_swapped.col(IDX::X1).swap(P_swapped.col(IDX::X2));
   P_swapped.col(IDX::Y1).swap(P_swapped.col(IDX::Y2));
 
-  // Convex combination toward the persymmetric average: PSD-preserving, leaves the center-position
-  // and yaw marginals unchanged, scales the mean<->difference coupling by (1 - alpha).
-  const StateMat P_new = (1.0 - 0.5 * alpha) * P_t + (0.5 * alpha) * P_swapped;
+  // Convex combination toward the persymmetric average scales the mean<->difference coupling by
+  // (1 - alpha); the diagonal top-up keeps every variance at or above its original value, so the
+  // smaller axle variance inflates toward the larger one and no axis tightens. PSD-preserving.
+  StateMat P_new = (1.0 - 0.5 * alpha) * P_t + (0.5 * alpha) * P_swapped;
+  P_new.diagonal() += (0.5 * alpha) * (P_swapped.diagonal() - P_t.diagonal()).cwiseAbs();
 
   ekf_.init(X_t, P_new);  // covariance-only update
 

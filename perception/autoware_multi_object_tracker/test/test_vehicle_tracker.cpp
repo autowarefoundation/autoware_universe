@@ -201,16 +201,16 @@ TEST(BlendAxleCovariance, NoOpAtZero)
   EXPECT_DOUBLE_EQ(exportedYawVariance(model), yaw_var_before);
 }
 
-// The persymmetric average preserves Cov(difference), so the exported yaw variance is unchanged
-// even at full blend — the blend removes coupling, it does not loosen (or tighten) heading.
-TEST(BlendAxleCovariance, PreservesYawVariance)
+// The blend only inflates variances: the exported yaw variance never tightens, and with the
+// asymmetric front/rear covariance of an evolved vehicle it strictly grows at full blend.
+TEST(BlendAxleCovariance, NeverTightensYawVariance)
 {
   BicycleMotionModel model = makeEvolvedVehicle();
   const double yaw_var_before = exportedYawVariance(model);
 
   EXPECT_TRUE(model.blendAxleCovariance(1.0));
 
-  EXPECT_NEAR(exportedYawVariance(model), yaw_var_before, 1e-9);
+  EXPECT_GT(exportedYawVariance(model), yaw_var_before);
 }
 
 // The core behavior: a common lateral bias rotates the box when the front/rear covariance is
