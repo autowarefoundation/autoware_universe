@@ -54,23 +54,19 @@ class TrajectoryTemporalMPTOptimizer : public TrajectoryOptimizerPluginBase
 public:
   TrajectoryTemporalMPTOptimizer() = default;
 
-  void initialize(
-    const std::string & name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper) override;
+  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
 
-  void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+  void update_params(const TrajectoryOptimizerParams & params) override;
 
-  void set_up_params() override;
-
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) override;
+protected:
+  void on_initialize(const TrajectoryOptimizerParams & params) override;
 
 private:
   std::unique_ptr<temporal_mpt::AcadosInterface> acados_interface_;
   TemporalMPTParams mpt_params_;
 
+  void set_mpt_params(
+    const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params);
   void create_or_reset_solver();
   void update_bicycle_geometry_from_vehicle();
   void apply_solver_model_parameters();
