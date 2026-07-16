@@ -304,6 +304,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
   std::unordered_map<std::size_t, double> id_to_stamp_map,
   std::shared_ptr<FusionCollectorInfoBase> collector_info)
 {
+  std::lock_guard<std::recursive_mutex> diagnostic_lock(diagnostic_mutex_);
+
   ExportObj output_msg;
   postprocess(*(output_det3d_msg), output_msg);
 
@@ -648,6 +650,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::show_diagnostic_message(
   std::unordered_map<std::size_t, double> id_to_stamp_map,
   std::shared_ptr<FusionCollectorInfoBase> collector_info)
 {
+  std::lock_guard<std::recursive_mutex> diagnostic_lock(diagnostic_mutex_);
+
   msg3d_fused_ = false;
   diagnostic_collector_info_ = std::move(collector_info);
   diagnostic_id_to_stamp_map_ = std::move(id_to_stamp_map);
@@ -658,6 +662,8 @@ template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::check_fusion_status(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
+  std::lock_guard<std::recursive_mutex> diagnostic_lock(diagnostic_mutex_);
+
   if (publish_output_msg_ || drop_previous_but_late_output_msg_ || !msg3d_fused_) {
     stat.add("msg3d/is_fused", msg3d_fused_);
 
