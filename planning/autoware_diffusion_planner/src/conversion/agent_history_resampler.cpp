@@ -46,10 +46,12 @@ double get_yaw(const Eigen::Matrix4d & pose)
   return std::atan2(pose(1, 0), pose(0, 0));
 }
 
+// Signed longitudinal speed: the twist is body-frame, so the sign of linear.x carries reverse
+// motion into the CTRV propagation.
 double get_speed(const AgentState & state)
 {
   const auto & linear = state.original_info.kinematics.twist_with_covariance.twist.linear;
-  return std::hypot(linear.x, linear.y);
+  return std::copysign(std::hypot(linear.x, linear.y), linear.x);
 }
 
 double get_yaw_rate(const AgentState & state)
@@ -140,11 +142,13 @@ std::optional<AgentHistory> resample_history(
   }
 
   // R3 flip pre-pass: trusting the newest observation, walk backward and rotate any older heading
-  // that differs from its newer neighbor by more than FLIP_YAW_THRESHOLD_RAD by pi.
+  // that differs from its newer neighbor by more than FLIP_YAW_THRESHOLD_RAD by pi. The velocity
+  // vector is unchanged, so its longitudinal component in the corrected heading inverts.
   for (size_t idx = n - 1; idx-- > 0;) {
     const double delta = autoware_utils_math::normalize_radian(obs_yaw[idx] - obs_yaw[idx + 1]);
     if (std::abs(delta) > FLIP_YAW_THRESHOLD_RAD) {
       obs_yaw[idx] = autoware_utils_math::normalize_radian(obs_yaw[idx] + M_PI);
+      obs_speed[idx] = -obs_speed[idx];
     }
   }
 
@@ -167,7 +171,8 @@ std::optional<AgentHistory> resample_history(
 
     if (target_sec <= obs_time[0]) {
       // Before the oldest observation. Within the backward horizon, extrapolate via the motion
-      // model. Beyond the horizon, freeze at the oldest observation instead of fabricating an
+      // model. Beyond the horizon, freeze at the oldest observation with its template twist —
+      // the repeat-fill signature the model saw for pre-appearance slots in training.
       const double back_dt = target_sec - obs_time[0];  // <= 0
       if (-back_dt > params.max_extrapolation_time) {
         grid_states.push_back(make_grid_state(
@@ -196,8 +201,8 @@ std::optional<AgentHistory> resample_history(
       grid_states.push_back(make_grid_state(raw[i1].original_info, x, y, yaw, target_time, speed));
     } else {
       // After the newest observation: extrapolate the leading edge forward via the motion model.
-      // Every retained history is current (disappeared agents are erased at ingestion), so there is
-      // no frozen branch here.
+      // Emitted agents are present in the latest message, so the newest observation lags
+      // frame_time by at most one tracker cycle and the extrapolation stays clamped.
       const MotionState start{obs_x[n - 1], obs_y[n - 1], obs_yaw[n - 1]};
       const MotionState propagated = propagate_motion(
         start, obs_speed[n - 1], obs_yaw_rate[n - 1], target_sec - newest_time, params);

@@ -145,15 +145,16 @@ TEST(AgentLifecycleTest, DedupOnNonAdvancingStamp)
   EXPECT_NEAR(latest_x(histories[0]), 0.0, 1e-6);  // stale x = 99 was ignored
 }
 
-// A disappeared agent is erased immediately (the tick after it is absent), leaving no dead history.
-TEST(AgentLifecycleTest, DisappearedAgentErasedImmediately)
+// An agent absent from the latest message is withheld from emission; its history stays buffered
+// internally but nothing dead reaches the model.
+TEST(AgentLifecycleTest, DisappearedAgentWithheldFromEmission)
 {
   const auto params = make_params();
   const UUID uuid = autoware_utils_uuid::generate_uuid();
   AgentData agent_data;
 
   agent_data.update_histories(make_msg({make_object(uuid, 0.0, 10.0)}, 100.0), params);
-  // Next tick (stamp advances): agent absent -> its history is dropped at once.
+  // Next tick (stamp advances): agent absent -> not emitted.
   agent_data.update_histories(make_msg({}, 100.1), params);
 
   const rclcpp::Time frame_time = to_time(100.1);
@@ -163,9 +164,9 @@ TEST(AgentLifecycleTest, DisappearedAgentErasedImmediately)
   EXPECT_EQ(histories.size(), 0u);
 }
 
-// A re-identification (agent A vanishes, agent B appears elsewhere) drops A immediately; only the
-// fresh B history remains, so A cannot teleport onto B.
-TEST(AgentLifecycleTest, DisappearedAgentDroppedOnReidentification)
+// A re-identification (agent A vanishes, agent B appears elsewhere) withholds A; only the fresh B
+// history is emitted, so A cannot teleport onto B.
+TEST(AgentLifecycleTest, DisappearedAgentWithheldOnReidentification)
 {
   const auto params = make_params();
   const UUID uuid_a = autoware_utils_uuid::generate_uuid();
@@ -181,7 +182,79 @@ TEST(AgentLifecycleTest, DisappearedAgentDroppedOnReidentification)
     frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
 
   ASSERT_EQ(histories.size(), 1u);
-  EXPECT_NEAR(latest_x(histories[0]), 50.0, 1e-6);  // only B; A was dropped, not frozen near 0
+  EXPECT_NEAR(latest_x(histories[0]), 50.0, 1e-6);  // only B; A is withheld, not frozen near 0
+}
+
+// A track suppressed for a tick and re-published resumes its retained history: the gap slot is
+// interpolated between the real observations that bracket it.
+TEST(AgentLifecycleTest, ReappearanceResumesRetainedHistory)
+{
+  const auto params = make_params();
+  const UUID uuid = autoware_utils_uuid::generate_uuid();
+  AgentData agent_data;
+
+  agent_data.update_histories(make_msg({make_object(uuid, 0.0, 10.0)}, 100.0), params);
+  agent_data.update_histories(make_msg({}, 100.1), params);
+  // Reappears stopped at x = 2; a fresh single-observation history would place every past slot
+  // at x = 2, while the retained one brackets the gap with the x = 0 observation.
+  agent_data.update_histories(make_msg({make_object(uuid, 2.0, 0.0)}, 100.2), params);
+
+  const rclcpp::Time frame_time = to_time(100.2);
+  const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
+    frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
+
+  ASSERT_EQ(histories.size(), 1u);
+  const auto & states = histories[0].states();
+  ASSERT_EQ(states.size(), static_cast<size_t>(INPUT_T_WITH_CURRENT));
+  // Slot at 100.1 interpolates the gap; slot at 100.0 hits the retained observation.
+  EXPECT_NEAR(states[states.size() - 2].pose(0, 3), 1.0, 1e-6);
+  EXPECT_NEAR(states[states.size() - 3].pose(0, 3), 0.0, 1e-6);
+}
+
+// A history whose newest observation ages past the history window is pruned; the same UUID
+// reappearing later starts from a fresh single-observation backfill.
+TEST(AgentLifecycleTest, RetainedHistoryPrunedBeyondWindow)
+{
+  const auto params = make_params();
+  const UUID uuid = autoware_utils_uuid::generate_uuid();
+  AgentData agent_data;
+
+  agent_data.update_histories(make_msg({make_object(uuid, 0.0, 10.0)}, 100.0), params);
+  // Empty ticks age the retained history past the 3.0 s window.
+  agent_data.update_histories(make_msg({}, 101.0), params);
+  agent_data.update_histories(make_msg({}, 102.0), params);
+  agent_data.update_histories(make_msg({}, 103.1), params);
+  agent_data.update_histories(make_msg({make_object(uuid, 50.0, 0.0)}, 103.2), params);
+
+  const rclcpp::Time frame_time = to_time(103.2);
+  const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
+    frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
+
+  ASSERT_EQ(histories.size(), 1u);
+  const auto & states = histories[0].states();
+  // Stationary fresh backfill: every slot sits at the reappearance position.
+  EXPECT_NEAR(states.front().pose(0, 3), 50.0, 1e-6);
+  EXPECT_NEAR(states.back().pose(0, 3), 50.0, 1e-6);
+}
+
+// A stamp regression beyond the history window (bag loop / sim reset) clears the buffers and the
+// message is ingested as the first one.
+TEST(AgentLifecycleTest, BackwardJumpResetsBuffers)
+{
+  const auto params = make_params();
+  const UUID uuid = autoware_utils_uuid::generate_uuid();
+  AgentData agent_data;
+
+  agent_data.update_histories(make_msg({make_object(uuid, 0.0, 0.0)}, 100.0), params);
+  // Time jumps back by 90 s: not a dedup drop, a reset.
+  agent_data.update_histories(make_msg({make_object(uuid, 7.0, 0.0)}, 10.0), params);
+
+  const rclcpp::Time frame_time = to_time(10.0);
+  const auto histories = agent_data.resampled_transformed_and_trimmed_histories(
+    frame_time, Eigen::Matrix4d::Identity(), NEIGHBOR_SHAPE[1], params);
+
+  ASSERT_EQ(histories.size(), 1u);
+  EXPECT_NEAR(latest_x(histories[0]), 7.0, 1e-6);
 }
 
 // A freshly seen agent has no real past. Within the backward extrapolation horizon the

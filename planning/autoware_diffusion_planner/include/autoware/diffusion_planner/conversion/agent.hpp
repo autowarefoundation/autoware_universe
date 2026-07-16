@@ -40,6 +40,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 namespace autoware::diffusion_planner
@@ -164,22 +165,26 @@ struct AgentData
   // Legacy buffering: push unconditionally, fill new agents with copies, erase disappeared agents.
   void update_histories(const TrackedObjects & objects);
 
-  // Resampled buffering: dedup on advancing header stamp, retain disappeared agents (marked not
-  // live), grow histories without repeat-fill, and prune agents fully aged out of the window.
+  // Resampled buffering: dedup on advancing header stamp, reset on a backward time jump, grow
+  // histories without repeat-fill, and retain absent agents until their newest observation ages
+  // out of the history window.
   void update_histories(const TrackedObjects & objects, const HistoryResamplingParams & params);
 
   // Transform histories, trim to max_num_agent, and return the processed vector.
   std::vector<AgentHistory> transformed_and_trimmed_histories(
     const Eigen::Matrix4d & transform, size_t max_num_agent) const;
 
-  // Resampled counterpart of transformed_and_trimmed_histories: re-time each retained history onto
-  // the odometry-anchored constant grid (see resample_history) before transform, sort, and trim.
+  // Resampled counterpart of transformed_and_trimmed_histories: emit only agents present in the
+  // latest message, re-timing each history onto the odometry-anchored constant grid (see
+  // resample_history) before transform, sort, and trim.
   std::vector<AgentHistory> resampled_transformed_and_trimmed_histories(
     const rclcpp::Time & frame_time, const Eigen::Matrix4d & transform, size_t max_num_agent,
     const HistoryResamplingParams & params) const;
 
 private:
   std::unordered_map<std::string, AgentHistory> histories_map_;
+  // UUIDs present in the latest ingested message; only these are emitted by the resampled path.
+  std::unordered_set<std::string> latest_ids_;
   std::optional<rclcpp::Time> last_processed_stamp_;
 };
 

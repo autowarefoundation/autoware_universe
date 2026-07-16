@@ -14,6 +14,15 @@
 
 #include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 
+#include "autoware/diffusion_planner/dimensions.hpp"
+
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
+
+#include <autoware_perception_msgs/msg/object_classification.hpp>
+#include <autoware_perception_msgs/msg/shape.hpp>
+#include <autoware_perception_msgs/msg/tracked_object.hpp>
+
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -28,6 +37,26 @@ HistoryResamplingParams make_params()
   HistoryResamplingParams params;
   params.max_extrapolation_time = 0.5;
   return params;
+}
+
+// Single-observation history of a car at (x, 0) heading +x with body-frame longitudinal speed vx.
+AgentHistory make_single_obs_history(const double x, const double vx, const rclcpp::Time & stamp)
+{
+  autoware_perception_msgs::msg::TrackedObject object;
+  object.object_id = autoware_utils_uuid::generate_uuid();
+  object.kinematics.pose_with_covariance.pose.position.x = x;
+  object.kinematics.pose_with_covariance.pose.orientation =
+    autoware_utils_geometry::create_quaternion_from_yaw(0.0);
+  object.kinematics.twist_with_covariance.twist.linear.x = vx;
+  object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  autoware_perception_msgs::msg::ObjectClassification classification;
+  classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+  classification.probability = 0.9;
+  object.classification.push_back(classification);
+
+  AgentHistory history(NEIGHBOR_HISTORY_BUFFER_SIZE);
+  history.update(object, stamp);
+  return history;
 }
 }  // namespace
 
@@ -128,6 +157,28 @@ TEST(AgentHistoryResamplerTest, InterpolateYawMidpoint)
   EXPECT_NEAR(interpolate_yaw(0.0, M_PI_2, 0.5), M_PI_4, 1e-9);
   EXPECT_NEAR(interpolate_yaw(0.0, M_PI_2, 0.0), 0.0, 1e-9);
   EXPECT_NEAR(interpolate_yaw(0.0, M_PI_2, 1.0), M_PI_2, 1e-9);
+}
+
+// A negative body-frame linear.x is a reversing vehicle: forward-extrapolated slots land behind
+// the newest observation along its heading.
+TEST(AgentHistoryResamplerTest, ReverseMotionExtrapolatesBackwardAlongHeading)
+{
+  const auto params = make_params();
+  const rclcpp::Time obs_time(100, 0);
+  const auto history = make_single_obs_history(0.0, -5.0, obs_time);
+
+  // Frame time 0.2 s past the observation: the two newest slots extrapolate forward in time.
+  const rclcpp::Time frame_time(100, 200000000);
+  const auto resampled = resample_history(history, frame_time, params);
+
+  ASSERT_TRUE(resampled.has_value());
+  const auto & states = resampled->states();
+  ASSERT_EQ(states.size(), static_cast<size_t>(INPUT_T_WITH_CURRENT));
+  EXPECT_NEAR(states.back().pose(0, 3), -1.0, 1e-6);              // 0.2 s at -5 m/s
+  EXPECT_NEAR(states[states.size() - 2].pose(0, 3), -0.5, 1e-6);  // 0.1 s at -5 m/s
+  EXPECT_NEAR(states[states.size() - 3].pose(0, 3), 0.0, 1e-6);   // the observation itself
+  // Backward extrapolation runs the reverse motion the other way: older slots sit ahead (+x).
+  EXPECT_GT(states[states.size() - 4].pose(0, 3), 0.0);
 }
 
 }  // namespace autoware::diffusion_planner::test

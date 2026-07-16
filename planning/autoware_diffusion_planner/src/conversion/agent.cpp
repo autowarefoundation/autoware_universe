@@ -14,6 +14,7 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
+#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
@@ -158,6 +159,20 @@ void AgentData::update_histories(
 {
   const rclcpp::Time objects_timestamp(objects.header.stamp);
 
+  // Beyond this age no retained observation can contribute a grid slot.
+  constexpr double retention_horizon_s =
+    static_cast<double>(INPUT_T_WITH_CURRENT - 1) * constants::PREDICTION_TIME_STEP_S;
+
+  // A stamp regression beyond the retention horizon is a time reset (bag loop / sim restart):
+  // drop all buffered state and ingest the message as the first one.
+  if (
+    last_processed_stamp_.has_value() &&
+    (last_processed_stamp_.value() - objects_timestamp).seconds() > retention_horizon_s) {
+    histories_map_.clear();
+    latest_ids_.clear();
+    last_processed_stamp_.reset();
+  }
+
   // Dedup: the neighbor subscriber polls the latest message, so the same (stale) message can be
   // served on consecutive ticks. Only ingest messages whose stamp strictly advances.
   if (last_processed_stamp_.has_value() && objects_timestamp <= last_processed_stamp_.value()) {
@@ -165,7 +180,7 @@ void AgentData::update_histories(
   }
   last_processed_stamp_ = objects_timestamp;
 
-  std::vector<std::string> found_ids;
+  latest_ids_.clear();
   for (const TrackedObject & object : objects.objects) {
     if (get_model_label(object) == AgentLabel::IGNORE) {
       continue;
@@ -185,12 +200,14 @@ void AgentData::update_histories(
         histories_map_.emplace(object_id, AgentHistory(NEIGHBOR_HISTORY_BUFFER_SIZE));
       inserted->second.update(object, objects_timestamp);
     }
-    found_ids.push_back(object_id);
+    latest_ids_.insert(object_id);
   }
 
-  // Erase any history whose agent is absent from this message immediately
+  // Prune histories whose newest observation has aged out of the history window; absent agents
+  // within the window stay buffered so a re-published track resumes its real history.
   for (auto it = histories_map_.begin(); it != histories_map_.end();) {
-    if (std::find(found_ids.begin(), found_ids.end(), it->first) == found_ids.end()) {
+    const double age_s = (objects_timestamp - it->second.get_latest_state().timestamp).seconds();
+    if (age_s > retention_horizon_s) {
       it = histories_map_.erase(it);
     } else {
       ++it;
@@ -204,7 +221,12 @@ std::vector<AgentHistory> AgentData::resampled_transformed_and_trimmed_histories
 {
   std::vector<AgentHistory> histories;
   histories.reserve(histories_map_.size());
-  for (const auto & [_, history] : histories_map_) {
+  for (const auto & [object_id, history] : histories_map_) {
+    // Emission mirrors the tracker's publication verdict: agents absent from the latest message
+    // stay buffered but are withheld from the model.
+    if (latest_ids_.count(object_id) == 0) {
+      continue;
+    }
     auto resampled = resample_history(history, frame_time, params);
     if (resampled.has_value()) {
       histories.push_back(std::move(resampled.value()));

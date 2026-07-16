@@ -67,8 +67,9 @@ double interpolate_yaw(double yaw_a, double yaw_b, double ratio);
 
 /**
  * @brief Re-time one history onto the 0.1s grid anchored at frame_time (oldest first, newest at
- * frame_time): interpolate within the observations, extrapolate live agents past the newest one,
- * freeze disappeared ones. Returns std::nullopt for an empty history.
+ * frame_time): interpolate within the observations, extrapolate (clamped) past the newest one,
+ * and freeze slots beyond the backward horizon at the oldest observation. Returns std::nullopt
+ * for an empty history.
  */
 std::optional<AgentHistory> resample_history(
   const AgentHistory & history, const rclcpp::Time & frame_time,
