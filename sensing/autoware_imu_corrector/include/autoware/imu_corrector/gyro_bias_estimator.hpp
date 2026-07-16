@@ -17,6 +17,9 @@
 #include "gyro_bias_estimation_module.hpp"
 
 #include <Eigen/Dense>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -33,7 +36,7 @@
 
 namespace autoware::imu_corrector
 {
-class GyroBiasEstimator : public rclcpp::Node
+class GyroBiasEstimator : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit GyroBiasEstimator(const rclcpp::NodeOptions & options);
@@ -100,12 +103,15 @@ public:
 
 private:
   void update_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat);
-  void callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg_ptr);
-  void callback_odom(const nav_msgs::msg::Odometry::ConstSharedPtr odom_msg_ptr);
+  void callback_imu(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Imu) & imu_msg_ptr);
+  void callback_odom(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) & odom_msg_ptr);
   void callback_pose_msg(
-    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
+    pose_msg_ptr);
   void estimate_scale_gyro(
-    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
+    pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
   double compute_yaw_rate_from_quat(
@@ -117,13 +123,13 @@ private:
 
   const std::string output_frame_ = "base_link";
 
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_sub_;
-  rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr gyro_bias_pub_;
-  rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr gyro_scale_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_scaled_pub_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::Imu) imu_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(nav_msgs::msg::Odometry) odom_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) pose_sub_;
+  AUTOWARE_PUBLISHER_PTR(geometry_msgs::msg::Vector3Stamped) gyro_bias_pub_;
+  AUTOWARE_PUBLISHER_PTR(geometry_msgs::msg::Vector3Stamped) gyro_scale_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Imu) imu_scaled_pub_;
+  AUTOWARE_TIMER_PTR timer_;
   rclcpp::Time start_time_check_scale_;
   rclcpp::Time last_time_rx_pose_;
   rclcpp::Time last_time_rx_imu_;
@@ -162,12 +168,15 @@ private:
   double avg_rate_pose_;
   double avg_rate_gyro_;
 
-  diagnostic_updater::Updater updater_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater updater_;
 
   std::optional<geometry_msgs::msg::Vector3> gyro_bias_;
   std::optional<geometry_msgs::msg::Vector3> gyro_bias_not_rotated_;
 
-  std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
+  using TfListener = autoware_utils::TransformListenerT<
+    autoware::agnocast_wrapper::Node, autoware::agnocast_wrapper::Buffer,
+    autoware::agnocast_wrapper::TransformListener>;
+  std::shared_ptr<TfListener> transform_listener_;
 
   std::string imu_frame_;
 
@@ -207,7 +216,8 @@ private:
   };
 
   void update_rate_ekf(
-    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr & pose_msg,
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
+      pose_msg,
     EKFEstimateScaleRateVars & ekf_rate_state);
 
   DiagnosticsInfo diagnostics_info_;
