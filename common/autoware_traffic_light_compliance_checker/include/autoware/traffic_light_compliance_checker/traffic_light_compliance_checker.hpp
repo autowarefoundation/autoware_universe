@@ -76,11 +76,13 @@ private:
 
   void cleanup_amber_rejection_history(const rclcpp::Time & current_time);
 
+  void cleanup_crossing_commitment_history(const rclcpp::Time & current_time);
+
   [[nodiscard]] tl::expected<ComplianceResult, std::string> check_with_filtered_signals(
     const Inputs & input,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & filtered_signals,
     const std::vector<int64_t> & force_reject_amber_ids, const bool check_red_lights,
-    const bool check_amber_lights) const;
+    const bool check_amber_lights);
 
   std::vector<Violation> get_red_light_violations(
     const std::vector<StopLineInfo> & red_stop_lines,
@@ -114,6 +116,7 @@ private:
   vehicle_info_utils::VehicleInfo vehicle_info_;
   std::unique_ptr<TrafficLightStatusTracker> status_tracker_;
   std::unordered_map<int64_t, rclcpp::Time> amber_rejection_history_;
+  std::unordered_map<int64_t, rclcpp::Time> crossing_commitment_history_;
 };
 
 }  // namespace autoware::traffic_light_compliance_checker

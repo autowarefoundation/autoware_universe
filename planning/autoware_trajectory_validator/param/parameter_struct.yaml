@@ -62,7 +62,7 @@ validator:
     crossing_commitment_distance:
       type: double
       default_value: 0.0
-      description: Maximum distance to a stop line at which an accepted crossing trajectory commits ego to crossing (m); zero disables the feature
+      description: Maximum distance before a stop line at which an accepted crossing trajectory commits ego to crossing (m); zero permits commitment once the ego front reaches or passes the line
       read_only: false
     crossing_commitment_duration:
       type: double

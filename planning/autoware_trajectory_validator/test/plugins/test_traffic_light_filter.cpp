@@ -352,6 +352,52 @@ TEST_F(TrafficLightFilterTest, AcceptedCrossingOutsideCommitmentDistanceIsNotRem
     "A crossing farther away than the configured distance should not create a commitment");
 }
 
+TEST_F(TrafficLightFilterTest, CrossingCommitmentDistanceIsMeasuredFromEgoFrontPoint)
+{
+  constexpr lanelet::Id light_id = 116;
+  constexpr double stop_x = 5.0;
+  set_crossing_commitment_parameters(4.0, 2.0);
+
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+  vehicle_info.max_longitudinal_offset_m = 2.0;
+  filter_->set_vehicle_info(vehicle_info);
+  create_and_set_map(light_id, stop_x);
+
+  // The stop line is 5 m from base_link but only 3 m from the 2 m front offset.
+  const auto crossing_trajectory = create_trajectory(0.0, 10.0);
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  expect_feasibility(crossing_trajectory, true);
+
+  advance_time(0.1);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(
+    crossing_trajectory, true,
+    "The crossing should be remembered because the ego front is within the distance threshold");
+}
+
+TEST_F(TrafficLightFilterTest, ZeroCommitmentDistanceAllowsEgoFrontBeyondStopLine)
+{
+  constexpr lanelet::Id light_id = 117;
+  constexpr double stop_x = 1.5;
+  set_crossing_commitment_parameters(0.0, 2.0);
+
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+  vehicle_info.max_longitudinal_offset_m = 2.0;
+  filter_->set_vehicle_info(vehicle_info);
+  create_and_set_map(light_id, stop_x);
+
+  // The base_link is before the stop line while the ego front is 0.5 m beyond it.
+  const auto crossing_trajectory = create_trajectory(0.0, 10.0);
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  expect_feasibility(crossing_trajectory, true);
+
+  advance_time(0.1);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(
+    crossing_trajectory, true,
+    "A zero distance should still remember a crossing once the ego front passed the stop line");
+}
+
 TEST_F(TrafficLightFilterTest, NonCrossingTrajectoryDoesNotCreateCrossingCommitment)
 {
   constexpr lanelet::Id light_id = 113;
