@@ -1315,6 +1315,20 @@ CandidateOutput StaticObstacleAvoidanceModule::planCandidate() const
 
   auto shifted_path = data.candidate_path;
 
+  // candidate_path is empty when updateData() returns early before fillShiftLine() runs.
+  // Typical cases: modified goal / route change (lanelet_sequence temporarily empty),
+  // empty previous reference path, or empty current_lanelets in fillFundamentalData().
+  // avoid_data_.update() resets candidate_path every cycle, so it stays empty in these cases.
+  //
+  // planWaitingApproval() always calls planCandidate() even when updateData() skipped
+  // planning. Without this guard, findEgoIndex() / findNearestIndex() throw
+  // std::invalid_argument via validateNonEmpty() and terminate the node.
+  if (shifted_path.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000, "Candidate path is empty. Skip planning candidate.");
+    return output;
+  }
+
   if (data.safe_shift_line.empty()) {
     const size_t ego_idx = planner_data_->findEgoIndex(shifted_path.path.points);
     utils::clipPathLength(
