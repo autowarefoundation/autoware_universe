@@ -50,7 +50,8 @@ using json = nlohmann::json;
  *    Per generator, metric scopes already present in stats (keys `gen/validator/metric` in
  *    stats_by_scope_) are updated every report; missing rows are treated as OK for that step.
  *
- * `count_warn_as_error`: if false, only ERROR(2); if true, WARN(1) also counts as error.
+ * `count_other_than_safe_as_error`: if false, HIGH_CAUTION and above count as error; if true,
+ * LOW_CAUTION also counts as error (anything other than SAFE).
  *
  * Metric rows whose `metric_name` matches `check_*_<32-hex UUID>` (optional `_<suffix>`) are
  * skipped (object-id-specific checks); see `shouldCollectMetricRow` in
@@ -61,7 +62,7 @@ class TrajectoryValidationAccumulator
 public:
   struct Parameters
   {
-    bool count_warn_as_error = false;
+    bool count_other_than_safe_as_error = false;
     double initial_span_duration_s =
       0.1;  // [s] default duration on the first frame of an error span
   } parameters;

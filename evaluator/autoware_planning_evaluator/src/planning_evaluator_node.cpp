@@ -104,8 +104,8 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   metrics_accumulator_.blinker_accumulator.parameters.window_duration_s =
     declare_parameter<double>("blinker_change_count.window_duration_s");
 
-  metrics_accumulator_.trajectory_validation_accumulator.parameters.count_warn_as_error =
-    declare_parameter<bool>("trajectory_validation.count_warn_as_error", false);
+  metrics_accumulator_.trajectory_validation_accumulator.parameters.count_other_than_safe_as_error =
+    declare_parameter<bool>("trajectory_validation.count_other_than_safe_as_error", false);
 
   // Parameters for node
   output_metrics_ = declare_parameter<bool>("output_metrics");

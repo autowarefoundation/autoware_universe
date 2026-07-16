@@ -20,12 +20,13 @@ namespace planning_diagnostics
 {
 namespace
 {
-bool levelIndicatesError(const RiskLevel::_level_type level, const bool count_warn_as_error)
+bool levelIndicatesError(
+  const RiskLevel::_level_type level, const bool count_other_than_safe_as_error)
 {
-  if (level >= RiskLevel::DANGER) {
+  if (level >= RiskLevel::HIGH_CAUTION) {
     return true;
   }
-  return count_warn_as_error && level > RiskLevel::LOW_CAUTION;
+  return count_other_than_safe_as_error && level > RiskLevel::SAFE;
 }
 
 /// Skip one-off object-id rows: metric_name like check_<prefix>_<32-hex> or
@@ -98,9 +99,9 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
     const double report_time_s =
       static_cast<double>(stamp.sec) + static_cast<double>(stamp.nanosec) * 1e-9;
 
-    const bool warn_as_err = parameters.count_warn_as_error;
+    const bool other_than_safe_as_err = parameters.count_other_than_safe_as_error;
     const double initial_span_duration_s = parameters.initial_span_duration_s;
-    const bool traj_err = levelIndicatesError(report.risk.level, warn_as_err);
+    const bool traj_err = levelIndicatesError(report.risk.level, other_than_safe_as_err);
     stats_by_scope_[gen].update(traj_err, report_time_s, initial_span_duration_s);
 
     // Rows in this report (last row wins if the same scope appears more than once).
@@ -110,7 +111,8 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
         continue;
       }
       const std::string scope = gen + "/" + row.validator_name + "/" + row.metric_name;
-      present_error_by_scope[scope] = levelIndicatesError(row.risk.level, warn_as_err);
+      present_error_by_scope[scope] =
+        levelIndicatesError(row.risk.level, other_than_safe_as_err);
     }
 
     for (const auto & [scope, m_err] : present_error_by_scope) {
