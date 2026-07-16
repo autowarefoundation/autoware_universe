@@ -251,7 +251,7 @@ void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg:
   }
 
   if (msg.points.size() < 2) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_, 3000, "Unexpected trajectory size < 2. Ignored.");
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "Unexpected trajectory size < 2. Ignored.");
     return;
   }
 
@@ -462,8 +462,6 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   control_data.operation_mode = input_data.current_operation_mode;
   control_data.interpolated_traj = m_last_valid_trajectory;
   if (control_data.interpolated_traj.points.size() < 2) {
-    RCLCPP_ERROR_THROTTLE(
-      logger_, *clock_, 3000, "Trajectory size is less than 2. Cannot calculate control data.");
     return control_data;
   }
   const double traj_start_time =
