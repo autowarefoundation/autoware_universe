@@ -30,8 +30,6 @@ bool isRedundant(
   constexpr double precision_threshold = 0.;
   constexpr double recall_threshold = 0.5;
 
-  const double generalized_iou_threshold = config.pruning_giou_threshold;
-
   const bool is_pedestrian =
     (source_label == classes::Label::PEDESTRIAN && target_label == classes::Label::PEDESTRIAN);
   const bool is_target_known = target_known_prob >= min_known_prob;
@@ -40,7 +38,7 @@ bool isRedundant(
   if (is_pedestrian) {
     double iou = shapes::get1dIoU(source_object, target_object);
     if (iou < min_valid_iou) return false;
-    return iou > config.min_known_object_removal_iou;
+    return iou > config.pedestrian_pair_min_iou;
   } else if (is_target_known && is_source_known) {
     // Both known. Plain IoU misses over-segmented fragments that carry a classification
     // (e.g. semantic-segmentation clusters): a small fragment inside a full-size object has
@@ -56,7 +54,7 @@ bool isRedundant(
     if (precision < min_valid_iou || recall < min_valid_iou) return false;
     // IoU recovered from precision (I/src) and recall (I/tgt): U = I*(1/p + 1/r - 1)
     const double iou = 1.0 / (1.0 / precision + 1.0 / recall - 1.0);
-    if (iou > config.min_known_object_removal_iou) return true;
+    if (iou > config.known_pair_min_iou) return true;
     // Containment: target mostly covered by source, and target area (= source area * p/r)
     // less than half of source area
     constexpr double containment_recall_threshold = 0.5;
@@ -74,9 +72,12 @@ bool isRedundant(
     // Any overlap (precision > 0) or a majority-covered target marks the unknown as redundant.
     return precision > precision_threshold || recall > recall_threshold;
   } else {
-    // Both are unknown: use generalized IoU
+    // Both are unknown: generalized IoU, with disjoint pairs (GIoU <= 0, reachable under a
+    // negative threshold) merge-eligible only within the boundary-gap bound.
     double iou = shapes::get2dGeneralizedIoU(source_object, target_object);
-    return iou > generalized_iou_threshold;
+    if (iou <= config.unknown_pair_min_giou) return false;
+    return iou > 0.0 ||
+           shapes::get2dMinimumGap(source_object, target_object) <= config.unknown_pair_max_gap;
   }
 }
 

@@ -186,7 +186,8 @@ struct MergeEdge
 std::vector<MergeEdge> decideMergeEdges(
   std::vector<TrackerSnapshot> & snapshots, const DecisionContext & ctx)
 {
-  const std::vector<std::pair<size_t, size_t>> candidate_pairs = findCandidatePairs(snapshots);
+  const std::vector<std::pair<size_t, size_t>> candidate_pairs =
+    findCandidatePairs(snapshots, ctx.config.unknown_pair_max_gap);
 
   std::vector<MergeEdge> edges;
   edges.reserve(candidate_pairs.size());

@@ -213,14 +213,15 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     params_.association_config.buildMaxDistances();
   }
 
-  params_.tracker_overlap_manager_config.min_known_object_removal_iou =
-    declare_parameter<double>("min_known_object_removal_iou");
-  params_.tracker_overlap_manager_config.min_unknown_object_removal_iou =
-    declare_parameter<double>("min_unknown_object_removal_iou");
-
-  // pruning parameters
-  params_.tracker_overlap_manager_config.pruning_giou_threshold =
-    declare_parameter<double>("pruning_generalized_iou_threshold");
+  // pruning parameters: tracker-pair redundancy thresholds per label-pair class
+  params_.tracker_overlap_manager_config.pedestrian_pair_min_iou =
+    declare_parameter<double>("pruning_pedestrian_pair_min_iou");
+  params_.tracker_overlap_manager_config.known_pair_min_iou =
+    declare_parameter<double>("pruning_known_pair_min_iou");
+  params_.tracker_overlap_manager_config.unknown_pair_min_giou =
+    declare_parameter<double>("pruning_unknown_pair_min_giou");
+  params_.tracker_overlap_manager_config.unknown_pair_max_gap =
+    declare_parameter<double>("pruning_unknown_pair_max_gap");
   // Per-tracker-type configuration (tracker_configs.<tracker>.<member>)
   params_.tracker_configs.polygon_tracker.enable_velocity_estimation =
     declare_parameter<bool>("tracker_configs.polygon_tracker.enable_velocity_estimation");

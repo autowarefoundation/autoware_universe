@@ -110,22 +110,32 @@
         "tracker_configs": {
           "$ref": "#/definitions/tracker_configs"
         },
-        "min_known_object_removal_iou": {
+        "pruning_pedestrian_pair_min_iou": {
           "type": "number",
-          "description": "Minimum IOU between associated objects with known label to remove younger tracker.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum 1D IoU between two pedestrian trackers to mark the pair redundant.",
           "default": 0.1
         },
-        "min_unknown_object_removal_iou": {
+        "pruning_known_pair_min_iou": {
           "type": "number",
-          "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker.",
-          "default": 0.001
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum 2D IoU between two known-class trackers to mark the pair redundant; a small fragment contained in a larger object merges by containment below this.",
+          "default": 0.1
         },
-        "pruning_generalized_iou_threshold": {
+        "pruning_unknown_pair_min_giou": {
           "type": "number",
           "minimum": -1.0,
           "maximum": 1.0,
-          "description": "Generalized IoU threshold applied to all tracked classes.",
+          "description": "Minimum generalized IoU between two unknown trackers to mark the pair redundant. Negative values admit disjoint pairs, bounded by pruning_unknown_pair_max_gap.",
           "default": 0.1
+        },
+        "pruning_unknown_pair_max_gap": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Maximum boundary gap [m] for a disjoint unknown-unknown pair to stay merge-eligible.",
+          "default": 1.0
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -177,9 +187,10 @@
         "publish_on_timer",
         "delay_compensation",
         "tracker_configs",
-        "min_known_object_removal_iou",
-        "min_unknown_object_removal_iou",
-        "pruning_generalized_iou_threshold",
+        "pruning_pedestrian_pair_min_iou",
+        "pruning_known_pair_min_iou",
+        "pruning_unknown_pair_min_giou",
+        "pruning_unknown_pair_max_gap",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",

@@ -34,10 +34,11 @@
       static_tracker:
         convert_polygon_to_bbox: false # convert POLYGON shape to BOUNDING_BOX at publish time
 
-    # pruning parameters
-    min_known_object_removal_iou: 0.1  # [ratio]
-    min_unknown_object_removal_iou: 0.001  # [ratio]
-    pruning_generalized_iou_threshold: 0.1  # [ratio]
+    # pruning parameters: tracker-pair redundancy thresholds per label-pair class
+    pruning_pedestrian_pair_min_iou: 0.1  # [ratio] 1D IoU between two pedestrians
+    pruning_known_pair_min_iou: 0.1       # [ratio] 2D IoU between two known-class objects
+    pruning_unknown_pair_min_giou: 0.1    # [ratio] GIoU between two unknowns; negative admits disjoint pairs
+    pruning_unknown_pair_max_gap: 1.0     # [m] boundary-gap bound for disjoint unknown-unknown pairs
 
     # debug parameters
     publish_processing_time: false

@@ -237,7 +237,7 @@ TEST_F(TrackerOverlapManagerTest, ClassifiedFragmentAbsorbedByContainment)
 {
   const auto time = baseTime();
   // A classified fragment fully inside a much larger same-class object, with IoU below
-  // min_known_object_removal_iou (0.1): plain IoU keeps both; only the containment criterion
+  // known_pair_min_iou (0.1): plain IoU keeps both; only the containment criterion
   // absorbs the fragment. Both use the same tracker type so direction is decided by
   // confidence/covariance, not priority.
   const auto car_obj = makeBboxObject(0.0, 0.0, 10.0, 2.4, mot::classes::Label::CAR, time);

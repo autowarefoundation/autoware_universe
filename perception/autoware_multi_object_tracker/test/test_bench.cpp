@@ -169,10 +169,11 @@ autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlap
 {
   autoware::multi_object_tracker::TrackerOverlapManagerConfig config;
 
-  config.min_known_object_removal_iou = 0.1;      // [ratio]
-  config.min_unknown_object_removal_iou = 0.001;  // [ratio]
+  config.pedestrian_pair_min_iou = 0.1;  // [ratio]
+  config.known_pair_min_iou = 0.1;       // [ratio]
 
-  config.pruning_giou_threshold = -0.3;  // [ratio]
+  config.unknown_pair_min_giou = -0.3;  // [ratio]
+  config.unknown_pair_max_gap = 1.0;    // [m]
 
   return config;
 }

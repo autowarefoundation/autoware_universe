@@ -24,13 +24,15 @@
 namespace autoware::multi_object_tracker::detail
 {
 
-// Discover every tracker pair whose bounding boxes could overlap, via the multi-circle gate.
-// The gate covers each tracker's oriented bounding box with a chain of equal circles along its
-// longer axis; a pair whose circles stay farther apart than (radius_a + radius_b + gate_margin)
-// cannot overlap. The circle union is a superset of the box, so the gate admits every pair the
-// geometric redundancy test could accept.
+// Discover every tracker pair whose shapes could satisfy the redundancy test, via the
+// multi-circle gate. The gate covers each tracker's oriented bounding box with a chain of equal
+// circles along its longer axis; a pair whose circles stay farther apart than
+// (radius_a + radius_b + margin) cannot pass. The cover and per-pair margin are a superset of
+// each redundancy criterion: known pairs require shape overlap, pedestrian pairs the 1D-IoU disc
+// inside their single circumscribing circle, unknown pairs a boundary gap within
+// unknown_pair_max_gap.
 std::vector<std::pair<size_t, size_t>> findCandidatePairs(
-  const std::vector<TrackerSnapshot> & snapshots);
+  const std::vector<TrackerSnapshot> & snapshots, const double unknown_pair_max_gap);
 
 }  // namespace autoware::multi_object_tracker::detail
 
