@@ -123,5 +123,5 @@
       steer_rate_margin: 0.2 # [rad/s] margin of steer_rate around 0 to count as steer change
 
     trajectory_validation:
-      # If true, WARN counts as error for report-level and each MetricReport; if false, only ERROR.
-      count_warn_as_error: false
+      # If true, LOW_CAUTION also counts as error; if false, HIGH_CAUTION and above count as error.
+      count_other_than_safe_as_error: false

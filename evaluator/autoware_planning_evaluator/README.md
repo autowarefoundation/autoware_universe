@@ -302,7 +302,7 @@ Metrics are calculated and published only when the node receives a message on `~
     - `/{generator_name}`: whole-trajectory result from `ValidationReport.level`.
     - `/{generator_name}/{validator_name}/{metric_name}`: per-row result from each `MetricReport` (names matching `check_*_<object-uuid>` patterns may be excluded; see implementation).
   - Parameters:
-    - `trajectory_validation.count_warn_as_error`: if `true`, both WARN and ERROR count as error; if `false`, only ERROR.
+    - `trajectory_validation.count_other_than_safe_as_error`: if `true`, any level other than SAFE (including LOW_CAUTION) counts as error; if `false`, HIGH_CAUTION and above count as error.
   - Sub-metrics to publish (value-based):
     - `/{scope}/value`: instantaneous `MetricReport.metric_value` for metric-row scopes (`/{generator_name}/{validator_name}/{metric_name}` only).
     - `/{scope}/error_duration`: current accumulated duration of the active error span for that scope (seconds).
