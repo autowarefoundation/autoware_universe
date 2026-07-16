@@ -61,7 +61,9 @@ TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result.value().is_feasible);
@@ -86,7 +88,9 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSpeedExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
   ASSERT_TRUE(result.has_value());
   EXPECT_FALSE(result.value().is_feasible);
@@ -111,7 +115,9 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenAccelerationExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
   ASSERT_TRUE(result.has_value());
   EXPECT_FALSE(result.value().is_feasible);
@@ -137,7 +143,9 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenDecelerationExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
   ASSERT_TRUE(result.has_value());
   EXPECT_FALSE(result.value().is_feasible);
@@ -166,7 +174,9 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringAngleExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
   ASSERT_TRUE(result.has_value());
   EXPECT_FALSE(result.value().is_feasible);
@@ -197,7 +207,9 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringRateExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
   ASSERT_TRUE(result.has_value());
   EXPECT_FALSE(result.value().is_feasible);

@@ -118,8 +118,9 @@ void TrafficLightFilter::set_vehicle_info(const VehicleInfo & vehicle_info)
 }
 
 TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext & context)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (const auto has_invalid_input = is_invalid_input(context, vehicle_info_ptr_)) {
     return tl::make_unexpected(*has_invalid_input);
   }
