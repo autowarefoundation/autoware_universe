@@ -57,6 +57,11 @@ class EvalTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    const auto * const enable_agnocast = std::getenv("ENABLE_AGNOCAST");
+    if (enable_agnocast != nullptr && std::string(enable_agnocast) == "1") {
+      GTEST_SKIP() << "This test launches a node and is skipped under ENABLE_AGNOCAST=1";
+    }
+
     rclcpp::init(0, nullptr);
 
     rclcpp::NodeOptions options;
@@ -236,7 +241,7 @@ protected:
 
   void spin_some()
   {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
