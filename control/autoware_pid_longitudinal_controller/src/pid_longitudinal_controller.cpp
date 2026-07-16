@@ -31,6 +31,18 @@
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
+namespace
+{
+std::string toStr(const ControlState state)
+{
+  if (state == ControlState::DRIVE) return "DRIVE";
+  if (state == ControlState::STOPPING) return "STOPPING";
+  if (state == ControlState::STOPPED) return "STOPPED";
+  if (state == ControlState::EMERGENCY) return "EMERGENCY";
+  return "UNDEFINED";
+}
+}  // namespace
+
 PidLongitudinalController::PidLongitudinalController(
   rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
 : node_parameters_(node.get_node_parameters_interface()),
@@ -58,8 +70,6 @@ PidLongitudinalController::PidLongitudinalController(
   }
 
   m_wheel_base = autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo().wheel_base_m;
-  m_vehicle_width =
-    autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo().vehicle_width_m;
   m_front_overhang =
     autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo().front_overhang_m;
 
@@ -245,22 +255,6 @@ PidLongitudinalController::PidLongitudinalController(
   setupDiagnosticUpdater();
 }
 
-void PidLongitudinalController::setKinematicState(const nav_msgs::msg::Odometry & msg)
-{
-  m_current_kinematic_state = msg;
-}
-
-void PidLongitudinalController::setCurrentAcceleration(
-  const geometry_msgs::msg::AccelWithCovarianceStamped & msg)
-{
-  m_current_accel = msg;
-}
-
-void PidLongitudinalController::setCurrentOperationMode(const OperationModeState & msg)
-{
-  m_current_operation_mode = msg;
-}
-
 void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg)
 {
   if (!longitudinal_utils::isValidTrajectory(msg, m_use_temporal_trajectory)) {
@@ -273,7 +267,7 @@ void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg:
     return;
   }
 
-  m_trajectory = msg;
+  m_last_valid_trajectory = msg;
 }
 
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
@@ -431,14 +425,9 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
 {
   // set input data
   setTrajectory(input_data.current_trajectory);
-  setKinematicState(input_data.current_odometry);
-  setCurrentAcceleration(input_data.current_accel);
-  setCurrentOperationMode(input_data.current_operation_mode);
 
-  // calculate current pose and control data
-  geometry_msgs::msg::Pose current_pose = m_current_kinematic_state.pose.pose;
-
-  const auto control_data = getControlData(current_pose);
+  // calculate control data
+  const auto control_data = getControlData(input_data);
 
   // update control state
   updateControlState(control_data);
@@ -458,21 +447,28 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   // publish debug data
   publishDebugData(ctrl_cmd, control_data);
 
+  // publish virtual wall marker if created during this cycle
+  publishVirtualWallMarker();
+
   return output;
 }
 
 PidLongitudinalController::ControlData PidLongitudinalController::getControlData(
-  const geometry_msgs::msg::Pose & current_pose)
+  const trajectory_follower::InputData & input_data)
 {
   ControlData control_data{};
+
+  const geometry_msgs::msg::Pose & current_pose = input_data.current_odometry.pose.pose;
 
   // dt
   control_data.dt = getDt();
 
   // current velocity and acceleration
-  control_data.current_motion.vel = m_current_kinematic_state.twist.twist.linear.x;
-  control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
-  control_data.interpolated_traj = m_trajectory;
+  control_data.current_motion.vel = input_data.current_odometry.twist.twist.linear.x;
+  control_data.current_motion.acc = input_data.current_accel.accel.accel.linear.x;
+  control_data.current_pose = current_pose;
+  control_data.operation_mode = input_data.current_operation_mode;
+  control_data.interpolated_traj = m_last_valid_trajectory;
   if (control_data.interpolated_traj.points.size() < 2) {
     RCLCPP_ERROR_THROTTLE(
       logger_, *clock_, 3000, "Trajectory size is less than 2. Cannot calculate control data.");
@@ -487,7 +483,7 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   autoware_planning_msgs::msg::TrajectoryPoint target_point;
 
   if (m_use_temporal_trajectory) {
-    const rclcpp::Time traj_stamp(m_trajectory.header.stamp);
+    const rclcpp::Time traj_stamp(m_last_valid_trajectory.header.stamp);
     const double elapsed_time = (clock_->now() - traj_stamp).seconds();
     const double nearest_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
     control_data.temporal_predicted_time = nearest_time;
@@ -521,7 +517,7 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   // Delay compensation - Calculate the distance we got, predicted velocity and predicted
   // acceleration after delay
   control_data.state_after_delay =
-    predictedStateAfterDelay(control_data.current_motion, m_delay_compensation_time);
+    predictedStateAfterDelay(control_data, m_delay_compensation_time);
 
   // calculate the target motion for delay compensation
   constexpr double min_running_dist = 0.01;
@@ -634,8 +630,11 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   return control_data;
 }
 
-PidLongitudinalController::Motion PidLongitudinalController::calcEmergencyCtrlCmd(const double dt)
+PidLongitudinalController::Motion PidLongitudinalController::calcEmergencyCtrlCmd(
+  const ControlData & control_data)
 {
+  const double dt = control_data.dt;
+
   // These accelerations are without slope compensation
   const auto & p = m_emergency_state_params;
   Motion raw_ctrl_cmd{p.vel, p.acc};
@@ -648,10 +647,9 @@ PidLongitudinalController::Motion PidLongitudinalController::calcEmergencyCtrlCm
     longitudinal_utils::applyDiffLimitFilter(raw_ctrl_cmd.acc, m_prev_raw_ctrl_cmd.acc, dt, p.jerk);
   m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_JERK_LIMITED, raw_ctrl_cmd.acc);
 
-  const auto virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
-    m_current_kinematic_state.pose.pose, "velocity control\n (emergency)", clock_->now(), 0,
+  m_virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
+    control_data.current_pose, "velocity control\n (emergency)", clock_->now(), 0,
     m_wheel_base + m_front_overhang);
-  m_pub_virtual_wall_marker->publish(virtual_wall_marker);
 
   return raw_ctrl_cmd;
 }
@@ -714,7 +712,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
       : false;
 
   // ==========================================================================================
-  // NOTE: due to removeOverlapPoints() in getControlData() m_trajectory and
+  // NOTE: due to removeOverlapPoints() in getControlData() m_last_valid_trajectory and
   // control_data.interpolated_traj have different size.
   // ==========================================================================================
   const double current_vel_cmd = std::fabs(
@@ -732,8 +730,8 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
 
   const auto debug_msg_once = [this](const auto & s) { RCLCPP_DEBUG_ONCE(logger_, "%s", s); };
 
-  const bool is_under_control = m_current_operation_mode.is_autoware_control_enabled &&
-                                m_current_operation_mode.mode == OperationModeState::AUTONOMOUS;
+  const bool is_under_control = control_data.operation_mode.is_autoware_control_enabled &&
+                                control_data.operation_mode.mode == OperationModeState::AUTONOMOUS;
 
   if (is_under_control != m_prev_vehicle_is_under_control) {
     m_prev_vehicle_is_under_control = is_under_control;
@@ -819,12 +817,11 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
           debug_msg_once("target speed > 0, but keep stop condition is met. Keep STOPPED.");
         }
 
-        // publish debug marker
+        // create debug marker
         if (is_under_control) {
-          const auto virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
-            m_current_kinematic_state.pose.pose, "velocity control\n(steering not converged)",
-            clock_->now(), 0, m_wheel_base + m_front_overhang);
-          m_pub_virtual_wall_marker->publish(virtual_wall_marker);
+          m_virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
+            control_data.current_pose, "velocity control\n(steering not converged)", clock_->now(),
+            0, m_wheel_base + m_front_overhang);
         }
 
         // keep STOPPED
@@ -900,7 +897,7 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
       control_data.interpolated_traj.points.at(target_idx).longitudinal_velocity_mps,
       control_data.interpolated_traj.points.at(target_idx).acceleration_mps2};
     if (m_control_state == ControlState::EMERGENCY) {
-      raw_ctrl_cmd = calcEmergencyCtrlCmd(control_data.dt);
+      raw_ctrl_cmd = calcEmergencyCtrlCmd(control_data);
     } else {
       if (m_control_state == ControlState::DRIVE) {
         raw_ctrl_cmd.vel = control_data.interpolated_traj.points.at(control_data.target_idx)
@@ -1004,16 +1001,14 @@ void PidLongitudinalController::publishDebugData(
   m_debug_values.setValues(
     DebugValues::TYPE::TEMPORAL_PREDICTED_TIME, control_data.temporal_predicted_time);
   m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_OBSERVED_TIME, control_data.temporal_observed_time);
+    DebugValues::TYPE::TEMPORAL_OBSERVED_TIME, std::numeric_limits<double>::quiet_NaN());
   m_debug_values.setValues(
     DebugValues::TYPE::TEMPORAL_FUSED_TIME, control_data.temporal_fused_time);
+  m_debug_values.setValues(DebugValues::TYPE::TEMPORAL_OBSERVATION_USED, 0.0);
   m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_OBSERVATION_USED,
-    control_data.temporal_observation_used ? 1.0 : 0.0);
+    DebugValues::TYPE::TEMPORAL_WINDOW_MIN, std::numeric_limits<double>::quiet_NaN());
   m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_WINDOW_MIN, control_data.temporal_window_min);
-  m_debug_values.setValues(
-    DebugValues::TYPE::TEMPORAL_WINDOW_MAX, control_data.temporal_window_max);
+    DebugValues::TYPE::TEMPORAL_WINDOW_MAX, std::numeric_limits<double>::quiet_NaN());
 
   // publish debug values
   autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
@@ -1029,6 +1024,15 @@ void PidLongitudinalController::publishDebugData(
   slope_msg.data.push_back(
     static_cast<decltype(slope_msg.data)::value_type>(control_data.slope_angle));
   m_pub_slope->publish(slope_msg);
+}
+
+void PidLongitudinalController::publishVirtualWallMarker()
+{
+  if (!m_virtual_wall_marker) {
+    return;
+  }
+  m_pub_virtual_wall_marker->publish(*m_virtual_wall_marker);
+  m_virtual_wall_marker.reset();
 }
 
 double PidLongitudinalController::getDt()
@@ -1149,15 +1153,16 @@ PidLongitudinalController::calcInterpolatedTrajPointAndSegment(
 }
 
 PidLongitudinalController::StateAfterDelay PidLongitudinalController::predictedStateAfterDelay(
-  const Motion current_motion, const double delay_compensation_time) const
+  const ControlData & control_data, const double delay_compensation_time) const
 {
-  const double current_vel = current_motion.vel;
-  const double current_acc = current_motion.acc;
+  const double current_vel = control_data.current_motion.vel;
+  const double current_acc = control_data.current_motion.acc;
   double running_distance = 0.0;
   double pred_vel = current_vel;
   double pred_acc = current_acc;
 
-  if (m_ctrl_cmd_vec.empty() || m_current_operation_mode.mode != OperationModeState::AUTONOMOUS) {
+  if (
+    m_ctrl_cmd_vec.empty() || control_data.operation_mode.mode != OperationModeState::AUTONOMOUS) {
     // check time to stop
     const double time_to_stop = -current_vel / current_acc;
     const double delay_time_calculation =
@@ -1212,8 +1217,8 @@ double PidLongitudinalController::applyVelocityFeedback(const ControlData & cont
     control_data.interpolated_traj.points.at(control_data.target_idx).longitudinal_velocity_mps,
     control_data.interpolated_traj.points.at(control_data.target_idx).acceleration_mps2};
   const double diff_vel = (target_motion.vel - current_vel) * vel_sign;
-  const bool is_under_control = m_current_operation_mode.is_autoware_control_enabled &&
-                                m_current_operation_mode.mode == OperationModeState::AUTONOMOUS;
+  const bool is_under_control = control_data.operation_mode.is_autoware_control_enabled &&
+                                control_data.operation_mode.mode == OperationModeState::AUTONOMOUS;
 
   const bool vehicle_is_moving = std::abs(current_vel) > m_current_vel_threshold_pid_integrate;
   const double time_under_control = getTimeUnderControl();
