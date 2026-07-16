@@ -106,9 +106,11 @@ void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
 
   auto try_load_optimizer_plugin = [&](const std::string & plugin_path, const std::string & name)
     -> std::shared_ptr<OptimizerPluginInterface> {
+    trajectory_optimizer::TrajectoryOptimizerParams optimizer_params;
+    optimizer_params.use_eb_smoother = true;
     try {
       auto plugin = plugin_loader_->createSharedInstance(plugin_path);
-      plugin->initialize(name, this, time_keeper_);
+      plugin->initialize(name, this, time_keeper_, optimizer_params);
       pub_debug_optimizer_module_trajectories_[plugin->get_name()] =
         this->create_publisher<Trajectory>(
           "~/debug/optimizer/" + plugin->get_name() + "/trajectory", 1);
@@ -345,14 +347,11 @@ Trajectory MinimumRuleBasedPlannerNode::smooth_trajectory(
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   auto optimizer_data = make_optimizer_data(input_data);
 
-  trajectory_optimizer::TrajectoryOptimizerParams optimizer_params;
-  optimizer_params.use_eb_smoother = true;
-
   auto trajectory_points = trajectory.points;
   if (path_smoother_) {
     autoware_utils_debug::ScopedTimeTrack st_path_smoother(
       path_smoother_->get_name(), *time_keeper_);
-    path_smoother_->optimize_trajectory(trajectory_points, optimizer_params, optimizer_data);
+    path_smoother_->optimize_trajectory(trajectory_points, optimizer_data);
     if (params_.debug.enable_optimizer_trajectory) {
       publish_debug_trajectory(path_smoother_->get_name(), trajectory_points);
     }

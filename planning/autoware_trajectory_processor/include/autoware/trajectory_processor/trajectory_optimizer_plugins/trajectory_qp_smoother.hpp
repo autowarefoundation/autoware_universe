@@ -39,42 +39,6 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 /**
- * @brief Parameters specific to the QP smoother
- */
-struct QPSmootherParams
-{
-  // Optimization weights
-  double weight_smoothness{10.0};  // Weight for path curvature/smoothness minimization
-  double weight_fidelity{1.0};     // Baseline fidelity (used when velocity-based disabled)
-
-  // Time discretization
-  double time_step_s{0.1};  // Fixed time step for velocity/acceleration calculations [s]
-
-  // Solver settings
-  double osqp_eps_abs{1e-4};
-  double osqp_eps_rel{1e-4};
-  int osqp_max_iter{4000};
-  bool osqp_verbose{false};
-
-  // Orientation preservation
-  bool preserve_input_trajectory_orientation{
-    true};  // Copy orientations from input trajectory to smoothed output
-  double max_distance_for_orientation_m{5.0};  // Max distance for nearest neighbor matching [m]
-
-  // Velocity-based fidelity weighting
-  bool use_velocity_based_fidelity{false};  // Master switch for velocity-based weighting
-  double velocity_threshold_mps{0.2};       // Speed at sigmoid transition midpoint [m/s]
-  double sigmoid_sharpness{40.0};           // Sigmoid steepness (higher = sharper)
-  double min_fidelity_weight{0.1};          // Minimum fidelity at very low speeds
-  double max_fidelity_weight{1.0};          // Maximum fidelity at high speeds
-
-  // Point constraints
-  // Number of points from start to constrain (preserve initial state)
-  int num_constrained_points_start{3};
-  int num_constrained_points_end{3};  // Number of points from end to constrain
-};
-
-/**
  * @brief QP-based trajectory smoother for path geometry optimization
  *
  * This plugin smooths trajectories using quadratic programming optimization
@@ -93,18 +57,16 @@ public:
   TrajectoryQPSmoother() = default;
   ~TrajectoryQPSmoother() = default;
 
-  void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
 
-  void set_up_params() override;
+  void update_params(const TrajectoryOptimizerParams & params) override;
 
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) override;
+protected:
+  void on_initialize(const TrajectoryOptimizerParams & params) override;
 
 private:
   // QP smoother specific parameters
-  QPSmootherParams qp_params_;
+  trajectory_optimizer_node_params::Params::TrajectoryQpSmoother qp_params_;
 
   /**
    * @brief Solve the QP problem for trajectory smoothing

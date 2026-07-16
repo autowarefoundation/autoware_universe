@@ -31,6 +31,18 @@ generate_parameter_library(trajectory_modifier_param
   param/trajectory_modifier_parameter_struct.yaml
 )
 
+generate_parameter_library(trajectory_optimizer_param
+  param/trajectory_optimizer_parameter_struct.yaml
+)
+
+target_link_libraries(autoware_trajectory_optimizer_component
+  trajectory_optimizer_param
+)
+
+target_compile_options(autoware_trajectory_optimizer_component PUBLIC
+  -Wno-error=deprecated-declarations
+)
+
 ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
   src/trajectory_modifier_utils/utils.cpp
   src/trajectory_modifier_utils/obstacle_stop_utils.cpp
@@ -78,6 +90,7 @@ target_link_libraries(
   autoware_trajectory_optimizer_plugins
   acados_interface_temporal
   tf2_geometry_msgs::tf2_geometry_msgs
+  trajectory_optimizer_param
 )
 
 ament_auto_add_library(autoware_trajectory_modifier_plugins SHARED

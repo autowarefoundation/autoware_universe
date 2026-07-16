@@ -37,15 +37,6 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using nav_msgs::msg::Odometry;
 
 /**
- * @brief Parameters for kinematic feasibility enforcer
- */
-struct TrajectoryKinematicFeasibilityParams
-{
-  double max_yaw_rate_rad_s{0.7};  // Maximum yaw rate [rad/s], default from MPC controller
-  double time_step_s{0.1};         // Fixed time step for yaw rate calculations [s]
-};
-
-/**
  * @brief Plugin that enforces Ackermann steering geometry and yaw rate constraints
  *
  * This plugin implements a forward-propagating algorithm that adjusts trajectory points
@@ -66,17 +57,15 @@ public:
   TrajectoryKinematicFeasibilityEnforcer() = default;
   ~TrajectoryKinematicFeasibilityEnforcer() = default;
 
-  void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
 
-  void set_up_params() override;
+  void update_params(const TrajectoryOptimizerParams & params) override;
 
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) override;
+protected:
+  void on_initialize(const TrajectoryOptimizerParams & params) override;
 
 private:
-  TrajectoryKinematicFeasibilityParams feasibility_params_;
+  trajectory_optimizer_node_params::Params::TrajectoryKinematicFeasibility feasibility_params_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
   /**

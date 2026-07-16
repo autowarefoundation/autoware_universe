@@ -45,12 +45,11 @@ public:
   TrajectoryEBSmootherOptimizer() = default;
   ~TrajectoryEBSmootherOptimizer() = default;
 
-  void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
-  void set_up_params() override;
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) override;
+  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
+  void update_params(const TrajectoryOptimizerParams & params) override;
+
+protected:
+  void on_initialize(const TrajectoryOptimizerParams & params) override;
 
 private:
   CommonParam common_param_{};
