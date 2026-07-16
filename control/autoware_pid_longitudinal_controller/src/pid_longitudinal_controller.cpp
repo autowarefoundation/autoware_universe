@@ -31,6 +31,23 @@
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
+namespace
+{
+bool is_valid_trajectory(
+  const autoware_planning_msgs::msg::Trajectory & msg, const bool use_temporal_trajectory)
+{
+  if (!longitudinal_utils::isValidTrajectory(msg, use_temporal_trajectory)) {
+    return false;
+  }
+
+  if (msg.points.size() < 2) {
+    return false;
+  }
+
+  return true;
+}
+}  // namespace
+
 PidLongitudinalController::PidLongitudinalController(
   rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
 : node_parameters_(node.get_node_parameters_interface()),
@@ -243,21 +260,6 @@ PidLongitudinalController::PidLongitudinalController(
   setupDiagnosticUpdater();
 }
 
-void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg)
-{
-  if (!longitudinal_utils::isValidTrajectory(msg, m_use_temporal_trajectory)) {
-    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "received invalid trajectory. ignore.");
-    return;
-  }
-
-  if (msg.points.size() < 2) {
-    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "Unexpected trajectory size < 2. Ignored.");
-    return;
-  }
-
-  m_last_valid_trajectory = msg;
-}
-
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
@@ -414,8 +416,10 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   // capture the time once for this control cycle
   const rclcpp::Time current_time = clock_->now();
 
-  // set input data
-  setTrajectory(input_data.current_trajectory);
+  // check input data
+  if (!is_valid_trajectory(input_data.current_trajectory, m_use_temporal_trajectory)) {
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "received invalid trajectory. ignore.");
+  }
 
   // calculate control data
   const auto control_data = getControlData(input_data, current_time);
@@ -451,6 +455,11 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   control_data.current_time = current_time;
 
   const geometry_msgs::msg::Pose & current_pose = input_data.current_odometry.pose.pose;
+
+  // update trajectory if valid
+  if (is_valid_trajectory(input_data.current_trajectory, m_use_temporal_trajectory)) {
+    m_last_valid_trajectory = input_data.current_trajectory;
+  }
 
   // dt
   control_data.dt = getDt(current_time);

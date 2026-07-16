@@ -248,12 +248,6 @@ private:
     std::string reason{""};
   };
 
-  /**
-   * @brief set reference trajectory with received message
-   * @param [in] msg trajectory message
-   */
-  void setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg);
-
   bool isReady(const trajectory_follower::InputData & input_data) override;
 
   /**
