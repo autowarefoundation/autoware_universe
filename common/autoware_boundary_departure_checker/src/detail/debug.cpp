@@ -233,7 +233,7 @@ MarkerArray create_debug_markers(
   hysteresis_state.critical_departure_history.for_each_side([&](const auto & side_value) {
     autoware_utils_visualization::append_marker_array(
       create_departure_footprint_marker(
-        side_value, footprints, curr_time, base_link_z, ++virtual_wall_id),
+        side_value, footprints, curr_time, base_link_z, virtual_wall_id),
       &marker_array);
     autoware_utils_visualization::append_marker_array(
       create_virtual_wall_marker(side_value, curr_time, base_link_z, virtual_wall_id),
