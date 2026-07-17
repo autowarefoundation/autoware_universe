@@ -57,10 +57,6 @@ def launch_setup(context, *args, **kwargs):
         _create_mapping_tuple("output/hazard_lights_cmd"),
     ]
 
-    # external_cmd_selector runs as autoware::agnocast_wrapper::Node, which does not
-    # support being loaded into any component container (agnocast-aware or not), so it
-    # is always launched standalone. The heaphook must be preloaded when Agnocast is
-    # enabled (ld_preload_value is provided by agnocast_env.launch.py).
     node = Node(
         package="autoware_external_cmd_selector",
         executable="autoware_external_cmd_selector",
