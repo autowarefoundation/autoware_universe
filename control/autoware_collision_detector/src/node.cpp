@@ -16,6 +16,7 @@
 
 #include "autoware/collision_detector/debug.hpp"
 
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
@@ -224,9 +225,10 @@ PredictedObjects CollisionDetectorNode::filterObjects(const PredictedObjects & i
     const bool is_within_range = (object_distance <= node_param_.nearby_filter_radius);
 
     // Determine if the object should be excluded based on its classification
-    const auto classification = object.classification.empty()
-                                  ? autoware_perception_msgs::msg::ObjectClassification::UNKNOWN
-                                  : object.classification.front().label;
+    const auto classification =
+      object.classification.empty()
+        ? autoware_perception_msgs::msg::ObjectClassification::UNKNOWN
+        : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
     bool should_be_excluded = shouldBeExcluded(classification);
 
     const bool is_within_range_and_filtering_class = is_within_range && should_be_excluded;
