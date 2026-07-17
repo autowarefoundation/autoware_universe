@@ -195,9 +195,7 @@
         </composable_node>
       </node_container>
 
-      <!-- shift_decider runs as autoware::agnocast_wrapper::Node, which does not support
-           component containers, so it is launched standalone instead of loaded into
-           /e2e_control_container. -->
+      <!-- shift_decider runs as standalone node -->
       <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
       <node pkg="autoware_shift_decider" exec="autoware_shift_decider" name="autoware_shift_decider" output="screen">
         <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
