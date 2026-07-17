@@ -142,6 +142,13 @@ trajectory_processor_params:
       validation:
         bounds<>: [0.0, 100.0]
       read_only: false
+    minimum_stop_margin:
+      type: double
+      default_value: 3.0
+      description: Minimum distance to maintain from an obstacle when stopped [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
     lateral_margin:
       type: double
       default_value: 0.5
