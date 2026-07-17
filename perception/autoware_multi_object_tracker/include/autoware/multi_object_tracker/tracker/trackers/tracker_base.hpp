@@ -53,6 +53,10 @@ private:
   int total_no_measurement_count_;
   int total_measurement_count_;
   rclcpp::Time last_update_with_measurement_time_;
+  // Time of the last measurement from a channel providing a trustworthy full box
+  // (channel_info.trust_extension); partial observations (clusters/corners) leave it unchanged.
+  // Overlap pruning demotes trackers that are stale on full measurements.
+  rclcpp::Time last_fully_measured_time_;
   std::vector<types::ExistenceProbability> existence_probabilities_;
   float total_existence_probability_;
   std::vector<classes::Classification> classification_;
@@ -148,6 +152,14 @@ public:
   {
     return (current_time - last_update_with_measurement_time_).seconds();
   }
+  // Seconds since the last full (trust_extension) measurement. Vehicle trackers coast on partial
+  // (cluster/corner) updates and report real staleness; every other tracker always counts as
+  // fully measured.
+  virtual double getElapsedTimeFromFullMeasurement(const rclcpp::Time & current_time) const
+  {
+    (void)current_time;
+    return 0.0;
+  }
   rclcpp::Time getLatestMeasurementTime() const { return last_update_with_measurement_time_; }
 
   // Composite trackers call inner tracker methods directly (bypassing updateWithMeasurement),
@@ -198,6 +210,12 @@ protected:
     object.classification = classification_;
     object.kinematics = kinematics_;
     object.trust_extension = trust_extension_;
+  }
+
+  // Shared implementation for the getElapsedTimeFromFullMeasurement() overrides.
+  double elapsedSinceLastFullMeasurement(const rclcpp::Time & current_time) const
+  {
+    return (current_time - last_fully_measured_time_).seconds();
   }
 
   // Compose the persistent fields and the motion-model kinematics into `object`: persistent fields,

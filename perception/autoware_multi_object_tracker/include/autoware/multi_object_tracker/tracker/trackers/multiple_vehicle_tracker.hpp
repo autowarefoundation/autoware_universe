@@ -106,6 +106,12 @@ public:
     if (!trust_extension) return UpdatePath::CONDITIONED;
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
   }
+
+  // Same policy as VehicleTracker: staleness on full measurements is meaningful.
+  double getElapsedTimeFromFullMeasurement(const rclcpp::Time & current_time) const override
+  {
+    return elapsedSinceLastFullMeasurement(current_time);
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

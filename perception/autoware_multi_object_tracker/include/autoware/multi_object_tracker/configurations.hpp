@@ -138,11 +138,11 @@ struct TrackerAssociationConfig
 //// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)
 struct TrackerOverlapManagerConfig
 {
-  float min_known_object_removal_iou{0.0f};
-  float min_unknown_object_removal_iou{0.0f};
-  double pruning_giou_threshold{0.0};
-  LabelDoubleMap pruning_distance_thresholds;
-  LabelDoubleMap pruning_distance_thresholds_sq;
+  // Redundancy thresholds per label-pair class.
+  double pedestrian_pair_min_iou{0.0};  // 1D IoU, pedestrian-pedestrian
+  double known_pair_min_iou{0.0};       // 2D IoU, known-known (containment merges below it)
+  double unknown_pair_min_giou{0.0};    // GIoU, unknown-unknown; negative admits disjoint pairs
+  double unknown_pair_max_gap{0.0};     // [m] boundary-gap bound for disjoint unknown pairs
 };
 
 //// Utility: safe map lookup
