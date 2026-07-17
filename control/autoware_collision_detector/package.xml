@@ -6,7 +6,6 @@
   <description>The collision_detector package</description>
 
   <maintainer email="hayate.sugahara@tier4.jp">Hayate Sugahara</maintainer>
-  <maintainer email="go.sakayori@tier4.jp">Go Sakayori</maintainer>
   <maintainer email="tomohito.ando@tier4.jp">Tomohito Ando</maintainer>
 
   <license>Apache License 2.0</license>
