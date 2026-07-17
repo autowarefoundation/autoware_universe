@@ -16,6 +16,7 @@
 #include "autoware/multi_object_tracker/merger/tracker_overlap_manager.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/pedestrian_and_bicycle_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/polygon_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
@@ -149,6 +150,16 @@ std::shared_ptr<mot::Tracker> makePolygonTracker(
   polygon_config.enable_velocity_estimation = false;
   // enable_motion_output left empty => motion output disabled for all labels
   auto tracker = std::make_shared<mot::PolygonTracker>(time, obj, polygon_config);
+  tracker->initializeExistenceProbabilities(channel.index, obj.existence_probability);
+  spinUp(tracker, obj, time, n_updates, channel);
+  return tracker;
+}
+
+std::shared_ptr<mot::Tracker> makePedestrianAndBicycleTracker(
+  const mot::types::DynamicObject & obj, const rclcpp::Time & time, const int n_updates,
+  const mot::types::InputChannel & channel)
+{
+  auto tracker = std::make_shared<mot::PedestrianAndBicycleTracker>(time, obj);
   tracker->initializeExistenceProbabilities(channel.index, obj.existence_probability);
   spinUp(tracker, obj, time, n_updates, channel);
   return tracker;
@@ -413,6 +424,47 @@ TEST_F(TrackerOverlapManagerTest, NonVehicleTrackersAlwaysCountFullyMeasured)
   auto tracker = makePolygonTracker(obj, time, kSpinWeak, channel_);
 
   // Freshness on full measurements is a vehicle-tracker concept; other trackers never go stale.
+  EXPECT_DOUBLE_EQ(tracker->getElapsedTimeFromFullMeasurement(mergeTime()), 0.0);
+}
+
+TEST_F(TrackerOverlapManagerTest, PedestrianAndBicycleReportsBicycleFullMeasurementStaleness)
+{
+  const auto time = baseTime();
+
+  // The composite drives its inner trackers directly, so the full-measurement clock lives on the
+  // outer tracker. A bicycle-labelled composite fed only partial (trust_extension=false) updates
+  // reports real staleness, while a fresh full-box composite does not.
+  mot::types::InputChannel cluster_channel = channel_;
+  cluster_channel.index = 1;
+  cluster_channel.trust_extension = false;
+
+  auto partial_obj = makeBboxObject(0.0, 0.0, 1.8, 0.8, mot::classes::Label::BICYCLE, time);
+  partial_obj.trust_extension = false;
+  auto stale_partial =
+    makePedestrianAndBicycleTracker(partial_obj, time, kSpinStrong, cluster_channel);
+
+  const auto fresh_obj = makeBboxObject(10.0, 0.0, 1.8, 0.8, mot::classes::Label::BICYCLE, time);
+  auto fresh_full = makePedestrianAndBicycleTracker(fresh_obj, time, kSpinStrong, channel_);
+
+  EXPECT_GT(stale_partial->getElapsedTimeFromFullMeasurement(mergeTime()), 0.5);
+  EXPECT_LT(fresh_full->getElapsedTimeFromFullMeasurement(mergeTime()), 0.5);
+}
+
+TEST_F(TrackerOverlapManagerTest, PedestrianAndBicycleReportsNoStalenessForPedestrian)
+{
+  const auto time = baseTime();
+
+  // A pedestrian-labelled composite reports no staleness even when fed only partial updates: the
+  // full-measurement clock is a vehicle concept and does not apply to the pedestrian inner.
+  mot::types::InputChannel cluster_channel = channel_;
+  cluster_channel.index = 1;
+  cluster_channel.trust_extension = false;
+
+  auto partial_obj = makeBboxObject(0.0, 0.0, 0.8, 0.8, mot::classes::Label::PEDESTRIAN, time);
+  partial_obj.trust_extension = false;
+  auto tracker = makePedestrianAndBicycleTracker(partial_obj, time, kSpinStrong, cluster_channel);
+
+  ASSERT_EQ(tracker->getHighestProbLabel(), mot::classes::Label::PEDESTRIAN);
   EXPECT_DOUBLE_EQ(tracker->getElapsedTimeFromFullMeasurement(mergeTime()), 0.0);
 }
 
