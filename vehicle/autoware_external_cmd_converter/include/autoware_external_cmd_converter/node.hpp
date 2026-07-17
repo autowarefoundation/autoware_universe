@@ -63,13 +63,13 @@ private:
 
   // Polling Subscriber
   AUTOWARE_POLLING_SUBSCRIBER_PTR(SteeringCommand)
-  steering_cmd_sub_ = create_polling_subscriber<SteeringCommand>("in/steering_cmd", rclcpp::QoS{1});
+  steering_cmd_sub_ = create_polling_subscriber<SteeringCommand>("in/steering_cmd");
   AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry)
-  velocity_sub_ = create_polling_subscriber<Odometry>("in/odometry", rclcpp::QoS{1});
+  velocity_sub_ = create_polling_subscriber<Odometry>("in/odometry");
   AUTOWARE_POLLING_SUBSCRIBER_PTR(GearCommand)
-  gear_cmd_sub_ = create_polling_subscriber<GearCommand>("in/gear_cmd", rclcpp::QoS{1});
+  gear_cmd_sub_ = create_polling_subscriber<GearCommand>("in/gear_cmd");
   AUTOWARE_POLLING_SUBSCRIBER_PTR(GateMode)
-  gate_mode_sub_ = create_polling_subscriber<GateMode>("in/current_gate_mode", rclcpp::QoS{1});
+  gate_mode_sub_ = create_polling_subscriber<GateMode>("in/current_gate_mode");
 
   void on_pedals_cmd(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PedalsCommand) & cmd_ptr);
   void on_heartbeat(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ManualOperatorHeartbeat) & msg);
