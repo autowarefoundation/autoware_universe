@@ -36,8 +36,9 @@ namespace
 // this to bound forward-Euler error (matches the tracker's dt_max sub-stepping).
 constexpr double CTRV_DT_SUB_STEP_MAX_S = 0.11;
 
-// A backward-in-time yaw jump larger than this [rad] (135 deg) is treated as a tracker heading
-// flip.
+// A bracketing observation pair whose headings differ by more than this [rad] (135 deg) is
+// treated as a tracker heading flip: the grid slot snaps to the nearer observation instead of
+// sweeping a fabricated intermediate heading.
 constexpr double FLIP_YAW_THRESHOLD_RAD = 2.35619449;
 
 // Heading of a pose matrix in its own frame.
@@ -50,8 +51,7 @@ double get_yaw(const Eigen::Matrix4d & pose)
 // motion into the CTRV propagation.
 double get_speed(const AgentState & state)
 {
-  const auto & linear = state.original_info.kinematics.twist_with_covariance.twist.linear;
-  return std::copysign(std::hypot(linear.x, linear.y), linear.x);
+  return state.original_info.kinematics.twist_with_covariance.twist.linear.x;
 }
 
 double get_yaw_rate(const AgentState & state)
@@ -59,23 +59,20 @@ double get_yaw_rate(const AgentState & state)
   return state.original_info.kinematics.twist_with_covariance.twist.angular.z;
 }
 
-// Synthesize a grid state from a template observation, overwriting its planar pose. When
-// speed_override is set the linear twist magnitude is rewritten (direction follows the pose).
+// Synthesize a grid state from a template observation, overwriting its planar pose and twist.
 AgentState make_grid_state(
   const TrackedObject & tmpl, const double x, const double y, const double yaw,
-  const rclcpp::Time & timestamp, const std::optional<double> & speed_override)
+  const rclcpp::Time & timestamp, const double speed)
 {
   TrackedObject object = tmpl;
   auto & pose = object.kinematics.pose_with_covariance.pose;
   pose.position.x = x;
   pose.position.y = y;
   pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
-  if (speed_override.has_value()) {
-    auto & linear = object.kinematics.twist_with_covariance.twist.linear;
-    linear.x = *speed_override;
-    linear.y = 0.0;
-    linear.z = 0.0;
-  }
+  auto & linear = object.kinematics.twist_with_covariance.twist.linear;
+  linear.x = speed;
+  linear.y = 0.0;
+  linear.z = 0.0;
   return AgentState(object, timestamp);
 }
 
@@ -125,7 +122,10 @@ std::optional<AgentHistory> resample_history(
   const auto & raw = history.states();
   const size_t n = raw.size();
 
-  // Snapshot per-observation kinematics; yaw is flip-corrected below before any interp/extrap.
+  // Snapshot per-observation kinematics. Tracker heading flips need no correction here: a flip
+  // re-expresses the state as (yaw + pi, -speed), which the CTRV propagation maps to identical
+  // positions, and raw flipped headings match the training-data signature. Only interpolation
+  // between a flipped pair is guarded (see the snap below).
   std::vector<double> obs_x(n);
   std::vector<double> obs_y(n);
   std::vector<double> obs_yaw(n);
@@ -139,17 +139,6 @@ std::optional<AgentHistory> resample_history(
     obs_speed[i] = get_speed(raw[i]);
     obs_yaw_rate[i] = get_yaw_rate(raw[i]);
     obs_time[i] = raw[i].timestamp.seconds();
-  }
-
-  // R3 flip pre-pass: trusting the newest observation, walk backward and rotate any older heading
-  // that differs from its newer neighbor by more than FLIP_YAW_THRESHOLD_RAD by pi. The velocity
-  // vector is unchanged, so its longitudinal component in the corrected heading inverts.
-  for (size_t idx = n - 1; idx-- > 0;) {
-    const double delta = autoware_utils_math::normalize_radian(obs_yaw[idx] - obs_yaw[idx + 1]);
-    if (std::abs(delta) > FLIP_YAW_THRESHOLD_RAD) {
-      obs_yaw[idx] = autoware_utils_math::normalize_radian(obs_yaw[idx] + M_PI);
-      obs_speed[idx] = -obs_speed[idx];
-    }
   }
 
   const double newest_time = obs_time[n - 1];
@@ -171,19 +160,19 @@ std::optional<AgentHistory> resample_history(
 
     if (target_sec <= obs_time[0]) {
       // Before the oldest observation. Within the backward horizon, extrapolate via the motion
-      // model. Beyond the horizon, freeze at the oldest observation with its template twist —
+      // model. Beyond the horizon, freeze at the oldest observation, keeping its nonzero speed —
       // the repeat-fill signature the model saw for pre-appearance slots in training.
       const double back_dt = target_sec - obs_time[0];  // <= 0
       if (-back_dt > params.max_extrapolation_time) {
         grid_states.push_back(make_grid_state(
-          raw[0].original_info, obs_x[0], obs_y[0], obs_yaw[0], target_time, std::nullopt));
+          raw[0].original_info, obs_x[0], obs_y[0], obs_yaw[0], target_time, obs_speed[0]));
       } else {
         const MotionState start{obs_x[0], obs_y[0], obs_yaw[0]};
         const MotionState propagated =
           propagate_motion(start, obs_speed[0], obs_yaw_rate[0], back_dt, params);
         grid_states.push_back(make_grid_state(
           raw[0].original_info, propagated.x, propagated.y, propagated.yaw, target_time,
-          std::nullopt));
+          obs_speed[0]));
       }
     } else if (target_sec <= newest_time) {
       // Within the observed history: interpolate position linearly, yaw along the shortest arc.
@@ -196,8 +185,19 @@ std::optional<AgentHistory> resample_history(
       const double ratio = (span > 0.0) ? (target_sec - obs_time[i0]) / span : 0.0;
       const double x = obs_x[i0] + ratio * (obs_x[i1] - obs_x[i0]);
       const double y = obs_y[i0] + ratio * (obs_y[i1] - obs_y[i0]);
-      const double yaw = interpolate_yaw(obs_yaw[i0], obs_yaw[i1], ratio);
-      const double speed = obs_speed[i0] + ratio * (obs_speed[i1] - obs_speed[i0]);
+      // A near-antipodal pair is a tracker heading flip: snap yaw and speed to the nearer
+      // observation; sweeping would fabricate perpendicular headings.
+      const double yaw_delta = autoware_utils_math::normalize_radian(obs_yaw[i1] - obs_yaw[i0]);
+      double yaw{};
+      double speed{};
+      if (std::abs(yaw_delta) > FLIP_YAW_THRESHOLD_RAD) {
+        const size_t nearer = (ratio < 0.5) ? i0 : i1;
+        yaw = obs_yaw[nearer];
+        speed = obs_speed[nearer];
+      } else {
+        yaw = interpolate_yaw(obs_yaw[i0], obs_yaw[i1], ratio);
+        speed = obs_speed[i0] + ratio * (obs_speed[i1] - obs_speed[i0]);
+      }
       grid_states.push_back(make_grid_state(raw[i1].original_info, x, y, yaw, target_time, speed));
     } else {
       // After the newest observation: extrapolate the leading edge forward via the motion model.
@@ -207,7 +207,7 @@ std::optional<AgentHistory> resample_history(
       const MotionState propagated = propagate_motion(
         start, obs_speed[n - 1], obs_yaw_rate[n - 1], target_sec - newest_time, params);
       grid_states.push_back(make_grid_state(
-        newest_tmpl, propagated.x, propagated.y, propagated.yaw, target_time, std::nullopt));
+        newest_tmpl, propagated.x, propagated.y, propagated.yaw, target_time, obs_speed[n - 1]));
     }
   }
 

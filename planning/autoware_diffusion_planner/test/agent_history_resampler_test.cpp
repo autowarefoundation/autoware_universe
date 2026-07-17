@@ -159,6 +159,46 @@ TEST(AgentHistoryResamplerTest, InterpolateYawMidpoint)
   EXPECT_NEAR(interpolate_yaw(0.0, M_PI_2, 1.0), M_PI_2, 1e-9);
 }
 
+// A tracker heading flip between two observations snaps the interpolated slot to the nearer
+// observation's yaw and speed; no perpendicular intermediate heading is emitted.
+TEST(AgentHistoryResamplerTest, FlipBetweenObservationsSnapsToNearerYaw)
+{
+  const auto params = make_params();
+
+  autoware_perception_msgs::msg::TrackedObject object;
+  object.object_id = autoware_utils_uuid::generate_uuid();
+  object.kinematics.pose_with_covariance.pose.orientation =
+    autoware_utils_geometry::create_quaternion_from_yaw(0.0);
+  object.kinematics.twist_with_covariance.twist.linear.x = 5.0;
+  object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  autoware_perception_msgs::msg::ObjectClassification classification;
+  classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+  classification.probability = 0.9;
+  object.classification.push_back(classification);
+
+  AgentHistory history(NEIGHBOR_HISTORY_BUFFER_SIZE);
+  history.update(object, rclcpp::Time(100, 0));
+  // Flipped re-expression of the same motion: heading rotated by pi, longitudinal speed negated.
+  object.kinematics.pose_with_covariance.pose.position.x = 0.5;
+  object.kinematics.pose_with_covariance.pose.orientation =
+    autoware_utils_geometry::create_quaternion_from_yaw(M_PI);
+  object.kinematics.twist_with_covariance.twist.linear.x = -5.0;
+  history.update(object, rclcpp::Time(100, 100000000));
+
+  // Frame time 100.14 s: the second-newest slot (100.04 s) interpolates across the flip.
+  const rclcpp::Time frame_time(100, 140000000);
+  const auto resampled = resample_history(history, frame_time, params);
+
+  ASSERT_TRUE(resampled.has_value());
+  const auto & states = resampled->states();
+  const auto & snapped = states[states.size() - 2];
+  EXPECT_NEAR(snapped.pose(0, 3), 0.2, 1e-6);  // position interpolates (ratio 0.4)
+  EXPECT_NEAR(snapped.pose(0, 0), 1.0, 1e-6);  // yaw snaps to the nearer (older) observation
+  EXPECT_NEAR(snapped.original_info.kinematics.twist_with_covariance.twist.linear.x, 5.0, 1e-6);
+  // The newest slot extrapolates the flipped state; both re-expressions advance +x.
+  EXPECT_NEAR(states.back().pose(0, 3), 0.7, 1e-6);
+}
+
 // A negative body-frame linear.x is a reversing vehicle: forward-extrapolated slots land behind
 // the newest observation along its heading.
 TEST(AgentHistoryResamplerTest, ReverseMotionExtrapolatesBackwardAlongHeading)
