@@ -33,6 +33,7 @@ namespace autoware::minimum_rule_based_planner::plugin
 {
 using autoware::trajectory_modifier::utils::clamp_stop_point_arc_length;
 using autoware::trajectory_modifier::utils::insert_stop_point;
+using autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_object_collision;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_pcd_collision;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_trajectory_shape;
@@ -161,22 +162,10 @@ void ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const Modifier
     data.acceleration_ptr->accel.accel.linear.x, params_.nominal_stopping_decel,
     params_.stopping_jerk);
 
-  if (!insert_stop_point(
-        traj_points, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length))
-    return;
-
   if (
     target_stop_point_arc_length < params_.arrived_distance_threshold ||
-    !insert_stop_point(
-      traj_points, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length)) {
-    auto p = traj_points.front();
-    traj_points.clear();
-    p.longitudinal_velocity_mps = 0.0;
-    p.acceleration_mps2 = 0.0;
-    p.time_from_start = rclcpp::Duration::from_seconds(0.0);
-    traj_points.push_back(p);
-    p.time_from_start = rclcpp::Duration::from_seconds(0.1);
-    traj_points.push_back(p);
+    !insert_stop_point(traj_points, target_stop_point_arc_length)) {
+    replace_trajectory_with_stop_point(traj_points, data.odometry_ptr->pose.pose);
   }
 
   const auto & stop_pose = traj_points.back().pose;

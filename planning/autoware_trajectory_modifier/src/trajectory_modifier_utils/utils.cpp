@@ -103,36 +103,47 @@ bool stop_point_exists(
 }
 
 bool insert_stop_point(
-  TrajectoryPoints & trajectory, const double stop_point_arc_length, const double traj_length)
+  TrajectoryPoints & trajectory, const double stop_point_arc_length, const double time_step)
 {
-  if (stop_point_arc_length < 1e-3) return false;
+  if (trajectory.empty()) return false;
 
-  const auto stop_index = [&]() -> size_t {
-    const auto index = motion_utils::insertStopPoint(stop_point_arc_length, trajectory);
-    if (index) return index.value();
+  if (stop_point_arc_length < 1e-3) {
+    replace_trajectory_with_stop_point(trajectory, trajectory.front().pose, time_step);
+    return true;
+  }
 
-    // TODO(Quda): this is a temporary fix, need to check why insertStopPoint fails when target
-    // distance is equal to trajectory length
-    if (stop_point_arc_length < traj_length) {
-      auto dist = 0.0;
-      auto it = std::adjacent_find(
-        trajectory.begin(), trajectory.end(), [&](const auto & p, const auto & next) {
-          dist += autoware_utils_geometry::calc_distance2d(p.pose.position, next.pose.position);
-          return dist >= stop_point_arc_length - 1e-3;
-        });
-      if (it != trajectory.end()) {
-        it->longitudinal_velocity_mps = 0.0;
-        it->acceleration_mps2 = 0.0;
-        return std::distance(trajectory.begin(), it);
-      }
-    }
+  constexpr double overlap_threshold = 0.1;
 
+  auto distance = 0.0;
+  auto seg_length = 0.0;
+  size_t idx = 0;
+  for (; idx < trajectory.size() - 1; ++idx) {
+    seg_length = autoware_utils_geometry::calc_distance2d(
+      trajectory[idx].pose.position, trajectory[idx + 1].pose.position);
+    if (distance + seg_length > stop_point_arc_length) break;
+    distance += seg_length;
+  }
+
+  if (idx == trajectory.size() - 1) {
     trajectory.back().longitudinal_velocity_mps = 0.0;
     trajectory.back().acceleration_mps2 = 0.0;
-    return trajectory.size() - 1;
-  }();
+    return true;
+  }
 
-  trajectory.erase(trajectory.begin() + stop_index + 1, trajectory.end());
+  auto stop_idx = idx;
+  if (std::abs(distance - stop_point_arc_length) < overlap_threshold) {
+    stop_idx = idx;
+  } else if (std::abs(distance + seg_length - stop_point_arc_length) < overlap_threshold) {
+    stop_idx = idx + 1;
+  } else {
+    auto target_idx =
+      motion_utils::insertStopPoint(idx, stop_point_arc_length - distance, trajectory);
+    stop_idx = target_idx ? target_idx.value() : idx;
+  }
+
+  if (stop_idx + 1 < trajectory.size()) {
+    trajectory.erase(trajectory.begin() + stop_idx + 1, trajectory.end());
+  }
   trajectory.back().longitudinal_velocity_mps = 0.0;
   trajectory.back().acceleration_mps2 = 0.0;
 

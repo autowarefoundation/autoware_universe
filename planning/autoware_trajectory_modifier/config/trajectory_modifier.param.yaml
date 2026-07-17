@@ -34,6 +34,7 @@
       enable_stop_for_objects: true
       enable_stop_for_pointcloud: false
       stop_margin: 6.0 # [m]
+      minimum_stop_margin: 3.0 # [m]
       lateral_margin: 0.2     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
       duplicate_check_threshold: 0.5 # threshold to check if the stop point is already in the trajectory [m]
 

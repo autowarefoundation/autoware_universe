@@ -145,6 +145,12 @@
               "default": 6.0,
               "minimum": 0.0
             },
+            "minimum_stop_margin": {
+              "type": "number",
+              "description": "Minimum distance to maintain from an obstacle when stopped [m]",
+              "default": 3.0,
+              "minimum": 0.0
+            },
             "lateral_margin": {
               "type": "number",
               "description": "Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]",

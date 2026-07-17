@@ -102,10 +102,11 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   std::string modified_plugins_str;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     for (auto & modifier : plugins_) {
-      if (!modifier->modify_trajectory(trajectory.points, input_data)) continue;
-      modifier->publish_planning_factor();
+      const auto modified = modifier->modify_trajectory(trajectory.points, input_data);
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
+      if (!modified) continue;
+      modifier->publish_planning_factor();
       if (!modified_plugins_str.empty()) modified_plugins_str += ", ";
       modified_plugins_str += modifier->get_short_name();
     }
