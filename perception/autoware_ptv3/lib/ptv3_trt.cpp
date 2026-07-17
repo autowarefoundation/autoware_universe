@@ -14,6 +14,7 @@
 
 #include "autoware/ptv3/ptv3_trt.hpp"
 
+#include "autoware/ptv3/experimental/point_type.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
@@ -129,7 +130,8 @@ void PTv3TRT::allocateSegOutputMessages()
     segmented_points_msg_ptr_->fields = segmented_pointcloud_fields_;
     segmented_points_msg_ptr_->is_bigendian = false;
     segmented_points_msg_ptr_->is_dense = true;
-    segmented_points_msg_ptr_->point_step = 21U;
+    segmented_points_msg_ptr_->point_step =
+      static_cast<std::uint32_t>(sizeof(experimental::PointXYZCPE));
     segmented_points_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
       output_capacity * segmented_points_msg_ptr_->point_step);
   }
@@ -180,9 +182,8 @@ void PTv3TRT::initPtr()
   stage_feat_d_.clear();
   stage_feat_d_.reserve(config_.enc_channels_.size());
   for (std::size_t stage = 0; stage < config_.enc_channels_.size(); ++stage) {
-    stage_feat_d_.push_back(
-      autoware::cuda_utils::make_unique<float[]>(
-        config_.stage_voxel_capacity(stage) * config_.enc_channels_[stage]));
+    stage_feat_d_.push_back(autoware::cuda_utils::make_unique<float[]>(
+      config_.stage_voxel_capacity(stage) * config_.enc_channels_[stage]));
   }
 
   compact_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
@@ -273,6 +274,9 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
 
 void PTv3TRT::createPointFields()
 {
+  segmented_pointcloud_fields_ = point_cloud_msg_wrapper::generate_fields_from_point<
+    experimental::PointXYZCPE, experimental::PointXYZCPEFieldGenerator>();
+
   auto make_point_field = [](const std::string & name, int offset, int datatype, int count) {
     sensor_msgs::msg::PointField field;
     field.name = name;
@@ -281,19 +285,6 @@ void PTv3TRT::createPointFields()
     field.count = count;
     return field;
   };
-
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("class_id", 12, sensor_msgs::msg::PointField::UINT8, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("probability", 13, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("entropy", 17, sensor_msgs::msg::PointField::FLOAT32, 1));
 
   visualization_pointcloud_fields_.push_back(
     make_point_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
@@ -560,11 +551,10 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   stage_views.reserve(serialized_pooling_stages_d_.size());
   for (auto & stage : serialized_pooling_stages_d_) {
-    stage_views.push_back(
-      SerializedPoolingDeviceStageView{
-        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-        stage.serialized_inverse.get()});
+    stage_views.push_back(SerializedPoolingDeviceStageView{
+      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+      stage.serialized_inverse.get()});
   }
 
   pre_ptr_->generateSerializedPoolingMetadata(
@@ -1100,12 +1090,15 @@ bool PTv3TRT::postProcess(
 
   if (should_publish_segmented_pointcloud) {
     const auto num_segmented_points = post_ptr_->createSegmentationPointcloud(
-      source_features, source_labels, source_probs, segmented_points_msg_ptr_->data.get(),
+      source_features, source_labels, source_probs,
+      reinterpret_cast<experimental::PointXYZCPE *>(segmented_points_msg_ptr_->data.get()),
       config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     segmented_points_msg_ptr_->header = header;
     segmented_points_msg_ptr_->width = static_cast<std::uint32_t>(num_segmented_points);
+    segmented_points_msg_ptr_->row_step =
+      segmented_points_msg_ptr_->width * segmented_points_msg_ptr_->point_step;
     publish_segmented_pointcloud_(std::move(segmented_points_msg_ptr_));
     segmented_points_msg_ptr_ = nullptr;
   }

@@ -102,6 +102,15 @@ TEST_F(PointTypeTest, CompatibleFieldsAreAccepted)
   EXPECT_TRUE(is_data_layout_compatible_with_point_xyzcpe(cloud));
 }
 
+TEST_F(PointTypeTest, GeneratedFieldsMatchLayout)
+{
+  const auto fields =
+    point_cloud_msg_wrapper::generate_fields_from_point<PointXYZCPE, PointXYZCPEFieldGenerator>();
+
+  EXPECT_EQ(fields, make_point_xyzcpe_fields());
+  EXPECT_TRUE(is_data_layout_compatible_with_point_xyzcpe(fields));
+}
+
 TEST_F(PointTypeTest, WrongFieldElementCountIsRejected)
 {
   auto fields = make_point_xyzcpe_fields();

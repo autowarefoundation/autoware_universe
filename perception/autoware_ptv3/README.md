@@ -20,18 +20,35 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 ### Output
 
-| Name                                   | Type                                                | Description                                             |
-| -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
-| `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.         |
-| `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                               |
-| `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`. |
-| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected 3D objects after score filtering and IoU NMS.  |
-| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                       |
-| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                             |
-| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                        |
-| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).                                    |
-| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                                  |
-| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms).                             |
+| Name                                   | Type                                                | Description                                                         |
+| -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
+| `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | `PointXYZCPE` cloud with class ID, probability, and entropy fields. |
+| `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                                           |
+| `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`.             |
+| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected 3D objects after score filtering and IoU NMS.              |
+| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                                   |
+| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                                         |
+| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                                    |
+| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).                                                |
+| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                                              |
+| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms).                                         |
+
+#### Segmentation point cloud format
+
+The `~/output/pointcloud/segmentation` topic uses the naturally aligned `PointXYZCPE` point type.
+Its `point_step` is 24 bytes.
+
+| Field         | Data type | Offset | Description                                                                  |
+| ------------- | --------- | -----: | ---------------------------------------------------------------------------- |
+| `x`           | `FLOAT32` |      0 | X coordinate in meters.                                                      |
+| `y`           | `FLOAT32` |      4 | Y coordinate in meters.                                                      |
+| `z`           | `FLOAT32` |      8 | Z coordinate in meters.                                                      |
+| `class_id`    | `UINT8`   |     12 | Predicted class encoded as `SemanticLabel`; 255 represents an invalid label. |
+| `probability` | `FLOAT32` |     16 | Probability of the predicted class.                                          |
+| `entropy`     | `FLOAT32` |     20 | Shannon entropy normalized by the logarithm of the number of classes.        |
+
+Bytes 13 through 15 are alignment padding. The output is intentionally not packed so that the
+floating-point fields remain naturally aligned on both the CPU and GPU.
 
 ## Parameters
 
