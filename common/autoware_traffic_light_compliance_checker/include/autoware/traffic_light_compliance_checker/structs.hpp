@@ -84,6 +84,16 @@ struct ComplianceResult
   std::vector<Violation> violations;
 };
 
+/// @brief debug information about an active crossing commitment
+struct CrossingCommitmentDebugInfo
+{
+  int64_t traffic_light_id;
+  lanelet::BasicLineString2d stop_line;
+  rclcpp::Time committed_at;
+  double elapsed_time;
+  double remaining_time;
+};
+
 /// @brief parameters for traffic light signal status tracking
 struct StatusTrackerParameters
 {

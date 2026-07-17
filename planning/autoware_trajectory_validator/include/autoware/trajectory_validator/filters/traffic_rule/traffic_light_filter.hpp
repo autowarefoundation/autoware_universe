@@ -57,6 +57,8 @@ private:
 
   void update_debug_data(
     const std::vector<traffic_light_compliance_checker::Violation> & violations,
+    const std::vector<traffic_light_compliance_checker::CrossingCommitmentDebugInfo> &
+      crossing_commitments,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
     const rclcpp::Time & current_time, const double z);
 };

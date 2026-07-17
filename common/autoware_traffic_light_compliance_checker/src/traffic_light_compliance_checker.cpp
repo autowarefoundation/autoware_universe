@@ -171,6 +171,29 @@ void TrafficLightComplianceChecker::update_parameters(const Parameters & paramet
   }
 }
 
+std::vector<CrossingCommitmentDebugInfo>
+TrafficLightComplianceChecker::get_crossing_commitment_debug_info(
+  const rclcpp::Time & current_time) const
+{
+  std::vector<CrossingCommitmentDebugInfo> debug_info;
+  if (params_.crossing_commitment_duration <= 0.0) {
+    return debug_info;
+  }
+
+  debug_info.reserve(crossing_commitment_history_.size());
+  for (const auto & [traffic_light_id, commitment] : crossing_commitment_history_) {
+    const auto elapsed_time = (current_time - commitment.committed_at).seconds();
+    if (elapsed_time < 0.0 || elapsed_time > params_.crossing_commitment_duration) {
+      continue;
+    }
+    debug_info.push_back(
+      CrossingCommitmentDebugInfo{
+        traffic_light_id, commitment.stop_line, commitment.committed_at, elapsed_time,
+        params_.crossing_commitment_duration - elapsed_time});
+  }
+  return debug_info;
+}
+
 tl::expected<ComplianceResult, std::string> TrafficLightComplianceChecker::check(
   const Inputs & input, const bool check_red_lights, const bool check_amber_lights)
 {
@@ -243,7 +266,7 @@ void TrafficLightComplianceChecker::cleanup_crossing_commitment_history(
   const rclcpp::Time & current_time)
 {
   for (auto it = crossing_commitment_history_.begin(); it != crossing_commitment_history_.end();) {
-    const auto elapsed = (current_time - it->second).seconds();
+    const auto elapsed = (current_time - it->second.committed_at).seconds();
     if (elapsed < 0.0 || elapsed > params_.crossing_commitment_duration) {
       it = crossing_commitment_history_.erase(it);
     } else {
@@ -488,7 +511,8 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
       if (
         !has_violation && is_within_commitment_distance &&
         trajectory_crosses_stop_line(trajectory_ls, stop_line.line)) {
-        crossing_commitment_history_[stop_line.traffic_light_id] = input.current_time;
+        crossing_commitment_history_[stop_line.traffic_light_id] =
+          CrossingCommitment{input.current_time, stop_line.line};
       }
     }
   }

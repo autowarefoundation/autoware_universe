@@ -66,7 +66,20 @@ public:
    */
   void update_parameters(const Parameters & parameters);
 
+  /**
+   * @brief return debug information for active crossing commitments
+   * @param current_time time used to calculate elapsed and remaining durations
+   */
+  [[nodiscard]] std::vector<CrossingCommitmentDebugInfo> get_crossing_commitment_debug_info(
+    const rclcpp::Time & current_time) const;
+
 private:
+  struct CrossingCommitment
+  {
+    rclcpp::Time committed_at;
+    lanelet::BasicLineString2d stop_line;
+  };
+
   [[nodiscard]] std::vector<int64_t> get_force_reject_amber_ids(
     const rclcpp::Time & current_time, bool is_ego_stopped) const;
 
@@ -116,7 +129,7 @@ private:
   vehicle_info_utils::VehicleInfo vehicle_info_;
   std::unique_ptr<TrafficLightStatusTracker> status_tracker_;
   std::unordered_map<int64_t, rclcpp::Time> amber_rejection_history_;
-  std::unordered_map<int64_t, rclcpp::Time> crossing_commitment_history_;
+  std::unordered_map<int64_t, CrossingCommitment> crossing_commitment_history_;
 };
 
 }  // namespace autoware::traffic_light_compliance_checker

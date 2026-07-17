@@ -16,7 +16,10 @@
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
+#include <algorithm>
+#include <iomanip>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -95,6 +98,13 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.checked_trajectory_length.jerk_limit = params.checked_trajectory_length.jerk_limit;
   return p;
 }
+
+std::string format_seconds(const double seconds)
+{
+  std::ostringstream stream;
+  stream << std::fixed << std::setprecision(2) << seconds;
+  return stream.str();
+}
 }  // namespace
 
 namespace autoware::trajectory_validator::plugin::traffic_rule
@@ -164,8 +174,8 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
   }
 
   update_debug_data(
-    result->violations, *context.traffic_light_signals, current_time,
-    context.odometry->pose.pose.position.z);
+    result->violations, checker_->get_crossing_commitment_debug_info(current_time),
+    *context.traffic_light_signals, current_time, context.odometry->pose.pose.position.z);
 
   std::vector<MetricReport> metrics;
 
@@ -198,6 +208,8 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
 
 void TrafficLightFilter::update_debug_data(
   const std::vector<traffic_light_compliance_checker::Violation> & violations,
+  const std::vector<traffic_light_compliance_checker::CrossingCommitmentDebugInfo> &
+    crossing_commitments,
   const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
   const rclcpp::Time & current_time, const double z)
 {
@@ -247,6 +259,22 @@ void TrafficLightFilter::update_debug_data(
 
     marker.text = "TL: " + std::to_string(tl_id) + ", " + info.signal_label +
                   ", Rejections: " + std::to_string(info.rejection_count);
+
+    debug_markers_.markers.push_back(marker);
+  }
+
+  marker.ns = "crossing_commitment_info";
+  marker.color.r = 0.0;
+  marker.color.g = 0.8;
+  marker.color.b = 1.0;
+  for (const auto & commitment : crossing_commitments) {
+    marker.id = static_cast<int>(debug_markers_.markers.size());
+    marker.pose.position.x = commitment.stop_line.front().x();
+    marker.pose.position.y = commitment.stop_line.front().y();
+    marker.pose.position.z = z + 2.8;
+    marker.text = "TL: " + std::to_string(commitment.traffic_light_id) +
+                  ", crossing committed, Remaining: " + format_seconds(commitment.remaining_time) +
+                  "s";
 
     debug_markers_.markers.push_back(marker);
   }
