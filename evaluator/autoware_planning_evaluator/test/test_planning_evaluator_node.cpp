@@ -162,21 +162,21 @@ protected:
   void publishTrajectory(const Trajectory & traj)
   {
     traj_pub_->publish(traj);
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
   void publishReferenceTrajectory(const Trajectory & traj)
   {
     ref_traj_pub_->publish(traj);
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
   void publishObjects(const Objects & obj)
   {
     objects_pub_->publish(obj);
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -185,7 +185,7 @@ protected:
     metric_updated_ = false;
     traj_pub_->publish(traj);
     while (!metric_updated_) {
-      rclcpp::spin_some(eval_node);
+      rclcpp::spin_some(eval_node->get_node_base_interface());
       rclcpp::spin_some(dummy_node);
       rclcpp::sleep_for(std::chrono::milliseconds(100));
     }
@@ -211,7 +211,7 @@ protected:
     modified_goal_pub_->publish(goal);
 
     while (!metric_updated_) {
-      rclcpp::spin_some(eval_node);
+      rclcpp::spin_some(eval_node->get_node_base_interface());
       rclcpp::spin_some(dummy_node);
       rclcpp::sleep_for(std::chrono::milliseconds(100));
     }
@@ -238,7 +238,7 @@ protected:
     odom.twist.twist.linear.y = y_vel;
 
     odom_pub_->publish(odom);
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -255,7 +255,7 @@ protected:
       distance, stop_point, PlanningFactor::STOP, SafetyFactorArray({}));
     planning_factor_interface_->publish();
 
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(sleep_time));
   }
@@ -269,7 +269,7 @@ protected:
              : TurnIndicatorsReport::DISABLE;
     blinker_pub_->publish(msg);
 
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(sleep_time));
   }
@@ -280,7 +280,7 @@ protected:
     msg.stamp = dummy_node->now();
     msg.steering_tire_angle = angle;
     steering_pub_->publish(msg);
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(sleep_time));
   }
@@ -761,7 +761,7 @@ TEST_F(EvalTest, TestStopDecisionDistance)
   publishEgoPose(0.0, 0.0, 0.0, 2.0, 0.0);
   publishStopPlanningFactor(10.0, 10.0, 0.0);
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -777,7 +777,7 @@ TEST_F(EvalTest, TestStopDecisionDuration)
   publishEgoPose(0.0, 0.0, 0.0, 2.0, 0.0);
   publishStopPlanningFactor(10.0, 10.0, 0.0, 500);
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -787,7 +787,7 @@ TEST_F(EvalTest, TestStopDecisionDuration)
   publishStopPlanningFactor(100.0, 100.0, 0.0, 500);
   publishStopPlanningFactor(100.0, 100.0, 0.0);
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -806,7 +806,7 @@ TEST_F(EvalTest, TestStopDecisionChange)
   publishStopPlanningFactor(5.0, 5.0, 0.0, 1000);
   publishStopPlanningFactor(5.0, 5.0, 0.0);
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -822,7 +822,7 @@ TEST_F(EvalTest, TestAbnormalStopDecisionDistance)
   publishEgoPose(0.0, 0.0, 0.0, 10.0, 0.0);
   publishStopPlanningFactor(5.0, 5.0, 0.0);
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -838,7 +838,7 @@ TEST_F(EvalTest, TestAbnormalStopDecisionDuration)
   publishEgoPose(0.0, 0.0, 0.0, 10.0, 0.0);
   publishStopPlanningFactor(15.0, 15.0, 0.0, 500);
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -848,7 +848,7 @@ TEST_F(EvalTest, TestAbnormalStopDecisionDuration)
   publishStopPlanningFactor(5.0, 5.0, 0.0, 1000);
   publishStopPlanningFactor(5.0, 5.0, 0.0);
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -865,7 +865,7 @@ TEST_F(EvalTest, TestBlinkerChangeCount)
   publishTurnIndicatorsReport(true, true);    // keep left blinker
   publishTurnIndicatorsReport(false, false);  // no blinker
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -881,7 +881,7 @@ TEST_F(EvalTest, TestBlinkerChangeCount)
   publishTurnIndicatorsReport(true, false);   // right blinker
   publishTurnIndicatorsReport(false, false);  // no blinker
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -900,7 +900,7 @@ TEST_F(EvalTest, TestBlinkerChangeCountTimeOut)
   rclcpp::sleep_for(std::chrono::milliseconds(10000));  // wait for 10 seconds to time out
   publishTurnIndicatorsReport(false, false);            // no blinker
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -921,7 +921,7 @@ TEST_F(EvalTest, TestSteeringChangeCount)
   publishSteeringAngle(0.0, 100);   // steer_rate around 0
 
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
@@ -943,7 +943,7 @@ TEST_F(EvalTest, TestSteeringChangeCountTimeOut)
   publishSteeringAngle(0.05, 100);                      // steer_rate around 0
 
   while (!metric_updated_) {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
