@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__PTV3__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 #define AUTOWARE__PTV3__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 
+#include "autoware/ptv3/experimental/point_type.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
 
@@ -39,7 +40,7 @@ public:
 
   void createSegmentationPointcloud(
     const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-    std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points);
+    experimental::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points);
 
   void reconstructPartial(
     const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,

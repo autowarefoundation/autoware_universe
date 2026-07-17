@@ -98,6 +98,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     SYSTEM PUBLIC
     ${autoware_cuda_utils_INCLUDE_DIRS}
   )
+  ament_target_dependencies(${PROJECT_NAME}_cuda_lib autoware_point_types)
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/ptv3_trt.cpp
