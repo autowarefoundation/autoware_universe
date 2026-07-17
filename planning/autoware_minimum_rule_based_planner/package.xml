@@ -6,6 +6,7 @@
   <description>The minimum_rule_based_planner package</description>
 
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
+  <maintainer email="hayate.sugahara@tier4.jp">Hayate Sugahara</maintainer>
   <maintainer email="yuki.takagi@tier4.jp">Yuki Takagi</maintainer>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
