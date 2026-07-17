@@ -21,18 +21,54 @@
           hazard: false
           over_drivable: false
           under_drivable: false
-        assessment_trajectories:
-          map_based: true
-          constant_curvature: true
-        ego_total_braking_delay: 0.4
+        pet_margin:
+          ego_earlier: 0.6
+          object_earlier: 1.0
         ego_footprint_margin:
-          lateral: 0.0
-          front: 0.0
+          lateral:
+            base: 0.3
+            pedestrian: 0.5
+            bicycle: 0.5
+          front: 1.0
           rear: 0.0
-        warn_threshold:
-          ego_acceleration: -2.0
-        error_threshold:
-          ego_acceleration: -4.0
+        ego_reaction_braking_delay:
+          nominal: 0.5
+          departure: 1.0
+        constant_curvature:
+          enable_assessment: true
+          object_time_horizon:
+            base: 1.0
+            pedestrian: 1.5
+            bicycle: 1.5
+          ego_earlier:
+            enable_assessment: false # Not evaluated. Must be false
+          object_earlier:
+            enable_assessment: true
+            ego_drac_acceleration:
+              safe_limit: -1.5
+              danger_limit: -3.0
+              fatal_limit: -6.0
+              enable_abandon: false
+        map_based:
+          enable_assessment: true
+          ego_prioritized_ego_earlier:
+            enable_assessment: false # Not evaluated. Must be false
+          ego_prioritized_object_earlier:
+            enable_assessment: false # Not evaluated. Must be false
+          object_prioritized_ego_earlier:
+            enable_assessment: true
+            ego_drac_acceleration:
+              safe_limit: -1.5
+              danger_limit: -3.0
+              fatal_limit: -6.0
+              enable_abandon: true
+          object_prioritized_object_earlier:
+            enable_assessment: true
+            ego_drac_acceleration:
+              safe_limit: -1.5
+              danger_limit: -3.0
+              fatal_limit: -6.0
+              enable_abandon: false
       rss:
         enable_assessment:
           # default value is true.

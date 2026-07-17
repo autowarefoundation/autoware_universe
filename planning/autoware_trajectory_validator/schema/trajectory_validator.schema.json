@@ -6,6 +6,7 @@
     "enable_assessment_per_class": {
       "type": "object",
       "properties": {
+        "base": { "type": "boolean", "default": true },
         "unknown": { "type": "boolean", "default": true },
         "car": { "type": "boolean", "default": true },
         "truck": { "type": "boolean", "default": true },
@@ -22,18 +23,57 @@
       "required": [],
       "additionalProperties": false
     },
-    "assessment_trajectories": {
+    "labeled_double": {
       "type": "object",
       "properties": {
-        "map_based": {
+        "base": { "type": "number" },
+        "unknown": { "type": "number" },
+        "car": { "type": "number" },
+        "truck": { "type": "number" },
+        "bus": { "type": "number" },
+        "trailer": { "type": "number" },
+        "motorcycle": { "type": "number" },
+        "bicycle": { "type": "number" },
+        "pedestrian": { "type": "number" },
+        "animal": { "type": "number" },
+        "hazard": { "type": "number" },
+        "over_drivable": { "type": "number" },
+        "under_drivable": { "type": "number" }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "drac_assessment": {
+      "type": "object",
+      "properties": {
+        "enable_assessment": {
           "type": "boolean",
           "default": true,
-          "description": "Use map-based predicted path trajectories."
+          "description": "Enable this DRAC assessment condition."
         },
-        "constant_curvature": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use constant-curvature predicted trajectories."
+        "ego_drac_acceleration": {
+          "type": "object",
+          "properties": {
+            "safe_limit": {
+              "type": "number",
+              "description": "Ego acceleration limit for a safe DRAC assessment [m/s²]."
+            },
+            "danger_limit": {
+              "type": "number",
+              "description": "Ego acceleration limit for a dangerous DRAC assessment [m/s²]."
+            },
+            "fatal_limit": {
+              "type": "number",
+              "description": "Ego acceleration limit for a fatal DRAC assessment [m/s²]."
+            },
+            "enable_abandon": {
+              "type": "boolean",
+              "default": false,
+              "description": "Treat an unavoidable collision as high caution instead of fatal."
+            }
+          },
+          "required": [],
+          "additionalProperties": false
         }
       },
       "required": [],
@@ -97,33 +137,86 @@
               "description": "Deceleration Rate to Avoid Collision (DRAC) assessment settings.",
               "properties": {
                 "enable_assessment": { "$ref": "#/definitions/enable_assessment_per_class" },
-                "assessment_trajectories": { "$ref": "#/definitions/assessment_trajectories" },
-                "ego_total_braking_delay": {
-                  "type": "number",
-                  "description": "Total ego braking delay for DRAC assessment [s].",
-                  "default": 0.4,
-                  "minimum": 0.0
-                },
-                "ego_footprint_margin": { "$ref": "#/definitions/ego_footprint_margin" },
-                "warn_threshold": {
+                "pet_margin": {
                   "type": "object",
                   "properties": {
-                    "ego_acceleration": {
+                    "ego_earlier": {
                       "type": "number",
-                      "description": "Ego acceleration threshold for DRAC warning (negative, m/s²).",
-                      "default": -3.0
+                      "description": "PET margin when ego reaches the collision point earlier than the object [s]."
+                    },
+                    "object_earlier": {
+                      "type": "number",
+                      "description": "PET margin when the object reaches the collision point earlier than ego [s]."
                     }
                   },
                   "required": [],
                   "additionalProperties": false
                 },
-                "error_threshold": {
+                "ego_footprint_margin": {
                   "type": "object",
                   "properties": {
-                    "ego_acceleration": {
+                    "lateral": { "$ref": "#/definitions/labeled_double" },
+                    "front": {
                       "type": "number",
-                      "description": "Ego acceleration threshold for DRAC error (negative, m/s²).",
-                      "default": -5.0
+                      "description": "Front margin added to the ego footprint for DRAC assessment [m]."
+                    },
+                    "rear": {
+                      "type": "number",
+                      "description": "Rear margin added to the ego footprint for DRAC assessment [m]."
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "ego_reaction_braking_delay": {
+                  "type": "object",
+                  "properties": {
+                    "nominal": {
+                      "type": "number",
+                      "description": "Ego reaction and braking delay used for nominal DRAC assessment [s]."
+                    },
+                    "departure": {
+                      "type": "number",
+                      "description": "Ego reaction and braking delay used for departure DRAC assessment [s]."
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "constant_curvature": {
+                  "type": "object",
+                  "properties": {
+                    "enable_assessment": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Use constant-curvature trajectories for DRAC assessment."
+                    },
+                    "object_time_horizon": { "$ref": "#/definitions/labeled_double" },
+                    "ego_earlier": { "$ref": "#/definitions/drac_assessment" },
+                    "object_earlier": { "$ref": "#/definitions/drac_assessment" }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "map_based": {
+                  "type": "object",
+                  "properties": {
+                    "enable_assessment": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Use map-based predicted path trajectories for DRAC assessment."
+                    },
+                    "ego_prioritized_ego_earlier": {
+                      "$ref": "#/definitions/drac_assessment"
+                    },
+                    "ego_prioritized_object_earlier": {
+                      "$ref": "#/definitions/drac_assessment"
+                    },
+                    "object_prioritized_ego_earlier": {
+                      "$ref": "#/definitions/drac_assessment"
+                    },
+                    "object_prioritized_object_earlier": {
+                      "$ref": "#/definitions/drac_assessment"
                     }
                   },
                   "required": [],

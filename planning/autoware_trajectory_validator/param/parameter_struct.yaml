@@ -42,7 +42,7 @@ validator:
     global_setting:
       time_resolution:
         type: double
-        default_value: 0.1
+        default_value: .NAN
         description: sampling interval used in collision check trajectory generation
         read_only: false
     drac:
@@ -66,50 +66,139 @@ validator:
         hazard: *drac_ea
         over_drivable: *drac_ea
         under_drivable: *drac_ea
-      assessment_trajectories:
-        map_based:
-          type: bool
-          default_value: true
-          description: Use map based predicted path trajectories for DRAC assessment
+      pet_margin:
+        ego_earlier:
+          type: double
+          default_value: .NAN
+          description: PET margin when ego reaches the collision point earlier than the object
           read_only: false
-        constant_curvature:
-          type: bool
-          default_value: true
-          description: Use constant curvature trajectories for DRAC assessment
+        object_earlier:
+          type: double
+          default_value: .NAN
+          description: PET margin when the object reaches the collision point earlier than ego
           read_only: false
-      ego_total_braking_delay:
-        type: double
-        default_value: 0.4
-        description: Total ego braking delay for DRAC assessment
-        read_only: false
       ego_footprint_margin:
         lateral:
-          type: double
-          default_value: 0.0
-          description: lateral margin added to both sides of the ego footprint for DRAC assessment
-          read_only: false
+          base:
+            type: double
+            default_value: .NAN
+            description: default lateral margin added to both sides of the ego footprint for DRAC assessment
+            read_only: false
+          unknown:
+            &drac_labeled_double_override {
+              type: double,
+              default_value: .NAN,
+              description: Per-class override. NaN uses the base value.,
+              read_only: false,
+            }
+          car: *drac_labeled_double_override
+          truck: *drac_labeled_double_override
+          bus: *drac_labeled_double_override
+          trailer: *drac_labeled_double_override
+          motorcycle: *drac_labeled_double_override
+          bicycle: *drac_labeled_double_override
+          pedestrian: *drac_labeled_double_override
+          animal: *drac_labeled_double_override
+          hazard: *drac_labeled_double_override
+          over_drivable: *drac_labeled_double_override
+          under_drivable: *drac_labeled_double_override
         front:
           type: double
-          default_value: 0.0
+          default_value: .NAN
           description: front margin added to the ego footprint for DRAC assessment
           read_only: false
         rear:
           type: double
-          default_value: 0.0
+          default_value: .NAN
           description: rear margin added to the ego footprint for DRAC assessment
           read_only: false
-      warn_threshold:
-        ego_acceleration:
+      ego_reaction_braking_delay:
+        nominal:
           type: double
-          default_value: -3.0
-          description: Ego acceleration threshold for DRAC warning (m/s^2, negative)
+          default_value: .NAN
+          description: Ego reaction and braking delay used for nominal DRAC assessment
           read_only: false
-      error_threshold:
-        ego_acceleration:
+        departure:
           type: double
-          default_value: -5.0
-          description: Ego acceleration threshold for DRAC error (m/s^2, negative)
+          default_value: .NAN
+          description: Ego reaction and braking delay used for departure DRAC assessment
           read_only: false
+      constant_curvature:
+        enable_assessment:
+          type: bool
+          default_value: true
+          description: Use constant curvature trajectories for DRAC assessment
+          read_only: false
+        object_time_horizon:
+          base:
+            type: double
+            default_value: .NAN
+            description: Default time horizon for the object constant curvature trajectory
+            read_only: false
+          unknown: *drac_labeled_double_override
+          car: *drac_labeled_double_override
+          truck: *drac_labeled_double_override
+          bus: *drac_labeled_double_override
+          trailer: *drac_labeled_double_override
+          motorcycle: *drac_labeled_double_override
+          bicycle: *drac_labeled_double_override
+          pedestrian: *drac_labeled_double_override
+          animal: *drac_labeled_double_override
+          hazard: *drac_labeled_double_override
+          over_drivable: *drac_labeled_double_override
+          under_drivable: *drac_labeled_double_override
+        ego_earlier:
+          &drac_assessment {
+            enable_assessment:
+              {
+                type: bool,
+                default_value: true,
+                description: Enable this DRAC assessment condition,
+                read_only: false,
+              },
+            ego_drac_acceleration:
+              {
+                safe_limit:
+                  {
+                    type: double,
+                    default_value: .NAN,
+                    description: Ego acceleration limit for a safe DRAC assessment,
+                    read_only: false,
+                  },
+                danger_limit:
+                  {
+                    type: double,
+                    default_value: .NAN,
+                    description: Ego acceleration limit for a dangerous DRAC assessment,
+                    read_only: false,
+                  },
+                fatal_limit:
+                  {
+                    type: double,
+                    default_value: .NAN,
+                    description: Ego acceleration limit for a fatal DRAC assessment,
+                    read_only: false,
+                  },
+                enable_abandon:
+                  {
+                    type: bool,
+                    default_value: false,
+                    description: Treat an unavoidable collision as high caution instead of fatal,
+                    read_only: false,
+                  },
+              },
+          }
+        object_earlier: *drac_assessment
+      map_based:
+        enable_assessment:
+          type: bool
+          default_value: false
+          description: Use map based predicted path trajectories for DRAC assessment
+          read_only: false
+        ego_prioritized_ego_earlier: *drac_assessment
+        ego_prioritized_object_earlier: *drac_assessment
+        object_prioritized_ego_earlier: *drac_assessment
+        object_prioritized_object_earlier: *drac_assessment
     rss:
       enable_assessment:
         base:
@@ -133,39 +222,39 @@ validator:
         under_drivable: *rss_ea
       stop_distance_margin:
         type: double
-        default_value: 2.0
+        default_value: .NAN
         description: required remaining distance to the object when ego stops
         read_only: false
       ego_total_braking_delay:
         type: double
-        default_value: 0.4
+        default_value: .NAN
         description: Total ego braking delay for RSS calculation
         read_only: false
       ego_footprint_margin:
         lateral:
           type: double
-          default_value: 0.0
+          default_value: .NAN
           description: lateral margin added to both sides of the ego footprint for RSS assessment
           read_only: false
         front:
           type: double
-          default_value: 0.0
+          default_value: .NAN
           description: front margin added to the ego footprint for RSS assessment
           read_only: false
         rear:
           type: double
-          default_value: 0.0
+          default_value: .NAN
           description: rear margin added to the ego footprint for RSS assessment
           read_only: false
       object_assumed_acceleration:
         type: double
-        default_value: -1.0
+        default_value: .NAN
         description: Assumed object acceleration for RSS calculation (m/s^2, negative)
         read_only: false
       error_threshold:
         ego_acceleration:
           type: double
-          default_value: -4.0
+          default_value: .NAN
           description: Ego acceleration threshold to determine RSS collision (m/s^2, negative)
           read_only: false
 

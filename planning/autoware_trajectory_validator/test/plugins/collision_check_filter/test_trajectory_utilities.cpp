@@ -65,18 +65,6 @@ TrajectoryPoints create_straight_trajectory_points(const std::vector<double> & x
   return traj_points;
 }
 
-template <typename ParamMap>
-ParamMap make_param_map_with_assessment_trajectories(const AssessmentTrajectories & assessment)
-{
-  ParamMap param_map;
-  for (const auto & [label, class_name] : kObjectClassifications) {
-    (void)label;
-    param_map[class_name].assessment_trajectories = assessment;
-  }
-  param_map[kCollisionCheckParamBaseKey].assessment_trajectories = assessment;
-  return param_map;
-}
-
 autoware_perception_msgs::msg::Shape create_bounding_box_shape(
   const double length = 4.0, const double width = 2.0)
 {

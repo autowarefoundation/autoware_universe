@@ -130,51 +130,110 @@ struct GlobalParams
   }
 };
 
-struct PetThreshold
-{
-  double ego_first_passing_time_gap{1.0};
-  double object_first_passing_time_gap{1.0};
-};
-
-struct AssessmentTrajectories
-{
-  bool map_based{true};
-  bool constant_curvature{true};
-};
-
 struct DracParams
 {
-  struct Threshold
+  struct PetMargin
   {
-    double ego_acceleration{-4.0};
+    double ego_earlier{1.0};
+    double object_earlier{1.0};
+  };
+
+  struct EgoReactionBrakingDelay
+  {
+    double nominal{0.4};
+    double departure{1.0};
+  };
+
+  struct EgoDracAcceleration
+  {
+    double safe_limit{-1.5};
+    double danger_limit{-3.0};
+    double fatal_limit{-6.0};
+    bool enable_abandon{false};
+  };
+
+  struct DracAssessment
+  {
+    bool enable_assessment{true};
+    EgoDracAcceleration ego_drac_assessment{};
+  };
+
+  struct ConstantCurvature
+  {
+    bool enable_assessment{true};
+    double object_time_horizon{1.0};
+    DracAssessment ego_earlier{};
+    DracAssessment object_earlier{};
+  };
+
+  struct MapBased
+  {
+    bool enable_assessment{};
+    DracAssessment ego_prioritized_ego_earlier{};
+    DracAssessment ego_prioritized_object_earlier{};
+    DracAssessment object_prioritized_ego_earlier{};
+    DracAssessment object_prioritized_object_earlier{};
   };
 
   DracParams() = default;
   DracParams(const validator::Params & node_params, const std::string_view key)
   {
     const auto & drac = node_params.collision_check.drac;
+
+    const auto parse_assessment = [&key](const auto & input, DracAssessment & output) {
+      output.enable_assessment = extract_labeled_param<bool>(input.enable_assessment, key);
+
+      const auto & input_acceleration = input.ego_drac_acceleration;
+      auto & output_acceleration = output.ego_drac_assessment;
+      output_acceleration.safe_limit =
+        extract_labeled_param<double>(input_acceleration.safe_limit, key);
+      output_acceleration.danger_limit =
+        extract_labeled_param<double>(input_acceleration.danger_limit, key);
+      output_acceleration.fatal_limit =
+        extract_labeled_param<double>(input_acceleration.fatal_limit, key);
+      output_acceleration.enable_abandon =
+        extract_labeled_param<bool>(input_acceleration.enable_abandon, key);
+    };
+
     enable_assessment = extract_labeled_param<bool>(drac.enable_assessment, key);
-    assessment_trajectories.map_based =
-      enable_assessment && extract_labeled_param<bool>(drac.assessment_trajectories.map_based, key);
-    assessment_trajectories.constant_curvature =
-      enable_assessment &&
-      extract_labeled_param<bool>(drac.assessment_trajectories.constant_curvature, key);
-    ego_total_braking_delay = extract_labeled_param<double>(drac.ego_total_braking_delay, key);
-    ego_footprint_margin.lateral = drac.ego_footprint_margin.lateral;
-    ego_footprint_margin.front = drac.ego_footprint_margin.front;
-    ego_footprint_margin.rear = drac.ego_footprint_margin.rear;
-    warn_threshold.ego_acceleration =
-      extract_labeled_param<double>(drac.warn_threshold.ego_acceleration, key);
-    error_threshold.ego_acceleration =
-      extract_labeled_param<double>(drac.error_threshold.ego_acceleration, key);
+    pet_margin.ego_earlier = extract_labeled_param<double>(drac.pet_margin.ego_earlier, key);
+    pet_margin.object_earlier = extract_labeled_param<double>(drac.pet_margin.object_earlier, key);
+    ego_footprint_margin.lateral =
+      extract_labeled_param<double>(drac.ego_footprint_margin.lateral, key);
+    ego_footprint_margin.front =
+      extract_labeled_param<double>(drac.ego_footprint_margin.front, key);
+    ego_footprint_margin.rear = extract_labeled_param<double>(drac.ego_footprint_margin.rear, key);
+    ego_reaction_braking_delay.nominal =
+      extract_labeled_param<double>(drac.ego_reaction_braking_delay.nominal, key);
+    ego_reaction_braking_delay.departure =
+      extract_labeled_param<double>(drac.ego_reaction_braking_delay.departure, key);
+
+    constant_curvature.enable_assessment =
+      extract_labeled_param<bool>(drac.constant_curvature.enable_assessment, key);
+    constant_curvature.object_time_horizon =
+      extract_labeled_param<double>(drac.constant_curvature.object_time_horizon, key);
+    parse_assessment(drac.constant_curvature.ego_earlier, constant_curvature.ego_earlier);
+    parse_assessment(drac.constant_curvature.object_earlier, constant_curvature.object_earlier);
+
+    map_based.enable_assessment =
+      extract_labeled_param<bool>(drac.map_based.enable_assessment, key);
+    parse_assessment(
+      drac.map_based.ego_prioritized_ego_earlier, map_based.ego_prioritized_ego_earlier);
+    parse_assessment(
+      drac.map_based.ego_prioritized_object_earlier, map_based.ego_prioritized_object_earlier);
+    parse_assessment(
+      drac.map_based.object_prioritized_ego_earlier, map_based.object_prioritized_ego_earlier);
+    parse_assessment(
+      drac.map_based.object_prioritized_object_earlier,
+      map_based.object_prioritized_object_earlier);
   }
 
-  bool enable_assessment{false};
-  AssessmentTrajectories assessment_trajectories{};
-  double ego_total_braking_delay{0.4};
+  bool enable_assessment{true};
+  PetMargin pet_margin{};
   EgoFootprintMargin ego_footprint_margin{};
-  Threshold warn_threshold{-2.0};
-  Threshold error_threshold{};
+  EgoReactionBrakingDelay ego_reaction_braking_delay{};
+  ConstantCurvature constant_curvature{};
+  MapBased map_based{};
 };
 
 struct RssParams
