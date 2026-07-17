@@ -195,16 +195,16 @@
         </composable_node>
       </node_container>
 
-      <!-- Load shift decider as composable node -->
-      <load_composable_node target="/e2e_control_container">
-        <composable_node pkg="autoware_shift_decider" plugin="autoware::shift_decider::ShiftDecider" name="autoware_shift_decider">
-          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
-          <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
-          <remap from="input/state" to="/autoware/state"/>
-          <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
-          <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
-        </composable_node>
-      </load_composable_node>
+      <!-- shift_decider runs as standalone node -->
+      <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+      <node pkg="autoware_shift_decider" exec="autoware_shift_decider" name="autoware_shift_decider" output="screen">
+        <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
+        <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
+        <remap from="input/state" to="/autoware/state"/>
+        <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
+        <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
+        <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+      </node>
 
       <node pkg="topic_tools" exec="relay" name="trajectory_follower_control_cmd_relay" output="log" args="/trajectory_follower/control_cmd /trajectory_follower_control_cmd"/>
 
