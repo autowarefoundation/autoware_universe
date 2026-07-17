@@ -206,6 +206,18 @@ if(BUILD_TESTING)
       ${OpenCV_LIBRARIES}
       ${CUDA_LIBRARIES}
     )
+
+    # CnnLampRecognizerCore tests (ROS-free): static helpers run GPU-free; the classify()
+    # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
+    ament_auto_add_gtest(test_cnn_lamp_recognizer_core
+      test/test_cnn_lamp_recognizer_core.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_lamp_recognizer_core
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
   endif()
 endif()
 
