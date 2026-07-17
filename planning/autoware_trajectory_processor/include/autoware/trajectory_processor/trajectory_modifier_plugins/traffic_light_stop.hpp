@@ -26,7 +26,6 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
-#include <string>
 
 namespace autoware::trajectory_modifier::plugin
 {
@@ -55,7 +54,7 @@ private:
   TrajectoryModifierParams::TrafficLightStop params_;
   TrajectoryModifierParams::StoppingConstraints stopping_params_;
 
-  std::optional<autoware::traffic_light_compliance_checker::Violation> nearest_violation_;
+  std::optional<autoware::traffic_light_compliance_checker::StopLineCrossing> nearest_violation_;
 
   std::unique_ptr<autoware::traffic_light_compliance_checker::TrafficLightComplianceChecker>
     checker_;
@@ -74,7 +73,7 @@ private:
 
   bool set_stop_point(TrajectoryPoints & traj_points, const InputData & input);
 
-  bool check_inputs(const InputData & input);
+  static bool check_inputs(const InputData & input);
 
   void publish_debug_string() const;
 };

@@ -25,6 +25,8 @@
 #include <lanelet2_core/geometry/LineString.h>
 
 #include <cstdint>
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light_compliance_checker
@@ -49,30 +51,39 @@ struct StopLineInfo
   int64_t traffic_light_id;
 };
 
-/// @brief type of traffic light violation
-enum class ViolationType { RED_LIGHT, AMBER_LIGHT };
-
-/// @brief violation detail
-struct Violation
+/// @brief information about stop lines
+struct StopLineInfos
 {
-  ViolationType type;
+  std::vector<StopLineInfo> red_stop_lines;
+  std::vector<StopLineInfo> amber_stop_lines;
+  std::vector<StopLineInfo> unknown_stop_lines;
+  std::vector<StopLineInfo> green_stop_lines;
+};
+
+/// @brief type of traffic light violation
+enum class ViolationType { NONE, RED_LIGHT, AMBER_LIGHT };
+
+/// @brief Information about stop line crossing
+struct StopLineCrossing
+{
   lanelet::BasicLineString2d stop_line;
   int64_t traffic_light_id;
-  lanelet::BasicPoint2d cross_point;
+  std::optional<lanelet::BasicPoint2d> cross_point;
   double arc_length_to_cross_point;
+  std::optional<double> distance_between_stop_point_and_stop_line;
+  ViolationType violation_type{ViolationType::NONE};
 
-  Violation(
-    ViolationType type, lanelet::BasicLineString2d stop_line, int64_t traffic_light_id,
+  StopLineCrossing(
+    lanelet::BasicLineString2d stop_line, int64_t traffic_light_id,
     lanelet::BasicPoint2d cross_point, double arc_length_to_cross_point)
-  : type(type),
-    stop_line(stop_line),
+  : stop_line(std::move(stop_line)),
     traffic_light_id(traffic_light_id),
     cross_point(cross_point),
     arc_length_to_cross_point(arc_length_to_cross_point)
   {
   }
 
-  bool operator<(const Violation & other) const
+  bool operator<(const StopLineCrossing & other) const
   {
     return arc_length_to_cross_point < other.arc_length_to_cross_point;
   }
@@ -81,7 +92,7 @@ struct Violation
 /// @brief result of compliance check
 struct ComplianceResult
 {
-  std::vector<Violation> violations;
+  std::vector<StopLineCrossing> crossings;
 };
 
 /// @brief debug information about an active crossing commitment

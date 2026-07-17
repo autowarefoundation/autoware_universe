@@ -17,6 +17,7 @@
 
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
+#include <autoware/traffic_light_compliance_checker/structs.hpp>
 #include <autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
@@ -56,7 +57,7 @@ private:
   std::optional<rclcpp::Time> last_frame_time_;
 
   void update_debug_data(
-    const std::vector<traffic_light_compliance_checker::Violation> & violations,
+    const std::vector<traffic_light_compliance_checker::StopLineCrossing> & violations,
     const std::vector<traffic_light_compliance_checker::CrossingCommitmentDebugInfo> &
       crossing_commitments,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,

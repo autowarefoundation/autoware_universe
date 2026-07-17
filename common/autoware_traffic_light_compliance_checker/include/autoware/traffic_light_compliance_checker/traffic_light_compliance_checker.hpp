@@ -27,12 +27,12 @@
 
 #include <lanelet2_core/LaneletMap.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light_compliance_checker
@@ -49,8 +49,6 @@ public:
    */
   TrafficLightComplianceChecker(
     const Parameters & parameters, const vehicle_info_utils::VehicleInfo & vehicle_info);
-
-  ~TrafficLightComplianceChecker();
 
   /**
    * @brief check if the trajectory complies with traffic lights
@@ -91,39 +89,52 @@ private:
 
   void cleanup_crossing_commitment_history(const rclcpp::Time & current_time);
 
-  [[nodiscard]] tl::expected<ComplianceResult, std::string> check_with_filtered_signals(
+  [[nodiscard]] tl::expected<ComplianceResult, std::string> get_crossings_with_filtered_signals(
     const Inputs & input,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & filtered_signals,
     const std::vector<int64_t> & force_reject_amber_ids, const bool check_red_lights,
     const bool check_amber_lights);
 
-  std::vector<Violation> get_red_light_violations(
-    const std::vector<StopLineInfo> & red_stop_lines,
-    const lanelet::BasicLineString2d & trajectory_ls,
-    const std::optional<lanelet::BasicPoint2d> & stop_point,
-    const double distance_offset = 0.0) const;
-  std::vector<Violation> get_amber_light_violations(
+  std::vector<StopLineCrossing> get_stop_line_crossings(
+    const std::vector<StopLineInfo> & stop_lines, const lanelet::BasicLineString2d & trajectory_ls,
+    const std::optional<lanelet::BasicPoint2d> & stop_point, const double distance_offset = 0.0,
+    const ViolationType violation_type_for_crossing = ViolationType::NONE) const;
+  std::vector<StopLineCrossing> get_amber_light_crossings(
     const std::vector<StopLineInfo> & amber_stop_lines,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
     const lanelet::BasicLineString2d & trajectory_ls,
     const std::optional<lanelet::BasicPoint2d> & stop_point,
     const std::vector<int64_t> & force_reject_amber_ids, const double distance_offset = 0.0) const;
 
-  /// @brief return the red and amber stop lines related to the given traffic light groups
-  [[nodiscard]] std::pair<std::vector<StopLineInfo>, std::vector<StopLineInfo>> get_stop_lines(
+  /// @brief return the stop lines related to the given traffic light groups
+  [[nodiscard]] StopLineInfos get_stop_lines(
     const lanelet::LaneletMap & lanelet_map,
     const autoware_planning_msgs::msg::LaneletRoute & route,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_lights) const;
-
-  /// @brief return true if there is a stop point and it is within margin distance of the stop line
-  [[nodiscard]] bool is_stop_point_within_margin_from_stop_line(
-    const std::optional<lanelet::BasicPoint2d> & stop_point,
-    const lanelet::BasicLineString2d & stop_line) const;
 
   /// @brief return true if ego can safely pass an amber traffic light
   [[nodiscard]] bool can_pass_amber_light(
     const double distance_to_stop_line, const double current_velocity,
     const double current_acceleration, const double time_to_cross_stop_line) const;
+
+  /// @brief update commited stop lines
+  void update_commitments(
+    const std::vector<StopLineCrossing> & crossings, const rclcpp::Time & current_time,
+    const double crossing_commitment_distance, const lanelet::BasicPoint2d & ego_base_point,
+    const lanelet::BasicPoint2d & ego_front_point);
+
+  /// @brief remove violations for commited stop lines
+  void remove_violations_for_commited_stop_lines(std::vector<StopLineCrossing> & crossings)
+  {
+    crossings.erase(
+      std::remove_if(
+        crossings.begin(), crossings.end(),
+        [this](const StopLineCrossing & crossing) {
+          return crossing_commitment_history_.find(crossing.traffic_light_id) !=
+                 crossing_commitment_history_.end();
+        }),
+      crossings.end());
+  }
 
   Parameters params_;
   vehicle_info_utils::VehicleInfo vehicle_info_;

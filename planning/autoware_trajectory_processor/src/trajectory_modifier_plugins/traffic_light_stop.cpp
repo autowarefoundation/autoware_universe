@@ -28,7 +28,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 {
   const auto tl_stop_p = params.traffic_light_stop;
   const auto stopping_params = params.stopping_constraints;
-  autoware::traffic_light_compliance_checker::Parameters p;
+  autoware::traffic_light_compliance_checker::Parameters p{};
   p.deceleration_limit = stopping_params.maximum_deceleration;
   p.jerk_limit = stopping_params.jerk_limit;
   p.crossing_time_limit = tl_stop_p.crossing_time_limit;
@@ -115,12 +115,12 @@ bool TrafficLightStop::check_traffic_lights(
     checker_->check(inputs, params_.stop_for_red_light, params_.stop_for_amber_light);
   if (!result) return false;
 
-  if (result->violations.empty()) return false;
+  if (result->crossings.empty()) return false;
 
-  const auto nearest_it = std::min_element(result->violations.begin(), result->violations.end());
+  const auto nearest_it = std::min_element(result->crossings.begin(), result->crossings.end());
   nearest_violation_ = *nearest_it;
 
-  debug_data_.violations_count = result->violations.size();
+  debug_data_.violations_count = result->crossings.size();
   debug_data_.nearest_violation_arc_length = nearest_it->arc_length_to_cross_point;
 
   RCLCPP_WARN_THROTTLE(

@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_validator/filters/traffic_rule/traffic_light_filter.hpp"
 
+#include <autoware/traffic_light_compliance_checker/structs.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
 #include <algorithm>
@@ -165,16 +166,17 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
   bool is_crossing_red = false;
   bool is_crossing_amber = false;
 
-  for (const auto & violation : result->violations) {
-    if (violation.type == traffic_light_compliance_checker::ViolationType::RED_LIGHT) {
+  for (const auto & violation : result->crossings) {
+    if (violation.violation_type == traffic_light_compliance_checker::ViolationType::RED_LIGHT) {
       is_crossing_red = true;
-    } else if (violation.type == traffic_light_compliance_checker::ViolationType::AMBER_LIGHT) {
+    } else if (
+      violation.violation_type == traffic_light_compliance_checker::ViolationType::AMBER_LIGHT) {
       is_crossing_amber = true;
     }
   }
 
   update_debug_data(
-    result->violations, checker_->get_crossing_commitment_debug_info(current_time),
+    result->crossings, checker_->get_crossing_commitment_debug_info(current_time),
     *context.traffic_light_signals, current_time, context.odometry->pose.pose.position.z);
 
   std::vector<MetricReport> metrics;
@@ -207,7 +209,7 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
 }
 
 void TrafficLightFilter::update_debug_data(
-  const std::vector<traffic_light_compliance_checker::Violation> & violations,
+  const std::vector<traffic_light_compliance_checker::StopLineCrossing> & violations,
   const std::vector<traffic_light_compliance_checker::CrossingCommitmentDebugInfo> &
     crossing_commitments,
   const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
