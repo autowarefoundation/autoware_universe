@@ -142,10 +142,6 @@ def generate_launch_description():
         )
     ]
 
-    # external_cmd_converter runs as autoware::agnocast_wrapper::Node, which does not
-    # support being loaded into any component container (agnocast-aware or not), so it
-    # is always launched standalone. The heaphook must be preloaded when Agnocast is
-    # enabled (ld_preload_value is provided by agnocast_env.launch.py).
     node = Node(
         package="autoware_external_cmd_converter",
         executable="external_cmd_converter_node",
