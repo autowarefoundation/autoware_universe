@@ -113,9 +113,6 @@ def generate_launch_description():
     ]
     # fmt: on
 
-    # Resolves use_agnocast/ld_preload_value (heaphook + existing LD_PRELOAD) from the
-    # ENABLE_AGNOCAST environment variable, and spawns the per-launch Agnocast discovery
-    # agent when enabled. No-op when Agnocast is disabled.
     agnocast_env = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
