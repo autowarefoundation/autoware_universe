@@ -1257,7 +1257,8 @@ double PidLongitudinalController::applyVelocityFeedback(const ControlData & cont
     if (
       abs(target_motion.vel) < m_state_transition_params.stopped_state_entry_vel &&
       target_motion.acc < m_state_transition_params.stopped_state_entry_acc) {
-      target_acc = m_stopped_state_params.acc;
+      target_acc =
+        control_data.interpolated_traj.points.at(control_data.target_idx).acceleration_mps2;
     }
 
     const double feedback_acc = w * a_connect + (1.0 - w) * target_acc;
