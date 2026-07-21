@@ -159,6 +159,11 @@ public:
     const geometry_msgs::msg::Point & prev_end_point,
     const geometry_msgs::msg::Point & following_end_point) const;
 
+  [[nodiscard]] std::optional<double> get_velocity_limit(const lanelet::BasicPoint2d & point) const;
+  [[nodiscard]] std::optional<double> get_velocity_limit(const lanelet::Point2d & point) const;
+  [[nodiscard]] std::optional<double> get_velocity_limit(
+    const geometry_msgs::msg::Point & point) const;
+
 private:
   [[nodiscard]] std::optional<std::size_t> find_segment_index_for_point(
     const geometry_msgs::msg::Point & point) const;

@@ -373,6 +373,51 @@ void add_bounds_linestring_to_map(
   map.add(linestring);
 }
 
+std::vector<lanelet::ConstLanelet> get_nearest_lanelets(
+  const lanelet::LaneletMap & route_map, const lanelet::BasicPoint2d & search_point)
+{
+  constexpr size_t k_max_nearest_lanelets = 5;
+  std::vector<lanelet::ConstLanelet> nearest_lanelets;
+  nearest_lanelets.reserve(k_max_nearest_lanelets);
+
+  route_map.laneletLayer.nearestUntil(
+    search_point, [&](const lanelet::BoundingBox2d & bbox, const lanelet::ConstLanelet & lanelet) {
+      if (lanelet::geometry::inside(lanelet, search_point)) {
+        nearest_lanelets.push_back(lanelet);
+        return nearest_lanelets.size() >= k_max_nearest_lanelets;
+      }
+      constexpr double k_bbox_touch_epsilon_m = 1e-3;
+      return lanelet::geometry::distance2d(bbox, search_point) > k_bbox_touch_epsilon_m;
+    });
+
+  return nearest_lanelets;
+}
+
+bool is_road_shoulder(const lanelet::ConstLanelet & lanelet)
+{
+  return std::string(lanelet.attributeOr(lanelet::AttributeName::Subtype, "none")) ==
+         "road_shoulder";
+}
+
+bool is_pedestrian_lane(const lanelet::ConstLanelet & lanelet)
+{
+  return std::string(lanelet.attributeOr(lanelet::AttributeName::Subtype, "none")) ==
+         "pedestrian_lane";
+}
+
+std::optional<double> read_speed_limit_from_lanelet(const lanelet::ConstLanelet & lanelet)
+{
+  constexpr const char * k_speed_limit_attribute = "speed_limit";
+  if (!lanelet.hasAttribute(k_speed_limit_attribute)) {
+    return std::nullopt;
+  }
+  const auto v = lanelet.attribute(k_speed_limit_attribute).asDouble();
+  if (!v) {
+    return std::nullopt;
+  }
+  return v.get();
+}
+
 lanelet::LaneletMap build_debug_map(lanelet::LaneletMap & route_map)
 {
   lanelet::LaneletMap debug_map;
@@ -724,6 +769,63 @@ lanelet::BasicPolygon2d ExtendedRouteHandler::get_near_segment_polygon(
   ring.emplace_back(ring.front());
 
   return lanelet::BasicPolygon2d(ring);
+}
+
+std::optional<double> ExtendedRouteHandler::get_velocity_limit(
+  const lanelet::BasicPoint2d & point) const
+{
+  const auto nearest_lanelets = get_nearest_lanelets(*route_map_, point);
+  if (nearest_lanelets.empty()) {
+    return std::nullopt;
+  }
+
+  std::optional<double> velocity_limit;
+
+  for (const auto & lanelet : nearest_lanelets) {
+    // If the lanelet has a speed limit attribute, use it.
+    const auto speed_limit = read_speed_limit_from_lanelet(lanelet);
+    if (speed_limit) {
+      velocity_limit = (velocity_limit) ? std::min(*velocity_limit, *speed_limit) : *speed_limit;
+      continue;
+    }
+
+    // If the lanelet has no speed limit attribute, but is a road_shoulder or pedestrian_lane, get
+    // the speed limit from the left and right lanelets.
+    if (is_road_shoulder(lanelet) || is_pedestrian_lane(lanelet)) {
+      const auto left_lanelet = traffic_rules::get_left_lanelet(*extended_routing_graph_, lanelet);
+      const auto right_lanelet =
+        traffic_rules::get_right_lanelet(*extended_routing_graph_, lanelet);
+      if (right_lanelet) {
+        const auto right_speed_limit = read_speed_limit_from_lanelet(*right_lanelet);
+        if (right_speed_limit) {
+          velocity_limit =
+            (velocity_limit) ? std::min(*velocity_limit, *right_speed_limit) : *right_speed_limit;
+          continue;
+        }
+      }
+      if (left_lanelet) {
+        const auto left_speed_limit = read_speed_limit_from_lanelet(*left_lanelet);
+        if (left_speed_limit) {
+          velocity_limit =
+            (velocity_limit) ? std::min(*velocity_limit, *left_speed_limit) : *left_speed_limit;
+          continue;
+        }
+      }
+    }
+  }
+
+  return velocity_limit;
+}
+
+std::optional<double> ExtendedRouteHandler::get_velocity_limit(const lanelet::Point2d & point) const
+{
+  return get_velocity_limit(lanelet::BasicPoint2d(point.x(), point.y()));
+}
+
+std::optional<double> ExtendedRouteHandler::get_velocity_limit(
+  const geometry_msgs::msg::Point & point) const
+{
+  return get_velocity_limit(lanelet::BasicPoint2d(point.x, point.y));
 }
 
 Path to_path_msg(const RouteBounds & bounds, const Trajectory & trajectory)

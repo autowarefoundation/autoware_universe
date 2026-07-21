@@ -247,10 +247,7 @@ public:
   [[nodiscard]] Objects get_avoidance_targets(
     const Objects & objects, const Trajectory & trajectory, const RouteBounds & route_bounds);
 
-  [[nodiscard]] Objects get_driving_along_vehicles(
-    const Objects & objects, const ExtendedRouteHandler & extended_route_handler,
-    const autoware::experimental::trajectory::Trajectory<TrajectoryPoint> & ego_trajectory,
-    const Trajectory & trajectory);
+  [[nodiscard]] Objects get_driving_along_vehicles(const Objects & objects);
 
 private:
   void track_avoidance_targets();

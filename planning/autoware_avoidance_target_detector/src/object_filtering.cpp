@@ -1035,14 +1035,8 @@ typename ObjectSelectorBase<ObjectT>::Objects ObjectSelectorBase<ObjectT>::get_a
 
 template <typename ObjectT>
 typename ObjectSelectorBase<ObjectT>::Objects
-ObjectSelectorBase<ObjectT>::get_driving_along_vehicles(
-  const Objects & objects, const ExtendedRouteHandler & extended_route_handler,
-  const aw_trajectory::Trajectory<TrajectoryPoint> & ego_trajectory, const Trajectory & trajectory)
+ObjectSelectorBase<ObjectT>::get_driving_along_vehicles(const Objects & objects)
 {
-  (void)extended_route_handler;
-  (void)ego_trajectory;
-  (void)trajectory;
-
   track_driving_along_vehicles();
 
   Objects driving_along_vehicles = objects;

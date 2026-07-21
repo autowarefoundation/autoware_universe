@@ -29,24 +29,30 @@ namespace autoware::avoidance_target_detector
  */
 AvoidanceTargetDetectorNode::AvoidanceTargetDetectorNode(const rclcpp::NodeOptions & node_options)
 : Node{"avoidance_target_detector", node_options},
-  sub_objects_{create_subscription<PredictedObjects>(
-    "~/input/objects", rclcpp::QoS{1},
-    std::bind(&AvoidanceTargetDetectorNode::on_objects, this, std::placeholders::_1))},
-  sub_tracked_objects_{create_subscription<TrackedObjects>(
-    "~/input/tracked_objects", rclcpp::QoS{1},
-    std::bind(&AvoidanceTargetDetectorNode::on_tracked_objects, this, std::placeholders::_1))},
-  pub_avoidance_targets_{create_publisher<PredictedObjects>("~/output/avoidance_targets", 1)},
-  pub_driving_along_vehicles_{
-    create_publisher<PredictedObjects>("~/output/driving_along_vehicles", 1)},
-  pub_tracked_avoidance_targets_{
-    create_publisher<TrackedObjects>("~/output/tracked_avoidance_targets", 1)},
-  pub_tracked_driving_along_vehicles_{
-    create_publisher<TrackedObjects>("~/output/tracked_driving_along_vehicles", 1)},
   pub_drivable_area_path_{create_publisher<Path>("~/output/drivable_area", 1)},
   pub_near_segment_polygon_{
     create_publisher<MarkerArray>("~/debug/near_segment_polygon", rclcpp::QoS{1}.transient_local())}
 {
   declare_parameter<bool>("use_extended_route_bounds", true);
+  declare_parameter<bool>("use_tracked_objects", false);
+  use_tracked_objects_ = get_parameter("use_tracked_objects").as_bool();
+
+  if (use_tracked_objects_) {
+    sub_tracked_objects_ = create_subscription<TrackedObjects>(
+      "~/input/tracked_objects", rclcpp::QoS{1},
+      std::bind(&AvoidanceTargetDetectorNode::on_tracked_objects, this, std::placeholders::_1));
+    pub_tracked_avoidance_targets_ =
+      create_publisher<TrackedObjects>("~/output/tracked_avoidance_targets", 1);
+    pub_tracked_driving_along_vehicles_ =
+      create_publisher<TrackedObjects>("~/output/tracked_driving_along_vehicles", 1);
+  } else {
+    sub_objects_ = create_subscription<PredictedObjects>(
+      "~/input/objects", rclcpp::QoS{1},
+      std::bind(&AvoidanceTargetDetectorNode::on_objects, this, std::placeholders::_1));
+    pub_avoidance_targets_ = create_publisher<PredictedObjects>("~/output/avoidance_targets", 1);
+    pub_driving_along_vehicles_ =
+      create_publisher<PredictedObjects>("~/output/driving_along_vehicles", 1);
+  }
 }
 
 void AvoidanceTargetDetectorNode::update_ego_trajectory(const TrajectoryPoint & ego_point)
@@ -79,16 +85,8 @@ void AvoidanceTargetDetectorNode::update_ego_trajectory(const TrajectoryPoint & 
   }
 }
 
-/**
- * @brief Callback for incoming predicted objects.
- * @param msg Predicted objects message.
- */
-void AvoidanceTargetDetectorNode::on_objects(const PredictedObjects::ConstSharedPtr msg)
+bool AvoidanceTargetDetectorNode::update_common_inputs()
 {
-  if (!msg) {
-    return;
-  }
-
   bool map_or_route_updated = false;
 
   if (const auto route_msg = sub_route_.take_data()) {
@@ -110,20 +108,23 @@ void AvoidanceTargetDetectorNode::on_objects(const PredictedObjects::ConstShared
   }
 
   if (!route_ || !extended_route_handler_) {
-    return;
+    return false;
   }
 
   trajectory_ = sub_trajectory_.take_data();
-  const Trajectory trajectory_msg = trajectory_ ? *trajectory_ : Trajectory{};
-
   if (!trajectory_ || !extended_route_handler_->getOriginalRouteHandler()->isHandlerReady()) {
-    return;
+    return false;
   }
 
   if (!trajectory_->points.empty()) {
     update_ego_trajectory(trajectory_->points.front());
   }
 
+  return true;
+}
+
+void AvoidanceTargetDetectorNode::publish_debug_visualizations(const Trajectory & trajectory_msg)
+{
   const auto use_extended_bounds = get_parameter("use_extended_route_bounds").as_bool();
   const auto & route_bounds = use_extended_bounds
                                 ? extended_route_handler_->get_extended_route_bounds()
@@ -145,6 +146,29 @@ void AvoidanceTargetDetectorNode::on_objects(const PredictedObjects::ConstShared
       }
     }
   }
+}
+
+/**
+ * @brief Callback for incoming predicted objects.
+ * @param msg Predicted objects message.
+ */
+void AvoidanceTargetDetectorNode::on_objects(const PredictedObjects::ConstSharedPtr msg)
+{
+  if (!msg || use_tracked_objects_) {
+    return;
+  }
+
+  if (!update_common_inputs()) {
+    return;
+  }
+
+  const Trajectory trajectory_msg = *trajectory_;
+  publish_debug_visualizations(trajectory_msg);
+
+  const auto use_extended_bounds = get_parameter("use_extended_route_bounds").as_bool();
+  const auto & route_bounds = use_extended_bounds
+                                ? extended_route_handler_->get_extended_route_bounds()
+                                : extended_route_handler_->get_original_route_bounds();
 
   object_selector_.update_objects(
     get_clock()->now(), *msg, trajectory_msg, *extended_route_handler_, ego_trajectory_,
@@ -157,8 +181,7 @@ void AvoidanceTargetDetectorNode::on_objects(const PredictedObjects::ConstShared
 
   PredictedObjects driving_along_vehicles;
   if (ego_trajectory_built_ && !trajectory_msg.points.empty()) {
-    driving_along_vehicles = object_selector_.get_driving_along_vehicles(
-      *msg, *extended_route_handler_, ego_trajectory_, trajectory_msg);
+    driving_along_vehicles = object_selector_.get_driving_along_vehicles(*msg);
   }
   pub_driving_along_vehicles_->publish(driving_along_vehicles);
 }
@@ -166,23 +189,19 @@ void AvoidanceTargetDetectorNode::on_objects(const PredictedObjects::ConstShared
 /**
  * @brief Callback for incoming tracked objects.
  * @param msg Tracked objects message.
- * @details Reuses the route handler and ego trajectory maintained by on_objects().
  */
 void AvoidanceTargetDetectorNode::on_tracked_objects(const TrackedObjects::ConstSharedPtr msg)
 {
-  if (!msg) {
+  if (!msg || !use_tracked_objects_) {
     return;
   }
 
-  if (!route_ || !extended_route_handler_ || !trajectory_) {
-    return;
-  }
-
-  if (!extended_route_handler_->getOriginalRouteHandler()->isHandlerReady()) {
+  if (!update_common_inputs()) {
     return;
   }
 
   const Trajectory trajectory_msg = *trajectory_;
+  publish_debug_visualizations(trajectory_msg);
 
   const auto use_extended_bounds = get_parameter("use_extended_route_bounds").as_bool();
   const auto & route_bounds = use_extended_bounds
@@ -200,8 +219,7 @@ void AvoidanceTargetDetectorNode::on_tracked_objects(const TrackedObjects::Const
 
   TrackedObjects driving_along_vehicles;
   if (ego_trajectory_built_ && !trajectory_msg.points.empty()) {
-    driving_along_vehicles = tracked_object_selector_.get_driving_along_vehicles(
-      *msg, *extended_route_handler_, ego_trajectory_, trajectory_msg);
+    driving_along_vehicles = tracked_object_selector_.get_driving_along_vehicles(*msg);
   }
   pub_tracked_driving_along_vehicles_->publish(driving_along_vehicles);
 }

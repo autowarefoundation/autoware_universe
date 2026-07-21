@@ -13,9 +13,11 @@
   <arg name="output_drivable_area" default="/planning/avoidance_target_detector/output/drivable_area"/>
   <arg name="debug_near_segment_polygon" default="/planning/avoidance_target_detector/debug/near_segment_polygon"/>
   <arg name="vehicle_info_param_path" default="$(find-pkg-share j6_gen2_description)/config/vehicle_info.param.yaml"/>
+  <arg name="use_tracked_objects" default="false"/>
 
   <node pkg="autoware_avoidance_target_detector" exec="autoware_avoidance_target_detector_node" name="avoidance_target_detector" output="screen">
     <param from="$(var vehicle_info_param_path)"/>
+    <param name="use_tracked_objects" value="$(var use_tracked_objects)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>
     <remap from="~/input/tracked_objects" to="$(var input_tracked_objects)"/>
     <remap from="~/input/trajectory" to="$(var input_trajectory)"/>

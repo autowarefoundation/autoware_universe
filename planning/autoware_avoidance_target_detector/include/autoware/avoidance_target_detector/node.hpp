@@ -70,6 +70,16 @@ private:
 
   void update_ego_trajectory(const TrajectoryPoint & ego_point);
 
+  /**
+   * @brief Poll map/route/trajectory and refresh shared planning state.
+   * @return True when route handler and trajectory are ready for object selection.
+   */
+  [[nodiscard]] bool update_common_inputs();
+
+  void publish_debug_visualizations(const Trajectory & trajectory_msg);
+
+  bool use_tracked_objects_{false};
+
   rclcpp::Subscription<PredictedObjects>::SharedPtr sub_objects_;
   rclcpp::Subscription<TrackedObjects>::SharedPtr sub_tracked_objects_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
