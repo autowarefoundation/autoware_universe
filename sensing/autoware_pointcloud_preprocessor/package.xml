@@ -39,6 +39,7 @@
   <depend>cgal</depend>
   <depend>cv_bridge</depend>
   <depend>diagnostic_updater</depend>
+  <depend>eigen</depend>
   <depend>image_transport</depend>
   <depend>libopencv-dev</depend>
   <depend>libpcl-all-dev</depend>
