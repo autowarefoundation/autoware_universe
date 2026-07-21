@@ -309,6 +309,8 @@ TEST_F(PolarVoxelOutlierFilterTest, VisibilityMetric)
       .append_parameter_override("intensity_threshold", intensity_threshold)
       .append_parameter_override("voxel_points_threshold", 1)
       .append_parameter_override("secondary_noise_threshold", secondary_noise_threshold)
+      // Isolate the secondary-return threshold path under test from the sparse-voxel rule.
+      .append_parameter_override("low_visibility_sparse_voxel_point_count_threshold", 0)
       .append_parameter_override("visibility_estimation_max_secondary_voxel_count", 2);
   PolarVoxelOutlierFilterComponentPublic node(options);
   auto input = make_filter_test_cloud();
