@@ -1315,8 +1315,8 @@ CandidateOutput StaticObstacleAvoidanceModule::planCandidate() const
 
   auto shifted_path = data.candidate_path;
 
-  // Rarely, shifted_path becomes empty when updateData() returns early (e.g. after modified goal) 
-  // before fillShiftLine() runs. 
+  // Rarely, shifted_path becomes empty when updateData() returns early (e.g. after modified goal)
+  // before fillShiftLine() runs.
   // Even after skipping the fillShiftLine(), planWaitingApproval() still calls planCandidate().
   // Guard here to avoid findEgoIndex() throwing std::invalid_argument via validateNonEmpty().
   if (shifted_path.path.points.empty()) {
