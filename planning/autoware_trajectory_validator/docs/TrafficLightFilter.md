@@ -9,6 +9,13 @@ This filter uses the TrafficLightComplianceChecker to check for violations. For 
 
 The TrafficLightComplianceChecker will check for violations and return the results. The traffic light filter will then scan the provided results for any red/amber light crossing. If the trajectory is crossing a red/amber light then the trajectory is rejected.
 
+When a crossing violation is detected, the trajectory is nevertheless allowed if both of the following conditions are met:
+
+- The distance from the current ego vehicle front point to the stop line is strictly less than `traffic_light.allow_if_cannot_stop_distance`.
+- The same distance is strictly less than the current stopping distance minus `traffic_light.stop_overshoot_margin`.
+
+The current stopping distance is calculated from the ego velocity and acceleration using `traffic_light.checked_trajectory_length.deceleration_limit`, `traffic_light.checked_trajectory_length.jerk_limit`, and `traffic_light.delay_response_time`. Setting `traffic_light.allow_if_cannot_stop_distance` to `0.0` disables this allowance.
+
 ## Algorithm Overview
 
 The following diagram shows the overall logic flow of the TrafficLightFilter:
