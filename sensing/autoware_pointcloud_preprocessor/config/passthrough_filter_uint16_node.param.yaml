@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    input_frame: base_link
+    output_frame: base_link
     filter_limit_min: 0
     filter_limit_max: 127
     filter_field_name: "channel"

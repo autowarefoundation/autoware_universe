@@ -6,6 +6,16 @@
     "polar_voxel_noise_filter": {
       "type": "object",
       "properties": {
+        "input_frame": {
+          "type": "string",
+          "description": "input frame id for point cloud data",
+          "default": ""
+        },
+        "output_frame": {
+          "type": "string",
+          "description": "output frame id for point cloud data",
+          "default": ""
+        },
         "radial_resolution": {
           "type": "number",
           "description": "Resolution in radial direction [m].",
