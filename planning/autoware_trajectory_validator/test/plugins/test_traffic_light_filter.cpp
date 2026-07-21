@@ -351,6 +351,38 @@ TEST_F(TrafficLightFilterTest, AllowsCrossingIfEgoFrontIsTooCloseToStop)
   expect_feasibility(points, false, "Should reject crossing at the strict allow-distance boundary");
 }
 
+TEST_F(TrafficLightFilterTest, AllowsCrossingWhenEgoFrontHasPassedStopLine)
+{
+  const lanelet::Id light_id = 109;
+  constexpr double stop_x = 3.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+
+  // The vehicle reference point is at x=0, but its front is at x=5 and has therefore passed the
+  // stop line by 2 m.
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+  vehicle_info.max_longitudinal_offset_m = 5.0;
+  filter_->set_vehicle_info(vehicle_info);
+
+  validator::Params params;
+  params.traffic_light.delay_response_time = 1.0;
+  params.traffic_light.stop_overshoot_margin = 0.5;
+  params.traffic_light.allow_if_cannot_stop_distance = 3.0;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 2.0;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 2.0;
+  filter_->update_parameters(params);
+
+  set_ego_motion(10.0, 0.0);
+  const auto points = create_trajectory(0.0, 10.0, 10.0);
+  expect_feasibility(
+    points, true, "Should allow proceeding when the ego front has passed the stop line");
+}
+
 TEST_F(TrafficLightFilterTest, RejectsCrossingWhenEgoCanStopSafely)
 {
   const lanelet::Id light_id = 105;
