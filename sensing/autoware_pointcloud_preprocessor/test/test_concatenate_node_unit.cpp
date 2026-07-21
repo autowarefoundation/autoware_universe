@@ -26,7 +26,6 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <gtest/gtest.h>
-#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <algorithm>
 #include <chrono>
@@ -69,24 +68,16 @@ protected:
 
     concatenate_node_ =
       std::make_shared<PointCloudConcatenateDataSynchronizerComponent>(node_options);
-    combine_cloud_handler_ = std::make_shared<CombineCloudHandler<PointCloud2Traits>>(
-      *concatenate_node_, input_topics, "base_link", true, true, true);
+    combine_cloud_handler_ = std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
+      input_topics, "base_link", true, true, true, "advanced");
 
     collector_ = std::make_shared<CloudCollector<PointCloud2Traits>>(
       std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(
         concatenate_node_->shared_from_this()),
       combine_cloud_handler_, number_of_pointcloud, timeout_sec, collector_debug_mode);
 
-    // Setup TF
-    tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(concatenate_node_);
-    tf_broadcaster_->sendTransform(generate_static_transform_msgs());
-
-    // Spin the node for a while to ensure transforms are published
-    auto start = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(100);
-    while (std::chrono::steady_clock::now() - start < timeout) {
-      rclcpp::spin_some(concatenate_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (const auto & transform : generate_static_transform_msgs()) {
+      combine_cloud_handler_->set_transform(transform);
     }
   }
 
@@ -172,9 +163,8 @@ protected:
   }
 
   std::shared_ptr<PointCloudConcatenateDataSynchronizerComponent> concatenate_node_;
-  std::shared_ptr<CombineCloudHandler<PointCloud2Traits>> combine_cloud_handler_;
+  std::shared_ptr<CombineCloudHandler<sensor_msgs::msg::PointCloud2>> combine_cloud_handler_;
   std::shared_ptr<CloudCollector<PointCloud2Traits>> collector_;
-  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 
   static constexpr int32_t timestamp_seconds{10};
   static constexpr uint32_t timestamp_nanoseconds{100'000'000};
@@ -354,7 +344,8 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
 
   auto
     [concatenate_cloud_ptr, concatenation_info_ptr, topic_to_transformed_cloud_map,
-     topic_to_original_stamp_map] = collector_->concatenate_pointclouds(topic_to_cloud_map);
+     topic_to_original_stamp_map, motion_compensation_status, dropped_frames_missing_transform] =
+      collector_->concatenate_pointclouds(topic_to_cloud_map);
 
   // test output concatenate cloud
   // No input twist, so it will not do the motion compensation
