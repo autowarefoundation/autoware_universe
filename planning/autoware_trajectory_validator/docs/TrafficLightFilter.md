@@ -92,12 +92,20 @@ The `TrafficLightFilter` provides debug markers to visualize which traffic light
 
 ### Debug Markers
 
-For each traffic light that causes at least one trajectory rejection, a `TEXT_VIEW_FACING` marker is generated at the position of the traffic light's stop line.
+For each traffic light with a relevant stop-line crossing, a `TEXT_VIEW_FACING` marker is generated at the position of the traffic light's stop line.
 
 The marker text contains:
 
 - **TL ID**: The unique identifier of the traffic light (regulatory element).
 - **Signal**: The current signal state as interpreted by the filter (e.g., `red`, `amber`, `amber as red`, `unknown as amber`).
 - **Rejections**: The total number of trajectories that were rejected due to this specific traffic light in the current frame.
+
+When a candidate trajectory intersects a relevant stop line, the text also shows the signed distance from the ego front to the stop line, the configured allow-distance limit, the calculated ego stopping distance, and whether the crossing was allowed or enforced. The distance is negative after the ego front passes the stop line.
+
+The dilemma-zone visualization also includes:
+
+- A cyan sphere at the calculated ego front pose.
+- A magenta line across the lane at `allow_if_cannot_stop_distance` before the stop line.
+- A translucent stopping wall at `ego_stopping_distance - stop_overshoot_margin` from the ego front. The wall is red when ego can stop before the stop line and green when the projected stopping point is beyond it.
 
 ![Traffic Light Filter Debug Markers](traffic_light_filter_debug_markers.png)
