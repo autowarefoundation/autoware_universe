@@ -18,7 +18,7 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 
-#include <angles/angles/angles.h>
+#include <angles/angles.h>
 
 #include <memory>
 #include <string>

@@ -21,7 +21,7 @@
 
 #include <autoware_utils_geometry/geometry.hpp>
 
-#include <angles/angles/angles.h>
+#include <angles/angles.h>
 
 #include <algorithm>
 #include <cstdint>
