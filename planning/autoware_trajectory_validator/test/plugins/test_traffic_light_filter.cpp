@@ -175,6 +175,18 @@ protected:
     return points;
   }
 
+  void set_ego_motion(const double velocity, const double acceleration)
+  {
+    auto odometry = std::make_shared<nav_msgs::msg::Odometry>(*context_.odometry);
+    odometry->twist.twist.linear.x = velocity;
+    context_.odometry = odometry;
+
+    auto accel =
+      std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>(*context_.acceleration);
+    accel->accel.accel.linear.x = acceleration;
+    context_.acceleration = accel;
+  }
+
   void expect_feasibility(
     const std::vector<TrajectoryPoint> & points, const bool expected_feasible,
     const std::string & message = "")
@@ -191,7 +203,7 @@ protected:
   FilterContext context_;
 };
 
-TEST_F(TrafficLightFilterTest, IsFeasibleEmptyInput)
+TEST_F(TrafficLightFilterTest, HandlesEmptyTrajectorySafely)
 {
   std::vector<TrajectoryPoint> points;
   create_and_set_map(0, 0);
@@ -337,6 +349,119 @@ TEST_F(TrafficLightFilterTest, AllowsCrossingIfEgoFrontIsTooCloseToStop)
   params.traffic_light.allow_if_cannot_stop_distance = 3.0;
   filter_->update_parameters(params);
   expect_feasibility(points, false, "Should reject crossing at the strict allow-distance boundary");
+}
+
+TEST_F(TrafficLightFilterTest, RejectsCrossingWhenEgoCanStopSafely)
+{
+  const lanelet::Id light_id = 105;
+  constexpr double stop_x = 4.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+
+  validator::Params params;
+  params.traffic_light.delay_response_time = 2.0;
+  params.traffic_light.stop_overshoot_margin = 0.5;
+  params.traffic_light.allow_if_cannot_stop_distance = 10.0;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 5.0;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 2.0;
+  filter_->update_parameters(params);
+
+  // At 2 m/s and -2 m/s^2, ego stops naturally after 1 m during the response delay.
+  set_ego_motion(2.0, -2.0);
+  const auto points = create_trajectory(0.0, 5.0, 2.0);
+  expect_feasibility(
+    points, false, "Should reject crossing when ego can stop safely before the stop line");
+}
+
+TEST_F(TrafficLightFilterTest, RejectsAtStoppingDistanceBoundary)
+{
+  const lanelet::Id light_id = 106;
+  constexpr double velocity = 2.0;
+  constexpr double acceleration = -2.0;
+  constexpr double deceleration_limit = 5.0;
+  constexpr double jerk_limit = 2.0;
+  constexpr double delay_response_time = 2.0;
+  constexpr double stop_overshoot_margin = 0.5;
+  // Ego naturally stops after exactly 1.0 m during the response delay, so the stop line at
+  // 0.5 m is exactly stopping_distance - stop_overshoot_margin.
+  constexpr double stop_x = 0.5;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+
+  validator::Params params;
+  params.traffic_light.delay_response_time = delay_response_time;
+  params.traffic_light.stop_overshoot_margin = stop_overshoot_margin;
+  params.traffic_light.allow_if_cannot_stop_distance = 10.0;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = deceleration_limit;
+  params.traffic_light.checked_trajectory_length.jerk_limit = jerk_limit;
+  filter_->update_parameters(params);
+
+  set_ego_motion(velocity, acceleration);
+  const auto points = create_trajectory(0.0, 1.0, velocity);
+  expect_feasibility(
+    points, false, "Should reject crossing exactly at the stopping-distance boundary");
+}
+
+TEST_F(TrafficLightFilterTest, RejectsWhenStoppingDistanceIsUnavailable)
+{
+  const lanelet::Id light_id = 107;
+  constexpr double stop_x = 0.25;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+
+  validator::Params params;
+  params.traffic_light.delay_response_time = 0.0;
+  params.traffic_light.stop_overshoot_margin = 0.5;
+  params.traffic_light.allow_if_cannot_stop_distance = 10.0;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 0.0;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 2.0;
+  filter_->update_parameters(params);
+
+  set_ego_motion(1.0, 0.0);
+  const auto points = create_trajectory(0.0, 1.0, 1.0);
+  expect_feasibility(
+    points, false, "Should retain the violation when stopping distance is unavailable");
+}
+
+TEST_F(TrafficLightFilterTest, RejectsWithZeroCannotStopAllowance)
+{
+  const lanelet::Id light_id = 108;
+  constexpr double stop_x = 1.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+
+  validator::Params params;
+  params.traffic_light.delay_response_time = 1.0;
+  params.traffic_light.stop_overshoot_margin = 0.5;
+  params.traffic_light.allow_if_cannot_stop_distance = 0.0;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.stable_duration_threshold_unknown = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 2.0;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 2.0;
+  filter_->update_parameters(params);
+
+  set_ego_motion(10.0, 0.0);
+  const auto points = create_trajectory(0.0, 2.0, 10.0);
+  expect_feasibility(
+    points, false, "Should preserve the old rejection behavior when allowance is disabled");
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
