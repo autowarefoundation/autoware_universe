@@ -22,22 +22,18 @@
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
-#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
-#include "diagnostic_updater/diagnostic_updater.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "rclcpp/duration.hpp"
+#include "rclcpp/time.hpp"
 
 #include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
 #include "autoware_control_msgs/msg/longitudinal.hpp"
-#include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 
-#include <deque>
 #include <limits>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -176,14 +172,38 @@ struct PidLongitudinalControllerConfig
   double ego_nearest_yaw_threshold;
 };
 
+struct PidLongitudinalControllerResult
+{
+  trajectory_follower::LongitudinalOutput output;
+  ControlState control_state{ControlState::STOPPED};
+  double slope_angle{0.0};
+  std::optional<visualization_msgs::msg::MarkerArray> virtual_wall_marker{std::nullopt};
+  bool received_invalid_trajectory{false};
+  std::optional<std::string> emergency_stop_reason{std::nullopt};
+};
+
 /// \class PidLongitudinalController
-/// \brief The node class used for generating longitudinal control commands (velocity/acceleration)
-class PidLongitudinalController : public trajectory_follower::LongitudinalControllerBase
+/// \brief generates longitudinal control commands (velocity/acceleration) from a trajectory and
+/// the current vehicle state; no dependency on rclcpp::Node/rclcpp::Logger
+class PidLongitudinalController
 {
 public:
-  /// \param node Reference to the node used only for the component and parameter initialization.
-  explicit PidLongitudinalController(
-    rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater);
+  explicit PidLongitudinalController(const PidLongitudinalControllerConfig & config);
+
+  /// \brief apply an updated config, e.g. from a parameter callback, while preserving the
+  /// internal PID/filter/smooth-stop state
+  void setConfig(const PidLongitudinalControllerConfig & config);
+
+  /// \brief compute the control command for this cycle
+  /// \param [in] input_data input data containing current odometry, acceleration, and operation
+  /// mode
+  /// \param [in] current_time time captured once per control cycle by the caller
+  /// \param [in] is_steer_converged whether the lateral controller has converged its steering
+  PidLongitudinalControllerResult run(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time,
+    const bool is_steer_converged);
+
+  const DebugValues & getDebugValues() const { return m_debug_values; }
 
 private:
   struct Motion
@@ -220,20 +240,6 @@ private:
     double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
     rclcpp::Time current_time{};  // time captured once per control cycle in run()
   };
-  rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
-  rclcpp::Clock::SharedPtr clock_;
-  rclcpp::Logger logger_;
-  // ros variables
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
-    m_pub_slope;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
-    m_pub_debug;
-  rclcpp::Publisher<MarkerArray>::SharedPtr m_pub_virtual_wall_marker;
-  std::optional<MarkerArray> m_virtual_wall_marker{std::nullopt};
-
-  rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
-  rcl_interfaces::msg::SetParametersResult paramCallback(
-    const std::vector<rclcpp::Parameter> & parameters);
 
   // pointers for ros topic
   autoware_planning_msgs::msg::Trajectory m_last_valid_trajectory;
@@ -280,27 +286,24 @@ private:
 
   std::optional<bool> m_prev_keep_stopped_condition{std::nullopt};
 
-  std::shared_ptr<rclcpp::Time> m_last_running_time{std::make_shared<rclcpp::Time>(clock_->now())};
+  std::shared_ptr<rclcpp::Time> m_last_running_time{nullptr};
 
-  // Diagnostic
-  std::shared_ptr<diagnostic_updater::Updater>
-    diag_updater_{};  // Diagnostic updater for publishing diagnostic data.
-  void setupDiagnosticUpdater();
-  void checkControlState(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  std::optional<MarkerArray> m_virtual_wall_marker{std::nullopt};
+
+  // time captured once per control cycle in run(), and whether the lateral controller has
+  // converged its steering for this cycle
+  rclcpp::Time m_current_time{};
+  bool m_is_steer_converged{false};
+
+  // error causes raised during this run(), to be logged by the caller
+  bool m_received_invalid_trajectory{false};
+  std::optional<std::string> m_emergency_stop_reason{std::nullopt};
 
   struct ResultWithReason
   {
     bool result{false};
     std::string reason{""};
   };
-
-  bool isReady(const trajectory_follower::InputData & input_data) override;
-
-  /**
-   * @brief compute control command, and publish periodically
-   */
-  trajectory_follower::LongitudinalOutput run(
-    trajectory_follower::InputData const & input_data) override;
 
   /**
    * @brief calculate data for controllers whose type is ControlData
@@ -337,7 +340,7 @@ private:
   Motion calcCtrlCmd(const ControlData & control_data);
 
   /**
-   * @brief publish control command
+   * @brief create the control command message
    * @param [in] ctrl_cmd calculated control command to control velocity
    * @param [in] current_time time captured once per control cycle in run()
    */
@@ -345,16 +348,11 @@ private:
     const Motion & ctrl_cmd, const rclcpp::Time & current_time);
 
   /**
-   * @brief publish debug data
+   * @brief update debug values
    * @param [in] ctrl_cmd calculated control command to control velocity
    * @param [in] control_data data for control calculation
    */
-  void publishDebugData(const Motion & ctrl_cmd, const ControlData & control_data);
-
-  /**
-   * @brief publish the virtual wall marker created during this cycle, if any
-   */
-  void publishVirtualWallMarker();
+  void setDebugValues(const Motion & ctrl_cmd, const ControlData & control_data);
 
   /**
    * @brief calculate time between current and previous one

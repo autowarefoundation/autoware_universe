@@ -16,8 +16,10 @@
 
 #include "autoware/motion_utils/marker/marker_helper.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
+#include "autoware/pid_longitudinal_controller/pid_longitudinal_controller_node.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/math/normalization.hpp"
+#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
 #include <fmt/format.h>
 
@@ -46,17 +48,10 @@ bool is_valid_trajectory(
 
   return true;
 }
-}  // namespace
 
-PidLongitudinalController::PidLongitudinalController(
-  rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
-: node_parameters_(node.get_node_parameters_interface()),
-  clock_(node.get_clock()),
-  logger_(node.get_logger().get_child("longitudinal_controller"))
+PidLongitudinalControllerConfig create_config(rclcpp::Node & node)
 {
-  using std::placeholders::_1;
-
-  diag_updater_ = diag_updater;
+  PidLongitudinalControllerConfig config{};
 
   // parameters timer
   config.longitudinal_ctrl_period = node.get_parameter("ctrl_period").as_double();
@@ -120,7 +115,6 @@ PidLongitudinalController::PidLongitudinalController(
     gains.kp = node.declare_parameter<double>("kp");
     gains.ki = node.declare_parameter<double>("ki");
     gains.kd = node.declare_parameter<double>("kd");
-    m_pid_vel.setGains(gains.kp, gains.ki, gains.kd);
 
     // initialize PID limits
     auto & limits = config.pid_limits;
@@ -132,13 +126,9 @@ PidLongitudinalController::PidLongitudinalController(
     limits.min_i_effort = node.declare_parameter<double>("min_i_effort");  // [m/s^2]
     limits.max_d_effort = node.declare_parameter<double>("max_d_effort");  // [m/s^2]
     limits.min_d_effort = node.declare_parameter<double>("min_d_effort");  // [m/s^2]
-    m_pid_vel.setLimits(
-      limits.max_out, limits.min_out, limits.max_p_effort, limits.min_p_effort, limits.max_i_effort,
-      limits.min_i_effort, limits.max_d_effort, limits.min_d_effort);
 
     // set lowpass filter for vel error and pitch
     config.lpf_vel_error_gain = node.declare_parameter<double>("lpf_vel_error_gain");
-    m_lpf_vel_error = std::make_shared<LowpassFilter1d>(0.0, config.lpf_vel_error_gain);
 
     config.enable_integration_at_low_speed =
       node.declare_parameter<bool>("enable_integration_at_low_speed");
@@ -171,8 +161,6 @@ PidLongitudinalController::PidLongitudinalController(
 
     p.weak_stop_dist = node.declare_parameter<double>("smooth_stop_weak_stop_dist");      // [m]
     p.strong_stop_dist = node.declare_parameter<double>("smooth_stop_strong_stop_dist");  // [m]
-
-    m_smooth_stop.emplace(p);
   }
 
   // parameters for stop state
@@ -193,7 +181,6 @@ PidLongitudinalController::PidLongitudinalController(
   // parameters for acc feedback
   {
     config.lpf_acc_error_gain = node.declare_parameter<double>("lpf_acc_error_gain");
-    m_lpf_acc_error = std::make_shared<LowpassFilter1d>(0.0, config.lpf_acc_error_gain);
     config.acc_feedback_gain = node.declare_parameter<double>("acc_feedback_gain");
   }
 
@@ -210,7 +197,6 @@ PidLongitudinalController::PidLongitudinalController(
   config.adaptive_trajectory_velocity_th =
     node.declare_parameter<double>("adaptive_trajectory_velocity_th");  // [m/s^2]
   config.lpf_pitch_gain = node.declare_parameter<double>("lpf_pitch_gain");
-  m_lpf_pitch = std::make_shared<LowpassFilter1d>(0.0, config.lpf_pitch_gain);
   config.max_pitch_rad = node.declare_parameter<double>("max_pitch_rad");  // [rad]
   config.min_pitch_rad = node.declare_parameter<double>("min_pitch_rad");  // [rad]
 
@@ -226,7 +212,7 @@ PidLongitudinalController::PidLongitudinalController(
   } else if (slope_source == "trajectory_goal_adaptive") {
     config.slope_source = PidLongitudinalControllerConfig::SlopeSource::TRAJECTORY_GOAL_ADAPTIVE;
   } else {
-    RCLCPP_ERROR(logger_, "Slope source is not valid. Using raw_pitch option as default");
+    RCLCPP_ERROR(node.get_logger(), "Slope source is not valid. Using raw_pitch option as default");
     config.slope_source = PidLongitudinalControllerConfig::SlopeSource::RAW_PITCH;
   }
 
@@ -240,6 +226,52 @@ PidLongitudinalController::PidLongitudinalController(
       ? node.get_parameter("ego_nearest_yaw_threshold").as_double()
       : node.declare_parameter<double>("ego_nearest_yaw_threshold");  // [rad]
 
+  return config;
+}
+}  // namespace
+
+PidLongitudinalController::PidLongitudinalController(const PidLongitudinalControllerConfig & cfg)
+: config(cfg)
+{
+  m_pid_vel.setGains(config.pid_gains.kp, config.pid_gains.ki, config.pid_gains.kd);
+  m_pid_vel.setLimits(
+    config.pid_limits.max_out, config.pid_limits.min_out, config.pid_limits.max_p_effort,
+    config.pid_limits.min_p_effort, config.pid_limits.max_i_effort, config.pid_limits.min_i_effort,
+    config.pid_limits.max_d_effort, config.pid_limits.min_d_effort);
+
+  m_lpf_vel_error = std::make_shared<LowpassFilter1d>(0.0, config.lpf_vel_error_gain);
+  m_lpf_acc_error = std::make_shared<LowpassFilter1d>(0.0, config.lpf_acc_error_gain);
+  m_lpf_pitch = std::make_shared<LowpassFilter1d>(0.0, config.lpf_pitch_gain);
+
+  m_smooth_stop.emplace(config.smooth_stop_params);
+}
+
+void PidLongitudinalController::setConfig(const PidLongitudinalControllerConfig & new_config)
+{
+  config = new_config;
+
+  m_pid_vel.setGains(config.pid_gains.kp, config.pid_gains.ki, config.pid_gains.kd);
+  m_pid_vel.setLimits(
+    config.pid_limits.max_out, config.pid_limits.min_out, config.pid_limits.max_p_effort,
+    config.pid_limits.min_p_effort, config.pid_limits.max_i_effort, config.pid_limits.min_i_effort,
+    config.pid_limits.max_d_effort, config.pid_limits.min_d_effort);
+  m_lpf_vel_error->setGain(config.lpf_vel_error_gain);
+  m_lpf_acc_error->setGain(config.lpf_acc_error_gain);
+  m_smooth_stop->setParams(config.smooth_stop_params);
+}
+
+PidLongitudinalControllerNode::PidLongitudinalControllerNode(
+  rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
+: node_parameters_(node.get_node_parameters_interface()),
+  clock_(node.get_clock()),
+  logger_(node.get_logger().get_child("longitudinal_controller")),
+  config(create_config(node)),
+  controller_(config)
+{
+  using std::placeholders::_1;
+
+  diag_updater_ = diag_updater;
+
   // subscriber, publisher
   m_pub_slope = node.create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
     "~/output/slope_angle", rclcpp::QoS{1});
@@ -249,13 +281,13 @@ PidLongitudinalController::PidLongitudinalController(
 
   // set parameter callback
   m_set_param_res = node.add_on_set_parameters_callback(
-    std::bind(&PidLongitudinalController::paramCallback, this, _1));
+    std::bind(&PidLongitudinalControllerNode::paramCallback, this, _1));
 
   // diagnostic
   setupDiagnosticUpdater();
 }
 
-rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
+rcl_interfaces::msg::SetParametersResult PidLongitudinalControllerNode::paramCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
   auto update_param = [&](const std::string & name, double & v) {
@@ -289,10 +321,8 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
     update_param("kp", gains.kp);
     update_param("ki", gains.ki);
     update_param("kd", gains.kd);
-    m_pid_vel.setGains(gains.kp, gains.ki, gains.kd);
 
     update_param("lpf_vel_error_gain", config.lpf_vel_error_gain);
-    m_lpf_vel_error->setGain(config.lpf_vel_error_gain);
 
     auto & limits = config.pid_limits;
     update_param("max_out", limits.max_out);
@@ -303,9 +333,6 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
     update_param("min_i_effort", limits.min_i_effort);
     update_param("max_d_effort", limits.max_d_effort);
     update_param("min_d_effort", limits.min_d_effort);
-    m_pid_vel.setLimits(
-      limits.max_out, limits.min_out, limits.max_p_effort, limits.min_p_effort, limits.max_i_effort,
-      limits.min_i_effort, limits.max_d_effort, limits.min_d_effort);
 
     update_param(
       "current_vel_threshold_pid_integration", config.current_vel_threshold_pid_integrate);
@@ -329,7 +356,6 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
     update_param("smooth_stop_weak_stop_time", p.weak_stop_time);
     update_param("smooth_stop_weak_stop_dist", p.weak_stop_dist);
     update_param("smooth_stop_strong_stop_dist", p.strong_stop_dist);
-    m_smooth_stop->setParams(p);
   }
 
   // stop state
@@ -350,7 +376,6 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
   // acceleration feedback
   update_param("acc_feedback_gain", config.acc_feedback_gain);
   update_param("lpf_acc_error_gain", config.lpf_acc_error_gain);
-  m_lpf_acc_error->setGain(config.lpf_acc_error_gain);
 
   // acceleration limit
   update_param("min_acc", config.min_acc);
@@ -365,27 +390,33 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
   update_param("min_pitch_rad", config.min_pitch_rad);
   update_param("adaptive_trajectory_velocity_th", config.adaptive_trajectory_velocity_th);
 
+  controller_.setConfig(config);
+
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";
   return result;
 }
 
-bool PidLongitudinalController::isReady(
+bool PidLongitudinalControllerNode::isReady(
   [[maybe_unused]] const trajectory_follower::InputData & input_data)
 {
   return true;
 }
 
-trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
-  trajectory_follower::InputData const & input_data)
+PidLongitudinalControllerResult PidLongitudinalController::run(
+  const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time,
+  const bool is_steer_converged)
 {
-  // capture the time once for this control cycle
-  const rclcpp::Time current_time = clock_->now();
+  // capture the time and lateral convergence state once for this control cycle
+  m_current_time = current_time;
+  m_is_steer_converged = is_steer_converged;
+  m_received_invalid_trajectory = false;
+  m_emergency_stop_reason = std::nullopt;
 
   // check input data
   if (!is_valid_trajectory(input_data.current_trajectory, config.use_temporal_trajectory)) {
-    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "received invalid trajectory. ignore.");
+    m_received_invalid_trajectory = true;
   }
 
   // calculate control data
@@ -406,13 +437,49 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   output.control_cmd_horizon.controls.push_back(cmd_msg);
   output.control_cmd_horizon.time_step_ms = 0.0;
 
-  // publish debug data
-  publishDebugData(ctrl_cmd, control_data);
+  // update debug data
+  setDebugValues(ctrl_cmd, control_data);
 
-  // publish virtual wall marker if created during this cycle
-  publishVirtualWallMarker();
+  PidLongitudinalControllerResult result;
+  result.output = output;
+  result.control_state = m_control_state;
+  result.slope_angle = control_data.slope_angle;
+  if (m_virtual_wall_marker) {
+    result.virtual_wall_marker = m_virtual_wall_marker;
+    m_virtual_wall_marker.reset();
+  }
+  result.received_invalid_trajectory = m_received_invalid_trajectory;
+  result.emergency_stop_reason = m_emergency_stop_reason;
 
-  return output;
+  return result;
+}
+
+trajectory_follower::LongitudinalOutput PidLongitudinalControllerNode::run(
+  trajectory_follower::InputData const & input_data)
+{
+  // capture the time once for this control cycle
+  const rclcpp::Time current_time = clock_->now();
+
+  const auto result =
+    controller_.run(input_data, current_time, lateral_sync_data_.is_steer_converged);
+
+  control_state_ = result.control_state;
+
+  emitLogs(result);
+  publishDebugData(result, current_time);
+  publishVirtualWallMarker(result);
+
+  return result.output;
+}
+
+void PidLongitudinalControllerNode::emitLogs(const PidLongitudinalControllerResult & result)
+{
+  if (result.received_invalid_trajectory) {
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "received invalid trajectory. ignore.");
+  }
+  if (result.emergency_stop_reason) {
+    RCLCPP_ERROR(logger_, "Emergency Stop since %s", result.emergency_stop_reason->c_str());
+  }
 }
 
 PidLongitudinalController::ControlData PidLongitudinalController::getControlData(
@@ -589,7 +656,7 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
     }
     m_previous_slope_angle = control_data.slope_angle;
   } else {
-    // config.slope_source is validated in the constructor, so this branch is unreachable.
+    // config.slope_source is validated when the config is created, so this branch is unreachable.
   }
 
   updatePitchDebugValues(control_data.slope_angle, traj_pitch, raw_pitch, m_lpf_pitch->getValue());
@@ -626,7 +693,7 @@ void PidLongitudinalController::changeControlState(
 {
   if (control_state != m_control_state) {
     if (control_state == ControlState::EMERGENCY) {
-      RCLCPP_ERROR(logger_, "Emergency Stop since %s", reason.c_str());
+      m_emergency_stop_reason = reason;
     }
   }
   m_control_state = control_state;
@@ -758,9 +825,9 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
     if (departure_condition_from_stopped) {
       // Let vehicle start after the steering is converged for dry steering
       const bool current_keep_stopped_condition =
-        std::fabs(current_vel) < vel_epsilon && !lateral_sync_data_.is_steer_converged;
+        std::fabs(current_vel) < vel_epsilon && !m_is_steer_converged;
       // NOTE: Dry steering is considered unnecessary when the steering is converged twice in a
-      //       row. This is because lateral_sync_data_.is_steer_converged is not the current but
+      //       row. This is because m_is_steer_converged is not the current but
       //       the previous value due to the order controllers' run and sync functions.
       const bool keep_stopped_condition =
         !m_prev_keep_stopped_condition ||
@@ -903,7 +970,6 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
 autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCmdMsg(
   const Motion & ctrl_cmd, const rclcpp::Time & current_time)
 {
-  // publish control command
   autoware_control_msgs::msg::Longitudinal cmd{};
   cmd.stamp = current_time;
   cmd.velocity = static_cast<decltype(cmd.velocity)>(ctrl_cmd.vel);
@@ -914,7 +980,7 @@ autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCm
   return cmd;
 }
 
-void PidLongitudinalController::publishDebugData(
+void PidLongitudinalController::setDebugValues(
   const Motion & ctrl_cmd, const ControlData & control_data)
 {
   // set debug values
@@ -935,30 +1001,32 @@ void PidLongitudinalController::publishDebugData(
     DebugValues::TYPE::TEMPORAL_WINDOW_MIN, std::numeric_limits<double>::quiet_NaN());
   m_debug_values.setValues(
     DebugValues::TYPE::TEMPORAL_WINDOW_MAX, std::numeric_limits<double>::quiet_NaN());
+}
 
-  // publish debug values
+void PidLongitudinalControllerNode::publishDebugData(
+  const PidLongitudinalControllerResult & result, const rclcpp::Time & current_time)
+{
   autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
-  debug_msg.stamp = control_data.current_time;
-  for (const auto & v : m_debug_values.getValues()) {
+  debug_msg.stamp = current_time;
+  for (const auto & v : controller_.getDebugValues().getValues()) {
     debug_msg.data.push_back(static_cast<decltype(debug_msg.data)::value_type>(v));
   }
   m_pub_debug->publish(debug_msg);
 
   // slope angle
   autoware_internal_debug_msgs::msg::Float32MultiArrayStamped slope_msg{};
-  slope_msg.stamp = control_data.current_time;
-  slope_msg.data.push_back(
-    static_cast<decltype(slope_msg.data)::value_type>(control_data.slope_angle));
+  slope_msg.stamp = current_time;
+  slope_msg.data.push_back(static_cast<decltype(slope_msg.data)::value_type>(result.slope_angle));
   m_pub_slope->publish(slope_msg);
 }
 
-void PidLongitudinalController::publishVirtualWallMarker()
+void PidLongitudinalControllerNode::publishVirtualWallMarker(
+  const PidLongitudinalControllerResult & result)
 {
-  if (!m_virtual_wall_marker) {
+  if (!result.virtual_wall_marker) {
     return;
   }
-  m_pub_virtual_wall_marker->publish(*m_virtual_wall_marker);
-  m_virtual_wall_marker.reset();
+  m_pub_virtual_wall_marker->publish(*result.virtual_wall_marker);
 }
 
 double PidLongitudinalController::getDt(const rclcpp::Time & current_time)
@@ -1225,12 +1293,12 @@ void PidLongitudinalController::updateDebugVelAcc(const ControlData & control_da
       control_data.current_motion.vel);
 }
 
-void PidLongitudinalController::setupDiagnosticUpdater()
+void PidLongitudinalControllerNode::setupDiagnosticUpdater()
 {
-  diag_updater_->add("control_state", this, &PidLongitudinalController::checkControlState);
+  diag_updater_->add("control_state", this, &PidLongitudinalControllerNode::checkControlState);
 }
 
-void PidLongitudinalController::checkControlState(
+void PidLongitudinalControllerNode::checkControlState(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
@@ -1238,12 +1306,12 @@ void PidLongitudinalController::checkControlState(
   auto level = DiagnosticStatus::OK;
   std::string msg = "OK";
 
-  if (m_control_state == ControlState::EMERGENCY) {
+  if (control_state_ == ControlState::EMERGENCY) {
     level = DiagnosticStatus::ERROR;
     msg = "emergency occurred due to ";
   }
 
-  stat.add<int32_t>("control_state", static_cast<int32_t>(m_control_state));
+  stat.add<int32_t>("control_state", static_cast<int32_t>(control_state_));
   stat.summary(level, msg);
 }
 
