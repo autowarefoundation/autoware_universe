@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer.hpp"
 
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_processor/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -50,11 +50,11 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
-  set_up_params();
-  initialize_optimizers();
+  param_listener_ = std::make_unique<trajectory_optimizer_node_params::ParamListener>(
+    get_node_parameters_interface());
+  params_ = param_listener_->get_params();
 
-  set_param_res_ = add_on_set_parameters_callback(
-    std::bind(&TrajectoryOptimizer::on_parameter, this, std::placeholders::_1));
+  initialize_optimizers();
 
   trajectories_sub_ = create_subscription<CandidateTrajectories>(
     "~/input/trajectories", 1,
@@ -70,7 +70,7 @@ void TrajectoryOptimizer::initialize_optimizers()
   }
 
   // Get plugin names from parameter
-  const auto plugin_names = get_parameter("plugin_names").as_string_array();
+  const auto plugin_names = params_.plugin_names;
 
   // Load each plugin in order
   for (const auto & plugin_name : plugin_names) {
@@ -93,7 +93,7 @@ void TrajectoryOptimizer::load_plugin(const std::string & plugin_name)
     }
 
     // Initialize plugin with node context
-    plugin->initialize(plugin_name, this, time_keeper_);
+    plugin->initialize(plugin_name, this, time_keeper_, params_);
 
     plugins_.push_back(plugin);
 
@@ -107,68 +107,17 @@ void TrajectoryOptimizer::load_plugin(const std::string & plugin_name)
   }
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryOptimizer::update_params()
 {
-  using autoware_utils_rclcpp::update_param;
-  auto params = params_;
+  try {
+    params_ = param_listener_->get_params();
 
-  update_param<bool>(
-    parameters, "use_akima_spline_interpolation", params.use_akima_spline_interpolation);
-  update_param<bool>(parameters, "use_eb_smoother", params.use_eb_smoother);
-  update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
-  update_param<bool>(parameters, "use_trajectory_point_fixer", params.use_trajectory_point_fixer);
-  update_param<bool>(parameters, "use_velocity_optimizer", params.use_velocity_optimizer);
-  update_param<bool>(parameters, "use_trajectory_extender", params.use_trajectory_extender);
-  update_param<bool>(
-    parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
-  update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
-  update_param<bool>(parameters, "use_temporal_mpt_optimizer", params.use_temporal_mpt_optimizer);
-
-  params_ = params;
-
-  // Forward parameter updates to all loaded plugins
-  for (auto & plugin : plugins_) {
-    plugin->on_parameter(parameters);
+    for (auto & plugin : plugins_) {
+      plugin->update_params(params_);
+    }
+  } catch (const std::exception & e) {
+    RCLCPP_WARN(this->get_logger(), "Failed to update parameters: %s", e.what());
   }
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
-}
-
-void TrajectoryOptimizer::set_up_params()
-{
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-
-  // Declare plugin_names parameter with default order
-  const std::vector<std::string> default_plugins = {
-    "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
-    "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
-    "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
-    "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"};
-  declare_parameter("plugin_names", default_plugins);
-
-  params_.use_akima_spline_interpolation =
-    get_or_declare_parameter<bool>(*this, "use_akima_spline_interpolation");
-  params_.use_eb_smoother = get_or_declare_parameter<bool>(*this, "use_eb_smoother");
-  params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
-  params_.use_trajectory_point_fixer =
-    get_or_declare_parameter<bool>(*this, "use_trajectory_point_fixer");
-  params_.use_velocity_optimizer = get_or_declare_parameter<bool>(*this, "use_velocity_optimizer");
-  params_.use_trajectory_extender =
-    get_or_declare_parameter<bool>(*this, "use_trajectory_extender");
-  params_.use_kinematic_feasibility_enforcer =
-    get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
-  params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
-  params_.use_temporal_mpt_optimizer =
-    get_or_declare_parameter<bool>(*this, "use_temporal_mpt_optimizer");
 }
 
 void TrajectoryOptimizer::publish_processing_time_ms(const double processing_time_ms)
@@ -185,6 +134,10 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   stop_watch_ptr_->tic("processing_time");
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   initialize_optimizers();
+
+  if (param_listener_->is_old(params_)) {
+    update_params();
+  }
 
   current_odometry_ptr_ = sub_current_odometry_.take_data();
   current_acceleration_ptr_ = sub_current_acceleration_.take_data();
@@ -203,7 +156,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     data.current_acceleration = *current_acceleration_ptr_;
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
-      plugin->optimize_trajectory(trajectory.points, params_, data);
+      plugin->optimize_trajectory(trajectory.points, data);
     }
 
     // Downstream Autoware modules dont properly support trajectories with less than 3 points. So we

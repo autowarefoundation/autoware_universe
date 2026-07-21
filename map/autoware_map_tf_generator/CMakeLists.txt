@@ -26,9 +26,11 @@ ament_auto_add_library(vector_map_tf_generator_node SHARED
   src/vector_map_tf_generator_node.cpp
 )
 
-rclcpp_components_register_node(vector_map_tf_generator_node
+autoware_agnocast_wrapper_register_node(vector_map_tf_generator_node
   PLUGIN "autoware::map_tf_generator::VectorMapTFGeneratorNode"
   EXECUTABLE autoware_vector_map_tf_generator
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
