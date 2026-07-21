@@ -416,8 +416,8 @@ TrafficLightComplianceChecker::get_crossings_with_filtered_signals(
                                          ? std::max(0.0, params_.crossing_commitment_distance) +
                                              vehicle_info_.max_longitudinal_offset_m
                                          : 0.0;
-  const auto max_trajectory_length =
-    std::max(ego_stopping_distance.value_or(0.0) + params_.stop_overshoot_margin, commitment_check_length);
+  const auto max_trajectory_length = std::max(
+    ego_stopping_distance.value_or(0.0) + params_.stop_overshoot_margin, commitment_check_length);
   auto length = 0.0;
   auto backward_length = 0.0;
   std::optional<lanelet::BasicPoint2d> stop_point;
