@@ -51,6 +51,104 @@ namespace trajectory_follower = ::autoware::motion::control::trajectory_follower
 
 enum class ControlState { DRIVE = 0, STOPPING, STOPPED, EMERGENCY };
 
+/// \brief parameters that configure the longitudinal control algorithm, read once at
+/// construction and updatable at runtime through the parameter callback
+struct PidLongitudinalControllerConfig
+{
+  enum class SlopeSource {
+    RAW_PITCH = 0,
+    TRAJECTORY_PITCH,
+    TRAJECTORY_ADAPTIVE,
+    TRAJECTORY_GOAL_ADAPTIVE
+  };
+
+  struct StateTransitionParams
+  {
+    // drive
+    double drive_state_stop_dist;
+    double drive_state_offset_stop_dist;
+    // stopping
+    double stopping_state_stop_dist;
+    // stop
+    double stopped_state_entry_duration_time;
+    double stopped_state_entry_vel;
+    double stopped_state_entry_acc;
+    // emergency
+    double emergency_state_overshoot_stop_dist;
+  };
+
+  struct StoppedStateParams
+  {
+    double vel;
+    double acc;
+  };
+
+  struct EmergencyStateParams
+  {
+    double vel;
+    double acc;
+    double jerk;
+  };
+
+  // vehicle info
+  double wheel_base{0.0};
+  double front_overhang{0.0};
+
+  // control period
+  double longitudinal_ctrl_period;
+
+  // delay compensation
+  double delay_compensation_time;
+  bool use_temporal_trajectory{false};
+
+  // enable flags
+  bool enable_smooth_stop;
+  bool enable_overshoot_emergency;
+  bool enable_slope_compensation;
+  bool enable_large_tracking_error_emergency;
+  bool enable_keep_stopped_until_steer_convergence;
+
+  // smooth stop transition
+  StateTransitionParams state_transition_params;
+
+  // drive
+  bool enable_integration_at_low_speed;
+  double current_vel_threshold_pid_integrate;
+  double time_threshold_before_pid_integrate;
+  double ff_scale_min{0.5};
+  double ff_scale_max{2.0};
+  bool enable_brake_keeping_before_stop;
+  double brake_keeping_acc;
+
+  // stop
+  StoppedStateParams stopped_state_params;
+
+  // emergency
+  EmergencyStateParams emergency_state_params;
+
+  // acc feedback
+  double acc_feedback_gain;
+
+  // acceleration limit
+  double max_acc;
+  double min_acc;
+
+  // jerk limit
+  double max_jerk;
+  double min_jerk;
+  double max_acc_cmd_diff;
+
+  // slope compensation
+  SlopeSource slope_source{SlopeSource::RAW_PITCH};
+  double adaptive_trajectory_velocity_th;
+  double max_pitch_rad;
+  double min_pitch_rad;
+
+  // ego nearest index search
+  double ego_nearest_dist_threshold;
+  double ego_nearest_yaw_threshold;
+};
+
 /// \class PidLongitudinalController
 /// \brief The node class used for generating longitudinal control commands (velocity/acceleration)
 class PidLongitudinalController : public trajectory_follower::LongitudinalControllerBase
@@ -113,108 +211,29 @@ private:
   // pointers for ros topic
   autoware_planning_msgs::msg::Trajectory m_last_valid_trajectory;
 
-  // vehicle info
-  double m_wheel_base{0.0};
-  double m_front_overhang{0.0};
+  // configuration parameters
+  PidLongitudinalControllerConfig config;
+
   bool m_prev_vehicle_is_under_control{false};
   std::shared_ptr<rclcpp::Time> m_under_control_starting_time{nullptr};
 
   // control state
   ControlState m_control_state{ControlState::STOPPED};
 
-  // control period
-  double m_longitudinal_ctrl_period;
-
-  // delay compensation
-  double m_delay_compensation_time;
-  bool m_use_temporal_trajectory{false};
   std::optional<double> m_prev_nearest_time{std::nullopt};
-
-  // enable flags
-  bool m_enable_smooth_stop;
-  bool m_enable_overshoot_emergency;
-  bool m_enable_slope_compensation;
-  bool m_enable_large_tracking_error_emergency;
-  bool m_enable_keep_stopped_until_steer_convergence;
-
-  // smooth stop transition
-  struct StateTransitionParams
-  {
-    // drive
-    double drive_state_stop_dist;
-    double drive_state_offset_stop_dist;
-    // stopping
-    double stopping_state_stop_dist;
-    // stop
-    double stopped_state_entry_duration_time;
-    double stopped_state_entry_vel;
-    double stopped_state_entry_acc;
-    // emergency
-    double emergency_state_overshoot_stop_dist;
-  };
-  StateTransitionParams m_state_transition_params;
 
   // drive
   PIDController m_pid_vel;
   std::shared_ptr<LowpassFilter1d> m_lpf_vel_error{nullptr};
-  bool m_enable_integration_at_low_speed;
-  double m_current_vel_threshold_pid_integrate;
-  double m_time_threshold_before_pid_integrate;
-  double m_ff_scale_min{0.5};
-  double m_ff_scale_max{2.0};
-  bool m_enable_brake_keeping_before_stop;
-  double m_brake_keeping_acc;
 
   // smooth stop
   std::optional<SmoothStop> m_smooth_stop;
 
-  // stop
-  struct StoppedStateParams
-  {
-    double vel;
-    double acc;
-  };
-  StoppedStateParams m_stopped_state_params;
-
-  // emergency
-  struct EmergencyStateParams
-  {
-    double vel;
-    double acc;
-    double jerk;
-  };
-  EmergencyStateParams m_emergency_state_params;
-
-  // acc feedback
-  double m_acc_feedback_gain;
   std::shared_ptr<LowpassFilter1d> m_lpf_acc_error{nullptr};
 
-  // acceleration limit
-  double m_max_acc;
-  double m_min_acc;
-
-  // jerk limit
-  double m_max_jerk;
-  double m_min_jerk;
-  double m_max_acc_cmd_diff;
-
   // slope compensation
-  enum class SlopeSource {
-    RAW_PITCH = 0,
-    TRAJECTORY_PITCH,
-    TRAJECTORY_ADAPTIVE,
-    TRAJECTORY_GOAL_ADAPTIVE
-  };
-  SlopeSource m_slope_source{SlopeSource::RAW_PITCH};
-  double m_adaptive_trajectory_velocity_th;
   std::shared_ptr<LowpassFilter1d> m_lpf_pitch{nullptr};
-  double m_max_pitch_rad;
-  double m_min_pitch_rad;
   std::optional<double> m_previous_slope_angle{std::nullopt};
-
-  // ego nearest index search
-  double m_ego_nearest_dist_threshold;
-  double m_ego_nearest_yaw_threshold;
 
   // buffer of send command
   std::vector<autoware_control_msgs::msg::Longitudinal> m_ctrl_cmd_vec;
