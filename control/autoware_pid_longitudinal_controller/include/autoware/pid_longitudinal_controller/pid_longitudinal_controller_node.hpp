@@ -21,7 +21,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
-#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include <memory>
 #include <vector>

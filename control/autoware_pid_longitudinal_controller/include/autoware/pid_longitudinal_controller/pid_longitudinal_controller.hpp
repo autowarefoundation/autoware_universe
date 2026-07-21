@@ -21,7 +21,6 @@
 #include "autoware/pid_longitudinal_controller/pid.hpp"
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
-#include "autoware_utils/ros/marker_helper.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
 
@@ -29,7 +28,7 @@
 #include "autoware_control_msgs/msg/longitudinal.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/pose.hpp"
-#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include <limits>
 #include <memory>
