@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -41,6 +42,9 @@ public:
     tier4_perception_msgs::msg::TrafficLightArray signals;
     bool detected_over_exposure = false;
     bool detected_under_exposure = false;
+    // The cropped ROI images fed to the classifier, in classification order (cheap cv::Mat
+    // views). The node passes them back to make_debug_image to render a debug view.
+    std::vector<cv::Mat> roi_images;
   };
 
   TrafficLightClassifier(
@@ -53,6 +57,11 @@ public:
   // backend fails, so the caller can skip publishing.
   std::optional<Result> classify(
     const cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoiArray & rois) const;
+
+  // Composite debug view for the most recent classify() call, built from its returned
+  // roi_images. Empty when there is nothing to render. Off the hot path: the node calls this
+  // only when a debug consumer is attached.
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & roi_images) const;
 
 private:
   std::shared_ptr<ClassifierInterface> classifier_;
