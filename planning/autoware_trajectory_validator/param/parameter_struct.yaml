@@ -77,7 +77,7 @@ validator:
     allow_if_cannot_stop_distance:
       type: double
       default_value: 0.0
-      description: Allow crossing a stop line within this distance if ego cannot stop before it (m)
+      description: allow crossing a stop line within this distance if ego cannot stop before the line plus its margin (m)
       validation:
         bounds<>: [0.0, 100.0]
       read_only: false

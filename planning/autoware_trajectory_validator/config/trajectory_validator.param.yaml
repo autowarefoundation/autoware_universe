@@ -25,7 +25,7 @@
       treat_amber_light_as_red_light: true # [-] when true, amber lights are handled like red lights
       treat_unknown_light_as_red_light: false # [-] when true, unknown lights are handled like red lights
       stop_overshoot_margin: 0.5 # [m] maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible
-      allow_if_cannot_stop_distance: 0.0 # [m] allow crossing a stop line within this distance if ego cannot stop before it
+      allow_if_cannot_stop_distance: 0.0 # [m] allow crossing a stop line within this distance if ego cannot stop before the line plus its margin
       stable_duration_threshold_red: 0.0 # [s] minimum duration a red light must be seen before it is considered active
       stable_duration_threshold_amber: 0.0 # [s] minimum duration an amber light must be seen before it is considered active
       stable_duration_threshold_unknown: 0.0 # [s] minimum duration an unknown light must be seen before it is considered active
