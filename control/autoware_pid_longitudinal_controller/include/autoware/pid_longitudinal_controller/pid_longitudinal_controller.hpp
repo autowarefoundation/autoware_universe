@@ -90,6 +90,25 @@ struct PidLongitudinalControllerConfig
     double jerk;
   };
 
+  struct PidGains
+  {
+    double kp;
+    double ki;
+    double kd;
+  };
+
+  struct PidLimits
+  {
+    double max_out;
+    double min_out;
+    double max_p_effort;
+    double min_p_effort;
+    double max_i_effort;
+    double min_i_effort;
+    double max_d_effort;
+    double min_d_effort;
+  };
+
   // vehicle info
   double wheel_base{0.0};
   double front_overhang{0.0};
@@ -112,6 +131,9 @@ struct PidLongitudinalControllerConfig
   StateTransitionParams state_transition_params;
 
   // drive
+  PidGains pid_gains;
+  PidLimits pid_limits;
+  double lpf_vel_error_gain;
   bool enable_integration_at_low_speed;
   double current_vel_threshold_pid_integrate;
   double time_threshold_before_pid_integrate;
@@ -119,6 +141,9 @@ struct PidLongitudinalControllerConfig
   double ff_scale_max{2.0};
   bool enable_brake_keeping_before_stop;
   double brake_keeping_acc;
+
+  // smooth stop
+  SmoothStop::Params smooth_stop_params;
 
   // stop
   StoppedStateParams stopped_state_params;
@@ -128,6 +153,7 @@ struct PidLongitudinalControllerConfig
 
   // acc feedback
   double acc_feedback_gain;
+  double lpf_acc_error_gain;
 
   // acceleration limit
   double max_acc;
@@ -141,6 +167,7 @@ struct PidLongitudinalControllerConfig
   // slope compensation
   SlopeSource slope_source{SlopeSource::RAW_PITCH};
   double adaptive_trajectory_velocity_th;
+  double lpf_pitch_gain;
   double max_pitch_rad;
   double min_pitch_rad;
 

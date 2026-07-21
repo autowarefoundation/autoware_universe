@@ -116,25 +116,29 @@ PidLongitudinalController::PidLongitudinalController(
   // parameters for drive state
   {
     // initialize PID gain
-    const double kp{node.declare_parameter<double>("kp")};
-    const double ki{node.declare_parameter<double>("ki")};
-    const double kd{node.declare_parameter<double>("kd")};
-    m_pid_vel.setGains(kp, ki, kd);
+    auto & gains = config.pid_gains;
+    gains.kp = node.declare_parameter<double>("kp");
+    gains.ki = node.declare_parameter<double>("ki");
+    gains.kd = node.declare_parameter<double>("kd");
+    m_pid_vel.setGains(gains.kp, gains.ki, gains.kd);
 
     // initialize PID limits
-    const double max_pid{node.declare_parameter<double>("max_out")};     // [m/s^2]
-    const double min_pid{node.declare_parameter<double>("min_out")};     // [m/s^2]
-    const double max_p{node.declare_parameter<double>("max_p_effort")};  // [m/s^2]
-    const double min_p{node.declare_parameter<double>("min_p_effort")};  // [m/s^2]
-    const double max_i{node.declare_parameter<double>("max_i_effort")};  // [m/s^2]
-    const double min_i{node.declare_parameter<double>("min_i_effort")};  // [m/s^2]
-    const double max_d{node.declare_parameter<double>("max_d_effort")};  // [m/s^2]
-    const double min_d{node.declare_parameter<double>("min_d_effort")};  // [m/s^2]
-    m_pid_vel.setLimits(max_pid, min_pid, max_p, min_p, max_i, min_i, max_d, min_d);
+    auto & limits = config.pid_limits;
+    limits.max_out = node.declare_parameter<double>("max_out");            // [m/s^2]
+    limits.min_out = node.declare_parameter<double>("min_out");            // [m/s^2]
+    limits.max_p_effort = node.declare_parameter<double>("max_p_effort");  // [m/s^2]
+    limits.min_p_effort = node.declare_parameter<double>("min_p_effort");  // [m/s^2]
+    limits.max_i_effort = node.declare_parameter<double>("max_i_effort");  // [m/s^2]
+    limits.min_i_effort = node.declare_parameter<double>("min_i_effort");  // [m/s^2]
+    limits.max_d_effort = node.declare_parameter<double>("max_d_effort");  // [m/s^2]
+    limits.min_d_effort = node.declare_parameter<double>("min_d_effort");  // [m/s^2]
+    m_pid_vel.setLimits(
+      limits.max_out, limits.min_out, limits.max_p_effort, limits.min_p_effort, limits.max_i_effort,
+      limits.min_i_effort, limits.max_d_effort, limits.min_d_effort);
 
     // set lowpass filter for vel error and pitch
-    const double lpf_vel_error_gain{node.declare_parameter<double>("lpf_vel_error_gain")};
-    m_lpf_vel_error = std::make_shared<LowpassFilter1d>(0.0, lpf_vel_error_gain);
+    config.lpf_vel_error_gain = node.declare_parameter<double>("lpf_vel_error_gain");
+    m_lpf_vel_error = std::make_shared<LowpassFilter1d>(0.0, config.lpf_vel_error_gain);
 
     config.enable_integration_at_low_speed =
       node.declare_parameter<bool>("enable_integration_at_low_speed");
@@ -153,33 +157,22 @@ PidLongitudinalController::PidLongitudinalController(
 
   // parameters for smooth stop state
   {
-    const double max_strong_acc{
-      node.declare_parameter<double>("smooth_stop_max_strong_acc")};  // [m/s^2]
-    const double min_strong_acc{
-      node.declare_parameter<double>("smooth_stop_min_strong_acc")};                // [m/s^2]
-    const double weak_acc{node.declare_parameter<double>("smooth_stop_weak_acc")};  // [m/s^2]
-    const double weak_stop_acc{
-      node.declare_parameter<double>("smooth_stop_weak_stop_acc")};  // [m/s^2]
-    const double strong_stop_acc{
-      node.declare_parameter<double>("smooth_stop_strong_stop_acc")};  // [m/s^2]
+    auto & p = config.smooth_stop_params;
+    p.max_strong_acc = node.declare_parameter<double>("smooth_stop_max_strong_acc");    // [m/s^2]
+    p.min_strong_acc = node.declare_parameter<double>("smooth_stop_min_strong_acc");    // [m/s^2]
+    p.weak_acc = node.declare_parameter<double>("smooth_stop_weak_acc");                // [m/s^2]
+    p.weak_stop_acc = node.declare_parameter<double>("smooth_stop_weak_stop_acc");      // [m/s^2]
+    p.strong_stop_acc = node.declare_parameter<double>("smooth_stop_strong_stop_acc");  // [m/s^2]
 
-    const double max_fast_vel{node.declare_parameter<double>("smooth_stop_max_fast_vel")};  // [m/s]
-    const double min_running_vel{
-      node.declare_parameter<double>("smooth_stop_min_running_vel")};  // [m/s]
-    const double min_running_acc{
-      node.declare_parameter<double>("smooth_stop_min_running_acc")};  // [m/s^2]
-    const double weak_stop_time{
-      node.declare_parameter<double>("smooth_stop_weak_stop_time")};  // [s]
+    p.min_fast_vel = node.declare_parameter<double>("smooth_stop_max_fast_vel");        // [m/s]
+    p.min_running_vel = node.declare_parameter<double>("smooth_stop_min_running_vel");  // [m/s]
+    p.min_running_acc = node.declare_parameter<double>("smooth_stop_min_running_acc");  // [m/s^2]
+    p.weak_stop_time = node.declare_parameter<double>("smooth_stop_weak_stop_time");    // [s]
 
-    const double weak_stop_dist{
-      node.declare_parameter<double>("smooth_stop_weak_stop_dist")};  // [m]
-    const double strong_stop_dist{
-      node.declare_parameter<double>("smooth_stop_strong_stop_dist")};  // [m]
+    p.weak_stop_dist = node.declare_parameter<double>("smooth_stop_weak_stop_dist");      // [m]
+    p.strong_stop_dist = node.declare_parameter<double>("smooth_stop_strong_stop_dist");  // [m]
 
-    m_smooth_stop.emplace(
-      SmoothStop::Params{
-        max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
-        min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist});
+    m_smooth_stop.emplace(p);
   }
 
   // parameters for stop state
@@ -199,8 +192,8 @@ PidLongitudinalController::PidLongitudinalController(
 
   // parameters for acc feedback
   {
-    const double lpf_acc_error_gain{node.declare_parameter<double>("lpf_acc_error_gain")};
-    m_lpf_acc_error = std::make_shared<LowpassFilter1d>(0.0, lpf_acc_error_gain);
+    config.lpf_acc_error_gain = node.declare_parameter<double>("lpf_acc_error_gain");
+    m_lpf_acc_error = std::make_shared<LowpassFilter1d>(0.0, config.lpf_acc_error_gain);
     config.acc_feedback_gain = node.declare_parameter<double>("acc_feedback_gain");
   }
 
@@ -216,8 +209,8 @@ PidLongitudinalController::PidLongitudinalController(
   // parameters for slope compensation
   config.adaptive_trajectory_velocity_th =
     node.declare_parameter<double>("adaptive_trajectory_velocity_th");  // [m/s^2]
-  const double lpf_pitch_gain{node.declare_parameter<double>("lpf_pitch_gain")};
-  m_lpf_pitch = std::make_shared<LowpassFilter1d>(0.0, lpf_pitch_gain);
+  config.lpf_pitch_gain = node.declare_parameter<double>("lpf_pitch_gain");
+  m_lpf_pitch = std::make_shared<LowpassFilter1d>(0.0, config.lpf_pitch_gain);
   config.max_pitch_rad = node.declare_parameter<double>("max_pitch_rad");  // [rad]
   config.min_pitch_rad = node.declare_parameter<double>("min_pitch_rad");  // [rad]
 
@@ -292,35 +285,27 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
 
   // drive state
   {
-    double kp{node_parameters_->get_parameter("kp").as_double()};
-    double ki{node_parameters_->get_parameter("ki").as_double()};
-    double kd{node_parameters_->get_parameter("kd").as_double()};
-    update_param("kp", kp);
-    update_param("ki", ki);
-    update_param("kd", kd);
-    m_pid_vel.setGains(kp, ki, kd);
+    auto & gains = config.pid_gains;
+    update_param("kp", gains.kp);
+    update_param("ki", gains.ki);
+    update_param("kd", gains.kd);
+    m_pid_vel.setGains(gains.kp, gains.ki, gains.kd);
 
-    double lpf_vel_error_gain{node_parameters_->get_parameter("lpf_vel_error_gain").as_double()};
-    update_param("lpf_vel_error_gain", lpf_vel_error_gain);
-    m_lpf_vel_error->setGain(lpf_vel_error_gain);
+    update_param("lpf_vel_error_gain", config.lpf_vel_error_gain);
+    m_lpf_vel_error->setGain(config.lpf_vel_error_gain);
 
-    double max_pid{node_parameters_->get_parameter("max_out").as_double()};
-    double min_pid{node_parameters_->get_parameter("min_out").as_double()};
-    double max_p{node_parameters_->get_parameter("max_p_effort").as_double()};
-    double min_p{node_parameters_->get_parameter("min_p_effort").as_double()};
-    double max_i{node_parameters_->get_parameter("max_i_effort").as_double()};
-    double min_i{node_parameters_->get_parameter("min_i_effort").as_double()};
-    double max_d{node_parameters_->get_parameter("max_d_effort").as_double()};
-    double min_d{node_parameters_->get_parameter("min_d_effort").as_double()};
-    update_param("max_out", max_pid);
-    update_param("min_out", min_pid);
-    update_param("max_p_effort", max_p);
-    update_param("min_p_effort", min_p);
-    update_param("max_i_effort", max_i);
-    update_param("min_i_effort", min_i);
-    update_param("max_d_effort", max_d);
-    update_param("min_d_effort", min_d);
-    m_pid_vel.setLimits(max_pid, min_pid, max_p, min_p, max_i, min_i, max_d, min_d);
+    auto & limits = config.pid_limits;
+    update_param("max_out", limits.max_out);
+    update_param("min_out", limits.min_out);
+    update_param("max_p_effort", limits.max_p_effort);
+    update_param("min_p_effort", limits.min_p_effort);
+    update_param("max_i_effort", limits.max_i_effort);
+    update_param("min_i_effort", limits.min_i_effort);
+    update_param("max_d_effort", limits.max_d_effort);
+    update_param("min_d_effort", limits.min_d_effort);
+    m_pid_vel.setLimits(
+      limits.max_out, limits.min_out, limits.max_p_effort, limits.min_p_effort, limits.max_i_effort,
+      limits.min_i_effort, limits.max_d_effort, limits.min_d_effort);
 
     update_param(
       "current_vel_threshold_pid_integration", config.current_vel_threshold_pid_integrate);
@@ -332,40 +317,19 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
 
   // stopping state
   {
-    double max_strong_acc{
-      node_parameters_->get_parameter("smooth_stop_max_strong_acc").as_double()};
-    double min_strong_acc{
-      node_parameters_->get_parameter("smooth_stop_min_strong_acc").as_double()};
-    double weak_acc{node_parameters_->get_parameter("smooth_stop_weak_acc").as_double()};
-    double weak_stop_acc{node_parameters_->get_parameter("smooth_stop_weak_stop_acc").as_double()};
-    double strong_stop_acc{
-      node_parameters_->get_parameter("smooth_stop_strong_stop_acc").as_double()};
-    double max_fast_vel{node_parameters_->get_parameter("smooth_stop_max_fast_vel").as_double()};
-    double min_running_vel{
-      node_parameters_->get_parameter("smooth_stop_min_running_vel").as_double()};
-    double min_running_acc{
-      node_parameters_->get_parameter("smooth_stop_min_running_acc").as_double()};
-    double weak_stop_time{
-      node_parameters_->get_parameter("smooth_stop_weak_stop_time").as_double()};
-    double weak_stop_dist{
-      node_parameters_->get_parameter("smooth_stop_weak_stop_dist").as_double()};
-    double strong_stop_dist{
-      node_parameters_->get_parameter("smooth_stop_strong_stop_dist").as_double()};
-    update_param("smooth_stop_max_strong_acc", max_strong_acc);
-    update_param("smooth_stop_min_strong_acc", min_strong_acc);
-    update_param("smooth_stop_weak_acc", weak_acc);
-    update_param("smooth_stop_weak_stop_acc", weak_stop_acc);
-    update_param("smooth_stop_strong_stop_acc", strong_stop_acc);
-    update_param("smooth_stop_max_fast_vel", max_fast_vel);
-    update_param("smooth_stop_min_running_vel", min_running_vel);
-    update_param("smooth_stop_min_running_acc", min_running_acc);
-    update_param("smooth_stop_weak_stop_time", weak_stop_time);
-    update_param("smooth_stop_weak_stop_dist", weak_stop_dist);
-    update_param("smooth_stop_strong_stop_dist", strong_stop_dist);
-    m_smooth_stop->setParams(
-      SmoothStop::Params{
-        max_strong_acc, min_strong_acc, weak_acc, weak_stop_acc, strong_stop_acc, max_fast_vel,
-        min_running_vel, min_running_acc, weak_stop_time, weak_stop_dist, strong_stop_dist});
+    auto & p = config.smooth_stop_params;
+    update_param("smooth_stop_max_strong_acc", p.max_strong_acc);
+    update_param("smooth_stop_min_strong_acc", p.min_strong_acc);
+    update_param("smooth_stop_weak_acc", p.weak_acc);
+    update_param("smooth_stop_weak_stop_acc", p.weak_stop_acc);
+    update_param("smooth_stop_strong_stop_acc", p.strong_stop_acc);
+    update_param("smooth_stop_max_fast_vel", p.min_fast_vel);
+    update_param("smooth_stop_min_running_vel", p.min_running_vel);
+    update_param("smooth_stop_min_running_acc", p.min_running_acc);
+    update_param("smooth_stop_weak_stop_time", p.weak_stop_time);
+    update_param("smooth_stop_weak_stop_dist", p.weak_stop_dist);
+    update_param("smooth_stop_strong_stop_dist", p.strong_stop_dist);
+    m_smooth_stop->setParams(p);
   }
 
   // stop state
@@ -385,9 +349,8 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
 
   // acceleration feedback
   update_param("acc_feedback_gain", config.acc_feedback_gain);
-  double lpf_acc_error_gain{node_parameters_->get_parameter("lpf_acc_error_gain").as_double()};
-  update_param("lpf_acc_error_gain", lpf_acc_error_gain);
-  m_lpf_acc_error->setGain(lpf_acc_error_gain);
+  update_param("lpf_acc_error_gain", config.lpf_acc_error_gain);
+  m_lpf_acc_error->setGain(config.lpf_acc_error_gain);
 
   // acceleration limit
   update_param("min_acc", config.min_acc);
