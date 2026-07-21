@@ -3,6 +3,8 @@
   <arg name="trajectory_selector_param_path" default="$(find-pkg-share autoware_trajectory_selector)/config/selector.param.yaml"/>
   <arg name="trajectory_concatenator_param_path" default="$(find-pkg-share autoware_trajectory_concatenator)/config/concatenator.param.yaml"/>
   <arg name="trajectory_validator_param_path" default="$(find-pkg-share autoware_trajectory_validator)/config/trajectory_validator.param.yaml"/>
+  <arg name="validator_diagnostic_param_path" default="$(find-pkg-share autoware_trajectory_validator)/config/trajectory_validator_diagnostic.param.yaml"/>
+
   <arg name="input_generative_trajectories" default="~/input/trajectories_generative"/>
   <arg name="input_backup_trajectories" default="~/input/trajectories_backup"/>
   <arg name="output_trajectories" default="~/output/trajectories"/>
@@ -20,6 +22,7 @@
     <param from="$(var trajectory_selector_param_path)" allow_substs="true"/>
     <param from="$(var trajectory_concatenator_param_path)" allow_substs="true"/>
     <param from="$(var trajectory_validator_param_path)" allow_substs="true"/>
+    <param from="$(var validator_diagnostic_param_path)"/>
     <param name="pseudo_emergency_stop.enable" value="$(var enable_pseudo_emergency_stop)"/>
     <remap from="~/input/trajectories_generative" to="$(var input_generative_trajectories)"/>
     <remap from="~/input/trajectories_backup" to="$(var input_backup_trajectories)"/>

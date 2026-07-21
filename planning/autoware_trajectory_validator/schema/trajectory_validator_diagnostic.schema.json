@@ -29,14 +29,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "type": "object",
-          "properties": {
-            "trajectory_validator_diagnostic": {
-              "$ref": "#/definitions/trajectory_validator_diagnostic"
-            }
-          },
-          "required": [],
-          "additionalProperties": false
+          "$ref": "#/definitions/trajectory_validator_diagnostic"
         }
       },
       "required": ["ros__parameters"],

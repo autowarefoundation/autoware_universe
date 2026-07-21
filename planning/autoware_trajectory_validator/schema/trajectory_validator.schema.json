@@ -3,6 +3,26 @@
   "title": "Parameters for Trajectory Validator",
   "type": "object",
   "definitions": {
+    "trajectory_validator_diagnostic": {
+      "type": "object",
+      "properties": {
+        "configured_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Entries of filter_name:action:diagnostic_name.",
+          "default": [
+            "uncrossable_boundary_departure_filter:moderate:trajectory_validator_uncrossable_boundary_departure_danger"
+          ]
+        },
+        "no_candidates_diag_status_name": {
+          "type": "string",
+          "description": "Status name published at ERROR when no candidate trajectory exists; empty to disable.",
+          "default": "trajectory_validator_no_candidate_trajectory"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
     "enable_assessment_per_class": {
       "type": "object",
       "properties": {
@@ -490,7 +510,10 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/trajectory_validator"
+          "anyOf": [
+            { "$ref": "#/definitions/trajectory_validator" },
+            { "$ref": "#/definitions/trajectory_validator_diagnostic" }
+          ]
         }
       },
       "required": ["ros__parameters"],
