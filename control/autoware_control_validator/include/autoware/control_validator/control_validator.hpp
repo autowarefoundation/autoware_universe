@@ -21,6 +21,7 @@
 
 #include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_control_validator/msg/control_validator_status.hpp>
 #include <autoware_utils/ros/parameter.hpp>
@@ -289,8 +290,7 @@ private:
   /**
    * @brief Infer autonomous control state
    */
-  bool infer_autonomous_control_state(
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(OperationModeState) &);
+  bool infer_autonomous_control_state(const OperationModeState::ConstSharedPtr &);
 
   /**
    * @brief Postprocessing while keeping debug values
@@ -299,11 +299,13 @@ private:
 
   // Subscribers and publishers
   AUTOWARE_SUBSCRIPTION_PTR(Control) sub_control_cmd_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(OperationModeState) sub_operational_state_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) sub_kinematics_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory) sub_reference_traj_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory) sub_predicted_traj_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped) sub_measured_acc_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<OperationModeState>::SharedPtr
+    sub_operational_state_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr sub_predicted_traj_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    sub_measured_acc_;
   AUTOWARE_PUBLISHER_PTR(ControlValidatorStatus) pub_status_;
   AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) pub_markers_;
   AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped) pub_processing_time_;

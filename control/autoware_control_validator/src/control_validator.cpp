@@ -251,13 +251,17 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control_cmd", 1, std::bind(&ControlValidator::on_control_cmd, this, _1));
-  sub_operational_state_ =
-    create_polling_subscriber<OperationModeState>("~/input/operational_mode_state", 1);
-  sub_kinematics_ = create_polling_subscriber<Odometry>("~/input/kinematics", 1);
-  sub_reference_traj_ = create_polling_subscriber<Trajectory>("~/input/reference_trajectory", 1);
-  sub_predicted_traj_ = create_polling_subscriber<Trajectory>("~/input/predicted_trajectory", 1);
-  sub_measured_acc_ =
-    create_polling_subscriber<AccelWithCovarianceStamped>("~/input/measured_acceleration", 1);
+  namespace agnocast_polling = autoware::agnocast_wrapper::polling;
+  sub_operational_state_ = agnocast_polling::create_polling_subscriber<OperationModeState>(
+    this, "~/input/operational_mode_state", 1);
+  sub_kinematics_ =
+    agnocast_polling::create_polling_subscriber<Odometry>(this, "~/input/kinematics", 1);
+  sub_reference_traj_ = agnocast_polling::create_polling_subscriber<Trajectory>(
+    this, "~/input/reference_trajectory", 1);
+  sub_predicted_traj_ = agnocast_polling::create_polling_subscriber<Trajectory>(
+    this, "~/input/predicted_trajectory", 1);
+  sub_measured_acc_ = agnocast_polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+    this, "~/input/measured_acceleration", 1);
 
   pub_status_ = create_publisher<ControlValidatorStatus>("~/output/validation_status", 1);
 
@@ -368,7 +372,7 @@ void ControlValidator::setup_diag()
 }
 
 bool ControlValidator::infer_autonomous_control_state(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(OperationModeState) & msg)
+  const OperationModeState::ConstSharedPtr & msg)
 {
   return (msg->mode == OperationModeState::AUTONOMOUS) && (msg->is_autoware_control_enabled);
 }
