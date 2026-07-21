@@ -78,17 +78,10 @@ private:
     trajectory_follower::InputData const & input_data) override;
 
   /**
-   * @brief publish debug data
+   * @brief publish debug data and the virtual wall marker created during this cycle, if any
    * @param [in] result output of the core control logic for this cycle
-   * @param [in] current_time time captured once per control cycle in run()
    */
-  void publishDebugData(
-    const PidLongitudinalControllerResult & result, const rclcpp::Time & current_time);
-
-  /**
-   * @brief publish the virtual wall marker created during this cycle, if any
-   */
-  void publishVirtualWallMarker(const PidLongitudinalControllerResult & result);
+  void publishMessage(const PidLongitudinalControllerResult & result);
 
   /**
    * @brief emit the critical logs raised by the core logic during this cycle

@@ -26,6 +26,7 @@
 
 #include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
 #include "autoware_control_msgs/msg/longitudinal.hpp"
+#include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -175,7 +176,8 @@ struct PidLongitudinalControllerResult
 {
   trajectory_follower::LongitudinalOutput output;
   ControlState control_state{ControlState::STOPPED};
-  double slope_angle{0.0};
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_message{};
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped slope_message{};
   std::optional<visualization_msgs::msg::MarkerArray> virtual_wall_marker{std::nullopt};
   bool received_invalid_trajectory{false};
   std::optional<std::string> emergency_stop_reason{std::nullopt};
@@ -201,8 +203,6 @@ public:
   PidLongitudinalControllerResult run(
     const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time,
     const bool is_steer_converged);
-
-  const DebugValues & getDebugValues() const { return m_debug_values; }
 
 private:
   struct Motion

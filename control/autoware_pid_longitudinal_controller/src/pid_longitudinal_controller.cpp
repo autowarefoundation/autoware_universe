@@ -114,7 +114,17 @@ PidLongitudinalControllerResult PidLongitudinalController::run(
   PidLongitudinalControllerResult result;
   result.output = output;
   result.control_state = m_control_state;
-  result.slope_angle = control_data.slope_angle;
+
+  result.debug_message.stamp = current_time;
+  for (const auto & v : m_debug_values.getValues()) {
+    result.debug_message.data.push_back(
+      static_cast<decltype(result.debug_message.data)::value_type>(v));
+  }
+
+  result.slope_message.stamp = current_time;
+  result.slope_message.data.push_back(
+    static_cast<decltype(result.slope_message.data)::value_type>(control_data.slope_angle));
+
   if (m_virtual_wall_marker) {
     result.virtual_wall_marker = m_virtual_wall_marker;
     m_virtual_wall_marker.reset();

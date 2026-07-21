@@ -363,8 +363,7 @@ trajectory_follower::LongitudinalOutput PidLongitudinalControllerNode::run(
   control_state_ = result.control_state;
 
   emitLogs(result);
-  publishDebugData(result, current_time);
-  publishVirtualWallMarker(result);
+  publishMessage(result);
 
   return result.output;
 }
@@ -379,30 +378,14 @@ void PidLongitudinalControllerNode::emitLogs(const PidLongitudinalControllerResu
   }
 }
 
-void PidLongitudinalControllerNode::publishDebugData(
-  const PidLongitudinalControllerResult & result, const rclcpp::Time & current_time)
+void PidLongitudinalControllerNode::publishMessage(const PidLongitudinalControllerResult & result)
 {
-  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
-  debug_msg.stamp = current_time;
-  for (const auto & v : controller_.getDebugValues().getValues()) {
-    debug_msg.data.push_back(static_cast<decltype(debug_msg.data)::value_type>(v));
-  }
-  m_pub_debug->publish(debug_msg);
+  m_pub_debug->publish(result.debug_message);
+  m_pub_slope->publish(result.slope_message);
 
-  // slope angle
-  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped slope_msg{};
-  slope_msg.stamp = current_time;
-  slope_msg.data.push_back(static_cast<decltype(slope_msg.data)::value_type>(result.slope_angle));
-  m_pub_slope->publish(slope_msg);
-}
-
-void PidLongitudinalControllerNode::publishVirtualWallMarker(
-  const PidLongitudinalControllerResult & result)
-{
-  if (!result.virtual_wall_marker) {
-    return;
+  if (result.virtual_wall_marker) {
+    m_pub_virtual_wall_marker->publish(*result.virtual_wall_marker);
   }
-  m_pub_virtual_wall_marker->publish(*result.virtual_wall_marker);
 }
 
 void PidLongitudinalControllerNode::setupDiagnosticUpdater()
