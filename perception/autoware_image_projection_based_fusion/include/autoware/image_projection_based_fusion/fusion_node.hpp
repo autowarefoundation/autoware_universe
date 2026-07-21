@@ -46,6 +46,7 @@
 #include <cstddef>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -120,6 +121,7 @@ private:
     concatenated_info_map_;
 
   diagnostic_updater::Updater diagnostic_updater_{this};
+  mutable std::mutex diagnostic_mutex_;
   std::shared_ptr<FusionCollectorInfoBase> diagnostic_collector_info_;
   std::unordered_map<std::size_t, double> diagnostic_id_to_stamp_map_;
 
