@@ -47,7 +47,6 @@ private:
     geometry_msgs::msg::Point stop_line_pos;
     std::string signal_label;
     size_t rejection_count{0};
-    std::optional<traffic_light_compliance_checker::DilemmaZoneDebugInfo> dilemma_zone;
   };
 
   std::unique_ptr<traffic_light_compliance_checker::TrafficLightComplianceChecker> checker_;
@@ -57,7 +56,7 @@ private:
   std::optional<rclcpp::Time> last_frame_time_;
 
   void update_debug_data(
-    const traffic_light_compliance_checker::ComplianceResult & result,
+    const std::vector<traffic_light_compliance_checker::Violation> & violations,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
     const rclcpp::Time & current_time, const double z);
 };

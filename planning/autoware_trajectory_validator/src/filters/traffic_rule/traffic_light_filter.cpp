@@ -16,12 +16,7 @@
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
-#include <algorithm>
-#include <cctype>
-#include <cmath>
-#include <iomanip>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -48,38 +43,6 @@ std::string get_signal_label(
   }
   if (is_unknown && params.treat_unknown_light_as_red_light) return "unknown as red";
   return "unknown";
-}
-
-std::string to_upper(std::string value)
-{
-  std::transform(value.begin(), value.end(), value.begin(), [](const unsigned char c) {
-    return static_cast<char>(std::toupper(c));
-  });
-  return value;
-}
-
-std::string format_distance(const double distance)
-{
-  std::ostringstream stream;
-  stream << std::fixed << std::setprecision(2) << distance << "m";
-  return stream.str();
-}
-
-double get_yaw(const geometry_msgs::msg::Quaternion & orientation)
-{
-  const auto sin_yaw = 2.0 * (orientation.w * orientation.z + orientation.x * orientation.y);
-  const auto cos_yaw = 1.0 - 2.0 * (orientation.y * orientation.y + orientation.z * orientation.z);
-  return std::atan2(sin_yaw, cos_yaw);
-}
-
-double get_stop_line_length(const lanelet::BasicLineString2d & stop_line)
-{
-  double length = 0.0;
-  for (size_t i = 1; i < stop_line.size(); ++i) {
-    length +=
-      std::hypot(stop_line[i].x() - stop_line[i - 1].x(), stop_line[i].y() - stop_line[i - 1].y());
-  }
-  return length;
 }
 
 std::optional<std::string> is_invalid_input(
@@ -200,7 +163,8 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
   }
 
   update_debug_data(
-    *result, *context.traffic_light_signals, current_time, context.odometry->pose.pose.position.z);
+    result->violations, *context.traffic_light_signals, current_time,
+    context.odometry->pose.pose.position.z);
 
   std::vector<MetricReport> metrics;
 
@@ -232,154 +196,58 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
 }
 
 void TrafficLightFilter::update_debug_data(
-  const traffic_light_compliance_checker::ComplianceResult & result,
+  const std::vector<traffic_light_compliance_checker::Violation> & violations,
   const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
   const rclcpp::Time & current_time, const double z)
 {
-  const auto update_common_info =
-    [&](const int64_t traffic_light_id, const lanelet::BasicLineString2d & stop_line) -> auto & {
-    auto & info = aggregated_rejections_[traffic_light_id];
-    if (!stop_line.empty()) {
-      info.stop_line_pos.x = 0.5 * (stop_line.front().x() + stop_line.back().x());
-      info.stop_line_pos.y = 0.5 * (stop_line.front().y() + stop_line.back().y());
-      info.stop_line_pos.z = z;
-    }
-
-    const auto signal_it = std::find_if(
-      traffic_light_signals.traffic_light_groups.begin(),
-      traffic_light_signals.traffic_light_groups.end(),
-      [&](const auto & group) { return group.traffic_light_group_id == traffic_light_id; });
-    info.signal_label = signal_it != traffic_light_signals.traffic_light_groups.end()
-                          ? get_signal_label(*signal_it, params_)
-                          : "unknown";
-    return info;
-  };
-
-  for (const auto & violation : result.violations) {
+  for (const auto & violation : violations) {
     auto & info = aggregated_rejections_[violation.traffic_light_id];
     info.rejection_count++;
-    update_common_info(violation.traffic_light_id, violation.stop_line);
-  }
-  for (const auto & dilemma_zone : result.dilemma_zone_debug_info) {
-    auto & info = update_common_info(dilemma_zone.traffic_light_id, dilemma_zone.stop_line);
-    info.dilemma_zone = dilemma_zone;
-  }
+    if (info.rejection_count == 1) {
+      info.stop_line_pos.x = violation.stop_line.front().x();
+      info.stop_line_pos.y = violation.stop_line.front().y();
+      info.stop_line_pos.z = z;
 
+      auto it = std::find_if(
+        traffic_light_signals.traffic_light_groups.begin(),
+        traffic_light_signals.traffic_light_groups.end(),
+        [&](const auto & g) { return g.traffic_light_group_id == violation.traffic_light_id; });
+
+      if (it != traffic_light_signals.traffic_light_groups.end()) {
+        info.signal_label = get_signal_label(*it, params_);
+      } else {
+        info.signal_label = "unknown";
+      }
+    }
+  }
   debug_markers_.markers.clear();
-  const auto make_marker = [&](const std::string & marker_namespace, const int32_t type) {
-    visualization_msgs::msg::Marker marker;
-    marker.header.frame_id = "map";
-    marker.header.stamp = current_time;
-    marker.ns = marker_namespace;
-    marker.id = static_cast<int>(debug_markers_.markers.size());
-    marker.type = type;
-    marker.action = visualization_msgs::msg::Marker::ADD;
-    marker.pose.orientation.w = 1.0;
-    return marker;
-  };
-
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = current_time;
+  marker.ns = "rejection_info";
+  marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+  marker.scale.z = 0.5;
+  marker.color.a = 0.9;
   for (const auto & [tl_id, info] : aggregated_rejections_) {
-    auto text_marker =
-      make_marker("rejection_info", visualization_msgs::msg::Marker::TEXT_VIEW_FACING);
-    text_marker.pose.position = info.stop_line_pos;
-    text_marker.pose.position.z += 2.0;
-    text_marker.scale.z = 0.5;
-    text_marker.color.a = 0.9;
+    marker.id = static_cast<int>(debug_markers_.markers.size());
+    marker.pose.position = info.stop_line_pos;
+    marker.pose.position.z += 2.0;
 
     if (info.signal_label == "red" || info.signal_label == "amber as red") {
-      text_marker.color.r = 1.0;
+      marker.color.r = 1.0;
+      marker.color.g = 0.0;
+      marker.color.b = 0.0;
     } else {
-      text_marker.color.r = 1.0;
-      text_marker.color.g = 0.5;
+      marker.color.r = 1.0;
+      marker.color.g = 0.5;
+      marker.color.b = 0.0;
     }
 
-    text_marker.text = "TL: " + std::to_string(tl_id) + " (" + to_upper(info.signal_label) +
-                       ")\nRejections: " + std::to_string(info.rejection_count);
+    marker.text = "TL: " + std::to_string(tl_id) + ", " + info.signal_label +
+                  ", Rejections: " + std::to_string(info.rejection_count);
 
-    if (!info.dilemma_zone.has_value()) {
-      debug_markers_.markers.push_back(text_marker);
-      continue;
-    }
-
-    const auto & dilemma_zone = *info.dilemma_zone;
-    text_marker.text +=
-      "\nDist to Stop: " + format_distance(dilemma_zone.distance_from_ego_front) +
-      "\nAllow Dist limit: " + format_distance(dilemma_zone.allow_if_cannot_stop_distance) +
-      "\nEgo Stop Dist: ";
-
-    if (dilemma_zone.ego_stopping_distance.has_value()) {
-      text_marker.text += format_distance(*dilemma_zone.ego_stopping_distance);
-    } else {
-      text_marker.text += "unavailable";
-    }
-
-    if (dilemma_zone.is_allowed) {
-      text_marker.text += "\nAction: ALLOWED (Cannot Stop)";
-      text_marker.color.r = 0.0;
-      text_marker.color.g = 1.0;
-    } else if (!dilemma_zone.ego_stopping_distance.has_value()) {
-      text_marker.text += "\nAction: ENFORCED (Stop Distance Unavailable)";
-    } else if (
-      dilemma_zone.allow_if_cannot_stop_distance <= 0.0 ||
-      dilemma_zone.distance_from_ego_front >= dilemma_zone.allow_if_cannot_stop_distance) {
-      text_marker.text += "\nAction: ENFORCED (Outside Allow Zone)";
-    } else {
-      text_marker.text += "\nAction: ENFORCED (Can Stop)";
-    }
-    debug_markers_.markers.push_back(text_marker);
-
-    auto ego_front_marker =
-      make_marker("traffic_light_ego_front", visualization_msgs::msg::Marker::SPHERE);
-    ego_front_marker.pose = dilemma_zone.ego_front_pose;
-    ego_front_marker.scale.x = 0.4;
-    ego_front_marker.scale.y = 0.4;
-    ego_front_marker.scale.z = 0.4;
-    ego_front_marker.color.g = 1.0;
-    ego_front_marker.color.b = 1.0;
-    ego_front_marker.color.a = 1.0;
-    debug_markers_.markers.push_back(ego_front_marker);
-
-    const double ego_yaw = get_yaw(dilemma_zone.ego_front_pose.orientation);
-    const double direction_x = std::cos(ego_yaw);
-    const double direction_y = std::sin(ego_yaw);
-
-    auto allow_boundary_marker =
-      make_marker("traffic_light_allow_boundary", visualization_msgs::msg::Marker::LINE_STRIP);
-    allow_boundary_marker.scale.x = 0.15;
-    allow_boundary_marker.color.r = 1.0;
-    allow_boundary_marker.color.b = 1.0;
-    allow_boundary_marker.color.a = 0.9;
-    for (const auto & stop_line_point : dilemma_zone.stop_line) {
-      geometry_msgs::msg::Point boundary_point;
-      boundary_point.x =
-        stop_line_point.x() - dilemma_zone.allow_if_cannot_stop_distance * direction_x;
-      boundary_point.y =
-        stop_line_point.y() - dilemma_zone.allow_if_cannot_stop_distance * direction_y;
-      boundary_point.z = z + 0.2;
-      allow_boundary_marker.points.push_back(boundary_point);
-    }
-    debug_markers_.markers.push_back(allow_boundary_marker);
-
-    if (dilemma_zone.ego_stopping_distance.has_value()) {
-      const double required_stopping_distance =
-        *dilemma_zone.ego_stopping_distance - dilemma_zone.stop_overshoot_margin;
-      auto stopping_wall_marker =
-        make_marker("traffic_light_required_stopping_wall", visualization_msgs::msg::Marker::CUBE);
-      stopping_wall_marker.pose = dilemma_zone.ego_front_pose;
-      stopping_wall_marker.pose.position.x += required_stopping_distance * direction_x;
-      stopping_wall_marker.pose.position.y += required_stopping_distance * direction_y;
-      stopping_wall_marker.pose.position.z = z + 1.0;
-      stopping_wall_marker.scale.x = 0.15;
-      stopping_wall_marker.scale.y = std::max(3.0, get_stop_line_length(dilemma_zone.stop_line));
-      stopping_wall_marker.scale.z = 2.0;
-      stopping_wall_marker.color.a = 0.35;
-      if (required_stopping_distance <= dilemma_zone.distance_from_ego_front) {
-        stopping_wall_marker.color.r = 1.0;
-      } else {
-        stopping_wall_marker.color.g = 1.0;
-      }
-      debug_markers_.markers.push_back(stopping_wall_marker);
-    }
+    debug_markers_.markers.push_back(marker);
   }
 }
 

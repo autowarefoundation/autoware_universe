@@ -381,19 +381,6 @@ TEST_F(TrafficLightFilterTest, AllowsCrossingWhenEgoFrontHasPassedStopLine)
   const auto points = create_trajectory(0.0, 10.0, 10.0);
   expect_feasibility(
     points, true, "Should allow proceeding when the ego front has passed the stop line");
-
-  const auto markers = filter_->take_debug_markers();
-  const auto find_marker = [&](const std::string & marker_namespace) {
-    return std::find_if(markers.markers.begin(), markers.markers.end(), [&](const auto & marker) {
-      return marker.ns == marker_namespace;
-    });
-  };
-  const auto summary_marker = find_marker("rejection_info");
-  ASSERT_NE(summary_marker, markers.markers.end());
-  EXPECT_NE(summary_marker->text.find("Action: ALLOWED (Cannot Stop)"), std::string::npos);
-  EXPECT_NE(find_marker("traffic_light_ego_front"), markers.markers.end());
-  EXPECT_NE(find_marker("traffic_light_allow_boundary"), markers.markers.end());
-  EXPECT_NE(find_marker("traffic_light_required_stopping_wall"), markers.markers.end());
 }
 
 TEST_F(TrafficLightFilterTest, RejectsCrossingWhenEgoCanStopSafely)

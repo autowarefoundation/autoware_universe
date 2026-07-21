@@ -20,13 +20,11 @@
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
-#include <geometry_msgs/msg/pose.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LineString.h>
 
 #include <cstdint>
-#include <optional>
 #include <vector>
 
 namespace autoware::traffic_light_compliance_checker
@@ -80,24 +78,10 @@ struct Violation
   }
 };
 
-/// @brief dilemma-zone values used to explain why a stop-line violation was kept or removed
-struct DilemmaZoneDebugInfo
-{
-  lanelet::BasicLineString2d stop_line;
-  int64_t traffic_light_id;
-  geometry_msgs::msg::Pose ego_front_pose;
-  double distance_from_ego_front;
-  double allow_if_cannot_stop_distance;
-  std::optional<double> ego_stopping_distance;
-  double stop_overshoot_margin;
-  bool is_allowed;
-};
-
 /// @brief result of compliance check
 struct ComplianceResult
 {
   std::vector<Violation> violations;
-  std::vector<DilemmaZoneDebugInfo> dilemma_zone_debug_info;
 };
 
 /// @brief parameters for traffic light signal status tracking

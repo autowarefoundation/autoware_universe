@@ -348,27 +348,19 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
       result.violations.end(), amber_light_violations.begin(), amber_light_violations.end());
   }
 
-  const auto ego_front_pose = autoware_utils_geometry::calc_offset_pose(
-    trajectory.front().pose, vehicle_info_.max_longitudinal_offset_m, 0.0, 0.0);
-  result.dilemma_zone_debug_info.reserve(result.violations.size());
-  result.violations.erase(
-    std::remove_if(
-      result.violations.begin(), result.violations.end(),
-      [&](const auto & violation) {
-        const auto distance_from_ego_front = violation.arc_length_to_cross_point - backward_length -
-                                             vehicle_info_.max_longitudinal_offset_m;
-        const bool is_allowed =
-          ego_stopping_distance.has_value() && params_.allow_if_cannot_stop_distance > 0.0 &&
-          distance_from_ego_front < params_.allow_if_cannot_stop_distance &&
-          distance_from_ego_front < *ego_stopping_distance - params_.stop_overshoot_margin;
-        result.dilemma_zone_debug_info.push_back(
-          DilemmaZoneDebugInfo{
-            violation.stop_line, violation.traffic_light_id, ego_front_pose,
-            distance_from_ego_front, params_.allow_if_cannot_stop_distance, ego_stopping_distance,
-            params_.stop_overshoot_margin, is_allowed});
-        return is_allowed;
-      }),
-    result.violations.end());
+  if (ego_stopping_distance.has_value() && params_.allow_if_cannot_stop_distance > 0.0) {
+    result.violations.erase(
+      std::remove_if(
+        result.violations.begin(), result.violations.end(),
+        [&](const auto & violation) {
+          const auto distance_from_ego_front = violation.arc_length_to_cross_point -
+                                               backward_length -
+                                               vehicle_info_.max_longitudinal_offset_m;
+          return distance_from_ego_front < params_.allow_if_cannot_stop_distance &&
+                 distance_from_ego_front < *ego_stopping_distance - params_.stop_overshoot_margin;
+        }),
+      result.violations.end());
+  }
 
   return result;
 }
