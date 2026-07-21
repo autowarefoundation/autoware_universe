@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -23198,7 +23198,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Filtering Logic</strong>: Same as normal mode (for accurate diagnostics)</li>
 <li><strong>Output Generation</strong>: <strong>SKIPPED</strong> - creates empty output for interface compatibility</li>
 <li><strong>Diagnostics</strong>: <strong>ALWAYS PUBLISHED</strong> - full visibility and filter ratio metrics</li>
-<li><strong>Noise Cloud</strong>: <strong>SKIPPED</strong> - no noise cloud generation regardless of <code>publish_noise_cloud</code> setting</li>
+<li><strong>Debug Point Clouds</strong>: Controlled by <code>publish_noise_cloud</code> and <code>publish_low_visibility_voxels</code>; disabled flags skip publisher creation, message generation, and publication</li>
 </ol>
 <p><strong>Use Cases for Visibility Estimation Only Mode:</strong></p>
 <ul>
@@ -23235,7 +23235,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Both criteria must be satisfied</strong> for a voxel to be kept</li>
 </ul>
 </li>
-<li><strong>Range-Aware Visibility</strong>: Visibility calculation limited to voxels within <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code>, and secondary voxel count limited by <code>visibility_estimation_max_secondary_voxel_count</code></li>
+<li><strong>Range-Aware Visibility</strong>: Visibility calculation limited to voxels within <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code>, with low-visibility candidates constrained by entropy, anisotropy, average intensity, secondary-return ratio, and <code>visibility_estimation_max_secondary_voxel_count</code></li>
 <li><strong>Secondary Return Filtering</strong>: Optional exclusion of secondary returns from output</li>
 <li><strong>Output</strong>: Filtered point cloud with enhanced noise removal (unless visibility-only mode)</li>
 </ol>
@@ -23256,6 +23256,8 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Comprehensive Diagnostics</strong>: Mode-specific filter ratio and visibility metrics</li>
 <li><strong>Debug Support</strong>: Optional noise cloud publishing for analysis and tuning</li>
 </ul>
+<h3 id="geometric-entropy-based-visibility-estimation-advanced-mode-only">Geometric Entropy-Based Visibility Estimation (Advanced Mode Only)<a class="headerlink" href="#geometric-entropy-based-visibility-estimation-advanced-mode-only" title="Permanent link">#</a></h3>
+<p>The filter uses geometric entropy and anisotropy analysis to detect low-visibility conditions caused by adverse weather. Entropy and anisotropy are calculated from the spatial distribution of points within voxels to identify irregular point clusters (rain, fog, smoke) while avoiding false positives on planar surfaces like windows. High entropy value combined with anisotropy value under certain threshold, indicates weather-induced noise, whereas planar surfaces exhibit different entropy and anisotropy values, avoiding that structural surfaces could be misclassified as noise when using secondary return type.</p>
 <h3 id="return-type-management-advanced-mode-only">Return Type Management (Advanced Mode Only)<a class="headerlink" href="#return-type-management-advanced-mode-only" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Primary Returns</strong>: Configurable list of return types (default: [1,6,8,10])</li>
@@ -23294,10 +23296,18 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <tr>
 <td><code>~/polar_voxel_outlier_filter/debug/pointcloud_noise</code></td>
 <td><code>sensor_msgs::msg::PointCloud2</code></td>
-<td>Filtered-out points for debugging (when enabled and not in visibility-only mode)</td>
+<td>Filtered-out points with appended per-voxel information fields for debugging when <code>publish_noise_cloud=true</code></td>
+</tr>
+<tr>
+<td><code>~/polar_voxel_outlier_filter/debug/low_visibility_voxels</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>Points in selected low-visibility voxels with appended per-voxel information fields for debugging when <code>publish_low_visibility_voxels=true</code></td>
 </tr>
 </tbody>
 </table>
+<p>The noise cloud and low-visibility voxel debug cloud include the input point fields and append these <code>FLOAT32</code> fields per point: <code>voxel_radius_idx</code>, <code>voxel_azimuth_idx</code>, <code>voxel_elevation_idx</code>, <code>voxel_entropy</code>, <code>voxel_anisotropy</code>, <code>voxel_point_count</code>, <code>voxel_average_intensity</code>, <code>voxel_secondary_return_count</code>, and <code>voxel_secondary_return_ratio</code>.</p>
+<p><code>voxel_entropy</code> and <code>voxel_anisotropy</code> are calculated only for voxels inside the configured visibility estimation range.</p>
+<p><code>publish_noise_cloud</code> and <code>publish_low_visibility_voxels</code> can be changed at runtime if needed.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <h3 id="node-parameters">Node Parameters<a class="headerlink" href="#node-parameters" title="Permanent link">#</a></h3>
 <p>This implementation inherits <code>autoware::pointcloud_preprocessor::Filter</code> class, please refer <a href="../../">README</a>.</p>
@@ -23418,6 +23428,41 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <td>≥0</td>
 </tr>
 <tr>
+<td>low_visibility_entropy_threshold</td>
+<td>float</td>
+<td>Minimum normalized geometric entropy for low-visibility candidate voxels.</td>
+<td>0.0</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>low_visibility_anisotropy_threshold</td>
+<td>float</td>
+<td>Maximum geometric anisotropy for low-visibility candidate voxels.</td>
+<td>1.0</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>low_visibility_average_intensity_threshold</td>
+<td>float</td>
+<td>Maximum voxel average intensity for low-visibility candidate voxels.</td>
+<td>255.0</td>
+<td>≥0<br>≤255</td>
+</tr>
+<tr>
+<td>low_visibility_sparse_voxel_point_count_threshold</td>
+<td>integer</td>
+<td>Maximum point count threshold for sparse low-visibility candidate voxels.</td>
+<td>10</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>low_visibility_sparse_voxel_secondary_return_ratio_threshold</td>
+<td>float</td>
+<td>Minimum secondary return ratio for sparse low-visibility candidate voxels.</td>
+<td>0.2</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
 <td>visibility_estimation_max_secondary_voxel_count</td>
 <td>integer</td>
 <td>Maximum secondary voxel count for visibility estimation calculations.</td>
@@ -23434,14 +23479,21 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <tr>
 <td>visibility_estimation_only</td>
 <td>boolean</td>
-<td>Whether to run filter for visibility estimation only without publishing point cloud outputs (for monitoring/diagnostic purposes only).</td>
+<td>Whether to run filter for visibility estimation only without populating the main output point cloud (for monitoring/diagnostic purposes only). Debug point cloud topics are still controlled by their own publish_* parameters.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>publish_noise_cloud</td>
 <td>boolean</td>
-<td>Whether to generate and publish noise point cloud for debugging (ignored when visibility_estimation_only=true).</td>
+<td>Whether to create, generate, and publish the noise point cloud for debugging. Can be toggled at runtime.</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>publish_low_visibility_voxels</td>
+<td>boolean</td>
+<td>Whether to create and publish points in selected low-visibility voxels for debugging. Can be toggled at runtime.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
@@ -23508,11 +23560,16 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>use_return_type_classification</strong>: Must be <code>true</code> to enable advanced two-criteria filtering</li>
 <li><strong>filter_secondary_returns</strong>: When <code>true</code>, only primary returns appear in output (advanced mode only)</li>
 <li><strong>secondary_noise_threshold</strong>: Only used when <code>use_return_type_classification=true</code></li>
+<li><strong>low_visibility_entropy_threshold</strong>: Minimum normalized geometric entropy for low-visibility candidate selection when <code>use_return_type_classification=true</code> (default: 0.3)</li>
+<li><strong>low_visibility_anisotropy_threshold</strong>: Maximum geometric anisotropy for low-visibility candidate selection when <code>use_return_type_classification=true</code> (default: 0.95)</li>
+<li><strong>low_visibility_average_intensity_threshold</strong>: Maximum voxel average intensity for visibility candidate selection when <code>use_return_type_classification=true</code></li>
+<li><strong>low-visibility voxels</strong>: In-range secondary-noise candidate voxels are constrained by entropy, anisotropy, and average intensity thresholds. Sparse in-range voxels with fewer than <code>low_visibility_sparse_voxel_point_count_threshold</code> points, <code>voxel_secondary_return_ratio &gt; low_visibility_sparse_voxel_secondary_return_ratio_threshold</code>, and average intensity below <code>low_visibility_average_intensity_threshold</code> are also selected as low-visibility voxels</li>
 <li><strong>visibility_estimation_max_secondary_voxel_count</strong>: Only used when <code>use_return_type_classification=true</code>, limits secondary voxel counting in visibility calculations</li>
 <li><strong>primary_return_types</strong>: Only used when <code>use_return_type_classification=true</code></li>
 <li><strong>visibility_estimation_max_range_m</strong>: Limits visibility calculation to reliable sensor range (advanced mode only)</li>
+<li><strong>publish_low_visibility_voxels</strong>: When <code>true</code>, publishes points in low-visibility voxels for monitoring entropy-based detection (advanced mode only)</li>
 <li><strong>visibility_estimation_only</strong>: When <code>true</code>, skips point cloud output generation but still calculates and publishes diagnostics</li>
-<li><strong>publish_noise_cloud</strong>: When <code>false</code>, improves performance by skipping noise cloud generation (ignored when <code>visibility_estimation_only=true</code>)</li>
+<li><strong>publish_noise_cloud</strong>: When <code>false</code>, improves performance by skipping noise cloud publisher creation, message generation, and publication</li>
 <li><strong>Diagnostics</strong>: Visibility is only published when return type classification is enabled</li>
 </ul>
 <h2 id="configuration-examples">Configuration Examples<a class="headerlink" href="#configuration-examples" title="Permanent link">#</a></h2>
@@ -23523,14 +23580,20 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 use_return_type_classification: true
 voxel_points_threshold: 2
 secondary_noise_threshold: 4
+low_visibility_entropy_threshold: 0.3
+low_visibility_anisotropy_threshold: 0.95
+low_visibility_average_intensity_threshold: 2.0
+low_visibility_sparse_voxel_point_count_threshold: 10
+low_visibility_sparse_voxel_secondary_return_ratio_threshold: 0.2
 visibility_estimation_max_secondary_voxel_count: 500
 visibility_estimation_max_range_m: 20.0
 primary_return_types: [1, 6, 8, 10]
 radial_resolution_m: 0.5
 azimuth_resolution_rad: 0.0175
-elevation_resolution_rad: 0.0175</p>
-<h1 id="publish_noise_cloud-is-ignored-in-visibility-only-mode">publish_noise_cloud is ignored in visibility-only mode<a class="headerlink" href="#publish_noise_cloud-is-ignored-in-visibility-only-mode" title="Permanent link">#</a></h1>
-<p>```</p>
+elevation_resolution_rad: 0.0175
+publish_noise_cloud: false
+publish_low_visibility_voxels: false
+```</p>
 <h3 id="simple-mode-configuration">Simple Mode Configuration<a class="headerlink" href="#simple-mode-configuration" title="Permanent link">#</a></h3>
 <p>```yaml</p>
 <h1 id="basic-occupancy-filtering-any-return-type-counts-equally">Basic occupancy filtering - any return type counts equally<a class="headerlink" href="#basic-occupancy-filtering-any-return-type-counts-equally" title="Permanent link">#</a></h1>
@@ -23548,6 +23611,11 @@ publish_noise_cloud: true # Enable for debugging
 <p>use_return_type_classification: true
 voxel_points_threshold: 2 # Primary return threshold
 secondary_noise_threshold: 4 # Secondary return threshold
+low_visibility_entropy_threshold: 0.3 # Min normalized geometric entropy for visibility candidates
+low_visibility_anisotropy_threshold: 0.95 # Max geometric anisotropy for visibility candidates
+low_visibility_average_intensity_threshold: 255.0 # Max voxel average intensity for visibility candidates
+low_visibility_sparse_voxel_point_count_threshold: 10 # Sparse voxel point count threshold
+low_visibility_sparse_voxel_secondary_return_ratio_threshold: 0.2 # Sparse voxel secondary return ratio threshold
 visibility_estimation_max_secondary_voxel_count: 500 # Max secondary voxels for visibility
 primary_return_types: [1, 6, 8, 10] # Primary return types
 filter_secondary_returns: false # Include secondary returns in output
@@ -23572,6 +23640,12 @@ visibility_estimation_max_azimuth_rad: 2.35
 visibility_estimation_min_elevation_rad: -0.26
 visibility_estimation_max_elevation_rad: 1.04
 visibility_estimation_max_secondary_voxel_count: 500 # Allow secondary voxels in visibility calculation
+low_visibility_entropy_threshold: 0.3 # Entropy threshold for low-visibility detection
+low_visibility_anisotropy_threshold: 0.95 # Anisotropy threshold for low-visibility detection
+low_visibility_average_intensity_threshold: 255.0 # Average intensity threshold for low-visibility detection
+low_visibility_sparse_voxel_point_count_threshold: 10 # Sparse voxel point count threshold
+low_visibility_sparse_voxel_secondary_return_ratio_threshold: 0.2 # Sparse voxel secondary return ratio threshold
+publish_low_visibility_voxels: true # Monitor voxels used for visibility estimation
 visibility_estimation_only: false # Normal filtering with debug output
 publish_noise_cloud: true # Enable noise cloud for analysis
 filter_ratio_error_threshold: 0.5
@@ -23681,7 +23755,8 @@ visibility_estimation_only: true # Diagnostics only
 <ul>
 <li><strong>Filter Ratio</strong>: <code>~/polar_voxel_outlier_filter/debug/filter_ratio</code> (autoware_internal_debug_msgs/Float32Stamped) - Always published</li>
 <li><strong>Visibility</strong>: <code>~/polar_voxel_outlier_filter/debug/visibility</code> (autoware_internal_debug_msgs/Float32Stamped) - Advanced mode only, range-limited</li>
-<li><strong>Noise Cloud</strong>: <code>~/polar_voxel_outlier_filter/debug/pointcloud_noise</code> (sensor_msgs/PointCloud2) - Not published in visibility-only mode</li>
+<li><strong>Noise Cloud</strong>: <code>~/polar_voxel_outlier_filter/debug/pointcloud_noise</code> (sensor_msgs/PointCloud2) - Published only when <code>publish_noise_cloud=true</code></li>
+<li><strong>Low Visibility Voxels</strong>: <code>~/polar_voxel_outlier_filter/debug/low_visibility_voxels</code> (sensor_msgs/PointCloud2) - Published only when <code>publish_low_visibility_voxels=true</code></li>
 </ul>
 <h3 id="programmatic-usage">Programmatic Usage<a class="headerlink" href="#programmatic-usage" title="Permanent link">#</a></h3>
 <p>```cpp</p>
@@ -23827,7 +23902,9 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::polarvoxeloutlie
 </ul>
 <h4 id="mode-selection-guidelines">Mode Selection Guidelines<a class="headerlink" href="#mode-selection-guidelines" title="Permanent link">#</a></h4>
 <ul>
-<li><strong>Choose visibility-only mode when</strong>:<ul>
+<li>
+<p><strong>Choose visibility-only mode when</strong>:</p>
+<ul>
 <li>Only diagnostic information is needed</li>
 <li>Computational resources are limited</li>
 <li>Running parallel monitoring alongside main processing</li>
@@ -24079,7 +24156,7 @@ primary_return_types: [1, 6, 8, 10] # Updated to include return type 8
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.expand", "navigation.indexes", "navigation.instant", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.footer"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../docs/assets/js/mathjax.js"></script>
       

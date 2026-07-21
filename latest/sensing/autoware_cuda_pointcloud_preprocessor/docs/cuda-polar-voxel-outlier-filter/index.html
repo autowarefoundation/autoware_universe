@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -23271,6 +23271,41 @@
 <td>≥0</td>
 </tr>
 <tr>
+<td>low_visibility_entropy_threshold</td>
+<td>float</td>
+<td>Minimum normalized geometric entropy for low-visibility candidate voxels.</td>
+<td>0.0</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>low_visibility_anisotropy_threshold</td>
+<td>float</td>
+<td>Maximum geometric anisotropy for low-visibility candidate voxels.</td>
+<td>1.0</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>low_visibility_average_intensity_threshold</td>
+<td>float</td>
+<td>Maximum voxel average intensity for low-visibility candidate voxels.</td>
+<td>255.0</td>
+<td>≥0<br>≤255</td>
+</tr>
+<tr>
+<td>low_visibility_sparse_voxel_point_count_threshold</td>
+<td>integer</td>
+<td>Maximum point count threshold for sparse low-visibility candidate voxels.</td>
+<td>10</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>low_visibility_sparse_voxel_secondary_return_ratio_threshold</td>
+<td>float</td>
+<td>Minimum secondary return ratio for sparse low-visibility candidate voxels.</td>
+<td>0.2</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
 <td>visibility_estimation_max_secondary_voxel_count</td>
 <td>integer</td>
 <td>Maximum secondary voxel count for visibility estimation calculations.</td>
@@ -23287,14 +23322,21 @@
 <tr>
 <td>visibility_estimation_only</td>
 <td>boolean</td>
-<td>Whether to run filter for visibility estimation only without publishing point cloud outputs (for monitoring/diagnostic purposes only).</td>
+<td>Whether to run filter for visibility estimation only without populating the main output point cloud (for monitoring/diagnostic purposes only). Debug point cloud topics are still controlled by their own publish_* parameters.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>publish_noise_cloud</td>
 <td>boolean</td>
-<td>Whether to generate and publish noise point cloud for debugging (ignored when visibility_estimation_only=true).</td>
+<td>Whether to create, generate, and publish the noise point cloud for debugging. Can be toggled at runtime.</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>publish_low_visibility_voxels</td>
+<td>boolean</td>
+<td>Whether to create and publish points in selected low-visibility voxels for debugging. Can be toggled at runtime.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
@@ -23464,7 +23506,7 @@ list(APPEND CUDA_NVCC_FLAGS "--fmad=false")</code></p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.expand", "navigation.indexes", "navigation.instant", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.footer"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../docs/assets/js/mathjax.js"></script>
       
