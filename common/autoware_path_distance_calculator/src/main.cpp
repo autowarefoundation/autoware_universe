@@ -66,7 +66,8 @@ void RouteDistanceCalculator::set_map(const autoware_map_msgs::msg::LaneletMapBi
 }
 
 void RouteDistanceCalculator::set_route(
-  const autoware_planning_msgs::msg::LaneletRoute & msg, const geometry_msgs::msg::Pose & current_pose)
+  const autoware_planning_msgs::msg::LaneletRoute & msg,
+  const geometry_msgs::msg::Pose & current_pose)
 {
   goal_pose_ = msg.goal_pose;
   is_route_ready_ = false;
@@ -110,7 +111,9 @@ RouteDistanceCalculator::find_current_lane(const geometry_msgs::msg::Pose & curr
 
   const auto it = std::find_if(
     shortest_path_lanes_.begin(), shortest_path_lanes_.end(),
-    [&current_lanelet](const PathLane & lane) { return lane.lanelet.id() == current_lanelet->id(); });
+    [&current_lanelet](const PathLane & lane) {
+      return lane.lanelet.id() == current_lanelet->id();
+    });
   if (it == shortest_path_lanes_.end()) {
     return std::nullopt;
   }
