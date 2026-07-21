@@ -96,6 +96,12 @@
               "default": 0.5,
               "minimum": 0.0
             },
+            "allow_if_cannot_stop_distance": {
+              "type": "number",
+              "description": "Allow crossing a stop line within this distance if ego cannot stop before it [m].",
+              "default": 0.0,
+              "minimum": 0.0
+            },
             "stable_duration_threshold_red": {
               "type": "number",
               "description": "Minimum duration a RED light must be seen before it is considered active (only when ego is moving) [s].",
