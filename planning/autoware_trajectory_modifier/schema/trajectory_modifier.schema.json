@@ -465,6 +465,12 @@
               "default": 0.0,
               "minimum": 0.0
             },
+            "allow_if_cannot_stop_distance": {
+              "type": "number",
+              "description": "allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
             "th_stable_duration_red": {
               "type": "number",
               "description": "Threshold for stable duration of red light [s]",
