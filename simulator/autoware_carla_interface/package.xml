@@ -30,6 +30,11 @@
 
   <!-- C++ dependencies for utility nodes -->
 
+  <!-- Python dependencies for SplatSim integration -->
+  <exec_depend>python3-grpcio</exec_depend>
+  <exec_depend>python3-protobuf</exec_depend>
+  <exec_depend>python3-docker</exec_depend>
+
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
