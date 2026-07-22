@@ -21,3 +21,11 @@
     goal_yaw_coeff: 500.0
     goal_terminal_scale: 10.0
     obstacle_collision_margin: 0.2
+
+    # Optional offline debug logging for mppi_debug_visualizer.py --log-dir
+    enable_debug_trajectory_log: true
+    debug_trajectory_log_directory: "/tmp/mppi_debug_log"
+
+    ignore_obstacles: false
+    ignore_drivable_area: true
+    force_cold_start_each_step: false

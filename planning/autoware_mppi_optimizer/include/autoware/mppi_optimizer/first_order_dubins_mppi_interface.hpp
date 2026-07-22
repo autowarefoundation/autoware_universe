@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -97,6 +98,27 @@ public:
 
   /** Configure MPPI cost weights (FirstOrderDubinsBicycleCostParams). */
   void setCostParams(const FirstOrderDubinsMppiCostParams & params);
+
+  /**
+   * @brief Optionally write reference/optimized trajectories for offline viz.
+   * @param enable When true, each optimizeTrajectory writes CSVs under directory.
+   * @param directory Output folder (created if missing). Ignored when enable is false.
+   */
+  void setDebugTrajectoryLogging(bool enable, const std::string & directory = "");
+
+  /**
+   * @brief Ablation options to mirror mppi_offline_retune conditions in online sim.
+   */
+  void setAblationOptions(
+    bool ignore_obstacles, bool ignore_drivable_area, bool force_cold_start_each_step);
+
+  /**
+   * @brief Copy per-rollout raw costs and normalized importance weights from the last
+   *        optimizeTrajectory / computeStep call (for offline retune histograms).
+   * @param stride Keep every N-th sample (1 = all rollouts). Use >1 to limit CSV size.
+   */
+  bool copySampleCostDistribution(
+    std::vector<float> & raw_costs, std::vector<float> & normalized_weights, int stride = 1) const;
 
   /**
    * @brief Run one MPPI control step and propagate the vehicle state forward.

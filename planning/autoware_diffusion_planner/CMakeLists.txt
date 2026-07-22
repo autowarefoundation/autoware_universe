@@ -187,6 +187,12 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     )
   endif()
 endif()
+
+install(PROGRAMS
+  scripts/mppi_debug_visualizer.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_auto_package(
   INSTALL_TO_SHARE
   config

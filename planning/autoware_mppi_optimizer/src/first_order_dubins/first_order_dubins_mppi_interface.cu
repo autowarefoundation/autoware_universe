@@ -14,6 +14,7 @@
 
 #include "autoware/mppi_optimizer/first_order_dubins_mppi_cost_params.hpp"
 #include "autoware/mppi_optimizer/first_order_dubins_mppi_interface.hpp"
+#include "autoware/mppi_optimizer/mppi_debug_trajectory_logger.hpp"
 #include "autoware/mppi_optimizer/tracked_objects_obstacles.hpp"
 
 #include <mppi/controllers/MPPI/mppi_controller.cuh>
@@ -350,6 +351,7 @@ struct FirstOrderDubinsMppiInterface::Impl
   FirstOrderDubinsBicycleParams dyn;
   FirstOrderDubinsMppiVehicleParams vehicle_params{};
   FirstOrderDubinsMppiCostParams user_cost_params_{};
+  MppiDebugTrajectoryLogger debug_trajectory_logger;
   COST cost;
   FirstOrderDubinsBicycleCostParams<kRefHorizon> cost_params{};
   SAMPLER sampler;
@@ -370,6 +372,9 @@ struct FirstOrderDubinsMppiInterface::Impl
   size_t tracking_start_idx{0U};
   float arc_length{kInitArcLength};
   float sim_time{0.0F};
+  bool ignore_obstacles{false};
+  bool ignore_drivable_area{false};
+  bool force_cold_start_each_step{false};
 
   Impl() : feedback(&model, kDt), sampler(SAMPLER::SAMPLING_PARAMS_T{}) {}
 
@@ -515,10 +520,17 @@ struct FirstOrderDubinsMppiInterface::Impl
       setup();
     }
 
+    if (force_cold_start_each_step) {
+      resetTrackingState();
+    }
+
     diffusion_reference = reference;
-    tracked_objects = tracked_objects_in;
+    tracked_objects = ignore_obstacles ? TrackedObjects{} : tracked_objects_in;
     path = trajectoryToPath2D(reference);
     obstacles.clear();
+    // Boundary crash is disabled on this stack (isEgoOutsideDrivableArea always false).
+    // ignore_drivable_area remains an ablation API flag; it does not reintroduce road borders.
+    (void)ignore_drivable_area;
 
     const size_t new_start_idx = findTrackingStartIndex(reference, odometry);
     const bool large_index_jump =
@@ -691,6 +703,64 @@ void FirstOrderDubinsMppiInterface::setCostParams(const FirstOrderDubinsMppiCost
   impl_->user_cost_params_ = params;
 }
 
+void FirstOrderDubinsMppiInterface::setDebugTrajectoryLogging(
+  const bool enable, const std::string & directory)
+{
+  if (!impl_) {
+    throw std::runtime_error("FirstOrderDubinsMppiInterface implementation is missing");
+  }
+  impl_->debug_trajectory_logger.configure(enable, directory);
+  impl_->debug_trajectory_logger.writeParamsOnce(impl_->user_cost_params_, impl_->vehicle_params);
+}
+
+void FirstOrderDubinsMppiInterface::setAblationOptions(
+  const bool ignore_obstacles, const bool ignore_drivable_area,
+  const bool force_cold_start_each_step)
+{
+  if (!impl_) {
+    throw std::runtime_error("FirstOrderDubinsMppiInterface implementation is missing");
+  }
+  impl_->ignore_obstacles = ignore_obstacles;
+  impl_->ignore_drivable_area = ignore_drivable_area;
+  impl_->force_cold_start_each_step = force_cold_start_each_step;
+  RCLCPP_INFO(
+    mppiLogger(),
+    "MPPI ablation options: ignore_obstacles=%s ignore_drivable_area=%s force_cold_start_each_step=%s",
+    ignore_obstacles ? "true" : "false", ignore_drivable_area ? "true" : "false",
+    force_cold_start_each_step ? "true" : "false");
+}
+
+bool FirstOrderDubinsMppiInterface::copySampleCostDistribution(
+  std::vector<float> & raw_costs, std::vector<float> & normalized_weights, const int stride) const
+{
+  raw_costs.clear();
+  normalized_weights.clear();
+  if (!impl_ || !impl_->controller || !impl_->initialized) {
+    return false;
+  }
+
+  // IMPORTANT: take by value (not const-ref-to-temporary). nvcc has historically broken
+  // lifetime extension for large Eigen return temporaries, which caused heap corruption
+  // (munmap_chunk: invalid pointer) when reading getSampledCostSeq() via const auto&.
+  const Mppi::sampled_cost_traj importance = impl_->controller->getSampledCostSeq();
+  const float baseline = impl_->controller->getBaselineCost();
+  const float normalizer = impl_->controller->getNormalizerCost();
+  const float lambda = std::max(impl_->user_cost_params_.lambda, 1.0e-6F);
+  const int stride_n = std::max(1, stride);
+  const int num_rollouts = static_cast<int>(importance.size());
+  const int kept = (num_rollouts + stride_n - 1) / stride_n;
+  raw_costs.reserve(static_cast<size_t>(kept));
+  normalized_weights.reserve(static_cast<size_t>(kept));
+
+  for (int i = 0; i < num_rollouts; i += stride_n) {
+    const float w = importance(i);
+    normalized_weights.push_back((normalizer > 0.0F) ? (w / normalizer) : 0.0F);
+    raw_costs.push_back(
+      (w > 0.0F) ? (baseline - lambda * std::log(w)) : (baseline + 1.0e6F));
+  }
+  return !raw_costs.empty();
+}
+
 FirstOrderDubinsMppiControl FirstOrderDubinsMppiInterface::computeStep(
   FirstOrderDubinsMppiState & state, float & arc_length, float sim_time)
 {
@@ -817,6 +887,19 @@ FirstOrderDubinsMppiOptimizationResult FirstOrderDubinsMppiInterface::optimizeTr
   // Rollout visualization disabled (CPU replay of top-K samples was ~80ms).
   fillOptimalHorizonPoints(impl_->controller->getActualStateSeq(), result.debug.optimal_horizon);
   result.debug.baseline_cost = impl_->controller->getBaselineCost();
+
+  MppiDebugEgoState ego;
+  ego.x = odometry.pose.pose.position.x;
+  ego.y = odometry.pose.pose.position.y;
+  ego.z = odometry.pose.pose.position.z;
+  ego.yaw = yawFromOdometry(odometry);
+  ego.v = odometry.twist.twist.linear.x;
+  ego.accel = longitudinalAccelerationMps2(acceleration);
+  ego.steer = steeringTireAngleRad(steering_status);
+  impl_->debug_trajectory_logger.writeParamsOnce(impl_->user_cost_params_, impl_->vehicle_params);
+  impl_->debug_trajectory_logger.logFrame(
+    result.debug.reference_trajectory, result.debug.optimized_trajectory, ego,
+    result.debug.baseline_cost);
 
   RCLCPP_INFO(
     mppiLogger(),

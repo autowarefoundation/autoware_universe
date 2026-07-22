@@ -39,6 +39,14 @@ MppiOptimizer::MppiOptimizer(const rclcpp::NodeOptions & options) : Node("mppi_o
   declare_first_order_dubins_mppi_vehicle_dynamics_params(*this);
   mppi_interface_->setCostParams(get_first_order_dubins_mppi_cost_params(*this));
   mppi_interface_->setVehicleParams(get_first_order_dubins_mppi_vehicle_params(*this));
+  const bool enable_debug_log = declare_parameter<bool>("enable_debug_trajectory_log", false);
+  const std::string debug_log_dir =
+    declare_parameter<std::string>("debug_trajectory_log_directory", "/tmp/mppi_debug_log");
+  mppi_interface_->setDebugTrajectoryLogging(enable_debug_log, debug_log_dir);
+  mppi_interface_->setAblationOptions(
+    declare_parameter<bool>("ignore_obstacles", false),
+    declare_parameter<bool>("ignore_drivable_area", false),
+    declare_parameter<bool>("force_cold_start_each_step", false));
 }
 
 void MppiOptimizer::on_trajectory(const Trajectory::ConstSharedPtr msg)

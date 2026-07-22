@@ -104,15 +104,41 @@ if(CUDA_AVAIL AND TRT_AVAIL)
     EXECUTABLE autoware_mppi_optimizer_node
   )
 
+  add_executable(mppi_offline_retune
+    src/tools/mppi_offline_retune.cpp
+  )
+  target_include_directories(mppi_offline_retune PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_link_libraries(mppi_offline_retune
+    first_order_dubins_mppi
+    rclcpp::rclcpp
+    tf2_geometry_msgs::tf2_geometry_msgs
+    autoware_perception_msgs::autoware_perception_msgs__rosidl_generator_cpp
+    autoware_planning_msgs::autoware_planning_msgs__rosidl_generator_cpp
+    autoware_vehicle_msgs::autoware_vehicle_msgs__rosidl_generator_cpp
+    geometry_msgs::geometry_msgs__rosidl_generator_cpp
+    nav_msgs::nav_msgs__rosidl_generator_cpp
+  )
+  set_target_properties(mppi_offline_retune PROPERTIES
+    CXX_STANDARD 17
+    POSITION_INDEPENDENT_CODE ON
+  )
+
   if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
   endif()
 
-  install(TARGETS first_order_dubins_mppi
+  install(TARGETS first_order_dubins_mppi mppi_offline_retune
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib/${PROJECT_NAME}
+  )
+  install(PROGRAMS
+    scripts/mppi_offline_tuner.py
+    DESTINATION lib/${PROJECT_NAME}
   )
 endif()
 

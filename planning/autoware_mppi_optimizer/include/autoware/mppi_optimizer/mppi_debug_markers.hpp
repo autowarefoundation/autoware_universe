@@ -72,7 +72,8 @@ inline Marker makeDeleteAllMarker(
 inline Marker makeLineStripMarker(
   const rclcpp::Time & stamp, const std::string & frame_id, const std::string & ns, const int id,
   const ColorRGBA & color, const double line_width,
-  const std::vector<std::pair<float, float>> & points)
+  const std::vector<std::pair<float, float>> & points,
+  const float z_val = 0.0F)
 {
   Marker marker;
   marker.header.stamp = stamp;
@@ -90,7 +91,7 @@ inline Marker makeLineStripMarker(
     geometry_msgs::msg::Point point;
     point.x = x;
     point.y = y;
-    point.z = 0.0;
+    point.z = z_val;
     marker.points.push_back(point);
   }
   return marker;
@@ -110,13 +111,13 @@ inline MarkerArray createMppiDebugMarkers(
     }
     marker_array.markers.push_back(makeLineStripMarker(
       stamp, frame_id, "mppi_reference", 0, makeColor(0.0F, 1.0F, 1.0F, 0.9F), 0.15,
-      reference_points));
+      reference_points, 0.5F));
   }
 
   if (!debug.optimal_horizon.empty()) {
     marker_array.markers.push_back(makeLineStripMarker(
       stamp, frame_id, "mppi_optimal", 0, makeColor(1.0F, 0.0F, 0.0F, 1.0F), 0.2,
-      debug.optimal_horizon));
+      debug.optimal_horizon, 0.5F));
   }
 
   marker_array.markers.push_back(makeDeleteAllMarker(stamp, frame_id, "mppi_rollout"));
