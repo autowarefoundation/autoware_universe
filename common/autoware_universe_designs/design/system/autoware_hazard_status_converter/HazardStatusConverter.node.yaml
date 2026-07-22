@@ -1,0 +1,47 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: HazardStatusConverter.node
+
+package:
+  name: autoware_hazard_status_converter
+  provider: autoware
+
+launch:
+  plugin: autoware::hazard_status_converter::Converter
+  executable: autoware_hazard_status_converter_node
+  node_output: screen
+
+# interfaces
+# subscribes the diagnostic graph (struct + status) plus emergency holding,
+# and publishes the aggregated hazard status.
+subscribers:
+  - name: diag_graph_struct
+    message_type: tier4_system_msgs/msg/DiagGraphStruct
+    global: /diagnostics_graph/struct
+  - name: diag_graph_status
+    message_type: tier4_system_msgs/msg/DiagGraphStatus
+    global: /diagnostics_graph/status
+  - name: emergency_holding
+    message_type: tier4_system_msgs/msg/EmergencyHoldingState
+    remap_target: ~/input/emergency_holding
+
+publishers:
+  - name: hazard_status
+    message_type: autoware_system_msgs/msg/HazardStatusStamped
+    remap_target: ~/hazard_status
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/hazard_status_converter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - on_input: diag_graph_status
+    outcomes:
+      - to_output: hazard_status

@@ -1,0 +1,142 @@
+/**:
+  ros__parameters:
+    plugin_names:
+      - "autoware::trajectory_modifier::plugin::StopPointFixer"
+      - "autoware::trajectory_modifier::plugin::SurroundObstacleStop"
+      - "autoware::trajectory_modifier::plugin::ObstacleStop"
+      - "autoware::trajectory_modifier::plugin::TrafficLightStop"
+      - "autoware::trajectory_modifier::plugin::VelocityModifier"
+    use_stop_point_fixer: true
+    use_obstacle_stop: true
+    use_traffic_light_stop: true
+    use_velocity_modifier: true
+    use_surround_obstacle_stop: false
+    trajectory_time_step: 0.1 # [s]
+
+    # Stop Point Fixer Plugin Parameters
+    stop_point_fixer:
+      force_stop_long_stopped_trajectories: true     # Force zero velocity trajectory for trajectories with long stops
+      force_stop_close_stopped_trajectories: true    # Force zero velocity trajectory for trajectories with stops close to ego
+      velocity_threshold: 0.25 # [m/s]
+      min_distance_threshold: 1.0 # [m]
+      min_stop_duration: 0.5 # [s]
+
+    stopping_constraints:
+      nominal_deceleration: 1.0 # [m/s^2]
+      maximum_deceleration: 4.0 # [m/s^2]
+      jerk_limit: 3.0 # [m/s^3]
+      arrived_distance_threshold: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
+
+    # Obstacle Stop Plugin Parameters
+    obstacle_stop:
+      use_objects: true
+      use_pointcloud: true
+      enable_stop_for_objects: true
+      enable_stop_for_pointcloud: false
+      stop_margin: 6.0 # [m]
+      lateral_margin: 0.2     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      duplicate_check_threshold: 0.5 # threshold to check if the stop point is already in the trajectory [m]
+
+      obstacle_tracking:
+        on_time_buffer: 0.5
+        off_time_buffer: 0.7
+        object_distance_th: 1.0 # [m]
+        object_yaw_th: 0.1745 # [rad] (10 degrees)
+        pcd_distance_th: 1.0 # [m]
+        grace_period: 0.2 # [s]
+
+      objects:
+        object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard"] # object types to consider for obstacle stop
+        max_velocity_th: 3.0      # maximum velocity threshold for target object [m/s]
+        stopped_velocity_th: 0.3 # [m/s]
+        max_lateral_velocity_th: 1.0 # [m/s] max lateral velocity (w.r.t ego traj) to consider for obstacle stop
+        safety_buffer: 0.1 # [m] safety buffer to expand object shape
+
+      pointcloud:
+        height_buffer: 0.5  # height buffer to add above ego height [m]
+        min_height: 0.2  # minimum height of pointcloud [m]
+        voxel_grid_filter:
+          x: 0.2
+          y: 0.2
+          z: 0.2
+          min_size: 3
+        clustering:
+          tolerance: 0.5  #[m]
+          min_height: 0.5
+          min_size: 10
+          max_size: 10000
+
+      rss_params:
+        enable: true
+        object_decel:
+          car: 1.5
+          truck: 1.5
+          bus: 1.5
+          trailer: 1.5
+          motorcycle: 2.0
+          bicycle: 3.0
+          pedestrian: 5.0
+          animal: 5.0
+        ego_decel: 2.5 # [m/s^2]
+        reaction_time: 0.2 # [s]
+        safety_margin: 2.0 # [m]
+        lookahead_horizon: 1.5 # [s]
+
+    # Surround Obstacle Stop Plugin Parameters
+    surround_obstacle_stop:
+      use_objects: true
+      use_pointcloud: false
+      object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "animal", "unknown"]
+      front_distance_th:
+        car: 0.5
+        truck: 0.5
+        bus: 0.5
+        trailer: 0.5
+        motorcycle: 0.5
+        bicycle: 0.5
+        pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      side_distance_th:
+        car: 0.0
+        truck: 0.0
+        bus: 0.0
+        trailer: 0.0
+        motorcycle: 0.0
+        bicycle: 0.5
+        pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      back_distance_th:
+        car: 0.0
+        truck: 0.0
+        bus: 0.0
+        trailer: 0.0
+        motorcycle: 0.5
+        bicycle: 0.5
+        pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      hysteresis_distance: 0.1
+      hysteresis_time: 0.2
+      ego_stopped_vel_th: 0.1 # [m/s]
+
+    # Traffic Light Stop Plugin Parameters
+    traffic_light_stop:
+      stop_margin: 0.75 # [m]
+      stop_for_red_light: true
+      stop_for_amber_light: true
+      treat_amber_light_as_red: false
+      treat_unknown_light_as_red: false
+      overshoot_tolerance: 0.0 # [m]
+      allow_if_cannot_stop_distance: 0.0 # [m]
+      th_stable_duration_red: 0.2 # [s]
+      th_stable_duration_amber: 0.2 # [s]
+      th_amber_rejection_hysteresis: 0.5 # [s]
+      crossing_time_limit: 2.75 # [s]

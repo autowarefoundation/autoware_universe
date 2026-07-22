@@ -85,10 +85,51 @@
               "description": "When true, amber lights are treated identically to red lights (no dilemma-zone logic is applied).",
               "default": true
             },
+            "treat_unknown_light_as_red_light": {
+              "type": "boolean",
+              "description": "When true, UNKNOWN lights are treated identically to red lights.",
+              "default": false
+            },
             "stop_overshoot_margin": {
               "type": "number",
               "description": "Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].",
               "default": 0.5,
+              "minimum": 0.0
+            },
+            "allow_if_cannot_stop_distance": {
+              "type": "number",
+              "description": "allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m].",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "stable_duration_threshold_red": {
+              "type": "number",
+              "description": "Minimum duration a RED light must be seen before it is considered active (only when ego is moving) [s].",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "stable_duration_threshold_amber": {
+              "type": "number",
+              "description": "Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving) [s].",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "stable_duration_threshold_unknown": {
+              "type": "number",
+              "description": "Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving) [s].",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "amber_rejection_hysteresis_duration": {
+              "type": "number",
+              "description": "Duration to persist an AMBER rejection state to prevent flipping [s].",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "ego_stopped_velocity_threshold": {
+              "type": "number",
+              "description": "Velocity threshold below which stability and hysteresis filters are bypassed [m/s].",
+              "default": 0.01,
               "minimum": 0.0
             },
             "checked_trajectory_length": {

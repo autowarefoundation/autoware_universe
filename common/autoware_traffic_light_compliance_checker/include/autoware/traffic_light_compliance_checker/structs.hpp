@@ -89,6 +89,7 @@ struct StatusTrackerParameters
 {
   double stable_duration_threshold_red;
   double stable_duration_threshold_amber;
+  double stable_duration_threshold_unknown;
 };
 
 /// @brief parameters for traffic light compliance check
@@ -101,8 +102,10 @@ struct Parameters
   bool treat_amber_light_as_red_light;
   bool treat_unknown_light_as_red_light;
   double stop_overshoot_margin;
+  double allow_if_cannot_stop_distance;
   double stable_duration_threshold_red;
   double stable_duration_threshold_amber;
+  double stable_duration_threshold_unknown;
   double amber_rejection_hysteresis_duration;
   double ego_stopped_velocity_threshold;
   struct CheckedTrajectoryLength

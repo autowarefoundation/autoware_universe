@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -136,9 +136,9 @@ protected:
     test_options.append_parameter_override("use_sim_time", true);
 
     const auto modifier_dir =
-      ament_index_cpp::get_package_share_directory("autoware_trajectory_modifier");
+      ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
     const auto optimizer_dir =
-      ament_index_cpp::get_package_share_directory("autoware_trajectory_optimizer");
+      ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
     const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
     optimizer_options.append_parameter_override(
       "trajectory_velocity_optimizer.smooth_velocities", true);
