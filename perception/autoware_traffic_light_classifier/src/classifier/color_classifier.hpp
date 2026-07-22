@@ -146,7 +146,7 @@ private:
 class ColorClassifier : public ClassifierInterface
 {
 public:
-  explicit ColorClassifier(rclcpp::Node * node_ptr);
+  ColorClassifier(rclcpp::Node * node_ptr, const HSVConfig & config);
   virtual ~ColorClassifier() = default;
 
   bool getTrafficSignals(

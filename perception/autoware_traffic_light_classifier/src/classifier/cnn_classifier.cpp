@@ -22,7 +22,6 @@
 #include <boost/algorithm/string/split.hpp>
 
 #include <algorithm>
-#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -152,54 +151,10 @@ cv::Mat CNNClassifierCore::make_debug_image(
 }
 
 // ============================== CNNClassifier ==============================
-// ROS adapter: declares parameters, reads the label file, publishes debug images, and
-// delegates classification to the Node-free core.
+// ROS adapter: publishes debug images, logs, and delegates classification to the Node-free core.
 
-namespace
-{
-// Read the label file into a vector of lines. Logs and throws std::runtime_error if the
-// file cannot be opened, so a misconfigured path fails node construction fast rather than
-// leaving the classifier with an empty label table (which would be an out-of-range
-// lookup at inference time).
-std::vector<std::string> read_label_file(rclcpp::Node * node, const std::string & filepath)
-{
-  std::ifstream labels_file(filepath);
-  if (!labels_file.is_open()) {
-    RCLCPP_ERROR(node->get_logger(), "Could not open label file. [%s]", filepath.c_str());
-    throw std::runtime_error("Could not open label file: " + filepath);
-  }
-  std::vector<std::string> labels;
-  std::string label;
-  while (std::getline(labels_file, label)) {
-    labels.push_back(label);
-  }
-  return labels;
-}
-
-// Declare the CNN parameters on `node`, read the label file, and return the resulting
-// config. ROS params cannot load std::vector<float>, so mean/std are declared as
-// std::vector<double> and narrowed here -- keeping that quirk in the adapter so the core
-// sees plain std::vector<float>.
-CNNConfig declare_cnn_config(rclcpp::Node * node)
-{
-  const std::string precision = node->declare_parameter<std::string>("precision");
-  const std::string label_path = node->declare_parameter<std::string>("label_path");
-  const std::string model_path = node->declare_parameter<std::string>("model_path");
-  const auto mean_d = node->declare_parameter<std::vector<double>>("mean");
-  const auto std_d = node->declare_parameter<std::vector<double>>("std");
-
-  CNNConfig config;
-  config.model_path = model_path;
-  config.precision = precision;
-  config.labels = read_label_file(node, label_path);
-  config.mean = std::vector<float>(mean_d.begin(), mean_d.end());
-  config.std = std::vector<float>(std_d.begin(), std_d.end());
-  return config;
-}
-}  // namespace
-
-CNNClassifier::CNNClassifier(rclcpp::Node * node_ptr)
-: node_ptr_(node_ptr), core_(declare_cnn_config(node_ptr))
+CNNClassifier::CNNClassifier(rclcpp::Node * node_ptr, const CNNConfig & config)
+: node_ptr_(node_ptr), core_(config)
 {
   image_pub_ = image_transport::create_publisher(
     node_ptr_, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());

@@ -96,7 +96,7 @@ private:
 class CNNClassifier : public ClassifierInterface
 {
 public:
-  explicit CNNClassifier(rclcpp::Node * node_ptr);
+  CNNClassifier(rclcpp::Node * node_ptr, const CNNConfig & config);
   virtual ~CNNClassifier() = default;
 
   bool getTrafficSignals(
