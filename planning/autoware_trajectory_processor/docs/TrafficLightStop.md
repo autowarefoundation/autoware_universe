@@ -82,5 +82,8 @@ The module parameters are grouped under `traffic_light_stop` section of `traject
 | `allow_if_cannot_stop_distance` | double | 0.0     | [m] Allow crossing when the ego front is within this distance and ego cannot stop before the stop line.           |
 | `th_stable_duration_red`        | double | 0.2     | [s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).           |
 | `th_stable_duration_amber`      | double | 0.2     | [s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).        |
+| `th_stable_duration_unknown`    | double | 0.0     | [s] Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving).      |
 | `th_amber_rejection_hysteresis` | double | 0.5     | [s] Duration to persist an amber rejection state to prevent "flipping" due to minor velocity/distance changes.    |
 | `crossing_time_limit`           | double | 2.75    | [s] Maximum time allowed for the ego vehicle to cross the stop line after an amber light appears.                 |
+| `delay_response_time`           | double | 0.5     | [s] Delay response time used to estimate the minimum ego stopping distance.                                       |
+| `ego_stopped_vel_th`            | double | 0.01    | [m/s] Velocity below which ego is considered stopped when checking traffic lights.                                |

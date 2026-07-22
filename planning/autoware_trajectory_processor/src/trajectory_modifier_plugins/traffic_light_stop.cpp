@@ -38,7 +38,10 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.allow_if_cannot_stop_distance = tl_stop_p.allow_if_cannot_stop_distance;
   p.stable_duration_threshold_red = tl_stop_p.th_stable_duration_red;
   p.stable_duration_threshold_amber = tl_stop_p.th_stable_duration_amber;
+  p.stable_duration_threshold_unknown = tl_stop_p.th_stable_duration_unknown;
   p.amber_rejection_hysteresis_duration = tl_stop_p.th_amber_rejection_hysteresis;
+  p.delay_response_time = tl_stop_p.delay_response_time;
+  p.ego_stopped_velocity_threshold = tl_stop_p.ego_stopped_vel_th;
   p.checked_trajectory_length.deceleration_limit = stopping_params.nominal_deceleration;
   p.checked_trajectory_length.jerk_limit = stopping_params.jerk_limit;
   return p;
