@@ -71,7 +71,7 @@ bool ColorClassifierCore::filter_hsv(
   return true;
 }
 
-ColorClassifierCore::ClassifierResult ColorClassifierCore::classify(
+ColorClassifierCore::ClassifierResult ColorClassifierCore::infer(
   const std::vector<cv::Mat> & images) const
 {
   ClassifierResult result;
@@ -221,15 +221,11 @@ cv::Mat ColorClassifierCore::make_debug_image(const cv::Mat & roi_image) const
   return debug_image;
 }
 
-// ============================== ColorClassifier ==============================
-// Node-free adapter: delegates classification and debug rendering to the core. Dynamic reconfigure
-// lives in the node, which drives get_config / set_config below.
+// classify() and make_debug_image() implement ClassifierInterface: they wrap infer() with the
+// caller-signal mapping and the batch debug composition. Dynamic reconfigure runs in the node,
+// which drives get_config / set_config above.
 
-ColorClassifier::ColorClassifier(const HSVConfig & config) : core_(config)
-{
-}
-
-bool ColorClassifier::getTrafficSignals(
+bool ColorClassifierCore::classify(
   const std::vector<cv::Mat> & images,
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
@@ -237,10 +233,10 @@ bool ColorClassifier::getTrafficSignals(
     return false;
   }
 
-  const ColorClassifierCore::ClassifierResult result = core_.classify(images);
+  const ClassifierResult result = infer(images);
 
-  // Attach the core's per-image color elements to the caller's pre-populated
-  // signals, preserving the traffic_light_id / traffic_light_type set upstream.
+  // Attach the per-image color elements to the caller's pre-populated signals, preserving the
+  // traffic_light_id / traffic_light_type set upstream.
   for (size_t i = 0; i < traffic_signals.signals.size(); i++) {
     auto & elements = traffic_signals.signals[i].elements;
     const auto & classified = result.signals.signals[i].elements;
@@ -250,14 +246,13 @@ bool ColorClassifier::getTrafficSignals(
   return result.success;
 }
 
-cv::Mat ColorClassifier::make_debug_image(const std::vector<cv::Mat> & images) const
+cv::Mat ColorClassifierCore::make_debug_image(const std::vector<cv::Mat> & images) const
 {
-  // Stack each ROI's mosaic vertically. The core renders RGB-ordered pixels (raw ROI + masks) and
-  // re-runs the HSV pipeline, so this stays off the hot path. Per-ROI mosaics differ in width, so
-  // later ones are scaled to the first's width before stacking.
+  // Stack each ROI's mosaic vertically. Per-ROI mosaics differ in width, so later ones are scaled
+  // to the first's width before stacking.
   cv::Mat debug_image;
   for (const auto & image : images) {
-    cv::Mat mosaic = core_.make_debug_image(image);
+    cv::Mat mosaic = make_debug_image(image);
     if (!debug_image.empty() && mosaic.cols != debug_image.cols) {
       cv::resize(
         mosaic, mosaic, cv::Size(debug_image.cols, mosaic.rows * debug_image.cols / mosaic.cols));
@@ -269,16 +264,6 @@ cv::Mat ColorClassifier::make_debug_image(const std::vector<cv::Mat> & images) c
     }
   }
   return debug_image;
-}
-
-const HSVConfig & ColorClassifier::get_config() const
-{
-  return core_.get_config();
-}
-
-void ColorClassifier::set_config(const HSVConfig & config)
-{
-  core_.set_config(config);
 }
 
 }  // namespace autoware::traffic_light

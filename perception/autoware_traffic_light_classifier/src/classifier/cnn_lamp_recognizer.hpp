@@ -127,7 +127,7 @@ struct CnnLampRecognizerConfig
 
 // Node-free lamp recognition core (ONNX/TensorRT): per-lamp bbox + color + type + angle. The
 // ctor builds a TensorRT engine (needs a GPU + model); the static helpers need neither.
-class CnnLampRecognizerCore
+class CnnLampRecognizerCore : public ClassifierInterface
 {
 public:
   // One entry per input image: the deduplicated lamp detections (geometry + color + shape +
@@ -142,9 +142,19 @@ public:
   // std::runtime_error if the engine setup fails or its output channels do not match model_params.
   explicit CnnLampRecognizerCore(const CnnLampRecognizerConfig & config);
 
+  // Detect lamps and map them into the caller's signals via update_traffic_signals (preserving
+  // traffic_light_type). Stashes the per-image detections + signals for make_debug_image. Returns
+  // false on a size mismatch or inference failure. NON-const: inference mutates engine buffers.
+  bool classify(
+    const std::vector<cv::Mat> & images,
+    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
+
+  // Composite debug view for the batch, rendered from the most recent classify() call.
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
   // Detect lamps in each ROI image, batching up to max_batch_size. NON-const: TensorRT
   // inference mutates the engine's internal buffers.
-  DetectionResult classify(const std::vector<cv::Mat> & images);
+  DetectionResult infer(const std::vector<cv::Mat> & images);
 
   // Map the deduplicated lamp detections into a TrafficLight's elements, honoring its
   // traffic_light_type (pedestrian forces CIRCLE). Emits a single UNKNOWN placeholder element
@@ -183,27 +193,9 @@ private:
   float nms_threshold_;
 
   LampRegressionArchitecture model_params_;
-};
 
-// Thin, Node-free adapter around CnnLampRecognizerCore: delegates recognition and debug rendering
-// to the core, and maps its per-image detections into the caller's signals.
-class CnnLampRecognizer : public ClassifierInterface
-{
-public:
-  explicit CnnLampRecognizer(const CnnLampRecognizerConfig & config);
-  ~CnnLampRecognizer() override = default;
-
-  bool getTrafficSignals(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
-
-  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
-
-private:
-  CnnLampRecognizerCore core_;
-  // Kept from the most recent getTrafficSignals so make_debug_image can render the batch: the
-  // per-image output signals (for the text labels) and the per-image raw detections (for the
-  // bounding boxes).
+  // Kept from the most recent classify() so make_debug_image can render the batch: the per-image
+  // output signals (for the text labels) and the per-image raw detections (for the boxes).
   tier4_perception_msgs::msg::TrafficLightArray last_signals_;
   std::vector<std::vector<LampElement>> last_lamps_;
 };

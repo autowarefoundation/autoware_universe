@@ -354,7 +354,7 @@ void CnnLampRecognizerCore::decode_tlr_output(
   }
 }
 
-CnnLampRecognizerCore::DetectionResult CnnLampRecognizerCore::classify(
+CnnLampRecognizerCore::DetectionResult CnnLampRecognizerCore::infer(
   const std::vector<cv::Mat> & images)
 {
   DetectionResult result;
@@ -540,15 +540,10 @@ cv::Mat CnnLampRecognizerCore::make_debug_image(
   return debug_image;
 }
 
-// ============================== CnnLampRecognizer ==============================
-// Node-free adapter: delegates recognition and debug rendering to the core and maps its per-image
-// detections into the caller's signals.
+// classify() and make_debug_image() implement ClassifierInterface: they wrap infer() with the
+// per-signal update_traffic_signals mapping and the batch debug composition.
 
-CnnLampRecognizer::CnnLampRecognizer(const CnnLampRecognizerConfig & config) : core_(config)
-{
-}
-
-bool CnnLampRecognizer::getTrafficSignals(
+bool CnnLampRecognizerCore::classify(
   const std::vector<cv::Mat> & images,
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
@@ -556,25 +551,24 @@ bool CnnLampRecognizer::getTrafficSignals(
     return false;
   }
 
-  const CnnLampRecognizerCore::DetectionResult result = core_.classify(images);
+  const DetectionResult result = infer(images);
   if (!result.success) {
     return false;
   }
 
   for (size_t i = 0; i < traffic_signals.signals.size(); ++i) {
-    CnnLampRecognizerCore::update_traffic_signals(
-      result.lamps_per_image[i], traffic_signals.signals[i]);
+    update_traffic_signals(result.lamps_per_image[i], traffic_signals.signals[i]);
   }
 
   // Keep the per-image output signals and raw detections so make_debug_image can render the batch
-  // afterwards; the node owns the debug publisher and asks only when a consumer is attached.
+  // afterwards.
   last_signals_ = traffic_signals;
   last_lamps_ = result.lamps_per_image;
 
   return true;
 }
 
-cv::Mat CnnLampRecognizer::make_debug_image(const std::vector<cv::Mat> & images) const
+cv::Mat CnnLampRecognizerCore::make_debug_image(const std::vector<cv::Mat> & images) const
 {
   // Vertically concatenate each image's debug view: boxes from the raw detections and a
   // label / confidence strip from the output signal, each resized to a fixed strip size.

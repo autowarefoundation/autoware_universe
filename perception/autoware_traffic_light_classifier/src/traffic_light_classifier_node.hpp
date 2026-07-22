@@ -101,7 +101,7 @@ private:
   std::unique_ptr<TrafficLightClassifier> classifier_;
   // Non-null only for the HSV backend, so on_set_parameters_callback can drive its dynamic
   // reconfigure.
-  std::shared_ptr<ColorClassifier> color_classifier_;
+  std::shared_ptr<ColorClassifierCore> color_classifier_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   std::unique_ptr<autoware_utils::DiagnosticsInterface>
