@@ -195,13 +195,25 @@ if(BUILD_TESTING)
       ${CUDA_LIBRARIES}
     )
 
-    # GPU/TensorRT characterization test for CnnLampRecognizer (same gate/runner as the
-    # CNN classifier test above; TIMEOUT covers the first-time TensorRT engine build).
-    ament_add_ros_isolated_gtest(test_cnn_lamp_recognizer
+    # CnnLampRecognizerCore tests (ROS-free): static helpers run GPU-free; the classify()
+    # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
+    ament_auto_add_gtest(test_cnn_lamp_recognizer
       test/test_cnn_lamp_recognizer.cpp
       TIMEOUT 600
     )
     target_link_libraries(test_cnn_lamp_recognizer
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
+
+    # CnnLampRecognizer adapter test (size guard + per-slot scatter): ROS-isolated, and
+    # self-skips without a GPU/model since the ctor builds the engine. TIMEOUT covers that build.
+    ament_add_ros_isolated_gtest(test_cnn_lamp_recognizer_adapter
+      test/test_cnn_lamp_recognizer_adapter.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_lamp_recognizer_adapter
       ${PROJECT_NAME}
       ${OpenCV_LIBRARIES}
       ${CUDA_LIBRARIES}
