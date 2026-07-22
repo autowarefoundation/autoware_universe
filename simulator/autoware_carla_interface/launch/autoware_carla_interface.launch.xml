@@ -50,6 +50,10 @@
 
     <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map_resolved)'"/>
 
+    <let name="carla_map" value="$(eval &quot;'$(var carla_map)' if '$(var carla_map)' else (__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01')&quot;)"/>
+
+    <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map)'"/>
+
     <!-- Sensor Configuration -->
     <arg
       name="use_light_weight_sensor_mapping"
@@ -64,6 +68,22 @@
       name="sensor_mapping_file_resolved"
       value="$(eval &quot;'$(var sensor_mapping_file)' if '$(var sensor_mapping_file)' else '$(var sensor_mapping_file_default)'&quot;)"
     />
+
+    <!-- SplatSim integration (optional) -->
+    <arg name="render_with_splatsim" default="false" description="Enable splatsim rendering via Docker + gRPC"/>
+    <arg name="splatsim_tileset_path" default="" description="Host path to tileset.json"/>
+    <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
+    <arg name="splatsim_grpc_port" default="50051"/>
+    <arg name="splatsim_use_sh" default="true"/>
+    <arg name="splatsim_frame_rate" default="20.0"/>
+    <arg name="splatsim_image_topic" default="/splatsim/image_raw"/>
+    <arg name="splatsim_camera_info_topic" default="/splatsim/camera_info"/>
+    <arg name="splatsim_frame_id" default="splatsim_camera"/>
+    <arg name="splatsim_near_plane" default="0.01"/>
+    <arg name="splatsim_far_plane" default="1000.0"/>
+    <arg name="splatsim_device" default="cuda:0"/>
+    <arg name="splatsim_restart_container" default="false" description="Force restart splatsim container even if already running"/>
+    <arg name="splatsim_compress_format" default="jpeg" description="Image compression format: 'jpeg', 'png', or '' for raw"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -95,6 +115,20 @@
       <param name="map_origin_y" value="$(var map_origin_y)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file_resolved)"/>
+      <param name="render_with_splatsim" value="$(var render_with_splatsim)"/>
+      <param name="splatsim_tileset_path" value="$(var splatsim_tileset_path)"/>
+      <param name="splatsim_image" value="$(var splatsim_image)"/>
+      <param name="splatsim_grpc_port" value="$(var splatsim_grpc_port)"/>
+      <param name="splatsim_use_sh" value="$(var splatsim_use_sh)"/>
+      <param name="splatsim_frame_rate" value="$(var splatsim_frame_rate)"/>
+      <param name="splatsim_image_topic" value="$(var splatsim_image_topic)"/>
+      <param name="splatsim_camera_info_topic" value="$(var splatsim_camera_info_topic)"/>
+      <param name="splatsim_frame_id" value="$(var splatsim_frame_id)"/>
+      <param name="splatsim_near_plane" value="$(var splatsim_near_plane)"/>
+      <param name="splatsim_far_plane" value="$(var splatsim_far_plane)"/>
+      <param name="splatsim_device" value="$(var splatsim_device)"/>
+      <param name="splatsim_restart_container" value="$(var splatsim_restart_container)"/>
+      <param name="splatsim_compress_format" value="$(var splatsim_compress_format)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>
@@ -116,24 +150,26 @@
     <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_velodyne_top" args="0 0 1 -1.5386 -0.015 0.001 velodyne_top velodyne_top_changed"/> -->
     <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_imu" args="0 0 1 -3.10519265 -0.015 -3.14059265359 tamagawa/imu_link tamagawa/imu_link_changed"/> -->
 
-    <!-- Relay CAM_FRONT to traffic_light namespace for traffic light recognition.
-         These relays subscribe the raw image, which forces the interface to
-         convert and publish every CAM_FRONT frame; skip them in light-weight
-         mode like the republish nodes below. -->
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_image_relay"
-      args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_camera_info_relay"
-      args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+    <!-- CARLA-only nodes: republish raw→compressed, relay, combiner (skipped in splatsim mode) -->
+    <group unless="$(var render_with_splatsim)">
+      <!-- Relay CAM_FRONT to traffic_light namespace for traffic light recognition.
+           These relays subscribe the raw image, which forces the interface to
+           convert and publish every CAM_FRONT frame; skip them in light-weight
+           mode like the republish nodes below. -->
+      <node
+        pkg="topic_tools"
+        exec="relay"
+        name="traffic_light_image_relay"
+        args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="topic_tools"
+        exec="relay"
+        name="traffic_light_camera_info_relay"
+        args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
 
     <!-- Image transport nodes to create compressed versions for all cameras -->
     <node
@@ -189,6 +225,7 @@
 
     <!-- Multi-camera combiner for RViz visualization -->
     <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen" unless="$(var use_light_weight_sensor_mapping)"/>
+    </group>
 
     <!-- E2E Planning Infrastructure -->
     <group if="$(var use_e2e_planning)">
