@@ -6,12 +6,12 @@ autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_arbiter.cpp
-  src/traffic_light_arbiter_core.cpp
+  src/traffic_light_arbiter_node.cpp
   src/signal_match_validator.cpp
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::traffic_light::TrafficLightArbiter"
+  PLUGIN "autoware::traffic_light::TrafficLightArbiterNode"
   EXECUTABLE traffic_light_arbiter_node
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
@@ -26,7 +26,7 @@ if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
 
   # The core test is ROS-free (no node, no DDS), so it needs no isolation.
   ament_auto_add_gtest(${PROJECT_NAME}_core_test
-    test/test_traffic_light_arbiter_core.cpp
+    test/test_traffic_light_arbiter.cpp
   )
 endif()
 

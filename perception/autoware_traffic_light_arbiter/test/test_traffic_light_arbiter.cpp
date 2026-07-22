@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/traffic_light_arbiter/traffic_light_arbiter_core.hpp"
+#include "autoware/traffic_light_arbiter/traffic_light_arbiter.hpp"
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/duration.hpp>
@@ -40,7 +40,7 @@ namespace
 {
 
 using autoware::traffic_light::SourcePriority;
-using autoware::traffic_light::TrafficLightArbiterCore;
+using autoware::traffic_light::TrafficLightArbiter;
 using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
 using TrafficLightElement = autoware_perception_msgs::msg::TrafficLightElement;
 using TrafficLightGroup = autoware_perception_msgs::msg::TrafficLightGroup;
@@ -301,9 +301,9 @@ const lanelet::LaneletMapConstPtr shared_map = []() {
 
 // Builds an arbiter with the suite-wide map already loaded. priority and
 // enable_signal_matching select the reconciliation mode under test.
-TrafficLightArbiterCore make_arbiter(SourcePriority priority, bool enable_signal_matching)
+TrafficLightArbiter make_arbiter(SourcePriority priority, bool enable_signal_matching)
 {
-  TrafficLightArbiterCore arbiter(
+  TrafficLightArbiter arbiter(
     priority, enable_signal_matching, default_external_delay_tolerance,
     default_external_time_tolerance, default_perception_time_tolerance);
   arbiter.set_map(shared_map);
@@ -321,7 +321,7 @@ TrafficLightArbiterCore make_arbiter(SourcePriority priority, bool enable_signal
 
 // Matched: when perception and external agree on color and shape, the
 // output carries the same element verbatim.
-TEST(TrafficLightArbiterCoreSignalMatching, matchedSignalsPassThrough)
+TEST(TrafficLightArbiterSignalMatching, matchedSignalsPassThrough)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -340,7 +340,7 @@ TEST(TrafficLightArbiterCoreSignalMatching, matchedSignalsPassThrough)
 // (0.90) rather than external's (0.10) reaches the output. Seeing 0.90
 // (and not 0.10) on a same-color/shape pair is what proves the differing
 // confidences did not break the match.
-TEST(TrafficLightArbiterCoreSignalMatching, differingConfidencesStillMatch)
+TEST(TrafficLightArbiterSignalMatching, differingConfidencesStillMatch)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -357,7 +357,7 @@ TEST(TrafficLightArbiterCoreSignalMatching, differingConfidencesStillMatch)
 
 // Color mismatch: when both sides share the shape but disagree on color,
 // the output falls back to UNKNOWN over that shape.
-TEST(TrafficLightArbiterCoreSignalMatching, colorMismatchProducesUnknown)
+TEST(TrafficLightArbiterSignalMatching, colorMismatchProducesUnknown)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -373,7 +373,7 @@ TEST(TrafficLightArbiterCoreSignalMatching, colorMismatchProducesUnknown)
 
 // Shape-set mismatch: perception has CIRCLE + RIGHT_ARROW, external has
 // only CIRCLE → the output is UNKNOWN over the shape union.
-TEST(TrafficLightArbiterCoreSignalMatching, shapeSetMismatchProducesUnknown)
+TEST(TrafficLightArbiterSignalMatching, shapeSetMismatchProducesUnknown)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -391,7 +391,7 @@ TEST(TrafficLightArbiterCoreSignalMatching, shapeSetMismatchProducesUnknown)
 // Perception-only single source: with no external to agree with, the
 // output for that id becomes UNKNOWN. Pedestrian ids would pass through
 // unchanged instead — see singleSourcePedestrianPassesThrough.
-TEST(TrafficLightArbiterCoreSignalMatching, perceptionOnlySingleSourceYieldsUnknown)
+TEST(TrafficLightArbiterSignalMatching, perceptionOnlySingleSourceYieldsUnknown)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -406,7 +406,7 @@ TEST(TrafficLightArbiterCoreSignalMatching, perceptionOnlySingleSourceYieldsUnkn
 // External-only single source: symmetric counterpart — reconciliation is
 // direction-symmetric, so the output for that id is also UNKNOWN when
 // perception is the missing side.
-TEST(TrafficLightArbiterCoreSignalMatching, externalOnlySingleSourceYieldsUnknown)
+TEST(TrafficLightArbiterSignalMatching, externalOnlySingleSourceYieldsUnknown)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -419,7 +419,7 @@ TEST(TrafficLightArbiterCoreSignalMatching, externalOnlySingleSourceYieldsUnknow
 }
 
 // Off-map id is dropped from the output and recorded in off_map_signal_ids.
-TEST(TrafficLightArbiterCoreSignalMatching, offMapIdIsDroppedAndReported)
+TEST(TrafficLightArbiterSignalMatching, offMapIdIsDroppedAndReported)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -442,7 +442,7 @@ TEST(TrafficLightArbiterCoreSignalMatching, offMapIdIsDroppedAndReported)
 
 // EXTERNAL priority: for pedestrian ids the external side wins even when
 // its confidence is lower than perception's.
-TEST(TrafficLightArbiterCorePedestrian, externalPriorityWinsForPedestrian)
+TEST(TrafficLightArbiterPedestrian, externalPriorityWinsForPedestrian)
 {
   auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/true);
 
@@ -458,7 +458,7 @@ TEST(TrafficLightArbiterCorePedestrian, externalPriorityWinsForPedestrian)
 
 // PERCEPTION priority: symmetric counterpart — for pedestrian ids the
 // perception side wins even when its confidence is lower than external's.
-TEST(TrafficLightArbiterCorePedestrian, perceptionPriorityWinsForPedestrian)
+TEST(TrafficLightArbiterPedestrian, perceptionPriorityWinsForPedestrian)
 {
   auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/true);
 
@@ -474,7 +474,7 @@ TEST(TrafficLightArbiterCorePedestrian, perceptionPriorityWinsForPedestrian)
 
 // CONFIDENCE mode: for pedestrian ids the arbiter walks each shape and
 // picks the side with the higher confidence.
-TEST(TrafficLightArbiterCorePedestrian, confidenceModePicksHigherConfidenceForPedestrian)
+TEST(TrafficLightArbiterPedestrian, confidenceModePicksHigherConfidenceForPedestrian)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
@@ -493,7 +493,7 @@ TEST(TrafficLightArbiterCorePedestrian, confidenceModePicksHigherConfidenceForPe
 // For pedestrian ids the present side flows through unchanged with no
 // UNKNOWN translation, even when source_priority would otherwise prefer
 // the absent side.
-TEST(TrafficLightArbiterCorePedestrian, singleSourcePedestrianPassesThrough)
+TEST(TrafficLightArbiterPedestrian, singleSourcePedestrianPassesThrough)
 {
   auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/true);
 
@@ -511,7 +511,7 @@ TEST(TrafficLightArbiterCorePedestrian, singleSourcePedestrianPassesThrough)
 
 // CONFIDENCE: same shape from both sources → the higher-confidence element
 // wins (here, perception 0.9 over external 0.7).
-TEST(TrafficLightArbiterCoreConfidencePriority, picksHigherConfidenceElement)
+TEST(TrafficLightArbiterConfidencePriority, picksHigherConfidenceElement)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -529,7 +529,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, picksHigherConfidenceElement)
 // the same id, the output carries both shapes verbatim. Reconciliation
 // runs independently per shape, so the absence of CIRCLE on the external
 // side does not block external's RIGHT_ARROW and vice versa.
-TEST(TrafficLightArbiterCoreConfidencePriority, perShapeUnionFromBothSides)
+TEST(TrafficLightArbiterConfidencePriority, perShapeUnionFromBothSides)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -546,7 +546,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perShapeUnionFromBothSides)
 
 // Perception-only: with no external present, the perception element flows
 // through unchanged regardless of priority mode.
-TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPassesThrough)
+TEST(TrafficLightArbiterConfidencePriority, perceptionOnlyPassesThrough)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -561,7 +561,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPassesThrough)
 // Off-map id is dropped before reaching priority selection too. Pins the
 // off-map guard as mode-independent (Signal Matching side has its own
 // counterpart in offMapIdIsDroppedAndReported).
-TEST(TrafficLightArbiterCoreConfidencePriority, offMapIdIsDroppedAndReported)
+TEST(TrafficLightArbiterConfidencePriority, offMapIdIsDroppedAndReported)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -576,7 +576,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, offMapIdIsDroppedAndReported)
 
 // Successive external publishes carrying different ids accumulate in the
 // cache; both end up in the final output with their published colors.
-TEST(TrafficLightArbiterCoreConfidencePriority, multipleExternalSourcesAccumulate)
+TEST(TrafficLightArbiterConfidencePriority, multipleExternalSourcesAccumulate)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -595,7 +595,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, multipleExternalSourcesAccumulat
 // the output group holds both, perception-side first. Mode is irrelevant
 // — the merge happens before mode-specific element reconciliation, so
 // Confidence is a fine host for this pin.
-TEST(TrafficLightArbiterCoreConfidencePriority, predictionsFromBothSidesAreMerged)
+TEST(TrafficLightArbiterConfidencePriority, predictionsFromBothSidesAreMerged)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -616,7 +616,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, predictionsFromBothSidesAreMerge
 
 // Perception-only side: when external is silent, the perception side's
 // prediction (with its information_source) still reaches the output.
-TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPredictionPropagates)
+TEST(TrafficLightArbiterConfidencePriority, perceptionOnlyPredictionPropagates)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -632,7 +632,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPredictionPropagat
 // External-only side: symmetric counterpart — when perception is silent,
 // the external side's prediction (with its information_source) reaches
 // the output.
-TEST(TrafficLightArbiterCoreConfidencePriority, externalOnlyPredictionPropagates)
+TEST(TrafficLightArbiterConfidencePriority, externalOnlyPredictionPropagates)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -653,7 +653,7 @@ TEST(TrafficLightArbiterCoreConfidencePriority, externalOnlyPredictionPropagates
 
 // External wins despite lower confidence: the EXTERNAL setting forces
 // the external side to win over a higher-confidence perception.
-TEST(TrafficLightArbiterCoreExternalPriority, externalPriorityOverridesConfidence)
+TEST(TrafficLightArbiterExternalPriority, externalPriorityOverridesConfidence)
 {
   auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/false);
 
@@ -669,7 +669,7 @@ TEST(TrafficLightArbiterCoreExternalPriority, externalPriorityOverridesConfidenc
 
 // External-only: the EXTERNAL setting has no effect when only one source
 // is present.
-TEST(TrafficLightArbiterCoreExternalPriority, externalOnlyPassesThrough)
+TEST(TrafficLightArbiterExternalPriority, externalOnlyPassesThrough)
 {
   auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/false);
 
@@ -684,7 +684,7 @@ TEST(TrafficLightArbiterCoreExternalPriority, externalOnlyPassesThrough)
 // Perception-only with EXTERNAL priority: with no external side present,
 // the EXTERNAL setting has nothing to apply to and the perception element
 // reaches the output.
-TEST(TrafficLightArbiterCoreExternalPriority, perceptionOnlyPassesThrough)
+TEST(TrafficLightArbiterExternalPriority, perceptionOnlyPassesThrough)
 {
   auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/false);
 
@@ -702,7 +702,7 @@ TEST(TrafficLightArbiterCoreExternalPriority, perceptionOnlyPassesThrough)
 
 // Perception wins despite lower confidence: symmetric counterpart of the
 // EXTERNAL override case.
-TEST(TrafficLightArbiterCorePerceptionPriority, perceptionPriorityOverridesConfidence)
+TEST(TrafficLightArbiterPerceptionPriority, perceptionPriorityOverridesConfidence)
 {
   auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/false);
 
@@ -718,7 +718,7 @@ TEST(TrafficLightArbiterCorePerceptionPriority, perceptionPriorityOverridesConfi
 
 // Perception-only: the PERCEPTION setting has no effect when only one
 // source is present.
-TEST(TrafficLightArbiterCorePerceptionPriority, perceptionOnlyPassesThrough)
+TEST(TrafficLightArbiterPerceptionPriority, perceptionOnlyPassesThrough)
 {
   auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/false);
 
@@ -732,7 +732,7 @@ TEST(TrafficLightArbiterCorePerceptionPriority, perceptionOnlyPassesThrough)
 
 // External-only with PERCEPTION priority: symmetric counterpart — external
 // is the only source, so it passes through.
-TEST(TrafficLightArbiterCorePerceptionPriority, externalOnlyPassesThrough)
+TEST(TrafficLightArbiterPerceptionPriority, externalOnlyPassesThrough)
 {
   auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/false);
 
@@ -752,9 +752,9 @@ TEST(TrafficLightArbiterCorePerceptionPriority, externalOnlyPassesThrough)
 // arbitrate() before set_map() yields output=std::nullopt. The Node
 // distinguishes "no output" (skip publish) from "empty output" (publish
 // with zero groups), so the optional must stay disengaged here.
-TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesNoOutput)
+TEST(TrafficLightArbiterBoundary, arbitrateWithoutMapProducesNoOutput)
 {
-  TrafficLightArbiterCore unconfigured(
+  TrafficLightArbiter unconfigured(
     CONFIDENCE, /*enable_signal_matching=*/false, default_external_delay_tolerance,
     default_external_time_tolerance, default_perception_time_tolerance);
 
@@ -769,9 +769,9 @@ TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesNoOutput)
 // A map with no TrafficLight regulatory elements yields an output that is
 // engaged but empty — the counterpart to the no-map case above. The Node
 // publishes a zero-group message here instead of skipping the publish.
-TEST(TrafficLightArbiterCoreBoundary, emptyMapProducesEmptyOutput)
+TEST(TrafficLightArbiterBoundary, emptyMapProducesEmptyOutput)
 {
-  TrafficLightArbiterCore arbiter(
+  TrafficLightArbiter arbiter(
     CONFIDENCE, /*enable_signal_matching=*/false, default_external_delay_tolerance,
     default_external_time_tolerance, default_perception_time_tolerance);
   arbiter.set_map(build_empty_map());
@@ -794,7 +794,7 @@ TEST(TrafficLightArbiterCoreBoundary, emptyMapProducesEmptyOutput)
 
 // Outside tolerance (perception is older than tolerance allows): perception
 // is excluded from arbitrate() so external alone reaches the output.
-TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionIsExcludedFromOutput)
+TEST(TrafficLightArbiterPerceptionStaleness, stalePerceptionIsExcludedFromOutput)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -814,7 +814,7 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionIsExcludedFromOu
 // Inside tolerance (perception is older but only by half the budget):
 // perception remains effective, so CONFIDENCE picks the higher-confidence
 // perception element over the lower-confidence external.
-TEST(TrafficLightArbiterCorePerceptionStaleness, freshPerceptionRemainsEffective)
+TEST(TrafficLightArbiterPerceptionStaleness, freshPerceptionRemainsEffective)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -845,7 +845,7 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, freshPerceptionRemainsEffective
 // on the bus indefinitely when no external source is publishing) is an
 // open question. This test pins the current behaviour; it does not
 // endorse it.
-TEST(TrafficLightArbiterCorePerceptionStaleness, perceptionAloneIsNeverStale)
+TEST(TrafficLightArbiterPerceptionStaleness, perceptionAloneIsNeverStale)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -865,7 +865,7 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, perceptionAloneIsNeverStale)
 // that the external side does not cover. With perception carrying
 // vehicle_a (stale) and external carrying vehicle_b (fresh), vehicle_a
 // must be absent from the output and vehicle_b must remain present.
-TEST(TrafficLightArbiterCorePerceptionStaleness, stalenessDropsEntirePerceptionMessage)
+TEST(TrafficLightArbiterPerceptionStaleness, stalenessDropsEntirePerceptionMessage)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -885,7 +885,7 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalenessDropsEntirePerceptionM
 
 // Stale perception drops its predictions from the merge too, so only the
 // external-side prediction (V2I) survives in the output group.
-TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionPredictionsAreSkipped)
+TEST(TrafficLightArbiterPerceptionStaleness, stalePerceptionPredictionsAreSkipped)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -914,7 +914,7 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionPredictionsAreSk
 // selection.
 // ---------------------------------------------------------------------------
 
-TEST(TrafficLightArbiterCoreLatestInputTime, takesNewerOfPerceptionAndExternal)
+TEST(TrafficLightArbiterLatestInputTime, takesNewerOfPerceptionAndExternal)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -933,7 +933,7 @@ TEST(TrafficLightArbiterCoreLatestInputTime, takesNewerOfPerceptionAndExternal)
 
 // Symmetric counterpart: when perception is the newer source, its stamp
 // wins even though external is also stored.
-TEST(TrafficLightArbiterCoreLatestInputTime, perceptionWinsWhenNewer)
+TEST(TrafficLightArbiterLatestInputTime, perceptionWinsWhenNewer)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -951,7 +951,7 @@ TEST(TrafficLightArbiterCoreLatestInputTime, perceptionWinsWhenNewer)
 
 // External is silent: with no external stamps to compare against,
 // latest_input_time falls back to the perception stamp.
-TEST(TrafficLightArbiterCoreLatestInputTime, perceptionStampWhenExternalIsSilent)
+TEST(TrafficLightArbiterLatestInputTime, perceptionStampWhenExternalIsSilent)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -973,7 +973,7 @@ TEST(TrafficLightArbiterCoreLatestInputTime, perceptionStampWhenExternalIsSilent
 
 // A stamp close enough to current_time (within external_delay_tolerance)
 // is accepted.
-TEST(TrafficLightArbiterCoreTiming, ingestExternalAcceptsStampsWithinTolerance)
+TEST(TrafficLightArbiterTiming, ingestExternalAcceptsStampsWithinTolerance)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -988,7 +988,7 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalAcceptsStampsWithinTolerance)
 
 // A stamp older than current_time by more than external_delay_tolerance
 // is rejected.
-TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooOldStamps)
+TEST(TrafficLightArbiterTiming, ingestExternalRejectsTooOldStamps)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -1004,7 +1004,7 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooOldStamps)
 // A stamp ahead of current_time by more than external_delay_tolerance is
 // also rejected — the tolerance is applied symmetrically in both
 // directions.
-TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooFutureStamps)
+TEST(TrafficLightArbiterTiming, ingestExternalRejectsTooFutureStamps)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
@@ -1020,7 +1020,7 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooFutureStamps)
 // Sweep-on-ingest downstream effect: an external entry evicted by the
 // sweep is absent from the next arbitration output, even when the
 // triggering perception covers a different id.
-TEST(TrafficLightArbiterCoreTiming, evictedExternalEntryAbsentFromOutput)
+TEST(TrafficLightArbiterTiming, evictedExternalEntryAbsentFromOutput)
 {
   auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
