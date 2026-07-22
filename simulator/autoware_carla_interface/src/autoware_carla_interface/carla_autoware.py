@@ -71,10 +71,14 @@ class InitializeInterface(object):
         self.timeout = self.param_["timeout"]
         self.sync_mode = self.param_["sync_mode"]
         self.fixed_delta_seconds = self.param_["fixed_delta_seconds"]
+        self.no_rendering_mode = self.param_["no_rendering_mode"]
         self.carla_map = self.param_["carla_map"]
+        self.force_load_world = self.param_["force_load_world"]
         self.agent_role_name = self.param_["ego_vehicle_role_name"]
         self.vehicle_type = self.param_["vehicle_type"]
         self.spawn_point = self.param_["spawn_point"]
+        self.spawn_point_ground_snap = self.param_["spawn_point_ground_snap"]
+        self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
 
@@ -95,6 +99,105 @@ class InitializeInterface(object):
         else:
             randomize = True
         return spawn_point, randomize
+
+    def _load_carla_world(self, client):
+        """Load the requested map while supporting CARLA Python API version differences."""
+        if self.force_load_world:
+            print(f"Loading CARLA world '{self.carla_map}' with client.load_world()", flush=True)
+            try:
+                client.load_world(self.carla_map)
+                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+            except RuntimeError as exc:
+                if "Connection refused" in str(exc):
+                    raise
+                print(
+                    "WARNING: client.load_world() raised while loading "
+                    f"'{self.carla_map}'; continuing with current world: {exc}",
+                    flush=True,
+                )
+            return
+
+        if hasattr(client, "load_world_if_different"):
+            try:
+                print(
+                    f"Loading CARLA world '{self.carla_map}' with load_world_if_different()",
+                    flush=True,
+                )
+                client.load_world_if_different(self.carla_map)
+                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+                return
+            except RuntimeError as exc:
+                print(
+                    "WARNING: load_world_if_different failed; falling back to load_world "
+                    f"for '{self.carla_map}': {exc}"
+                )
+
+        current_map = None
+        try:
+            current_map = client.get_world().get_map().name.split("/")[-1]
+        except RuntimeError:
+            pass
+
+        if current_map != self.carla_map:
+            print(f"Loading CARLA world '{self.carla_map}' with client.load_world()", flush=True)
+            try:
+                client.load_world(self.carla_map)
+                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+            except RuntimeError as exc:
+                if "Connection refused" in str(exc):
+                    raise
+                print(
+                    "WARNING: client.load_world() raised while loading "
+                    f"'{self.carla_map}'; continuing with current world: {exc}",
+                    flush=True,
+                )
+
+    def _snap_spawn_point_to_ground(self, spawn_point):
+        if not self.spawn_point_ground_snap:
+            return spawn_point
+
+        sample_offsets = (
+            (0.0, 0.0),
+            (0.75, 0.0),
+            (-0.75, 0.0),
+            (0.0, 0.75),
+            (0.0, -0.75),
+            (1.5, 0.0),
+            (-1.5, 0.0),
+            (0.0, 1.5),
+            (0.0, -1.5),
+        )
+        projected_heights = []
+        try:
+            for offset_x, offset_y in sample_offsets:
+                search_origin = carla.Location(
+                    x=spawn_point.location.x + offset_x,
+                    y=spawn_point.location.y + offset_y,
+                    z=1000.0,
+                )
+                labelled_point = self.world.ground_projection(search_origin, 10000.0)
+                if labelled_point is not None:
+                    projected_heights.append(labelled_point.location.z)
+        except RuntimeError as exc:
+            print(f"WARNING: Could not ground-snap CARLA spawn point: {exc}")
+            return spawn_point
+
+        if not projected_heights:
+            print("WARNING: Could not ground-snap CARLA spawn point: no ground projection found")
+            return spawn_point
+
+        ground_z = max(projected_heights)
+        snapped = carla.Transform(carla.Location(), spawn_point.rotation)
+        snapped.location.x = spawn_point.location.x
+        snapped.location.y = spawn_point.location.y
+        snapped.location.z = ground_z + self.spawn_point_ground_offset_z
+        print(
+            "Ground-snapped spawn point: "
+            f"ground_z={ground_z:.3f}, offset_z={self.spawn_point_ground_offset_z:.3f}, "
+            f"spawn_z={snapped.location.z:.3f}",
+            flush=True,
+        )
+        return snapped
 
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
@@ -135,39 +238,70 @@ class InitializeInterface(object):
     def load_world(self):
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
-        client.load_world_if_different(self.carla_map)
+        print("Connecting to CARLA server", flush=True)
+        self._load_carla_world(client)
 
         # Wait for the world to be fully loaded
         # This is critical for non-default maps that need time to load
+        print("Waiting for CARLA world initialization", flush=True)
         time.sleep(2.0)
 
         self.world = client.get_world()
+        print("CARLA world handle acquired", flush=True)
 
         # Verify world is ready by attempting to tick it
         # This ensures the world is fully initialized before accessing settings
         try:
+            print("Ticking CARLA world before applying settings", flush=True)
             self.world.tick()
+            print("Initial CARLA world tick completed", flush=True)
         except RuntimeError:
             # If synchronous mode is not enabled yet, tick() may fail
             # In this case, just wait a bit more
+            print("Initial CARLA world tick failed; waiting before applying settings", flush=True)
             time.sleep(1.0)
 
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = self.fixed_delta_seconds
         settings.synchronous_mode = self.sync_mode
+        settings.no_rendering_mode = self.no_rendering_mode
+        print(
+            "Applying CARLA settings: "
+            f"sync={settings.synchronous_mode}, "
+            f"fixed_delta_seconds={settings.fixed_delta_seconds}, "
+            f"no_rendering_mode={settings.no_rendering_mode}",
+            flush=True,
+        )
         self.world.apply_settings(settings)
+        print("CARLA settings applied", flush=True)
         CarlaDataProvider.set_world(self.world)
+        print("CARLA data provider world set", flush=True)
         CarlaDataProvider.set_client(client)
 
         spawn_point, randomize = self._parse_spawn_point()
+        if not randomize:
+            spawn_point = self._snap_spawn_point_to_ground(spawn_point)
+        print(
+            f"Spawning ego vehicle '{self.vehicle_type}' at {spawn_point} "
+            f"(random_location={randomize})",
+            flush=True,
+        )
         self.ego_actor = CarlaDataProvider.request_new_actor(
             self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
         )
+        if self.ego_actor is None:
+            raise RuntimeError(
+                f"Failed to spawn ego vehicle '{self.vehicle_type}' on CARLA map "
+                f"'{self.carla_map}' at {spawn_point}"
+            )
+        print(f"Spawned ego vehicle actor id={self.ego_actor.id}", flush=True)
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
 
         self.sensor_wrapper = SensorWrapper(self.interface)
+        print("Spawning CARLA sensors", flush=True)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
+        print("CARLA sensors spawned", flush=True)
 
         if self.use_traffic_manager:
             self._setup_traffic_manager(client)
