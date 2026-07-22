@@ -348,6 +348,20 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
       result.violations.end(), amber_light_violations.begin(), amber_light_violations.end());
   }
 
+  if (ego_stopping_distance.has_value() && params_.allow_if_cannot_stop_distance > 0.0) {
+    result.violations.erase(
+      std::remove_if(
+        result.violations.begin(), result.violations.end(),
+        [&](const auto & violation) {
+          const auto distance_from_ego_front = violation.arc_length_to_cross_point -
+                                               backward_length -
+                                               vehicle_info_.max_longitudinal_offset_m;
+          return distance_from_ego_front < params_.allow_if_cannot_stop_distance &&
+                 distance_from_ego_front < *ego_stopping_distance - params_.stop_overshoot_margin;
+        }),
+      result.violations.end());
+  }
+
   return result;
 }
 
