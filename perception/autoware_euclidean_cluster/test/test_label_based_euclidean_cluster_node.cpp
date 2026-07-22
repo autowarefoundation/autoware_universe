@@ -245,7 +245,7 @@ TEST_F(LabelClusterConfigBehavior, PublishesDetectedObjectsForSemanticInput)
 
   auto output_sub =
     helper_node->create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
-      "/output", rclcpp::QoS{1},
+      "/output/objects", rclcpp::QoS{1},
       [&](autoware_perception_msgs::msg::DetectedObjects::SharedPtr msg) {
         std::lock_guard<std::mutex> lock(mutex);
         output_msg = std::move(msg);
@@ -253,8 +253,8 @@ TEST_F(LabelClusterConfigBehavior, PublishesDetectedObjectsForSemanticInput)
         cv.notify_one();
       });
 
-  auto input_pub =
-    helper_node->create_publisher<sensor_msgs::msg::PointCloud2>("/input", rclcpp::SensorDataQoS());
+  auto input_pub = helper_node->create_publisher<sensor_msgs::msg::PointCloud2>(
+    "/input/pointcloud", rclcpp::SensorDataQoS());
 
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(cluster_node);
@@ -299,15 +299,15 @@ TEST_F(LabelClusterConfigBehavior, PublishesSemanticNonObjectsAsSegments)
   sensor_msgs::msg::PointCloud2::SharedPtr output_msg;
 
   auto output_sub = helper_node->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "/output_segments", rclcpp::QoS{1}, [&](sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+    "/output/pointcloud", rclcpp::QoS{1}, [&](sensor_msgs::msg::PointCloud2::SharedPtr msg) {
       std::lock_guard<std::mutex> lock(mutex);
       output_msg = std::move(msg);
       received = true;
       cv.notify_one();
     });
 
-  auto input_pub =
-    helper_node->create_publisher<sensor_msgs::msg::PointCloud2>("/input", rclcpp::SensorDataQoS());
+  auto input_pub = helper_node->create_publisher<sensor_msgs::msg::PointCloud2>(
+    "/input/pointcloud", rclcpp::SensorDataQoS());
 
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(cluster_node);
