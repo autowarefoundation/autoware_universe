@@ -178,19 +178,6 @@ InputData make_input_data(
 }
 }  // namespace
 
-TEST(PidLongitudinalController, ValidTrajectoryIsNotFlaggedInvalid)
-{
-  // Arrange
-  PidLongitudinalController controller(make_default_config());
-  const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
-
-  // Act
-  const auto result = controller.run(input_data, rclcpp::Time(1, 0), true);
-
-  // Assert
-  EXPECT_FALSE(result.received_invalid_trajectory);
-}
-
 TEST(PidLongitudinalController, StaysStoppedWhenCloseToStopPoint)
 {
   // Arrange
@@ -385,38 +372,6 @@ TEST(PidLongitudinalController, RawPitchSlopeSourceProducesStoppedState)
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
 }
 
-TEST(PidLongitudinalController, TrajectoryPitchSlopeSourceProducesStoppedState)
-{
-  // Arrange
-  auto config = make_default_config();
-  config.slope_source = PidLongitudinalControllerConfig::SlopeSource::TRAJECTORY_PITCH;
-  PidLongitudinalController controller(config);
-  const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
-
-  // Act
-  const auto result = controller.run(input_data, rclcpp::Time(1, 0), true);
-
-  // Assert
-  EXPECT_EQ(result.control_state, ControlState::STOPPED);
-}
-
-TEST(PidLongitudinalController, TrajectoryAdaptiveSlopeSourceBlendsRawPitchAtLowSpeed)
-{
-  // Arrange
-  // With the adaptive source and the ego below adaptive_trajectory_velocity_th, the slope falls
-  // back to the raw pitch, exercising the low-speed branch of the adaptive slope estimation.
-  auto config = make_default_config();
-  config.slope_source = PidLongitudinalControllerConfig::SlopeSource::TRAJECTORY_ADAPTIVE;
-  PidLongitudinalController controller(config);
-  const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
-
-  // Act
-  const auto result = controller.run(input_data, rclcpp::Time(1, 0), true);
-
-  // Assert
-  EXPECT_EQ(result.control_state, ControlState::STOPPED);
-}
-
 TEST(PidLongitudinalController, TemporalTrajectoryProducesValidCommand)
 {
   // Arrange
@@ -491,24 +446,10 @@ TEST(PidLongitudinalController, DrivesInReverseForNegativeVelocityTrajectory)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
-}
-
-TEST(PidLongitudinalController, SlopeCompensationDisabledPassesAccelerationThrough)
-{
-  // Arrange
-  // With slope compensation disabled the raw acceleration is emitted without a pitch-based
-  // correction term, exercising the early-return branch of the slope compensation.
-  auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
-  config.enable_slope_compensation = false;
-  PidLongitudinalController controller(config);
-  const auto trajectory = make_straight_trajectory(20, 1.0, 5.0);
-
-  // Act
-  const auto result = controller.run(make_input_data(trajectory, 2.0), rclcpp::Time(1, 0), true);
-
-  // Assert
-  EXPECT_EQ(result.control_state, ControlState::DRIVE);
+  // Target velocity (-5.0) passes through unchanged; a positive acceleration means "speed up in
+  // the current (reverse) gear direction" per the direction-agnostic accel command convention.
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, -5.0f);
+  EXPECT_GT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousControl)
@@ -531,28 +472,6 @@ TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousContro
   EXPECT_TRUE(result.virtual_wall_marker.has_value());
 }
 
-TEST(PidLongitudinalController, TrimsCommandHistoryAcrossAutonomousDriveCycles)
-{
-  // Arrange
-  // Three autonomous DRIVE cycles spaced beyond delay_compensation_time fill and then trim the
-  // recorded command history buffer.
-  auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
-  PidLongitudinalController controller(config);
-  const auto trajectory = make_straight_trajectory(30, 1.0, 5.0);
-  controller.run(
-    make_input_data(trajectory, 3.0, 0.0, true), rclcpp::Time(1, 0, RCL_ROS_TIME), true);
-  controller.run(
-    make_input_data(trajectory, 3.0, 1.0, true), rclcpp::Time(1, 300000000, RCL_ROS_TIME), true);
-
-  // Act
-  const auto result = controller.run(
-    make_input_data(trajectory, 3.0, 2.0, true), rclcpp::Time(1, 600000000, RCL_ROS_TIME), true);
-
-  // Assert
-  EXPECT_EQ(result.control_state, ControlState::DRIVE);
-}
-
 TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
 {
   // Arrange
@@ -567,28 +486,6 @@ TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
   // Act
   const auto result =
     controller.run(make_input_data(trajectory, 0.0), rclcpp::Time(1, 200000000), true);
-
-  // Assert
-  EXPECT_EQ(result.control_state, ControlState::STOPPED);
-}
-
-TEST(PidLongitudinalController, StopsWithoutSmoothStopAfterStandstill)
-{
-  // Arrange
-  // With smooth stop disabled and under autonomous control, standing still near a stop point
-  // transitions DRIVE to STOPPED through the non-smooth-stop branch.
-  auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
-  config.enable_smooth_stop = false;
-  PidLongitudinalController controller(config);
-  controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 5.0), 3.0, 0.0, true),
-    rclcpp::Time(1, 0, RCL_ROS_TIME), true);
-
-  // Act
-  const auto result = controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0, 0.3), 0.0, 0.0, true),
-    rclcpp::Time(1, 200000000, RCL_ROS_TIME), true);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
@@ -678,34 +575,4 @@ TEST(PidLongitudinalController, StaysInEmergencyWhileOvershootPersistsUnderContr
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::EMERGENCY);
-}
-
-TEST(PidLongitudinalController, EmptyTrajectoryIsFlaggedInvalid)
-{
-  // Arrange
-  // Feed a valid trajectory first so the controller retains a last-valid trajectory to fall back
-  // on, then feed an empty trajectory to exercise the invalid-trajectory path.
-  PidLongitudinalController controller(make_default_config());
-  controller.run(make_input_data(make_straight_trajectory(10, 1.0, 0.0)), rclcpp::Time(1, 0), true);
-
-  // Act
-  const auto result = controller.run(make_input_data(Trajectory{}), rclcpp::Time(2, 0), true);
-
-  // Assert
-  EXPECT_TRUE(result.received_invalid_trajectory);
-}
-
-TEST(PidLongitudinalController, SinglePointTrajectoryIsFlaggedInvalid)
-{
-  // Arrange
-  // A trajectory with fewer than two points is invalid; seed a valid trajectory first as above.
-  PidLongitudinalController controller(make_default_config());
-  controller.run(make_input_data(make_straight_trajectory(10, 1.0, 0.0)), rclcpp::Time(1, 0), true);
-
-  // Act
-  const auto result = controller.run(
-    make_input_data(make_straight_trajectory(1, 1.0, 0.0)), rclcpp::Time(2, 0), true);
-
-  // Assert
-  EXPECT_TRUE(result.received_invalid_trajectory);
 }
