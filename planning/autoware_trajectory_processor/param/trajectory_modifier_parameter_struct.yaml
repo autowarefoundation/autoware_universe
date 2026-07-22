@@ -500,6 +500,13 @@ trajectory_modifier_params:
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
+    th_stable_duration_unknown:
+      type: double
+      default_value: 0.0
+      description: Threshold for stable duration of unknown light [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
     th_amber_rejection_hysteresis:
       type: double
       default_value: 0.5
@@ -511,6 +518,20 @@ trajectory_modifier_params:
       type: double
       default_value: 2.75
       description: Crossing time limit [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    delay_response_time:
+      type: double
+      default_value: 0.5
+      description: Delay response time used to estimate the minimum ego stopping distance [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    ego_stopped_vel_th:
+      type: double
+      default_value: 0.01
+      description: Velocity below which ego is considered stopped when checking traffic lights [m/s]
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
