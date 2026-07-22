@@ -14,7 +14,9 @@
         },
         "classes": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Class names to filter out from the filtered output cloud when their probability exceeds the threshold.",
           "uniqueItems": true
         },
@@ -43,7 +45,11 @@
         },
         "yaw_norm_thresholds": {
           "type": "array",
-          "items": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
           "description": "Per-class minimum sine/cosine norm for yaw. Boxes below threshold are discarded.",
           "minItems": 1
         }
@@ -56,7 +62,10 @@
       "properties": {
         "distance_bin_upper_limits": {
           "type": "array",
-          "items": { "type": "number", "exclusiveMinimum": 0.0 },
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0.0
+          },
           "description": "Ordered upper bounds of radial distance bins in meters.",
           "minItems": 1
         },
@@ -65,7 +74,11 @@
           "description": "Per-class arrays of minimum confidence scores, one value per distance bin.",
           "additionalProperties": {
             "type": "array",
-            "items": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+            "items": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
             "minItems": 1
           }
         }
@@ -73,21 +86,38 @@
       "required": ["distance_bin_upper_limits", "min_confidence_scores"],
       "additionalProperties": false
     },
-    "backbone": {
+    "encoder": {
       "type": "object",
       "properties": {
         "onnx_path": {
           "type": "string",
-          "description": "Path to the backbone ONNX file.",
+          "description": "Path to the encoder ONNX file.",
           "pattern": "\\.onnx$"
         },
         "engine_path": {
           "type": "string",
-          "description": "Path to the backbone TensorRT engine file.",
+          "description": "Path to the encoder TensorRT engine file.",
           "pattern": "\\.engine$"
+        },
+        "workspace_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "TensorRT builder memory-pool limit in bytes for this engine.",
+          "default": 8589934592
+        },
+        "voxels_num": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Voxel ranges used during inference [min, opt, max].",
+          "default": [16000, 128000, 192000],
+          "minItems": 3,
+          "maxItems": 3
         }
       },
-      "required": ["onnx_path", "engine_path"],
+      "required": ["onnx_path", "engine_path", "workspace_size", "voxels_num"],
       "additionalProperties": false
     },
     "segmentation3d": {
@@ -113,12 +143,25 @@
         },
         "filter": {
           "$ref": "#/definitions/filter"
+        },
+        "workspace_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "TensorRT builder memory-pool limit in bytes for this engine.",
+          "default": 17179869184
         }
       },
       "required": ["use_head"],
       "allOf": [
         {
-          "if": { "properties": { "use_head": { "const": true } }, "required": ["use_head"] },
+          "if": {
+            "properties": {
+              "use_head": {
+                "const": true
+              }
+            },
+            "required": ["use_head"]
+          },
           "then": {
             "required": ["onnx_path", "engine_path", "source_reconstruction", "filter"]
           }
@@ -150,24 +193,46 @@
         },
         "allow_remapping_by_area_matrix": {
           "type": "array",
-          "items": { "type": "integer", "enum": [0, 1] },
+          "items": {
+            "type": "integer",
+            "enum": [0, 1]
+          },
           "description": "Flat row-major matrix (num_classes x num_classes) of allowed class remappings by area."
         },
         "min_area_matrix": {
           "type": "array",
-          "items": { "type": "number", "minimum": 0.0 },
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          },
           "description": "Flat row-major matrix (num_classes x num_classes) of minimum bounding box areas for remapping."
         },
         "max_area_matrix": {
           "type": "array",
-          "items": { "type": "number", "minimum": 0.0 },
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          },
           "description": "Flat row-major matrix (num_classes x num_classes) of maximum bounding box areas for remapping."
+        },
+        "workspace_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "TensorRT builder memory-pool limit in bytes for this engine.",
+          "default": 4294967296
         }
       },
       "required": ["use_head"],
       "allOf": [
         {
-          "if": { "properties": { "use_head": { "const": true } }, "required": ["use_head"] },
+          "if": {
+            "properties": {
+              "use_head": {
+                "const": true
+              }
+            },
+            "required": ["use_head"]
+          },
           "then": {
             "required": [
               "onnx_path",
@@ -201,15 +266,21 @@
           "description": "Point cloud buffer capacity. Must be at least the maximum expected number of points per frame.",
           "minimum": 1
         },
-        "backbone": { "$ref": "#/definitions/backbone" },
-        "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
-        "detection3d": { "$ref": "#/definitions/detection3d" }
+        "encoder": {
+          "$ref": "#/definitions/encoder"
+        },
+        "segmentation3d": {
+          "$ref": "#/definitions/segmentation3d"
+        },
+        "detection3d": {
+          "$ref": "#/definitions/detection3d"
+        }
       },
       "required": [
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
-        "backbone",
+        "encoder",
         "segmentation3d",
         "detection3d"
       ],

@@ -22,8 +22,9 @@
 namespace autoware::trajectory_validator::plugin::safety
 {
 UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext & context)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (const auto validate_context = validate_filter_context(context); !validate_context) {
     return tl::make_unexpected(validate_context.error());
   }

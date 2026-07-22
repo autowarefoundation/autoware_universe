@@ -42,9 +42,10 @@ The packaged launch file remaps these by default to the following topics:
 5. Split the remaining points into buckets keyed by the mapped Autoware object label.
 6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
 7. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
-8. Estimate a shape and pose for each cluster with `ShapeEstimator`.
-9. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
-10. Publish one `DetectedObject` per cluster.
+8. Compute the average semantic probability for each output cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label filtered cloud, rather than rematching points by coordinate.
+9. Estimate a shape and pose for each cluster with `ShapeEstimator`.
+10. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
+11. Publish one `DetectedObject` per cluster.
 
 ## Label Mapping
 
@@ -75,7 +76,7 @@ If no supported non-ignored mapping remains after parsing `class_names.*`, the n
 After clustering, the node converts each cluster into a `DetectedObject`.
 
 - The output classification label is the mapped object label for that bucket.
-- The output existence probability is the average of the bucket point probabilities.
+- The output existence probability is the average of the clustered point probabilities for that object instance.
 - Shape estimation is delegated to `autoware::shape_estimation::ShapeEstimator`.
 - `shape_policy=0` (`ALL_POLYGON`) estimates whole shapes as polygon.
 - `shape_policy=1` (`LABEL_DEPEND`) estimates shapes with the mapped object label.
@@ -182,7 +183,6 @@ The default parameter file keeps common road users and filters out map/backgroun
 - `class_id` is interpreted only by order in `class_names.*`; changing YAML order changes the expected semantic index mapping.
 - When the input has no `class_id` field, all points are clustered together as `UNKNOWN`.
 - When the input has no `probability` field, every point is treated as confidence `1.0`.
-- The current existence probability is averaged per label bucket before clustering, not per individual cluster.
 - Clustering is spatial only; there is no temporal association or tracking.
 
 ## Intended Usage
@@ -194,6 +194,5 @@ Use this node when a segmentation model already separates obstacle classes in th
 The following items came up during PR review as acceptable short-term trade-offs, but they remain good candidates for follow-up work.
 
 - Load semantic label order from the segmentation model artifact, such as `label.txt`, and keep the ROS parameter file focused on label selection and Autoware label remapping instead of treating YAML declaration order as the source of truth.
-- Preserve source point indices through clustering so `existence_probability` can be computed per output cluster rather than once per semantic bucket.
-  - Or uncertainty aware clustering can be applied to propagate point-level probabilities into clusters using entropy field values.
+- Improve uncertainty-aware clustering so point-level probabilities can be propagated with richer statistics than a simple per-cluster average, such as entropy-aware aggregation or quantile-based gating.
 - Improve large-cluster downsampling in the internal voxel-grid-based cluster with deterministic voxel-wise, spatially uniform, or edge-preserving sampling so shape estimation keeps outline points more reliably.

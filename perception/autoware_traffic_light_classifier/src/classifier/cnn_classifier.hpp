@@ -17,16 +17,13 @@
 
 #include "classifier_interface.hpp"
 
-#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/cuda_utils/stream_unique_ptr.hpp>
 #include <autoware/tensorrt_classifier/tensorrt_classifier.hpp>
-#include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <tier4_perception_msgs/msg/traffic_light.hpp>
+#include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
@@ -35,20 +32,67 @@
 #include <cv_bridge/cv_bridge.h>
 #endif
 
-#include <fstream>
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace autoware::traffic_light
 {
+// Configuration for CNNClassifierCore. model_path is a file path (TrtClassifier loads
+// the model itself); labels are the pre-read label-file lines, so the core does no file
+// I/O of its own.
+struct CNNConfig
+{
+  std::string model_path;
+  std::string precision;
+  std::vector<std::string> labels;
+  std::vector<float> mean;
+  std::vector<float> std;
+};
 
-using autoware::cuda_utils::CudaUniquePtr;
-using autoware::cuda_utils::CudaUniquePtrHost;
-using autoware::cuda_utils::makeCudaStream;
-using autoware::cuda_utils::StreamUniquePtr;
+// CNN (TensorRT) classification core; the engine is whatever model is configured
+// (e.g. MobileNet-v2 or EfficientNet-b1). Its constructor builds a TensorRT engine, so
+// instantiating it needs a GPU and the model; decode_label and make_debug_image are
+// static so they can be exercised without one.
+class CNNClassifierCore
+{
+public:
+  // One signal per input image, elements populated by the label decode. traffic_light_id
+  // / type are left unset -- the caller associates them.
+  struct ClassifierResult
+  {
+    tier4_perception_msgs::msg::TrafficLightArray signals;
+    bool success = false;
+  };
 
+  // Builds the TensorRT engine from config.model_path and stores the label table. Throws
+  // std::invalid_argument if mean/std are not size 3 (a TrtClassifier precondition).
+  explicit CNNClassifierCore(const CNNConfig & config);
+
+  // Classify each ROI image into one signal, batching up to the model's static batch
+  // size. NON-const: TrtClassifier::doInference mutates the engine's internal buffers.
+  ClassifierResult classify(const std::vector<cv::Mat> & images);
+
+  // Decode one model label string into per-lamp elements: comma-separated lamps, each a
+  // "color-shape" token, a bare color (-> CIRCLE), a bare shape (-> GREEN), or "unknown".
+  // Every element gets `confidence`.
+  static std::vector<tier4_perception_msgs::msg::TrafficLightElement> decode_label(
+    const std::string & label, float confidence);
+
+  // Render one debug image: the ROI resized to a fixed width with a label / confidence
+  // text strip below. Returns a fresh Mat (does not mutate roi_image).
+  static cv::Mat make_debug_image(
+    const cv::Mat & roi_image, const tier4_perception_msgs::msg::TrafficLight & signal);
+
+private:
+  std::unique_ptr<autoware::tensorrt_classifier::TrtClassifier> classifier_;
+  std::vector<std::string> labels_;
+  int batch_size_ = 0;
+};
+
+// Thin ROS adapter around CNNClassifierCore. Owns the node-facing concerns (parameter
+// declaration, label-file reading, debug-image publishing, logging) and delegates
+// classification to the core. Public API is unchanged.
 class CNNClassifier : public ClassifierInterface
 {
 public:
@@ -60,20 +104,9 @@ public:
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
 private:
-  void postProcess(
-    int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal) const;
-  bool readLabelfile(std::string filepath, std::vector<std::string> & labels);
-  void outputDebugImage(
-    cv::Mat & debug_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal);
-
-private:
   rclcpp::Node * node_ptr_;
-  int batch_size_;
-  std::unique_ptr<autoware::tensorrt_classifier::TrtClassifier> classifier_;
   image_transport::Publisher image_pub_;
-  std::vector<std::string> labels_;
-  std::vector<float> mean_;
-  std::vector<float> std_;
+  CNNClassifierCore core_;
 };
 
 }  // namespace autoware::traffic_light

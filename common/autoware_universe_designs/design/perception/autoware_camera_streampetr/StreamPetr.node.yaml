@@ -1,0 +1,73 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: StreamPetr.node
+
+package:
+  name: autoware_camera_streampetr
+  provider: autoware
+
+launch:
+  plugin: autoware::camera_streampetr::StreamPetrNode
+  executable: autoware_camera_streampetr_node
+  node_output: screen
+
+# interfaces
+# per-camera sockets (rois_number cameras; camera0-4 in the sample launcher):
+# each camera has an image (image_transport) and a camera_info input.
+subscribers:
+  - name: camera0_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/camera0/image
+  - name: camera0_camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera0/camera_info
+  - name: camera1_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/camera1/image
+  - name: camera1_camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera1/camera_info
+  - name: camera2_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/camera2/image
+  - name: camera2_camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera2/camera_info
+  - name: camera3_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/camera3/image
+  - name: camera3_camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera3/camera_info
+  - name: camera4_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/camera4/image
+  - name: camera4_camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera4/camera_info
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/objects
+
+# parameters
+param_files:
+  - name: node_param
+    default: config/camera_streampetr.param.yaml
+  - name: model_param
+    default: ml_package_camera_streampetr.param.yaml
+
+param_values:
+  - name: build_only
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: detect
+    trigger_conditions:
+      - on_input: camera0_image
+    outcomes:
+      - to_output: objects

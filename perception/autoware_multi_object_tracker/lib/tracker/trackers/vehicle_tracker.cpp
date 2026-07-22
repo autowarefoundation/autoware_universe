@@ -26,12 +26,16 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
+#include <cmath>
 
 namespace autoware::multi_object_tracker
 {
 
 namespace
 {
+
+// Prediction time over which the axle-covariance blend reaches full decoupling.
+constexpr double kAxleBlendTimeConstant = 1.0;  // [s]
 
 types::DynamicObject normalizeYaw(const types::DynamicObject & object, const double reference_yaw)
 {
@@ -145,12 +149,26 @@ VehicleTracker::VehicleTracker(
 
 bool VehicleTracker::predict(const rclcpp::Time & time)
 {
+  // Capture the interval since the last measurement correction.
+  time_since_correction_ = getElapsedTimeFromLastUpdate(time);
   return motion_model_.predictState(time);
+}
+
+void VehicleTracker::applyAxleCovarianceBlend()
+{
+  const double blend_ratio = std::clamp(time_since_correction_ / kAxleBlendTimeConstant, 0.0, 1.0);
+  if (blend_ratio <= 0.0) return;  // no time elapsed
+
+  motion_model_.blendAxleCovariance(blend_ratio);
 }
 
 bool VehicleTracker::updateKinematics(
   const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
+  // Re-symmetrize the axle covariance so a common-mode lateral bias translates the box to absorb
+  // localization error.
+  applyAxleCovarianceBlend();
+
   // Use measurement length only when the channel and shape are trustworthy.
   const bool is_bbox = (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   const bool can_update_shape = channel_info.trust_extension && is_bbox;
@@ -207,6 +225,9 @@ bool VehicleTracker::updateWheelKinematics(
   const UpdateStrategy & strategy, const types::DynamicObject & measurement,
   const types::DynamicObject & prediction)
 {
+  // Relax the front/rear covariance asymmetry before the wheel-anchor EKF update.
+  applyAxleCovarianceBlend();
+
   // When polygon and tracked widths disagree, the observed edge center is a biased lateral
   // measurement that the wheel-base lever amplifies into yaw. correctWheelAnchor() nudges the
   // anchor and folds the extra lateral variance into pose_cov.

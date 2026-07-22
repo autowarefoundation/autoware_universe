@@ -303,13 +303,10 @@ TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
   // Act
   auto result = cluster.process(pc);
 
-  // Assert - if any clusters form, check probability is reasonable
+  // Assert
   ASSERT_TRUE(result.has_value());
-  if (!result->objects.empty()) {
-    // Probability should be some reasonable value between 0 and 1
-    EXPECT_GE(result->objects[0].existence_probability, 0.0f);
-    EXPECT_LE(result->objects[0].existence_probability, 1.0f);
-  }
+  ASSERT_EQ(result->objects.size(), 1U);
+  EXPECT_NEAR(result->objects[0].existence_probability, 0.6f, 1e-5f);
 }
 
 // ============================================================================

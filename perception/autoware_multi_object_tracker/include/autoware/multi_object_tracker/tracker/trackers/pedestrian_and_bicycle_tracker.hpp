@@ -65,6 +65,14 @@ public:
     return activeInner().getMotionState(time, pose, pose_cov, twist, twist_cov);
   }
   rclcpp::Time getStateTime() const override { return activeInner().getStateTime(); }
+  // Bicycle box coasts on partial updates like a vehicle; pedestrian reports no staleness. The
+  // composite drives inner trackers directly, so the full-measurement clock lives on this (outer)
+  // tracker, refreshed by Tracker::updateWithMeasurement().
+  double getElapsedTimeFromFullMeasurement(const rclcpp::Time & current_time) const override
+  {
+    if (getHighestProbLabel() == classes::Label::PEDESTRIAN) return 0.0;
+    return elapsedSinceLastFullMeasurement(current_time);
+  }
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override
   {
     pedestrian_tracker_.setObjectShape(shape);

@@ -12,7 +12,7 @@
   <arg name="use_seg3d_head" default="true" description="Enable segmentation 3D head"/>
   <arg name="use_det3d_head" default="true" description="Enable detection 3D head"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_ptv3)/config/ptv3.param.yaml" description="Path to the model parameter file"/>
-  <arg name="backbone_ml_package_param_path" default="$(var model_path)/ml_package_$(var model_variant)_backbone.param.yaml" description="Path to the backbone ML package parameter file"/>
+  <arg name="encoder_ml_package_param_path" default="$(var model_path)/ml_package_$(var model_variant)_encoder.param.yaml" description="Path to the encoder ML package parameter file"/>
   <arg
     name="seg3d_head_ml_package_param_path"
     default="$(var model_path)/ml_package_$(var model_variant)_seg3d_head.param.yaml"
@@ -38,7 +38,7 @@
         <remap from="~/output/pointcloud/filtered/cuda" to="$(var output/pointcloud/filtered)/cuda"/>
         <remap from="~/output/objects" to="$(var output/objects)"/>
         <param from="$(var model_param_path)" allow_substs="true"/>
-        <param from="$(var backbone_ml_package_param_path)"/>
+        <param from="$(var encoder_ml_package_param_path)"/>
         <param from="$(var seg3d_head_ml_package_param_path)"/>
         <param from="$(var det3d_head_ml_package_param_path)"/>
 
@@ -59,7 +59,7 @@
       <remap from="~/output/pointcloud/filtered/cuda" to="$(var output/pointcloud/filtered)/cuda/dummy"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>
       <param from="$(var model_param_path)" allow_substs="true"/>
-      <param from="$(var backbone_ml_package_param_path)"/>
+      <param from="$(var encoder_ml_package_param_path)"/>
       <param from="$(var seg3d_head_ml_package_param_path)"/>
       <param from="$(var det3d_head_ml_package_param_path)"/>
 

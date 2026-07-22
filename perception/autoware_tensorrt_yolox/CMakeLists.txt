@@ -191,6 +191,18 @@ if(BUILD_TESTING)
       ${PROJECT_NAME}_node
       ${OpenCV_LIBRARIES}
     )
+
+    # Unit test that drives TrtYoloXDetector::detect() directly (no ROS topics). Same GPU / TensorRT
+    # / ONNX model requirements as the node test, so it is gated here and self-skips at runtime.
+    ament_auto_add_gtest(test_tensorrt_yolox_detector
+      test/test_tensorrt_yolox_detector.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_tensorrt_yolox_detector
+      ${PROJECT_NAME}
+      ${PROJECT_NAME}_node
+      ${OpenCV_LIBRARIES}
+    )
     install(FILES test/test_image.jpg DESTINATION share/${PROJECT_NAME}/test)
   endif()
 endif()
@@ -198,5 +210,4 @@ endif()
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config
-  test/test_label_data
 )

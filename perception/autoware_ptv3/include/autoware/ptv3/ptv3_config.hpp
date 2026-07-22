@@ -45,10 +45,12 @@ public:
     const std::vector<std::string> & segmentation_class_names = {},
     const std::vector<std::string> & serialization_orders = {},
     const std::vector<std::int64_t> & pooling_strides = {},
+    const std::vector<std::int64_t> & enc_channels = {},
     const std::vector<std::int64_t> & palette = {},
     const float filter_class_probability_threshold = {},
     const std::vector<std::string> & filter_classes = {},
     const std::string & filter_output_format = {}, const std::string & source_reconstruction = {},
+    const std::vector<std::int64_t> & dec_depths = {},
     const std::vector<std::string> & detection_class_names = {},
     const std::vector<float> & bbox_voxel_size = {},
     const std::vector<float> & distance_bin_upper_limits = {},
@@ -88,9 +90,12 @@ public:
       voxel_z_size_ = voxel_size[2];
     }
 
-    grid_x_size_ = static_cast<std::int64_t>((max_x_range_ - min_x_range_) / voxel_x_size_);
-    grid_y_size_ = static_cast<std::int64_t>((max_y_range_ - min_y_range_) / voxel_y_size_);
-    grid_z_size_ = static_cast<std::int64_t>((max_z_range_ - min_z_range_) / voxel_z_size_);
+    const auto grid_cells = [](const float min_range, const float max_range, const float size) {
+      return static_cast<std::int64_t>(std::round((max_range - min_range) / size));
+    };
+    grid_x_size_ = grid_cells(min_x_range_, max_x_range_, voxel_x_size_);
+    grid_y_size_ = grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
+    grid_z_size_ = grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
     auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
@@ -105,6 +110,7 @@ public:
 
     serialization_orders_ = validate_serialization_orders(serialization_orders);
     pooling_strides_ = validate_pooling_strides(pooling_strides);
+    enc_channels_ = validate_enc_channels(enc_channels, pooling_strides_.size() + 1);
 
     if (use_seg3d_head_) {
       segmentation_class_names_ = segmentation_class_names;
@@ -118,6 +124,20 @@ public:
       filter_class_indices_ = make_filter_class_indices(segmentation_class_names_, filter_classes);
       filter_output_format_ = filter_output_format;
       source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
+
+      // dec_depths drives the seg-head engine input set: block stages consume their
+      if (dec_depths.size() != pooling_strides_.size()) {
+        throw std::runtime_error(
+          "dec_depths must contain one entry per decoder stage (pooling_strides size = " +
+          std::to_string(pooling_strides_.size()) + "), got " + std::to_string(dec_depths.size()) +
+          ".");
+      }
+      for (std::size_t stage = 0; stage < dec_depths.size(); ++stage) {
+        if (dec_depths[stage] < 0) {
+          throw std::runtime_error("dec_depths entries must be non-negative.");
+        }
+      }
+      dec_depths_ = dec_depths;
     }
 
     if (use_det3d_head_) {
@@ -163,19 +183,25 @@ public:
       bbox_voxel_x_size_ = bbox_voxel_size[0];
       bbox_voxel_y_size_ = bbox_voxel_size[1];
 
-      auto is_integer_multiple = [](const float numerator, const float denominator) {
-        constexpr float eps = 1e-3F;
-        const float remainder = std::fmod(numerator, denominator);
-        return std::abs(remainder) < eps || std::abs(remainder - denominator) < eps;
-      };
-
-      if (!is_integer_multiple(bbox_voxel_x_size_, voxel_x_size_)) {
-        throw std::runtime_error(
-          "x component of bbox_voxel_size must be a positive integer multiple of voxel_size.");
+      // The exporter taps encoder stages S-2 (BEV resolution) and S-1, so the detection grid
+      // resolution must equal the voxel size at stage S-2's cumulative pooling depth.
+      std::int64_t skip_stage_depth = 0;
+      for (std::size_t stage = 0; stage + 1 < pooling_strides_.size(); ++stage) {
+        for (auto value = pooling_strides_[stage]; value > 1; value >>= 1) {
+          ++skip_stage_depth;
+        }
       }
-      if (!is_integer_multiple(bbox_voxel_y_size_, voxel_y_size_)) {
+      const auto skip_stage_scale = static_cast<float>(std::int64_t{1} << skip_stage_depth);
+      constexpr float eps = 1e-3F;
+      if (std::abs(bbox_voxel_x_size_ - voxel_x_size_ * skip_stage_scale) > eps) {
         throw std::runtime_error(
-          "y component of bbox_voxel_size must be a positive integer multiple of voxel_size.");
+          "x component of bbox_voxel_size must equal voxel_size * 2^" +
+          std::to_string(skip_stage_depth) + " (the detection branch taps that encoder stage).");
+      }
+      if (std::abs(bbox_voxel_y_size_ - voxel_y_size_ * skip_stage_scale) > eps) {
+        throw std::runtime_error(
+          "y component of bbox_voxel_size must equal voxel_size * 2^" +
+          std::to_string(skip_stage_depth) + " (the detection branch taps that encoder stage).");
       }
 
       distance_bin_upper_limits_ = distance_bin_upper_limits;
@@ -298,6 +324,41 @@ public:
     return pooling_strides;
   }
 
+  static std::vector<std::int64_t> validate_enc_channels(
+    const std::vector<std::int64_t> & enc_channels, const std::size_t expected_size)
+  {
+    if (enc_channels.size() != expected_size) {
+      throw std::runtime_error(
+        "enc_channels must contain one entry per encoder stage (pooling_strides size + 1 = " +
+        std::to_string(expected_size) + "), got " + std::to_string(enc_channels.size()) + ".");
+    }
+    for (const auto channels : enc_channels) {
+      if (channels < 1) {
+        throw std::runtime_error("Each enc_channels entry must be positive.");
+      }
+    }
+    return enc_channels;
+  }
+
+  // Hard geometric voxel-count bound for one encoder stage: a stage cannot hold more voxels
+  // than the sparse grid has cells at its cumulative pooling depth, and pooling never grows
+  // the voxel count, so min(max_num_voxels_, grid cells) is safe for any input.
+  [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
+  {
+    std::int64_t cumulative_depth = 0;
+    for (std::size_t stage = 0; stage < stage_index; ++stage) {
+      for (auto value = pooling_strides_[stage]; value > 1; value >>= 1) {
+        ++cumulative_depth;
+      }
+    }
+    const auto ceil_shift = [cumulative_depth](const std::int64_t size) {
+      return (size + (std::int64_t{1} << cumulative_depth) - 1) >> cumulative_depth;
+    };
+    const auto grid_cells =
+      ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) * ceil_shift(grid_z_size_);
+    return std::min(max_num_voxels_, grid_cells);
+  }
+
   // CUDA parameters
   const std::uint32_t threads_per_block_{256};  // threads number for a block
 
@@ -314,12 +375,14 @@ public:
 
   ///// NETWORK PARAMETERS /////
 
-  // Backbone
+  // Encoder
   std::vector<std::string> segmentation_class_names_;
   std::vector<std::string> serialization_orders_;
   std::vector<std::int64_t> pooling_strides_;
+  std::vector<std::int64_t> enc_channels_;  // per encoder stage, finest to deepest
 
   // Segmentation head
+  std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage
   std::vector<float> colors_rgb_;
   float filter_class_probability_threshold_{};
   std::vector<std::uint32_t> filter_class_indices_;
@@ -344,7 +407,6 @@ public:
   std::int64_t min_num_voxels_{};
   std::int64_t max_num_voxels_{};
   const std::int64_t num_point_feature_size_{4};  // x, y, z, intensity
-  const std::int64_t backbone_feat_dim_{64};      // backbone output feature dimension
 
   // Pointcloud range in meters
   float min_x_range_{};

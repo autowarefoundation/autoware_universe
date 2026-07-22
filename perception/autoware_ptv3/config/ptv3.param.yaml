@@ -5,26 +5,30 @@
     # network
     trt_precision: fp16
     cloud_capacity: 2000000
-    backbone:
-      onnx_path: "$(var model_path)/$(var model_variant)_backbone.onnx"
-      engine_path: "$(var model_path)/$(var model_variant)_backbone.engine"
+    encoder:
+      onnx_path: "$(var model_path)/$(var model_variant)_encoder.onnx"
+      engine_path: "$(var model_path)/$(var model_variant)_encoder.engine"
+      workspace_size: 8589934592  # 8 GiB
+      voxels_num: [16000, 160000, 256000]
     segmentation3d:
       use_head: $(var use_seg3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_seg3d_head.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_seg3d_head.engine"
+      workspace_size: 8589934592  # 8 GiB
       source_reconstruction: "full"
       filter:
         class_probability_threshold: 0.05
-        classes: ["drivable_flat"]
+        classes: ["drivable_flat", "non_drivable_flat", "noise"]
         output_format: ""
     detection3d:
       use_head: $(var use_det3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_det3d_head.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_det3d_head.engine"
+      workspace_size: 4294967296  # 4 GiB
       post_process_params:
         iou_nms_search_distance_2d: 10.0
         iou_nms_threshold: 0.1
-        yaw_norm_thresholds: [0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.0]
+        yaw_norm_thresholds: [0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.1]
       detection_score_thresholds:
         distance_bin_upper_limits: [50.0, 90.0, 121.0, 200.0]
         min_confidence_scores:
@@ -33,8 +37,8 @@
           BUS: [0.1, 0.1, 0.1, 0.1]
           BICYCLE: [0.1, 0.1, 0.1, 0.1]
           PEDESTRIAN: [0.1, 0.1, 0.1, 0.1]
-          TRAFFIC_CONE: [0.01, 0.01, 0.01, 0.01]
-          BARRIER: [0.01, 0.01, 0.01, 0.01]
+          TRAFFIC_CONE: [0.1, 0.1, 0.1, 0.1]
+          BARRIER: [0.1, 0.1, 0.1, 0.1]
       allow_remapping_by_area_matrix:
         # Row: original class. Column: class to remap to.
         # CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN, TRAFFIC_CONE, BARRIER
