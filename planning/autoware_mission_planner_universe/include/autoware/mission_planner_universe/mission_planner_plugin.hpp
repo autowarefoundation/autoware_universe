@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MISSION_PLANNER_UNIVERSE__MISSION_PLANNER_PLUGIN_HPP_
 #define AUTOWARE__MISSION_PLANNER_UNIVERSE__MISSION_PLANNER_PLUGIN_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -37,8 +38,9 @@ public:
   using MarkerArray = visualization_msgs::msg::MarkerArray;
 
   virtual ~PlannerPlugin() = default;
-  virtual void initialize(rclcpp::Node * node) = 0;
-  virtual void initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg) = 0;
+  virtual void initialize(autoware::agnocast_wrapper::Node * node) = 0;
+  virtual void initialize(
+    autoware::agnocast_wrapper::Node * node, const LaneletMapBin::ConstSharedPtr msg) = 0;
   virtual bool ready() const = 0;
   virtual LaneletRoute plan(const RoutePoints & points) = 0;
   virtual MarkerArray visualize(

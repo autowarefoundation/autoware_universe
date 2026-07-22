@@ -15,12 +15,14 @@
 #ifndef MISSION_PLANNER__ARRIVAL_CHECKER_HPP_
 #define MISSION_PLANNER__ARRIVAL_CHECKER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
 namespace autoware::mission_planner_universe
 {
@@ -30,9 +32,11 @@ class ArrivalChecker
 public:
   using PoseWithUuidStamped = autoware_planning_msgs::msg::PoseWithUuidStamped;
   using PoseStamped = geometry_msgs::msg::PoseStamped;
-  explicit ArrivalChecker(rclcpp::Node * node);
+  using Odometry = nav_msgs::msg::Odometry;
+  explicit ArrivalChecker(autoware::agnocast_wrapper::Node * node);
   void set_goal();
   void set_goal(const PoseWithUuidStamped & goal);
+  void add_odometry(const Odometry & odometry);
   bool is_arrived(const PoseStamped & pose) const;
 
 private:
@@ -42,8 +46,7 @@ private:
   double arrival_check_longitudinal_undershoot_distance_;
   double arrival_check_longitudinal_overshoot_distance_;
   std::optional<PoseWithUuidStamped> goal_with_uuid_;
-  rclcpp::Subscription<PoseWithUuidStamped>::SharedPtr sub_goal_;
-  autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;
+  autoware::motion_utils::VehicleStopCheckerBase vehicle_stop_checker_;
 };
 
 }  // namespace autoware::mission_planner_universe

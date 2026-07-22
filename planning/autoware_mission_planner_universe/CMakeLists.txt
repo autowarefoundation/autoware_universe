@@ -20,9 +20,11 @@ ament_auto_add_library(${PROJECT_NAME}_component SHARED
   src/mission_planner/route_selector.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::mission_planner_universe::MissionPlanner"
   EXECUTABLE mission_planner
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}_component
