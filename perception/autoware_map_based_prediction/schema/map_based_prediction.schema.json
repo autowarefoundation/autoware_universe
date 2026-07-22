@@ -276,6 +276,61 @@
         "processing_time_consecutive_excess_tolerance": {
           "type": "number",
           "default": 1.0
+        },
+        "planning_aware_prediction": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": false,
+              "description": "enable planning-aware prediction fidelity allocation. When disabled, every object receives full-fidelity prediction (previous behavior)"
+            },
+            "ego_trajectory_timeout": {
+              "type": "number",
+              "default": 1.0,
+              "description": "[s] if the ego planned trajectory is older than this, every object is treated as highly relevant (fail-safe)"
+            },
+            "always_relevant_radius": {
+              "type": "number",
+              "default": 20.0,
+              "description": "[m] objects within this distance of the ego vehicle always receive full-fidelity prediction"
+            },
+            "lateral_margin_base": {
+              "type": "number",
+              "default": 3.0,
+              "description": "[m] corridor half width around the ego planned trajectory at the ego position"
+            },
+            "lateral_margin_rate": {
+              "type": "number",
+              "default": 0.1,
+              "description": "[m/m] corridor half width growth per meter of arc length along the planned trajectory"
+            },
+            "time_to_corridor_threshold": {
+              "type": "number",
+              "default": 5.0,
+              "description": "[s] objects approaching the corridor within this time receive full-fidelity prediction"
+            },
+            "demote_frame_count": {
+              "type": "integer",
+              "default": 5,
+              "description": "[frames] consecutive low-relevance classifications required before an object is demoted to lightweight prediction"
+            },
+            "low_fidelity_time_horizon": {
+              "type": "number",
+              "default": 3.0,
+              "description": "[s] prediction time horizon of the lightweight constant-velocity prediction for low-relevance vehicles"
+            }
+          },
+          "required": [
+            "enable",
+            "ego_trajectory_timeout",
+            "always_relevant_radius",
+            "lateral_margin_base",
+            "lateral_margin_rate",
+            "time_to_corridor_threshold",
+            "demote_frame_count",
+            "low_fidelity_time_horizon"
+          ]
         }
       },
       "required": [
@@ -309,7 +364,8 @@
         "publish_processing_time_detail",
         "publish_debug_markers",
         "processing_time_tolerance",
-        "processing_time_consecutive_excess_tolerance"
+        "processing_time_consecutive_excess_tolerance",
+        "planning_aware_prediction"
       ]
     }
   },

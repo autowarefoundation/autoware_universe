@@ -53,6 +53,20 @@
 
     reference_path_resolution: 0.5 #[m]
 
+    # planning-aware prediction fidelity allocation
+    # Concentrates the expensive lanelet-based multi-mode prediction on the vehicles
+    # relevant to the ego planned trajectory. Low-relevance vehicles receive a
+    # lightweight constant-velocity prediction instead. Disabled by default.
+    planning_aware_prediction:
+      enable: false
+      ego_trajectory_timeout: 1.0 #[s]
+      always_relevant_radius: 20.0 #[m]
+      lateral_margin_base: 3.0 #[m]
+      lateral_margin_rate: 0.1 #[m/m]
+      time_to_corridor_threshold: 5.0 #[s]
+      demote_frame_count: 5 #[frames]
+      low_fidelity_time_horizon: 3.0 #[s]
+
     # debug parameters
     publish_processing_time: false
     publish_processing_time_detail: false
