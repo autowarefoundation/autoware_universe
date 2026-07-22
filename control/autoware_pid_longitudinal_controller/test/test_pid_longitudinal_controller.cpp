@@ -183,7 +183,8 @@ TEST(PidLongitudinalController, StaysStoppedWhenCloseToStopPoint)
   // Arrange
   // A zero-velocity trajectory places the stop point at the ego, so the distance to the stop
   // point stays below drive_state_stop_dist and no departure is triggered.
-  PidLongitudinalController controller(make_default_config());
+  const auto config = make_default_config();
+  PidLongitudinalController controller(config);
   const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
 
   // Act
@@ -191,6 +192,11 @@ TEST(PidLongitudinalController, StaysStoppedWhenCloseToStopPoint)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
+  EXPECT_FLOAT_EQ(
+    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  // The stopped-state acceleration is negative by config; slope compensation may further adjust
+  // it, but STOPPED must never command a positive (accelerating) output.
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, StoppedStateOutputsStoppedStateCommand)
@@ -229,6 +235,10 @@ TEST(PidLongitudinalController, DepartsToDriveWhenFarFromStopAndKeepStoppedDisab
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
+  // The target velocity (5.0) passes through unchanged, and the ego is far below it, so the PID
+  // feedback must command a positive (accelerating) acceleration.
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 5.0f);
+  EXPECT_GT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, KeepsStoppedUntilSteerConvergesWhenGuardEnabled)
@@ -236,7 +246,8 @@ TEST(PidLongitudinalController, KeepsStoppedUntilSteerConvergesWhenGuardEnabled)
   // Arrange
   // Far from the stop point but with the keep-stopped guard enabled and steering not converged,
   // the ego must remain STOPPED even though the departure distance condition is met.
-  PidLongitudinalController controller(make_default_config());
+  const auto config = make_default_config();
+  PidLongitudinalController controller(config);
   const auto input_data = make_input_data(make_straight_trajectory(20, 1.0, 5.0));
 
   // Act
@@ -244,6 +255,9 @@ TEST(PidLongitudinalController, KeepsStoppedUntilSteerConvergesWhenGuardEnabled)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
+  EXPECT_FLOAT_EQ(
+    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, SetConfigAppliesNewStoppedStateCommand)
@@ -290,6 +304,10 @@ TEST(PidLongitudinalController, TransitionsToStoppingNearStopPoint)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPING);
+  // STOPPING always targets the stopped-state velocity, and the smooth-stop controller must not
+  // command acceleration while approaching a stop.
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 0.0f);
+  EXPECT_LE(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, TransitionsToEmergencyWhenOvershootingStopPoint)
@@ -310,6 +328,11 @@ TEST(PidLongitudinalController, TransitionsToEmergencyWhenOvershootingStopPoint)
   // Assert
   EXPECT_EQ(result.control_state, ControlState::EMERGENCY);
   EXPECT_TRUE(result.emergency_stop_reason.has_value());
+  // EMERGENCY targets a full stop with a rate-limited velocity command, so the commanded velocity
+  // must be reduced from the pre-emergency target (5.0), and the commanded acceleration must be a
+  // hard braking command, never a positive (accelerating) one.
+  EXPECT_LT(result.output.control_cmd.velocity, 5.0f);
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, KeepsBrakeBeforeStopWhenEnabled)
@@ -334,6 +357,10 @@ TEST(PidLongitudinalController, KeepsBrakeBeforeStopWhenEnabled)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
+  // Brake keeping caps the acceleration at brake_keeping_acc (non-positive) on approach to the
+  // stop point, so the ego must not be commanded to accelerate here.
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 3.0f);
+  EXPECT_LE(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, PredictsStateFromCommandHistoryWhenAutonomous)
@@ -355,6 +382,9 @@ TEST(PidLongitudinalController, PredictsStateFromCommandHistoryWhenAutonomous)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
+  // The target velocity (5.0) passes through unchanged regardless of the history-based
+  // delay-compensated prediction used internally for the PID feedback term.
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 5.0f);
 }
 
 TEST(PidLongitudinalController, RawPitchSlopeSourceProducesStoppedState)
@@ -370,24 +400,9 @@ TEST(PidLongitudinalController, RawPitchSlopeSourceProducesStoppedState)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-}
-
-TEST(PidLongitudinalController, TemporalTrajectoryProducesValidCommand)
-{
-  // Arrange
-  // A time-parameterized trajectory drives the temporal (time-based) nearest/target point
-  // selection instead of the spatial geometric projection.
-  auto config = make_default_config();
-  config.use_temporal_trajectory = true;
-  PidLongitudinalController controller(config);
-  const auto temporal_trajectory = make_temporal_trajectory(20, 1.0, 3.0, 0.1, 1.0);
-
-  // Act
-  const auto result = controller.run(
-    make_input_data(temporal_trajectory, 3.0), rclcpp::Time(1, 500000000, RCL_ROS_TIME), true);
-
-  // Assert
-  EXPECT_FALSE(result.received_invalid_trajectory);
+  EXPECT_FLOAT_EQ(
+    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, DepartsFromStoppingWhenStopPointRecedes)
@@ -408,6 +423,10 @@ TEST(PidLongitudinalController, DepartsFromStoppingWhenStopPointRecedes)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
+  // The target velocity (5.0) passes through unchanged, and departing STOPPING clamps the
+  // previous raw acceleration to be non-negative so the ego does not stall on departure.
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 5.0f);
+  EXPECT_GE(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, RecoversFromEmergencyToDriveWhenControlReleased)
@@ -428,6 +447,8 @@ TEST(PidLongitudinalController, RecoversFromEmergencyToDriveWhenControlReleased)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
+  // The target velocity (5.0) passes through unchanged once DRIVE resumes.
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 5.0f);
 }
 
 TEST(PidLongitudinalController, DrivesInReverseForNegativeVelocityTrajectory)
@@ -458,7 +479,8 @@ TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousContro
   // Under autonomous control, far from the stop point but with steering not converged, the ego
   // keeps STOPPED and raises a virtual wall marker. Two cycles cover the branch that also
   // considers the previous keep-stopped condition.
-  PidLongitudinalController controller(make_default_config());
+  const auto config = make_default_config();
+  PidLongitudinalController controller(config);
   const auto trajectory = make_straight_trajectory(20, 1.0, 5.0);
   controller.run(
     make_input_data(trajectory, 0.0, 0.0, true), rclcpp::Time(1, 0, RCL_ROS_TIME), false);
@@ -470,6 +492,10 @@ TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousContro
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
   EXPECT_TRUE(result.virtual_wall_marker.has_value());
+  EXPECT_FLOAT_EQ(
+    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_FLOAT_EQ(
+    result.output.control_cmd.acceleration, static_cast<float>(config.stopped_state_params.acc));
 }
 
 TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
@@ -489,6 +515,9 @@ TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
+  EXPECT_FLOAT_EQ(
+    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, StaysStoppingWhileStopPointHolds)
@@ -509,6 +538,8 @@ TEST(PidLongitudinalController, StaysStoppingWhileStopPointHolds)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPING);
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 0.0f);
+  EXPECT_LE(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, StoppingTransitionsToEmergencyOnOvershoot)
@@ -528,6 +559,8 @@ TEST(PidLongitudinalController, StoppingTransitionsToEmergencyOnOvershoot)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::EMERGENCY);
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, 0.0f);
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, EmergencyTransitionsToStoppedAfterStandstill)
@@ -551,6 +584,9 @@ TEST(PidLongitudinalController, EmergencyTransitionsToStoppedAfterStandstill)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
+  EXPECT_FLOAT_EQ(
+    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
 TEST(PidLongitudinalController, StaysInEmergencyWhileOvershootPersistsUnderControl)
@@ -575,4 +611,26 @@ TEST(PidLongitudinalController, StaysInEmergencyWhileOvershootPersistsUnderContr
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::EMERGENCY);
+  // EMERGENCY's rate-limited velocity command must have decreased from the pre-emergency target
+  // (5.0), and the acceleration must remain a braking (negative) command.
+  EXPECT_LT(result.output.control_cmd.velocity, 5.0f);
+  EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
+}
+
+TEST(PidLongitudinalController, TemporalTrajectoryProducesValidCommand)
+{
+  // Arrange
+  // A time-parameterized trajectory drives the temporal (time-based) nearest/target point
+  // selection instead of the spatial geometric projection.
+  auto config = make_default_config();
+  config.use_temporal_trajectory = true;
+  PidLongitudinalController controller(config);
+  const auto temporal_trajectory = make_temporal_trajectory(20, 1.0, 3.0, 0.1, 1.0);
+
+  // Act
+  const auto result = controller.run(
+    make_input_data(temporal_trajectory, 3.0), rclcpp::Time(1, 500000000, RCL_ROS_TIME), true);
+
+  // Assert
+  EXPECT_FALSE(result.received_invalid_trajectory);
 }
