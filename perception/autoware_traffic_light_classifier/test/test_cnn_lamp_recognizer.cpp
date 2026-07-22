@@ -18,7 +18,7 @@
 // Tests for CnnLampRecognizerCore, the Node-free lamp recognition core. Two groups, both
 // ROS-free; all Arrange-Act-Assert.
 //
-//  - Static helpers updateTrafficSignals()/outputDebugImage() need only the message types +
+//  - Static helpers update_traffic_signals()/make_debug_image() need only the message types +
 //    OpenCV, so they run (no GPU/model). They pin the non-obvious mapping behavior
 //    (empty->placeholder, pedestrian->CIRCLE, confidence zeroing vs keeping, per-lamp order,
 //    clear-before-map) and the debug geometry. Plain enum->enum maps (color/arrow/cross) are
@@ -62,7 +62,7 @@ using tier4_perception_msgs::msg::TrafficLightElement;
 // that exercise the confidence path pass an explicit value instead.
 constexpr float default_confidence = 1.0f;
 
-// Build one lamp detection. Group A hand-constructs these; updateTrafficSignals maps them
+// Build one lamp detection. Group A hand-constructs these; update_traffic_signals maps them
 // independently of the model (box stays zero-default, which the mapping ignores).
 tl::LampElement make_lamp(
   tl::Color color, tl::Shape shape, tl::ArrowDirection arrow_direction,
@@ -89,7 +89,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, EmptyInputYieldsSingleUnknownPlaceh
   const std::vector<tl::LampElement> no_lamps;
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(no_lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(no_lamps, signal);
 
   // Assert
   ASSERT_EQ(signal.elements.size(), 1u);
@@ -98,7 +98,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, EmptyInputYieldsSingleUnknownPlaceh
   EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.0f);
 }
 
-// updateTrafficSignals emits one output element per input lamp, in input order (it does not
+// update_traffic_signals emits one output element per input lamp, in input order (it does not
 // merge duplicates -- that is classify()'s job). Two distinct lamps must both survive and keep
 // their order, so a caller can trust element[i] came from lamp[i].
 TEST(CnnLampRecognizerCoreUpdateSignalsTest, MultipleLampsYieldElementPerLampInOrder)
@@ -111,7 +111,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, MultipleLampsYieldElementPerLampInO
     make_lamp(tl::Color::RED, tl::Shape::CROSS, tl::ArrowDirection::UNKNOWN)};
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
 
   // Assert
   ASSERT_EQ(signal.elements.size(), 2u);
@@ -121,7 +121,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, MultipleLampsYieldElementPerLampInO
   EXPECT_EQ(signal.elements[1].shape, TrafficLightElement::CROSS);
 }
 
-// updateTrafficSignals clears the signal's existing elements before mapping, so repeated calls
+// update_traffic_signals clears the signal's existing elements before mapping, so repeated calls
 // replace rather than accumulate. A stale element left in place would be a downstream bug.
 TEST(CnnLampRecognizerCoreUpdateSignalsTest, ClearsPreexistingElements)
 {
@@ -135,7 +135,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, ClearsPreexistingElements)
     make_lamp(tl::Color::GREEN, tl::Shape::CIRCLE, tl::ArrowDirection::UNKNOWN)};
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
 
   // Assert -- only the freshly mapped element remains; the stale AMBER one is gone.
   ASSERT_EQ(signal.elements.size(), 1u);
@@ -155,7 +155,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, PedestrianTypeForcesCircle)
     make_lamp(tl::Color::GREEN, tl::Shape::ARROW, tl::ArrowDirection::UP_ARROW, 0.8f)};
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
 
   // Assert
   ASSERT_EQ(signal.elements.size(), 1u);
@@ -174,7 +174,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, PedShapeForcesCircle)
     make_lamp(tl::Color::RED, tl::Shape::PED, tl::ArrowDirection::UNKNOWN)};
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
 
   // Assert
   ASSERT_EQ(signal.elements.size(), 1u);
@@ -193,7 +193,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnknownColorPreservesConfidence)
     make_lamp(tl::Color::UNKNOWN, tl::Shape::CIRCLE, tl::ArrowDirection::UNKNOWN, 0.7f)};
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
 
   // Assert
   ASSERT_EQ(signal.elements.size(), 1u);
@@ -212,7 +212,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnknownArrowDirectionZeroesConfiden
     make_lamp(tl::Color::GREEN, tl::Shape::ARROW, tl::ArrowDirection::UNKNOWN, 0.9f)};
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
 
   // Assert
   ASSERT_EQ(signal.elements.size(), 1u);
@@ -220,7 +220,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnknownArrowDirectionZeroesConfiden
   EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.0f);
 }
 
-// A shape with no message mapping yet (e.g. U_TURN, see the TODO in updateTrafficSignals) hits
+// A shape with no message mapping yet (e.g. U_TURN, see the TODO in update_traffic_signals) hits
 // the outer default: UNKNOWN with the confidence zeroed, even though the detection carried a
 // positive one.
 TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnsupportedShapeZeroesConfidence)
@@ -231,7 +231,7 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnsupportedShapeZeroesConfidence)
     make_lamp(tl::Color::GREEN, tl::Shape::U_TURN, tl::ArrowDirection::UNKNOWN, 0.9f)};
 
   // Act
-  tl::CnnLampRecognizerCore::updateTrafficSignals(lamps, signal);
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
 
   // Assert
   ASSERT_EQ(signal.elements.size(), 1u);
@@ -242,8 +242,8 @@ TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnsupportedShapeZeroesConfidence)
 // Fill color is immaterial -- the debug tests assert geometry only.
 const cv::Scalar roi_fill_color{0, 255, 0};
 
-// outputDebugImage rescales the ROI to a fixed width and stacks a fixed-height label strip below
-// it (kDebugImageWidth / kDebugTextHeight in the production code).
+// make_debug_image rescales the ROI to a fixed width and stacks a fixed-height label strip below
+// it (debug_image_width / debug_text_height in the production code).
 constexpr int debug_image_width = 200;
 constexpr int debug_text_height = 50;
 
@@ -254,7 +254,7 @@ TEST(CnnLampRecognizerCoreDebugImageTest, MosaicGeometry)
   // drive the label strip.
   const int roi_width = 100;
   const int roi_height = 50;
-  cv::Mat debug_image(roi_height, roi_width, CV_8UC3, roi_fill_color);
+  const cv::Mat roi_image(roi_height, roi_width, CV_8UC3, roi_fill_color);
 
   tl::LampElement lamp =
     make_lamp(tl::Color::GREEN, tl::Shape::CIRCLE, tl::ArrowDirection::UNKNOWN);
@@ -269,7 +269,8 @@ TEST(CnnLampRecognizerCoreDebugImageTest, MosaicGeometry)
   signal.elements.push_back(element);
 
   // Act
-  tl::CnnLampRecognizerCore::outputDebugImage(debug_image, signal, &lamps);
+  const cv::Mat debug_image =
+    tl::CnnLampRecognizerCore::make_debug_image(roi_image, signal, &lamps);
 
   // Assert -- fixed width; height = aspect-preserving scaled ROI + the label strip.
   const int scaled_roi_height = debug_image_width * roi_height / roi_width;  // 200*50/100 = 100
@@ -278,18 +279,19 @@ TEST(CnnLampRecognizerCoreDebugImageTest, MosaicGeometry)
   EXPECT_EQ(debug_image.type(), CV_8UC3);
 }
 
-// outputDebugImage still produces the mosaic when no per-lamp detections are supplied
+// make_debug_image still produces the mosaic when no per-lamp detections are supplied
 // (elements == nullptr) -- the box-drawing branch is guarded and must not dereference it.
 TEST(CnnLampRecognizerCoreDebugImageTest, HandlesNullElements)
 {
   // Arrange
   const int roi_width = 100;
   const int roi_height = 50;
-  cv::Mat debug_image(roi_height, roi_width, CV_8UC3, roi_fill_color);
+  const cv::Mat roi_image(roi_height, roi_width, CV_8UC3, roi_fill_color);
   TrafficLight signal;  // no elements -> empty label
 
   // Act
-  tl::CnnLampRecognizerCore::outputDebugImage(debug_image, signal, nullptr);
+  const cv::Mat debug_image =
+    tl::CnnLampRecognizerCore::make_debug_image(roi_image, signal, nullptr);
 
   // Assert
   const int scaled_roi_height = debug_image_width * roi_height / roi_width;
@@ -403,7 +405,7 @@ protected:
 };
 
 // Count/color/shape are NOT pinned (brittle across model updates; the mapping is covered
-// model-free by the updateTrafficSignals tests). Require >=1 detection so the per-lamp checks
+// model-free by the update_traffic_signals tests). Require >=1 detection so the per-lamp checks
 // can't vacuously pass on an empty result.
 TEST_F(CnnLampRecognizerCoreClassifyTest, RealCropYieldsWellFormedDetections)
 {
@@ -434,7 +436,7 @@ TEST_F(CnnLampRecognizerCoreClassifyTest, RealCropYieldsWellFormedDetections)
 // classify() returns one result vector per input image. A detected crop and a black image
 // (which yields nothing) make the slots asymmetric, so a scatter swap would empty slot 0 and
 // fill slot 1 -- identical crops could not catch that. Black keeps the empty slot model-stable:
-// no model detects a lamp in pure black. Contents are left to the updateTrafficSignals tests.
+// no model detects a lamp in pure black. Contents are left to the update_traffic_signals tests.
 TEST_F(CnnLampRecognizerCoreClassifyTest, BatchClassificationScattersPerImageResults)
 {
   if (!core_) {
