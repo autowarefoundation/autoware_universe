@@ -512,8 +512,6 @@ bool is_clockwise(const alt::PointList2d & vertices)
 
 bool is_convex(const alt::Polygon2d & poly)
 {
-  constexpr double epsilon = 1e-6;
-
   if (!poly.inners().empty()) {
     return false;
   }
@@ -521,11 +519,11 @@ bool is_convex(const alt::Polygon2d & poly)
   const auto & outer = poly.outer();
 
   for (auto it = std::next(outer.cbegin()); it != std::prev(outer.cend()); ++it) {
-    const auto & p1 = *--it;
+    const auto & p1 = *std::prev(it);
     const auto & p2 = *it;
-    const auto & p3 = *++it;
+    const auto & p3 = *std::next(it);
 
-    if ((p2 - p1).cross(p3 - p2) > epsilon) {
+    if ((p2 - p1).cross(p3 - p2) > 0) {
       return false;
     }
   }
