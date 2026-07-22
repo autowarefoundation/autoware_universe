@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore dedup
+
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
 #include "autoware/diffusion_planner/constants.hpp"
@@ -19,8 +21,11 @@
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -193,9 +198,8 @@ void AgentData::update_histories(
     if (it != histories_map_.end()) {
       it->second.update(object, objects_timestamp);
     } else {
-      // New UUID: start a growing buffer with a single real observation. No repeat-fill; the
-      // resampling step extrapolates backward from this observation to fill the pre-appearance
-      // grid.
+      // New UUID: a growing buffer seeded with a single real observation; the resampling step
+      // extrapolates backward from it to fill the pre-appearance grid.
       auto [inserted, _] =
         histories_map_.emplace(object_id, AgentHistory(NEIGHBOR_HISTORY_BUFFER_SIZE));
       inserted->second.update(object, objects_timestamp);

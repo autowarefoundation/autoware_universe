@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore CTRV tmpl
+
 #include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 
 #include "autoware/diffusion_planner/constants.hpp"
@@ -37,8 +39,7 @@ namespace
 constexpr double CTRV_DT_SUB_STEP_MAX_S = 0.11;
 
 // A bracketing observation pair whose headings differ by more than this [rad] (135 deg) is
-// treated as a tracker heading flip: the grid slot snaps to the nearer observation instead of
-// sweeping a fabricated intermediate heading.
+// treated as a tracker heading flip: the grid slot snaps to the nearer observation.
 constexpr double FLIP_YAW_THRESHOLD_RAD = 2.35619449;
 
 // Heading of a pose matrix in its own frame.
@@ -122,10 +123,10 @@ std::optional<AgentHistory> resample_history(
   const auto & raw = history.states();
   const size_t n = raw.size();
 
-  // Snapshot per-observation kinematics. Tracker heading flips need no correction here: a flip
-  // re-expresses the state as (yaw + pi, -speed), which the CTRV propagation maps to identical
-  // positions, and raw flipped headings match the training-data signature. Only interpolation
-  // between a flipped pair is guarded (see the snap below).
+  // Per-observation kinematics, snapshotted raw: a tracker heading flip re-expresses the state as
+  // (yaw + pi, -speed), which the CTRV propagation maps to identical positions, and flipped
+  // headings match the training-data signature. Interpolation across a flipped pair snaps to the
+  // nearer observation (see below).
   std::vector<double> obs_x(n);
   std::vector<double> obs_y(n);
   std::vector<double> obs_yaw(n);

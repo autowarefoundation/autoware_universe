@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore CTRV dedup
+
 #ifndef AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HISTORY_RESAMPLER_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HISTORY_RESAMPLER_HPP_
 

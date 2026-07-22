@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore dedup
+
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
@@ -246,7 +248,7 @@ TEST(AgentLifecycleTest, BackwardJumpResetsBuffers)
   AgentData agent_data;
 
   agent_data.update_histories(make_msg({make_object(uuid, 0.0, 0.0)}, 100.0), params);
-  // Time jumps back by 90 s: not a dedup drop, a reset.
+  // A 90 s stamp regression exceeds the retention horizon and triggers a reset.
   agent_data.update_histories(make_msg({make_object(uuid, 7.0, 0.0)}, 10.0), params);
 
   const rclcpp::Time frame_time = to_time(10.0);
@@ -259,7 +261,7 @@ TEST(AgentLifecycleTest, BackwardJumpResetsBuffers)
 
 // A freshly seen agent has no real past. Within the backward extrapolation horizon the
 // pre-appearance slots are extrapolated by motion (consistent with its velocity); beyond the
-// horizon they are frozen at the oldest observation rather than receding indefinitely.
+// horizon they are frozen at the oldest observation.
 TEST(AgentLifecycleTest, PastSlotsExtrapolatedThenFrozenBeyondHorizonForNewAgent)
 {
   const auto params = make_params();  // max_extrapolation_time = 0.5 s

@@ -12,36 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore dedup
+
 #ifndef AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_
 
 #include "Eigen/Dense"
 
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <rclcpp/time.hpp>
 
-#include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
-#include <algorithm>
 #include <array>
-#include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <deque>
-#include <iostream>
-#include <limits>
-#include <memory>
 #include <optional>
-#include <sstream>
+#include <stdexcept>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 namespace autoware::diffusion_planner
 {
