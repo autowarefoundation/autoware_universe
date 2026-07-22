@@ -279,7 +279,7 @@ void AEB::onTimer()
   updater_.force_update();
 }
 
-void AEB::onImu(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Imu) & input_msg)
+void AEB::onImu(const std::shared_ptr<const Imu> & input_msg)
 {
   // transform imu
   const auto logger = get_logger();
@@ -291,7 +291,7 @@ void AEB::onImu(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Imu) & input_msg)
   tf2::doTransform(input_msg->angular_velocity, *angular_velocity_ptr_, transform_stamped.value());
 }
 
-void AEB::onPointCloud(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) & input_msg)
+void AEB::onPointCloud(const std::shared_ptr<const PointCloud2> & input_msg)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 

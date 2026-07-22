@@ -20,6 +20,7 @@
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -333,19 +334,26 @@ public:
   explicit AEB(const rclcpp::NodeOptions & node_options);
 
   // subscriber
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PointCloud2)
-  sub_point_cloud_ = create_polling_subscriber<PointCloud2>(
-    "~/input/pointcloud", autoware_utils::single_depth_sensor_qos());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(VelocityReport)
-  sub_velocity_ = create_polling_subscriber<VelocityReport>("~/input/velocity");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Imu)
-  sub_imu_ = create_polling_subscriber<Imu>("~/input/imu");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  sub_predicted_traj_ = create_polling_subscriber<Trajectory>("~/input/predicted_trajectory");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects)
-  predicted_objects_sub_ = create_polling_subscriber<PredictedObjects>("~/input/objects");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AutowareState)
-  sub_autoware_state_ = create_polling_subscriber<AutowareState>("/autoware/state");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PointCloud2>::SharedPtr sub_point_cloud_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<PointCloud2>(
+      this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<VelocityReport>::SharedPtr sub_velocity_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<VelocityReport>(
+      this, "~/input/velocity");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Imu>::SharedPtr sub_imu_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Imu>(this, "~/input/imu");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr
+    sub_predicted_traj_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+        this, "~/input/predicted_trajectory");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PredictedObjects>::SharedPtr
+    predicted_objects_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<PredictedObjects>(
+        this, "~/input/objects");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<AutowareState>::SharedPtr
+    sub_autoware_state_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<AutowareState>(
+        this, "/autoware/state");
   // publisher
   AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::PointCloud2) pub_obstacle_pointcloud_;
   AUTOWARE_PUBLISHER_PTR(MarkerArray) debug_marker_publisher_;
@@ -362,13 +370,13 @@ public:
    * @brief Callback for point cloud messages
    * @param input_msg Shared pointer to the point cloud message
    */
-  void onPointCloud(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) & input_msg);
+  void onPointCloud(const std::shared_ptr<const PointCloud2> & input_msg);
 
   /**
    * @brief Callback for IMU messages
    * @param input_msg Shared pointer to the IMU message
    */
-  void onImu(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Imu) & input_msg);
+  void onImu(const std::shared_ptr<const Imu> & input_msg);
 
   /**
    * @brief Timer callback function
@@ -538,11 +546,11 @@ public:
 
   // Member variables
   PointCloud2::SharedPtr obstacle_ros_pointcloud_ptr_{nullptr};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(VelocityReport) current_velocity_ptr_ {};
+  std::shared_ptr<const VelocityReport> current_velocity_ptr_{};
   Vector3::SharedPtr angular_velocity_ptr_{nullptr};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) predicted_traj_ptr_ {};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(PredictedObjects) predicted_objects_ptr_ {};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(AutowareState) autoware_state_ {};
+  std::shared_ptr<const Trajectory> predicted_traj_ptr_{};
+  std::shared_ptr<const PredictedObjects> predicted_objects_ptr_{};
+  std::shared_ptr<const AutowareState> autoware_state_{};
 
   autoware::agnocast_wrapper::Buffer tf_buffer_{get_clock()};
   autoware::agnocast_wrapper::TransformListener tf_listener_{tf_buffer_, *this};
