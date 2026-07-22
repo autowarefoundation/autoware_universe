@@ -85,6 +85,45 @@ message StreamSummary {
   uint64 poses_received = 2;
 }
 
+// ── LiDAR data streaming ─────────────────────────────────────────────
+
+message LidarSensorConfig {
+  string name = 1;
+  // Built-in elevation table selector: "OT128" | "XT32" | "" (empty). When
+  // ``elevation_deg`` below is set it takes precedence over this.
+  string sensor_type = 2;
+  uint32 n_rows = 3;              // uniform-elevation beam count (fallback)
+  uint32 n_columns = 4;           // azimuth samples per revolution
+  double fps = 5;                 // spin rate (Hz); also the render cadence
+  double min_range_m = 6;
+  double max_range_m = 7;
+  // Sensor mount pose in the base_link frame (sensor-in-base). The rotation
+  // is a wxyz quaternion. No inversion is applied — this is the genuine
+  // sensor→base extrinsic.
+  Pose extrinsic = 8;
+  // Explicit per-beam elevation table in degrees, any order. When non-empty
+  // it overrides ``sensor_type`` and the uniform ``n_rows`` fallback.
+  repeated double elevation_deg = 9;
+  // DDS publishing.
+  string pointcloud_topic = 10;
+  string frame_id = 11;
+  // Return gating. 0 selects the server defaults (drop=0.5, alpha=0.1).
+  double drop_threshold = 12;
+  double alpha_threshold = 13;
+}
+
+message InitializeLidarRequest {
+  // The scene must already be loaded via Initialize.
+  LidarSensorConfig sensor = 1;
+}
+
+message LidarData {
+  Timestamp stamp = 1;
+  // base_link → world pose (position + wxyz quaternion). The server applies
+  // the sensor→base extrinsic from InitializeLidar internally.
+  Pose pose = 2;
+}
+
 // ── Service definition ───────────────────────────────────────────────
 
 service RenderingService {
@@ -94,4 +133,12 @@ service RenderingService {
   // Client streams timestamped camera poses. Server renders at frame_rate
   // cadence and publishes via DDS. Returns summary when stream closes.
   rpc StreamCameraData(stream CameraData) returns (StreamSummary);
+
+  // Add a LiDAR sensor to the already-loaded scene. Call Initialize first.
+  rpc InitializeLidar(InitializeLidarRequest) returns (InitializeResponse);
+
+  // Client streams timestamped base_link poses. Server renders the LiDAR
+  // panorama at the sensor's spin rate and publishes sensor_msgs/PointCloud2
+  // via DDS. Returns summary when the stream closes.
+  rpc StreamLidarData(stream LidarData) returns (StreamSummary);
 }

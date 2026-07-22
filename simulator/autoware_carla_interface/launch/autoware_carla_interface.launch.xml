@@ -84,6 +84,16 @@
     <arg name="splatsim_device" default="cuda:0"/>
     <arg name="splatsim_restart_container" default="false" description="Force restart splatsim container even if already running"/>
     <arg name="splatsim_compress_format" default="jpeg" description="Image compression format: 'jpeg', 'png', or '' for raw"/>
+    <arg name="splatsim_render_lidar" default="false" description="Render LiDAR via splatsim (publishes PointCloud2 to the sensing topic)"/>
+    <arg name="splatsim_lidar_grpc_port" default="50061" description="Base gRPC port for splatsim LiDAR containers"/>
+    <arg name="splatsim_lidar_sensor_type" default="OT128" description="LiDAR elevation table: 'OT128', 'XT32', or '' for uniform n_rows"/>
+    <arg name="splatsim_lidar_fps" default="10.0" description="LiDAR spin rate / render cadence (Hz)"/>
+    <arg name="splatsim_lidar_n_rows" default="0" description="Uniform beam count (0 = sensor_type default)"/>
+    <arg name="splatsim_lidar_n_columns" default="0" description="Azimuth samples per revolution (0 = server default)"/>
+    <arg name="splatsim_lidar_min_range_m" default="0.0" description="Min range (0 = server default)"/>
+    <arg name="splatsim_lidar_max_range_m" default="0.0" description="Max range (0 = CARLA sensor mapping range)"/>
+    <arg name="splatsim_lidar_drop_threshold" default="0.0" description="Return drop threshold (0 = server default)"/>
+    <arg name="splatsim_lidar_alpha_threshold" default="0.0" description="Return alpha threshold (0 = server default)"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -129,6 +139,16 @@
       <param name="splatsim_device" value="$(var splatsim_device)"/>
       <param name="splatsim_restart_container" value="$(var splatsim_restart_container)"/>
       <param name="splatsim_compress_format" value="$(var splatsim_compress_format)"/>
+      <param name="splatsim_render_lidar" value="$(var splatsim_render_lidar)"/>
+      <param name="splatsim_lidar_grpc_port" value="$(var splatsim_lidar_grpc_port)"/>
+      <param name="splatsim_lidar_sensor_type" value="$(var splatsim_lidar_sensor_type)"/>
+      <param name="splatsim_lidar_fps" value="$(var splatsim_lidar_fps)"/>
+      <param name="splatsim_lidar_n_rows" value="$(var splatsim_lidar_n_rows)"/>
+      <param name="splatsim_lidar_n_columns" value="$(var splatsim_lidar_n_columns)"/>
+      <param name="splatsim_lidar_min_range_m" value="$(var splatsim_lidar_min_range_m)"/>
+      <param name="splatsim_lidar_max_range_m" value="$(var splatsim_lidar_max_range_m)"/>
+      <param name="splatsim_lidar_drop_threshold" value="$(var splatsim_lidar_drop_threshold)"/>
+      <param name="splatsim_lidar_alpha_threshold" value="$(var splatsim_lidar_alpha_threshold)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>

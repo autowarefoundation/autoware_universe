@@ -46,6 +46,16 @@ class RenderingServiceStub(object):
                 request_serializer=rendering__service__pb2.CameraData.SerializeToString,
                 response_deserializer=rendering__service__pb2.StreamSummary.FromString,
                 _registered_method=True)
+        self.InitializeLidar = channel.unary_unary(
+                '/splatsim.v1.RenderingService/InitializeLidar',
+                request_serializer=rendering__service__pb2.InitializeLidarRequest.SerializeToString,
+                response_deserializer=rendering__service__pb2.InitializeResponse.FromString,
+                _registered_method=True)
+        self.StreamLidarData = channel.stream_unary(
+                '/splatsim.v1.RenderingService/StreamLidarData',
+                request_serializer=rendering__service__pb2.LidarData.SerializeToString,
+                response_deserializer=rendering__service__pb2.StreamSummary.FromString,
+                _registered_method=True)
 
 
 class RenderingServiceServicer(object):
@@ -68,6 +78,22 @@ class RenderingServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def InitializeLidar(self, request, context):
+        """Add a LiDAR sensor to the already-loaded scene. Call Initialize first.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StreamLidarData(self, request_iterator, context):
+        """Client streams timestamped base_link poses. Server renders the LiDAR
+        panorama at the sensor's spin rate and publishes sensor_msgs/PointCloud2
+        via DDS. Returns summary when the stream closes.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_RenderingServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -79,6 +105,16 @@ def add_RenderingServiceServicer_to_server(servicer, server):
             'StreamCameraData': grpc.stream_unary_rpc_method_handler(
                     servicer.StreamCameraData,
                     request_deserializer=rendering__service__pb2.CameraData.FromString,
+                    response_serializer=rendering__service__pb2.StreamSummary.SerializeToString,
+            ),
+            'InitializeLidar': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitializeLidar,
+                    request_deserializer=rendering__service__pb2.InitializeLidarRequest.FromString,
+                    response_serializer=rendering__service__pb2.InitializeResponse.SerializeToString,
+            ),
+            'StreamLidarData': grpc.stream_unary_rpc_method_handler(
+                    servicer.StreamLidarData,
+                    request_deserializer=rendering__service__pb2.LidarData.FromString,
                     response_serializer=rendering__service__pb2.StreamSummary.SerializeToString,
             ),
     }
@@ -137,6 +173,60 @@ class RenderingService(object):
             target,
             '/splatsim.v1.RenderingService/StreamCameraData',
             rendering__service__pb2.CameraData.SerializeToString,
+            rendering__service__pb2.StreamSummary.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def InitializeLidar(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/splatsim.v1.RenderingService/InitializeLidar',
+            rendering__service__pb2.InitializeLidarRequest.SerializeToString,
+            rendering__service__pb2.InitializeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StreamLidarData(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/splatsim.v1.RenderingService/StreamLidarData',
+            rendering__service__pb2.LidarData.SerializeToString,
             rendering__service__pb2.StreamSummary.FromString,
             options,
             channel_credentials,
