@@ -151,6 +151,14 @@ class carla_ros2_interface(object):
             "splatsim_device": (rclpy.Parameter.Type.STRING, "cuda:0"),
             "splatsim_restart_container": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_compress_format": (rclpy.Parameter.Type.STRING, "jpeg"),
+            "splatsim_render_camera": (rclpy.Parameter.Type.BOOL, True),
+            # Geographic origin (lat/lon in decimal degrees) of the CARLA world
+            # origin, used to build the MGRS transform for splatsim.  When both
+            # are 0.0 the origin is parsed from the CARLA map's OpenDRIVE
+            # GeoReference; set them explicitly for maps that carry no OpenDRIVE
+            # (e.g. CARLA 0.10.0 Odaiba).
+            "splatsim_geo_origin_lat": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_geo_origin_lon": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # SplatSim LiDAR parameters
             "splatsim_render_lidar": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_lidar_grpc_port": (rclpy.Parameter.Type.INTEGER, 50061),
@@ -291,14 +299,29 @@ class carla_ros2_interface(object):
                 "Check enabled_sensors list and calibration files."
             )
 
-        # SplatSim: separate camera configs and filter them out of CARLA sensors
+        # SplatSim: separate camera/LiDAR configs and filter them out of CARLA
+        # sensors.  Camera and LiDAR rendering are independently gated so the
+        # scene can be driven by LiDAR alone (splatsim_render_camera=false)
+        # without spinning up a Docker container per camera.
         if self.render_with_splatsim:
+            render_camera = bool(self.param_values.get("splatsim_render_camera", True))
+            render_lidar = bool(self.param_values.get("splatsim_render_lidar"))
             carla_configs = []
             for cfg in self.sensor_configs:
                 if cfg.carla_type.startswith("sensor.camera"):
-                    self._splatsim_camera_configs.append(cfg)
+                    if render_camera:
+                        self._splatsim_camera_configs.append(cfg)
+                        self.logger.info(
+                            f"Rendering camera '{cfg.sensor_id}' via splatsim"
+                        )
+                    else:
+                        # Neither splatsim nor real CARLA: camera fully off.
+                        self.logger.info(
+                            f"Skipping camera '{cfg.sensor_id}' "
+                            "(splatsim mode, camera rendering disabled)"
+                        )
                 elif cfg.carla_type.startswith("sensor.lidar"):
-                    if self.param_values.get("splatsim_render_lidar"):
+                    if render_lidar:
                         self._splatsim_lidar_configs.append(cfg)
                         self.logger.info(
                             f"Rendering LiDAR '{cfg.sensor_id}' via splatsim"
@@ -1524,9 +1547,29 @@ class carla_ros2_interface(object):
         import lanelet2.io
         from autoware_lanelet2_extension_python.projection import MGRSProjector
 
-        world = CarlaDataProvider.get_world()
-        xodr_xml = world.get_map().to_opendrive()
-        self._proj_origin = _parse_geo_reference(xodr_xml)
+        override_lat = float(self.param_values.get("splatsim_geo_origin_lat", 0.0) or 0.0)
+        override_lon = float(self.param_values.get("splatsim_geo_origin_lon", 0.0) or 0.0)
+        if override_lat != 0.0 or override_lon != 0.0:
+            # Explicit geographic origin (e.g. CARLA 0.10.0 Odaiba, which
+            # carries no OpenDRIVE GeoReference).
+            self._proj_origin = (override_lat, override_lon)
+            self.logger.info(
+                "GeoTransform using explicit splatsim_geo_origin override "
+                f"(lat_0={override_lat:.8f}, lon_0={override_lon:.8f}); "
+                "skipping OpenDRIVE GeoReference"
+            )
+        else:
+            world = CarlaDataProvider.get_world()
+            try:
+                xodr_xml = world.get_map().to_opendrive()
+            except RuntimeError as exc:
+                raise RuntimeError(
+                    "CARLA map has no parsable OpenDRIVE GeoReference "
+                    "(e.g. CARLA 0.10.0 Odaiba). Set the splatsim_geo_origin_lat "
+                    "/ splatsim_geo_origin_lon launch args to the map's "
+                    "geographic origin so splatsim can build its MGRS transform."
+                ) from exc
+            self._proj_origin = _parse_geo_reference(xodr_xml)
         lat_0, lon_0 = self._proj_origin
 
         projector = MGRSProjector(lanelet2.io.Origin(lat_0, lon_0))
