@@ -23009,9 +23009,9 @@
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
 <p>This package receives traffic signals from perception and external (e.g., V2X) components and combines them using either a confidence-based or a external-preference based approach.</p>
 <h2 id="trafficlightarbiter">TrafficLightArbiter<a class="headerlink" href="#trafficlightarbiter" title="Permanent link">#</a></h2>
-<p>A node that merges traffic light/signal state from image recognition and external (e.g., V2X) systems to provide to a planning component. Merging is only applied to <code>elements</code> in the <code>TrafficLightGroup</code> msg, not to <code>predictions</code>.</p>
+<p>Merges traffic light/signal state from image recognition and external (e.g., V2X) systems to provide to a planning component. Merging is only applied to <code>elements</code> in the <code>TrafficLightGroup</code> msg, not to <code>predictions</code>.</p>
 <h3 id="signal-match-validator">Signal Match Validator<a class="headerlink" href="#signal-match-validator" title="Permanent link">#</a></h3>
-<p>When <code>enable_signal_matching</code> is set to true, this node validates the match between perception signals and external signals.
+<p>When <code>enable_signal_matching</code> is set to true, perception and external signals are validated against each other.
 The table below outlines how the matching process determines the output based on the combination of perception and external signal colors. Each cell represents the outcome when a specific color from a perception signal (columns) intersects with a color from an external signal (rows).</p>
 <table>
 <thead>
