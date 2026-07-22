@@ -218,8 +218,9 @@ void DiffusionPlanner::set_up_params()
   params_.shadow_mode = this->declare_parameter<bool>("shadow_mode", false);
   enable_mppi_debug_trajectory_log_ =
     this->declare_parameter<bool>("enable_debug_trajectory_log", false);
-  mppi_debug_trajectory_log_directory_ = this->declare_parameter<std::string>(
-    "debug_trajectory_log_directory", "/tmp/mppi_debug_log");
+  // Empty -> $XDG_CACHE_HOME/autoware/mppi_debug_log or $HOME/.cache/autoware/mppi_debug_log
+  mppi_debug_trajectory_log_directory_ =
+    this->declare_parameter<std::string>("debug_trajectory_log_directory", "");
   mppi_ignore_obstacles_ = this->declare_parameter<bool>("ignore_obstacles", false);
   mppi_ignore_drivable_area_ = this->declare_parameter<bool>("ignore_drivable_area", false);
   mppi_force_cold_start_each_step_ =

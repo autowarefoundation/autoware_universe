@@ -40,8 +40,9 @@ MppiOptimizer::MppiOptimizer(const rclcpp::NodeOptions & options) : Node("mppi_o
   mppi_interface_->setCostParams(get_first_order_dubins_mppi_cost_params(*this));
   mppi_interface_->setVehicleParams(get_first_order_dubins_mppi_vehicle_params(*this));
   const bool enable_debug_log = declare_parameter<bool>("enable_debug_trajectory_log", false);
+  // Empty -> $XDG_CACHE_HOME/autoware/mppi_debug_log or $HOME/.cache/autoware/mppi_debug_log
   const std::string debug_log_dir =
-    declare_parameter<std::string>("debug_trajectory_log_directory", "/tmp/mppi_debug_log");
+    declare_parameter<std::string>("debug_trajectory_log_directory", "");
   mppi_interface_->setDebugTrajectoryLogging(enable_debug_log, debug_log_dir);
   mppi_interface_->setAblationOptions(
     declare_parameter<bool>("ignore_obstacles", false),

@@ -281,7 +281,7 @@ private:
   std::unique_ptr<autoware::mppi_optimizer::FirstOrderDubinsMppiInterface> mppi_optimizer_;
 
   bool enable_mppi_debug_trajectory_log_{false};
-  std::string mppi_debug_trajectory_log_directory_{"/tmp/mppi_debug_log"};
+  std::string mppi_debug_trajectory_log_directory_{};
   bool mppi_ignore_obstacles_{false};
   bool mppi_ignore_drivable_area_{false};
   bool mppi_force_cold_start_each_step_{false};

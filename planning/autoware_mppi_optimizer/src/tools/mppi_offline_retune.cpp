@@ -21,7 +21,8 @@
  *
  * Example:
  *   ros2 run autoware_mppi_optimizer mppi_offline_retune -- \
- *     --log-dir /tmp/mppi_debug_log --out-dir /tmp/mppi_retune \
+ *     --log-dir "$HOME/.cache/autoware/mppi_debug_log" \
+ *     --out-dir "$HOME/.cache/autoware/mppi_retune" \
  *     --frame 12 --set track_coeff=2000 --set steer_rate_coeff=5000
  */
 
