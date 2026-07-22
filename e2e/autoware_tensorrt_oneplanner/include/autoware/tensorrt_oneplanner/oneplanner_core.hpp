@@ -95,6 +95,7 @@ struct OnePlannerParams
 {
   std::string args_path;
   double temperature;
+  bool enable_warm_start;
   int64_t velocity_smoothing_window;
   double stopping_threshold;
   float turn_indicator_keep_offset;

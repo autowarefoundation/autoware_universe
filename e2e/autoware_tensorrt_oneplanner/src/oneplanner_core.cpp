@@ -26,6 +26,7 @@
 #include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -163,6 +164,11 @@ InputDataMap OnePlannerCore::create_input_data(const OnePlannerFrameContext & fr
   {
     const int64_t copy_steps = std::clamp<int64_t>(params_.delay_step, 0, OUTPUT_T / 2);
     const bool has_previous_output = !last_agent_poses_map_.empty();
+    const auto & linear_twist = frame_context.ego_kinematic_state.twist.twist.linear;
+    const double ego_speed_mps = std::hypot(linear_twist.x, linear_twist.y);
+    const bool allow_warm_start =
+      params_.enable_warm_start && has_previous_output &&
+      ego_speed_mps >= detail::kWarmStartMinEgoSpeedMps;
 
     // create_sampled_trajectories returns the 33-agent diffusion-planner layout;
     // OnePlanner is ego-only (P=1), so keep only the first agent block.
@@ -170,9 +176,8 @@ InputDataMap OnePlannerCore::create_input_data(const OnePlannerFrameContext & fr
       preprocess::create_sampled_trajectories(params_.temperature);
     sampled_trajectories.resize((OUTPUT_T + 1) * POSE_DIM);
 
-    if (has_previous_output) {
+    if (allow_warm_start) {
       constexpr int64_t agent_idx = 0;
-      delay_step = copy_steps;
       for (int64_t t = 0; t <= copy_steps; ++t) {
         const size_t dst_base = agent_idx * (OUTPUT_T + 1) * POSE_DIM + t * POSE_DIM;
         const Eigen::Matrix4d pose_ego =
@@ -184,9 +189,20 @@ InputDataMap OnePlannerCore::create_input_data(const OnePlannerFrameContext & fr
 
         sampled_trajectories[dst_base + 0] =
           (shifted_x - detail::kEgoPositionXMean) / detail::kEgoPositionStd;
-        sampled_trajectories[dst_base + 1] = shifted_y / detail::kEgoPositionStd;
+        sampled_trajectories[dst_base + 1] =
+          (shifted_y - detail::kEgoPositionYMean) / detail::kEgoPositionYStd;
         sampled_trajectories[dst_base + 2] = shifted_cos;
         sampled_trajectories[dst_base + 3] = shifted_sin;
+      }
+
+      const auto warm_start_summary = detail::summarize_warm_start(
+        sampled_trajectories, static_cast<std::size_t>(POSE_DIM),
+        static_cast<std::size_t>(copy_steps + 1));
+      if (warm_start_summary.should_fallback()) {
+        sampled_trajectories = preprocess::create_sampled_trajectories(params_.temperature);
+        sampled_trajectories.resize((OUTPUT_T + 1) * POSE_DIM);
+      } else {
+        delay_step = copy_steps;
       }
     }
 

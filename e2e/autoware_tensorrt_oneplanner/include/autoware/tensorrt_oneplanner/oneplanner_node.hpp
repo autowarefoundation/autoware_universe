@@ -81,6 +81,13 @@ private:
   void on_pointcloud(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
   void on_map(const LaneletMapBin::ConstSharedPtr map_msg);
 
+  /// @brief Throttled diagnostic dump of the (normalized) planner inputs and the raw
+  ///        model-output trajectory speed. Only called when `debug_tensor_logging_` is set.
+  void log_debug_tensors(
+    const InputDataMap & input_data_map, const std::vector<float> & prediction,
+    const autoware_planning_msgs::msg::Trajectory & published_trajectory,
+    const nav_msgs::msg::Odometry & ego_kinematic_state, int64_t num_input_points);
+
   // Model / engine parameters
   BevEncoderParams bev_params_;
   std::string planner_onnx_path_;
@@ -88,6 +95,12 @@ private:
   std::string plugins_path_;
 
   OnePlannerParams params_;
+
+  // When true, log the (normalized) planner-input tensors and the raw model-output
+  // trajectory speed every frame (throttled). Off by default; used to diagnose the
+  // "speed capped at ~2 m/s" behavior by separating an input-pipeline fault from
+  // genuine (possibly out-of-distribution) model output. See CLAUDE.md.
+  bool debug_tensor_logging_{false};
 
   // Processing
   std::unique_ptr<OnePlannerCore> core_;

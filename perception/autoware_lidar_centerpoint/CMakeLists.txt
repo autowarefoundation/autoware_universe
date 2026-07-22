@@ -52,6 +52,7 @@ endif()
 if(TRT_AVAIL AND CUDA_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
+  find_package(diagnostic_updater REQUIRED)
 
   include_directories(
     include
@@ -121,6 +122,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   target_link_libraries(${PROJECT_NAME}_component
     ${PROJECT_NAME}_lib
+    ${diagnostic_updater_LIBRARIES}
   )
 
   rclcpp_components_register_node(${PROJECT_NAME}_component

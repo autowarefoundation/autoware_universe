@@ -190,7 +190,11 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
         """Set the world and world settings."""
         CarlaDataProvider._world = world
         CarlaDataProvider._sync_flag = world.get_settings().synchronous_mode
-        CarlaDataProvider._map = world.get_map()
+        try:
+            CarlaDataProvider._map = world.get_map()
+        except RuntimeError as exc:
+            print(f"WARNING: Could not read CARLA map metadata: {exc}")
+            CarlaDataProvider._map = None
         CarlaDataProvider._blueprint_library = world.get_blueprint_library()
         CarlaDataProvider.generate_spawn_points()
         CarlaDataProvider.prepare_map()
@@ -248,7 +252,10 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
     def prepare_map():
         """Set the current map and loads all traffic lights for this map to_traffic_light_map."""
         if CarlaDataProvider._map is None:
-            CarlaDataProvider._map = CarlaDataProvider._world.get_map()
+            try:
+                CarlaDataProvider._map = CarlaDataProvider._world.get_map()
+            except RuntimeError as exc:
+                print(f"WARNING: Could not read CARLA map metadata for traffic lights: {exc}")
 
         # Parse all traffic lights
         CarlaDataProvider._traffic_light_map.clear()
@@ -265,7 +272,12 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
     @staticmethod
     def generate_spawn_points():
         """Generate spawn points for the current map."""
-        spawn_points = list(CarlaDataProvider.get_map(CarlaDataProvider._world).get_spawn_points())
+        try:
+            carla_map = CarlaDataProvider.get_map(CarlaDataProvider._world)
+            spawn_points = list(carla_map.get_spawn_points())
+        except RuntimeError as exc:
+            print(f"WARNING: Could not generate CARLA map spawn points: {exc}")
+            spawn_points = []
         CarlaDataProvider._rng.shuffle(spawn_points)
         CarlaDataProvider._spawn_points = spawn_points
         CarlaDataProvider._spawn_index = 0

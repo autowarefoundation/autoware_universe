@@ -129,6 +129,11 @@
           "default": 0.0,
           "minimum": 0.0
         },
+        "enable_warm_start": {
+          "type": "boolean",
+          "description": "If true, feed the previous-frame ego trajectory back into sampled_trajectories when eligible.",
+          "default": true
+        },
         "velocity_smoothing_window": {
           "type": "integer",
           "description": "Moving-average window (in trajectory points) used to smooth the longitudinal velocity.",
@@ -179,6 +184,11 @@
           "description": "Timeout (s) after which a traffic-light-group message is considered stale.",
           "default": 0.2,
           "minimum": 0.0
+        },
+        "debug_tensor_logging": {
+          "type": "boolean",
+          "description": "When true, log the (normalized) planner-input tensors and the raw model-output trajectory speed every frame (throttled). Off in normal operation.",
+          "default": false
         }
       },
       "required": [

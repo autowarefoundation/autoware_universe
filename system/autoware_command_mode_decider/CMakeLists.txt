@@ -4,6 +4,8 @@ project(autoware_command_mode_decider)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(diagnostic_updater REQUIRED)
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/plugin/plugin.cpp"
   "src/plugin/status.cpp"
@@ -12,6 +14,10 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 target_include_directories(${PROJECT_NAME} PRIVATE
   "src"
+)
+
+target_link_libraries(${PROJECT_NAME}
+  ${diagnostic_updater_LIBRARIES}
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}

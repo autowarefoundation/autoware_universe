@@ -76,7 +76,77 @@ TEST(OnePlannerDetail, EgoNormalizerConstantsAreStable)
 {
   // Guard against accidental drift from the StateNormalizer baked into the exported graph.
   EXPECT_FLOAT_EQ(detail::kEgoPositionXMean, 10.0f);
+  EXPECT_FLOAT_EQ(detail::kEgoPositionYMean, 0.0f);
   EXPECT_FLOAT_EQ(detail::kEgoPositionStd, 20.0f);
+  EXPECT_FLOAT_EQ(detail::kEgoPositionYStd, 20.0f);
+}
+
+TEST(OnePlannerDetail, SummarizeWarmStartDetectsWeakInput)
+{
+  std::vector<float> sampled(
+    static_cast<std::size_t>(diffusion_planner::OUTPUT_T + 1) *
+      static_cast<std::size_t>(diffusion_planner::POSE_DIM),
+    0.0f);
+  const std::size_t base = 0;
+  sampled[base + 0] = (11.0f - detail::kEgoPositionXMean) / detail::kEgoPositionStd;
+  sampled[base + 2] = 1.0f;
+
+  const auto summary = detail::summarize_warm_start(
+    sampled, static_cast<std::size_t>(diffusion_planner::POSE_DIM),
+    static_cast<std::size_t>(diffusion_planner::OUTPUT_T + 1));
+
+  EXPECT_EQ(summary.active_steps, 1u);
+  EXPECT_EQ(summary.duplicate_step_pairs, 0u);
+  EXPECT_TRUE(summary.is_weak());
+  EXPECT_TRUE(summary.should_fallback());
+}
+
+TEST(OnePlannerDetail, SummarizeWarmStartDetectsCollapsedInput)
+{
+  std::vector<float> sampled(
+    static_cast<std::size_t>(diffusion_planner::OUTPUT_T + 1) *
+      static_cast<std::size_t>(diffusion_planner::POSE_DIM),
+    0.0f);
+  for (std::size_t t = 0; t < 3; ++t) {
+    const std::size_t base = t * static_cast<std::size_t>(diffusion_planner::POSE_DIM);
+    sampled[base + 0] = (12.0f - detail::kEgoPositionXMean) / detail::kEgoPositionStd;
+    sampled[base + 1] = (1.5f - detail::kEgoPositionYMean) / detail::kEgoPositionYStd;
+    sampled[base + 2] = 1.0f;
+  }
+
+  const auto summary = detail::summarize_warm_start(
+    sampled, static_cast<std::size_t>(diffusion_planner::POSE_DIM), 3u);
+
+  EXPECT_EQ(summary.active_steps, 3u);
+  EXPECT_EQ(summary.duplicate_step_pairs, 2u);
+  EXPECT_FALSE(summary.is_weak());
+  EXPECT_TRUE(summary.is_collapsed());
+  EXPECT_TRUE(summary.should_fallback());
+}
+
+TEST(OnePlannerDetail, SummarizeWarmStartKeepsMovingInput)
+{
+  std::vector<float> sampled(
+    static_cast<std::size_t>(diffusion_planner::OUTPUT_T + 1) *
+      static_cast<std::size_t>(diffusion_planner::POSE_DIM),
+    0.0f);
+  for (std::size_t t = 0; t < 3; ++t) {
+    const std::size_t base = t * static_cast<std::size_t>(diffusion_planner::POSE_DIM);
+    sampled[base + 0] =
+      (12.0f + static_cast<float>(t) * 0.5f - detail::kEgoPositionXMean) /
+      detail::kEgoPositionStd;
+    sampled[base + 1] = (1.5f - detail::kEgoPositionYMean) / detail::kEgoPositionYStd;
+    sampled[base + 2] = 1.0f;
+  }
+
+  const auto summary = detail::summarize_warm_start(
+    sampled, static_cast<std::size_t>(diffusion_planner::POSE_DIM), 3u);
+
+  EXPECT_EQ(summary.active_steps, 3u);
+  EXPECT_EQ(summary.duplicate_step_pairs, 0u);
+  EXPECT_FALSE(summary.is_weak());
+  EXPECT_FALSE(summary.is_collapsed());
+  EXPECT_FALSE(summary.should_fallback());
 }
 
 }  // namespace autoware::tensorrt_oneplanner

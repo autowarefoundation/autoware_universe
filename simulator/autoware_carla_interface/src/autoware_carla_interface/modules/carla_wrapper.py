@@ -242,9 +242,25 @@ class SensorWrapper(object):
 
     def _configure_camera_attributes(self, bp, spec):
         """Configure camera-specific attributes."""
-        bp.set_attribute("image_size_x", str(spec["image_size_x"]))
-        bp.set_attribute("image_size_y", str(spec["image_size_y"]))
-        bp.set_attribute("fov", str(spec["fov"]))
+        camera_attributes = [
+            "image_size_x",
+            "image_size_y",
+            "fov",
+            "sensor_tick",
+            "post_process_profile",
+            "enable_postprocess_effects",
+            "gamma",
+            "shutter_speed",
+            "iso",
+            "fstop",
+            "min_fstop",
+            "blade_count",
+            "exposure_mode",
+            "exposure_compensation",
+        ]
+        for attribute in camera_attributes:
+            if attribute in spec and bp.has_attribute(attribute):
+                bp.set_attribute(attribute, str(spec[attribute]))
 
     def _configure_lidar_attributes(self, bp, spec):
         """Configure LiDAR-specific attributes."""

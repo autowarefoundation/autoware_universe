@@ -1,0 +1,97 @@
+# CARLA 0.10.0 sensor mapping for LiDAR-based planning plus a low-load front camera preview.
+# Use this only when the CARLA server is running with rendering enabled.
+
+default_sensor_kit_name: carla_sensor_kit_description
+
+sensor_mappings:
+  velodyne_top_base_link:
+    carla_type: sensor.lidar.ray_cast
+    id: top
+    ros_config:
+      frame_id: velodyne_top
+      topic_base: /sensing/lidar/top
+      topic_suffix: /pointcloud_before_sync
+      frequency_hz: 10
+      qos_profile: best_effort
+    parameters:
+      range: 100
+      channels: 64
+      points_per_second: 300000
+      upper_fov: 10.0
+      lower_fov: -30.0
+      rotation_frequency: 20
+      noise_stddev: 0.0
+
+  CAM_FRONT/camera_link:
+    carla_type: sensor.camera.rgb
+    id: CAM_FRONT
+    ros_config:
+      frame_id: CAM_FRONT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT/camera_info
+      frequency_hz: 5
+      qos_profile: reliable
+    parameters:
+      image_size_x: 640
+      image_size_y: 360
+      fov: 90.0
+      sensor_tick: 0.1
+      post_process_profile: autoware_demo
+    # CARLA 0.10.0 Odaiba J6Gen2 top_front_center_left camera pose.
+    # rgl_test_autoware_demo.py mounts this camera under sensor_kit_base_link.
+    # The values below are base_link -> sensor_kit_base_link + sensor_kit_base_link -> camera,
+    # before the bridge applies its vehicle-center conversion.
+    transform_override:
+      x: 5.39302
+      y: 0.03770
+      z: 2.76760
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+
+  tamagawa/imu_link:
+    carla_type: sensor.other.imu
+    id: imu
+    ros_config:
+      frame_id: tamagawa/imu_link
+      topic: /sensing/imu/tamagawa/imu_raw
+      frequency_hz: 50
+      qos_profile: reliable
+    parameters:
+      noise_accel_stddev_x: 0.0
+      noise_accel_stddev_y: 0.0
+      noise_accel_stddev_z: 0.0
+      noise_gyro_stddev_x: 0.0
+      noise_gyro_stddev_y: 0.0
+      noise_gyro_stddev_z: 0.0
+
+  gnss_link:
+    carla_type: sensor.other.gnss
+    id: gnss
+    ros_config:
+      frame_id: map
+      topic: /sensing/gnss/pose_with_covariance
+      frequency_hz: 2
+      qos_profile: reliable
+    parameters:
+      noise_alt_stddev: 0.0
+      noise_lat_stddev: 0.0
+      noise_lon_stddev: 0.0
+      noise_alt_bias: 0.0
+      noise_lat_bias: 0.0
+      noise_lon_bias: 0.0
+    covariance:
+      position_variance: 0.01
+      orientation_variance: 1.0
+
+normalization:
+  strip_suffixes:
+    - _base_link
+    - _link
+    - /camera_link
+
+enabled_sensors:
+  - velodyne_top_base_link
+  - CAM_FRONT/camera_link
+  - tamagawa/imu_link
+  - gnss_link

@@ -154,6 +154,16 @@ std::pair<bool, MPCTrajectory> resampleMPCTrajectoryByDistance(
     output_arclength.push_back(s);
   }
 
+  // Degenerate input (e.g. all points at ~the same arc length, as can happen with a very short
+  // or near-stationary trajectory, or an out-of-range nearest_seg_idx/ego_offset_to_segment)
+  // can leave output_arclength empty or not strictly sorted. spline()/lerp() require a sorted,
+  // non-empty query, so bail out gracefully here instead of letting them throw.
+  if (
+    output_arclength.empty() ||
+    !std::is_sorted(output_arclength.begin(), output_arclength.end())) {
+    return {false, output};
+  }
+
   std::vector<double> input_yaw = input.yaw;
   convertEulerAngleToMonotonic(input_yaw);
 

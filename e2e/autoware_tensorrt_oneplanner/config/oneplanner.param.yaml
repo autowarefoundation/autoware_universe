@@ -28,6 +28,7 @@
 
     # Planner parameters (mirroring autoware_diffusion_planner)
     temperature: 0.0
+    enable_warm_start: true
     velocity_smoothing_window: 8
     stopping_threshold: 0.3
     turn_indicator_keep_offset: -1.25
@@ -37,3 +38,7 @@
     line_string_max_step_m: 5.0
     use_time_interpolation: false
     traffic_light_group_msg_timeout_seconds: 0.2
+
+    # Debug: when true, log the (normalized) planner-input tensors and the raw
+    # model-output trajectory speed every frame (throttled). Off in normal operation.
+    debug_tensor_logging: false
