@@ -395,9 +395,18 @@ bool equals(const alt::Polygon2d & poly1, const alt::Polygon2d & poly2)
 alt::Points2d::const_iterator find_farthest(
   const alt::Points2d & points, const alt::Point2d & seg_start, const alt::Point2d & seg_end)
 {
+  constexpr double epsilon = 1e-9;
   const auto seg_vec = seg_end - seg_start;
   return std::max_element(points.begin(), points.end(), [&](const auto & a, const auto & b) {
-    return std::abs(seg_vec.cross(a - seg_start)) < std::abs(seg_vec.cross(b - seg_start));
+    const auto dist_a = std::abs(seg_vec.cross(a - seg_start));
+    const auto dist_b = std::abs(seg_vec.cross(b - seg_start));
+    if (std::abs(dist_a - dist_b) > epsilon) {
+      return dist_a < dist_b;
+    }
+    if (std::abs(a.x() - b.x()) > epsilon) {
+      return a.x() < b.x();
+    }
+    return a.y() < b.y();
   });
 }
 
@@ -482,7 +491,8 @@ bool intersects(const alt::ConvexPolygon2d & poly1, const alt::ConvexPolygon2d &
 bool is_above(
   const alt::Point2d & point, const alt::Point2d & seg_start, const alt::Point2d & seg_end)
 {
-  return (seg_end - seg_start).cross(point - seg_start) > 0;
+  constexpr double epsilon = 1e-9;
+  return (seg_end - seg_start).cross(point - seg_start) > epsilon;
 }
 
 bool is_clockwise(const alt::PointList2d & vertices)
@@ -618,10 +628,10 @@ bool within(const alt::Point2d & point, const alt::ConvexPolygon2d & poly)
     const auto end_vec = point - p2;
     const auto cross = start_vec.cross(end_vec);
 
-    if (is_upward_edge && cross > 0) {  // point is to the left of edge
+    if (is_upward_edge && cross > epsilon) {  // point is to the left of edge
       winding_number++;
       continue;
-    } else if (is_downward_edge && cross < 0) {  // point is to the left of edge
+    } else if (is_downward_edge && cross < -epsilon) {  // point is to the left of edge
       winding_number--;
       continue;
     }
