@@ -27,8 +27,8 @@ namespace autoware::diffusion_planner::test
 namespace
 {
 TrackedObject make_object(
-  const unique_identifier_msgs::msg::UUID & uuid, const double x, const double yaw,
-  const double vx, const double vy = 0.0)
+  const unique_identifier_msgs::msg::UUID & uuid, const double x, const double yaw, const double vx,
+  const double vy = 0.0)
 {
   TrackedObject object;
   object.object_id = uuid;
@@ -92,8 +92,7 @@ TEST(AgentHistoryFlipTest, FlipIngestReexpressesBufferedStates)
   ASSERT_EQ(states.size(), 3u);
   for (const auto & state : states) {
     EXPECT_NEAR(state.pose(0, 0), -1.0, 1e-6);  // yaw = pi
-    EXPECT_NEAR(
-      state.original_info.kinematics.twist_with_covariance.twist.linear.x, -5.0, 1e-6);
+    EXPECT_NEAR(state.original_info.kinematics.twist_with_covariance.twist.linear.x, -5.0, 1e-6);
   }
   // Positions and timestamps are untouched by the re-expression.
   EXPECT_NEAR(states[0].pose(0, 3), 0.0, 1e-6);
