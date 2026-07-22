@@ -168,8 +168,13 @@ std::optional<alt::ConvexPolygon2d> convex_hull(const alt::Points2d & points)
 
   // QuickHull algorithm
 
-  const auto p_minmax_itr = std::minmax_element(
-    points.begin(), points.end(), [](const auto & a, const auto & b) { return a.x() < b.x(); });
+  const auto p_minmax_itr =
+    std::minmax_element(points.begin(), points.end(), [](const auto & a, const auto & b) {
+      if (a.x() != b.x()) {
+        return a.x() < b.x();
+      }
+      return a.y() < b.y();
+    });
   const auto & p_min = *p_minmax_itr.first;
   const auto & p_max = *p_minmax_itr.second;
 
