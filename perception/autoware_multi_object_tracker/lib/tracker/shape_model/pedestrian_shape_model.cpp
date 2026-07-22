@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
+#include <geometry_msgs/msg/pose.hpp>
+
 #include <algorithm>
 #include <cmath>
 
@@ -24,8 +26,20 @@ namespace autoware::multi_object_tracker
 
 using Shape = autoware_perception_msgs::msg::Shape;
 
+namespace
+{
+// A frame co-located with `position` but aligned to the global axes (zero yaw).
+geometry_msgs::msg::Pose globalFrameAt(const geometry_msgs::msg::Point & position)
+{
+  geometry_msgs::msg::Pose pose;
+  pose.position = position;
+  pose.orientation.w = 1.0;
+  return pose;
+}
+}  // namespace
+
 PedestrianShapeModel::PedestrianShapeModel(const object_model::ObjectModel & object_model)
-: object_model_(object_model)
+: object_model_(object_model), last_footprint_update_time_(rclcpp::Time(0, 0, RCL_ROS_TIME))
 {
 }
 
@@ -63,7 +77,8 @@ void PedestrianShapeModel::init(const types::DynamicObject & object)
 }
 
 bool PedestrianShapeModel::update(
-  const types::DynamicObject & object, bool trust_extension, double tracker_yaw)
+  const types::DynamicObject & object, bool trust_extension, double tracker_yaw,
+  const rclcpp::Time & time)
 {
   // Model-derived sanity bounds (permissive: 0.5× min … 1.5× max)
   const double len_max = object_model_.size_limit.length_max * 1.5;
@@ -118,6 +133,14 @@ bool PedestrianShapeModel::update(
     }
   }
 
+  // Store the footprint anchored at the object position but aligned to the global axes
+  if (!object.shape.footprint.points.empty()) {
+    footprint_ = shapes::transformFootprint(
+      object.shape.footprint, object.pose, globalFrameAt(object.pose.position));
+    footprint_valid_ = true;
+    last_footprint_update_time_ = time;
+  }
+
   clampToLimits();
   area_ = length_ * width_;
   return true;
@@ -125,22 +148,24 @@ bool PedestrianShapeModel::update(
 
 void PedestrianShapeModel::exportTo(types::DynamicObject & output) const
 {
-  const double asymmetry = std::abs(length_ - width_) / std::max({length_, width_, 1e-6});
+  // Always export a BOUNDING_BOX with explicit length (x) and width (y).
+  output.shape.type = Shape::BOUNDING_BOX;
+  output.shape.dimensions.x = length_;
+  output.shape.dimensions.y = width_;
+  output.shape.dimensions.z = height_;
 
-  if (asymmetry < 0.15) {
-    // Nearly circular → CYLINDER
-    const double diameter = (length_ + width_) * 0.5;
-    output.shape.type = Shape::CYLINDER;
-    output.shape.dimensions.x = diameter;
-    output.shape.dimensions.y = diameter;
-    output.shape.dimensions.z = height_;
+  // The footprint is kept in a global-orientation frame, so re-express it in the output object's
+  // frame (message position and orientation)
+  const double footprint_age = (output.time - last_footprint_update_time_).seconds();
+  const bool footprint_fresh =
+    footprint_valid_ && footprint_age >= 0.0 && footprint_age < FOOTPRINT_TIMEOUT_S;
+  if (footprint_fresh) {
+    output.shape.footprint =
+      shapes::transformFootprint(footprint_, globalFrameAt(output.pose.position), output.pose);
   } else {
-    output.shape.type = Shape::BOUNDING_BOX;
-    output.shape.dimensions.x = length_;
-    output.shape.dimensions.y = width_;
-    output.shape.dimensions.z = height_;
+    output.shape.footprint.points.clear();
   }
-  output.shape.footprint.points.clear();
+
   output.area = types::getArea(output.shape);
 }
 
