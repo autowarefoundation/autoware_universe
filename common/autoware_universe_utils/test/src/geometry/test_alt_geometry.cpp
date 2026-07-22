@@ -52,7 +52,7 @@ TEST(alt_geometry, area)
   }
 }
 
-TEST(alt_geometry, DISABLED_convexHull)
+TEST(alt_geometry, convexHull)
 {
   // FIXME(soblin): convex_hull algorithm can cause infinite-loop
   /*
@@ -797,7 +797,7 @@ TEST(alt_geometry, areaRand)
   }
 }
 
-TEST(alt_geometry, DISABLED_convexHullRand)
+TEST(alt_geometry, convexHullRand)
 {
   std::vector<autoware::universe_utils::Polygon2d> polygons;
   constexpr auto polygons_nb = 100;
