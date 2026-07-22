@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,10 +37,6 @@ namespace
 // Fixed CTRV integration sub-step [s]; a larger extrapolation dt is split into steps no longer than
 // this to bound forward-Euler error (matches the tracker's dt_max sub-stepping).
 constexpr double CTRV_DT_SUB_STEP_MAX_S = 0.11;
-
-// A bracketing observation pair whose headings differ by more than this [rad] (135 deg) is
-// treated as a tracker heading flip: the grid slot snaps to the nearer observation.
-constexpr double FLIP_YAW_THRESHOLD_RAD = 2.35619449;
 
 // Heading of a pose matrix in its own frame.
 double get_yaw(const Eigen::Matrix4d & pose)
@@ -123,10 +119,9 @@ std::optional<AgentHistory> resample_history(
   const auto & raw = history.states();
   const size_t n = raw.size();
 
-  // Per-observation kinematics, snapshotted raw: a tracker heading flip re-expresses the state as
-  // (yaw + pi, -speed), which the CTRV propagation maps to identical positions, and flipped
-  // headings match the training-data signature. Interpolation across a flipped pair snaps to the
-  // nearer observation (see below).
+  // Per-observation kinematics, snapshotted raw. Histories arrive flip-normalized to the newest
+  // observation's heading convention (see AgentHistory::update); signed linear.x carries reverse
+  // motion through the CTRV propagation.
   std::vector<double> obs_x(n);
   std::vector<double> obs_y(n);
   std::vector<double> obs_yaw(n);
@@ -186,19 +181,8 @@ std::optional<AgentHistory> resample_history(
       const double ratio = (span > 0.0) ? (target_sec - obs_time[i0]) / span : 0.0;
       const double x = obs_x[i0] + ratio * (obs_x[i1] - obs_x[i0]);
       const double y = obs_y[i0] + ratio * (obs_y[i1] - obs_y[i0]);
-      // A near-antipodal pair is a tracker heading flip: snap yaw and speed to the nearer
-      // observation; sweeping would fabricate perpendicular headings.
-      const double yaw_delta = autoware_utils_math::normalize_radian(obs_yaw[i1] - obs_yaw[i0]);
-      double yaw{};
-      double speed{};
-      if (std::abs(yaw_delta) > FLIP_YAW_THRESHOLD_RAD) {
-        const size_t nearer = (ratio < 0.5) ? i0 : i1;
-        yaw = obs_yaw[nearer];
-        speed = obs_speed[nearer];
-      } else {
-        yaw = interpolate_yaw(obs_yaw[i0], obs_yaw[i1], ratio);
-        speed = obs_speed[i0] + ratio * (obs_speed[i1] - obs_speed[i0]);
-      }
+      const double yaw = interpolate_yaw(obs_yaw[i0], obs_yaw[i1], ratio);
+      const double speed = obs_speed[i0] + ratio * (obs_speed[i1] - obs_speed[i0]);
       grid_states.push_back(make_grid_state(raw[i1].original_info, x, y, yaw, target_time, speed));
     } else {
       // After the newest observation: extrapolate the leading edge forward via the motion model.

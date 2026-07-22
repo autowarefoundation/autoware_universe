@@ -62,13 +62,19 @@ struct AgentState
 
   [[nodiscard]] std::array<float, AGENT_STATE_DIM> as_array() const noexcept;
 
-  // Only the pose is mutable (by `apply_transform` in AgentHistory)
+  // Re-express the state under the opposite heading convention: pose and orientation rotated by
+  // pi about the body z-axis, body-frame linear twist negated. The described physical motion is
+  // unchanged.
+  void flip_heading_convention();
+
+  // Mutable kinematics (`apply_transform` rewrites the pose; `flip_heading_convention` rewrites
+  // pose and original_info together); the identity fields below are immutable.
   Eigen::Matrix4d pose{Eigen::Matrix4d::Identity()};
+  TrackedObject original_info;
 
   const rclcpp::Time timestamp;
   const AgentLabel label{AgentLabel::VEHICLE};
   const std::string object_id;
-  const TrackedObject original_info;
 };
 
 /**
@@ -96,16 +102,10 @@ struct AgentHistory
     }
   }
 
-  void update(const TrackedObject & object, const rclcpp::Time & timestamp)
-  {
-    AgentState state(object, timestamp);
-    if (
-      queue_.size() > 0 &&
-      queue_.back().object_id != autoware_utils_uuid::to_hex_string(object.object_id)) {
-      throw std::runtime_error("Object ID mismatch");
-    }
-    push_back(state);
-  }
+  // Ingest one observation. A heading jump beyond the flip threshold is a tracker orientation
+  // correction: every buffered state is re-expressed to the incoming convention (yaw + pi,
+  // negated linear twist) before the push, so the stored history is flip-free.
+  void update(const TrackedObject & object, const rclcpp::Time & timestamp);
 
   [[nodiscard]] std::vector<float> as_array() const noexcept
   {

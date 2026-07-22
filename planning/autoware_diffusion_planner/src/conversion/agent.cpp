@@ -22,6 +22,7 @@
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware_utils_math/normalization.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -36,6 +37,17 @@ namespace autoware::diffusion_planner
 
 namespace
 {
+
+// A heading jump beyond this [rad] (135 deg) between the buffered newest state and an incoming
+// observation is a tracker orientation correction: the tracker rotates an object by pi when its
+// reverse velocity exceeds the model bound, superseding the older heading convention.
+constexpr double FLIP_YAW_THRESHOLD_RAD = 2.35619449;
+
+// Heading of a pose matrix in its own frame.
+double get_yaw(const Eigen::Matrix4d & pose)
+{
+  return std::atan2(pose(1, 0), pose(0, 0));
+}
 
 AgentLabel get_model_label(const TrackedObject & object)
 {
@@ -86,21 +98,40 @@ std::vector<AgentHistory> transform_sort_trim(
 
 AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timestamp)
 : pose(utils::pose_to_matrix4d(object.kinematics.pose_with_covariance.pose)),
+  original_info(object),
   timestamp(timestamp),
   label(get_model_label(object)),
-  object_id(autoware_utils_uuid::to_hex_string(object.object_id)),
-  original_info(object)
+  object_id(autoware_utils_uuid::to_hex_string(object.object_id))
 {
+}
+
+void AgentState::flip_heading_convention()
+{
+  // Rz(pi) post-multiplication: the first two rotation columns negate, the translation stays.
+  pose.block<3, 1>(0, 0) *= -1.0;
+  pose.block<3, 1>(0, 1) *= -1.0;
+  auto & orientation = original_info.kinematics.pose_with_covariance.pose.orientation;
+  const Eigen::Quaterniond rotated =
+    Eigen::Quaterniond(orientation.w, orientation.x, orientation.y, orientation.z) *
+    Eigen::Quaterniond(0.0, 0.0, 0.0, 1.0);
+  orientation.x = rotated.x();
+  orientation.y = rotated.y();
+  orientation.z = rotated.z();
+  orientation.w = rotated.w();
+  auto & linear = original_info.kinematics.twist_with_covariance.twist.linear;
+  linear.x = -linear.x;
+  linear.y = -linear.y;
 }
 
 // Return the state attribute as an array.
 [[nodiscard]] std::array<float, AGENT_STATE_DIM> AgentState::as_array() const noexcept
 {
   const auto [cos_yaw, sin_yaw] = utils::rotation_matrix_to_cos_sin(pose.block<3, 3>(0, 0));
+  // Signed body-frame twist rotated into the pose frame: velocity carries its own direction, so
+  // a reversing vehicle keeps its heading while its velocity points backward.
   const auto & linear_vel = original_info.kinematics.twist_with_covariance.twist.linear;
-  const double velocity_norm = std::hypot(linear_vel.x, linear_vel.y);
-  const double velocity_x = velocity_norm * cos_yaw;
-  const double velocity_y = velocity_norm * sin_yaw;
+  const double velocity_x = cos_yaw * linear_vel.x - sin_yaw * linear_vel.y;
+  const double velocity_y = sin_yaw * linear_vel.x + cos_yaw * linear_vel.y;
 
   return {
     static_cast<float>(pose(0, 3)),
@@ -115,6 +146,28 @@ AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timest
     static_cast<float>(label == AgentLabel::PEDESTRIAN),
     static_cast<float>(label == AgentLabel::BICYCLE),
   };
+}
+
+void AgentHistory::update(const TrackedObject & object, const rclcpp::Time & timestamp)
+{
+  AgentState state(object, timestamp);
+  if (
+    queue_.size() > 0 &&
+    queue_.back().object_id != autoware_utils_uuid::to_hex_string(object.object_id)) {
+    throw std::runtime_error("Object ID mismatch");
+  }
+  // A heading flip supersedes the buffered convention: re-express every stored state to the
+  // incoming one, keeping the history flip-free.
+  if (!queue_.empty()) {
+    const double delta =
+      autoware_utils_math::normalize_radian(get_yaw(state.pose) - get_yaw(queue_.back().pose));
+    if (std::abs(delta) > FLIP_YAW_THRESHOLD_RAD) {
+      for (auto & buffered : queue_) {
+        buffered.flip_heading_convention();
+      }
+    }
+  }
+  push_back(state);
 }
 
 void AgentData::update_histories(const TrackedObjects & objects)

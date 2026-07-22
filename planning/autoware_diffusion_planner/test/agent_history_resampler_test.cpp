@@ -159,9 +159,9 @@ TEST(AgentHistoryResamplerTest, InterpolateYawMidpoint)
   EXPECT_NEAR(interpolate_yaw(0.0, M_PI_2, 1.0), M_PI_2, 1e-9);
 }
 
-// A tracker heading flip between two observations snaps the interpolated slot to the nearer
-// observation's yaw and speed; no perpendicular intermediate heading is emitted.
-TEST(AgentHistoryResamplerTest, FlipBetweenObservationsSnapsToNearerYaw)
+// A heading flip ingested into the history is normalized at update time, so the resampled grid
+// carries one coherent heading with positions on the physical trajectory.
+TEST(AgentHistoryResamplerTest, FlippedIngestYieldsCoherentResampledHistory)
 {
   const auto params = make_params();
 
@@ -185,18 +185,21 @@ TEST(AgentHistoryResamplerTest, FlipBetweenObservationsSnapsToNearerYaw)
   object.kinematics.twist_with_covariance.twist.linear.x = -5.0;
   history.update(object, rclcpp::Time(100, 100000000));
 
-  // Frame time 100.14 s: the second-newest slot (100.04 s) interpolates across the flip.
+  // Frame time 100.14 s: the second-newest slot (100.04 s) interpolates between the observations.
   const rclcpp::Time frame_time(100, 140000000);
   const auto resampled = resample_history(history, frame_time, params);
 
   ASSERT_TRUE(resampled.has_value());
   const auto & states = resampled->states();
-  const auto & snapped = states[states.size() - 2];
-  EXPECT_NEAR(snapped.pose(0, 3), 0.2, 1e-6);  // position interpolates (ratio 0.4)
-  EXPECT_NEAR(snapped.pose(0, 0), 1.0, 1e-6);  // yaw snaps to the nearer (older) observation
-  EXPECT_NEAR(snapped.original_info.kinematics.twist_with_covariance.twist.linear.x, 5.0, 1e-6);
-  // The newest slot extrapolates the flipped state; both re-expressions advance +x.
+  const auto & interpolated = states[states.size() - 2];
+  EXPECT_NEAR(interpolated.pose(0, 3), 0.2, 1e-6);   // position interpolates (ratio 0.4)
+  EXPECT_NEAR(interpolated.pose(0, 0), -1.0, 1e-6);  // yaw follows the corrected convention (pi)
+  EXPECT_NEAR(
+    interpolated.original_info.kinematics.twist_with_covariance.twist.linear.x, -5.0, 1e-6);
+  // The newest slot extrapolates the corrected state; the motion still advances +x.
   EXPECT_NEAR(states.back().pose(0, 3), 0.7, 1e-6);
+  // The slot before the oldest observation back-extrapolates along the same trajectory.
+  EXPECT_NEAR(states[states.size() - 3].pose(0, 3), -0.3, 1e-6);
 }
 
 // A negative body-frame linear.x is a reversing vehicle: forward-extrapolated slots land behind
