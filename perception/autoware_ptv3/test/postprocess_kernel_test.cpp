@@ -48,8 +48,6 @@ PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
   params.point_cloud_range = {-10.0F, -10.0F, -3.0F, 10.0F, 10.0F, 3.0F};
   params.voxel_size = {0.2F, 0.2F, 0.2F};
   params.segmentation_class_names = {"car", "truck", "drivable_flat"};
-  params.serialization_orders = {"z", "z-trans"};
-  params.pooling_strides = {2, 2, 2, 2};
   params.palette = {
     255, 0,
     0,  // car
@@ -58,7 +56,6 @@ PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
     0,   0,
     255,  // drivable_flat
   };
-  params.filter_class_probability_threshold = 0.8F;
   params.filter_classes = {"truck"};
   params.filter_output_format = "xyzi";
   params.filter_apply_to_segmentation = filter_apply_to_segmentation;
@@ -200,6 +197,47 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndice
   EXPECT_EQ(std::find(class_ids.begin(), class_ids.end(), truck_label), class_ids.end());
   EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), ground_label), class_ids.end());
   EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), 255U), class_ids.end());
+}
+
+TEST_F(PostprocessKernelTest, FilteredPointcloudFiltersOnlyArgmaxClass)
+{
+  const auto config = make_test_config();
+  PostprocessCuda postprocess(config, stream_);
+
+  constexpr std::size_t num_points = 3;
+  constexpr std::size_t num_classes = 3;
+
+  const std::vector<CloudPointTypeXYZI> input_points = {
+    {1.0f, 10.0f, 100.0f, 0.1f},  // car argmax: kept despite truck probability
+    {2.0f, 20.0f, 200.0f, 0.2f},  // truck argmax: filtered
+    {3.0f, 30.0f, 300.0f, 0.3f},  // drivable_flat argmax: kept despite truck probability
+  };
+  const std::vector<float> pred_probs = {
+    0.7f, 0.2f, 0.1f, 0.2f, 0.6f, 0.2f, 0.1f, 0.3f, 0.6f,
+  };
+
+  auto input_points_d = this->template makeDeviceBuffer<CloudPointTypeXYZI>(num_points);
+  auto pred_probs_d = this->template makeDeviceBuffer<float>(num_points * num_classes);
+  auto output_points_d = this->template makeDeviceBuffer<CloudPointTypeXYZI>(num_points);
+
+  copyToDevice(input_points_d.get(), input_points);
+  copyToDevice(pred_probs_d.get(), pred_probs);
+
+  const auto num_filtered_points = postprocess.createFilteredPointcloud(
+    input_points_d.get(), CloudFormat::XYZI, CloudFormat::XYZI, pred_probs_d.get(),
+    output_points_d.get(), num_classes, num_points);
+
+  EXPECT_EQ(num_filtered_points, 2U);
+
+  const auto output_points = copyToHost(output_points_d.get(), num_filtered_points);
+  std::array<float, 2> x_values{};
+  for (std::size_t i = 0; i < output_points.size(); ++i) {
+    x_values[i] = output_points[i].x;
+  }
+
+  std::sort(x_values.begin(), x_values.end());
+  EXPECT_EQ(x_values[0], 1.0f);
+  EXPECT_EQ(x_values[1], 3.0f);
 }
 
 }  // namespace test

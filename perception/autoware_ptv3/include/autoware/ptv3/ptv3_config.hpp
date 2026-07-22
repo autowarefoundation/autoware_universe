@@ -47,10 +47,10 @@ public:
     const std::vector<std::int64_t> & pooling_strides = {},
     const std::vector<std::int64_t> & enc_channels = {},
     const std::vector<std::int64_t> & palette = {},
-    const float filter_class_probability_threshold = {},
     const std::vector<std::string> & filter_classes = {},
     const std::string & filter_output_format = {}, const bool filter_apply_to_segmentation = {},
     const std::string & source_reconstruction = {},
+    const std::vector<std::int64_t> & dec_depths = {},
     const std::vector<std::string> & detection_class_names = {},
     const std::vector<float> & bbox_voxel_size = {},
     const std::vector<float> & distance_bin_upper_limits = {},
@@ -120,7 +120,6 @@ public:
           class_name.begin(), class_name.end(), class_name.begin(),
           [](unsigned char c) { return std::tolower(c); });
       }
-      filter_class_probability_threshold_ = filter_class_probability_threshold;
       filter_class_indices_ = make_filter_class_indices(segmentation_class_names_, filter_classes);
       filter_output_format_ = filter_output_format;
       filter_apply_to_segmentation_ = filter_apply_to_segmentation;
@@ -385,7 +384,6 @@ public:
   // Segmentation head
   std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage
   std::vector<float> colors_rgb_;
-  float filter_class_probability_threshold_{};
   std::vector<std::uint32_t> filter_class_indices_;
   std::string filter_output_format_;
   bool filter_apply_to_segmentation_{};

@@ -17,7 +17,6 @@
       workspace_size: 8589934592  # 8 GiB
       source_reconstruction: "full"
       filter:
-        class_probability_threshold: 0.05
         classes: ["drivable_flat", "non_drivable_flat", "noise"]
         output_format: ""
         apply_to_segmentation: false
