@@ -102,6 +102,7 @@ struct Parameters
   bool treat_amber_light_as_red_light;
   bool treat_unknown_light_as_red_light;
   double stop_overshoot_margin;
+  double allow_if_cannot_stop_distance;
   double stable_duration_threshold_red;
   double stable_duration_threshold_amber;
   double stable_duration_threshold_unknown;
