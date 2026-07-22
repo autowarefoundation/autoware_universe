@@ -22,6 +22,7 @@
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <tl_expected/expected.hpp>
 
+#include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -35,6 +36,7 @@ namespace autoware::trajectory_validator::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using VehicleInfo = autoware::vehicle_info_utils::VehicleInfo;
+using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_trajectory_validator::msg::MetricReport;
 using autoware_trajectory_validator::msg::RiskLevel;
 
@@ -69,7 +71,7 @@ public:
    * @param context Current world state snapshot.
    */
   virtual result_t is_feasible(
-    const TrajectoryPoints & traj_points, const FilterContext & context) = 0;
+    const CandidateTrajectory & candidate_trajectory, const FilterContext & context) = 0;
 
   /**
    * @brief Updates the plugin's internal configuration from the latest parameter values.

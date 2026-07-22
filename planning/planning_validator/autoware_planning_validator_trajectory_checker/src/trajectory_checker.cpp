@@ -23,7 +23,7 @@
 #include <autoware_utils/ros/update_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <angles/angles/angles.h>
+#include <angles/angles.h>
 
 #include <memory>
 #include <string>

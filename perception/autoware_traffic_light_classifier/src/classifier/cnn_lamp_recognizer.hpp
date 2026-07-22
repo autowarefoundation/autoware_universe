@@ -52,9 +52,9 @@ struct BBox
 struct BBoxInfo
 {
   BBox box;
-  int classId{0};  // type: circle=0, arrow=1, u-turn=2, ped=3, number=4, cross=5
+  int class_id{0};  // type: circle=0, arrow=1, u-turn=2, ped=3, number=4, cross=5
   float prob{0.f};
-  int subClassId{0};  // color: green=0, amber=1, red=2
+  int sub_class_id{0};  // color: green=0, amber=1, red=2
   float sin{0.f};
   float cos{1.f};
 };
@@ -117,30 +117,63 @@ struct LampRegressionArchitecture
   int cos_index{14};
   int sin_index{15};
   float scale_x_y{2.0f};
-  /// YOLO center decode: 0.5f * (scale_x_y - 1.0f), set when loading parameters.
+  /// YOLO center decode offset; derived by CnnLampRecognizerCore from scale_x_y.
   float bbox_offset{0.5f};
   std::vector<float> anchors;
 };
 
-/**
- * @brief Lamp recognizer: per-lamp bbox + color + type + angle (ONNX/TensorRT).
- */
-class CnnLampRecognizer : public ClassifierInterface
+// Plain config for CnnLampRecognizerCore (the core does no ROS parameter reading of its own).
+// The core ctor validates the anchors size and derives bbox_offset, so it owns those invariants.
+struct CnnLampRecognizerConfig
+{
+  std::string model_path;
+  std::string precision;
+  float score_threshold{0.f};
+  float nms_threshold{0.f};
+  int max_batch_size{0};
+  LampRegressionArchitecture model_params;
+};
+
+// Node-free lamp recognition core (ONNX/TensorRT): per-lamp bbox + color + type + angle. The
+// ctor builds a TensorRT engine (needs a GPU + model); the static helpers need neither.
+class CnnLampRecognizerCore
 {
 public:
-  explicit CnnLampRecognizer(rclcpp::Node * node_ptr);
-  ~CnnLampRecognizer() override = default;
+  // One entry per input image: the deduplicated lamp detections (geometry + color + shape +
+  // arrow direction). An empty inner vector means nothing passed the thresholds.
+  struct DetectionResult
+  {
+    std::vector<std::vector<LampElement>> lamps_per_image;
+    bool success = false;
+  };
 
-  bool getTrafficSignals(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
+  // Builds the TensorRT engine from config.model_path and stores the decode parameters. Throws
+  // std::runtime_error if the engine setup fails or its output channels do not match model_params.
+  explicit CnnLampRecognizerCore(const CnnLampRecognizerConfig & config);
+
+  // Detect lamps in each ROI image, batching up to max_batch_size. NON-const: TensorRT
+  // inference mutates the engine's internal buffers.
+  DetectionResult classify(const std::vector<cv::Mat> & images);
+
+  // Map the deduplicated lamp detections into a TrafficLight's elements, honoring its
+  // traffic_light_type (pedestrian forces CIRCLE). Emits a single UNKNOWN placeholder element
+  // with zero confidence when unique_elements is empty.
+  static void update_traffic_signals(
+    const std::vector<LampElement> & unique_elements,
+    tier4_perception_msgs::msg::TrafficLight & traffic_signal);
+
+  // Build one debug view from roi_image: bounding boxes for each lamp plus a label /
+  // confidence text strip below. Returns a new image; roi_image is not modified.
+  static cv::Mat make_debug_image(
+    const cv::Mat & roi_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal,
+    const std::vector<LampElement> * elements);
 
 private:
   void preprocess(const std::vector<cv::Mat> & images);
-  bool doInference(size_t batch_size);
-  void decodeTlrOutput(size_t batch_size, std::vector<std::vector<BBoxInfo>> & detections_per_roi);
+  bool do_inference(size_t batch_size);
+  void decode_tlr_output(
+    size_t batch_size, std::vector<std::vector<BBoxInfo>> & detections_per_roi);
 
-  rclcpp::Node * node_ptr_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_common_;
   StreamUniquePtr stream_{makeCudaStream()};
 
@@ -159,8 +192,25 @@ private:
   float nms_threshold_;
 
   LampRegressionArchitecture model_params_;
+};
 
+// Thin ROS adapter around CnnLampRecognizerCore. Owns the node-facing concerns (parameter
+// declaration, debug-image publishing, logging) and delegates recognition to the core. Public
+// API is unchanged.
+class CnnLampRecognizer : public ClassifierInterface
+{
+public:
+  explicit CnnLampRecognizer(rclcpp::Node * node_ptr);
+  ~CnnLampRecognizer() override = default;
+
+  bool getTrafficSignals(
+    const std::vector<cv::Mat> & images,
+    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
+
+private:
+  rclcpp::Node * node_ptr_;
   image_transport::Publisher image_pub_;
+  CnnLampRecognizerCore core_;
 };
 
 }  // namespace autoware::traffic_light
