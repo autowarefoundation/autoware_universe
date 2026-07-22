@@ -73,12 +73,9 @@ void IntersectionCollisionChecker::init(
   pub_string_ =
     node.create_publisher<StringStamped>("~/intersection_collision_checker/debug/state", 1);
 
-  pub_planning_factors_ =
-    node.create_publisher<autoware_internal_planning_msgs::msg::PlanningFactorArray>(
-      "/planning/planning_factors/intersection_collision_checker", 1);
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceBase>(
-      "intersection_collision_checker");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(&node, "intersection_collision_checker");
 
   setup_diag();
 }
@@ -647,11 +644,7 @@ void IntersectionCollisionChecker::publish_planning_factor(const DebugData & deb
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   planning_factor_interface_->add(
     traj_points, ego_pose, ego_pose, PlanningFactor::STOP, factor_array);
-  autoware_internal_planning_msgs::msg::PlanningFactorArray factors_msg;
-  factors_msg.header.frame_id = "map";
-  factors_msg.header.stamp = clock_->now();
-  factors_msg.factors = planning_factor_interface_->take_factors();
-  pub_planning_factors_->publish(factors_msg);
+  planning_factor_interface_->publish();
 }
 
 }  // namespace autoware::planning_validator

@@ -47,7 +47,8 @@ protected:
   std::shared_ptr<PlanningValidatorContext> context_;
   rclcpp::Clock::SharedPtr clock_{};
 
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterfaceBase>
+  std::unique_ptr<
+    autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>>
     planning_factor_interface_;
 };
 

@@ -102,8 +102,6 @@ private:
   AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_voxel_pointcloud_;
   AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_cluster_pointcloud_;
   AUTOWARE_PUBLISHER_PTR(StringStamped) pub_string_;
-  AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::PlanningFactorArray)
-  pub_planning_factors_;
 
   intersection_collision_checker_node::Params params_;
 
