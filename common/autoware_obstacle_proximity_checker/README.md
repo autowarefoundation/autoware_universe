@@ -90,7 +90,7 @@ Callers must transform the point cloud to `base_link` before passing it to the l
 
 Supported object labels:
 
-`unknown`, `car`, `truck`, `bus`, `trailer`, `motorcycle`, `bicycle`, `pedestrian`, `pointcloud`
+`unknown`, `car`, `truck`, `bus`, `trailer`, `motorcycle`, `bicycle`, `pedestrian`, `animal`, `hazard`, `over_drivable`, `under_drivable`, `pointcloud`
 
 ## Assumptions / Known limits
 

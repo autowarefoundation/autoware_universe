@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
@@ -364,8 +364,11 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   auto is_safe = [&](
                    const auto & object, const double obj_arc_length, const double obj_lon_vel,
                    const double ego_arc_length, const double ego_vel) -> std::pair<bool, bool> {
-    if (object.classification.empty()) return {false, false};
-    const auto obj_type = classification_to_object_type.at(object.classification.front().label);
+    const auto label =
+      object.classification.empty()
+        ? ObjectClassification::UNKNOWN
+        : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    const auto obj_type = classification_to_object_type.at(label);
     if (!object_decel_map.count(obj_type)) return {false, false};
     const auto obj_decel = object_decel_map.at(obj_type);
     if (obj_lon_vel < stopped_vel_th) return {false, false};
@@ -573,9 +576,12 @@ void ObstacleTracker::update_objects(
     for (const auto & [uuid, existing_object] : persistent_objects_map_) {
       const auto existing_obj_label = existing_object.object.classification.empty()
                                         ? ObjectClassification::UNKNOWN
-                                        : existing_object.object.classification.front().label;
-      const auto obj_label = object.classification.empty() ? ObjectClassification::UNKNOWN
-                                                           : object.classification.front().label;
+                                        : autoware::object_recognition_utils::getHighestProbLabel(
+                                            existing_object.object.classification);
+      const auto obj_label =
+        object.classification.empty()
+          ? ObjectClassification::UNKNOWN
+          : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
       if (existing_obj_label != obj_label) continue;
       const auto distance = autoware_utils::calc_distance2d(
         object.kinematics.initial_pose_with_covariance.pose.position,
