@@ -75,10 +75,10 @@ public:
       "classifier_type",
       static_cast<int>(TrafficLightClassifierNodelet::ClassifierType::HSVFilter));
     if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
-      classifier_ptr_ = std::make_unique<ColorClassifier>(this, declare_hsv_config(this));
+      classifier_ptr_ = std::make_unique<ColorClassifier>(declare_hsv_config(this));
     } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
 #if ENABLE_GPU
-      classifier_ptr_ = std::make_unique<CNNClassifier>(this, declare_cnn_config(this));
+      classifier_ptr_ = std::make_unique<CNNClassifier>(declare_cnn_config(this));
 #else
       RCLCPP_ERROR(get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
