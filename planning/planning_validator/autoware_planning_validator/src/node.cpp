@@ -105,23 +105,16 @@ bool PlanningValidatorNode::isDataReady()
 void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
 {
   auto & data = context_->data;
-  const auto kinematics = sub_kinematics_->take_data();
-  data->current_kinematics = kinematics ? std::make_shared<const Odometry>(*kinematics) : nullptr;
-  const auto acceleration = sub_acceleration_->take_data();
-  data->current_acceleration =
-    acceleration ? std::make_shared<const AccelWithCovarianceStamped>(*acceleration) : nullptr;
-  const auto pointcloud = sub_pointcloud_->take_data();
-  data->obstacle_pointcloud =
-    pointcloud ? std::make_shared<const PointCloud2>(*pointcloud) : nullptr;
-  const auto traffic_signals = sub_traffic_signals_->take_data();
-  data->traffic_signals =
-    traffic_signals ? std::make_shared<const TrafficLightGroupArray>(*traffic_signals) : nullptr;
+  // Zero-copy: take_data() already returns std::shared_ptr<const T>, so assign it directly
+  // instead of copying the message into a freshly allocated shared_ptr.
+  data->current_kinematics = sub_kinematics_->take_data();
+  data->current_acceleration = sub_acceleration_->take_data();
+  data->obstacle_pointcloud = sub_pointcloud_->take_data();
+  data->traffic_signals = sub_traffic_signals_->take_data();
   data->set_current_trajectory(traj_msg);
 
-  const auto route = sub_route_->take_data();
-  data->set_route(route ? std::make_shared<const LaneletRoute>(*route) : nullptr);
-  const auto map = sub_lanelet_map_bin_->take_data();
-  data->set_map(map ? std::make_shared<const LaneletMapBin>(*map) : nullptr);
+  data->set_route(sub_route_->take_data());
+  data->set_map(sub_lanelet_map_bin_->take_data());
 }
 
 void PlanningValidatorNode::onOdometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) & msg)
@@ -145,9 +138,7 @@ void PlanningValidatorNode::onTrajectory(
   if (!isDataReady()) return;
 
   // Check operational mode state
-  const auto operation_mode = sub_operational_state_->take_data();
-  const OperationModeState::ConstSharedPtr operation_mode_msg =
-    operation_mode ? std::make_shared<const OperationModeState>(*operation_mode) : nullptr;
+  const OperationModeState::ConstSharedPtr operation_mode_msg = sub_operational_state_->take_data();
   if (operation_mode_msg) {
     flag_autonomous_control_enabled_ = infer_autonomous_control_state(operation_mode_msg);
   }

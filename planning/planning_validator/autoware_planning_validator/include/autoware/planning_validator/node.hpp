@@ -21,6 +21,7 @@
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_debug/published_time_publisher.hpp>
@@ -80,27 +81,34 @@ private:
   // subscriber
   AUTOWARE_SUBSCRIPTION_PTR(Trajectory) sub_trajectory_;
   AUTOWARE_SUBSCRIPTION_PTR(Odometry) sub_odometry_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest)
-  sub_route_ =
-    create_polling_subscriber<LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest>(
-      "~/input/route", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest)
-  sub_lanelet_map_bin_ =
-    create_polling_subscriber<LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest>(
-      "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PointCloud2)
-  sub_pointcloud_ = create_polling_subscriber<PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS(rclcpp::KeepLast(1)));
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry)
-  sub_kinematics_ = create_polling_subscriber<Odometry>("~/input/kinematics");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped)
-  sub_acceleration_ = create_polling_subscriber<AccelWithCovarianceStamped>("~/input/acceleration");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(OperationModeState)
-  sub_operational_state_ = create_polling_subscriber<OperationModeState>(
-    "~/input/operational_mode_state", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray)
-  sub_traffic_signals_ =
-    create_polling_subscriber<TrafficLightGroupArray>("~/input/traffic_signals");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletRoute, autoware::agnocast_wrapper::polling::polling_policy::Newest>::SharedPtr
+    sub_route_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletRoute, autoware::agnocast_wrapper::polling::polling_policy::Newest>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletMapBin, autoware::agnocast_wrapper::polling::polling_policy::Newest>::SharedPtr
+    sub_lanelet_map_bin_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletMapBin, autoware::agnocast_wrapper::polling::polling_policy::Newest>(
+      this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PointCloud2>::SharedPtr sub_pointcloud_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<PointCloud2>(
+      this, "~/input/pointcloud", rclcpp::SensorDataQoS(rclcpp::KeepLast(1)));
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_kinematics_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
+      this, "~/input/kinematics");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    sub_acceleration_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+        this, "~/input/acceleration");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<OperationModeState>::SharedPtr
+    sub_operational_state_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<OperationModeState>(
+        this, "~/input/operational_mode_state", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<TrafficLightGroupArray>::SharedPtr
+    sub_traffic_signals_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<TrafficLightGroupArray>(
+        this, "~/input/traffic_signals");
 
   // publisher
   AUTOWARE_PUBLISHER_PTR(Trajectory) pub_traj_;
