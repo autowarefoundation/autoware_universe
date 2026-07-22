@@ -21,8 +21,10 @@
     "fignum",
     "gridspec",
     "labelcolor",
+    "polyline",
     "relim",
     "retuned",
+    "timesteps",
     "valinit"
   ]
 }
