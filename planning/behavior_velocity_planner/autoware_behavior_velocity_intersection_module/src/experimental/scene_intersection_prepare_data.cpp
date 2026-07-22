@@ -186,7 +186,7 @@ std::optional<double> IntersectionModule::getStopLineIndexFromMap(
   const auto intersections =
     autoware::experimental::trajectory::crossed(cropped_path, extended_stopline);
   if (!intersections.empty()) {
-    return intersections.front();
+    return lane_id_interval.start + intersections.front();
   }
 
   geometry_msgs::msg::Pose stop_point_from_map;
