@@ -151,6 +151,17 @@ class carla_ros2_interface(object):
             "splatsim_device": (rclpy.Parameter.Type.STRING, "cuda:0"),
             "splatsim_restart_container": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_compress_format": (rclpy.Parameter.Type.STRING, "jpeg"),
+            # SplatSim LiDAR parameters
+            "splatsim_render_lidar": (rclpy.Parameter.Type.BOOL, False),
+            "splatsim_lidar_grpc_port": (rclpy.Parameter.Type.INTEGER, 50061),
+            "splatsim_lidar_sensor_type": (rclpy.Parameter.Type.STRING, "OT128"),
+            "splatsim_lidar_fps": (rclpy.Parameter.Type.DOUBLE, 10.0),
+            "splatsim_lidar_n_rows": (rclpy.Parameter.Type.INTEGER, 0),
+            "splatsim_lidar_n_columns": (rclpy.Parameter.Type.INTEGER, 0),
+            "splatsim_lidar_min_range_m": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_lidar_max_range_m": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_lidar_drop_threshold": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_lidar_alpha_threshold": (rclpy.Parameter.Type.DOUBLE, 0.0),
         }
 
         self.param_values = {}
@@ -287,9 +298,15 @@ class carla_ros2_interface(object):
                 if cfg.carla_type.startswith("sensor.camera"):
                     self._splatsim_camera_configs.append(cfg)
                 elif cfg.carla_type.startswith("sensor.lidar"):
-                    self.logger.info(
-                        f"Skipping LiDAR '{cfg.sensor_id}' (splatsim mode)"
-                    )
+                    if self.param_values.get("splatsim_render_lidar"):
+                        self._splatsim_lidar_configs.append(cfg)
+                        self.logger.info(
+                            f"Rendering LiDAR '{cfg.sensor_id}' via splatsim"
+                        )
+                    else:
+                        self.logger.info(
+                            f"Skipping LiDAR '{cfg.sensor_id}' (splatsim mode)"
+                        )
                 else:
                     carla_configs.append(cfg)
             self.sensor_configs = carla_configs
@@ -450,6 +467,9 @@ class carla_ros2_interface(object):
         self.render_with_splatsim = False
         self._splatsim_cameras = []
         self._splatsim_camera_configs = []
+        self._splatsim_lidars = []
+        self._splatsim_lidar_configs = []
+        self._geo_transform_ready = False
         self._mgrs_offset_x = 0.0
         self._mgrs_offset_y = 0.0
         self._proj_origin = (0.0, 0.0)
@@ -1498,6 +1518,8 @@ class carla_ros2_interface(object):
 
     def _init_geo_transform(self):
         """Compute MGRS offset from CARLA OpenDRIVE GeoReference."""
+        if self._geo_transform_ready:
+            return
         import lanelet2.core
         import lanelet2.io
         from autoware_lanelet2_extension_python.projection import MGRSProjector
@@ -1513,6 +1535,7 @@ class carla_ros2_interface(object):
         self._mgrs_offset_x = origin_local.x
         self._mgrs_offset_y = origin_local.y
 
+        self._geo_transform_ready = True
         self.logger.info(
             f"GeoTransform initialized: lat_0={lat_0:.8f}, lon_0={lon_0:.8f}, "
             f"mgrs_offset=({self._mgrs_offset_x:.1f}, {self._mgrs_offset_y:.1f})"
@@ -1571,6 +1594,65 @@ class carla_ros2_interface(object):
             self._splatsim_cameras.append(cam)
             self.logger.info(f"SplatSimRGBCamera created for sensor '{cfg.sensor_id}'")
 
+    def init_splatsim_lidars(self):
+        """Create SplatSimLidar instances for each LiDAR sensor.
+
+        Must be called after the CARLA world is loaded (ego_actor is set).
+        The rendered PointCloud2 is published on the sensor's sensing topic so
+        the existing preprocessing pipeline (and OnePlanner) runs unchanged.
+        """
+        if not self.render_with_splatsim or not self._splatsim_lidar_configs:
+            return
+        if not self.param_values.get("splatsim_tileset_path"):
+            self.logger.warning(
+                "render_with_splatsim is true but splatsim_tileset_path is empty; "
+                "skipping splatsim lidar initialization"
+            )
+            return
+
+        self._init_geo_transform()
+
+        from .splatsim.splatsim_lidar import SplatSimLidar
+
+        p = self.param_values
+        base_grpc_port = p["splatsim_lidar_grpc_port"]
+        for lidar_idx, cfg in enumerate(self._splatsim_lidar_configs):
+            spec = {
+                "id": cfg.sensor_id,
+                "spawn_point": cfg.transform or {
+                    "x": 0.0, "y": 0.0, "z": 0.0,
+                    "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+                },
+            }
+            params = cfg.parameters or {}
+            # Prefer explicit params; fall back to the CARLA sensor mapping range.
+            max_range = p["splatsim_lidar_max_range_m"] or float(
+                params.get("range", 0.0)
+            )
+            grpc_port = base_grpc_port + lidar_idx
+            lidar = SplatSimLidar(
+                spec,
+                proj_origin=self._proj_origin,
+                tileset_path=p["splatsim_tileset_path"],
+                splatsim_image=p["splatsim_image"],
+                grpc_port=grpc_port,
+                use_sh=p["splatsim_use_sh"],
+                sensor_type=p["splatsim_lidar_sensor_type"],
+                fps=p["splatsim_lidar_fps"],
+                n_rows=p["splatsim_lidar_n_rows"],
+                n_columns=p["splatsim_lidar_n_columns"],
+                min_range_m=p["splatsim_lidar_min_range_m"],
+                max_range_m=max_range,
+                drop_threshold=p["splatsim_lidar_drop_threshold"],
+                alpha_threshold=p["splatsim_lidar_alpha_threshold"],
+                pointcloud_topic=cfg.topic or "/sensing/lidar/top/pointcloud_before_sync",
+                frame_id=cfg.frame_id or "velodyne_top",
+                device=p["splatsim_device"],
+                restart_container=p["splatsim_restart_container"],
+            )
+            self._splatsim_lidars.append(lidar)
+            self.logger.info(f"SplatSimLidar created for sensor '{cfg.sensor_id}'")
+
     def _splatsim_tick(self, seconds, nanoseconds):
         """Per-tick splatsim work: send poses, publish dummy perception/localization."""
         # Send ego pose to splatsim cameras
@@ -1584,6 +1666,14 @@ class carla_ros2_interface(object):
         if actor_matrix is not None and self._splatsim_cameras:
             for cam in self._splatsim_cameras:
                 cam.update(
+                    actor_matrix_4x4=actor_matrix,
+                    stamp_sec=seconds,
+                    stamp_nanosec=nanoseconds,
+                )
+
+        if actor_matrix is not None and self._splatsim_lidars:
+            for lidar in self._splatsim_lidars:
+                lidar.update(
                     actor_matrix_4x4=actor_matrix,
                     stamp_sec=seconds,
                     stamp_nanosec=nanoseconds,
@@ -1738,6 +1828,11 @@ class carla_ros2_interface(object):
         for cam in self._splatsim_cameras:
             cam.shutdown()
         self._splatsim_cameras.clear()
+
+        # Shutdown splatsim lidars
+        for lidar in self._splatsim_lidars:
+            lidar.shutdown()
+        self._splatsim_lidars.clear()
 
         # Destroy publishers first
         if self.ros_publisher_manager:

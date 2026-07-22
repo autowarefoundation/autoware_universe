@@ -120,3 +120,47 @@ class StreamSummary(_message.Message):
     frames_rendered: int
     poses_received: int
     def __init__(self, frames_rendered: _Optional[int] = ..., poses_received: _Optional[int] = ...) -> None: ...
+
+class LidarSensorConfig(_message.Message):
+    __slots__ = ("name", "sensor_type", "n_rows", "n_columns", "fps", "min_range_m", "max_range_m", "extrinsic", "elevation_deg", "pointcloud_topic", "frame_id", "drop_threshold", "alpha_threshold")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SENSOR_TYPE_FIELD_NUMBER: _ClassVar[int]
+    N_ROWS_FIELD_NUMBER: _ClassVar[int]
+    N_COLUMNS_FIELD_NUMBER: _ClassVar[int]
+    FPS_FIELD_NUMBER: _ClassVar[int]
+    MIN_RANGE_M_FIELD_NUMBER: _ClassVar[int]
+    MAX_RANGE_M_FIELD_NUMBER: _ClassVar[int]
+    EXTRINSIC_FIELD_NUMBER: _ClassVar[int]
+    ELEVATION_DEG_FIELD_NUMBER: _ClassVar[int]
+    POINTCLOUD_TOPIC_FIELD_NUMBER: _ClassVar[int]
+    FRAME_ID_FIELD_NUMBER: _ClassVar[int]
+    DROP_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    ALPHA_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    sensor_type: str
+    n_rows: int
+    n_columns: int
+    fps: float
+    min_range_m: float
+    max_range_m: float
+    extrinsic: Pose
+    elevation_deg: _containers.RepeatedScalarFieldContainer[float]
+    pointcloud_topic: str
+    frame_id: str
+    drop_threshold: float
+    alpha_threshold: float
+    def __init__(self, name: _Optional[str] = ..., sensor_type: _Optional[str] = ..., n_rows: _Optional[int] = ..., n_columns: _Optional[int] = ..., fps: _Optional[float] = ..., min_range_m: _Optional[float] = ..., max_range_m: _Optional[float] = ..., extrinsic: _Optional[_Union[Pose, _Mapping]] = ..., elevation_deg: _Optional[_Iterable[float]] = ..., pointcloud_topic: _Optional[str] = ..., frame_id: _Optional[str] = ..., drop_threshold: _Optional[float] = ..., alpha_threshold: _Optional[float] = ...) -> None: ...
+
+class InitializeLidarRequest(_message.Message):
+    __slots__ = ("sensor",)
+    SENSOR_FIELD_NUMBER: _ClassVar[int]
+    sensor: LidarSensorConfig
+    def __init__(self, sensor: _Optional[_Union[LidarSensorConfig, _Mapping]] = ...) -> None: ...
+
+class LidarData(_message.Message):
+    __slots__ = ("stamp", "pose")
+    STAMP_FIELD_NUMBER: _ClassVar[int]
+    POSE_FIELD_NUMBER: _ClassVar[int]
+    stamp: Timestamp
+    pose: Pose
+    def __init__(self, stamp: _Optional[_Union[Timestamp, _Mapping]] = ..., pose: _Optional[_Union[Pose, _Mapping]] = ...) -> None: ...
