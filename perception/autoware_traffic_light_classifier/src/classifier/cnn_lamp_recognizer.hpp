@@ -200,7 +200,7 @@ private:
 class CnnLampRecognizer : public ClassifierInterface
 {
 public:
-  explicit CnnLampRecognizer(rclcpp::Node * node_ptr);
+  CnnLampRecognizer(rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config);
   ~CnnLampRecognizer() override = default;
 
   bool getTrafficSignals(

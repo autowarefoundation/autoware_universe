@@ -543,52 +543,11 @@ cv::Mat CnnLampRecognizerCore::make_debug_image(
 }
 
 // ============================== CnnLampRecognizer ==============================
-// ROS adapter: declares parameters, publishes debug images, and delegates recognition to the
-// Node-free core.
+// ROS adapter: publishes debug images, logs, and delegates recognition to the Node-free core.
 
-namespace
-{
-// Declare the lamp recognizer parameters on `node` and return the config. Anchors are narrowed
-// double->float here (a ROS quirk); config-data invariants live in the core ctor, not here.
-CnnLampRecognizerConfig declare_lamp_config(rclcpp::Node * node)
-{
-  CnnLampRecognizerConfig config;
-  config.model_path = node->declare_parameter<std::string>("model_path");
-  config.precision = node->declare_parameter<std::string>("precision");
-  config.score_threshold = static_cast<float>(node->declare_parameter<double>("score_threshold"));
-  config.nms_threshold = static_cast<float>(node->declare_parameter<double>("nms_threshold"));
-  config.max_batch_size = node->declare_parameter<int>("max_batch_size");
-
-  auto & model_params = config.model_params;
-  model_params.num_anchors = node->declare_parameter<int>("model_params.num_anchors");
-  model_params.chans_per_anchor = node->declare_parameter<int>("model_params.chans_per_anchor");
-  model_params.x_index = node->declare_parameter<int>("model_params.x_index");
-  model_params.y_index = node->declare_parameter<int>("model_params.y_index");
-  model_params.w_index = node->declare_parameter<int>("model_params.w_index");
-  model_params.h_index = node->declare_parameter<int>("model_params.h_index");
-  model_params.obj_index = node->declare_parameter<int>("model_params.obj_index");
-  model_params.color_start = node->declare_parameter<int>("model_params.color_start");
-  model_params.type_start = node->declare_parameter<int>("model_params.type_start");
-  model_params.num_types = node->declare_parameter<int>("model_params.num_types");
-  model_params.num_colors = node->declare_parameter<int>("model_params.num_colors");
-  model_params.cos_index = node->declare_parameter<int>("model_params.cos_index");
-  model_params.sin_index = node->declare_parameter<int>("model_params.sin_index");
-  model_params.scale_x_y =
-    static_cast<float>(node->declare_parameter<double>("model_params.scale_x_y"));
-
-  const auto anchors_param = node->declare_parameter<std::vector<double>>("model_params.anchors");
-  model_params.anchors.clear();
-  model_params.anchors.reserve(anchors_param.size());
-  for (double v : anchors_param) {
-    model_params.anchors.push_back(static_cast<float>(v));
-  }
-
-  return config;
-}
-}  // namespace
-
-CnnLampRecognizer::CnnLampRecognizer(rclcpp::Node * node_ptr)
-: node_ptr_(node_ptr), core_(declare_lamp_config(node_ptr))
+CnnLampRecognizer::CnnLampRecognizer(
+  rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config)
+: node_ptr_(node_ptr), core_(config)
 {
   image_pub_ = image_transport::create_publisher(
     node_ptr_, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());

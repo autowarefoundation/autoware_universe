@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "traffic_light_classifier_node.hpp"
 
+#include "classifier_params.hpp"
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
@@ -53,16 +55,16 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   int classifier_type = this->declare_parameter<int>("classifier_type");
   std::shared_ptr<ClassifierInterface> classifier_ptr;
   if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
-    classifier_ptr = std::make_shared<ColorClassifier>(this);
+    classifier_ptr = std::make_shared<ColorClassifier>(this, declare_hsv_config(this));
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CNNClassifier>(this);
+    classifier_ptr = std::make_shared<CNNClassifier>(this, declare_cnn_config(this));
 #else
     RCLCPP_ERROR(this->get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::LampRecognizer) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CnnLampRecognizer>(this);
+    classifier_ptr = std::make_shared<CnnLampRecognizer>(this, declare_lamp_config(this));
 #else
     RCLCPP_ERROR(
       this->get_logger(), "please install CUDA, CUDNN and TensorRT to use LampRecognizer");
