@@ -66,4 +66,3 @@
     ]
     num_points: [5000, 80000, 160000] # [min, opt, max]
     num_unique_coors: [3000, 30000, 60000] # [min, opt, max]
-
