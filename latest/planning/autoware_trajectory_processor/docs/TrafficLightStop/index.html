@@ -22938,6 +22938,12 @@
 <td>[s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).</td>
 </tr>
 <tr>
+<td><code>th_stable_duration_unknown</code></td>
+<td>double</td>
+<td>0.0</td>
+<td>[s] Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving).</td>
+</tr>
+<tr>
 <td><code>th_amber_rejection_hysteresis</code></td>
 <td>double</td>
 <td>0.5</td>
@@ -22948,6 +22954,18 @@
 <td>double</td>
 <td>2.75</td>
 <td>[s] Maximum time allowed for the ego vehicle to cross the stop line after an amber light appears.</td>
+</tr>
+<tr>
+<td><code>delay_response_time</code></td>
+<td>double</td>
+<td>0.5</td>
+<td>[s] Delay response time used to estimate the minimum ego stopping distance.</td>
+</tr>
+<tr>
+<td><code>ego_stopped_vel_th</code></td>
+<td>double</td>
+<td>0.01</td>
+<td>[m/s] Velocity below which ego is considered stopped when checking traffic lights.</td>
 </tr>
 </tbody>
 </table></div>
