@@ -70,8 +70,14 @@
     />
 
     <!-- SplatSim integration (optional) -->
-    <arg name="render_with_splatsim" default="false" description="Enable splatsim rendering via Docker + gRPC"/>
-    <arg name="splatsim_tileset_path" default="" description="Host path to tileset.json"/>
+    <arg name="render_with_splatsim" default="true" description="Enable splatsim rendering via Docker + gRPC"/>
+    <arg name="splatsim_render_camera" default="false" description="Render cameras via splatsim (false = cameras fully off in splatsim mode)"/>
+    <!-- Geographic origin of the CARLA world origin. Defaults are for CARLA 0.10.0 Odaiba
+         (MGRS 54SUE local (92008.441357, 45335.052882) reverse-projected to WGS84),
+         which carries no OpenDRIVE GeoReference. Set to 0.0/0.0 to parse from OpenDRIVE instead. -->
+    <arg name="splatsim_geo_origin_lat" default="35.645946115028" description="Latitude (deg) of the CARLA world origin for the splatsim MGRS transform"/>
+    <arg name="splatsim_geo_origin_lon" default="139.807130021877" description="Longitude (deg) of the CARLA world origin for the splatsim MGRS transform"/>
+    <arg name="splatsim_tileset_path" default="$(env HOME)/workspace/fg_plus_bg_background_v25_enu_ecef.usdz" description="Host path to the 3DGS scene (tileset.json or .usdz)"/>
     <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
     <arg name="splatsim_grpc_port" default="50051"/>
     <arg name="splatsim_use_sh" default="true"/>
@@ -84,7 +90,7 @@
     <arg name="splatsim_device" default="cuda:0"/>
     <arg name="splatsim_restart_container" default="false" description="Force restart splatsim container even if already running"/>
     <arg name="splatsim_compress_format" default="jpeg" description="Image compression format: 'jpeg', 'png', or '' for raw"/>
-    <arg name="splatsim_render_lidar" default="false" description="Render LiDAR via splatsim (publishes PointCloud2 to the sensing topic)"/>
+    <arg name="splatsim_render_lidar" default="true" description="Render LiDAR via splatsim (publishes PointCloud2 to the sensing topic)"/>
     <arg name="splatsim_lidar_grpc_port" default="50061" description="Base gRPC port for splatsim LiDAR containers"/>
     <arg name="splatsim_lidar_sensor_type" default="OT128" description="LiDAR elevation table: 'OT128', 'XT32', or '' for uniform n_rows"/>
     <arg name="splatsim_lidar_fps" default="10.0" description="LiDAR spin rate / render cadence (Hz)"/>
@@ -139,6 +145,9 @@
       <param name="splatsim_device" value="$(var splatsim_device)"/>
       <param name="splatsim_restart_container" value="$(var splatsim_restart_container)"/>
       <param name="splatsim_compress_format" value="$(var splatsim_compress_format)"/>
+      <param name="splatsim_render_camera" value="$(var splatsim_render_camera)"/>
+      <param name="splatsim_geo_origin_lat" value="$(var splatsim_geo_origin_lat)"/>
+      <param name="splatsim_geo_origin_lon" value="$(var splatsim_geo_origin_lon)"/>
       <param name="splatsim_render_lidar" value="$(var splatsim_render_lidar)"/>
       <param name="splatsim_lidar_grpc_port" value="$(var splatsim_lidar_grpc_port)"/>
       <param name="splatsim_lidar_sensor_type" value="$(var splatsim_lidar_sensor_type)"/>
