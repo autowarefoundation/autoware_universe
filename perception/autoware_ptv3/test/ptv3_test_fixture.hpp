@@ -52,6 +52,7 @@ struct PTv3ConfigParams
   float filter_class_probability_threshold = 0.5F;
   std::vector<std::string> filter_classes = {};
   std::string filter_output_format = "xyzi";
+  bool filter_apply_to_segmentation = false;
   std::string source_reconstruction = "partial";
   std::vector<std::int64_t> dec_depths = {0, 0};
 };
@@ -63,7 +64,7 @@ inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
     params.voxels_num, params.point_cloud_range, params.voxel_size, params.segmentation_class_names,
     params.serialization_orders, params.pooling_strides, params.enc_channels, params.palette,
     params.filter_class_probability_threshold, params.filter_classes, params.filter_output_format,
-    params.source_reconstruction, params.dec_depths);
+    params.filter_apply_to_segmentation, params.source_reconstruction, params.dec_depths);
 }
 
 // Base fixture for all autoware_ptv3 CUDA unit tests: owns a CUDA stream and the

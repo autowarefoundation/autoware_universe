@@ -40,7 +40,7 @@ struct OutputSegmentationPointType
   float entropy;
 } __attribute__((packed));
 
-PTv3Config make_test_config()
+PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
 {
   PTv3ConfigParams params;
   params.cloud_capacity = 128;
@@ -61,6 +61,7 @@ PTv3Config make_test_config()
   params.filter_class_probability_threshold = 0.8F;
   params.filter_classes = {"truck"};
   params.filter_output_format = "xyzi";
+  params.filter_apply_to_segmentation = filter_apply_to_segmentation;
   params.source_reconstruction = "none";
   return makeConfig(params);
 }
@@ -69,9 +70,79 @@ class PostprocessKernelTest : public PTv3CudaTest
 {
 };
 
-TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndices)
+TEST_F(PostprocessKernelTest, SegmentationPointcloudDoesNotFilterConfiguredClassIndicesByDefault)
 {
   const auto config = make_test_config();
+  PostprocessCuda postprocess(config, stream_);
+
+  constexpr std::size_t num_points = 4;
+  constexpr std::size_t num_classes = 3;
+
+  // XYZ + padding for float4 input layout used by kernel.
+  const std::vector<float> input_features = {
+    1.0f, 10.0f, 100.0f, 0.0f,  // label 0: car
+    2.0f, 20.0f, 200.0f, 0.0f,  // label 1: truck (filtered)
+    3.0f, 30.0f, 300.0f, 0.0f,  // label 2: drivable_flat
+    4.0f, 40.0f, 400.0f, 0.0f,  // invalid label
+  };
+  const std::vector<std::int64_t> pred_labels = {0, 1, 2, -1};
+  const std::vector<float> pred_probs = {
+    0.9f, 0.1f, 0.0f, 0.2f, 0.8f, 0.0f, 0.1f, 0.0f, 0.9f, 0.3f, 0.3f, 0.4f,
+  };
+
+  auto input_features_d = this->template makeDeviceBuffer<float>(num_points * 4);
+  auto pred_labels_d = this->template makeDeviceBuffer<std::int64_t>(num_points);
+  auto pred_probs_d = this->template makeDeviceBuffer<float>(num_points * num_classes);
+  auto output_points_d = this->template makeDeviceBuffer<OutputSegmentationPointType>(num_points);
+
+  copyToDevice(input_features_d.get(), input_features);
+  copyToDevice(pred_labels_d.get(), pred_labels);
+  copyToDevice(pred_probs_d.get(), pred_probs);
+
+  const auto num_segmented_points = postprocess.createSegmentationPointcloud(
+    input_features_d.get(), pred_labels_d.get(), pred_probs_d.get(),
+    reinterpret_cast<std::uint8_t *>(output_points_d.get()), num_classes, num_points);
+
+  EXPECT_EQ(num_segmented_points, 4U);
+
+  const auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+
+  std::array<float, 4> x_values{};
+  std::array<std::uint8_t, 4> class_ids{};
+  for (std::size_t i = 0; i < output_points.size(); ++i) {
+    x_values[i] = output_points[i].x;
+    class_ids[i] = output_points[i].class_id;
+  }
+
+  std::sort(x_values.begin(), x_values.end());
+  EXPECT_EQ(x_values[0], 1.0f);
+  EXPECT_EQ(x_values[1], 2.0f);
+  EXPECT_EQ(x_values[2], 3.0f);
+  EXPECT_EQ(x_values[3], 4.0f);
+
+  const auto car_label =
+    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::CAR);
+  const auto truck_label =
+    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::TRUCK);
+  const auto ground_label =
+    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::FLAT_SURFACE);
+
+  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), car_label), class_ids.end());
+  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), truck_label), class_ids.end());
+  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), ground_label), class_ids.end());
+  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), 255U), class_ids.end());
+
+  for (const auto & output_point : output_points) {
+    if (output_point.x == 4.0f) {
+      EXPECT_EQ(output_point.class_id, 255U);
+      EXPECT_EQ(output_point.probability, 0.0f);
+    }
+  }
+}
+
+TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndicesWhenEnabled)
+{
+  const auto config = make_test_config(true);
   PostprocessCuda postprocess(config, stream_);
 
   constexpr std::size_t num_points = 4;
@@ -120,19 +191,15 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndice
 
   const auto car_label =
     static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::CAR);
+  const auto truck_label =
+    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::TRUCK);
   const auto ground_label =
     static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::FLAT_SURFACE);
 
   EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), car_label), class_ids.end());
+  EXPECT_EQ(std::find(class_ids.begin(), class_ids.end(), truck_label), class_ids.end());
   EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), ground_label), class_ids.end());
   EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), 255U), class_ids.end());
-
-  for (const auto & output_point : output_points) {
-    if (output_point.x == 4.0f) {
-      EXPECT_EQ(output_point.class_id, 255U);
-      EXPECT_EQ(output_point.probability, 0.0f);
-    }
-  }
 }
 
 }  // namespace test

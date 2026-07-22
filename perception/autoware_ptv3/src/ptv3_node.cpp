@@ -83,6 +83,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   float filter_class_probability_threshold = 0.0F;
   std::vector<std::string> filter_classes;
   std::string filter_output_format;
+  bool filter_apply_to_segmentation = false;
   std::string source_reconstruction = "none";
   std::vector<std::int64_t> dec_depths;
   if (use_seg3d_head) {
@@ -101,6 +102,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       "segmentation3d.filter.classes", descriptor);
     filter_output_format =
       this->declare_parameter<std::string>("segmentation3d.filter.output_format", descriptor);
+    filter_apply_to_segmentation =
+      this->declare_parameter<bool>("segmentation3d.filter.apply_to_segmentation", descriptor);
     source_reconstruction =
       this->declare_parameter<std::string>("segmentation3d.source_reconstruction", descriptor);
     dec_depths =
@@ -191,11 +194,11 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
 
   PTv3Config config(
     use_seg3d_head, use_det3d_head, plugins_path, cloud_capacity, voxels_num, point_cloud_range,
-    voxel_size, segmentation_class_names, serialization_orders, pooling_strides, enc_channels,
-    palette, filter_class_probability_threshold, filter_classes, filter_output_format,
-    source_reconstruction, dec_depths, detection_class_names_, bbox_voxel_size,
-    distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds, has_twist_,
-    num_proposals, post_center_range);
+    voxel_size, segmentation_class_names, serialization_orders, pooling_strides, palette,
+    filter_class_probability_threshold, filter_classes, filter_output_format,
+    filter_apply_to_segmentation, source_reconstruction, dec_depths, detection_class_names_,
+    bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
+    has_twist_, num_proposals, post_center_range);
 
   const auto encoder_trt_config = tensorrt_common::TrtCommonConfig(
     encoder_onnx_path, trt_precision, encoder_engine_path, encoder_workspace_size);

@@ -24,9 +24,18 @@
           "type": "string",
           "description": "Filtered output point format. Empty string preserves the input format.",
           "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
+        },
+        "apply_to_segmentation": {
+          "type": "boolean",
+          "description": "Whether to also remove filter.classes from the segmentation pointcloud output."
         }
       },
-      "required": ["class_probability_threshold", "classes", "output_format"],
+      "required": [
+        "class_probability_threshold",
+        "classes",
+        "output_format",
+        "apply_to_segmentation"
+      ],
       "additionalProperties": false
     },
     "post_process_params": {

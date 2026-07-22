@@ -424,12 +424,14 @@ std::size_t PostprocessCuda::createSegmentationPointcloud(
   cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
 
   auto num_blocks = divup(num_points, config_.threads_per_block_);
+  const auto num_filter_classes =
+    config_.filter_apply_to_segmentation_ ? config_.filter_class_indices_.size() : std::size_t{0};
 
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
-    class_id_to_semantic_label_d_.get(), filter_class_indices_d_.get(),
-    config_.filter_class_indices_.size(), filtered_mask_d_.get(),
-    reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
+    class_id_to_semantic_label_d_.get(), filter_class_indices_d_.get(), num_filter_classes,
+    filtered_mask_d_.get(), reinterpret_cast<OutputSegmentationPointType *>(output_points),
+    num_classes, num_points);
 
   std::uint32_t num_segmented_points = 0;
   cudaMemcpyAsync(
