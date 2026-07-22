@@ -357,18 +357,11 @@ __host__ __device__ bool FirstOrderDubinsBicycleCostImpl<
   CLASS_T, NUM_TIMESTEPS, PARAMS_T,
   DYN_PARAMS_T>::isEgoOutsideDrivableArea(const float x, const float y, const float yaw) const
 {
+  (void)x;
+  (void)y;
   (void)yaw;
-  if (num_drivable_vertices_ < 3) {
-    return isOffRoad(x, y);
-  }
-
-  // Rear-axle containment in the drivable polygon. Corner checks are too strict on tight curves.
-  if (pointInPolygon(x, y, drivable_poly_x_, drivable_poly_y_, num_drivable_vertices_)) {
-    return false;
-  }
-
-  // Polygon boundary is piecewise-linear; defer to ref lateral offset near the corridor edge.
-  return isOffRoad(x, y);
+  // Boundary / polygonal / left-right corridor crash disabled.
+  return false;
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>

@@ -96,8 +96,7 @@ public:
 
   __host__ __device__ bool isOffRoad(const float x, const float y) const;
 
-  /** True when outside drivable polygon (rear axle); falls back to ref lateral offset near the poly
-   * boundary. */
+  /** Disabled: always false (no polygon / lateral-bound / road-border crash). */
   __host__ __device__ bool isEgoOutsideDrivableArea(
     const float x, const float y, const float yaw) const;
 

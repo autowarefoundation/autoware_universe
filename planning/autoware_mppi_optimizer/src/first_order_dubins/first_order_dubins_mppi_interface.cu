@@ -745,7 +745,30 @@ FirstOrderDubinsMppiOptimizationResult FirstOrderDubinsMppiInterface::optimizeTr
   const int steer_cmd_idx =
     static_cast<int>(FirstOrderDubinsBicycleParams::ControlIndex::STEER_CMD);
 
-  const size_t num_points = std::min(output.points.size(), static_cast<size_t>(kMppiHorizon));
+  // GPU costs post-step state at timestep t against ref[t] (= DP[t] at time (t+1)*dt).
+  // Map: points[i] <- state[i+1], control[i].
+  //
+  // Vendor mismatch: GPU rollouts take H steps (mppi_common.cu: t = 0..H-1) and cost the
+  // final post-step state x[H], but host getActualStateSeq() only runs H-1 steps
+  // (controller.cuh: i < num_timesteps - 1) and stores x[0..H-1]. Reconstruct x[H] here
+  // with one dynamics step so the last DP point is not left as a duplicate of x[H-1].
+  const int n_state = static_cast<int>(state_trajectory.cols());
+  const int n_ctrl = static_cast<int>(u_opt_traj.cols());
+  const size_t num_points = std::min(
+    {output.points.size(), static_cast<size_t>(std::max(0, n_state)),
+     static_cast<size_t>(std::max(0, n_ctrl))});
+
+  DYN::state_array x_final = DYN::state_array::Zero();
+  DYN::state_array x_final_dot = DYN::state_array::Zero();
+  DYN::output_array y_final = DYN::output_array::Zero();
+  const bool have_final_state = n_state > 0 && n_ctrl > 0;
+  if (have_final_state) {
+    DYN::state_array x_tail = state_trajectory.col(n_state - 1);
+    DYN::control_array u_tail = u_opt_traj.col(n_ctrl - 1);
+    impl_->model.enforceConstraints(x_tail, u_tail);
+    impl_->model.step(
+      x_tail, x_final, x_final_dot, u_tail, y_final, static_cast<float>(n_state - 1), kDt);
+  }
 
   float max_pos_delta = 0.0F;
   float max_vel_delta = 0.0F;
@@ -755,11 +778,17 @@ FirstOrderDubinsMppiOptimizationResult FirstOrderDubinsMppiInterface::optimizeTr
       break;
     }
     const auto & in_point = input.points[i];
-    const int col = static_cast<int>(i);
-    const float tracked_x = state_trajectory(pos_x_idx, col);
-    const float tracked_y = state_trajectory(pos_y_idx, col);
-    const float tracked_yaw = state_trajectory(yaw_idx, col);
-    const float tracked_v = state_trajectory(vel_x_idx, col);
+    const int control_col = static_cast<int>(i);
+    const bool use_final = (control_col + 1 >= n_state) && have_final_state;
+
+    const float tracked_x =
+      use_final ? x_final(pos_x_idx) : state_trajectory(pos_x_idx, control_col + 1);
+    const float tracked_y =
+      use_final ? x_final(pos_y_idx) : state_trajectory(pos_y_idx, control_col + 1);
+    const float tracked_yaw =
+      use_final ? x_final(yaw_idx) : state_trajectory(yaw_idx, control_col + 1);
+    const float tracked_v =
+      use_final ? x_final(vel_x_idx) : state_trajectory(vel_x_idx, control_col + 1);
 
     const float ref_x = static_cast<float>(in_point.pose.position.x);
     const float ref_y = static_cast<float>(in_point.pose.position.y);
@@ -773,8 +802,8 @@ FirstOrderDubinsMppiOptimizationResult FirstOrderDubinsMppiInterface::optimizeTr
     out_point.pose.position.z = in_point.pose.position.z;
     out_point.pose.orientation = quaternionFromYaw(tracked_yaw);
     out_point.longitudinal_velocity_mps = tracked_v;
-    out_point.acceleration_mps2 = u_opt_traj(accel_cmd_idx, col);
-    out_point.front_wheel_angle_rad = u_opt_traj(steer_cmd_idx, col);
+    out_point.acceleration_mps2 = u_opt_traj(accel_cmd_idx, control_col);
+    out_point.front_wheel_angle_rad = u_opt_traj(steer_cmd_idx, control_col);
     ++i;
   }
 
