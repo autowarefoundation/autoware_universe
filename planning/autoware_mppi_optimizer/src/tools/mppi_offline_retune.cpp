@@ -92,7 +92,7 @@ void printUsage(const char * argv0)
        "  --help\n";
 }
 
-std::string trim(std::string s)
+std::string trim(const std::string & s)
 {
   const auto start = s.find_first_not_of(" \t\r\n");
   if (start == std::string::npos) {

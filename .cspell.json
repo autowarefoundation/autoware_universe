@@ -13,6 +13,16 @@
     "brkay54",
     "libtensorrt",
     "TRTBEV",
-    "CUDA_HOSTDEV"
+    "CUDA_HOSTDEV",
+    "datalim",
+    "dubins",
+    "execv",
+    "expt",
+    "fignum",
+    "gridspec",
+    "labelcolor",
+    "relim",
+    "retuned",
+    "valinit"
   ]
 }
