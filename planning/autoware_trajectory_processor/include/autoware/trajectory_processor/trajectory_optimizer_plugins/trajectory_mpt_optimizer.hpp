@@ -21,6 +21,7 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
+#include <autoware_trajectory_processor/trajectory_optimizer_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -61,7 +62,7 @@ struct MPTParams
   double ego_nearest_yaw_threshold_deg{45.0};
 
   // Acceleration smoothing
-  int acceleration_moving_average_window{
+  int64_t acceleration_moving_average_window{
     5};  // Moving average window size for acceleration smoothing
 };
 
@@ -70,18 +71,12 @@ class TrajectoryMPTOptimizer : public TrajectoryOptimizerPluginBase
 public:
   TrajectoryMPTOptimizer() = default;
 
-  void initialize(
-    const std::string & name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper) override;
+  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
 
-  void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
+  void update_params(const TrajectoryOptimizerParams & params) override;
 
-  void set_up_params() override;
-
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) override;
+protected:
+  void on_initialize(const TrajectoryOptimizerParams & params) override;
 
 private:
   // Core MPT optimizer instance
@@ -94,7 +89,7 @@ private:
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
   // Parameter structs
-  MPTParams mpt_params_;
+  trajectory_optimizer_node_params::Params::TrajectoryMptOptimizer mpt_params_;
   EgoNearestParam ego_nearest_param_;
   TrajectoryParam traj_param_;
   std::shared_ptr<DebugData> debug_data_ptr_;
