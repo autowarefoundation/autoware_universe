@@ -329,7 +329,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
                                     : "next segment is right turn";
       RCLCPP_INFO_STREAM(
         logger_, "Cannot shift on the current segment (ID: "
-                   << current_segment.preferred_primitive.id << ")");
+                   << current_segment.preferred_primitive.id << "): " << shift_unavailable_reason);
       break;
     }
 
