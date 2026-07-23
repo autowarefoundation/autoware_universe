@@ -292,12 +292,12 @@ bool VehicleTracker::measure(
   shape_model_.updateFootprint(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
-  // Belief-driven 180° flip, enabled only at low speed where the reverse-velocity limit cannot
-  // correct the heading sign.
-  if (
-    sign_belief_.shouldFlip() &&
-    std::abs(motion_model_.getStateElement(IDX::U)) <
-      object_model_.orientation_sign_belief.flip_vel_limit) {
+  // The tracked longitudinal velocity votes on the heading-sign belief once per measurement.
+  sign_belief_.voteVelocity(motion_model_.getStateElement(IDX::U));
+
+  // Belief-driven 180° flip. Velocity evidence is part of the belief, so yaw votes decide the
+  // sign at low speed and the velocity sign decides above the par speed.
+  if (sign_belief_.shouldFlip()) {
     motion_model_.flipOrientation();
     if (shape_model_.isFootprintValid()) {
       shape_model_.flipFootprintXY();

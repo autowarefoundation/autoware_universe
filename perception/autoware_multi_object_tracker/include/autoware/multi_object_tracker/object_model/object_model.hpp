@@ -121,7 +121,7 @@ struct OrientationSignBelief
   double dead_zone{0.0};          // [rad] no-vote band around |yaw_diff| = 90 deg
   double log_odds_max{0.0};       // [-] belief clamp bound
   double flip_threshold{0.0};     // [-] flip when log_odds < -flip_threshold
-  double flip_vel_limit{0.0};     // [m/s] belief-based flip enabled below this |vel_long|
+  double vote_vel_par{0.0};  // [m/s] speed where a velocity vote equals an AVAILABLE yaw vote
 };
 
 class ObjectModel
@@ -192,7 +192,7 @@ public:
         orientation_sign_belief.dead_zone = deg2rad(30.0);
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
-        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
         break;
 
       case ObjectModelType::NormalVehicle:
@@ -246,7 +246,7 @@ public:
         orientation_sign_belief.dead_zone = deg2rad(30.0);
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
-        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
         break;
 
       case ObjectModelType::BigVehicle:
@@ -300,7 +300,7 @@ public:
         orientation_sign_belief.dead_zone = deg2rad(30.0);
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
-        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
         break;
 
       case ObjectModelType::Bicycle:
@@ -354,7 +354,7 @@ public:
         orientation_sign_belief.dead_zone = deg2rad(30.0);
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
-        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
         break;
 
       case ObjectModelType::Pedestrian:

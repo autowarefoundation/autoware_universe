@@ -470,6 +470,33 @@ TEST(OrientationSignBelief, AvailableVotesWeighMore)
   EXPECT_GT(beliefParams().vote_available, beliefParams().vote_sign_unknown);
 }
 
+// A velocity vote weighs linearly with speed and matches an AVAILABLE yaw vote at the par speed.
+TEST(OrientationSignBelief, VelocityVoteScalesWithSpeed)
+{
+  auto belief = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  belief.voteVelocity(-beliefParams().vote_vel_par);
+  EXPECT_DOUBLE_EQ(belief.logOdds(), -beliefParams().vote_available);
+
+  auto slow = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  slow.voteVelocity(-0.1 * beliefParams().vote_vel_par);
+  EXPECT_DOUBLE_EQ(slow.logOdds(), -0.1 * beliefParams().vote_available);
+}
+
+// Against an agreeing AVAILABLE yaw vote, reverse motion below the par speed keeps the sign
+// (parked vehicles maneuver in reverse) while reverse motion above it drives the belief negative.
+TEST(OrientationSignBelief, ParSpeedSetsYawVelocityPriority)
+{
+  auto slow = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  slow.vote(0.0, true);
+  slow.voteVelocity(-0.5 * beliefParams().vote_vel_par);
+  EXPECT_GT(slow.logOdds(), 0.0);
+
+  auto fast = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  fast.vote(0.0, true);
+  fast.voteVelocity(-2.0 * beliefParams().vote_vel_par);
+  EXPECT_LT(fast.logOdds(), 0.0);
+}
+
 // The flip fires only past -flip_threshold, and negation on flip restores a trusted belief.
 TEST(OrientationSignBelief, FlipTriggerAndNegation)
 {

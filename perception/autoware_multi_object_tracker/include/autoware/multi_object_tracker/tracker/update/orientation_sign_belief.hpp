@@ -25,8 +25,8 @@ namespace autoware::multi_object_tracker
 {
 
 // Log-odds belief that the tracker's heading sign is correct. Each detection votes by its raw yaw
-// sign; a strongly negative belief triggers a 180° flip, and negation on flip provides hysteresis
-// against oscillation.
+// sign and the tracked longitudinal velocity votes by its sign; a strongly negative belief
+// triggers a 180° flip, and negation on flip provides hysteresis against oscillation.
 class OrientationSignBelief
 {
 public:
@@ -50,6 +50,15 @@ public:
     if (std::abs(std::abs(yaw_diff) - M_PI_2) < params_.dead_zone) return;
     const double weight = is_sign_known ? params_.vote_available : params_.vote_sign_unknown;
     log_odds_ += std::abs(yaw_diff) < M_PI_2 ? weight : -weight;
+    log_odds_ = std::clamp(log_odds_, -params_.log_odds_max, params_.log_odds_max);
+  }
+
+  // Forward motion agrees with the heading sign, reverse motion disagrees. The vote weight grows
+  // linearly with speed and matches an AVAILABLE yaw vote at vote_vel_par, so a slow reverse
+  // maneuver (e.g. parking) barely moves the belief while yaw votes dominate.
+  void voteVelocity(const double vel_long)
+  {
+    log_odds_ += params_.vote_available * vel_long / params_.vote_vel_par;
     log_odds_ = std::clamp(log_odds_, -params_.log_odds_max, params_.log_odds_max);
   }
 
