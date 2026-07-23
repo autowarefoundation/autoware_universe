@@ -84,6 +84,11 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
   pub_traffic_signal_ = this->create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
     "~/output/debug/traffic_signal", 1);
+  pub_snapped_pose_ =
+    this->create_publisher<geometry_msgs::msg::PoseStamped>("~/debug/snapped_pose", 1);
+  pub_snap_interpolation_time_ =
+    this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/debug/snap_interpolation_time", 1);
   debug_processing_time_detail_pub_ = this->create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
   debug_processing_time_pub_ =
@@ -199,6 +204,12 @@ void DiffusionPlanner::set_up_params()
   params_.delay_step = this->declare_parameter<int64_t>("delay_step", 0);
   params_.line_string_max_step_m = this->declare_parameter<double>("line_string_max_step_m", 5.0);
   params_.use_time_interpolation = this->declare_parameter<bool>("use_time_interpolation", false);
+  params_.ego_snap_to_prev_trajectory =
+    this->declare_parameter<bool>("ego_snap_to_prev_trajectory", true);
+  params_.ego_snap_max_position_error_m =
+    this->declare_parameter<double>("ego_snap_max_position_error_m", 0.3);
+  params_.ego_snap_max_yaw_error_deg =
+    this->declare_parameter<double>("ego_snap_max_yaw_error_deg", 5.0);
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
@@ -312,6 +323,12 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(parameters, "delay_step", temp_params.delay_step);
     update_param<double>(parameters, "line_string_max_step_m", temp_params.line_string_max_step_m);
     update_param<bool>(parameters, "use_time_interpolation", temp_params.use_time_interpolation);
+    update_param<bool>(
+      parameters, "ego_snap_to_prev_trajectory", temp_params.ego_snap_to_prev_trajectory);
+    update_param<double>(
+      parameters, "ego_snap_max_position_error_m", temp_params.ego_snap_max_position_error_m);
+    update_param<double>(
+      parameters, "ego_snap_max_yaw_error_deg", temp_params.ego_snap_max_yaw_error_deg);
     update_param<double>(
       parameters, "guidance.start_guidance.reference_distance_m",
       temp_params.start_guidance_reference_distance_m);
@@ -436,6 +453,33 @@ void DiffusionPlanner::publish_first_traffic_light_on_route(
   pub_traffic_signal_->publish(msg);
 }
 
+void DiffusionPlanner::publish_snapped_pose(
+  const FrameContext & frame_context, const rclcpp::Time & timestamp) const
+{
+  if (!frame_context.snapped_pose || !frame_context.snapped_interpolation_time_s) {
+    return;
+  }
+
+  const Eigen::Matrix4d & snapped_pose = frame_context.snapped_pose.value();
+  geometry_msgs::msg::PoseStamped pose_msg;
+  pose_msg.header.stamp = timestamp;
+  pose_msg.header.frame_id = "map";
+  pose_msg.pose.position.x = snapped_pose(0, 3);
+  pose_msg.pose.position.y = snapped_pose(1, 3);
+  pose_msg.pose.position.z = snapped_pose(2, 3);
+  const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));
+  pose_msg.pose.orientation.x = q.x();
+  pose_msg.pose.orientation.y = q.y();
+  pose_msg.pose.orientation.z = q.z();
+  pose_msg.pose.orientation.w = q.w();
+  pub_snapped_pose_->publish(pose_msg);
+
+  autoware_internal_debug_msgs::msg::Float64Stamped interpolation_time_msg;
+  interpolation_time_msg.stamp = timestamp;
+  interpolation_time_msg.data = frame_context.snapped_interpolation_time_s.value();
+  pub_snap_interpolation_time_->publish(interpolation_time_msg);
+}
+
 void DiffusionPlanner::publish_debug_markers(
   const InputDataMap & input_data_map, const Eigen::Matrix4d & ego_to_map_transform,
   const rclcpp::Time & timestamp) const
@@ -537,6 +581,8 @@ void DiffusionPlanner::on_timer()
   publish_debug_markers(input_data_map, frame_context->ego_to_map_transform, frame_time);
 
   publish_first_traffic_light_on_route(*frame_context);
+
+  publish_snapped_pose(*frame_context, frame_time);
 
   // Calculate and record metrics for diagnostics using core
   diagnostics_inference_->add_key_value(

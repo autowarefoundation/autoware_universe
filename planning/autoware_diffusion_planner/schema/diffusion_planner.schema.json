@@ -176,6 +176,21 @@
           "default": false,
           "description": "Whether to interpolate ego past trajectory at regular time intervals"
         },
+        "ego_snap_to_prev_trajectory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to snap the ego pose onto the previous planning trajectory. When enabled, the ego pose is replaced by the foot of the perpendicular to the closest segment of the previous planning trajectory (planning start pose + previous prediction)."
+        },
+        "ego_snap_max_position_error_m": {
+          "type": "number",
+          "default": 0.3,
+          "description": "Maximum allowed position distance [m] between the actual ego pose and the snapped pose. If the distance exceeds this value the snap is skipped and the raw ego pose is kept."
+        },
+        "ego_snap_max_yaw_error_deg": {
+          "type": "number",
+          "default": 5.0,
+          "description": "Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose. If the difference exceeds this value the snap is skipped and the raw ego pose is kept."
+        },
         "guidance": {
           "type": "object",
           "properties": {
