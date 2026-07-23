@@ -24,6 +24,7 @@
 //
 
 #include "../src/classifier/color_classifier.hpp"
+#include "../src/classifier_params.hpp"
 
 #include <opencv2/core.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -46,7 +47,7 @@ TEST(ColorClassifierAdapterTest, MismatchedSizesReturnFalse)
 {
   // Arrange
   auto node = std::make_shared<rclcpp::Node>("color_classifier_adapter_test");
-  tl::ColorClassifier classifier(node.get());
+  tl::ColorClassifier classifier(node.get(), tl::declare_hsv_config(node.get()));
   const std::vector<cv::Mat> images{cv::Mat(4, 4, CV_8UC3, cv::Scalar(0, 0, 0))};
   TrafficLightArray signals;
   signals.signals.resize(2);  // two signals but one image -- the deliberate count mismatch
