@@ -387,16 +387,18 @@ void BicycleMotionModel::flipStateOrientation(StateVec & X, StateMat & P) const
   X(IDX::X2) = x_center + x1_rel;
   X(IDX::Y2) = y_center + y1_rel;
 
-  // reverse the velocity
+  // reverse longitudinal velocity (U) direction
   X(IDX::U) = -X(IDX::U);
-  // rotation velocity does not change
+  // horizontal velocity does not change
 
-  // replace covariance
-  // Swap rows and columns
+  // covariance transform T*P*T^T: swap the axle rows/columns and negate the U cross-covariances
+  // U self-variance remains unchanged
   P.row(IDX::X1).swap(P.row(IDX::X2));
   P.row(IDX::Y1).swap(P.row(IDX::Y2));
   P.col(IDX::X1).swap(P.col(IDX::X2));
   P.col(IDX::Y1).swap(P.col(IDX::Y2));
+  P.row(IDX::U) *= -1.0;
+  P.col(IDX::U) *= -1.0;
 }
 
 bool BicycleMotionModel::flipOrientation()

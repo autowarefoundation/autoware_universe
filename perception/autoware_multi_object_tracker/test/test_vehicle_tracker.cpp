@@ -614,9 +614,14 @@ TEST(FlipOrientation, SwapsAxlesAndReversesVelocity)
   EXPECT_DOUBLE_EQ(
     p_after(BicycleMotionModel::Y2, BicycleMotionModel::Y2),
     p_before(BicycleMotionModel::Y1, BicycleMotionModel::Y1));
+  // Cross-covariances follow the error transform dU' = -dU.
+  ASSERT_NE(p_before(BicycleMotionModel::X2, BicycleMotionModel::U), 0.0);
   EXPECT_DOUBLE_EQ(
     p_after(BicycleMotionModel::X1, BicycleMotionModel::U),
-    p_before(BicycleMotionModel::X2, BicycleMotionModel::U));
+    -p_before(BicycleMotionModel::X2, BicycleMotionModel::U));
+  EXPECT_DOUBLE_EQ(
+    p_after(BicycleMotionModel::U, BicycleMotionModel::U),
+    p_before(BicycleMotionModel::U, BicycleMotionModel::U));
 }
 
 // The flip is an involution: applying it twice restores state and covariance exactly.
