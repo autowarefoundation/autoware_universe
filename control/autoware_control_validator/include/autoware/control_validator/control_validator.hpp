@@ -21,8 +21,8 @@
 #include "diagnostic_updater/diagnostic_updater.hpp"
 
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
+#include <autoware_control_validator/control_validator_parameters.hpp>
 #include <autoware_control_validator/msg/control_validator_status.hpp>
-#include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -48,7 +48,6 @@ using autoware_control_msgs::msg::Control;
 using autoware_control_validator::msg::ControlValidatorStatus;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using autoware_utils::get_or_declare_parameter;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
@@ -61,15 +60,21 @@ using nav_msgs::msg::Odometry;
 class LatencyValidator
 {
 public:
-  explicit LatencyValidator(rclcpp::Node & node)
-  : nominal_latency_threshold{
-      get_or_declare_parameter<double>(node, "thresholds.nominal_latency")} {};
+  explicit LatencyValidator(const ::control_validator::Params & params)
+  {
+    update_parameters(params);
+  }
+
+  void update_parameters(const ::control_validator::Params & params)
+  {
+    nominal_latency_threshold = params.thresholds.nominal_latency;
+  }
 
   void validate(
     ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const;
 
 private:
-  const double nominal_latency_threshold;
+  double nominal_latency_threshold{};
 };
 
 /**
@@ -80,16 +85,22 @@ private:
 class TrajectoryValidator
 {
 public:
-  explicit TrajectoryValidator(rclcpp::Node & node)
-  : max_distance_deviation_threshold{
-      get_or_declare_parameter<double>(node, "thresholds.max_distance_deviation")} {};
+  explicit TrajectoryValidator(const ::control_validator::Params & params)
+  {
+    update_parameters(params);
+  }
+
+  void update_parameters(const ::control_validator::Params & params)
+  {
+    max_distance_deviation_threshold = params.thresholds.max_distance_deviation;
+  }
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
     const Trajectory & reference_trajectory);
 
 private:
-  const double max_distance_deviation_threshold;
+  double max_distance_deviation_threshold{};
   std::optional<Trajectory> prev_reference_trajectory_;
 };
 
@@ -100,10 +111,17 @@ private:
 class LateralJerkValidator
 {
 public:
-  explicit LateralJerkValidator(rclcpp::Node & node)
-  : lateral_jerk_threshold_{get_or_declare_parameter<double>(node, "thresholds.lateral_jerk")},
-    logger_{node.get_logger()},
-    measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+  LateralJerkValidator(const rclcpp::Logger & logger, const ::control_validator::Params & params)
+  : logger_{logger}, measured_vel_lpf{params.vel_lpf_gain}
+  {
+    update_parameters(params);
+  }
+
+  void update_parameters(const ::control_validator::Params & params)
+  {
+    lateral_jerk_threshold_ = params.thresholds.lateral_jerk;
+    measured_vel_lpf.setGain(params.vel_lpf_gain);
+  }
 
   void validate(
     ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
@@ -124,11 +142,19 @@ class AccelerationValidator
 {
 public:
   friend class AccelerationValidatorTest;
-  explicit AccelerationValidator(rclcpp::Node & node)
-  : e_offset{get_or_declare_parameter<double>(node, "thresholds.acc_error_offset")},
-    e_scale{get_or_declare_parameter<double>(node, "thresholds.acc_error_scale")},
-    desired_acc_lpf{get_or_declare_parameter<double>(node, "acc_lpf_gain")},
-    measured_acc_lpf{get_or_declare_parameter<double>(node, "acc_lpf_gain")} {};
+  explicit AccelerationValidator(const ::control_validator::Params & params)
+  : desired_acc_lpf{params.acc_lpf_gain}, measured_acc_lpf{params.acc_lpf_gain}
+  {
+    update_parameters(params);
+  }
+
+  void update_parameters(const ::control_validator::Params & params)
+  {
+    e_offset = params.thresholds.acc_error_offset;
+    e_scale = params.thresholds.acc_error_scale;
+    desired_acc_lpf.setGain(params.acc_lpf_gain);
+    measured_acc_lpf.setGain(params.acc_lpf_gain);
+  }
 
   void validate(
     ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
@@ -136,8 +162,8 @@ public:
 
 private:
   bool is_in_error_range() const;
-  const double e_offset;
-  const double e_scale;
+  double e_offset{};
+  double e_scale{};
   autoware::signal_processing::LowpassFilter1d desired_acc_lpf;
   autoware::signal_processing::LowpassFilter1d measured_acc_lpf;
 };
@@ -149,31 +175,36 @@ private:
 class VelocityValidator
 {
 public:
-  explicit VelocityValidator(rclcpp::Node & node)
-  : rolling_back_velocity_th{get_or_declare_parameter<double>(
-      node, "thresholds.rolling_back_velocity")},
-    over_velocity_ratio_th{
-      get_or_declare_parameter<double>(node, "thresholds.over_velocity_ratio")},
-    over_velocity_offset_th{
-      get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset")},
-    hold_velocity_error_until_stop{
-      get_or_declare_parameter<bool>(node, "hold_velocity_error_until_stop")},
-    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
-    target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
-    over_velocity_vehicle_vel_lpf{
-      get_or_declare_parameter<double>(node, "over_velocity.vel_lpf_gain")},
-    over_velocity_target_vel_lpf{
-      get_or_declare_parameter<double>(node, "over_velocity.vel_lpf_gain")} {};
+  explicit VelocityValidator(const ::control_validator::Params & params)
+  : vehicle_vel_lpf{params.vel_lpf_gain},
+    target_vel_lpf{params.vel_lpf_gain},
+    over_velocity_vehicle_vel_lpf{params.over_velocity.vel_lpf_gain},
+    over_velocity_target_vel_lpf{params.over_velocity.vel_lpf_gain}
+  {
+    update_parameters(params);
+  }
+
+  void update_parameters(const ::control_validator::Params & params)
+  {
+    rolling_back_velocity_th = params.thresholds.rolling_back_velocity;
+    over_velocity_ratio_th = params.thresholds.over_velocity_ratio;
+    over_velocity_offset_th = params.thresholds.over_velocity_offset;
+    hold_velocity_error_until_stop = params.hold_velocity_error_until_stop;
+    vehicle_vel_lpf.setGain(params.vel_lpf_gain);
+    target_vel_lpf.setGain(params.vel_lpf_gain);
+    over_velocity_vehicle_vel_lpf.setGain(params.over_velocity.vel_lpf_gain);
+    over_velocity_target_vel_lpf.setGain(params.over_velocity.vel_lpf_gain);
+  }
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
     const Odometry & kinematics);
 
 private:
-  const double rolling_back_velocity_th;
-  const double over_velocity_ratio_th;
-  const double over_velocity_offset_th;
-  const bool hold_velocity_error_until_stop;
+  double rolling_back_velocity_th{};
+  double over_velocity_ratio_th{};
+  double over_velocity_offset_th{};
+  bool hold_velocity_error_until_stop{};
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
   autoware::signal_processing::LowpassFilter1d target_vel_lpf;
   autoware::signal_processing::LowpassFilter1d over_velocity_vehicle_vel_lpf;
@@ -187,24 +218,30 @@ private:
 class OverrunValidator
 {
 public:
-  explicit OverrunValidator(rclcpp::Node & node)
-  : overrun_stop_point_dist_th{get_or_declare_parameter<double>(
-      node, "thresholds.overrun_stop_point_dist")},
-    will_overrun_stop_point_dist_th{
-      get_or_declare_parameter<double>(node, "thresholds.will_overrun_stop_point_dist")},
-    assumed_limit_acc{get_or_declare_parameter<double>(node, "thresholds.assumed_limit_acc")},
-    assumed_delay_time{get_or_declare_parameter<double>(node, "thresholds.assumed_delay_time")},
-    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+  explicit OverrunValidator(const ::control_validator::Params & params)
+  : vehicle_vel_lpf{params.vel_lpf_gain}
+  {
+    update_parameters(params);
+  }
+
+  void update_parameters(const ::control_validator::Params & params)
+  {
+    overrun_stop_point_dist_th = params.thresholds.overrun_stop_point_dist;
+    will_overrun_stop_point_dist_th = params.thresholds.will_overrun_stop_point_dist;
+    assumed_limit_acc = params.thresholds.assumed_limit_acc;
+    assumed_delay_time = params.thresholds.assumed_delay_time;
+    vehicle_vel_lpf.setGain(params.vel_lpf_gain);
+  }
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
     const Odometry & kinematics);
 
 private:
-  const double overrun_stop_point_dist_th;
-  const double will_overrun_stop_point_dist_th;
-  const double assumed_limit_acc;
-  const double assumed_delay_time;
+  double overrun_stop_point_dist_th{};
+  double will_overrun_stop_point_dist_th{};
+  double assumed_limit_acc{};
+  double assumed_delay_time{};
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
 };
 
@@ -215,19 +252,21 @@ private:
 class YawValidator
 {
 public:
-  explicit YawValidator(rclcpp::Node & node)
-  : yaw_deviation_error_th_{get_or_declare_parameter<double>(
-      node, "thresholds.yaw_deviation_error")},
-    yaw_deviation_warn_th_{
-      get_or_declare_parameter<double>(node, "thresholds.yaw_deviation_warn")} {};
+  explicit YawValidator(const ::control_validator::Params & params) { update_parameters(params); }
+
+  void update_parameters(const ::control_validator::Params & params)
+  {
+    yaw_deviation_error_th_ = params.thresholds.yaw_deviation_error;
+    yaw_deviation_warn_th_ = params.thresholds.yaw_deviation_warn;
+  }
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
     const Odometry & kinematics) const;
 
 private:
-  const double yaw_deviation_error_th_;
-  const double yaw_deviation_warn_th_;
+  double yaw_deviation_error_th_{};
+  double yaw_deviation_warn_th_{};
 };
 
 /**
@@ -309,6 +348,10 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_;
 
+  // parameters (generated by generate_parameter_library)
+  ::control_validator::ParamListener param_listener_;
+  ::control_validator::Params params_;
+
   // system parameters
   int64_t diag_error_count_threshold_ = 0;
   bool display_on_terminal_ = true;
@@ -328,13 +371,13 @@ private:
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
   // individual validators
-  LatencyValidator latency_validator{*this};
-  LateralJerkValidator lateral_jerk_validator{*this};
-  TrajectoryValidator trajectory_validator{*this};
-  AccelerationValidator acceleration_validator{*this};
-  VelocityValidator velocity_validator{*this};
-  OverrunValidator overrun_validator{*this};
-  YawValidator yaw_validator{*this};
+  LatencyValidator latency_validator;
+  LateralJerkValidator lateral_jerk_validator;
+  TrajectoryValidator trajectory_validator;
+  AccelerationValidator acceleration_validator;
+  VelocityValidator velocity_validator;
+  OverrunValidator overrun_validator;
+  YawValidator yaw_validator;
 };
 }  // namespace autoware::control_validator
 

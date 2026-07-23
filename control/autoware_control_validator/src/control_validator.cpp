@@ -244,7 +244,17 @@ void YawValidator::validate(
 }
 
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
-: Node("control_validator", options), vehicle_info_()
+: Node("control_validator", options),
+  param_listener_(get_node_parameters_interface()),
+  params_(param_listener_.get_params()),
+  vehicle_info_(),
+  latency_validator(params_),
+  lateral_jerk_validator(get_logger(), params_),
+  trajectory_validator(params_),
+  acceleration_validator(params_),
+  velocity_validator(params_),
+  overrun_validator(params_),
+  yaw_validator(params_)
 {
   using std::placeholders::_1;
 
@@ -284,8 +294,8 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 
 void ControlValidator::setup_parameters()
 {
-  diag_error_count_threshold_ = declare_parameter<int64_t>("diag_error_count_threshold");
-  display_on_terminal_ = declare_parameter<bool>("display_on_terminal");
+  diag_error_count_threshold_ = params_.diag_error_count_threshold;
+  display_on_terminal_ = params_.display_on_terminal;
 
   try {
     vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
@@ -397,6 +407,20 @@ void ControlValidator::validation_filtering(ControlValidatorStatus & res)
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 {
   stop_watch.tic();
+
+  // refresh parameters if they were updated at runtime
+  if (param_listener_.is_old(params_)) {
+    params_ = param_listener_.get_params();
+    diag_error_count_threshold_ = params_.diag_error_count_threshold;
+    display_on_terminal_ = params_.display_on_terminal;
+    latency_validator.update_parameters(params_);
+    lateral_jerk_validator.update_parameters(params_);
+    trajectory_validator.update_parameters(params_);
+    acceleration_validator.update_parameters(params_);
+    velocity_validator.update_parameters(params_);
+    overrun_validator.update_parameters(params_);
+    yaw_validator.update_parameters(params_);
+  }
 
   // prepare ros topics
   const auto waiting = [this](const auto topic_name) {
