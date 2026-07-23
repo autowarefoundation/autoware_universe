@@ -18,6 +18,8 @@
 #include "autoware/obstacle_proximity_checker/obstacle_proximity_checker.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 
 #include <memory>
@@ -57,7 +59,7 @@ private:
   bool is_stop_active_{false};
   std::optional<rclcpp::Time> last_obstacle_found_time_;
 
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_debug_text_;
 
   [[nodiscard]] bool check_inputs(const InputData & input) const;
 

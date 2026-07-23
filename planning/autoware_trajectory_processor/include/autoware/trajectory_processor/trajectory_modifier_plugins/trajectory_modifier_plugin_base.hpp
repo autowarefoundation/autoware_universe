@@ -19,6 +19,7 @@
 #include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/input_data.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -38,6 +39,8 @@ using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using TrajectoryModifierParams = trajectory_modifier_params::Params;
+using PlanningFactorInterface =
+  autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>;
 
 class TrajectoryModifierPluginBase
 {
@@ -45,7 +48,7 @@ public:
   TrajectoryModifierPluginBase() = default;
 
   void initialize(
-    std::string name, rclcpp::Node * node_ptr,
+    std::string name, autoware::agnocast_wrapper::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
     const std::shared_ptr<TrajectoryModifierContext> & context,
     [[maybe_unused]] const TrajectoryModifierParams & params)
@@ -69,7 +72,7 @@ public:
     const TrajectoryPoints & traj_points, const InputData & input) = 0;
   std::string get_name() const { return name_; }
   std::string get_short_name() const { return short_name_; }
-  rclcpp::Node * get_node_ptr() const { return node_ptr_; }
+  autoware::agnocast_wrapper::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
   virtual void update_params(const TrajectoryModifierParams & params) = 0;
 
@@ -91,8 +94,7 @@ public:
 
 protected:
   virtual void on_initialize(const TrajectoryModifierParams & params) = 0;
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
-    planning_factor_interface_;
+  std::unique_ptr<PlanningFactorInterface> planning_factor_interface_;
   std::shared_ptr<TrajectoryModifierContext> context_;
   bool enabled_{true};
   double trajectory_time_step_{0.1};
@@ -102,7 +104,7 @@ protected:
 private:
   std::string name_;
   std::string short_name_;
-  rclcpp::Node * node_ptr_;
+  autoware::agnocast_wrapper::Node * node_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 }  // namespace autoware::trajectory_modifier::plugin

@@ -19,6 +19,8 @@
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/input_data.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -54,14 +56,16 @@ using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::PointCloud2;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
-class TrajectoryModifier : public rclcpp::Node
+namespace polling = autoware::agnocast_wrapper::polling;
+
+class TrajectoryModifier : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit TrajectoryModifier(const rclcpp::NodeOptions & options);
 
 private:
-  void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
-  void on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
+  void on_traj(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg);
+  void on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & msg);
   void load_plugin(const std::string & name);
   void unload_plugin(const std::string & name);
   tl::expected<plugin::InputData, std::string> make_input_data();
@@ -72,29 +76,32 @@ private:
 
   void update_params();
 
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
-  rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) trajectories_sub_;
+  AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) trajectories_pub_;
 
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
-    this, "~/input/odometry"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
-    sub_current_acceleration_{this, "~/input/acceleration"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
-    this, "~/input/objects"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
-    this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos()};
+  polling::PollingSubscriber<Odometry>::SharedPtr sub_current_odometry_ =
+    polling::create_polling_subscriber<Odometry>(this, "~/input/odometry");
+  polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr sub_current_acceleration_ =
+    polling::create_polling_subscriber<AccelWithCovarianceStamped>(this, "~/input/acceleration");
+  polling::PollingSubscriber<PredictedObjects>::SharedPtr sub_objects_ =
+    polling::create_polling_subscriber<PredictedObjects>(this, "~/input/objects");
+  polling::PollingSubscriber<PointCloud2>::SharedPtr sub_pointcloud_ =
+    polling::create_polling_subscriber<PointCloud2>(
+      this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos());
 
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<
-    autoware_perception_msgs::msg::TrafficLightGroupArray>
-    sub_traffic_lights_{this, "~/input/traffic_signals"};
-  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_map_;
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<
-    autoware_planning_msgs::msg::LaneletRoute, autoware_utils_rclcpp::polling_policy::Latest>
-    sub_route_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
+  polling::PollingSubscriber<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr
+    sub_traffic_lights_ =
+      polling::create_polling_subscriber<autoware_perception_msgs::msg::TrafficLightGroupArray>(
+        this, "~/input/traffic_signals");
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_map_msgs::msg::LaneletMapBin) sub_map_;
+  polling::PollingSubscriber<autoware_planning_msgs::msg::LaneletRoute>::SharedPtr sub_route_ =
+    polling::create_polling_subscriber<autoware_planning_msgs::msg::LaneletRoute>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
 
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_pub_;
-  std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_processing_time_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
+  debug_processing_time_detail_pub_;
+  std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    pub_processing_time_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
   pluginlib::ClassLoader<plugin::TrajectoryModifierPluginBase> plugin_loader_;

@@ -192,7 +192,8 @@ protected:
     autoware::test_utils::updateNodeOptions(
       node_options, {autoware_test_utils_dir + "/config/test_vehicle_info.param.yaml"});
 
-    node_ = std::make_shared<rclcpp::Node>("test_obstacle_stop_node", node_options);
+    node_ =
+      std::make_shared<autoware::agnocast_wrapper::Node>("test_obstacle_stop_node", node_options);
     time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>();
 
     set_up_default_params();
@@ -260,7 +261,7 @@ protected:
     p.rss_params.lookahead_horizon = 1.5;
   }
 
-  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<autoware::agnocast_wrapper::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<ObstacleStop> plugin_;
   trajectory_modifier_params::Params params_;
