@@ -1574,7 +1574,7 @@ void CrosswalkModule::planStop(
 {
   // Calculate stop factor
   auto stop_factor = [&]() -> std::optional<StopPoseWithObjectUuids> {
-    if (nearest_stop_factor) return *nearest_stop_factor;
+    if (nearest_stop_factor) return nearest_stop_factor;
     if (default_stop_pose) return StopPoseWithObjectUuids{*default_stop_pose, {}};
     return std::nullopt;
   }();
