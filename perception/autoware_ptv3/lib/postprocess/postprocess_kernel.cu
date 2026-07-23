@@ -142,7 +142,7 @@ __global__ void createSegmentationPointcloudKernel(
   const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
   const std::uint8_t * class_id_to_semantic_label, const std::uint32_t * filter_class_indices,
   std::size_t num_filter_classes, std::uint32_t * output_num_points,
-  experimental::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
+  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -417,7 +417,7 @@ void PostprocessCuda::createVisualizationPointcloud(
 
 std::size_t PostprocessCuda::createSegmentationPointcloud(
   const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-  experimental::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
+  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
 {
   cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
 

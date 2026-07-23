@@ -55,9 +55,6 @@ if(BUILD_TESTING)
   target_include_directories(semantic_label_test PRIVATE include)
   ament_target_dependencies(semantic_label_test autoware_perception_msgs)
 
-  ament_add_gtest(point_type_test test/point_type_test.cpp)
-  target_include_directories(point_type_test PRIVATE include)
-  ament_target_dependencies(point_type_test autoware_point_types sensor_msgs)
 endif()
 
 if(TRT_AVAIL AND CUDA_AVAIL)
