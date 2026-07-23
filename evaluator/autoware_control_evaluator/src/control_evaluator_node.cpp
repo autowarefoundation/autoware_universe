@@ -94,7 +94,8 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   for (const auto & module_name : stop_deviation_modules_) {
     planning_factors_sub_.emplace(
       module_name,
-      this->create_polling_subscriber<PlanningFactorArray>(topic_prefix + module_name));
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<PlanningFactorArray>(
+        this, topic_prefix + module_name));
     stop_deviation_accumulators_.emplace(module_name, Accumulator<double>());
     stop_deviation_abs_accumulators_.emplace(module_name, Accumulator<double>());
   }
