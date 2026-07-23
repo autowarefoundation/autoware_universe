@@ -37,7 +37,7 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
-#include <angles/angles/angles.h>
+#include <angles/angles.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
