@@ -128,7 +128,7 @@ If every element of a traffic light's signal is filtered out, the node emits an 
 
 The vector map is always subscribed (the node needs it to map traffic-light-ids to regulatory-element-ids); the `enable` flag only controls whether the filter runs.
 
-> **NOTE:** The correctness of this filter depends **entirely on the quality of the vector map**. If a traffic light's `light_bulbs` in the map is incomplete or wrong (e.g. an arrow bulb is missing, or `color`/`arrow` attributes are stale), the filter will incorrectly reject valid ML predictions and the node will publish UNKNOWN for that light. Before enabling this option, verify that every relevant traffic light in your map has accurate `light_bulbs` points with correct `color` and `arrow` attributes — see the [vector map requirements](https://docs.pilot.auto/reference-design/common/map-requirements/vector-map-requirements/category_traffic_light) for the expected format.
+> **NOTE:** The correctness of this filter depends **entirely on the quality of the vector map**. If a traffic light's `light_bulbs` in the map is incomplete or wrong (e.g. an arrow bulb is missing, or `color`/`arrow` attributes are stale), the filter will incorrectly reject valid ML predictions and the node will publish UNKNOWN for that light. Before enabling this option, verify that every relevant traffic light in your map has accurate `light_bulbs` points with correct `color` and `arrow` attributes.
 
 ### Example
 
