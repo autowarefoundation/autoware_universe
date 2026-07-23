@@ -76,29 +76,23 @@ MpcLateralController::MpcLateralController(
   /* mpc parameters */
   const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo();
   const double wheelbase = vehicle_info.wheel_base_m;
-  constexpr double deg2rad = static_cast<double>(M_PI) / 180.0;
   m_mpc->m_steer_lim = vehicle_info.max_steer_angle_rad;
 
   // steer rate limit depending on curvature
-  const auto steer_rate_lim_dps_list_by_curvature =
+  m_steer_rate_lim_dps_list_by_curvature =
     node.declare_parameter<std::vector<double>>("steer_rate_lim_dps_list_by_curvature");
-  const auto curvature_list_for_steer_rate_lim =
+  m_curvature_list_for_steer_rate_lim =
     node.declare_parameter<std::vector<double>>("curvature_list_for_steer_rate_lim");
-  for (size_t i = 0; i < steer_rate_lim_dps_list_by_curvature.size(); ++i) {
-    m_mpc->m_steer_rate_lim_map_by_curvature.emplace_back(
-      curvature_list_for_steer_rate_lim.at(i),
-      steer_rate_lim_dps_list_by_curvature.at(i) * deg2rad);
-  }
+  updateSteerRateLimitByCurvatureMap(
+    m_steer_rate_lim_dps_list_by_curvature, m_curvature_list_for_steer_rate_lim);
 
   // steer rate limit depending on velocity
-  const auto steer_rate_lim_dps_list_by_velocity =
+  m_steer_rate_lim_dps_list_by_velocity =
     node.declare_parameter<std::vector<double>>("steer_rate_lim_dps_list_by_velocity");
-  const auto velocity_list_for_steer_rate_lim =
+  m_velocity_list_for_steer_rate_lim =
     node.declare_parameter<std::vector<double>>("velocity_list_for_steer_rate_lim");
-  for (size_t i = 0; i < steer_rate_lim_dps_list_by_velocity.size(); ++i) {
-    m_mpc->m_steer_rate_lim_map_by_velocity.emplace_back(
-      velocity_list_for_steer_rate_lim.at(i), steer_rate_lim_dps_list_by_velocity.at(i) * deg2rad);
-  }
+  updateSteerRateLimitByVelocityMap(
+    m_steer_rate_lim_dps_list_by_velocity, m_velocity_list_for_steer_rate_lim);
 
   /* vehicle model setup */
   auto vehicle_model_ptr =
@@ -620,6 +614,30 @@ void MpcLateralController::declareMPCparameters(rclcpp::Node & node)
   m_mpc->m_param.min_prediction_length = dp("mpc_min_prediction_length");
 }
 
+void MpcLateralController::updateSteerRateLimitByVelocityMap(
+  const std::vector<double> & steer_rate_lim_dps_list, const std::vector<double> & velocity_list)
+{
+  constexpr double deg2rad = static_cast<double>(M_PI) / 180.0;
+  std::vector<std::pair<double, double>> map;
+  map.reserve(steer_rate_lim_dps_list.size());
+  for (size_t i = 0; i < steer_rate_lim_dps_list.size(); ++i) {
+    map.emplace_back(velocity_list.at(i), steer_rate_lim_dps_list.at(i) * deg2rad);
+  }
+  m_mpc->m_steer_rate_lim_map_by_velocity = std::move(map);
+}
+
+void MpcLateralController::updateSteerRateLimitByCurvatureMap(
+  const std::vector<double> & steer_rate_lim_dps_list, const std::vector<double> & curvature_list)
+{
+  constexpr double deg2rad = static_cast<double>(M_PI) / 180.0;
+  std::vector<std::pair<double, double>> map;
+  map.reserve(steer_rate_lim_dps_list.size());
+  for (size_t i = 0; i < steer_rate_lim_dps_list.size(); ++i) {
+    map.emplace_back(curvature_list.at(i), steer_rate_lim_dps_list.at(i) * deg2rad);
+  }
+  m_mpc->m_steer_rate_lim_map_by_curvature = std::move(map);
+}
+
 rcl_interfaces::msg::SetParametersResult MpcLateralController::paramCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
@@ -630,8 +648,39 @@ rcl_interfaces::msg::SetParametersResult MpcLateralController::paramCallback(
   // strong exception safety wrt MPCParam
   MPCParam param = m_mpc->m_param;
 
+  // local copies so that the whole request is committed atomically (or rejected as a whole)
+  double stop_state_entry_ego_speed = m_stop_state_entry_ego_speed;
+  double stop_state_entry_target_speed = m_stop_state_entry_target_speed;
+  auto steer_rate_dps_by_vel = m_steer_rate_lim_dps_list_by_velocity;
+  auto velocity_list = m_velocity_list_for_steer_rate_lim;
+  auto steer_rate_dps_by_curvature = m_steer_rate_lim_dps_list_by_curvature;
+  auto curvature_list = m_curvature_list_for_steer_rate_lim;
+
   using MPCUtils::update_param;
   try {
+    // Validate the steering rate limit lists before applying any side effect so that a
+    // length mismatch rejects the whole request instead of crashing later on .at().
+    update_param(parameters, "stop_state_entry_ego_speed", stop_state_entry_ego_speed);
+    update_param(parameters, "stop_state_entry_target_speed", stop_state_entry_target_speed);
+    update_param(parameters, "steer_rate_lim_dps_list_by_velocity", steer_rate_dps_by_vel);
+    update_param(parameters, "velocity_list_for_steer_rate_lim", velocity_list);
+    update_param(parameters, "steer_rate_lim_dps_list_by_curvature", steer_rate_dps_by_curvature);
+    update_param(parameters, "curvature_list_for_steer_rate_lim", curvature_list);
+    if (steer_rate_dps_by_vel.size() != velocity_list.size()) {
+      result.successful = false;
+      result.reason =
+        "steer_rate_lim_dps_list_by_velocity and velocity_list_for_steer_rate_lim "
+        "must have the same length";
+      return result;
+    }
+    if (steer_rate_dps_by_curvature.size() != curvature_list.size()) {
+      result.successful = false;
+      result.reason =
+        "steer_rate_lim_dps_list_by_curvature and curvature_list_for_steer_rate_lim "
+        "must have the same length";
+      return result;
+    }
+
     auto & nw = param.nominal_weight;
     auto & lcw = param.low_curvature_weight;
 
@@ -679,6 +728,14 @@ rcl_interfaces::msg::SetParametersResult MpcLateralController::paramCallback(
 
     // transaction succeeds, now assign values
     m_mpc->m_param = param;
+    m_stop_state_entry_ego_speed = stop_state_entry_ego_speed;
+    m_stop_state_entry_target_speed = stop_state_entry_target_speed;
+    m_steer_rate_lim_dps_list_by_velocity = steer_rate_dps_by_vel;
+    m_velocity_list_for_steer_rate_lim = velocity_list;
+    m_steer_rate_lim_dps_list_by_curvature = steer_rate_dps_by_curvature;
+    m_curvature_list_for_steer_rate_lim = curvature_list;
+    updateSteerRateLimitByVelocityMap(steer_rate_dps_by_vel, velocity_list);
+    updateSteerRateLimitByCurvatureMap(steer_rate_dps_by_curvature, curvature_list);
   } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
     result.successful = false;
     result.reason = e.what();
