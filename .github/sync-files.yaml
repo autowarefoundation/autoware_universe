@@ -24,6 +24,7 @@
     - source: .github/workflows/sync-branches.yaml
     - source: .github/workflows/sync-files.yaml
     - source: .github/workflows/update-codeowners-from-packages.yaml
+    - source: .github/workflows/lint-autoware-system-design-format.yaml
     - source: docs/assets/js/mathjax.js
     - source: .clang-format
     - source: .markdown-link-check.json
