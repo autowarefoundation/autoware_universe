@@ -18,10 +18,10 @@ from nav_msgs.msg import OccupancyGrid
 from pyquaternion import Quaternion
 
 # -- Vehicle Shape --
-vehicle_shape = fp.VehicleShape()
-vehicle_shape.length = 2.0
-vehicle_shape.width = 1.0
-vehicle_shape.base2back = 1.0
+vehicle_info = fp.VehicleInfo()
+vehicle_info.length = 2.0
+vehicle_info.width = 1.0
+vehicle_info.base2back = 1.0
 
 
 # -- Planner Common Parameter --
@@ -55,7 +55,7 @@ astar_param.smoothness_weight = 1.0
 astar_param.obstacle_distance_weight = 1.0
 astar_param.goal_lat_distance_weight = 1.0
 
-astar = fp.AstarSearch(planner_param, vehicle_shape, astar_param)
+astar = fp.AstarSearch(planner_param, vehicle_info, astar_param)
 
 
 # -- Costmap Definition
