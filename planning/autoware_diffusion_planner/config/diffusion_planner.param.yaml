@@ -35,6 +35,9 @@
     delay_step: 0
     line_string_max_step_m: 5.0
     use_time_interpolation: false
+    object_motion_resampling:
+      enable: true                    # re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp
+      max_extrapolation_time: 0.5     # [s]  max extrapolation horizon (both forward from newest and backward from oldest observation)
     planning_factor:
       enable_stop: true
       enable_slowdown: false

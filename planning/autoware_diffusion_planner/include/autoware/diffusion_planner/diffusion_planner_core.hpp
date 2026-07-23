@@ -16,6 +16,7 @@
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_CORE_HPP_
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
+#include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/inference/guidance/centerline_guidance.hpp"
 #include "autoware/diffusion_planner/inference/guidance/start_guidance.hpp"
 #include "autoware/diffusion_planner/inference/guidance/stop_guidance.hpp"
@@ -134,6 +135,7 @@ struct DiffusionPlannerParams
   int64_t delay_step;
   double line_string_max_step_m;
   bool use_time_interpolation;
+  HistoryResamplingParams object_motion_resampling;
   int dpm_solver_steps;
   double start_guidance_reference_distance_m;
   double start_guidance_max_scale;

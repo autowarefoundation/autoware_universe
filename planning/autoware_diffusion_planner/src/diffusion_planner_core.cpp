@@ -292,10 +292,22 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     turn_indicators_history_.pop_front();
   }
 
-  // Update neighbor agent data
-  agent_data_.update_histories(*effective_objects);
-  const auto processed_neighbor_histories =
-    agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
+  // The neighbor histories are anchored to the ego stamp so the model sees a constant 0.1s grid.
+  const rclcpp::Time frame_time(ego_kinematic_state->header.stamp);
+
+  // Update neighbor agent data. When history alignment is enabled, retained per-UUID histories are
+  // re-timed onto the odometry-anchored constant grid (interpolated within, extrapolated to the
+  // frame time); otherwise the legacy buffered histories are used directly.
+  std::vector<AgentHistory> processed_neighbor_histories;
+  if (params_.object_motion_resampling.enable) {
+    agent_data_.update_histories(*effective_objects, params_.object_motion_resampling);
+    processed_neighbor_histories = agent_data_.resampled_transformed_and_trimmed_histories(
+      frame_time, map_to_ego_transform, NEIGHBOR_SHAPE[1], params_.object_motion_resampling);
+  } else {
+    agent_data_.update_histories(*effective_objects);
+    processed_neighbor_histories =
+      agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
+  }
 
   // Update traffic light map
   const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
@@ -303,7 +315,6 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     traffic_signals, traffic_light_id_map_, current_time, traffic_light_msg_timeout_s);
 
   // Create frame context
-  const rclcpp::Time frame_time(ego_kinematic_state->header.stamp);
   const FrameContext frame_context{
     *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, processed_neighbor_histories,
     frame_time};
