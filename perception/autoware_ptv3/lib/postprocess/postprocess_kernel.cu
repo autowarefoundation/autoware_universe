@@ -140,7 +140,7 @@ __global__ void createVisualizationPointcloudKernel(
 
 __global__ void createSegmentationPointcloudKernel(
   const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
-  const std::uint8_t * class_id_to_semantic_label, experimental::PointXYZCPE * output_points,
+  const std::uint8_t * class_id_to_semantic_label, point_types::PointXYZCPE * output_points,
   std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -397,7 +397,7 @@ void PostprocessCuda::createVisualizationPointcloud(
 
 void PostprocessCuda::createSegmentationPointcloud(
   const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-  experimental::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
+  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
 {
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 

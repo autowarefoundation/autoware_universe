@@ -14,7 +14,6 @@
 
 #include "autoware/ptv3/ptv3_trt.hpp"
 
-#include "autoware/ptv3/experimental/point_type.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
@@ -131,7 +130,7 @@ void PTv3TRT::allocateSegOutputMessages()
     segmented_points_msg_ptr_->is_bigendian = false;
     segmented_points_msg_ptr_->is_dense = true;
     segmented_points_msg_ptr_->point_step =
-      static_cast<std::uint32_t>(sizeof(experimental::PointXYZCPE));
+      static_cast<std::uint32_t>(sizeof(point_types::PointXYZCPE));
     segmented_points_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
       output_capacity * segmented_points_msg_ptr_->point_step);
   }
@@ -276,7 +275,7 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
 void PTv3TRT::createPointFields()
 {
   segmented_pointcloud_fields_ = point_cloud_msg_wrapper::generate_fields_from_point<
-    experimental::PointXYZCPE, experimental::PointXYZCPEFieldGenerator>();
+    point_types::PointXYZCPE, point_types::PointXYZCPEFieldGenerator>();
 
   auto make_point_field = [](const std::string & name, int offset, int datatype, int count) {
     sensor_msgs::msg::PointField field;
@@ -1093,7 +1092,7 @@ bool PTv3TRT::postProcess(
   if (should_publish_segmented_pointcloud) {
     post_ptr_->createSegmentationPointcloud(
       source_features, source_labels, source_probs,
-      reinterpret_cast<experimental::PointXYZCPE *>(segmented_points_msg_ptr_->data.get()),
+      reinterpret_cast<point_types::PointXYZCPE *>(segmented_points_msg_ptr_->data.get()),
       config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
