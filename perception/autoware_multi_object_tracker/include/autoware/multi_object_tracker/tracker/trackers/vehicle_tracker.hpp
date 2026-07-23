@@ -19,6 +19,7 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/vehicle_shape_model.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/update/orientation_sign_belief.hpp"
 #include "autoware/multi_object_tracker/tracker/update/vehicle_update_strategy.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -45,6 +46,9 @@ private:
 
   // Interval [s] since the last measurement update.
   double time_since_correction_{0.0};
+
+  // Accumulated heading-sign evidence from raw detection yaws.
+  OrientationSignBelief sign_belief_;
 
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(

@@ -66,6 +66,10 @@ private:
     double q_cov_length = 0.25;                  // [m^2] covariance of the length uncertainty, 0.5m
   } motion_params_;
 
+  // 180° heading flip on a raw state/covariance pair: swap the axle points about the body
+  // center, negate the longitudinal velocity, swap the matching covariance rows/cols.
+  void flipStateOrientation(StateVec & X, StateMat & P) const;
+
 public:
   BicycleMotionModel();
 
@@ -126,6 +130,10 @@ public:
   bool blendAxleCovariance(const double blend_ratio);
 
   bool limitStates();
+
+  // Rotate the tracked heading 180°: swap the axle points about the body center and negate the
+  // longitudinal velocity.
+  bool flipOrientation();
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 

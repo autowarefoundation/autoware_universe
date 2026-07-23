@@ -114,6 +114,15 @@ struct BicycleModelState
   double wheel_pos_rear_min{0.0};     // [m]
   double length_uncertainty{0.0};     // [m] length uncertainty
 };
+struct OrientationSignBelief
+{
+  double vote_sign_unknown{0.0};  // [-] log-odds increment per SIGN_UNKNOWN measurement
+  double vote_available{0.0};     // [-] log-odds increment per AVAILABLE measurement
+  double dead_zone{0.0};          // [rad] no-vote band around |yaw_diff| = 90 deg
+  double log_odds_max{0.0};       // [-] belief clamp bound
+  double flip_threshold{0.0};     // [-] flip when log_odds < -flip_threshold
+  double flip_vel_limit{0.0};     // [m/s] belief-based flip enabled below this |vel_long|
+};
 
 class ObjectModel
 {
@@ -126,6 +135,7 @@ public:
   StateCovariance initial_covariance;
   StateCovariance measurement_covariance;
   BicycleModelState bicycle_state;
+  OrientationSignBelief orientation_sign_belief;
 
   explicit ObjectModel(const ObjectModelType & type_set)
   {
@@ -175,6 +185,14 @@ public:
         bicycle_state.wheel_pos_front_min = 1.0;
         bicycle_state.wheel_pos_rear_min = 1.0;
         bicycle_state.length_uncertainty = 1.0;
+
+        // orientation sign belief
+        orientation_sign_belief.vote_sign_unknown = 1.1;
+        orientation_sign_belief.vote_available = 2.2;
+        orientation_sign_belief.dead_zone = deg2rad(30.0);
+        orientation_sign_belief.log_odds_max = 4.0;
+        orientation_sign_belief.flip_threshold = 2.0;
+        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
         break;
 
       case ObjectModelType::NormalVehicle:
@@ -221,6 +239,14 @@ public:
         bicycle_state.wheel_pos_front_min = 1.0;
         bicycle_state.wheel_pos_rear_min = 1.0;
         bicycle_state.length_uncertainty = 0.5;
+
+        // orientation sign belief
+        orientation_sign_belief.vote_sign_unknown = 1.1;
+        orientation_sign_belief.vote_available = 2.2;
+        orientation_sign_belief.dead_zone = deg2rad(30.0);
+        orientation_sign_belief.log_odds_max = 4.0;
+        orientation_sign_belief.flip_threshold = 2.0;
+        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
         break;
 
       case ObjectModelType::BigVehicle:
@@ -267,6 +293,14 @@ public:
         bicycle_state.wheel_pos_front_min = 1.5;
         bicycle_state.wheel_pos_rear_min = 1.5;
         bicycle_state.length_uncertainty = 0.8;
+
+        // orientation sign belief
+        orientation_sign_belief.vote_sign_unknown = 1.1;
+        orientation_sign_belief.vote_available = 2.2;
+        orientation_sign_belief.dead_zone = deg2rad(30.0);
+        orientation_sign_belief.log_odds_max = 4.0;
+        orientation_sign_belief.flip_threshold = 2.0;
+        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
         break;
 
       case ObjectModelType::Bicycle:
@@ -313,6 +347,14 @@ public:
         bicycle_state.wheel_pos_front_min = 0.3;
         bicycle_state.wheel_pos_rear_min = 0.3;
         bicycle_state.length_uncertainty = 0.3;
+
+        // orientation sign belief
+        orientation_sign_belief.vote_sign_unknown = 1.1;
+        orientation_sign_belief.vote_available = 2.2;
+        orientation_sign_belief.dead_zone = deg2rad(30.0);
+        orientation_sign_belief.log_odds_max = 4.0;
+        orientation_sign_belief.flip_threshold = 2.0;
+        orientation_sign_belief.flip_vel_limit = kmph2mps(5.0);
         break;
 
       case ObjectModelType::Pedestrian:

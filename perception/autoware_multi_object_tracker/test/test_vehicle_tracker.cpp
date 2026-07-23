@@ -14,10 +14,17 @@
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/update/orientation_sign_belief.hpp"
 #include "autoware/multi_object_tracker/tracker/update/vehicle_update_strategy.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <Eigen/Eigenvalues>
 #include <autoware_utils_geometry/msg/covariance.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <tf2/utils.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <gtest/gtest.h>
 
@@ -399,6 +406,239 @@ TEST(ExportedPoseCovariance, PositiveSemiDefinite)
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(exportedPoseBlock(makeEvolvedVehicle()));
   ASSERT_EQ(solver.info(), Eigen::Success);
   EXPECT_GE(solver.eigenvalues().minCoeff(), -1e-12);
+}
+
+// ---------------------------------------------------------------------------------------------
+// OrientationSignBelief — log-odds heading-sign evidence with flip hysteresis.
+// ---------------------------------------------------------------------------------------------
+namespace
+{
+const object_model::OrientationSignBelief & beliefParams()
+{
+  return object_model::normal_vehicle.orientation_sign_belief;
+}
+
+OrientationSignBelief seededBelief(const types::OrientationAvailability availability)
+{
+  return OrientationSignBelief(beliefParams(), availability);
+}
+}  // namespace
+
+// The seeding detection counts as one agreeing vote, weighted by its availability.
+TEST(OrientationSignBelief, SeedPerAvailability)
+{
+  EXPECT_DOUBLE_EQ(seededBelief(types::OrientationAvailability::UNAVAILABLE).logOdds(), 0.0);
+  EXPECT_DOUBLE_EQ(
+    seededBelief(types::OrientationAvailability::SIGN_UNKNOWN).logOdds(),
+    beliefParams().vote_sign_unknown);
+  EXPECT_DOUBLE_EQ(
+    seededBelief(types::OrientationAvailability::AVAILABLE).logOdds(),
+    beliefParams().vote_available);
+}
+
+// Repeated agreeing/disagreeing votes saturate at the clamp bounds.
+TEST(OrientationSignBelief, AccumulationClampsAtBounds)
+{
+  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  for (int i = 0; i < 20; ++i) {
+    belief.vote(0.0, false);
+  }
+  EXPECT_DOUBLE_EQ(belief.logOdds(), beliefParams().log_odds_max);
+
+  for (int i = 0; i < 40; ++i) {
+    belief.vote(M_PI, false);
+  }
+  EXPECT_DOUBLE_EQ(belief.logOdds(), -beliefParams().log_odds_max);
+}
+
+// Near-perpendicular measurements fall in the dead zone and leave the belief unchanged.
+TEST(OrientationSignBelief, DeadZoneSkipsVote)
+{
+  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  const double before = belief.logOdds();
+  belief.vote(M_PI * 75.0 / 180.0, false);
+  belief.vote(-M_PI * 105.0 / 180.0, false);
+  EXPECT_DOUBLE_EQ(belief.logOdds(), before);
+}
+
+// AVAILABLE votes carry the stronger weight.
+TEST(OrientationSignBelief, AvailableVotesWeighMore)
+{
+  auto belief = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  belief.vote(M_PI, true);
+  EXPECT_DOUBLE_EQ(belief.logOdds(), -beliefParams().vote_available);
+  EXPECT_GT(beliefParams().vote_available, beliefParams().vote_sign_unknown);
+}
+
+// The flip fires only past -flip_threshold, and negation on flip restores a trusted belief.
+TEST(OrientationSignBelief, FlipTriggerAndNegation)
+{
+  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  belief.vote(M_PI, false);
+  belief.vote(M_PI, false);
+  EXPECT_FALSE(belief.shouldFlip());  // -1.1 > -2.0
+  belief.vote(M_PI, false);
+  EXPECT_TRUE(belief.shouldFlip());  // -2.2 < -2.0
+
+  belief.onFlipped();
+  EXPECT_DOUBLE_EQ(belief.logOdds(), 2.0 * beliefParams().vote_sign_unknown);
+  EXPECT_FALSE(belief.shouldFlip());
+}
+
+// Alternating votes after a flip stay within one weight of the post-flip belief and can never
+// traverse from +flip_threshold to -flip_threshold.
+TEST(OrientationSignBelief, NoOscillationUnderAlternatingVotes)
+{
+  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  for (int i = 0; i < 3; ++i) {
+    belief.vote(M_PI, false);
+  }
+  ASSERT_TRUE(belief.shouldFlip());
+  belief.onFlipped();
+
+  for (int i = 0; i < 50; ++i) {
+    belief.vote(i % 2 == 0 ? M_PI : 0.0, false);
+    EXPECT_FALSE(belief.shouldFlip());
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// BicycleMotionModel::flipOrientation — 180° heading flip of the raw state.
+// ---------------------------------------------------------------------------------------------
+namespace
+{
+void rawState(
+  const BicycleMotionModel & model, BicycleMotionModel::StateVec & x,
+  BicycleMotionModel::StateMat & p)
+{
+  model.MotionModel<6>::getPredictedState(evolvedTime(), x, p);
+}
+}  // namespace
+
+// The flip swaps the axle points and negates the longitudinal velocity; heading rotates by pi
+// while the wheelbase (and thus the tracked length) is preserved.
+TEST(FlipOrientation, SwapsAxlesAndReversesVelocity)
+{
+  BicycleMotionModel model = makeEvolvedVehicle();
+  BicycleMotionModel::StateVec x_before;
+  BicycleMotionModel::StateMat p_before;
+  rawState(model, x_before, p_before);
+  const double yaw_before = model.getYawState();
+  const double length_before = model.getLength();
+
+  EXPECT_TRUE(model.flipOrientation());
+
+  BicycleMotionModel::StateVec x_after;
+  BicycleMotionModel::StateMat p_after;
+  rawState(model, x_after, p_after);
+
+  const double yaw_jump =
+    autoware_utils_math::normalize_radian(model.getYawState() - yaw_before);
+  EXPECT_NEAR(std::abs(yaw_jump), M_PI, 1e-12);
+  EXPECT_DOUBLE_EQ(model.getLength(), length_before);
+
+  EXPECT_DOUBLE_EQ(x_after(BicycleMotionModel::X1), x_before(BicycleMotionModel::X2));
+  EXPECT_DOUBLE_EQ(x_after(BicycleMotionModel::Y1), x_before(BicycleMotionModel::Y2));
+  EXPECT_DOUBLE_EQ(x_after(BicycleMotionModel::X2), x_before(BicycleMotionModel::X1));
+  EXPECT_DOUBLE_EQ(x_after(BicycleMotionModel::Y2), x_before(BicycleMotionModel::Y1));
+  EXPECT_DOUBLE_EQ(x_after(BicycleMotionModel::U), -x_before(BicycleMotionModel::U));
+  EXPECT_DOUBLE_EQ(x_after(BicycleMotionModel::V), x_before(BicycleMotionModel::V));
+
+  EXPECT_DOUBLE_EQ(
+    p_after(BicycleMotionModel::X1, BicycleMotionModel::X1),
+    p_before(BicycleMotionModel::X2, BicycleMotionModel::X2));
+  EXPECT_DOUBLE_EQ(
+    p_after(BicycleMotionModel::Y2, BicycleMotionModel::Y2),
+    p_before(BicycleMotionModel::Y1, BicycleMotionModel::Y1));
+  EXPECT_DOUBLE_EQ(
+    p_after(BicycleMotionModel::X1, BicycleMotionModel::U),
+    p_before(BicycleMotionModel::X2, BicycleMotionModel::U));
+}
+
+// The flip is an involution: applying it twice restores state and covariance exactly.
+TEST(FlipOrientation, DoubleFlipRestoresState)
+{
+  BicycleMotionModel model = makeEvolvedVehicle();
+  BicycleMotionModel::StateVec x_before;
+  BicycleMotionModel::StateMat p_before;
+  rawState(model, x_before, p_before);
+
+  EXPECT_TRUE(model.flipOrientation());
+  EXPECT_TRUE(model.flipOrientation());
+
+  BicycleMotionModel::StateVec x_after;
+  BicycleMotionModel::StateMat p_after;
+  rawState(model, x_after, p_after);
+  EXPECT_TRUE(x_after.isApprox(x_before, 1e-15));
+  EXPECT_TRUE(p_after.isApprox(p_before, 1e-15));
+}
+
+// ---------------------------------------------------------------------------------------------
+// VehicleTracker heading-sign flip — SIGN_UNKNOWN detections opposing the tracked heading
+// accumulate belief and flip a slow tracker.
+// ---------------------------------------------------------------------------------------------
+namespace
+{
+types::DynamicObject makeVehicleDetection(const rclcpp::Time & time, const double yaw)
+{
+  types::DynamicObject object;
+  object.time = time;
+  object.channel_index = 0;
+  object.existence_probability = 0.9f;
+  object.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
+  object.pose.position.x = 10.0;
+  object.pose.position.y = 5.0;
+  object.pose.position.z = 0.9;
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, yaw);
+  object.pose.orientation = tf2::toMsg(q);
+  object.pose_covariance = {};
+  object.pose_covariance[XYZRPY_COV_IDX::X_X] = 0.16;
+  object.pose_covariance[XYZRPY_COV_IDX::Y_Y] = 0.16;
+  object.pose_covariance[XYZRPY_COV_IDX::YAW_YAW] = 0.15;
+  object.twist_covariance = {};
+  object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  object.shape.dimensions.x = 4.5;
+  object.shape.dimensions.y = 2.0;
+  object.shape.dimensions.z = 1.8;
+  object.trust_extension = true;
+  return object;
+}
+
+double trackedYaw(const VehicleTracker & tracker, const rclcpp::Time & time)
+{
+  types::DynamicObject tracked;
+  EXPECT_TRUE(tracker.getTrackedObject(time, tracked));
+  return tf2::getYaw(tracked.pose.orientation);
+}
+}  // namespace
+
+// A stationary tracker seeded with the wrong sign flips once opposing SIGN_UNKNOWN votes cross
+// the threshold (seed +w, then -w per frame: below -2.0 on the third), and stays flipped.
+TEST(VehicleTrackerSignFlip, OpposedVotesFlipSlowTracker)
+{
+  const types::InputChannel channel{};
+  const rclcpp::Time start(0, 0, RCL_ROS_TIME);
+  VehicleTracker tracker(object_model::normal_vehicle, start, makeVehicleDetection(start, 0.0));
+
+  int flipped_at = -1;
+  rclcpp::Time time = start;
+  for (int i = 1; i <= 6; ++i) {
+    time = start + rclcpp::Duration::from_seconds(0.1 * i);
+    tracker.predict(time);
+    tracker.measure(makeVehicleDetection(time, M_PI), time, channel);
+    const double deviation =
+      std::abs(autoware_utils_math::normalize_radian(trackedYaw(tracker, time) - M_PI));
+    if (flipped_at < 0 && deviation < M_PI_2) {
+      flipped_at = i;
+    }
+  }
+  EXPECT_EQ(flipped_at, 3);
+
+  // Agreeing frames after the flip keep the corrected heading.
+  const double deviation =
+    std::abs(autoware_utils_math::normalize_radian(trackedYaw(tracker, time) - M_PI));
+  EXPECT_LT(deviation, 0.1);
 }
 
 }  // namespace autoware::multi_object_tracker

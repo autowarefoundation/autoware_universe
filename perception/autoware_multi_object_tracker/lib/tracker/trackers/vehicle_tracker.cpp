@@ -63,7 +63,8 @@ VehicleTracker::VehicleTracker(
   logger_(rclcpp::get_logger("VehicleTracker")),
   object_model_(object_model),
   shape_model_(object_model),
-  shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER)
+  shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER),
+  sign_belief_(object_model.orientation_sign_belief, object.kinematics.orientation_availability)
 {
   // set tracker type based on object model
   switch (object_model.type) {
@@ -202,11 +203,13 @@ bool VehicleTracker::updateKinematics(
     }
     const double pre_limit_yaw = motion_model_.getYawState();
     motion_model_.limitStates();
-    // Flip stored footprint when yaw-limit correction reverses heading by 180°
-    if (shape_model_.isFootprintValid()) {
-      const double yaw_diff =
-        autoware_utils_math::normalize_radian(motion_model_.getYawState() - pre_limit_yaw);
-      if (std::abs(yaw_diff) > M_PI_2) {
+    // A yaw-limit correction reversing the heading by 180° also negates the sign belief and
+    // flips the stored footprint.
+    const double limit_yaw_diff =
+      autoware_utils_math::normalize_radian(motion_model_.getYawState() - pre_limit_yaw);
+    if (std::abs(limit_yaw_diff) > M_PI_2) {
+      sign_belief_.onFlipped();
+      if (shape_model_.isFootprintValid()) {
         shape_model_.flipFootprintXY();
       }
     }
@@ -260,7 +263,19 @@ bool VehicleTracker::measure(
       dt);
   }
 
-  const types::DynamicObject corrected = normalizeYaw(in_object, motion_model_.getYawState());
+  // The raw yaw sign votes on the heading-sign belief before normalization discards it.
+  const double tracker_yaw = motion_model_.getYawState();
+  if (
+    in_object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
+    channel_info.trust_orientation) {
+    const double raw_yaw_diff = autoware_utils_math::normalize_radian(
+      tf2::getYaw(in_object.pose.orientation) - tracker_yaw);
+    sign_belief_.vote(
+      raw_yaw_diff,
+      in_object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE);
+  }
+
+  const types::DynamicObject corrected = normalizeYaw(in_object, tracker_yaw);
 
   const bool is_bbox = (corrected.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   updateKinematics(corrected, channel_info);
@@ -276,6 +291,19 @@ bool VehicleTracker::measure(
     motion_model_.getPredictedState(time, tracker_pose, dummy_cov, dummy_twist, dummy_cov);
   shape_model_.updateFootprint(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
+
+  // Belief-driven 180° flip, enabled only at low speed where the reverse-velocity limit cannot
+  // correct the heading sign.
+  if (
+    sign_belief_.shouldFlip() &&
+    std::abs(motion_model_.getStateElement(IDX::U)) <
+      object_model_.orientation_sign_belief.flip_vel_limit) {
+    motion_model_.flipOrientation();
+    if (shape_model_.isFootprintValid()) {
+      shape_model_.flipFootprintXY();
+    }
+    sign_belief_.onFlipped();
+  }
 
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();
