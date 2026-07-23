@@ -21,6 +21,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/cuda_utils/thrust_utils.hpp>
+#include <autoware/cuda_utils/thrust_workspace_allocator.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -91,6 +92,10 @@ private:
   const int threads_per_block_{256};
   cudaMemPool_t device_memory_pool_{};
 
+  // Pre-allocated workspace backing thrust temporaries so the per-callback
+  // reductions/scans run without process-wide cudaMalloc/cudaFree barriers.
+  autoware::cuda_utils::ThrustWorkspace thrust_workspace_;
+
   ProcessingStats stats_;
 
   // Organizing buffers
@@ -114,6 +119,10 @@ private:
   thrust::device_vector<std::uint8_t> device_mismatch_mask_;
   thrust::device_vector<std::uint32_t> device_ring_outlier_mask_;
   thrust::device_vector<std::uint32_t> device_indices_;
+  // Diagnostic counters (crop-passed / NaN / mismatch). Written by CUB reductions
+  // on the node stream and read back together at a single synchronize, so the
+  // stats never trigger thrust::count's default-stream host-value sync.
+  thrust::device_vector<int> device_diag_counts_;
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;

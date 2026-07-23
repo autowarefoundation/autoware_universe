@@ -24,6 +24,7 @@
 #include <cuda_runtime.h>
 #include <thrust/device_vector.h>
 
+#include <cstddef>
 #include <deque>
 
 namespace autoware::cuda_pointcloud_preprocessor
@@ -38,13 +39,15 @@ void undistort3DLaunch(
   std::uint8_t * output_mismatch_mask, int threads_per_block, int blocks_per_grid,
   cudaStream_t & stream);
 
-void setupTwist2DStructs(
+// Returns the number of twist structs uploaded (the valid prefix of
+// device_twist_2d_structs, whose size() may exceed it: the buffer only grows).
+std::size_t setupTwist2DStructs(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
   thrust::device_vector<TwistStruct2D> & device_twist_2d_structs, cudaStream_t & stream);
 
-void setupTwist3DStructs(
+std::size_t setupTwist3DStructs(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
