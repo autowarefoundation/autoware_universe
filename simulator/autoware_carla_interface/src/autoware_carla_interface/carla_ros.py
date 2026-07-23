@@ -13,8 +13,13 @@
 # limitations under the License.
 
 import math
+import re
 import threading
+import xml.etree.ElementTree as ET
 
+from autoware_adapi_v1_msgs.msg import LocalizationInitializationState
+from autoware_perception_msgs.msg import PredictedObjects
+from autoware_perception_msgs.msg import TrafficLightGroupArray
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
@@ -23,18 +28,31 @@ from autoware_vehicle_msgs.msg import SteeringReport
 from autoware_vehicle_msgs.msg import TurnIndicatorsCommand
 from autoware_vehicle_msgs.msg import TurnIndicatorsReport
 from autoware_vehicle_msgs.msg import VelocityReport
+from autoware_vehicle_msgs.srv import ControlModeCommand
 from builtin_interfaces.msg import Time
 import carla
 from cv_bridge import CvBridge
+from geometry_msgs.msg import AccelWithCovarianceStamped
 from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import Quaternion
+from geometry_msgs.msg import TransformStamped
+from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import Odometry
 import numpy
 import rclpy
+from rclpy.qos import DurabilityPolicy
+from rclpy.qos import QoSProfile
+from rclpy.qos import ReliabilityPolicy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
+from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import PointField
+from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import Header
+from tf2_msgs.msg import TFMessage
 from tier4_vehicle_msgs.msg import ActuationCommandStamped
 from tier4_vehicle_msgs.msg import ActuationStatusStamped
 from transforms3d.euler import euler2quat
@@ -44,12 +62,55 @@ from .modules import ROSPublisherManager
 from .modules import SensorKitLoader
 from .modules import SensorPublishWorker
 from .modules import SensorRegistry
+from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import carla_location_to_ros_point
 from .modules.carla_utils import carla_rotation_to_ros_quaternion
 from .modules.carla_utils import create_cloud
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
+
+
+def _parse_geo_reference(xodr_xml: str):
+    """Extract ``(lat_0, lon_0)`` from the OpenDRIVE ``<geoReference>`` PROJ string."""
+    match = re.search(
+        r"<geoReference>\s*<!\[CDATA\[(.*?)\]\]>\s*</geoReference>",
+        xodr_xml,
+        re.DOTALL,
+    )
+    if match:
+        proj_string = match.group(1).strip()
+    else:
+        root = ET.fromstring(xodr_xml)
+        geo_ref = root.find(".//geoReference")
+        if geo_ref is not None and geo_ref.text:
+            proj_string = geo_ref.text.strip()
+        else:
+            raise ValueError("No <geoReference> found in OpenDRIVE XML")
+
+    lat_match = re.search(r"\+lat_0=([0-9eE.+-]+)", proj_string)
+    lon_match = re.search(r"\+lon_0=([0-9eE.+-]+)", proj_string)
+    if lat_match is None or lon_match is None:
+        raise ValueError(f"Cannot extract +lat_0/+lon_0 from GeoReference: {proj_string}")
+    return float(lat_match.group(1)), float(lon_match.group(1))
+
+
+def _parse_lanelet2_origin(osm_path: str):
+    """Return ``(lat, lon)`` of the first georeferenced node in a lanelet2 OSM map.
+
+    Autoware lanelet2 maps tag every ``<node>`` with WGS84 ``lat``/``lon``
+    (alongside its MGRS ``local_x``/``local_y``).  Any node is enough to fix the
+    MGRS grid zone, which is all the projector needs to reverse-project the
+    ``map_origin`` (CARLA world origin expressed in MGRS-local) back to WGS84.
+    """
+    tree = ET.parse(osm_path)
+    root = tree.getroot()
+    for node in root.iter("node"):
+        lat = node.get("lat")
+        lon = node.get("lon")
+        if lat is not None and lon is not None:
+            return float(lat), float(lon)
+    raise ValueError(f"No <node lat=... lon=...> found in {osm_path}")
 
 
 class carla_ros2_interface(object):
@@ -64,15 +125,73 @@ class carla_ros2_interface(object):
             "sync_mode": (rclpy.Parameter.Type.BOOL, None),
             "timeout": (rclpy.Parameter.Type.INTEGER, None),
             "fixed_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
+            "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
             "carla_map": (rclpy.Parameter.Type.STRING, None),
+            "force_load_world": (rclpy.Parameter.Type.BOOL, False),
             "ego_vehicle_role_name": (rclpy.Parameter.Type.STRING, None),
             "spawn_point": (rclpy.Parameter.Type.STRING, None),
+            "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
+            "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "vehicle_type": (rclpy.Parameter.Type.STRING, None),
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
+            "min_positive_throttle": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "min_positive_throttle_speed_threshold": (rclpy.Parameter.Type.DOUBLE, 0.8),
+            "normalize_steer_command": (rclpy.Parameter.Type.BOOL, True),
+            "steer_command_gain": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            "steering_time_constant": (rclpy.Parameter.Type.DOUBLE, 0.2),
+            "steer_response_calibration_enable": (rclpy.Parameter.Type.BOOL, False),
+            "steer_response_calibration_wheel_base": (rclpy.Parameter.Type.DOUBLE, 2.79),
+            "steer_response_calibration_table": (rclpy.Parameter.Type.STRING, ""),
+            "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            # Offset between the CARLA world origin and the Autoware map frame origin.
+            # Needed for custom/georeferenced CARLA levels whose local coordinates
+            # don't already coincide with the lanelet2/PCD map frame.
+            "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            # Path to the Autoware lanelet2 map (``*.osm``).  When set, the
+            # splatsim geographic origin is derived from it (reverse-projecting
+            # map_origin through the map's MGRS grid) instead of the OpenDRIVE
+            # GeoReference or the manual splatsim_geo_origin_lat/lon override.
+            "lanelet2_map_path": (rclpy.Parameter.Type.STRING, ""),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
+            # SplatSim parameters
+            "render_with_splatsim": (rclpy.Parameter.Type.BOOL, False),
+            "splatsim_tileset_path": (rclpy.Parameter.Type.STRING, ""),
+            "splatsim_image": (rclpy.Parameter.Type.STRING, "splatsim:latest"),
+            "splatsim_grpc_port": (rclpy.Parameter.Type.INTEGER, 50051),
+            "splatsim_use_sh": (rclpy.Parameter.Type.BOOL, True),
+            "splatsim_frame_rate": (rclpy.Parameter.Type.DOUBLE, 20.0),
+            "splatsim_image_topic": (rclpy.Parameter.Type.STRING, "/splatsim/image_raw"),
+            "splatsim_camera_info_topic": (rclpy.Parameter.Type.STRING, "/splatsim/camera_info"),
+            "splatsim_frame_id": (rclpy.Parameter.Type.STRING, "splatsim_camera"),
+            "splatsim_near_plane": (rclpy.Parameter.Type.DOUBLE, 0.01),
+            "splatsim_far_plane": (rclpy.Parameter.Type.DOUBLE, 1000.0),
+            "splatsim_device": (rclpy.Parameter.Type.STRING, "cuda:0"),
+            "splatsim_restart_container": (rclpy.Parameter.Type.BOOL, False),
+            "splatsim_compress_format": (rclpy.Parameter.Type.STRING, "jpeg"),
+            "splatsim_render_camera": (rclpy.Parameter.Type.BOOL, True),
+            # Manual override for the geographic origin (lat/lon in decimal
+            # degrees) of the CARLA world origin, used to build the MGRS
+            # transform for splatsim.  Normally left at 0.0/0.0: the origin is
+            # derived from the lanelet2 map (lanelet2_map_path) and, failing
+            # that, from the CARLA map's OpenDRIVE GeoReference.  Set explicitly
+            # only to bypass both.
+            "splatsim_geo_origin_lat": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_geo_origin_lon": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            # SplatSim LiDAR parameters
+            "splatsim_render_lidar": (rclpy.Parameter.Type.BOOL, False),
+            "splatsim_lidar_grpc_port": (rclpy.Parameter.Type.INTEGER, 50061),
+            "splatsim_lidar_sensor_type": (rclpy.Parameter.Type.STRING, "OT128"),
+            "splatsim_lidar_fps": (rclpy.Parameter.Type.DOUBLE, 10.0),
+            "splatsim_lidar_n_rows": (rclpy.Parameter.Type.INTEGER, 0),
+            "splatsim_lidar_n_columns": (rclpy.Parameter.Type.INTEGER, 0),
+            "splatsim_lidar_min_range_m": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_lidar_max_range_m": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_lidar_drop_threshold": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "splatsim_lidar_alpha_threshold": (rclpy.Parameter.Type.DOUBLE, 0.0),
         }
 
         self.param_values = {}
@@ -83,12 +202,16 @@ class carla_ros2_interface(object):
                 self.ros2_node.declare_parameter(param_name, param_type)
             self.param_values[param_name] = self.ros2_node.get_parameter(param_name).value
 
+        self.steer_response_calibration_table = self._parse_steer_response_calibration_table(
+            self.param_values.get("steer_response_calibration_table", "")
+        )
+
     def _initialize_clock_publisher(self):
         """Initialize and publish initial clock message."""
         self.clock_publisher = self.ros2_node.create_publisher(Clock, "/clock", 10)
         obj_clock = Clock()
         obj_clock.clock = Time(sec=0)
-        self.clock_publisher.publish(obj_clock)
+        self._safe_publish(self.clock_publisher, obj_clock)
 
     def _setup_tf_listener(self):
         """Initialize TF buffer/listener for map alignment."""
@@ -124,6 +247,28 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state = self.ros2_node.create_publisher(
             HazardLightsReport, "/vehicle/status/hazard_lights_status", 1
         )
+        self.pub_carla_control_debug = self.ros2_node.create_publisher(
+            Float32MultiArray, "/debug/carla/control_conversion", 10
+        )
+
+    def _initialize_control_mode_service(self):
+        """
+        Serve the control mode change request used by operation_mode_transition_manager.
+
+        Without a server for this service, the transition manager's async request never
+        gets a response, so Engage stalls in "in transition" until it times out and
+        reverts to STOP. The CARLA bridge always drives the vehicle itself, so any
+        requested mode is trivially accepted.
+        """
+        self.srv_control_mode = self.ros2_node.create_service(
+            ControlModeCommand,
+            "/control/control_mode_request",
+            self.control_mode_request_callback,
+        )
+
+    def control_mode_request_callback(self, request, response):
+        response.success = True
+        return response
 
     def _initialize_subscriptions(self):
         """Initialize all ROS 2 subscriptions."""
@@ -175,6 +320,35 @@ class carla_ros2_interface(object):
                 "Sensor mapping produced zero sensors. "
                 "Check enabled_sensors list and calibration files."
             )
+
+        # SplatSim: separate camera/LiDAR configs and filter them out of CARLA
+        # sensors.  Camera and LiDAR rendering are independently gated so the
+        # scene can be driven by LiDAR alone (splatsim_render_camera=false)
+        # without spinning up a Docker container per camera.
+        if self.render_with_splatsim:
+            render_camera = bool(self.param_values.get("splatsim_render_camera", True))
+            render_lidar = bool(self.param_values.get("splatsim_render_lidar"))
+            carla_configs = []
+            for cfg in self.sensor_configs:
+                if cfg.carla_type.startswith("sensor.camera"):
+                    if render_camera:
+                        self._splatsim_camera_configs.append(cfg)
+                        self.logger.info(f"Rendering camera '{cfg.sensor_id}' via splatsim")
+                    else:
+                        # Neither splatsim nor real CARLA: camera fully off.
+                        self.logger.info(
+                            f"Skipping camera '{cfg.sensor_id}' "
+                            "(splatsim mode, camera rendering disabled)"
+                        )
+                elif cfg.carla_type.startswith("sensor.lidar"):
+                    if render_lidar:
+                        self._splatsim_lidar_configs.append(cfg)
+                        self.logger.info(f"Rendering LiDAR '{cfg.sensor_id}' via splatsim")
+                    else:
+                        self.logger.info(f"Skipping LiDAR '{cfg.sensor_id}' (splatsim mode)")
+                else:
+                    carla_configs.append(cfg)
+            self.sensor_configs = carla_configs
 
         self._register_sensor_configs(self.sensor_configs)
         self._create_sensor_publishers_from_registry()
@@ -256,6 +430,7 @@ class carla_ros2_interface(object):
 
         # Setup all components
         self._initialize_parameters()
+        self.render_with_splatsim = bool(self.param_values.get("render_with_splatsim", False))
         self._setup_tf_listener()
         self._initialize_clock_publisher()
 
@@ -264,6 +439,11 @@ class carla_ros2_interface(object):
         # Initialize publishers and subscriptions
         self._initialize_subscriptions()
         self._initialize_status_publishers()
+        self._initialize_control_mode_service()
+
+        # SplatSim: create dummy perception and localization publishers
+        if self.render_with_splatsim:
+            self._initialize_splatsim_publishers()
 
         # Start ROS 2 spin thread (Thread Safety: Shared state protected by self._state_lock)
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
@@ -297,6 +477,12 @@ class carla_ros2_interface(object):
         self.current_control = carla.VehicleControl()
         self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
         self.current_hazard_lights = HazardLightsCommand.DISABLE
+        self._logged_steer_conversion = False
+        self._logged_steering_status_fallback = False
+        self._logged_steer_calibration = False
+        self.steer_response_calibration_table = []
+        self._last_control_conversion_debug = None
+        self._shutting_down = False
 
         # Thread synchronization (protects: current_control, ego_actor, timestamp, physics_control)
         self._state_lock = threading.Lock()
@@ -313,6 +499,32 @@ class carla_ros2_interface(object):
         self.clock_publisher = None
         self.spin_thread = None
         self.cv_bridge = CvBridge()
+
+        # SplatSim state
+        self.render_with_splatsim = False
+        self._splatsim_cameras = []
+        self._splatsim_camera_configs = []
+        self._splatsim_lidars = []
+        self._splatsim_lidar_configs = []
+        self._geo_transform_ready = False
+        self._mgrs_offset_x = 0.0
+        self._mgrs_offset_y = 0.0
+        self._proj_origin = (0.0, 0.0)
+        self._latest_imu_accel = None
+
+    def _ros_context_ok(self):
+        return not self._shutting_down and rclpy.ok()
+
+    def _safe_publish(self, publisher, msg):
+        if not self._ros_context_ok() or publisher is None:
+            return False
+        try:
+            publisher.publish(msg)
+            return True
+        except Exception as exc:
+            if self._shutting_down or not rclpy.ok():
+                return False
+            raise exc
 
     def __call__(self):
         input_data = self.sensor_interface.get_data()
@@ -439,16 +651,90 @@ class carla_ros2_interface(object):
 
         point_cloud_msg = create_cloud(header, fields, structured_lidar_data)
         publisher.publish(point_cloud_msg)
+        # Keep the splatsim gRPC sync fed with the latest LiDAR frame time.
+        self.sensor_registry.update_sensor_timestamp(id_, self.timestamp)
 
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
-        pose.position.z += 2.0
-        carla_pose_transform = ros_pose_to_carla_transform(pose)
+        carla_pose_transform = ros_pose_to_carla_transform(
+            pose,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
+
+        # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
+        # map-frame z is meaningless here. Ground-snap using CARLA's own map
+        # geometry instead of assuming map-frame z aligns with the terrain,
+        # otherwise the vehicle can spawn far above/below ground (e.g. falling
+        # forever) whenever the clicked location's elevation differs from
+        # wherever the fixed z-offset happened to be tuned for.
+        world = CarlaDataProvider.get_world()
+        ground_z = None
+        if world is not None:
+            sample_offsets = (
+                (0.0, 0.0),
+                (0.75, 0.0),
+                (-0.75, 0.0),
+                (0.0, 0.75),
+                (0.0, -0.75),
+                (1.5, 0.0),
+                (-1.5, 0.0),
+                (0.0, 1.5),
+                (0.0, -1.5),
+            )
+            projected_heights = []
+            for offset_x, offset_y in sample_offsets:
+                search_origin = carla.Location(
+                    x=carla_pose_transform.location.x + offset_x,
+                    y=carla_pose_transform.location.y + offset_y,
+                    z=1000.0,
+                )
+                labelled_point = world.ground_projection(search_origin, 10000.0)
+                if labelled_point is not None:
+                    projected_heights.append(labelled_point.location.z)
+            if projected_heights:
+                ground_z = max(projected_heights)
+
+        if ground_z is not None:
+            carla_pose_transform.location.z = (
+                ground_z + self.param_values["initial_pose_ground_offset_z"]
+            )
+            self.logger.info(
+                "Ground-snapped initial pose: "
+                f"ground_z={ground_z:.3f}, "
+                f"offset_z={self.param_values['initial_pose_ground_offset_z']:.3f}, "
+                f"spawn_z={carla_pose_transform.location.z:.3f}"
+            )
+        else:
+            self.logger.warning(
+                "Could not find ground height for initial pose; falling back to a fixed z-offset"
+            )
+            carla_pose_transform.location.z += 2.0
 
         with self._state_lock:
             if self.ego_actor is not None:
+                reset_control = carla.VehicleControl()
+                reset_control.throttle = 0.0
+                reset_control.brake = 1.0
+                reset_control.steer = 0.0
+                reset_control.gear = 1
+                reset_control.reverse = False
+                reset_control.manual_gear_shift = True
+
+                # A fallen or colliding actor can keep large velocity/rotation even after
+                # set_transform(). Freeze physics briefly, place it above the projected
+                # ground, clear motion, then resume simulation from a stopped state.
+                self.ego_actor.set_simulate_physics(False)
                 self.ego_actor.set_transform(carla_pose_transform)
+                self.ego_actor.set_target_velocity(carla.Vector3D(0.0, 0.0, 0.0))
+                self.ego_actor.set_target_angular_velocity(carla.Vector3D(0.0, 0.0, 0.0))
+                self.ego_actor.apply_control(reset_control)
+                self.ego_actor.set_simulate_physics(True)
+                self.current_control = reset_control
+                self.prev_timestamp = None
+                self.prev_steer_output = 0.0
+                self.logger.info(f"Reset ego vehicle to CARLA transform: {carla_pose_transform}")
             else:
                 self.logger.warning("Cannot set initial pose: ego vehicle not available")
 
@@ -479,15 +765,18 @@ class carla_ros2_interface(object):
                 return
             ego_transform = self.ego_actor.get_transform()
 
-        pose_carla.position = carla_location_to_ros_point(ego_transform.location)
+        pose_carla.position = carla_location_to_ros_point(
+            ego_transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
         pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
         out_pose_with_cov.pose.pose = pose_carla
         out_pose_with_cov.pose.covariance = self._create_gnss_covariance_matrix()
 
-        # Publish via registry publisher
-        gnss_config.publisher.publish(out_pose_with_cov)
-        self.sensor_registry.update_sensor_timestamp(gnss_config.sensor_id, self.timestamp)
+        if self._safe_publish(gnss_config.publisher, out_pose_with_cov):
+            self.sensor_registry.update_sensor_timestamp(gnss_config.sensor_id, self.timestamp)
 
     def _create_gnss_covariance_matrix(self):
         """Create GNSS covariance matrix from sensor configuration."""
@@ -599,6 +888,8 @@ class carla_ros2_interface(object):
             img_msg = self.cv_bridge.cv2_to_imgmsg(image_array, encoding="bgra8")
             img_msg.header = header
             img_pub.publish(img_msg)
+            # Keep the splatsim gRPC sync fed with the latest camera frame time.
+            self.sensor_registry.update_sensor_timestamp(cam_id, self.timestamp)
 
     def imu(self, carla_imu_measurement):
         """Transform and publish IMU measurement to ROS."""
@@ -631,10 +922,18 @@ class carla_ros2_interface(object):
         imu_msg.orientation.z = quat[3]
 
         if self.pub_imu:
-            self.pub_imu.publish(imu_msg)
-            self.sensor_registry.update_sensor_timestamp("imu", self.timestamp)
+            if self._safe_publish(self.pub_imu, imu_msg):
+                self.sensor_registry.update_sensor_timestamp("imu", self.timestamp)
         else:
             self.logger.warning("IMU publisher not initialized")
+
+        # Cache acceleration for splatsim localization publishing
+        if self.render_with_splatsim:
+            self._latest_imu_accel = (
+                imu_msg.linear_acceleration.x,
+                imu_msg.linear_acceleration.y,
+                imu_msg.linear_acceleration.z,
+            )
 
     def first_order_steering(self, steer_input):
         """
@@ -670,6 +969,285 @@ class carla_ros2_interface(object):
         self.prev_timestamp = self.timestamp
         return steer_output
 
+    def _get_front_wheel_max_steer_rad(self):
+        """Return the CARLA ego vehicle front-wheel max steering angle in radians."""
+        if not self.physics_control or not self.physics_control.wheels:
+            return None
+
+        # CARLA stores WheelPhysicsControl.max_steer_angle in degrees.
+        front_wheels = self.physics_control.wheels[:2]
+        max_steer_deg = max(abs(wheel.max_steer_angle) for wheel in front_wheels)
+        if max_steer_deg <= 0.0:
+            return None
+        return math.radians(max_steer_deg)
+
+    def _get_steering_curve_ratio(self, speed_mps):
+        if not self.physics_control or not self.physics_control.steering_curve:
+            return 1.0
+
+        # CARLA 0.10 can return steering_curve points in a non-monotonic order
+        # (e.g. taxi: 0, 10, 0, 20, ...). numpy.interp expects ascending x values;
+        # using the raw order can overestimate the available steering ratio around
+        # bends and therefore under-command CARLA's normalized steer input.
+        sorted_curve = sorted(self.physics_control.steering_curve, key=lambda point: point.x)
+        ratio = numpy.interp(
+            abs(speed_mps), [point.x for point in sorted_curve], [point.y for point in sorted_curve]
+        )
+        return max(float(ratio), 1.0e-3)
+
+    def _parse_steer_response_calibration_table(self, table_text):
+        """
+        Parse a curvature-to-CARLA-steer table.
+
+        Format: "curvature_1pm:carla_steer;curvature_1pm:carla_steer;..."
+        Curvature and steer values are treated as non-negative magnitudes.
+        """
+        table = []
+        if not table_text:
+            return table
+
+        for item in table_text.replace(",", ";").split(";"):
+            item = item.strip()
+            if not item:
+                continue
+            if ":" not in item:
+                self.logger.warning(f"Ignoring malformed steer calibration item: {item}")
+                continue
+            curvature_text, steer_text = item.split(":", 1)
+            try:
+                curvature = abs(float(curvature_text.strip()))
+                steer = abs(float(steer_text.strip()))
+            except ValueError:
+                self.logger.warning(f"Ignoring malformed steer calibration item: {item}")
+                continue
+            table.append((curvature, min(steer, 1.0)))
+
+        table.sort(key=lambda entry: entry[0])
+        deduped = []
+        for curvature, steer in table:
+            if deduped and abs(deduped[-1][0] - curvature) < 1.0e-6:
+                deduped[-1] = (curvature, steer)
+            else:
+                deduped.append((curvature, steer))
+        return deduped
+
+    def _interpolate_steer_response_calibration(self, desired_curvature):
+        table = self.steer_response_calibration_table
+        if not table:
+            return None
+
+        magnitude = abs(desired_curvature)
+        sign = 1.0 if desired_curvature >= 0.0 else -1.0
+
+        if magnitude <= table[0][0]:
+            if table[0][0] <= 1.0e-6:
+                calibrated = table[0][1]
+            else:
+                calibrated = table[0][1] * magnitude / table[0][0]
+            return sign * calibrated
+
+        if magnitude >= table[-1][0]:
+            return sign * table[-1][1]
+
+        for left, right in zip(table, table[1:]):
+            if left[0] <= magnitude <= right[0]:
+                span = right[0] - left[0]
+                if span <= 1.0e-6:
+                    return sign * right[1]
+                alpha = (magnitude - left[0]) / span
+                calibrated = left[1] + alpha * (right[1] - left[1])
+                return sign * calibrated
+
+        return sign * table[-1][1]
+
+    def _interpolate_curvature_from_steer_response_calibration(self, carla_steer):
+        table = self.steer_response_calibration_table
+        if not table:
+            return None
+
+        magnitude = abs(carla_steer)
+        sign = 1.0 if carla_steer >= 0.0 else -1.0
+        steer_to_curvature = sorted((steer, curvature) for curvature, steer in table)
+
+        if magnitude <= steer_to_curvature[0][0]:
+            if steer_to_curvature[0][0] <= 1.0e-6:
+                curvature = steer_to_curvature[0][1]
+            else:
+                curvature = steer_to_curvature[0][1] * magnitude / steer_to_curvature[0][0]
+            return sign * curvature
+
+        if magnitude >= steer_to_curvature[-1][0]:
+            return sign * steer_to_curvature[-1][1]
+
+        for left, right in zip(steer_to_curvature, steer_to_curvature[1:]):
+            if left[0] <= magnitude <= right[0]:
+                span = right[0] - left[0]
+                if span <= 1.0e-6:
+                    return sign * right[1]
+                alpha = (magnitude - left[0]) / span
+                curvature = left[1] + alpha * (right[1] - left[1])
+                return sign * curvature
+
+        return sign * steer_to_curvature[-1][1]
+
+    def _convert_autoware_steer_to_carla(self, autoware_steer_rad):
+        """
+        Convert Autoware tire angle [rad] into CARLA's normalized steer command [-1, 1].
+
+        CARLA applies the vehicle's max wheel angle and steering_curve internally.
+        Autoware control_cmd already represents the desired tire angle, so compensate
+        those CARLA limits here instead of multiplying by the steering_curve again.
+        """
+        steer_gain = self.param_values.get("steer_command_gain", 1.0)
+        desired_tire_angle = -autoware_steer_rad * steer_gain
+
+        current_vel = self.ego_actor.get_velocity()
+        speed_mps = math.sqrt(
+            current_vel.x * current_vel.x
+            + current_vel.y * current_vel.y
+            + current_vel.z * current_vel.z
+        )
+
+        if self.param_values.get("normalize_steer_command", True):
+            max_steer_rad = self._get_front_wheel_max_steer_rad()
+            steering_ratio = self._get_steering_curve_ratio(speed_mps)
+            if max_steer_rad:
+                carla_steer_raw = desired_tire_angle / (max_steer_rad * steering_ratio)
+            else:
+                carla_steer_raw = desired_tire_angle
+        else:
+            # Legacy behavior kept as an escape hatch for old CARLA vehicle assets.
+            steering_ratio = self._get_steering_curve_ratio(speed_mps)
+            max_steer_rad = self._get_front_wheel_max_steer_rad()
+            carla_steer_raw = desired_tire_angle * steering_ratio
+
+        calibrated_steer_raw = 0.0
+        desired_curvature = 0.0
+        calibration_enabled = self.param_values.get("steer_response_calibration_enable", False)
+        if calibration_enabled and self.steer_response_calibration_table:
+            calibration_wheel_base = self.param_values.get(
+                "steer_response_calibration_wheel_base", 2.79
+            )
+            if abs(calibration_wheel_base) > 1.0e-6:
+                desired_curvature = math.tan(desired_tire_angle) / calibration_wheel_base
+                calibrated = self._interpolate_steer_response_calibration(desired_curvature)
+                if calibrated is not None:
+                    calibrated_steer_raw = calibrated
+                    carla_steer_raw = calibrated
+
+        carla_steer = max(min(carla_steer_raw, 1.0), -1.0)
+        self._last_control_conversion_debug = {
+            "autoware_steer_rad": float(autoware_steer_rad),
+            "desired_tire_angle_rad": float(desired_tire_angle),
+            "speed_mps": float(speed_mps),
+            "max_front_steer_rad": float(max_steer_rad) if max_steer_rad else 0.0,
+            "steering_curve_ratio": float(steering_ratio),
+            "carla_steer_raw": float(carla_steer_raw),
+            "carla_steer_clamped": float(carla_steer),
+            "desired_curvature": float(desired_curvature),
+            "calibrated_steer_raw": float(calibrated_steer_raw),
+        }
+
+        if not self._logged_steer_conversion:
+            max_steer_rad = self._get_front_wheel_max_steer_rad()
+            self.logger.info(
+                "CARLA steering conversion: normalize=%s, gain=%.3f, max_front_steer_rad=%s"
+                % (
+                    self.param_values.get("normalize_steer_command", True),
+                    steer_gain,
+                    f"{max_steer_rad:.3f}" if max_steer_rad else "unknown",
+                )
+            )
+            self._logged_steer_conversion = True
+        if (
+            calibration_enabled
+            and self.steer_response_calibration_table
+            and not self._logged_steer_calibration
+        ):
+            self.logger.info(
+                "CARLA steering response calibration enabled: wheel_base=%.3f, table_points=%d"
+                % (
+                    self.param_values.get("steer_response_calibration_wheel_base", 2.79),
+                    len(self.steer_response_calibration_table),
+                )
+            )
+            self._logged_steer_calibration = True
+
+        return carla_steer
+
+    def _publish_control_conversion_debug(self, in_cmd, out_cmd, filtered_steer):
+        """
+        Publish compact bridge conversion debug values.
+
+        Float32MultiArray data order:
+        0 autoware_steer_rad
+        1 desired_tire_angle_rad after bridge gain/sign conversion
+        2 ego_speed_mps
+        3 carla_max_front_steer_rad
+        4 carla_steering_curve_ratio
+        5 carla_steer_raw before clamp
+        6 carla_steer_clamped before bridge first-order filter
+        7 carla_steer_filtered applied to VehicleControl
+        8 input_accel_cmd
+        9 input_brake_cmd
+        10 output_throttle
+        11 output_brake
+        12 desired_curvature_1pm from desired_tire_angle / calibration wheel base
+        13 calibrated_steer_raw from response table
+        """
+        debug = self._last_control_conversion_debug or {}
+        msg = Float32MultiArray()
+        msg.data = [
+            debug.get("autoware_steer_rad", 0.0),
+            debug.get("desired_tire_angle_rad", 0.0),
+            debug.get("speed_mps", 0.0),
+            debug.get("max_front_steer_rad", 0.0),
+            debug.get("steering_curve_ratio", 0.0),
+            debug.get("carla_steer_raw", 0.0),
+            debug.get("carla_steer_clamped", 0.0),
+            float(filtered_steer),
+            float(in_cmd.actuation.accel_cmd),
+            float(in_cmd.actuation.brake_cmd),
+            float(out_cmd.throttle),
+            float(out_cmd.brake),
+            debug.get("desired_curvature", 0.0),
+            debug.get("calibrated_steer_raw", 0.0),
+        ]
+        self._safe_publish(self.pub_carla_control_debug, msg)
+
+    def _estimate_steering_status_rad(self, wheel_steer_deg, control, speed_mps):
+        """Return Autoware steering tire angle [rad] from CARLA wheel angle or control input."""
+        measured_steer_rad = -math.radians(wheel_steer_deg)
+        if abs(measured_steer_rad) > 1.0e-4 or abs(control.steer) <= 1.0e-4:
+            return measured_steer_rad
+
+        calibration_enabled = self.param_values.get("steer_response_calibration_enable", False)
+        if calibration_enabled and self.steer_response_calibration_table:
+            calibration_wheel_base = self.param_values.get(
+                "steer_response_calibration_wheel_base", 2.79
+            )
+            effective_curvature = self._interpolate_curvature_from_steer_response_calibration(
+                control.steer
+            )
+            if effective_curvature is not None:
+                return -math.atan(effective_curvature * calibration_wheel_base)
+
+        max_steer_rad = self._get_front_wheel_max_steer_rad()
+        if not max_steer_rad:
+            return measured_steer_rad
+
+        steering_ratio = self._get_steering_curve_ratio(speed_mps)
+        estimated_steer_rad = -control.steer * max_steer_rad * steering_ratio
+
+        if not self._logged_steering_status_fallback:
+            self.logger.warning(
+                "CARLA wheel steer angle is zero while control.steer is non-zero; "
+                "publishing estimated steering_status from VehicleControl.steer."
+            )
+            self._logged_steering_status_fallback = True
+
+        return estimated_steer_rad
+
     def control_callback(self, in_cmd):
         """
         Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
@@ -678,20 +1256,42 @@ class carla_ros2_interface(object):
 
         """
         out_cmd = carla.VehicleControl()
+        self.tau = self.param_values.get("steering_time_constant", 0.2)
+        min_positive_throttle = self.param_values.get("min_positive_throttle", 0.0)
+        min_positive_throttle_speed_threshold = self.param_values.get(
+            "min_positive_throttle_speed_threshold", 0.8
+        )
         out_cmd.throttle = in_cmd.actuation.accel_cmd
+        out_cmd.gear = 1
+        out_cmd.reverse = False
+        out_cmd.manual_gear_shift = True
 
         with self._state_lock:
-            # convert base on steer curve of the vehicle
             if not self.physics_control or not self.ego_actor:
                 return  # Skip if vehicle not initialized yet
 
-            steer_curve = self.physics_control.steering_curve
             current_vel = self.ego_actor.get_velocity()
-            max_steer_ratio = numpy.interp(
-                abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
+            speed_mps = math.sqrt(
+                current_vel.x * current_vel.x
+                + current_vel.y * current_vel.y
+                + current_vel.z * current_vel.z
             )
-            out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
+            should_apply_min_throttle = (
+                out_cmd.throttle > 0.0
+                and min_positive_throttle > 0.0
+                and in_cmd.actuation.brake_cmd <= 0.0
+                and (
+                    min_positive_throttle_speed_threshold < 0.0
+                    or speed_mps <= min_positive_throttle_speed_threshold
+                )
+            )
+            if should_apply_min_throttle:
+                out_cmd.throttle = max(out_cmd.throttle, min_positive_throttle)
+
+            carla_steer = self._convert_autoware_steer_to_carla(in_cmd.actuation.steer_cmd)
+            out_cmd.steer = self.first_order_steering(carla_steer)
             out_cmd.brake = in_cmd.actuation.brake_cmd
+            self._publish_control_conversion_debug(in_cmd, out_cmd, out_cmd.steer)
             self.current_control = out_cmd
 
     def turn_indicators_callback(self, in_cmd):
@@ -776,7 +1376,14 @@ class carla_ros2_interface(object):
         out_vel_state.heading_rate = ego_transform.transform_vector(ego_angular_velocity).z
 
         out_steering_state.stamp = out_vel_state.header.stamp
-        out_steering_state.steering_tire_angle = -math.radians(steer_angle)
+        speed_mps = math.sqrt(
+            ego_velocity_carla.x * ego_velocity_carla.x
+            + ego_velocity_carla.y * ego_velocity_carla.y
+            + ego_velocity_carla.z * ego_velocity_carla.z
+        )
+        out_steering_state.steering_tire_angle = self._estimate_steering_status_rad(
+            steer_angle, control, speed_mps
+        )
 
         out_gear_state.stamp = out_vel_state.header.stamp
         out_gear_state.report = GearReport.DRIVE
@@ -812,13 +1419,13 @@ class carla_ros2_interface(object):
         else:
             out_hazard_lights_state.report = HazardLightsReport.DISABLE
 
-        self.pub_actuation_status.publish(out_actuation_status)
-        self.pub_vel_state.publish(out_vel_state)
-        self.pub_steering_state.publish(out_steering_state)
-        self.pub_ctrl_mode.publish(out_ctrl_mode)
-        self.pub_gear_state.publish(out_gear_state)
-        self.pub_turn_indicators_state.publish(out_turn_indicators_state)
-        self.pub_hazard_lights_state.publish(out_hazard_lights_state)
+        self._safe_publish(self.pub_actuation_status, out_actuation_status)
+        self._safe_publish(self.pub_vel_state, out_vel_state)
+        self._safe_publish(self.pub_steering_state, out_steering_state)
+        self._safe_publish(self.pub_ctrl_mode, out_ctrl_mode)
+        self._safe_publish(self.pub_gear_state, out_gear_state)
+        self._safe_publish(self.pub_turn_indicators_state, out_turn_indicators_state)
+        self._safe_publish(self.pub_hazard_lights_state, out_hazard_lights_state)
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
     def run_step(self, input_data, timestamp):
@@ -850,7 +1457,10 @@ class carla_ros2_interface(object):
         nanoseconds = int((self.timestamp - seconds) * 1e9)
         obj_clock = Clock()
         obj_clock.clock = Time(sec=seconds, nanosec=nanoseconds)
-        self.clock_publisher.publish(obj_clock)
+        if not self._ros_context_ok():
+            with self._state_lock:
+                return self.current_control
+        self._safe_publish(self.clock_publisher, obj_clock)
 
         # publish data of all sensors
         for key, data in input_data.items():
@@ -874,7 +1484,9 @@ class carla_ros2_interface(object):
                     self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
                     self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
             elif sensor_type == "sensor.other.gnss":
-                self.pose()
+                # Skip GNSS pose when splatsim provides localization directly
+                if not self.render_with_splatsim:
+                    self.pose()
             elif sensor_type == "sensor.lidar.ray_cast":
                 if not self.checkFrequency(key):
                     self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
@@ -883,6 +1495,10 @@ class carla_ros2_interface(object):
                 self.imu(data[1])
             else:
                 self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+
+        # SplatSim: send ego pose to splatsim cameras and publish dummy data
+        if self.render_with_splatsim:
+            self._splatsim_tick(seconds, nanoseconds)
 
         # Push turn indicator / hazard lights to CARLA before reading status back.
         self.apply_light_state()
@@ -894,6 +1510,396 @@ class carla_ros2_interface(object):
         with self._state_lock:
             return self.current_control
 
+    # ── SplatSim integration methods ──────────────────────────────────────
+
+    def _initialize_splatsim_publishers(self):
+        """Create publishers for dummy perception and localization (splatsim mode)."""
+        self.pub_empty_objects = self.ros2_node.create_publisher(
+            PredictedObjects, "/perception/object_recognition/objects", 1
+        )
+        self.pub_empty_pointcloud = self.ros2_node.create_publisher(
+            PointCloud2, "/perception/obstacle_segmentation/pointcloud", 1
+        )
+        self.pub_empty_traffic_signals = self.ros2_node.create_publisher(
+            TrafficLightGroupArray,
+            "/perception/traffic_light_recognition/traffic_signals",
+            1,
+        )
+        self.pub_empty_occupancy_grid = self.ros2_node.create_publisher(
+            OccupancyGrid, "/perception/occupancy_grid_map/map", 1
+        )
+        self.pub_tf = self.ros2_node.create_publisher(TFMessage, "/tf", 10)
+        self.pub_localization_odom = self.ros2_node.create_publisher(
+            Odometry, "/localization/kinematic_state", 10
+        )
+        self.pub_localization_pose = self.ros2_node.create_publisher(
+            PoseWithCovarianceStamped,
+            "/localization/pose_estimator/pose_with_covariance",
+            10,
+        )
+        self.pub_localization_accel = self.ros2_node.create_publisher(
+            AccelWithCovarianceStamped, "/localization/acceleration", 10
+        )
+        loc_init_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        self.pub_localization_init_state = self.ros2_node.create_publisher(
+            LocalizationInitializationState,
+            "/localization/initialization_state",
+            loc_init_qos,
+        )
+        self.pub_fusion_pose = self.ros2_node.create_publisher(
+            PoseStamped, "/localization/pose_twist_fusion_filter/pose", 10
+        )
+        self.pub_initialpose3d = self.ros2_node.create_publisher(
+            PoseWithCovarianceStamped, "/initialpose3d", 10
+        )
+
+    def _init_geo_transform(self):
+        """Resolve the splatsim geographic origin and its MGRS offset.
+
+        The origin (lat/lon of the CARLA world origin) is resolved in priority
+        order: an explicit ``splatsim_geo_origin_lat/lon`` override, then the
+        Autoware lanelet2 map, then the CARLA OpenDRIVE GeoReference.
+        """
+        if self._geo_transform_ready:
+            return
+        from autoware_lanelet2_extension_python.projection import MGRSProjector
+        import lanelet2.core
+        import lanelet2.io
+
+        override_lat = float(self.param_values.get("splatsim_geo_origin_lat", 0.0) or 0.0)
+        override_lon = float(self.param_values.get("splatsim_geo_origin_lon", 0.0) or 0.0)
+        lanelet2_map_path = str(self.param_values.get("lanelet2_map_path", "") or "").strip()
+        if override_lat != 0.0 or override_lon != 0.0:
+            # Explicit manual override, bypasses both auto-derivation paths.
+            self._proj_origin = (override_lat, override_lon)
+            self.logger.info(
+                "GeoTransform using explicit splatsim_geo_origin override "
+                f"(lat_0={override_lat:.8f}, lon_0={override_lon:.8f})"
+            )
+        elif lanelet2_map_path:
+            # Derive the CARLA world origin's lat/lon directly from the lanelet2
+            # map Autoware is loading.  The ROS map frame published here IS the
+            # map's MGRS-local frame, so map_origin (the CARLA world origin
+            # expressed in MGRS-local) reverse-projected through the map's MGRS
+            # grid gives exactly the geographic origin splatsim needs.  This
+            # guarantees the splatsim scene stays aligned with the map frame and
+            # removes any dependence on an OpenDRIVE GeoReference.
+            seed_lat, seed_lon = _parse_lanelet2_origin(lanelet2_map_path)
+            seed_projector = MGRSProjector(lanelet2.io.Origin(seed_lat, seed_lon))
+            # A forward() call locks the projector's MGRS grid code (e.g. 54SUE)
+            # from the seed node; reverse() cannot run until it is set.
+            seed_projector.forward(lanelet2.core.GPSPoint(seed_lat, seed_lon, 0.0))
+            mox = float(self.param_values.get("map_origin_x", 0.0) or 0.0)
+            moy = float(self.param_values.get("map_origin_y", 0.0) or 0.0)
+            world_origin = seed_projector.reverse(lanelet2.core.BasicPoint3d(mox, moy, 0.0))
+            self._proj_origin = (world_origin.lat, world_origin.lon)
+            self.logger.info(
+                "GeoTransform derived from lanelet2 map "
+                f"'{lanelet2_map_path}': seed_node=({seed_lat:.8f}, {seed_lon:.8f}), "
+                f"map_origin=({mox:.3f}, {moy:.3f}) -> "
+                f"origin=({self._proj_origin[0]:.8f}, {self._proj_origin[1]:.8f})"
+            )
+        else:
+            world = CarlaDataProvider.get_world()
+            try:
+                xodr_xml = world.get_map().to_opendrive()
+            except RuntimeError as exc:
+                raise RuntimeError(
+                    "CARLA map has no parsable OpenDRIVE GeoReference "
+                    "(e.g. CARLA 0.10.0 Odaiba). Set lanelet2_map_path to the "
+                    "Autoware lanelet2 map, or the splatsim_geo_origin_lat / "
+                    "splatsim_geo_origin_lon launch args to the map's geographic "
+                    "origin, so splatsim can build its MGRS transform."
+                ) from exc
+            self._proj_origin = _parse_geo_reference(xodr_xml)
+        lat_0, lon_0 = self._proj_origin
+
+        projector = MGRSProjector(lanelet2.io.Origin(lat_0, lon_0))
+        origin_gps = lanelet2.core.GPSPoint(lat_0, lon_0, 0.0)
+        origin_local = projector.forward(origin_gps)
+        self._mgrs_offset_x = origin_local.x
+        self._mgrs_offset_y = origin_local.y
+
+        self._geo_transform_ready = True
+        self.logger.info(
+            f"GeoTransform initialized: lat_0={lat_0:.8f}, lon_0={lon_0:.8f}, "
+            f"mgrs_offset=({self._mgrs_offset_x:.1f}, {self._mgrs_offset_y:.1f})"
+        )
+
+    def init_splatsim_cameras(self):
+        """Create SplatSimRGBCamera instances for each camera sensor.
+
+        Must be called after the CARLA world is loaded (ego_actor is set).
+        """
+        if not self.render_with_splatsim or not self._splatsim_camera_configs:
+            return
+        if not self.param_values.get("splatsim_tileset_path"):
+            self.logger.warning(
+                "render_with_splatsim is true but splatsim_tileset_path is empty; "
+                "skipping splatsim camera initialization"
+            )
+            return
+
+        self._init_geo_transform()
+
+        from .splatsim.splatsim_camera import SplatSimRGBCamera
+
+        p = self.param_values
+        base_grpc_port = p["splatsim_grpc_port"]
+        for cam_idx, cfg in enumerate(self._splatsim_camera_configs):
+            # Build sensor spec dict matching SplatSimRGBCamera expectations
+            spec = {
+                "id": cfg.sensor_id,
+                "image_size_x": cfg.parameters.get("image_size_x", 1600),
+                "image_size_y": cfg.parameters.get("image_size_y", 900),
+                "fov": cfg.parameters.get("fov", 70.0),
+                "spawn_point": cfg.transform
+                or {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "roll": 0.0,
+                    "pitch": 0.0,
+                    "yaw": 0.0,
+                },
+            }
+            grpc_port = base_grpc_port + cam_idx
+            cam = SplatSimRGBCamera(
+                spec,
+                proj_origin=self._proj_origin,
+                tileset_path=p["splatsim_tileset_path"],
+                splatsim_image=p["splatsim_image"],
+                grpc_port=grpc_port,
+                use_sh=p["splatsim_use_sh"],
+                frame_rate=p["splatsim_frame_rate"],
+                image_topic=cfg.topic_image or p["splatsim_image_topic"],
+                camera_info_topic=cfg.topic_info or p["splatsim_camera_info_topic"],
+                frame_id=cfg.frame_id or p["splatsim_frame_id"],
+                near_plane=p["splatsim_near_plane"],
+                far_plane=p["splatsim_far_plane"],
+                device=p["splatsim_device"],
+                restart_container=p["splatsim_restart_container"],
+                compress_format=p.get("splatsim_compress_format", ""),
+            )
+            self._splatsim_cameras.append(cam)
+            self.logger.info(f"SplatSimRGBCamera created for sensor '{cfg.sensor_id}'")
+
+    def init_splatsim_lidars(self):
+        """Create SplatSimLidar instances for each LiDAR sensor.
+
+        Must be called after the CARLA world is loaded (ego_actor is set).
+        The rendered PointCloud2 is published on the sensor's sensing topic so
+        the existing preprocessing pipeline (and OnePlanner) runs unchanged.
+        """
+        if not self.render_with_splatsim or not self._splatsim_lidar_configs:
+            return
+        if not self.param_values.get("splatsim_tileset_path"):
+            self.logger.warning(
+                "render_with_splatsim is true but splatsim_tileset_path is empty; "
+                "skipping splatsim lidar initialization"
+            )
+            return
+
+        self._init_geo_transform()
+
+        from .splatsim.splatsim_lidar import SplatSimLidar
+
+        p = self.param_values
+        base_grpc_port = p["splatsim_lidar_grpc_port"]
+        for lidar_idx, cfg in enumerate(self._splatsim_lidar_configs):
+            spec = {
+                "id": cfg.sensor_id,
+                "spawn_point": cfg.transform
+                or {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "roll": 0.0,
+                    "pitch": 0.0,
+                    "yaw": 0.0,
+                },
+            }
+            params = cfg.parameters or {}
+            # Prefer explicit params; fall back to the CARLA sensor mapping range.
+            max_range = p["splatsim_lidar_max_range_m"] or float(params.get("range", 0.0))
+            grpc_port = base_grpc_port + lidar_idx
+            lidar = SplatSimLidar(
+                spec,
+                proj_origin=self._proj_origin,
+                tileset_path=p["splatsim_tileset_path"],
+                splatsim_image=p["splatsim_image"],
+                grpc_port=grpc_port,
+                use_sh=p["splatsim_use_sh"],
+                sensor_type=p["splatsim_lidar_sensor_type"],
+                fps=p["splatsim_lidar_fps"],
+                n_rows=p["splatsim_lidar_n_rows"],
+                n_columns=p["splatsim_lidar_n_columns"],
+                min_range_m=p["splatsim_lidar_min_range_m"],
+                max_range_m=max_range,
+                drop_threshold=p["splatsim_lidar_drop_threshold"],
+                alpha_threshold=p["splatsim_lidar_alpha_threshold"],
+                pointcloud_topic=cfg.topic or "/sensing/lidar/top/pointcloud_before_sync",
+                frame_id=cfg.frame_id or "velodyne_top",
+                device=p["splatsim_device"],
+                restart_container=p["splatsim_restart_container"],
+            )
+            self._splatsim_lidars.append(lidar)
+            self.logger.info(f"SplatSimLidar created for sensor '{cfg.sensor_id}'")
+
+    def _splatsim_tick(self, seconds, nanoseconds):
+        """Per-tick splatsim work: send poses, publish dummy perception/localization."""
+        # Send ego pose to splatsim cameras
+        with self._state_lock:
+            if self.ego_actor is not None:
+                ego_tf = self.ego_actor.get_transform()
+                actor_matrix = ego_tf.get_matrix()
+            else:
+                actor_matrix = None
+
+        if actor_matrix is not None and self._splatsim_cameras:
+            for cam in self._splatsim_cameras:
+                cam.update(
+                    actor_matrix_4x4=actor_matrix,
+                    stamp_sec=seconds,
+                    stamp_nanosec=nanoseconds,
+                )
+
+        if actor_matrix is not None and self._splatsim_lidars:
+            for lidar in self._splatsim_lidars:
+                lidar.update(
+                    actor_matrix_4x4=actor_matrix,
+                    stamp_sec=seconds,
+                    stamp_nanosec=nanoseconds,
+                )
+
+        # Publish dummy perception data
+        header = self.get_msg_header(frame_id="map")
+
+        empty_objects = PredictedObjects()
+        empty_objects.header = header
+        self.pub_empty_objects.publish(empty_objects)
+
+        empty_pc = PointCloud2()
+        empty_pc.header = self.get_msg_header(frame_id="base_link")
+        empty_pc.fields = [
+            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
+            PointField(name="intensity", offset=12, datatype=PointField.UINT8, count=1),
+            PointField(name="return_type", offset=13, datatype=PointField.UINT8, count=1),
+            PointField(name="channel", offset=14, datatype=PointField.UINT16, count=1),
+        ]
+        empty_pc.point_step = 16
+        empty_pc.height = 1
+        empty_pc.width = 0
+        empty_pc.row_step = 0
+        empty_pc.is_dense = True
+        self.pub_empty_pointcloud.publish(empty_pc)
+
+        empty_tl = TrafficLightGroupArray()
+        empty_tl.stamp = header.stamp
+        self.pub_empty_traffic_signals.publish(empty_tl)
+
+        empty_og = OccupancyGrid()
+        empty_og.header = self.get_msg_header(frame_id="map")
+        empty_og.info.resolution = 0.5
+        empty_og.info.width = 0
+        empty_og.info.height = 0
+        self.pub_empty_occupancy_grid.publish(empty_og)
+
+        # Publish localization from CARLA ground truth
+        with self._state_lock:
+            has_ego = self.ego_actor is not None
+        if has_ego:
+            self._publish_localization()
+
+    def _publish_localization(self):
+        """Publish localization data from CARLA ground truth (splatsim mode).
+
+        Position: CARLA → xodr (flip y) → MGRS absolute (add offset)
+        Orientation: 2D yaw only (CARLA CW+ → ROS CCW+)
+        """
+        header = self.get_msg_header(frame_id="map")
+
+        with self._state_lock:
+            carla_tf = self.ego_actor.get_transform()
+            ego_vel = self.ego_actor.get_velocity()
+            ego_ang_vel = self.ego_actor.get_angular_velocity()
+            trans_mat = numpy.array(carla_tf.get_matrix()).reshape(4, 4)
+
+        # Position
+        pose = Pose()
+        pose.position.x = carla_tf.location.x + self._mgrs_offset_x
+        pose.position.y = -carla_tf.location.y + self._mgrs_offset_y
+        pose.position.z = carla_tf.location.z
+
+        # Orientation (2D yaw only)
+        yaw = -math.radians(carla_tf.rotation.yaw)
+        qw = math.cos(yaw / 2.0)
+        qz = math.sin(yaw / 2.0)
+        pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
+
+        # /tf (map → base_link)
+        tf_stamped = TransformStamped()
+        tf_stamped.header = header
+        tf_stamped.child_frame_id = "base_link"
+        tf_stamped.transform.translation.x = pose.position.x
+        tf_stamped.transform.translation.y = pose.position.y
+        tf_stamped.transform.translation.z = pose.position.z
+        tf_stamped.transform.rotation = pose.orientation
+        self.pub_tf.publish(TFMessage(transforms=[tf_stamped]))
+
+        # /localization/kinematic_state (Odometry)
+        odom = Odometry()
+        odom.header = header
+        odom.child_frame_id = "base_link"
+        odom.pose.pose = pose
+        rot_mat = trans_mat[0:3, 0:3]
+        inv_rot_mat = rot_mat.T
+        vel_vec = numpy.array([ego_vel.x, ego_vel.y, ego_vel.z]).reshape(3, 1)
+        ego_velocity = (inv_rot_mat @ vel_vec).T[0]
+        odom.twist.twist.linear.x = float(ego_velocity[0])
+        odom.twist.twist.linear.y = float(-ego_velocity[1])
+        odom.twist.twist.linear.z = float(ego_velocity[2])
+        odom.twist.twist.angular.z = -math.radians(ego_ang_vel.z)
+        self.pub_localization_odom.publish(odom)
+
+        # Pose with covariance
+        pose_cov = PoseWithCovarianceStamped()
+        pose_cov.header = header
+        pose_cov.pose.pose = pose
+        pcov = pose_cov.pose.covariance
+        pcov[0] = pcov[7] = pcov[14] = pcov[21] = pcov[28] = pcov[35] = 0.0001
+        self.pub_localization_pose.publish(pose_cov)
+
+        # Acceleration
+        accel_msg = AccelWithCovarianceStamped()
+        accel_msg.header = self.get_msg_header(frame_id="base_link")
+        if self._latest_imu_accel is not None:
+            accel_msg.accel.accel.linear.x = self._latest_imu_accel[0]
+            accel_msg.accel.accel.linear.y = self._latest_imu_accel[1]
+            accel_msg.accel.accel.linear.z = self._latest_imu_accel[2]
+        self.pub_localization_accel.publish(accel_msg)
+
+        # Localization initialization state
+        init_state = LocalizationInitializationState()
+        init_state.stamp = header.stamp
+        init_state.state = LocalizationInitializationState.INITIALIZED
+        self.pub_localization_init_state.publish(init_state)
+
+        # Satisfy topic_state_monitors
+        pose_stamped = PoseStamped()
+        pose_stamped.header = header
+        pose_stamped.pose = pose
+        self.pub_fusion_pose.publish(pose_stamped)
+        self.pub_initialpose3d.publish(pose_cov)
+
+    # ── Shutdown ──────────────────────────────────────────────────────────
+
     def shutdown(self):
         """
         Clean shutdown of ROS node and spin thread.
@@ -902,10 +1908,22 @@ class carla_ros2_interface(object):
         process hanging and publisher leaks.
 
         """
-        # Stop publish workers before destroying the publishers they use
+        # Signal worker loops to exit (they poll self._shutting_down) before we
+        # stop and destroy the publishers they use, avoiding hangs and leaks.
+        self._shutting_down = True
         for worker in self._publish_workers.values():
             worker.stop()
         self._publish_workers.clear()
+
+        # Shutdown splatsim cameras first
+        for cam in self._splatsim_cameras:
+            cam.shutdown()
+        self._splatsim_cameras.clear()
+
+        # Shutdown splatsim lidars
+        for lidar in self._splatsim_lidars:
+            lidar.shutdown()
+        self._splatsim_lidars.clear()
 
         # Destroy publishers first
         if self.ros_publisher_manager:

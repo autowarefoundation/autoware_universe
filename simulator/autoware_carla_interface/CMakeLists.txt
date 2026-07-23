@@ -40,6 +40,41 @@ rclcpp_components_register_node(${PROJECT_NAME}_operation_mode_component
 )
 
 # ============================================================================
+# SplatSim gRPC proto (fetched from the tier4/splatsim release, generated here)
+# ============================================================================
+# The generated *_pb2*.py modules are not committed; they are regenerated on
+# every build from the pinned SplatSim release proto so they stay in sync with
+# the installed protobuf/grpc runtime.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+set(SPLATSIM_VERSION "v1.2.0")
+set(SPLATSIM_PROTO_URL
+  "https://raw.githubusercontent.com/tier4/splatsim/${SPLATSIM_VERSION}/proto/splatsim/v1/rendering_service.proto")
+set(_splatsim_proto_dir "${CMAKE_CURRENT_BINARY_DIR}/splatsim_proto")
+set(_splatsim_proto_file "${_splatsim_proto_dir}/rendering_service.proto")
+set(_splatsim_proto_out "${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}/splatsim/proto")
+
+file(MAKE_DIRECTORY "${_splatsim_proto_dir}")
+message(STATUS "Fetching SplatSim proto ${SPLATSIM_VERSION} from ${SPLATSIM_PROTO_URL}")
+file(DOWNLOAD "${SPLATSIM_PROTO_URL}" "${_splatsim_proto_file}"
+  STATUS _splatsim_dl_status
+  TLS_VERIFY ON)
+list(GET _splatsim_dl_status 0 _splatsim_dl_code)
+if(NOT _splatsim_dl_code EQUAL 0)
+  list(GET _splatsim_dl_status 1 _splatsim_dl_msg)
+  message(FATAL_ERROR "Failed to download SplatSim proto (${SPLATSIM_VERSION}): ${_splatsim_dl_msg}")
+endif()
+
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_splatsim_proto.py"
+    --proto "${_splatsim_proto_file}"
+    --out-dir "${_splatsim_proto_out}"
+  RESULT_VARIABLE _splatsim_gen_result)
+if(NOT _splatsim_gen_result EQUAL 0)
+  message(FATAL_ERROR "Failed to generate SplatSim proto Python modules")
+endif()
+
+# ============================================================================
 # Python Package Installation
 # ============================================================================
 
