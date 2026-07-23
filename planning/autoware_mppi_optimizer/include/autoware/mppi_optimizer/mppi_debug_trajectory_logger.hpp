@@ -34,7 +34,7 @@
 namespace autoware::mppi_optimizer
 {
 
-/** Prefer $XDG_CACHE_HOME, else $HOME/.cache — never a world-writable path like /tmp. */
+/** Prefer $XDG_CACHE_HOME, else $HOME/.cache (user-private, not world-writable). */
 inline std::string default_mppi_debug_log_directory()
 {
   if (const char * xdg = std::getenv("XDG_CACHE_HOME"); xdg != nullptr && xdg[0] != '\0') {

@@ -16,7 +16,6 @@
     "CUDA_HOSTDEV",
     "datalim",
     "dubins",
-    "execv",
     "expt",
     "fignum",
     "gridspec",
@@ -24,6 +23,7 @@
     "polyline",
     "relim",
     "retuned",
+    "runpy",
     "timesteps",
     "valinit"
   ]

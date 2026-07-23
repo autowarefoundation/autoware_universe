@@ -8,7 +8,6 @@
     "cuh",
     "datalim",
     "dubins",
-    "execv",
     "expt",
     "fignum",
     "gridspec",
@@ -18,6 +17,7 @@
     "relim",
     "retuned",
     "rollouts",
+    "runpy",
     "valinit"
   ]
 }
