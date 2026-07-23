@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import os
-import sys
-import time
-import threading
 from pathlib import Path
+import sys
+import threading
+import time
 
 import docker
 from docker.types import DeviceRequest
@@ -71,16 +71,18 @@ class SplatSimDockerManager:
                     self._container = existing
                     self._reused = True
                     self._log_thread = threading.Thread(
-                        target=self._stream_logs, daemon=True,
+                        target=self._stream_logs,
+                        daemon=True,
                     )
                     self._log_thread.start()
                     return self.grpc_address
                 else:
-                    reason = "force_restart requested" if self._force_restart else f"status={existing.status}"
-                    _log(
-                        f"Container '{self._container_name}' exists ({reason}), "
-                        f"removing it"
+                    reason = (
+                        "force_restart requested"
+                        if self._force_restart
+                        else f"status={existing.status}"
                     )
+                    _log(f"Container '{self._container_name}' exists ({reason}), " f"removing it")
                     existing.stop(timeout=10)
                     existing.remove(force=True)
             except docker.errors.NotFound:
@@ -88,7 +90,9 @@ class SplatSimDockerManager:
 
         tileset_dir = str(Path(tileset_host_path).resolve().parent)
 
-        _log(f"Starting container (image={self._image}, name={self._container_name}, mount={tileset_dir} -> /data)")
+        _log(
+            f"Starting container (image={self._image}, name={self._container_name}, mount={tileset_dir} -> /data)"
+        )
         env = {"GRPC_PORT": str(self._grpc_port)}
         splatsim_log_level = os.environ.get("SPLATSIM_LOG_LEVEL")
         if splatsim_log_level:
@@ -107,7 +111,8 @@ class SplatSimDockerManager:
         self._container = self._client.containers.run(**run_kwargs)
         _log(f"Container started: {self._container.short_id}")
         self._log_thread = threading.Thread(
-            target=self._stream_logs, daemon=True,
+            target=self._stream_logs,
+            daemon=True,
         )
         self._log_thread.start()
         return self.grpc_address
@@ -133,9 +138,7 @@ class SplatSimDockerManager:
             except Exception:
                 pass
             time.sleep(1.0)
-        raise TimeoutError(
-            f"splatsim gRPC server at {address} not ready within {timeout}s"
-        )
+        raise TimeoutError(f"splatsim gRPC server at {address} not ready within {timeout}s")
 
     def _stream_logs(self) -> None:
         """Stream container logs to stderr in a background thread."""

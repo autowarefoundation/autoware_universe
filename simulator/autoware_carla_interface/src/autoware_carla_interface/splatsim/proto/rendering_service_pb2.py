@@ -4,57 +4,54 @@
 # source: rendering_service.proto
 # Protobuf Python Version: 5.27.2
 """Generated protocol buffer code."""
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import runtime_version as _runtime_version
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
+
 _runtime_version.ValidateProtobufRuntimeVersion(
-    _runtime_version.Domain.PUBLIC,
-    5,
-    27,
-    2,
-    '',
-    'rendering_service.proto'
+    _runtime_version.Domain.PUBLIC, 5, 27, 2, "", "rendering_service.proto"
 )
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
 
 
-
-
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17rendering_service.proto\x12\x0bsplatsim.v1\")\n\tTimestamp\x12\x0b\n\x03sec\x18\x01 \x01(\x05\x12\x0f\n\x07nanosec\x18\x02 \x01(\r\"a\n\x10\x43\x61meraIntrinsics\x12\n\n\x02\x66x\x18\x01 \x01(\x01\x12\n\n\x02\x66y\x18\x02 \x01(\x01\x12\n\n\x02\x63x\x18\x03 \x01(\x01\x12\n\n\x02\x63y\x18\x04 \x01(\x01\x12\r\n\x05width\x18\x05 \x01(\r\x12\x0e\n\x06height\x18\x06 \x01(\r\"*\n\x07Vector3\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\"8\n\nQuaternion\x12\t\n\x01w\x18\x01 \x01(\x01\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01z\x18\x04 \x01(\x01\"Y\n\x04Pose\x12&\n\x08position\x18\x01 \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12)\n\x08rotation\x18\x02 \x01(\x0b\x32\x17.splatsim.v1.Quaternion\"\x9a\x03\n\x11InitializeRequest\x12\x14\n\x0ctileset_path\x18\x01 \x01(\t\x12\x0e\n\x06use_sh\x18\x02 \x01(\x08\x12\x31\n\nintrinsics\x18\x03 \x01(\x0b\x32\x1d.splatsim.v1.CameraIntrinsics\x12\'\n\x0cinitial_pose\x18\x04 \x01(\x0b\x32\x11.splatsim.v1.Pose\x12\x12\n\nframe_rate\x18\x05 \x01(\x01\x12-\n\rclock_initial\x18\x06 \x01(\x0b\x32\x16.splatsim.v1.Timestamp\x12\x13\n\x0bimage_topic\x18\x07 \x01(\t\x12\x19\n\x11\x63\x61mera_info_topic\x18\x08 \x01(\t\x12\x10\n\x08\x66rame_id\x18\t \x01(\t\x12\x12\n\nnear_plane\x18\n \x01(\x02\x12\x11\n\tfar_plane\x18\x0b \x01(\x02\x12\x0e\n\x06\x64\x65vice\x18\x0c \x01(\t\x12.\n\x10\x62\x61\x63kground_color\x18\r \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12\x17\n\x0f\x63ompress_format\x18\x0e \x01(\t\"\xa9\x01\n\x12InitializeResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12*\n\x0cscene_origin\x18\x03 \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12.\n\x10\x65\x63\x65\x66_translation\x18\x04 \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12\x15\n\recef_rotation\x18\x05 \x03(\x01\"T\n\nCameraData\x12%\n\x05stamp\x18\x01 \x01(\x0b\x32\x16.splatsim.v1.Timestamp\x12\x1f\n\x04pose\x18\x02 \x01(\x0b\x32\x11.splatsim.v1.Pose\"@\n\rStreamSummary\x12\x17\n\x0f\x66rames_rendered\x18\x01 \x01(\x04\x12\x16\n\x0eposes_received\x18\x02 \x01(\x04\"\xaa\x02\n\x11LidarSensorConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0bsensor_type\x18\x02 \x01(\t\x12\x0e\n\x06n_rows\x18\x03 \x01(\r\x12\x11\n\tn_columns\x18\x04 \x01(\r\x12\x0b\n\x03\x66ps\x18\x05 \x01(\x01\x12\x13\n\x0bmin_range_m\x18\x06 \x01(\x01\x12\x13\n\x0bmax_range_m\x18\x07 \x01(\x01\x12$\n\textrinsic\x18\x08 \x01(\x0b\x32\x11.splatsim.v1.Pose\x12\x15\n\relevation_deg\x18\t \x03(\x01\x12\x18\n\x10pointcloud_topic\x18\n \x01(\t\x12\x10\n\x08\x66rame_id\x18\x0b \x01(\t\x12\x16\n\x0e\x64rop_threshold\x18\x0c \x01(\x01\x12\x17\n\x0f\x61lpha_threshold\x18\r \x01(\x01\"H\n\x16InitializeLidarRequest\x12.\n\x06sensor\x18\x01 \x01(\x0b\x32\x1e.splatsim.v1.LidarSensorConfig\"S\n\tLidarData\x12%\n\x05stamp\x18\x01 \x01(\x0b\x32\x16.splatsim.v1.Timestamp\x12\x1f\n\x04pose\x18\x02 \x01(\x0b\x32\x11.splatsim.v1.Pose2\xce\x02\n\x10RenderingService\x12M\n\nInitialize\x12\x1e.splatsim.v1.InitializeRequest\x1a\x1f.splatsim.v1.InitializeResponse\x12I\n\x10StreamCameraData\x12\x17.splatsim.v1.CameraData\x1a\x1a.splatsim.v1.StreamSummary(\x01\x12W\n\x0fInitializeLidar\x12#.splatsim.v1.InitializeLidarRequest\x1a\x1f.splatsim.v1.InitializeResponse\x12G\n\x0fStreamLidarData\x12\x16.splatsim.v1.LidarData\x1a\x1a.splatsim.v1.StreamSummary(\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
+    b'\n\x17rendering_service.proto\x12\x0bsplatsim.v1")\n\tTimestamp\x12\x0b\n\x03sec\x18\x01 \x01(\x05\x12\x0f\n\x07nanosec\x18\x02 \x01(\r"a\n\x10\x43\x61meraIntrinsics\x12\n\n\x02\x66x\x18\x01 \x01(\x01\x12\n\n\x02\x66y\x18\x02 \x01(\x01\x12\n\n\x02\x63x\x18\x03 \x01(\x01\x12\n\n\x02\x63y\x18\x04 \x01(\x01\x12\r\n\x05width\x18\x05 \x01(\r\x12\x0e\n\x06height\x18\x06 \x01(\r"*\n\x07Vector3\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01"8\n\nQuaternion\x12\t\n\x01w\x18\x01 \x01(\x01\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01z\x18\x04 \x01(\x01"Y\n\x04Pose\x12&\n\x08position\x18\x01 \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12)\n\x08rotation\x18\x02 \x01(\x0b\x32\x17.splatsim.v1.Quaternion"\x9a\x03\n\x11InitializeRequest\x12\x14\n\x0ctileset_path\x18\x01 \x01(\t\x12\x0e\n\x06use_sh\x18\x02 \x01(\x08\x12\x31\n\nintrinsics\x18\x03 \x01(\x0b\x32\x1d.splatsim.v1.CameraIntrinsics\x12\'\n\x0cinitial_pose\x18\x04 \x01(\x0b\x32\x11.splatsim.v1.Pose\x12\x12\n\nframe_rate\x18\x05 \x01(\x01\x12-\n\rclock_initial\x18\x06 \x01(\x0b\x32\x16.splatsim.v1.Timestamp\x12\x13\n\x0bimage_topic\x18\x07 \x01(\t\x12\x19\n\x11\x63\x61mera_info_topic\x18\x08 \x01(\t\x12\x10\n\x08\x66rame_id\x18\t \x01(\t\x12\x12\n\nnear_plane\x18\n \x01(\x02\x12\x11\n\tfar_plane\x18\x0b \x01(\x02\x12\x0e\n\x06\x64\x65vice\x18\x0c \x01(\t\x12.\n\x10\x62\x61\x63kground_color\x18\r \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12\x17\n\x0f\x63ompress_format\x18\x0e \x01(\t"\xa9\x01\n\x12InitializeResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12*\n\x0cscene_origin\x18\x03 \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12.\n\x10\x65\x63\x65\x66_translation\x18\x04 \x01(\x0b\x32\x14.splatsim.v1.Vector3\x12\x15\n\recef_rotation\x18\x05 \x03(\x01"T\n\nCameraData\x12%\n\x05stamp\x18\x01 \x01(\x0b\x32\x16.splatsim.v1.Timestamp\x12\x1f\n\x04pose\x18\x02 \x01(\x0b\x32\x11.splatsim.v1.Pose"@\n\rStreamSummary\x12\x17\n\x0f\x66rames_rendered\x18\x01 \x01(\x04\x12\x16\n\x0eposes_received\x18\x02 \x01(\x04"\xaa\x02\n\x11LidarSensorConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0bsensor_type\x18\x02 \x01(\t\x12\x0e\n\x06n_rows\x18\x03 \x01(\r\x12\x11\n\tn_columns\x18\x04 \x01(\r\x12\x0b\n\x03\x66ps\x18\x05 \x01(\x01\x12\x13\n\x0bmin_range_m\x18\x06 \x01(\x01\x12\x13\n\x0bmax_range_m\x18\x07 \x01(\x01\x12$\n\textrinsic\x18\x08 \x01(\x0b\x32\x11.splatsim.v1.Pose\x12\x15\n\relevation_deg\x18\t \x03(\x01\x12\x18\n\x10pointcloud_topic\x18\n \x01(\t\x12\x10\n\x08\x66rame_id\x18\x0b \x01(\t\x12\x16\n\x0e\x64rop_threshold\x18\x0c \x01(\x01\x12\x17\n\x0f\x61lpha_threshold\x18\r \x01(\x01"H\n\x16InitializeLidarRequest\x12.\n\x06sensor\x18\x01 \x01(\x0b\x32\x1e.splatsim.v1.LidarSensorConfig"S\n\tLidarData\x12%\n\x05stamp\x18\x01 \x01(\x0b\x32\x16.splatsim.v1.Timestamp\x12\x1f\n\x04pose\x18\x02 \x01(\x0b\x32\x11.splatsim.v1.Pose2\xce\x02\n\x10RenderingService\x12M\n\nInitialize\x12\x1e.splatsim.v1.InitializeRequest\x1a\x1f.splatsim.v1.InitializeResponse\x12I\n\x10StreamCameraData\x12\x17.splatsim.v1.CameraData\x1a\x1a.splatsim.v1.StreamSummary(\x01\x12W\n\x0fInitializeLidar\x12#.splatsim.v1.InitializeLidarRequest\x1a\x1f.splatsim.v1.InitializeResponse\x12G\n\x0fStreamLidarData\x12\x16.splatsim.v1.LidarData\x1a\x1a.splatsim.v1.StreamSummary(\x01\x62\x06proto3'
+)
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rendering_service_pb2', _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "rendering_service_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  DESCRIPTOR._loaded_options = None
-  _globals['_TIMESTAMP']._serialized_start=40
-  _globals['_TIMESTAMP']._serialized_end=81
-  _globals['_CAMERAINTRINSICS']._serialized_start=83
-  _globals['_CAMERAINTRINSICS']._serialized_end=180
-  _globals['_VECTOR3']._serialized_start=182
-  _globals['_VECTOR3']._serialized_end=224
-  _globals['_QUATERNION']._serialized_start=226
-  _globals['_QUATERNION']._serialized_end=282
-  _globals['_POSE']._serialized_start=284
-  _globals['_POSE']._serialized_end=373
-  _globals['_INITIALIZEREQUEST']._serialized_start=376
-  _globals['_INITIALIZEREQUEST']._serialized_end=786
-  _globals['_INITIALIZERESPONSE']._serialized_start=789
-  _globals['_INITIALIZERESPONSE']._serialized_end=958
-  _globals['_CAMERADATA']._serialized_start=960
-  _globals['_CAMERADATA']._serialized_end=1044
-  _globals['_STREAMSUMMARY']._serialized_start=1046
-  _globals['_STREAMSUMMARY']._serialized_end=1110
-  _globals['_LIDARSENSORCONFIG']._serialized_start=1113
-  _globals['_LIDARSENSORCONFIG']._serialized_end=1411
-  _globals['_INITIALIZELIDARREQUEST']._serialized_start=1413
-  _globals['_INITIALIZELIDARREQUEST']._serialized_end=1485
-  _globals['_LIDARDATA']._serialized_start=1487
-  _globals['_LIDARDATA']._serialized_end=1570
-  _globals['_RENDERINGSERVICE']._serialized_start=1573
-  _globals['_RENDERINGSERVICE']._serialized_end=1907
+    DESCRIPTOR._loaded_options = None
+    _globals["_TIMESTAMP"]._serialized_start = 40
+    _globals["_TIMESTAMP"]._serialized_end = 81
+    _globals["_CAMERAINTRINSICS"]._serialized_start = 83
+    _globals["_CAMERAINTRINSICS"]._serialized_end = 180
+    _globals["_VECTOR3"]._serialized_start = 182
+    _globals["_VECTOR3"]._serialized_end = 224
+    _globals["_QUATERNION"]._serialized_start = 226
+    _globals["_QUATERNION"]._serialized_end = 282
+    _globals["_POSE"]._serialized_start = 284
+    _globals["_POSE"]._serialized_end = 373
+    _globals["_INITIALIZEREQUEST"]._serialized_start = 376
+    _globals["_INITIALIZEREQUEST"]._serialized_end = 786
+    _globals["_INITIALIZERESPONSE"]._serialized_start = 789
+    _globals["_INITIALIZERESPONSE"]._serialized_end = 958
+    _globals["_CAMERADATA"]._serialized_start = 960
+    _globals["_CAMERADATA"]._serialized_end = 1044
+    _globals["_STREAMSUMMARY"]._serialized_start = 1046
+    _globals["_STREAMSUMMARY"]._serialized_end = 1110
+    _globals["_LIDARSENSORCONFIG"]._serialized_start = 1113
+    _globals["_LIDARSENSORCONFIG"]._serialized_end = 1411
+    _globals["_INITIALIZELIDARREQUEST"]._serialized_start = 1413
+    _globals["_INITIALIZELIDARREQUEST"]._serialized_end = 1485
+    _globals["_LIDARDATA"]._serialized_start = 1487
+    _globals["_LIDARDATA"]._serialized_end = 1570
+    _globals["_RENDERINGSERVICE"]._serialized_start = 1573
+    _globals["_RENDERINGSERVICE"]._serialized_end = 1907
 # @@protoc_insertion_point(module_scope)

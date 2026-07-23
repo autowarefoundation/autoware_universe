@@ -50,8 +50,8 @@ from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import PointField
-from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Header
 from tf2_msgs.msg import TFMessage
 from tier4_vehicle_msgs.msg import ActuationCommandStamped
 from tier4_vehicle_msgs.msg import ActuationStatusStamped
@@ -91,9 +91,7 @@ def _parse_geo_reference(xodr_xml: str):
     lat_match = re.search(r"\+lat_0=([0-9eE.+-]+)", proj_string)
     lon_match = re.search(r"\+lon_0=([0-9eE.+-]+)", proj_string)
     if lat_match is None or lon_match is None:
-        raise ValueError(
-            f"Cannot extract +lat_0/+lon_0 from GeoReference: {proj_string}"
-        )
+        raise ValueError(f"Cannot extract +lat_0/+lon_0 from GeoReference: {proj_string}")
     return float(lat_match.group(1)), float(lon_match.group(1))
 
 
@@ -335,9 +333,7 @@ class carla_ros2_interface(object):
                 if cfg.carla_type.startswith("sensor.camera"):
                     if render_camera:
                         self._splatsim_camera_configs.append(cfg)
-                        self.logger.info(
-                            f"Rendering camera '{cfg.sensor_id}' via splatsim"
-                        )
+                        self.logger.info(f"Rendering camera '{cfg.sensor_id}' via splatsim")
                     else:
                         # Neither splatsim nor real CARLA: camera fully off.
                         self.logger.info(
@@ -347,13 +343,9 @@ class carla_ros2_interface(object):
                 elif cfg.carla_type.startswith("sensor.lidar"):
                     if render_lidar:
                         self._splatsim_lidar_configs.append(cfg)
-                        self.logger.info(
-                            f"Rendering LiDAR '{cfg.sensor_id}' via splatsim"
-                        )
+                        self.logger.info(f"Rendering LiDAR '{cfg.sensor_id}' via splatsim")
                     else:
-                        self.logger.info(
-                            f"Skipping LiDAR '{cfg.sensor_id}' (splatsim mode)"
-                        )
+                        self.logger.info(f"Skipping LiDAR '{cfg.sensor_id}' (splatsim mode)")
                 else:
                     carla_configs.append(cfg)
             self.sensor_configs = carla_configs
@@ -438,9 +430,7 @@ class carla_ros2_interface(object):
 
         # Setup all components
         self._initialize_parameters()
-        self.render_with_splatsim = bool(
-            self.param_values.get("render_with_splatsim", False)
-        )
+        self.render_with_splatsim = bool(self.param_values.get("render_with_splatsim", False))
         self._setup_tf_listener()
         self._initialize_clock_publisher()
 
@@ -1169,7 +1159,11 @@ class carla_ros2_interface(object):
                 )
             )
             self._logged_steer_conversion = True
-        if calibration_enabled and self.steer_response_calibration_table and not self._logged_steer_calibration:
+        if (
+            calibration_enabled
+            and self.steer_response_calibration_table
+            and not self._logged_steer_calibration
+        ):
             self.logger.info(
                 "CARLA steering response calibration enabled: wheel_base=%.3f, table_points=%d"
                 % (
@@ -1572,15 +1566,13 @@ class carla_ros2_interface(object):
         """
         if self._geo_transform_ready:
             return
+        from autoware_lanelet2_extension_python.projection import MGRSProjector
         import lanelet2.core
         import lanelet2.io
-        from autoware_lanelet2_extension_python.projection import MGRSProjector
 
         override_lat = float(self.param_values.get("splatsim_geo_origin_lat", 0.0) or 0.0)
         override_lon = float(self.param_values.get("splatsim_geo_origin_lon", 0.0) or 0.0)
-        lanelet2_map_path = str(
-            self.param_values.get("lanelet2_map_path", "") or ""
-        ).strip()
+        lanelet2_map_path = str(self.param_values.get("lanelet2_map_path", "") or "").strip()
         if override_lat != 0.0 or override_lon != 0.0:
             # Explicit manual override, bypasses both auto-derivation paths.
             self._proj_origin = (override_lat, override_lon)
@@ -1603,9 +1595,7 @@ class carla_ros2_interface(object):
             seed_projector.forward(lanelet2.core.GPSPoint(seed_lat, seed_lon, 0.0))
             mox = float(self.param_values.get("map_origin_x", 0.0) or 0.0)
             moy = float(self.param_values.get("map_origin_y", 0.0) or 0.0)
-            world_origin = seed_projector.reverse(
-                lanelet2.core.BasicPoint3d(mox, moy, 0.0)
-            )
+            world_origin = seed_projector.reverse(lanelet2.core.BasicPoint3d(mox, moy, 0.0))
             self._proj_origin = (world_origin.lat, world_origin.lon)
             self.logger.info(
                 "GeoTransform derived from lanelet2 map "
@@ -1667,9 +1657,14 @@ class carla_ros2_interface(object):
                 "image_size_x": cfg.parameters.get("image_size_x", 1600),
                 "image_size_y": cfg.parameters.get("image_size_y", 900),
                 "fov": cfg.parameters.get("fov", 70.0),
-                "spawn_point": cfg.transform or {
-                    "x": 0.0, "y": 0.0, "z": 0.0,
-                    "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+                "spawn_point": cfg.transform
+                or {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "roll": 0.0,
+                    "pitch": 0.0,
+                    "yaw": 0.0,
                 },
             }
             grpc_port = base_grpc_port + cam_idx
@@ -1718,16 +1713,19 @@ class carla_ros2_interface(object):
         for lidar_idx, cfg in enumerate(self._splatsim_lidar_configs):
             spec = {
                 "id": cfg.sensor_id,
-                "spawn_point": cfg.transform or {
-                    "x": 0.0, "y": 0.0, "z": 0.0,
-                    "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+                "spawn_point": cfg.transform
+                or {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "roll": 0.0,
+                    "pitch": 0.0,
+                    "yaw": 0.0,
                 },
             }
             params = cfg.parameters or {}
             # Prefer explicit params; fall back to the CARLA sensor mapping range.
-            max_range = p["splatsim_lidar_max_range_m"] or float(
-                params.get("range", 0.0)
-            )
+            max_range = p["splatsim_lidar_max_range_m"] or float(params.get("range", 0.0))
             grpc_port = base_grpc_port + lidar_idx
             lidar = SplatSimLidar(
                 spec,
@@ -1791,15 +1789,9 @@ class carla_ros2_interface(object):
             PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
             PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
             PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
-            PointField(
-                name="intensity", offset=12, datatype=PointField.UINT8, count=1
-            ),
-            PointField(
-                name="return_type", offset=13, datatype=PointField.UINT8, count=1
-            ),
-            PointField(
-                name="channel", offset=14, datatype=PointField.UINT16, count=1
-            ),
+            PointField(name="intensity", offset=12, datatype=PointField.UINT8, count=1),
+            PointField(name="return_type", offset=13, datatype=PointField.UINT8, count=1),
+            PointField(name="channel", offset=14, datatype=PointField.UINT16, count=1),
         ]
         empty_pc.point_step = 16
         empty_pc.height = 1

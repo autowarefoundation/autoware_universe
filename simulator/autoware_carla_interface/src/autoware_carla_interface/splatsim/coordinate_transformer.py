@@ -24,13 +24,12 @@ import json
 import logging
 from pathlib import Path
 
+from autoware_lanelet2_extension_python.projection import MGRSProjector
+import lanelet2.core
+import lanelet2.io
 import numpy as np
 from numpy.typing import NDArray
 from pyproj import Transformer
-
-import lanelet2.core
-import lanelet2.io
-from autoware_lanelet2_extension_python.projection import MGRSProjector
 import rclpy
 
 _rlog = rclpy.logging.get_logger("splatsim_coord")
@@ -85,7 +84,10 @@ def _rotation_matrix_to_quaternion_wxyz(
 
 
 def _quaternion_xyzw_to_rotation_matrix(
-    x: float, y: float, z: float, w: float,
+    x: float,
+    y: float,
+    z: float,
+    w: float,
 ) -> NDArray[np.float64]:
     """Convert ROS quaternion ``(x, y, z, w)`` to a 3x3 rotation matrix."""
     R = np.array(
@@ -153,9 +155,7 @@ class CoordinateTransformer:
         self._mgrs_offset_y = origin_local.y
 
         # pyproj: LLA → ECEF
-        self._lla_to_ecef = Transformer.from_crs(
-            "EPSG:4326", "EPSG:4978", always_xy=True
-        )
+        self._lla_to_ecef = Transformer.from_crs("EPSG:4326", "EPSG:4978", always_xy=True)
 
         # Tileset: tile_local → ECEF:  p_ecef = R @ p_tile + t
         self._tile_R_inv = ecef_rotation.T  # ECEF → tile-local
@@ -176,7 +176,10 @@ class CoordinateTransformer:
         )
 
     def enu_position_to_tile_local(
-        self, x: float, y: float, z: float,
+        self,
+        x: float,
+        y: float,
+        z: float,
     ) -> NDArray[np.float64]:
         """Convert an ENU (ROS map) position to re-centered tile-local."""
         # 1. ENU → MGRS absolute
@@ -213,7 +216,8 @@ class CoordinateTransformer:
         return result
 
     def enu_rotation_to_tile_local(
-        self, R_enu: NDArray[np.float64],
+        self,
+        R_enu: NDArray[np.float64],
     ) -> NDArray[np.float64]:
         """Convert an ENU rotation matrix to tile-local."""
         return self._R_enu_to_tile @ R_enu

@@ -6,16 +6,15 @@ import logging
 import math
 from pathlib import Path
 
-import carla
-import numpy as np
-
-from autoware_carla_interface.splatsim.docker_manager import SplatSimDockerManager
-from autoware_carla_interface.splatsim.grpc_client import SplatSimGrpcClient
 from autoware_carla_interface.splatsim.coordinate_transformer import (
-    CoordinateTransformer,
     _rotation_matrix_to_quaternion_wxyz,
 )
+from autoware_carla_interface.splatsim.coordinate_transformer import CoordinateTransformer
+from autoware_carla_interface.splatsim.docker_manager import SplatSimDockerManager
+from autoware_carla_interface.splatsim.grpc_client import SplatSimGrpcClient
 from autoware_carla_interface.splatsim.proto import rendering_service_pb2 as pb2
+import carla
+import numpy as np
 import rclpy
 
 _rlog = rclpy.logging.get_logger("splatsim_camera")
@@ -25,7 +24,9 @@ _S_CARLA_TO_ENU = np.diag([1.0, -1.0, 1.0])
 
 
 def _fov_to_intrinsics(
-    width: int, height: int, fov_deg: float,
+    width: int,
+    height: int,
+    fov_deg: float,
 ) -> tuple[float, float, float, float]:
     """Convert horizontal FOV + resolution to ``(fx, fy, cx, cy)``."""
     fov_rad = math.radians(fov_deg)
@@ -80,7 +81,8 @@ class SplatSimRGBCamera:
         # ── Docker container ──
         container_name = f"splatsim_{self._sensor_id}"
         self._docker = SplatSimDockerManager(
-            image=splatsim_image, grpc_port=grpc_port,
+            image=splatsim_image,
+            grpc_port=grpc_port,
             container_name=container_name,
             force_restart=restart_container,
         )
@@ -96,7 +98,12 @@ class SplatSimRGBCamera:
             tileset_path=container_tileset,
             use_sh=use_sh,
             intrinsics=pb2.CameraIntrinsics(
-                fx=fx, fy=fy, cx=cx, cy=cy, width=cam_w, height=cam_h,
+                fx=fx,
+                fy=fy,
+                cx=cx,
+                cy=cy,
+                width=cam_w,
+                height=cam_h,
             ),
             frame_rate=frame_rate,
             image_topic=image_topic,
@@ -128,13 +135,14 @@ class SplatSimRGBCamera:
             from autoware_carla_interface.splatsim.coordinate_transformer import (
                 parse_tileset_transform,
             )
+
             ecef_rot, ecef_trans = parse_tileset_transform(tileset_path)
-            _rlog.warn("gRPC server did not return ECEF transform; "
-                       "falling back to parse_tileset_transform")
+            _rlog.warn(
+                "gRPC server did not return ECEF transform; "
+                "falling back to parse_tileset_transform"
+            )
         _rlog.warn(
-            f"ECEF rot:\n{ecef_rot}\n"
-            f"ECEF trans: {ecef_trans}\n"
-            f"scene_origin: {scene_origin}"
+            f"ECEF rot:\n{ecef_rot}\n" f"ECEF trans: {ecef_trans}\n" f"scene_origin: {scene_origin}"
         )
         self._transformer = CoordinateTransformer(
             proj_origin=proj_origin,
@@ -163,7 +171,8 @@ class SplatSimRGBCamera:
         """
         T_world_actor = np.array(actor_matrix_4x4, dtype=np.float64)
         T_actor_camera = np.asarray(
-            self._sensor_transform.get_matrix(), dtype=np.float64,
+            self._sensor_transform.get_matrix(),
+            dtype=np.float64,
         )
         T_carla_cam = T_world_actor @ T_actor_camera
 
@@ -173,7 +182,9 @@ class SplatSimRGBCamera:
         # Position: CARLA → ENU (flip y) → tile-local
         enu_pos = _S_CARLA_TO_ENU @ carla_pos
         tile_pos = self._transformer.enu_position_to_tile_local(
-            enu_pos[0], enu_pos[1], enu_pos[2],
+            enu_pos[0],
+            enu_pos[1],
+            enu_pos[2],
         )
 
         self._update_count += 1

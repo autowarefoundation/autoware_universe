@@ -25,16 +25,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import carla
-import numpy as np
-
 from autoware_carla_interface.splatsim.coordinate_transformer import (
-    CoordinateTransformer,
     _rotation_matrix_to_quaternion_wxyz,
 )
+from autoware_carla_interface.splatsim.coordinate_transformer import CoordinateTransformer
 from autoware_carla_interface.splatsim.docker_manager import SplatSimDockerManager
 from autoware_carla_interface.splatsim.grpc_client import SplatSimGrpcClient
 from autoware_carla_interface.splatsim.proto import rendering_service_pb2 as pb2
+import carla
+import numpy as np
 import rclpy
 
 _rlog = rclpy.logging.get_logger("splatsim_lidar")
@@ -87,7 +86,8 @@ class SplatSimLidar:
         # ── Docker container ──
         container_name = f"splatsim_{self._sensor_id}"
         self._docker = SplatSimDockerManager(
-            image=splatsim_image, grpc_port=grpc_port,
+            image=splatsim_image,
+            grpc_port=grpc_port,
             container_name=container_name,
             force_restart=restart_container,
         )
@@ -123,9 +123,12 @@ class SplatSimLidar:
             from autoware_carla_interface.splatsim.coordinate_transformer import (
                 parse_tileset_transform,
             )
+
             ecef_rot, ecef_trans = parse_tileset_transform(tileset_path)
-            _rlog.warn("gRPC server did not return ECEF transform; "
-                       "falling back to parse_tileset_transform")
+            _rlog.warn(
+                "gRPC server did not return ECEF transform; "
+                "falling back to parse_tileset_transform"
+            )
         self._transformer = CoordinateTransformer(
             proj_origin=proj_origin,
             ecef_rotation=ecef_rot,
@@ -145,11 +148,15 @@ class SplatSimLidar:
                 max_range_m=max_range_m,
                 extrinsic=pb2.Pose(
                     position=pb2.Vector3(
-                        x=float(ext_pos[0]), y=float(ext_pos[1]), z=float(ext_pos[2]),
+                        x=float(ext_pos[0]),
+                        y=float(ext_pos[1]),
+                        z=float(ext_pos[2]),
                     ),
                     rotation=pb2.Quaternion(
-                        w=ext_quat_wxyz[0], x=ext_quat_wxyz[1],
-                        y=ext_quat_wxyz[2], z=ext_quat_wxyz[3],
+                        w=ext_quat_wxyz[0],
+                        x=ext_quat_wxyz[1],
+                        y=ext_quat_wxyz[2],
+                        z=ext_quat_wxyz[3],
                     ),
                 ),
                 elevation_deg=list(elevation_deg),
@@ -194,7 +201,9 @@ class SplatSimLidar:
         # Position: CARLA -> ENU (flip y) -> tile-local
         enu_pos = _S_CARLA_TO_ENU @ carla_pos
         tile_pos = self._transformer.enu_position_to_tile_local(
-            enu_pos[0], enu_pos[1], enu_pos[2],
+            enu_pos[0],
+            enu_pos[1],
+            enu_pos[2],
         )
 
         # Rotation: CARLA -> ENU -> tile-local -> ROS base_link (X-fwd, Y-left, Z-up).

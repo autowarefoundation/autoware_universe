@@ -5,13 +5,10 @@ from __future__ import annotations
 import threading
 from typing import Iterator
 
+from autoware_carla_interface.splatsim.proto import rendering_service_pb2 as pb2
+from autoware_carla_interface.splatsim.proto import rendering_service_pb2_grpc as pb2_grpc
 import grpc
 import rclpy
-
-from autoware_carla_interface.splatsim.proto import (
-    rendering_service_pb2 as pb2,
-    rendering_service_pb2_grpc as pb2_grpc,
-)
 
 _rlog = rclpy.logging.get_logger("splatsim_grpc_client")
 
@@ -64,9 +61,7 @@ class SplatSimGrpcClient:
 
     def start_stream(self) -> None:
         """Open the ``StreamCameraData`` client-streaming RPC in a background thread."""
-        self._stream_thread = threading.Thread(
-            target=self._stream_worker, daemon=True
-        )
+        self._stream_thread = threading.Thread(target=self._stream_worker, daemon=True)
         self._stream_thread.start()
 
     def send_camera_data(
@@ -123,9 +118,7 @@ class SplatSimGrpcClient:
 
     # ── LiDAR ─────────────────────────────────────────────────────────
 
-    def initialize_lidar(
-        self, request: pb2.InitializeLidarRequest
-    ) -> pb2.InitializeResponse:
+    def initialize_lidar(self, request: pb2.InitializeLidarRequest) -> pb2.InitializeResponse:
         """Send ``InitializeLidar`` RPC.  ``Initialize`` must have run first."""
         _rlog.warn(f"Sending InitializeLidar to {self._address} ...")
         response = self._stub.InitializeLidar(request)
@@ -137,9 +130,7 @@ class SplatSimGrpcClient:
 
     def start_lidar_stream(self) -> None:
         """Open the ``StreamLidarData`` client-streaming RPC in a background thread."""
-        self._lidar_stream_thread = threading.Thread(
-            target=self._lidar_stream_worker, daemon=True
-        )
+        self._lidar_stream_thread = threading.Thread(target=self._lidar_stream_worker, daemon=True)
         self._lidar_stream_thread.start()
 
     def send_lidar_data(
@@ -150,10 +141,7 @@ class SplatSimGrpcClient:
         rotation_wxyz: tuple[float, float, float, float],
     ) -> None:
         """Store the latest base_link pose for the background LiDAR stream."""
-        if (
-            self._lidar_stream_thread is not None
-            and not self._lidar_stream_thread.is_alive()
-        ):
+        if self._lidar_stream_thread is not None and not self._lidar_stream_thread.is_alive():
             if self._lidar_stream_error is not None:
                 _rlog.error(f"LiDAR gRPC stream died: {self._lidar_stream_error}")
             else:
@@ -221,9 +209,7 @@ class SplatSimGrpcClient:
     def _lidar_stream_worker(self) -> None:
         """Background thread that drives the StreamLidarData RPC."""
         try:
-            self._lidar_stream_result = self._stub.StreamLidarData(
-                self._lidar_pose_generator()
-            )
+            self._lidar_stream_result = self._stub.StreamLidarData(self._lidar_pose_generator())
             _rlog.warn(
                 "LiDAR stream finished: "
                 f"rendered={self._lidar_stream_result.frames_rendered}, "
@@ -263,9 +249,7 @@ class SplatSimGrpcClient:
     def _stream_worker(self) -> None:
         """Background thread that drives the StreamCameraData RPC."""
         try:
-            self._stream_result = self._stub.StreamCameraData(
-                self._pose_generator()
-            )
+            self._stream_result = self._stub.StreamCameraData(self._pose_generator())
             _rlog.warn(
                 f"Stream finished: rendered={self._stream_result.frames_rendered}, "
                 f"received={self._stream_result.poses_received}"

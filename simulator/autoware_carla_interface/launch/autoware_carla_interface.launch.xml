@@ -1,16 +1,12 @@
 <launch>
   <!-- E2E Planning support -->
-    <arg name="use_e2e_planning" default="false"/>
-    <arg
-      name="carla_state_publish_tf"
-      default="true"
-      description="Publish map->base_link TF from CARLA ground-truth odometry when use_e2e_planning is enabled"
-    />
-    <arg
-      name="launch_legacy_e2e_control"
-      default="false"
-      description="Launch the CARLA bridge-local E2E trajectory follower and vehicle_cmd_gate. Keep false when Autoware's control stack is launched."
-    />
+  <arg name="use_e2e_planning" default="false"/>
+  <arg name="carla_state_publish_tf" default="true" description="Publish map->base_link TF from CARLA ground-truth odometry when use_e2e_planning is enabled"/>
+  <arg
+    name="launch_legacy_e2e_control"
+    default="false"
+    description="Launch the CARLA bridge-local E2E trajectory follower and vehicle_cmd_gate. Keep false when Autoware's control stack is launched."
+  />
   <arg name="vehicle_model" default="sample_vehicle"/>
   <arg name="use_sim_time" default="true"/>
   <arg name="launch_config_pkg" default="autoware_launch" description="Package providing control parameter configs"/>
@@ -43,10 +39,7 @@
     <arg name="map_origin_x" default="0.0" description="X offset from CARLA world origin to the Autoware map frame origin (needed for georeferenced/custom CARLA maps)"/>
     <arg name="map_origin_y" default="0.0" description="Y offset from CARLA world origin to the Autoware map frame origin (needed for georeferenced/custom CARLA maps)"/>
 
-    <let
-      name="carla_map_resolved"
-      value="$(eval &quot;'$(var carla_map)' if '$(var carla_map)' else (__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01')&quot;)"
-    />
+    <let name="carla_map_resolved" value="$(eval &quot;'$(var carla_map)' if '$(var carla_map)' else (__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01')&quot;)"/>
 
     <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map_resolved)'"/>
 
@@ -64,10 +57,7 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping_light_weight.yaml" if="$(var use_light_weight_sensor_mapping)"/>
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="" description="Path to sensor mapping YAML"/>
-    <let
-      name="sensor_mapping_file_resolved"
-      value="$(eval &quot;'$(var sensor_mapping_file)' if '$(var sensor_mapping_file)' else '$(var sensor_mapping_file_default)'&quot;)"
-    />
+    <let name="sensor_mapping_file_resolved" value="$(eval &quot;'$(var sensor_mapping_file)' if '$(var sensor_mapping_file)' else '$(var sensor_mapping_file_default)'&quot;)"/>
 
     <!-- SplatSim integration (optional) -->
     <arg name="render_with_splatsim" default="true" description="Enable splatsim rendering via Docker + gRPC"/>
@@ -81,10 +71,7 @@
     <arg name="splatsim_geo_origin_lon" default="0.0" description="Longitude (deg) override of the CARLA world origin for the splatsim MGRS transform (0 = auto)"/>
     <!-- Autoware lanelet2 map used to auto-derive the splatsim geographic origin.
          Defaults to <map_path>/lanelet2_map.osm; empty falls back to OpenDRIVE. -->
-    <let
-      name="lanelet2_map_path_default"
-      value="$(eval &quot;__import__('os').path.join('$(var map_path)', 'lanelet2_map.osm') if '$(var map_path)'.strip() else ''&quot;)"
-    />
+    <let name="lanelet2_map_path_default" value="$(eval &quot;__import__('os').path.join('$(var map_path)', 'lanelet2_map.osm') if '$(var map_path)'.strip() else ''&quot;)"/>
     <arg name="lanelet2_map_path" default="$(var lanelet2_map_path_default)" description="Path to the Autoware lanelet2 map (*.osm) for splatsim geo-origin derivation"/>
     <arg name="splatsim_tileset_path" default="$(env HOME)/workspace/fg_plus_bg_background_v25_enu_ecef.usdz" description="Host path to the 3DGS scene (tileset.json or .usdz)"/>
     <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
@@ -210,60 +197,60 @@
         unless="$(var use_light_weight_sensor_mapping)"
       />
 
-    <!-- Image transport nodes to create compressed versions for all cameras -->
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_front_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+      <!-- Image transport nodes to create compressed versions for all cameras -->
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_front_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
 
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_front_left_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_LEFT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_front_right_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_RIGHT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_back_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK/image_raw -r out/compressed:=/sensing/camera/CAM_BACK/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_back_left_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_LEFT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_back_right_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_RIGHT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="traffic_light_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_front_left_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_LEFT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_front_right_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_RIGHT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_back_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK/image_raw -r out/compressed:=/sensing/camera/CAM_BACK/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_back_left_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_LEFT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_back_right_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_RIGHT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="traffic_light_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
 
-    <!-- Multi-camera combiner for RViz visualization -->
-    <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen" unless="$(var use_light_weight_sensor_mapping)"/>
+      <!-- Multi-camera combiner for RViz visualization -->
+      <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen" unless="$(var use_light_weight_sensor_mapping)"/>
     </group>
 
     <!-- E2E Planning Infrastructure -->

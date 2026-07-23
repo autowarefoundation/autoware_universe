@@ -10,10 +10,10 @@ Import paths are automatically fixed for the package layout.
 
 from __future__ import annotations
 
+from pathlib import Path
 import re
 import subprocess
 import sys
-from pathlib import Path
 
 _THIS_DIR = Path(__file__).resolve().parent
 PROTO_DIR = _THIS_DIR / "proto"
@@ -46,9 +46,7 @@ def main() -> None:
 def _flatten_and_fix_imports() -> None:
     """Move files from nested subdirs to OUT_DIR and fix imports."""
     nested_files = [
-        f
-        for f in OUT_DIR.rglob("*.py*")
-        if f.parent != OUT_DIR and f.suffix in (".py", ".pyi")
+        f for f in OUT_DIR.rglob("*.py*") if f.parent != OUT_DIR and f.suffix in (".py", ".pyi")
     ]
 
     for src in nested_files:
