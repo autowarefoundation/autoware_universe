@@ -16,6 +16,7 @@ ament_auto_add_library(${PROJECT_NAME}_core SHARED
 ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   plugins/change_operation_mode_divider.cpp
   plugins/change_autoware_control_divider.cpp
+  plugins/control_mode_request_divider.cpp
   plugins/reset_diag_graph_divider.cpp
   plugins/reset_redundancy_switcher_divider.cpp
   plugins/set_aggregator_initializing_divider.cpp

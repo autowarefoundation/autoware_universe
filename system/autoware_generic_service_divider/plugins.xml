@@ -7,6 +7,10 @@
          base_class_type="generic_service_divider::ServiceDividerPluginBase">
     <description>Divider plugin for autoware_system_msgs/srv/ChangeAutowareControl</description>
   </class>
+  <class type="generic_service_divider::ControlModeRequestDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for autoware_vehicle_msgs/srv/ControlModeCommand</description>
+  </class>
   <class type="generic_service_divider::ResetDiagGraphDivider"
          base_class_type="generic_service_divider::ServiceDividerPluginBase">
     <description>Divider plugin for tier4_system_msgs/srv/ResetDiagGraph</description>

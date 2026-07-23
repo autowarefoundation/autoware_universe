@@ -3,6 +3,7 @@
     plugins:
       - generic_service_divider::ChangeOperationModeDivider
       - generic_service_divider::ChangeAutowareControlDivider
+      - generic_service_divider::ControlModeRequestDivider
       - generic_service_divider::ResetDiagGraphDivider
       - generic_service_divider::ResetRedundancySwitcherDivider
 
@@ -25,6 +26,19 @@
         names:
           - /main/system/operation_mode/change_autoware_control
           - /sub/system/operation_mode/change_autoware_control
+        primaries:
+          - true
+          - false
+        timeouts_ms:
+          - 200
+          - 500
+
+    control_mode_request:
+      input_service: /control/control_mode_request
+      output_services:
+        names:
+          - /main/control/control_mode_request
+          - /sub/control/control_mode_request
         primaries:
           - true
           - false
