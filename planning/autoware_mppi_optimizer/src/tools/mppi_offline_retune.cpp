@@ -515,7 +515,7 @@ int run(int argc, char ** argv)
     frame_mppi.setDebugTrajectoryLogging(false);
 
     const auto result =
-      frame_mppi.optimizeTrajectory(reference, odom, accel, steering, empty_objects, std::nullopt);
+      frame_mppi.optimizeTrajectory(reference, odom, accel, steering, empty_objects);
 
     const std::string opt_path = out_dir + "/" + tag + "_optimized.csv";
     if (!writeMppiDebugTrajectoryCsv(opt_path, result.debug.optimized_trajectory)) {
