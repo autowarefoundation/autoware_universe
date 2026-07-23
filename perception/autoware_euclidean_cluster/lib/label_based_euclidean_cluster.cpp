@@ -16,6 +16,7 @@
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_classification.hpp>
+#include <autoware/ptv3/experimental/semantic_label_helper.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -27,6 +28,7 @@
 #include <pcl/common/common.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <numeric>
@@ -48,6 +50,13 @@ struct SemanticPoint
 {
   pcl::PointXYZ point;
   float probability{};
+  std::uint8_t class_id{};
+};
+
+struct SplitPointcloudResult
+{
+  std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> object_points;
+  sensor_msgs::msg::PointCloud2 segment_points;
 };
 
 /// @brief Check whether a point cloud contains a field with the expected datatype.
@@ -60,13 +69,61 @@ bool has_field(
   });
 }
 
-/// @brief Split semantic points into buckets keyed by mapped object label.
-std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> split_pointcloud(
-  const sensor_msgs::msg::PointCloud2 & pointcloud,
-  const std::unordered_map<std::uint8_t, std::uint8_t> & class_id_to_object_label,
-  const float min_probability)
+/// @brief Create an empty point cloud that preserves the input point field layout.
+sensor_msgs::msg::PointCloud2 create_empty_segment_pointcloud(
+  const sensor_msgs::msg::PointCloud2 & input)
 {
-  std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> buckets;
+  sensor_msgs::msg::PointCloud2 output;
+  output.header = input.header;
+  output.height = 1;
+  output.width = 0;
+  output.fields = input.fields;
+  output.is_bigendian = input.is_bigendian;
+  output.point_step = input.point_step;
+  output.row_step = 0;
+  output.is_dense = input.is_dense;
+  return output;
+}
+
+/// @brief Append one original input point to a segment cloud while preserving all point fields.
+void append_segment_point(
+  sensor_msgs::msg::PointCloud2 & output, const sensor_msgs::msg::PointCloud2 & input,
+  const std::size_t point_index)
+{
+  const auto row = point_index / input.width;
+  const auto column = point_index % input.width;
+  const auto input_offset = row * input.row_step + column * input.point_step;
+  const auto input_begin = input.data.begin() + static_cast<std::ptrdiff_t>(input_offset);
+  const auto input_end = input_begin + static_cast<std::ptrdiff_t>(input.point_step);
+  output.data.insert(output.data.end(), input_begin, input_end);
+  ++output.width;
+  output.row_step = output.point_step * output.width;
+}
+
+/// @brief Add a SemanticLabel point to object buckets or segment output.
+void append_classified_point(
+  SplitPointcloudResult & result, const pcl::PointXYZ & point, const std::uint8_t class_id,
+  const float probability, const sensor_msgs::msg::PointCloud2 & input,
+  const std::size_t point_index)
+{
+  namespace ptv3 = autoware::ptv3::experimental;
+
+  const auto semantic_label = static_cast<ptv3::SemanticLabel>(class_id);
+  const auto object_label = ptv3::try_into_object(semantic_label);
+  if (object_label) {
+    result.object_points[*object_label].push_back(SemanticPoint{point, probability, class_id});
+    return;
+  }
+
+  append_segment_point(result.segment_points, input, point_index);
+}
+
+/// @brief Split semantic points into buckets keyed by object label.
+SplitPointcloudResult split_pointcloud(
+  const sensor_msgs::msg::PointCloud2 & pointcloud, const float min_probability)
+{
+  SplitPointcloudResult result;
+  result.segment_points = create_empty_segment_pointcloud(pointcloud);
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
   sensor_msgs::PointCloud2ConstIterator<float> iter_y(pointcloud, "y");
@@ -79,34 +136,29 @@ std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> split_pointcloud(
   if (has_class_id && has_probability) {
     sensor_msgs::PointCloud2ConstIterator<std::uint8_t> iter_class(pointcloud, "class_id");
     sensor_msgs::PointCloud2ConstIterator<float> iter_probability(pointcloud, "probability");
-    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_class, ++iter_probability) {
+    std::size_t point_index = 0;
+    for (; iter_x != iter_x.end();
+         ++iter_x, ++iter_y, ++iter_z, ++iter_class, ++iter_probability, ++point_index) {
       if (*iter_probability < min_probability) {
         continue;
       }
 
-      const auto mapping = class_id_to_object_label.find(*iter_class);
-      if (mapping == class_id_to_object_label.end()) {
-        continue;
-      }
-
-      buckets[mapping->second].push_back(
-        SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), *iter_probability});
+      append_classified_point(
+        result, pcl::PointXYZ(*iter_x, *iter_y, *iter_z), *iter_class, *iter_probability,
+        pointcloud, point_index);
     }
-    return buckets;
+    return result;
   }
 
   if (has_class_id) {
     sensor_msgs::PointCloud2ConstIterator<std::uint8_t> iter_class(pointcloud, "class_id");
-    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_class) {
-      const auto mapping = class_id_to_object_label.find(*iter_class);
-      if (mapping == class_id_to_object_label.end()) {
-        continue;
-      }
-
-      buckets[mapping->second].push_back(
-        SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), 1.0F});
+    std::size_t point_index = 0;
+    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_class, ++point_index) {
+      append_classified_point(
+        result, pcl::PointXYZ(*iter_x, *iter_y, *iter_z), *iter_class, 1.0F, pointcloud,
+        point_index);
     }
-    return buckets;
+    return result;
   }
 
   if (has_probability) {
@@ -116,18 +168,18 @@ std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> split_pointcloud(
         continue;
       }
 
-      buckets[ObjectClassification::UNKNOWN].push_back(
-        SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), *iter_probability});
+      result.object_points[ObjectClassification::UNKNOWN].push_back(
+        SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), *iter_probability, 0U});
     }
-    return buckets;
+    return result;
   }
 
   for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-    buckets[ObjectClassification::UNKNOWN].push_back(
-      SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), 1.0F});
+    result.object_points[ObjectClassification::UNKNOWN].push_back(
+      SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), 1.0F, 0U});
   }
 
-  return buckets;
+  return result;
 }
 
 /// @brief Compute the average semantic probability for one clustered object instance.
@@ -204,15 +256,13 @@ std::pair<Shape, geometry_msgs::msg::Pose> create_fallback_shape_and_pose(
 }  // namespace
 
 LabelBasedEuclideanCluster::LabelBasedEuclideanCluster(
-  const std::unordered_map<std::uint8_t, std::uint8_t> & class_id_to_object_label,
   float min_probability, ShapePolicy shape_policy,
   std::shared_ptr<EuclideanClusterInterface> default_cluster,
   const std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>> &
     label_cluster_executers,
   std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator,
   const std::vector<ConfusableLabelGroup> & confusable_groups)
-: class_id_to_object_label_(class_id_to_object_label),
-  min_probability_(min_probability),
+: min_probability_(min_probability),
   shape_policy_(shape_policy),
   default_cluster_(std::move(default_cluster)),
   label_cluster_executers_(label_cluster_executers),
@@ -248,7 +298,7 @@ EuclideanClusterInterface & LabelBasedEuclideanCluster::get_cluster_executer(
 LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
   const sensor_msgs::msg::PointCloud2 & input_msg)
 {
-  DetectedObjects output_msg;
+  Output output;
   // Note: frame_id and timestamp are NOT set here; they must be set by the caller (ROS node)
 
   // Check for required fields
@@ -260,11 +310,12 @@ LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
   }
 
   // 1. Split points by label and filter by probability
-  auto split_points = split_pointcloud(input_msg, class_id_to_object_label_, min_probability_);
+  auto split_points = split_pointcloud(input_msg, min_probability_);
+  output.segments = std::move(split_points.segment_points);
 
   // 2. Run per-label clustering and collect all cluster entries
   std::vector<ClusterEntry> all_entries;
-  for (const auto & [label, semantic_points] : split_points) {
+  for (const auto & [label, semantic_points] : split_points.object_points) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr label_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     label_cloud->reserve(semantic_points.size());
     for (const auto & sp : semantic_points) {
@@ -328,10 +379,10 @@ LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
     object.kinematics.orientation_availability =
       autoware_perception_msgs::msg::DetectedObjectKinematics::UNAVAILABLE;
 
-    output_msg.objects.push_back(std::move(object));
+    output.objects.objects.push_back(std::move(object));
   }
 
-  return output_msg;
+  return output;
 }
 
 }  // namespace autoware::euclidean_cluster
