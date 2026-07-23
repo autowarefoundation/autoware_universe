@@ -258,14 +258,14 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   }
 
   // (4) default stop line position on interpolated path
-  intersection_stoplines.default_stopline = [&]() -> std::optional<double> {
+  const auto temp_default_stopline = [&]() -> std::optional<double> {
     const auto map_stop_s = getStopLineIndexFromMap(
       path, left_bound, right_bound, lane_id_interval, assigned_lanelet, planner_data);
-    if (!map_stop_s) {
-      return std::nullopt;
+    double default_stopline_s = 0.0;
+    if (map_stop_s) {
+      default_stopline_s = map_stop_s.value() - baselink2front;
     }
-    auto default_stopline_s = map_stop_s.value() - baselink2front;
-    if (default_stopline_s < 0) {
+    if (default_stopline_s <= 0) {
       default_stopline_s = intersection_stoplines.first_attention_stopline - stopline_margin;
     }
     if (default_stopline_s < 0) {
@@ -273,6 +273,9 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     }
     return default_stopline_s;
   }();
+
+  // default stopline is 0 if not exist.
+  intersection_stoplines.default_stopline = temp_default_stopline.value_or(0.0);
 
   // (5) collision stop line
   intersection_stoplines.collision_stopline = [&]() -> std::optional<double> {
@@ -287,12 +290,12 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
       return autoware::experimental::trajectory::find_nearest_index(
         path, previous_stop_pose.collision_stopline_pose.value().position);
     }
-    if (!intersection_stoplines.default_stopline) {
+    if (!temp_default_stopline) {
       return std::nullopt;
     }
 
     const auto dist_to_default_stopline =
-      intersection_stoplines.default_stopline.value() - intersection_stoplines.closest_s;
+      std::fabs(intersection_stoplines.default_stopline.value() - intersection_stoplines.closest_s);
 
     if (dist_to_default_stopline > braking_dist) {
       // default stop line is feasible
@@ -323,7 +326,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   // (6) occlusion peeking stop line position on interpolated path
   // static position
   const auto static_occlusion_peeking_line_s = [&]() -> std::optional<double> {
-    if (!intersection_stoplines.default_stopline) {
+    if (!temp_default_stopline) {
       return std::nullopt;
     }
     // NOTE: if footprints[0] is already inside the attention area, invalid
