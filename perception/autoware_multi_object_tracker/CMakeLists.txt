@@ -47,6 +47,7 @@ set(${PROJECT_NAME}_lib
   lib/merger/overlap_gate.cpp
   lib/association/polar_association.cpp
   lib/association/scoring/bev_assignment_scoring.cpp
+  lib/association/uuid_association.cpp
   lib/association/scoring/polar_assignment_scoring.cpp
   lib/merger/redundancy_check.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
