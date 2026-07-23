@@ -182,6 +182,11 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 
   sensor_fusion_ = config.sensor_fusion_;
 
+  // trainStation/DDS removal: enable when the sparse engine was exported with the 4 down-sample
+  // GetIndicePairsImplicitGemm nodes removed (rulebooks precomputed + bound at runtime).
+  config.sparse_remove_trainstation_ =
+    this->declare_parameter<bool>("sparse_remove_trainstation", false, descriptor);
+
   use_compressed_images_ =
     this->declare_parameter<bool>("use_compressed_images", false, descriptor);
   const auto run_image_undistortion =
