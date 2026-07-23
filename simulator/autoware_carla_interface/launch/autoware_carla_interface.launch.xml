@@ -1,6 +1,12 @@
 <launch>
   <!-- E2E Planning support -->
   <arg name="use_e2e_planning" default="false"/>
+  <arg name="carla_state_publish_tf" default="true" description="Publish map->base_link TF from CARLA ground-truth odometry when use_e2e_planning is enabled"/>
+  <arg
+    name="launch_legacy_e2e_control"
+    default="false"
+    description="Launch the CARLA bridge-local E2E trajectory follower and vehicle_cmd_gate. Keep false when Autoware's control stack is launched."
+  />
   <arg name="vehicle_model" default="sample_vehicle"/>
   <arg name="use_sim_time" default="true"/>
   <arg name="launch_config_pkg" default="autoware_launch" description="Package providing control parameter configs"/>
@@ -11,13 +17,33 @@
     <arg name="ego_vehicle_role_name" default="ego_vehicle"/>
     <arg name="vehicle_type" default="vehicle.toyota.prius"/>
     <arg name="spawn_point" default="None" description="location of ego vehicle spawn (default is random), example = [0.2 , 4.1, 0.4, 0., 0., 0.]"/>
+    <arg name="spawn_point_ground_snap" default="False" description="Snap an explicit spawn_point z value to the CARLA ground mesh before spawning"/>
+    <arg name="spawn_point_ground_offset_z" default="0.5" description="Meters above ground to place the ego when spawn_point_ground_snap is enabled"/>
     <arg name="map_path" default="" description="Autoware map directory path (map name will be extracted for CARLA)"/>
+    <arg name="carla_map" default="" description="CARLA level/map name override. If empty, basename(map_path) is used"/>
+    <arg name="force_load_world" default="False" description="Always call client.load_world(carla_map) instead of load_world_if_different"/>
     <arg name="sync_mode" default="True"/>
     <arg name="fixed_delta_seconds" default="0.05" description="Time step for CARLA, FPS=1/value"/>
+    <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings"/>
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
+    <arg name="min_positive_throttle" default="0.0" description="Minimum CARLA throttle applied when a positive Autoware accel command is received"/>
+    <arg name="min_positive_throttle_speed_threshold" default="0.8" description="Only apply min_positive_throttle while ego speed is below this threshold [m/s]. Negative means always apply."/>
+    <arg name="normalize_steer_command" default="True" description="Convert Autoware tire angle commands to CARLA normalized steer using vehicle physics"/>
+    <arg name="steer_command_gain" default="1.0" description="Gain applied to Autoware tire angle before CARLA steer normalization"/>
+    <arg name="steering_time_constant" default="0.2" description="First-order steering filter time constant [s]"/>
+    <arg name="steer_response_calibration_enable" default="False" description="Use a measured curvature-to-CARLA-steer response table instead of pure max-steer normalization"/>
+    <arg name="steer_response_calibration_wheel_base" default="2.79" description="Wheel base used to convert desired Autoware tire angle to target curvature for response calibration"/>
+    <arg name="steer_response_calibration_table" default="" description="Semicolon separated curvature:carla_steer response table, e.g. 0.0:0.0;0.014:0.2"/>
+    <arg name="initial_pose_ground_offset_z" default="1.0" description="Meters above CARLA ground projection for RViz initial pose resets"/>
+    <arg name="map_origin_x" default="0.0" description="X offset from CARLA world origin to the Autoware map frame origin (needed for georeferenced/custom CARLA maps)"/>
+    <arg name="map_origin_y" default="0.0" description="Y offset from CARLA world origin to the Autoware map frame origin (needed for georeferenced/custom CARLA maps)"/>
 
-    <let name="carla_map" value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"/>
+    <let name="carla_map_resolved" value="$(eval &quot;'$(var carla_map)' if '$(var carla_map)' else (__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01')&quot;)"/>
+
+    <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map_resolved)'"/>
+
+    <let name="carla_map" value="$(eval &quot;'$(var carla_map)' if '$(var carla_map)' else (__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01')&quot;)"/>
 
     <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map)'"/>
 
@@ -30,7 +56,46 @@
     <arg name="sensor_kit_name" default="carla_sensor_kit_description" description="Name of the sensor kit package containing calibration"/>
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping_light_weight.yaml" if="$(var use_light_weight_sensor_mapping)"/>
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
-    <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
+    <arg name="sensor_mapping_file" default="" description="Path to sensor mapping YAML"/>
+    <let name="sensor_mapping_file_resolved" value="$(eval &quot;'$(var sensor_mapping_file)' if '$(var sensor_mapping_file)' else '$(var sensor_mapping_file_default)'&quot;)"/>
+
+    <!-- SplatSim integration (optional) -->
+    <arg name="render_with_splatsim" default="true" description="Enable splatsim rendering via Docker + gRPC"/>
+    <arg name="splatsim_render_camera" default="false" description="Render cameras via splatsim (false = cameras fully off in splatsim mode)"/>
+    <!-- Manual override for the geographic origin of the CARLA world origin.
+         Leave at 0.0/0.0: by default the origin is derived from the lanelet2
+         map (see lanelet2_map_path below) by reverse-projecting map_origin
+         through the map's MGRS grid, falling back to the OpenDRIVE GeoReference.
+         Set explicitly only to bypass both. -->
+    <arg name="splatsim_geo_origin_lat" default="0.0" description="Latitude (deg) override of the CARLA world origin for the splatsim MGRS transform (0 = auto)"/>
+    <arg name="splatsim_geo_origin_lon" default="0.0" description="Longitude (deg) override of the CARLA world origin for the splatsim MGRS transform (0 = auto)"/>
+    <!-- Autoware lanelet2 map used to auto-derive the splatsim geographic origin.
+         Defaults to <map_path>/lanelet2_map.osm; empty falls back to OpenDRIVE. -->
+    <let name="lanelet2_map_path_default" value="$(eval &quot;__import__('os').path.join('$(var map_path)', 'lanelet2_map.osm') if '$(var map_path)'.strip() else ''&quot;)"/>
+    <arg name="lanelet2_map_path" default="$(var lanelet2_map_path_default)" description="Path to the Autoware lanelet2 map (*.osm) for splatsim geo-origin derivation"/>
+    <arg name="splatsim_tileset_path" default="$(env HOME)/workspace/fg_plus_bg_background_v25_enu_ecef.usdz" description="Host path to the 3DGS scene (tileset.json or .usdz)"/>
+    <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
+    <arg name="splatsim_grpc_port" default="50051"/>
+    <arg name="splatsim_use_sh" default="true"/>
+    <arg name="splatsim_frame_rate" default="20.0"/>
+    <arg name="splatsim_image_topic" default="/splatsim/image_raw"/>
+    <arg name="splatsim_camera_info_topic" default="/splatsim/camera_info"/>
+    <arg name="splatsim_frame_id" default="splatsim_camera"/>
+    <arg name="splatsim_near_plane" default="0.01"/>
+    <arg name="splatsim_far_plane" default="1000.0"/>
+    <arg name="splatsim_device" default="cuda:0"/>
+    <arg name="splatsim_restart_container" default="false" description="Force restart splatsim container even if already running"/>
+    <arg name="splatsim_compress_format" default="jpeg" description="Image compression format: 'jpeg', 'png', or '' for raw"/>
+    <arg name="splatsim_render_lidar" default="true" description="Render LiDAR via splatsim (publishes PointCloud2 to the sensing topic)"/>
+    <arg name="splatsim_lidar_grpc_port" default="50061" description="Base gRPC port for splatsim LiDAR containers"/>
+    <arg name="splatsim_lidar_sensor_type" default="OT128" description="LiDAR elevation table: 'OT128', 'XT32', or '' for uniform n_rows"/>
+    <arg name="splatsim_lidar_fps" default="10.0" description="LiDAR spin rate / render cadence (Hz)"/>
+    <arg name="splatsim_lidar_n_rows" default="0" description="Uniform beam count (0 = sensor_type default)"/>
+    <arg name="splatsim_lidar_n_columns" default="0" description="Azimuth samples per revolution (0 = server default)"/>
+    <arg name="splatsim_lidar_min_range_m" default="0.0" description="Min range (0 = server default)"/>
+    <arg name="splatsim_lidar_max_range_m" default="0.0" description="Max range (0 = CARLA sensor mapping range)"/>
+    <arg name="splatsim_lidar_drop_threshold" default="0.0" description="Return drop threshold (0 = server default)"/>
+    <arg name="splatsim_lidar_alpha_threshold" default="0.0" description="Return alpha threshold (0 = server default)"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -39,14 +104,57 @@
       <param name="timeout" value="$(var timeout)"/>
       <param name="sync_mode" value="$(var sync_mode)"/>
       <param name="fixed_delta_seconds" value="$(var fixed_delta_seconds)"/>
-      <param name="carla_map" value="$(var carla_map)"/>
+      <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
+      <param name="carla_map" value="$(var carla_map_resolved)"/>
+      <param name="force_load_world" value="$(var force_load_world)"/>
       <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name)"/>
       <param name="spawn_point" value="$(var spawn_point)"/>
+      <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
+      <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
       <param name="vehicle_type" value="$(var vehicle_type)"/>
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
+      <param name="min_positive_throttle" value="$(var min_positive_throttle)"/>
+      <param name="min_positive_throttle_speed_threshold" value="$(var min_positive_throttle_speed_threshold)"/>
+      <param name="normalize_steer_command" value="$(var normalize_steer_command)"/>
+      <param name="steer_command_gain" value="$(var steer_command_gain)"/>
+      <param name="steering_time_constant" value="$(var steering_time_constant)"/>
+      <param name="steer_response_calibration_enable" value="$(var steer_response_calibration_enable)"/>
+      <param name="steer_response_calibration_wheel_base" value="$(var steer_response_calibration_wheel_base)"/>
+      <param name="steer_response_calibration_table" value="$(var steer_response_calibration_table)"/>
+      <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
+      <param name="map_origin_x" value="$(var map_origin_x)"/>
+      <param name="map_origin_y" value="$(var map_origin_y)"/>
+      <param name="lanelet2_map_path" value="$(var lanelet2_map_path)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
-      <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
+      <param name="sensor_mapping_file" value="$(var sensor_mapping_file_resolved)"/>
+      <param name="render_with_splatsim" value="$(var render_with_splatsim)"/>
+      <param name="splatsim_tileset_path" value="$(var splatsim_tileset_path)"/>
+      <param name="splatsim_image" value="$(var splatsim_image)"/>
+      <param name="splatsim_grpc_port" value="$(var splatsim_grpc_port)"/>
+      <param name="splatsim_use_sh" value="$(var splatsim_use_sh)"/>
+      <param name="splatsim_frame_rate" value="$(var splatsim_frame_rate)"/>
+      <param name="splatsim_image_topic" value="$(var splatsim_image_topic)"/>
+      <param name="splatsim_camera_info_topic" value="$(var splatsim_camera_info_topic)"/>
+      <param name="splatsim_frame_id" value="$(var splatsim_frame_id)"/>
+      <param name="splatsim_near_plane" value="$(var splatsim_near_plane)"/>
+      <param name="splatsim_far_plane" value="$(var splatsim_far_plane)"/>
+      <param name="splatsim_device" value="$(var splatsim_device)"/>
+      <param name="splatsim_restart_container" value="$(var splatsim_restart_container)"/>
+      <param name="splatsim_compress_format" value="$(var splatsim_compress_format)"/>
+      <param name="splatsim_render_camera" value="$(var splatsim_render_camera)"/>
+      <param name="splatsim_geo_origin_lat" value="$(var splatsim_geo_origin_lat)"/>
+      <param name="splatsim_geo_origin_lon" value="$(var splatsim_geo_origin_lon)"/>
+      <param name="splatsim_render_lidar" value="$(var splatsim_render_lidar)"/>
+      <param name="splatsim_lidar_grpc_port" value="$(var splatsim_lidar_grpc_port)"/>
+      <param name="splatsim_lidar_sensor_type" value="$(var splatsim_lidar_sensor_type)"/>
+      <param name="splatsim_lidar_fps" value="$(var splatsim_lidar_fps)"/>
+      <param name="splatsim_lidar_n_rows" value="$(var splatsim_lidar_n_rows)"/>
+      <param name="splatsim_lidar_n_columns" value="$(var splatsim_lidar_n_columns)"/>
+      <param name="splatsim_lidar_min_range_m" value="$(var splatsim_lidar_min_range_m)"/>
+      <param name="splatsim_lidar_max_range_m" value="$(var splatsim_lidar_max_range_m)"/>
+      <param name="splatsim_lidar_drop_threshold" value="$(var splatsim_lidar_drop_threshold)"/>
+      <param name="splatsim_lidar_alpha_threshold" value="$(var splatsim_lidar_alpha_threshold)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>
@@ -68,79 +176,82 @@
     <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_velodyne_top" args="0 0 1 -1.5386 -0.015 0.001 velodyne_top velodyne_top_changed"/> -->
     <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_imu" args="0 0 1 -3.10519265 -0.015 -3.14059265359 tamagawa/imu_link tamagawa/imu_link_changed"/> -->
 
-    <!-- Relay CAM_FRONT to traffic_light namespace for traffic light recognition.
-         These relays subscribe the raw image, which forces the interface to
-         convert and publish every CAM_FRONT frame; skip them in light-weight
-         mode like the republish nodes below. -->
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_image_relay"
-      args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_camera_info_relay"
-      args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+    <!-- CARLA-only nodes: republish raw→compressed, relay, combiner (skipped in splatsim mode) -->
+    <group unless="$(var render_with_splatsim)">
+      <!-- Relay CAM_FRONT to traffic_light namespace for traffic light recognition.
+           These relays subscribe the raw image, which forces the interface to
+           convert and publish every CAM_FRONT frame; skip them in light-weight
+           mode like the republish nodes below. -->
+      <node
+        pkg="topic_tools"
+        exec="relay"
+        name="traffic_light_image_relay"
+        args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="topic_tools"
+        exec="relay"
+        name="traffic_light_camera_info_relay"
+        args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
 
-    <!-- Image transport nodes to create compressed versions for all cameras -->
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_front_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+      <!-- Image transport nodes to create compressed versions for all cameras -->
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_front_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
 
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_front_left_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_LEFT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_front_right_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_RIGHT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_back_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK/image_raw -r out/compressed:=/sensing/camera/CAM_BACK/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_back_left_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_LEFT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="cam_back_right_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_RIGHT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="image_transport"
-      exec="republish"
-      name="traffic_light_republish"
-      args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_front_left_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_LEFT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_front_right_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_RIGHT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_back_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK/image_raw -r out/compressed:=/sensing/camera/CAM_BACK/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_back_left_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_LEFT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="cam_back_right_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_RIGHT/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
+      <node
+        pkg="image_transport"
+        exec="republish"
+        name="traffic_light_republish"
+        args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
+        unless="$(var use_light_weight_sensor_mapping)"
+      />
 
-    <!-- Multi-camera combiner for RViz visualization -->
-    <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen" unless="$(var use_light_weight_sensor_mapping)"/>
+      <!-- Multi-camera combiner for RViz visualization -->
+      <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen" unless="$(var use_light_weight_sensor_mapping)"/>
+    </group>
 
     <!-- E2E Planning Infrastructure -->
     <group if="$(var use_e2e_planning)">
@@ -155,7 +266,7 @@
         <param name="use_sim_time" value="$(var use_sim_time)"/>
         <param name="frame_id" value="map"/>
         <param name="child_frame_id" value="base_link"/>
-        <param name="publish_tf" value="true"/>
+        <param name="publish_tf" value="$(var carla_state_publish_tf)"/>
         <param name="max_time_diff_sec" value="0.3"/>
         <remap from="~/input/pose_with_covariance" to="/sensing/gnss/pose_with_covariance"/>
         <remap from="~/input/twist_with_covariance" to="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
@@ -172,79 +283,92 @@
         <remap from="output/accel" to="/localization/acceleration"/>
       </node>
 
-      <!-- Minimal control: trajectory follower only -->
-      <node_container pkg="rclcpp_components" exec="component_container_mt" name="e2e_control_container" namespace="" output="screen">
-        <composable_node pkg="autoware_trajectory_follower_node" plugin="autoware::motion::control::trajectory_follower_node::Controller" name="trajectory_follower">
-          <param name="use_sim_time" value="$(var use_sim_time)"/>
-          <param name="lateral_controller_mode" value="mpc"/>
-          <param name="longitudinal_controller_mode" value="pid"/>
-          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/trajectory_follower_node.param.yaml"/>
-          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/lateral/mpc.param.yaml"/>
-          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/longitudinal/pid.param.yaml"/>
-          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/common/nearest_search.param.yaml"/>
+      <group if="$(var launch_legacy_e2e_control)">
+        <!-- Legacy bridge-local control path. Disabled by default to avoid duplicate publishers with Autoware control. -->
+        <node_container pkg="rclcpp_components" exec="component_container_mt" name="e2e_control_container" namespace="" output="screen">
+          <composable_node pkg="autoware_trajectory_follower_node" plugin="autoware::motion::control::trajectory_follower_node::Controller" name="trajectory_follower">
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <param name="lateral_controller_mode" value="mpc"/>
+            <param name="longitudinal_controller_mode" value="pid"/>
+            <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/trajectory_follower_node.param.yaml"/>
+            <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/lateral/mpc.param.yaml"/>
+            <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/longitudinal/pid.param.yaml"/>
+            <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/common/nearest_search.param.yaml"/>
+            <param from="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
+            <remap from="~/input/current_odometry" to="/localization/kinematic_state"/>
+            <remap from="~/input/current_accel" to="/localization/acceleration"/>
+            <remap from="~/input/current_steering" to="/vehicle/status/steering_status"/>
+            <remap from="~/input/current_operation_mode" to="/system/operation_mode/state"/>
+            <remap from="~/output/control_cmd" to="/trajectory_follower/control_cmd"/>
+            <remap from="~/output/predicted_trajectory" to="/control/trajectory_follower/predicted_trajectory"/>
+            <remap from="~/output/lateral_diagnostic" to="/control/trajectory_follower/lateral/diagnostic"/>
+            <remap from="~/output/longitudinal_diagnostic" to="/control/trajectory_follower/longitudinal/diagnostic"/>
+          </composable_node>
+        </node_container>
+
+        <!-- Load shift decider as composable node -->
+        <load_composable_node target="/e2e_control_container">
+          <composable_node pkg="autoware_shift_decider" plugin="autoware::shift_decider::ShiftDecider" name="autoware_shift_decider">
+            <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
+            <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
+            <remap from="input/state" to="/autoware/state"/>
+            <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
+            <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
+          </composable_node>
+        </load_composable_node>
+
+        <node pkg="topic_tools" exec="relay" name="trajectory_follower_control_cmd_relay" output="log" args="/trajectory_follower/control_cmd /trajectory_follower_control_cmd"/>
+
+        <!-- External command selector (required for engagement) -->
+        <include file="$(find-pkg-share autoware_external_cmd_selector)/launch/external_cmd_selector.launch.py">
+          <arg name="use_intra_process" value="false"/>
+          <arg name="target_container" value="/e2e_control_container"/>
+          <arg name="external_cmd_selector_param_path" value="$(find-pkg-share $(var launch_config_pkg))/config/control/external_cmd_selector/external_cmd_selector.param.yaml"/>
+          <arg name="output/current_selector_mode" value="/control/external_cmd_selector/current_selector_mode"/>
+        </include>
+
+        <!-- Vehicle command gate for operation mode management -->
+        <let name="check_external_emergency_heartbeat" value="false"/>
+        <node pkg="autoware_vehicle_cmd_gate" exec="vehicle_cmd_gate_exe" name="vehicle_cmd_gate" output="screen">
+          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/vehicle_cmd_gate/vehicle_cmd_gate.param.yaml"/>
           <param from="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
-          <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
-          <remap from="~/input/current_odometry" to="/localization/kinematic_state"/>
-          <remap from="~/input/current_accel" to="/localization/acceleration"/>
-          <remap from="~/input/current_steering" to="/vehicle/status/steering_status"/>
-          <remap from="~/input/current_operation_mode" to="/system/operation_mode/state"/>
-          <remap from="~/output/control_cmd" to="/trajectory_follower/control_cmd"/>
-          <remap from="~/output/predicted_trajectory" to="/control/trajectory_follower/predicted_trajectory"/>
-          <remap from="~/output/lateral_diagnostic" to="/control/trajectory_follower/lateral/diagnostic"/>
-          <remap from="~/output/longitudinal_diagnostic" to="/control/trajectory_follower/longitudinal/diagnostic"/>
-        </composable_node>
-      </node_container>
+          <param name="use_emergency_handling" value="false"/>
+          <param name="check_external_emergency_heartbeat" value="false"/>
 
-      <!-- shift_decider runs as standalone node -->
-      <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
-      <node pkg="autoware_shift_decider" exec="autoware_shift_decider" name="autoware_shift_decider" output="screen">
-        <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
-        <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
-        <remap from="input/state" to="/autoware/state"/>
-        <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
-        <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
-        <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
-      </node>
+          <remap from="input/steering" to="/vehicle/status/steering_status"/>
+          <remap from="input/auto/control_cmd" to="/trajectory_follower/control_cmd"/>
+          <remap from="input/auto/turn_indicators_cmd" to="/planning/turn_indicators_cmd"/>
+          <remap from="input/auto/hazard_lights_cmd" to="/planning/hazard_lights_cmd"/>
+          <remap from="input/auto/gear_cmd" to="/control/shift_decider/gear_cmd"/>
 
-      <node pkg="topic_tools" exec="relay" name="trajectory_follower_control_cmd_relay" output="log" args="/trajectory_follower/control_cmd /trajectory_follower_control_cmd"/>
+          <remap from="input/external/control_cmd" to="/external/selected/control_cmd"/>
+          <remap from="input/external/turn_indicators_cmd" to="/external/selected/turn_indicators_cmd"/>
+          <remap from="input/external/hazard_lights_cmd" to="/external/selected/hazard_lights_cmd"/>
+          <remap from="input/external/gear_cmd" to="/external/selected/gear_cmd"/>
+          <remap from="input/external_emergency_stop_heartbeat" to="/external/selected/heartbeat"/>
 
-      <!-- External command selector (required for engagement) -->
-      <include file="$(find-pkg-share autoware_external_cmd_selector)/launch/external_cmd_selector.launch.py">
-        <arg name="use_intra_process" value="false"/>
-        <arg name="target_container" value="/e2e_control_container"/>
-        <arg name="external_cmd_selector_param_path" value="$(find-pkg-share $(var launch_config_pkg))/config/control/external_cmd_selector/external_cmd_selector.param.yaml"/>
-        <arg name="output/current_selector_mode" value="/control/external_cmd_selector/current_selector_mode"/>
-      </include>
+          <remap from="input/engage" to="/autoware/engage"/>
+          <remap from="input/gate_mode" to="/control/gate_mode_cmd"/>
+          <remap from="output/gate_mode" to="/control/current_gate_mode"/>
+          <remap from="output/engage" to="/api/autoware/get/engage"/>
+          <remap from="output/control_cmd" to="/control/command/control_cmd"/>
+          <remap from="output/gear_cmd" to="/control/command/gear_cmd"/>
+          <remap from="output/turn_indicators_cmd" to="/control/command/turn_indicators_cmd"/>
+          <remap from="output/hazard_lights_cmd" to="/control/command/hazard_lights_cmd"/>
+        </node>
 
-      <!-- Vehicle command gate for operation mode management -->
-      <let name="check_external_emergency_heartbeat" value="false"/>
-      <node pkg="autoware_vehicle_cmd_gate" exec="vehicle_cmd_gate_exe" name="vehicle_cmd_gate" output="screen">
-        <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/vehicle_cmd_gate/vehicle_cmd_gate.param.yaml"/>
-        <param from="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
-        <param name="use_emergency_handling" value="false"/>
-        <param name="check_external_emergency_heartbeat" value="false"/>
-
-        <remap from="input/steering" to="/vehicle/status/steering_status"/>
-        <remap from="input/auto/control_cmd" to="/trajectory_follower/control_cmd"/>
-        <remap from="input/auto/turn_indicators_cmd" to="/planning/turn_indicators_cmd"/>
-        <remap from="input/auto/hazard_lights_cmd" to="/planning/hazard_lights_cmd"/>
-        <remap from="input/auto/gear_cmd" to="/control/shift_decider/gear_cmd"/>
-
-        <remap from="input/external/control_cmd" to="/external/selected/control_cmd"/>
-        <remap from="input/external/turn_indicators_cmd" to="/external/selected/turn_indicators_cmd"/>
-        <remap from="input/external/hazard_lights_cmd" to="/external/selected/hazard_lights_cmd"/>
-        <remap from="input/external/gear_cmd" to="/external/selected/gear_cmd"/>
-        <remap from="input/external_emergency_stop_heartbeat" to="/external/selected/heartbeat"/>
-
-        <remap from="input/engage" to="/autoware/engage"/>
-        <remap from="input/gate_mode" to="/control/gate_mode_cmd"/>
-        <remap from="output/gate_mode" to="/control/current_gate_mode"/>
-        <remap from="output/engage" to="/api/autoware/get/engage"/>
-        <remap from="output/control_cmd" to="/control/command/control_cmd"/>
-        <remap from="output/gear_cmd" to="/control/command/gear_cmd"/>
-        <remap from="output/turn_indicators_cmd" to="/control/command/turn_indicators_cmd"/>
-        <remap from="output/hazard_lights_cmd" to="/control/command/hazard_lights_cmd"/>
-      </node>
+        <!-- shift_decider runs as standalone node (agnocast on current awf/main) -->
+        <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+        <node pkg="autoware_shift_decider" exec="autoware_shift_decider" name="autoware_shift_decider" output="screen">
+          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
+          <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
+          <remap from="input/state" to="/autoware/state"/>
+          <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
+          <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
+          <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+        </node>
+      </group>
     </group>
   </group>
 </launch>

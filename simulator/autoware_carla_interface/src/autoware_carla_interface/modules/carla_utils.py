@@ -88,11 +88,19 @@ def create_cloud(header, fields, points):
     )
 
 
-def carla_location_to_ros_point(carla_location):
-    """Convert a carla location to a ROS point."""
+def carla_location_to_ros_point(carla_location, origin_x=0.0, origin_y=0.0):
+    """
+    Convert a carla location to a ROS point.
+
+    origin_x/origin_y translate from CARLA's local world origin to the
+    Autoware map frame origin. They are needed whenever the CARLA level was
+    authored with its own local origin instead of matching the lanelet2/PCD
+    map frame directly (e.g. a real-world-georeferenced custom map), and are
+    zero for stock CARLA towns whose maps are natively aligned with the map frame.
+    """
     ros_point = Point()
-    ros_point.x = carla_location.x
-    ros_point.y = -carla_location.y
+    ros_point.x = carla_location.x + origin_x
+    ros_point.y = -carla_location.y + origin_y
     ros_point.z = carla_location.z
 
     return ros_point
@@ -120,9 +128,13 @@ def ros_quaternion_to_carla_rotation(ros_quaternion):
     )
 
 
-def ros_pose_to_carla_transform(ros_pose):
-    """Convert ROS pose to carla transform."""
+def ros_pose_to_carla_transform(ros_pose, origin_x=0.0, origin_y=0.0):
+    """Convert ROS pose to carla transform (inverse of carla_location_to_ros_point)."""
     return carla.Transform(
-        carla.Location(ros_pose.position.x, -ros_pose.position.y, ros_pose.position.z),
+        carla.Location(
+            ros_pose.position.x - origin_x,
+            origin_y - ros_pose.position.y,
+            ros_pose.position.z,
+        ),
         ros_quaternion_to_carla_rotation(ros_pose.orientation),
     )

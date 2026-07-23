@@ -547,7 +547,7 @@ class SensorKitLoader:
             self.logger.debug(f"No mapping found for sensor: {sensor_name}")
             return None
 
-        transform = sensor_data.get("transform")
+        transform = mapping.get("transform_override") or sensor_data.get("transform")
         if not transform:
             missing_transforms.append(sensor_name)
             self.logger.error(

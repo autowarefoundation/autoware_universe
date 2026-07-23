@@ -1,0 +1,6 @@
+# SplatSim gRPC modules generated at build time by protoc from the vendored
+# rendering_service.proto (see CMakeLists.txt / generate_splatsim_proto.py).
+# Not committed so they stay in sync with the installed protobuf/grpc runtime.
+/src/autoware_carla_interface/splatsim/proto/rendering_service_pb2.py
+/src/autoware_carla_interface/splatsim/proto/rendering_service_pb2.pyi
+/src/autoware_carla_interface/splatsim/proto/rendering_service_pb2_grpc.py
