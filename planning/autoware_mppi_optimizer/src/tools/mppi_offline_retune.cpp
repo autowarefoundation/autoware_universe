@@ -58,12 +58,12 @@ namespace
 using autoware::mppi_optimizer::FirstOrderDubinsMppiCostParams;
 using autoware::mppi_optimizer::FirstOrderDubinsMppiInterface;
 using autoware::mppi_optimizer::FirstOrderDubinsMppiVehicleParams;
-using autoware::mppi_optimizer::MppiDebugEgoState;
 using autoware::mppi_optimizer::formatMppiDebugFrameId;
 using autoware::mppi_optimizer::listMppiDebugFrameIds;
 using autoware::mppi_optimizer::loadMppiDebugEgoCsv;
 using autoware::mppi_optimizer::loadMppiDebugKeyValueCsv;
 using autoware::mppi_optimizer::loadMppiDebugTrajectoryCsv;
+using autoware::mppi_optimizer::MppiDebugEgoState;
 using autoware::mppi_optimizer::writeMppiDebugCostsCsv;
 using autoware::mppi_optimizer::writeMppiDebugTrajectoryCsv;
 using autoware_planning_msgs::msg::Trajectory;
@@ -180,8 +180,9 @@ void loadParamsYaml(const std::string & path, FirstOrderDubinsMppiCostParams & p
       value = value.substr(1, value.size() - 2);
     }
     // Skip non-numeric / bool flags.
-    if (key == "enable_debug_trajectory_log" || key == "debug_trajectory_log_directory" ||
-        key == "ros__parameters" || key == "/**") {
+    if (
+      key == "enable_debug_trajectory_log" || key == "debug_trajectory_log_directory" ||
+      key == "ros__parameters" || key == "/**") {
       continue;
     }
     try {
@@ -513,8 +514,8 @@ int run(int argc, char ** argv)
     frame_mppi.setVehicleParams(vehicle_params);
     frame_mppi.setDebugTrajectoryLogging(false);
 
-    const auto result = frame_mppi.optimizeTrajectory(
-      reference, odom, accel, steering, empty_objects, std::nullopt);
+    const auto result =
+      frame_mppi.optimizeTrajectory(reference, odom, accel, steering, empty_objects, std::nullopt);
 
     const std::string opt_path = out_dir + "/" + tag + "_optimized.csv";
     if (!writeMppiDebugTrajectoryCsv(opt_path, result.debug.optimized_trajectory)) {

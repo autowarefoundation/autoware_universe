@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Thin wrapper: launches mppi_debug_visualizer.py in offline compare+retune mode.
+r"""Thin wrapper: launches mppi_debug_visualizer.py in offline compare+retune mode.
 
 Uses the same plots as the debug visualizer (XY + heading/vel/accel/steer/steer-rate),
 overlaying diffusion reference, logged MPPI output, and a retuned MPPI result.
 
 Example:
-  ros2 run autoware_mppi_optimizer mppi_offline_tuner.py -- \\
-    --log-dir "$HOME/.cache/autoware/mppi_debug_log" \\
+  ros2 run autoware_mppi_optimizer mppi_offline_tuner.py -- \
+    --log-dir "$HOME/.cache/autoware/mppi_debug_log" \
     --params-yaml $(ros2 pkg prefix autoware_mppi_optimizer)/share/autoware_mppi_optimizer/config/mppi_optimizer.param.yaml
 """
 
@@ -39,9 +39,7 @@ def find_visualizer() -> Path:
         candidate = Path(env).expanduser().resolve()
         if candidate.is_file() and candidate.suffix == ".py":
             return candidate
-        raise FileNotFoundError(
-            f"MPPI_DEBUG_VISUALIZER={env!r} is not an existing .py file."
-        )
+        raise FileNotFoundError(f"MPPI_DEBUG_VISUALIZER={env!r} is not an existing .py file.")
     try:
         prefix = subprocess.check_output(
             ["ros2", "pkg", "prefix", "autoware_diffusion_planner"],
@@ -56,10 +54,7 @@ def find_visualizer() -> Path:
     # Source-tree fallback (dev without install).
     here = Path(__file__).resolve()
     candidate = (
-        here.parents[2]
-        / "autoware_diffusion_planner"
-        / "scripts"
-        / "mppi_debug_visualizer.py"
+        here.parents[2] / "autoware_diffusion_planner" / "scripts" / "mppi_debug_visualizer.py"
     )
     if candidate.is_file():
         return candidate

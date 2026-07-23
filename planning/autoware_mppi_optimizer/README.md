@@ -17,17 +17,12 @@ autoware_mppi_optimizer/
     └── first_order_dubins_mppi_interface.cu
 ```
 
-
-
 ### Requirements
 
 - CUDA Toolkit (curand, cufft)
 - Eigen3
 
-
-
 ## Inputs / Outputs
-
 
 | Topic                 | Type                                    | Description          |
 | --------------------- | --------------------------------------- | -------------------- |
@@ -35,16 +30,11 @@ autoware_mppi_optimizer/
 | `~/input/odometry`    | `nav_msgs/msg/Odometry`                 | Current ego state    |
 | `~/output/trajectory` | `autoware_planning_msgs/msg/Trajectory` | Optimized trajectory |
 
-
-
-
 ## Launch
 
 ```bash
 ros2 launch autoware_mppi_optimizer mppi_optimizer.launch.xml
 ```
-
-
 
 ## Offline debug logging + retune
 
@@ -89,9 +79,7 @@ Notes:
 - `ignore_drivable_area` is retained as an ablation flag; on this stack boundary crash is already
   disabled in the cost (`isEgoOutsideDrivableArea` always false).
 - `force_cold_start_each_step` only resets tracking counters / arc-length (control is already
-re-seeded from the reference via `updateImportanceSampler(u_nom)` each cycle).
-
-
+  re-seeded from the reference via `updateImportanceSampler(u_nom)` each cycle).
 
 ### Replay only
 
@@ -99,8 +87,6 @@ re-seeded from the reference via `updateImportanceSampler(u_nom)` each cycle).
 ros2 run autoware_diffusion_planner mppi_debug_visualizer.py -- \
   --log-dir "$HOME/.cache/autoware/mppi_debug_log"
 ```
-
-
 
 ### Batch retune (CLI)
 
@@ -112,8 +98,6 @@ ros2 run autoware_mppi_optimizer mppi_offline_retune -- \
   --set track_coeff=2000 --set steer_rate_coeff=5000 \
   --copy-reference
 ```
-
-
 
 ### Interactive compare + retune
 

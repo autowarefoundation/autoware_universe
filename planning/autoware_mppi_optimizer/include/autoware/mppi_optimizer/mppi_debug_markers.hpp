@@ -72,8 +72,7 @@ inline Marker makeDeleteAllMarker(
 inline Marker makeLineStripMarker(
   const rclcpp::Time & stamp, const std::string & frame_id, const std::string & ns, const int id,
   const ColorRGBA & color, const double line_width,
-  const std::vector<std::pair<float, float>> & points,
-  const float z_val = 0.0F)
+  const std::vector<std::pair<float, float>> & points, const float z_val = 0.0F)
 {
   Marker marker;
   marker.header.stamp = stamp;

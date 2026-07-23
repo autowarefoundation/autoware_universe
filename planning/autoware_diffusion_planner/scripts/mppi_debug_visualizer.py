@@ -74,7 +74,6 @@ from rclpy.qos import QoSProfile
 from rclpy.qos import ReliabilityPolicy
 from rclpy.utilities import remove_ros_args
 
-
 # Rolling window for live measured tire-angle history (replaces a constant axhline).
 MEASURED_STEER_HISTORY_S = 8.0
 
@@ -367,7 +366,7 @@ def draw_frame(axes, frame: MppiDebugFrame) -> None:
     lengths = [len(frame.reference_vel), len(frame.optimized_vel)]
     if frame.retuned_vel:
         lengths.append(len(frame.retuned_vel))
-    n_compare = min(l for l in lengths if l > 0) if any(lengths) else 0
+    n_compare = min(n for n in lengths if n > 0) if any(lengths) else 0
 
     ax_xy.clear()
     ax_xy.set_title("Trajectory (diffusion ref vs MPPI)")
@@ -579,10 +578,9 @@ def draw_frame(axes, frame: MppiDebugFrame) -> None:
     ax_steer_meas.set_xlabel("time [s] (0 = now)")
     ax_steer_meas.set_ylabel("δ_meas [rad]")
     ax_steer_meas.grid(True)
-    has_measured_history = (
-        len(frame.measured_steer_times) > 0
-        and len(frame.measured_steer_times) == len(frame.measured_steer_history)
-    )
+    has_measured_history = len(frame.measured_steer_times) > 0 and len(
+        frame.measured_steer_times
+    ) == len(frame.measured_steer_history)
     if has_measured_history:
         t_end = frame.measured_steer_times[-1]
         t_rel = [t - t_end for t in frame.measured_steer_times]
@@ -620,7 +618,14 @@ def draw_frame(axes, frame: MppiDebugFrame) -> None:
             )
             ax_cost.legend(loc="best", fontsize=8)
         else:
-            ax_cost.text(0.5, 0.5, "Retune to populate", ha="center", va="center", transform=ax_cost.transAxes)
+            ax_cost.text(
+                0.5,
+                0.5,
+                "Retune to populate",
+                ha="center",
+                va="center",
+                transform=ax_cost.transAxes,
+            )
 
     if ax_weight is not None:
         ax_weight.clear()
@@ -638,9 +643,23 @@ def draw_frame(axes, frame: MppiDebugFrame) -> None:
                 )
                 ax_weight.legend(loc="best", fontsize=8)
             else:
-                ax_weight.text(0.5, 0.5, "All weights zero", ha="center", va="center", transform=ax_weight.transAxes)
+                ax_weight.text(
+                    0.5,
+                    0.5,
+                    "All weights zero",
+                    ha="center",
+                    va="center",
+                    transform=ax_weight.transAxes,
+                )
         else:
-            ax_weight.text(0.5, 0.5, "Retune to populate", ha="center", va="center", transform=ax_weight.transAxes)
+            ax_weight.text(
+                0.5,
+                0.5,
+                "Retune to populate",
+                ha="center",
+                va="center",
+                transform=ax_weight.transAxes,
+            )
 
 
 def create_figure(*, with_retune_panel: bool = False):
@@ -1008,9 +1027,7 @@ class OfflineLogVisualizer:
             # Any frame's ego file; check first available frame.
             first_tag = f"{self._frame_ids[0]:06d}"
             if not (log_dir / f"{first_tag}_ego.csv").is_file():
-                self._status = (
-                    "WARNING: no *_ego.csv — retune uses ref[0] IC; re-log after rebuild"
-                )
+                self._status = "WARNING: no *_ego.csv — retune uses ref[0] IC; re-log after rebuild"
         self._out_dir = Path(tempfile.mkdtemp(prefix="mppi_retune_")) if enable_retune else None
         self._retune_bin = retune_bin
         self._fig, self._axes = create_figure(with_retune_panel=enable_retune)

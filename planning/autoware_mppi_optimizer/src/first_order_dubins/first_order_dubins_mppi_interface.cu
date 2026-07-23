@@ -725,7 +725,8 @@ void FirstOrderDubinsMppiInterface::setAblationOptions(
   impl_->force_cold_start_each_step = force_cold_start_each_step;
   RCLCPP_INFO(
     mppiLogger(),
-    "MPPI ablation options: ignore_obstacles=%s ignore_drivable_area=%s force_cold_start_each_step=%s",
+    "MPPI ablation options: ignore_obstacles=%s ignore_drivable_area=%s "
+    "force_cold_start_each_step=%s",
     ignore_obstacles ? "true" : "false", ignore_drivable_area ? "true" : "false",
     force_cold_start_each_step ? "true" : "false");
 }
@@ -755,8 +756,7 @@ bool FirstOrderDubinsMppiInterface::copySampleCostDistribution(
   for (int i = 0; i < num_rollouts; i += stride_n) {
     const float w = importance(i);
     normalized_weights.push_back((normalizer > 0.0F) ? (w / normalizer) : 0.0F);
-    raw_costs.push_back(
-      (w > 0.0F) ? (baseline - lambda * std::log(w)) : (baseline + 1.0e6F));
+    raw_costs.push_back((w > 0.0F) ? (baseline - lambda * std::log(w)) : (baseline + 1.0e6F));
   }
   return !raw_costs.empty();
 }

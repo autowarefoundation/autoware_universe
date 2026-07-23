@@ -207,8 +207,9 @@ inline std::vector<uint64_t> listMppiDebugFrameIds(const std::string & log_dir)
   for (const auto & entry : std::filesystem::directory_iterator(log_dir)) {
     const auto name = entry.path().filename().string();
     constexpr char kSuffix[] = "_reference.csv";
-    if (name.size() > sizeof(kSuffix) - 1U &&
-        name.compare(name.size() - (sizeof(kSuffix) - 1U), sizeof(kSuffix) - 1U, kSuffix) == 0) {
+    if (
+      name.size() > sizeof(kSuffix) - 1U &&
+      name.compare(name.size() - (sizeof(kSuffix) - 1U), sizeof(kSuffix) - 1U, kSuffix) == 0) {
       ids.push_back(std::stoull(name.substr(0, name.size() - (sizeof(kSuffix) - 1U))));
     }
   }

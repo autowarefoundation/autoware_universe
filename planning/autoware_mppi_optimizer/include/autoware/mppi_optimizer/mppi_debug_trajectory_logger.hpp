@@ -18,8 +18,9 @@
 #include "autoware/mppi_optimizer/first_order_dubins_mppi_cost_params.hpp"
 #include "autoware/mppi_optimizer/first_order_dubins_mppi_vehicle_params.hpp"
 
-#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <rclcpp/logging.hpp>
+
+#include <autoware_planning_msgs/msg/trajectory.hpp>
 
 #include <tf2/utils.h>
 
@@ -183,8 +184,9 @@ public:
     const std::string ref_path = directory_ + "/" + frame_tag + "_reference.csv";
     const std::string opt_path = directory_ + "/" + frame_tag + "_optimized.csv";
     const std::string ego_path = directory_ + "/" + frame_tag + "_ego.csv";
-    if (!writeTrajectoryCsv(ref_path, reference) || !writeTrajectoryCsv(opt_path, optimized) ||
-        !writeEgoCsv(ego_path, ego)) {
+    if (
+      !writeTrajectoryCsv(ref_path, reference) || !writeTrajectoryCsv(opt_path, optimized) ||
+      !writeEgoCsv(ego_path, ego)) {
       return;
     }
 
