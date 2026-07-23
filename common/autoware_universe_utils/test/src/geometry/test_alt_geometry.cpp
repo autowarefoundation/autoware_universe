@@ -52,7 +52,7 @@ TEST(alt_geometry, area)
   }
 }
 
-TEST(alt_geometry, DISABLED_convexHull)
+TEST(alt_geometry, convexHull)
 {
   // FIXME(soblin): convex_hull algorithm can cause infinite-loop
   /*
@@ -92,6 +92,45 @@ TEST(alt_geometry, DISABLED_convexHull)
       EXPECT_NEAR(alt_it->x(), ground_truth_it->x(), epsilon);
       EXPECT_NEAR(alt_it->y(), ground_truth_it->y(), epsilon);
     }
+  }
+
+  {  // Less than 3 points
+    Points2d points_empty;
+    EXPECT_FALSE(convex_hull(points_empty));
+
+    Points2d points_one = {{1.0, 1.0}};
+    EXPECT_FALSE(convex_hull(points_one));
+
+    Points2d points_two = {{1.0, 1.0}, {2.0, 2.0}};
+    EXPECT_FALSE(convex_hull(points_two));
+  }
+
+  {  // Points with identical X coordinates (multiple min/max X tie-breaking)
+    Points2d points = {{0.0, 0.0}, {0.0, 2.0}, {2.0, 0.0}, {2.0, 2.0}, {1.0, 1.0}};
+    const auto result = convex_hull(points);
+    ASSERT_TRUE(result);
+    EXPECT_GE(result->vertices().size(), 4U);
+  }
+
+  {  // Collinear points
+    Points2d points = {{0.0, 0.0}, {1.0, 1.0}, {2.0, 2.0}, {3.0, 3.0}};
+    const auto result = convex_hull(points);
+    ASSERT_FALSE(result);
+  }
+
+  {  // Duplicate points
+    Points2d points = {{0.0, 0.0}, {0.0, 0.0}, {0.0, 2.0}, {2.0, 0.0}, {2.0, 2.0}, {2.0, 2.0}};
+    const auto result = convex_hull(points);
+    ASSERT_TRUE(result);
+    EXPECT_GE(result->vertices().size(), 4U);
+  }
+
+  {  // Near-collinear points (floating point precision noise)
+    Points2d points = {{0.0, 0.0}, {1.0, 1.0 + 1e-12}, {2.0, 2.0 - 1e-12},
+                       {3.0, 3.0}, {0.0, 3.0},         {3.0, 0.0}};
+    const auto result = convex_hull(points);
+    ASSERT_TRUE(result);
+    EXPECT_GE(result->vertices().size(), 4U);
   }
 }
 
@@ -186,6 +225,28 @@ TEST(alt_geometry, coveredBy)
     const auto result = covered_by(point, ConvexPolygon2d::create({p1, p2, p3, p4}).value());
 
     EXPECT_FALSE(result);
+  }
+
+  {  // The point is exactly a vertex of the polygon
+    const Point2d point = {1.0, 1.0};
+    const Point2d p1 = {1.0, 1.0};
+    const Point2d p2 = {1.0, -1.0};
+    const Point2d p3 = {-1.0, -1.0};
+    const Point2d p4 = {-1.0, 1.0};
+    const auto result = covered_by(point, ConvexPolygon2d::create({p1, p2, p3, p4}).value());
+
+    EXPECT_TRUE(result);
+  }
+
+  {  // The point is on a horizontal edge
+    const Point2d point = {0.0, 1.0};
+    const Point2d p1 = {1.0, 1.0};
+    const Point2d p2 = {1.0, -1.0};
+    const Point2d p3 = {-1.0, -1.0};
+    const Point2d p4 = {-1.0, 1.0};
+    const auto result = covered_by(point, ConvexPolygon2d::create({p1, p2, p3, p4}).value());
+
+    EXPECT_TRUE(result);
   }
 }
 
@@ -360,6 +421,63 @@ TEST(geometry, envelope)
       EXPECT_NEAR(alt_it->x(), ground_truth_it->x(), epsilon);
       EXPECT_NEAR(alt_it->y(), ground_truth_it->y(), epsilon);
     }
+  }
+}
+
+TEST(alt_geometry, equals)
+{
+  using autoware::universe_utils::equals;
+  using autoware::universe_utils::alt::Point2d;
+  using autoware::universe_utils::alt::PointList2d;
+  using autoware::universe_utils::alt::Polygon2d;
+
+  {  // Point equality within 1e-3
+    const Point2d p1 = {1.0, 2.0};
+    const Point2d p2 = {1.0 + 1e-4, 2.0 - 1e-4};
+    EXPECT_TRUE(equals(p1, p2));
+  }
+
+  {  // Point inequality beyond 1e-3
+    const Point2d p1 = {1.0, 2.0};
+    const Point2d p2 = {1.0 + 2e-3, 2.0};
+    EXPECT_FALSE(equals(p1, p2));
+  }
+
+  {  // Polygon equality
+    const auto poly1 = Polygon2d::create(
+                         PointList2d{
+                           {2.0, 1.3},
+                           {2.4, 1.7},
+                           {2.8, 1.8},
+                           {3.4, 1.2},
+                           {3.7, 1.6},
+                           {3.4, 2.0},
+                           {4.1, 3.0},
+                           {5.3, 2.6},
+                           {5.4, 1.2},
+                           {4.9, 0.8},
+                           {2.9, 0.7},
+                           {2.0, 1.3}},
+                         {PointList2d{{4.0, 2.0}, {4.2, 1.4}, {4.8, 1.9}, {4.4, 2.2}, {4.0, 2.0}}})
+                         .value();
+    const auto poly2 =
+      Polygon2d::create(
+        PointList2d{
+          {2.0 + 1e-4, 1.3 - 1e-4},
+          {2.4, 1.7},
+          {2.8, 1.8},
+          {3.4, 1.2},
+          {3.7, 1.6},
+          {3.4, 2.0},
+          {4.1, 3.0},
+          {5.3, 2.6},
+          {5.4, 1.2},
+          {4.9, 0.8},
+          {2.9, 0.7},
+          {2.0, 1.3}},
+        {PointList2d{{4.0 + 1e-4, 2.0 - 1e-4}, {4.2, 1.4}, {4.8, 1.9}, {4.4, 2.2}, {4.0, 2.0}}})
+        .value();
+    EXPECT_TRUE(equals(poly1, poly2));
   }
 }
 
@@ -539,6 +657,15 @@ TEST(alt_geometry, isAbove)
 
     EXPECT_FALSE(result);
   }
+
+  {  // Vertical segment
+    const Point2d point = {-1.0, 0.0};
+    const Point2d p1 = {0.0, -1.0};
+    const Point2d p2 = {0.0, 1.0};
+    const auto result = is_above(point, p1, p2);
+
+    EXPECT_TRUE(result);
+  }
 }
 
 TEST(alt_geometry, isClockwise)
@@ -566,6 +693,36 @@ TEST(alt_geometry, isClockwise)
     const auto result = is_clockwise(vertices);
 
     EXPECT_FALSE(result);
+  }
+}
+
+TEST(alt_geometry, isConvex)
+{
+  using autoware::universe_utils::is_convex;
+  using autoware::universe_utils::alt::PointList2d;
+  using autoware::universe_utils::alt::Polygon2d;
+
+  {  // Convex polygon
+    const auto poly =
+      Polygon2d::create(PointList2d{{0.0, 0.0}, {0.0, 2.0}, {2.0, 2.0}, {2.0, 0.0}, {0.0, 0.0}}, {})
+        .value();
+    EXPECT_TRUE(is_convex(poly));
+  }
+
+  {  // Concave polygon (indent)
+    const auto poly =
+      Polygon2d::create(
+        PointList2d{{0.0, 0.0}, {0.0, 2.0}, {1.0, 1.0}, {2.0, 2.0}, {2.0, 0.0}, {0.0, 0.0}}, {})
+        .value();
+    EXPECT_FALSE(is_convex(poly));
+  }
+
+  {  // Polygon with inner hole
+    const auto poly = Polygon2d::create(
+                        PointList2d{{0.0, 0.0}, {0.0, 4.0}, {4.0, 4.0}, {4.0, 0.0}, {0.0, 0.0}},
+                        {PointList2d{{1.0, 1.0}, {1.0, 2.0}, {2.0, 2.0}, {2.0, 1.0}, {1.0, 1.0}}})
+                        .value();
+    EXPECT_FALSE(is_convex(poly));
   }
 }
 
@@ -797,7 +954,7 @@ TEST(alt_geometry, areaRand)
   }
 }
 
-TEST(alt_geometry, DISABLED_convexHullRand)
+TEST(alt_geometry, convexHullRand)
 {
   std::vector<autoware::universe_utils::Polygon2d> polygons;
   constexpr auto polygons_nb = 100;
