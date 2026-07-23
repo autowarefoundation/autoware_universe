@@ -59,9 +59,7 @@ void RouteDistanceCalculator::set_map(const autoware_map_msgs::msg::LaneletMapBi
   is_map_ready_ = true;
 }
 
-void RouteDistanceCalculator::set_route(
-  const autoware_planning_msgs::msg::LaneletRoute & msg,
-  const geometry_msgs::msg::Pose & current_pose)
+void RouteDistanceCalculator::set_route(const autoware_planning_msgs::msg::LaneletRoute & msg)
 {
   goal_pose_ = msg.goal_pose;
   is_route_ready_ = false;
