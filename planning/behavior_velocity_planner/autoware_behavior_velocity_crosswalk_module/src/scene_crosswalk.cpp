@@ -788,15 +788,35 @@ std::optional<CollisionPoint> CrosswalkModule::getCollisionPoint(
 
   double minimum_stop_dist = std::numeric_limits<double>::max();
   std::optional<CollisionPoint> nearest_collision_point{std::nullopt};
+
+  // Precompute a bounding box of the attention area once, plus the object's bounding radius, for
+  // a cheap broad-phase reject in the per-step loop below (profiling showed most steps are far
+  // from the crosswalk, so their polygon intersection is empty -- wasted convex_hull + intersection).
+  boost::geometry::model::box<Point2d> attention_bbox;
+  boost::geometry::envelope(attention_area, attention_bbox);
+  const double obj_bounding_radius =
+    0.5 * std::hypot(object.shape.dimensions.x, object.shape.dimensions.y);
+
   for (const auto & obj_path : object.kinematics.predicted_paths) {
     size_t start_idx{0};
     bool is_start_idx_initialized{false};
     for (size_t i = 0; i < obj_path.path.size(); ++i) {
-      // For effective computation, the point and polygon intersection is calculated first.
-      const auto obj_one_step_polygon = createMultiStepPolygon(obj_path.path, obj_polygon, i, i);
-      const auto one_step_intersection_polygons =
-        calcOverlappingPoints(obj_one_step_polygon, attention_area);
-      if (!one_step_intersection_polygons.empty()) {
+      // Broad-phase reject: if the object's bounding box at this step cannot reach the attention
+      // area, the one-step polygon intersection is necessarily empty; skip the expensive
+      // convex_hull + intersection.
+      const auto & obj_pos_i = autoware_utils::get_pose(obj_path.path.at(i)).position;
+      const boost::geometry::model::box<Point2d> obj_bbox(
+        Point2d(obj_pos_i.x - obj_bounding_radius, obj_pos_i.y - obj_bounding_radius),
+        Point2d(obj_pos_i.x + obj_bounding_radius, obj_pos_i.y + obj_bounding_radius));
+      bool one_step_overlaps = false;
+      if (boost::geometry::intersects(obj_bbox, attention_bbox)) {
+        // For effective computation, the point and polygon intersection is calculated first.
+        const auto obj_one_step_polygon =
+          createMultiStepPolygon(obj_path.path, obj_polygon, i, i);
+        one_step_overlaps =
+          !calcOverlappingPoints(obj_one_step_polygon, attention_area).empty();
+      }
+      if (one_step_overlaps) {
         if (!is_start_idx_initialized) {
           start_idx = i;
           is_start_idx_initialized = true;
