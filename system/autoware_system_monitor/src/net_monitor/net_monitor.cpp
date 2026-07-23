@@ -664,7 +664,7 @@ bool NetMonitor::connect_service()
 
   // Connect socket
   boost::system::error_code error_code;
-  socket_->connect(endpoint, error_code);
+  error_code = socket_->connect(endpoint, error_code);
 
   if (error_code) {
     RCLCPP_ERROR_ONCE(get_logger(), "Failed to connect socket. %s", error_code.message().c_str());
