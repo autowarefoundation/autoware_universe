@@ -6,6 +6,7 @@
   <description>RViz panel that displays the trajectory generator currently selected by the trajectory ranker</description>
 
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
+  <maintainer email="hayate.sugahara@tier4.jp">Hayate Sugahara</maintainer>
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
 
   <license>Apache License 2.0</license>
