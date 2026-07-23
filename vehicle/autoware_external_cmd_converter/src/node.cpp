@@ -34,6 +34,18 @@ ExternalCmdConverterNode::ExternalCmdConverterNode(const rclcpp::NodeOptions & n
   heartbeat_sub_ = create_subscription<ManualOperatorHeartbeat>(
     "in/heartbeat", 1, std::bind(&ExternalCmdConverterNode::on_heartbeat, this, _1));
 
+  steering_cmd_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<SteeringCommand>(
+      this, "in/steering_cmd");
+  velocity_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(this, "in/odometry");
+  gear_cmd_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<GearCommand>(
+      this, "in/gear_cmd");
+  gate_mode_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<GateMode>(
+      this, "in/current_gate_mode");
+
   // Parameter
   ref_vel_gain_ = declare_parameter<double>("ref_vel_gain");
 

@@ -17,6 +17,7 @@
 
 #include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_raw_vehicle_cmd_converter/accel_map.hpp>
 #include <autoware_raw_vehicle_cmd_converter/brake_map.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -62,21 +63,18 @@ private:
   AUTOWARE_SUBSCRIPTION_PTR(ManualOperatorHeartbeat) heartbeat_sub_;
 
   // Polling Subscriber
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(SteeringCommand)
-  steering_cmd_sub_ = create_polling_subscriber<SteeringCommand>("in/steering_cmd");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry)
-  velocity_sub_ = create_polling_subscriber<Odometry>("in/odometry");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(GearCommand)
-  gear_cmd_sub_ = create_polling_subscriber<GearCommand>("in/gear_cmd");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(GateMode)
-  gate_mode_sub_ = create_polling_subscriber<GateMode>("in/current_gate_mode");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<SteeringCommand>::SharedPtr
+    steering_cmd_sub_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr velocity_sub_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<GearCommand>::SharedPtr gear_cmd_sub_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<GateMode>::SharedPtr gate_mode_sub_;
 
   void on_pedals_cmd(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PedalsCommand) & cmd_ptr);
   void on_heartbeat(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ManualOperatorHeartbeat) & msg);
 
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) current_velocity_ptr_;  // [m/s]
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(GearCommand) current_gear_cmd_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(GateMode) current_gate_mode_;
+  Odometry::ConstSharedPtr current_velocity_ptr_;  // [m/s]
+  GearCommand::ConstSharedPtr current_gear_cmd_;
+  GateMode::ConstSharedPtr current_gate_mode_;
 
   std::shared_ptr<rclcpp::Time> latest_heartbeat_received_time_;
   std::shared_ptr<rclcpp::Time> latest_cmd_received_time_;
