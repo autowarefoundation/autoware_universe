@@ -31,6 +31,7 @@ std::string param_name(const std::string & prefix, const std::string & name)
 void declare_first_order_dubins_mppi_cost_params(rclcpp::Node & node, const std::string & prefix)
 {
   const FirstOrderDubinsMppiCostParams defaults;
+  node.declare_parameter(param_name(prefix, "lambda"), defaults.lambda);
   node.declare_parameter(param_name(prefix, "desired_speed"), defaults.desired_speed);
   node.declare_parameter(param_name(prefix, "speed_coeff"), defaults.speed_coeff);
   node.declare_parameter(param_name(prefix, "track_coeff"), defaults.track_coeff);
@@ -43,6 +44,7 @@ void declare_first_order_dubins_mppi_cost_params(rclcpp::Node & node, const std:
     param_name(prefix, "boundary_threshold_right"), defaults.boundary_threshold_right);
   node.declare_parameter(param_name(prefix, "accel_cmd_coeff"), defaults.accel_cmd_coeff);
   node.declare_parameter(param_name(prefix, "steer_cmd_coeff"), defaults.steer_cmd_coeff);
+  node.declare_parameter(param_name(prefix, "steer_rate_coeff"), defaults.steer_rate_coeff);
   node.declare_parameter(
     param_name(prefix, "lateral_acceleration_coeff"), defaults.lateral_acceleration_coeff);
   node.declare_parameter(param_name(prefix, "lateral_jerk_coeff"), defaults.lateral_jerk_coeff);
@@ -60,6 +62,7 @@ FirstOrderDubinsMppiCostParams get_first_order_dubins_mppi_cost_params(
   const rclcpp::Node & node, const std::string & prefix)
 {
   FirstOrderDubinsMppiCostParams params;
+  params.lambda = static_cast<float>(node.get_parameter(param_name(prefix, "lambda")).as_double());
   params.desired_speed =
     static_cast<float>(node.get_parameter(param_name(prefix, "desired_speed")).as_double());
   params.speed_coeff =
@@ -80,6 +83,8 @@ FirstOrderDubinsMppiCostParams get_first_order_dubins_mppi_cost_params(
     static_cast<float>(node.get_parameter(param_name(prefix, "accel_cmd_coeff")).as_double());
   params.steer_cmd_coeff =
     static_cast<float>(node.get_parameter(param_name(prefix, "steer_cmd_coeff")).as_double());
+  params.steer_rate_coeff =
+    static_cast<float>(node.get_parameter(param_name(prefix, "steer_rate_coeff")).as_double());
   params.lateral_acceleration_coeff = static_cast<float>(
     node.get_parameter(param_name(prefix, "lateral_acceleration_coeff")).as_double());
   params.lateral_jerk_coeff =

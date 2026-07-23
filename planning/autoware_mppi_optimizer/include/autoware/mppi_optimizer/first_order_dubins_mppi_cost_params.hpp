@@ -22,6 +22,8 @@ namespace autoware::mppi_optimizer
  * mppi_optimizer.param.yaml */
 struct FirstOrderDubinsMppiCostParams
 {
+  /** Softmax temperature for trajectory weighting (higher = softer weighting). */
+  float lambda{1500.0F};
   float desired_speed{3.0F};
   float speed_coeff{500.0F};
   float track_coeff{1000.0F};
@@ -32,6 +34,8 @@ struct FirstOrderDubinsMppiCostParams
   float boundary_threshold_right{-1.0F};
   float accel_cmd_coeff{0.0F};
   float steer_cmd_coeff{0.0F};
+  /** Host/offline field; GPU cost wiring lives on the reduce_jitter stack. */
+  float steer_rate_coeff{0.0F};
   float lateral_acceleration_coeff{300.0F};
   float lateral_jerk_coeff{300.0F};
   float longitudinal_jerk_coeff{10.0F};
