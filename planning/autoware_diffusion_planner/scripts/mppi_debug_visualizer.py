@@ -75,7 +75,7 @@ from rclpy.qos import ReliabilityPolicy
 from rclpy.utilities import remove_ros_args
 
 # Rolling window for live measured tire-angle history (replaces a constant axhline).
-MEASURED_STEER_HISTORY_S = 8.0
+MEASURED_STEER_HISTORY_S = 16.0
 
 DEFAULT_PARAMS: Dict[str, float] = {
     "lambda": 3000.0,
@@ -357,15 +357,36 @@ def frame_from_loaded(
 
 
 def draw_frame(axes, frame: MppiDebugFrame) -> None:
-    if len(axes) >= 8:
-        ax_xy, ax_heading, ax_vel, ax_accel, ax_steer_cmd, ax_steer_meas, ax_cost, ax_weight = axes
-    else:
-        ax_xy, ax_heading, ax_vel, ax_accel, ax_steer_cmd, ax_steer_meas = axes
+    if len(axes) >= 10:
+        (
+            ax_xy,
+            ax_x,
+            ax_y,
+            ax_heading,
+            ax_vel,
+            ax_accel,
+            ax_steer_cmd,
+            ax_steer_meas,
+            ax_cost,
+            ax_weight,
+        ) = axes
+    elif len(axes) >= 8:
+        ax_xy, ax_x, ax_y, ax_heading, ax_vel, ax_accel, ax_steer_cmd, ax_steer_meas = axes
         ax_cost = ax_weight = None
+    else:
+        # Backward-compatible unpack (pre x/y tracking axes).
+        ax_xy, ax_heading, ax_vel, ax_accel, ax_steer_cmd, ax_steer_meas = axes
+        ax_x = ax_y = ax_cost = ax_weight = None
 
     lengths = [len(frame.reference_vel), len(frame.optimized_vel)]
     if frame.retuned_vel:
         lengths.append(len(frame.retuned_vel))
+    if frame.reference_xy:
+        lengths.append(len(frame.reference_xy[0]))
+    if frame.optimized_xy:
+        lengths.append(len(frame.optimized_xy[0]))
+    if frame.retuned_xy:
+        lengths.append(len(frame.retuned_xy[0]))
     n_compare = min(n for n in lengths if n > 0) if any(lengths) else 0
 
     ax_xy.clear()
@@ -422,6 +443,45 @@ def draw_frame(axes, frame: MppiDebugFrame) -> None:
     ax_xy.legend(loc="best")
 
     idx = list(range(n_compare)) if n_compare > 0 else []
+
+    def _plot_xy_component(ax, title: str, ylabel: str, component: int) -> None:
+        if ax is None:
+            return
+        ax.clear()
+        ax.set_title(title)
+        ax.set_xlabel("point index")
+        ax.set_ylabel(ylabel)
+        ax.grid(True)
+        if n_compare <= 0:
+            return
+        if frame.reference_xy and len(frame.reference_xy[component]) >= n_compare:
+            ax.plot(
+                idx,
+                frame.reference_xy[component][:n_compare],
+                "c--",
+                linewidth=2,
+                label="diffusion",
+            )
+        if frame.optimized_xy and len(frame.optimized_xy[component]) >= n_compare:
+            ax.plot(
+                idx,
+                frame.optimized_xy[component][:n_compare],
+                "r-",
+                linewidth=2,
+                label="MPPI logged",
+            )
+        if frame.retuned_xy and len(frame.retuned_xy[component]) >= n_compare:
+            ax.plot(
+                idx,
+                frame.retuned_xy[component][:n_compare],
+                color="tab:green",
+                linewidth=2.2,
+                label="MPPI retuned",
+            )
+        ax.legend(loc="best")
+
+    _plot_xy_component(ax_x, "X tracking", "x [m]", 0)
+    _plot_xy_component(ax_y, "Y tracking", "y [m]", 1)
 
     ax_heading.clear()
     ax_heading.set_title("Heading")
@@ -664,27 +724,31 @@ def draw_frame(axes, frame: MppiDebugFrame) -> None:
 
 def create_figure(*, with_retune_panel: bool = False):
     if with_retune_panel:
-        fig = plt.figure(figsize=(17, 14))
+        fig = plt.figure(figsize=(17, 16))
         gs = gridspec.GridSpec(
-            6,
+            8,
             3,
             figure=fig,
             width_ratios=[1.25, 1.0, 0.78],
-            height_ratios=[1.0, 1.0, 1.0, 1.0, 0.85, 0.85],
+            height_ratios=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.85, 0.85],
             wspace=0.30,
             hspace=0.45,
         )
-        ax_xy = fig.add_subplot(gs[0:4, 0])
-        ax_cost = fig.add_subplot(gs[4, 0])
-        ax_weight = fig.add_subplot(gs[5, 0])
-        ax_heading = fig.add_subplot(gs[0, 1])
-        ax_vel = fig.add_subplot(gs[1, 1])
-        ax_accel = fig.add_subplot(gs[2, 1])
-        ax_steer_cmd = fig.add_subplot(gs[3, 1])
-        ax_steer_meas = fig.add_subplot(gs[4:, 1])
+        ax_xy = fig.add_subplot(gs[0:6, 0])
+        ax_cost = fig.add_subplot(gs[6, 0])
+        ax_weight = fig.add_subplot(gs[7, 0])
+        ax_x = fig.add_subplot(gs[0, 1])
+        ax_y = fig.add_subplot(gs[1, 1])
+        ax_heading = fig.add_subplot(gs[2, 1])
+        ax_vel = fig.add_subplot(gs[3, 1])
+        ax_accel = fig.add_subplot(gs[4, 1])
+        ax_steer_cmd = fig.add_subplot(gs[5, 1])
+        ax_steer_meas = fig.add_subplot(gs[6:, 1])
         fig.canvas.manager.set_window_title("Diffusion Planner MPPI Debug Visualizer")
         return fig, (
             ax_xy,
+            ax_x,
+            ax_y,
             ax_heading,
             ax_vel,
             ax_accel,
@@ -694,16 +758,18 @@ def create_figure(*, with_retune_panel: bool = False):
             ax_weight,
         )
 
-    fig = plt.figure(figsize=(14, 12))
-    gs = gridspec.GridSpec(5, 2, figure=fig, width_ratios=[1.2, 1.0], wspace=0.28, hspace=0.42)
+    fig = plt.figure(figsize=(14, 14))
+    gs = gridspec.GridSpec(7, 2, figure=fig, width_ratios=[1.2, 1.0], wspace=0.28, hspace=0.42)
     ax_xy = fig.add_subplot(gs[:, 0])
-    ax_heading = fig.add_subplot(gs[0, 1])
-    ax_vel = fig.add_subplot(gs[1, 1])
-    ax_accel = fig.add_subplot(gs[2, 1])
-    ax_steer_cmd = fig.add_subplot(gs[3, 1])
-    ax_steer_meas = fig.add_subplot(gs[4, 1])
+    ax_x = fig.add_subplot(gs[0, 1])
+    ax_y = fig.add_subplot(gs[1, 1])
+    ax_heading = fig.add_subplot(gs[2, 1])
+    ax_vel = fig.add_subplot(gs[3, 1])
+    ax_accel = fig.add_subplot(gs[4, 1])
+    ax_steer_cmd = fig.add_subplot(gs[5, 1])
+    ax_steer_meas = fig.add_subplot(gs[6, 1])
     fig.canvas.manager.set_window_title("Diffusion Planner MPPI Debug Visualizer")
-    return fig, (ax_xy, ax_heading, ax_vel, ax_accel, ax_steer_cmd, ax_steer_meas)
+    return fig, (ax_xy, ax_x, ax_y, ax_heading, ax_vel, ax_accel, ax_steer_cmd, ax_steer_meas)
 
 
 def load_params_yaml(path: Optional[Path]) -> Dict[str, float]:
