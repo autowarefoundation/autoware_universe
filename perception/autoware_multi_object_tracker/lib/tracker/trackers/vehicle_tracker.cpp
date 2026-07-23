@@ -64,8 +64,7 @@ VehicleTracker::VehicleTracker(
   object_model_(object_model),
   shape_model_(object_model),
   shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER),
-  sign_belief_(
-    object_model.orientation_sign_belief, object.kinematics.orientation_availability, time)
+  sign_belief_(object.kinematics.orientation_availability, time)
 {
   // set tracker type based on object model
   switch (object_model.type) {

@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UPDATE__ORIENTATION_SIGN_BELIEF_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UPDATE__ORIENTATION_SIGN_BELIEF_HPP_
 
-#include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <rclcpp/time.hpp>
@@ -31,12 +30,29 @@ namespace autoware::multi_object_tracker
 // uninformed prior over time; the tracked longitudinal velocity contributes memorylessly at
 // decision time, weighted by speed and velocity certainty. A confidently negative fused
 // agreement triggers a 180° flip, and negation on flip provides hysteresis against oscillation.
+// Class-independent tuning constants shared by every vehicle tracker.
+struct OrientationSignBeliefParams
+{
+  double tau{3.0};                 // [s] evidence memory time constant
+  double stationary_var{0.25};     // [-] variance of the uninformed agreement prior
+  double r_yaw_available{0.5};     // [-] yaw-vote noise variance, sign known
+  double r_yaw_sign_unknown{2.0};  // [-] yaw-vote noise variance, sign unknown
+  double dead_zone{M_PI / 6.0};    // [rad] no-vote band around |yaw_diff| = 90 deg
+  double r_vel{0.1};               // [-] velocity-evidence noise variance at the par speed
+  double vote_vel_par{5.0 / 3.6};  // [m/s] speed where the velocity evidence saturates
+  double vote_vel_var{1.0};        // [m^2/s^2] velocity variance where its certainty halves
+  double flip_z{1.3};              // [-] posterior confidence gate (z-score) for flipping
+  double flip_min_agreement{0.2};  // [-] fused-agreement magnitude floor for flipping
+};
+
 class OrientationSignBelief
 {
 public:
+  using Params = OrientationSignBeliefParams;
+
   OrientationSignBelief(
-    const object_model::OrientationSignBelief & params,
-    const types::OrientationAvailability initial_availability, const rclcpp::Time & time)
+    const types::OrientationAvailability initial_availability, const rclcpp::Time & time,
+    const Params & params = Params{})
   : params_(params), variance_(params.stationary_var), last_update_time_(time)
   {
     // The seeding detection also seeds the tracker yaw, so it counts as one agreeing vote.
@@ -110,7 +126,7 @@ private:
     variance_ *= (1.0 - gain);
   }
 
-  object_model::OrientationSignBelief params_;
+  Params params_;
   double agreement_{0.0};
   double variance_{0.0};
   rclcpp::Time last_update_time_;

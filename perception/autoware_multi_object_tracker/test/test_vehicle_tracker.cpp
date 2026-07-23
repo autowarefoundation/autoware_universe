@@ -414,9 +414,10 @@ TEST(ExportedPoseCovariance, PositiveSemiDefinite)
 // ---------------------------------------------------------------------------------------------
 namespace
 {
-const object_model::OrientationSignBelief & beliefParams()
+const OrientationSignBelief::Params & beliefParams()
 {
-  return object_model::normal_vehicle.orientation_sign_belief;
+  static const OrientationSignBelief::Params params{};
+  return params;
 }
 
 rclcpp::Time beliefTime(const double seconds = 0.0)
@@ -426,7 +427,7 @@ rclcpp::Time beliefTime(const double seconds = 0.0)
 
 OrientationSignBelief seededBelief(const types::OrientationAvailability availability)
 {
-  return OrientationSignBelief(beliefParams(), availability, beliefTime());
+  return OrientationSignBelief(availability, beliefTime(), beliefParams());
 }
 
 // Expected posterior of one KF update with measurement z and noise r from prior (0, Q).

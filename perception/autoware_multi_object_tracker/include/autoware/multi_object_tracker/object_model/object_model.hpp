@@ -114,19 +114,6 @@ struct BicycleModelState
   double wheel_pos_rear_min{0.0};     // [m]
   double length_uncertainty{0.0};     // [m] length uncertainty
 };
-struct OrientationSignBelief
-{
-  double tau{0.0};                 // [s] evidence memory time constant
-  double stationary_var{0.0};      // [-] variance of the uninformed agreement prior
-  double r_yaw_available{0.0};     // [-] yaw-vote noise variance, sign known
-  double r_yaw_sign_unknown{0.0};  // [-] yaw-vote noise variance, sign unknown
-  double dead_zone{0.0};           // [rad] no-vote band around |yaw_diff| = 90 deg
-  double r_vel{0.0};               // [-] velocity-evidence noise variance at the par speed
-  double vote_vel_par{0.0};        // [m/s] speed where the velocity evidence saturates
-  double vote_vel_var{0.0};        // [m^2/s^2] velocity variance where its certainty halves
-  double flip_z{0.0};              // [-] posterior confidence gate (z-score) for flipping
-  double flip_min_agreement{0.0};  // [-] fused-agreement magnitude floor for flipping
-};
 
 class ObjectModel
 {
@@ -139,7 +126,6 @@ public:
   StateCovariance initial_covariance;
   StateCovariance measurement_covariance;
   BicycleModelState bicycle_state;
-  OrientationSignBelief orientation_sign_belief;
 
   explicit ObjectModel(const ObjectModelType & type_set)
   {
@@ -189,18 +175,6 @@ public:
         bicycle_state.wheel_pos_front_min = 1.0;
         bicycle_state.wheel_pos_rear_min = 1.0;
         bicycle_state.length_uncertainty = 1.0;
-
-        // orientation sign belief
-        orientation_sign_belief.tau = 3.0;
-        orientation_sign_belief.stationary_var = sq(0.5);
-        orientation_sign_belief.r_yaw_available = 0.5;
-        orientation_sign_belief.r_yaw_sign_unknown = 2.0;
-        orientation_sign_belief.dead_zone = deg2rad(30.0);
-        orientation_sign_belief.r_vel = 0.1;
-        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
-        orientation_sign_belief.vote_vel_var = sq(1.0);
-        orientation_sign_belief.flip_z = 1.3;
-        orientation_sign_belief.flip_min_agreement = 0.2;
         break;
 
       case ObjectModelType::NormalVehicle:
@@ -247,18 +221,6 @@ public:
         bicycle_state.wheel_pos_front_min = 1.0;
         bicycle_state.wheel_pos_rear_min = 1.0;
         bicycle_state.length_uncertainty = 0.5;
-
-        // orientation sign belief
-        orientation_sign_belief.tau = 3.0;
-        orientation_sign_belief.stationary_var = sq(0.5);
-        orientation_sign_belief.r_yaw_available = 0.5;
-        orientation_sign_belief.r_yaw_sign_unknown = 2.0;
-        orientation_sign_belief.dead_zone = deg2rad(30.0);
-        orientation_sign_belief.r_vel = 0.1;
-        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
-        orientation_sign_belief.vote_vel_var = sq(1.0);
-        orientation_sign_belief.flip_z = 1.3;
-        orientation_sign_belief.flip_min_agreement = 0.2;
         break;
 
       case ObjectModelType::BigVehicle:
@@ -305,18 +267,6 @@ public:
         bicycle_state.wheel_pos_front_min = 1.5;
         bicycle_state.wheel_pos_rear_min = 1.5;
         bicycle_state.length_uncertainty = 0.8;
-
-        // orientation sign belief
-        orientation_sign_belief.tau = 3.0;
-        orientation_sign_belief.stationary_var = sq(0.5);
-        orientation_sign_belief.r_yaw_available = 0.5;
-        orientation_sign_belief.r_yaw_sign_unknown = 2.0;
-        orientation_sign_belief.dead_zone = deg2rad(30.0);
-        orientation_sign_belief.r_vel = 0.1;
-        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
-        orientation_sign_belief.vote_vel_var = sq(1.0);
-        orientation_sign_belief.flip_z = 1.3;
-        orientation_sign_belief.flip_min_agreement = 0.2;
         break;
 
       case ObjectModelType::Bicycle:
@@ -363,18 +313,6 @@ public:
         bicycle_state.wheel_pos_front_min = 0.3;
         bicycle_state.wheel_pos_rear_min = 0.3;
         bicycle_state.length_uncertainty = 0.3;
-
-        // orientation sign belief
-        orientation_sign_belief.tau = 3.0;
-        orientation_sign_belief.stationary_var = sq(0.5);
-        orientation_sign_belief.r_yaw_available = 0.5;
-        orientation_sign_belief.r_yaw_sign_unknown = 2.0;
-        orientation_sign_belief.dead_zone = deg2rad(30.0);
-        orientation_sign_belief.r_vel = 0.1;
-        orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
-        orientation_sign_belief.vote_vel_var = sq(1.0);
-        orientation_sign_belief.flip_z = 1.3;
-        orientation_sign_belief.flip_min_agreement = 0.2;
         break;
 
       case ObjectModelType::Pedestrian:
