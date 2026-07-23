@@ -142,7 +142,13 @@ void sortCrosswalksByDistance(
     const auto l2_end_points_on_crosswalk =
       getPathEndPointsOnCrosswalk(ego_path, l2.polygon2d().basicPolygon(), ego_pos);
 
-    if (!l1_end_points_on_crosswalk || !l2_end_points_on_crosswalk) {
+    if (!l1_end_points_on_crosswalk && !l2_end_points_on_crosswalk) {
+      return l1.id() < l2.id();
+    }
+    if (!l1_end_points_on_crosswalk) {
+      return false;
+    }
+    if (!l2_end_points_on_crosswalk) {
       return true;
     }
 
