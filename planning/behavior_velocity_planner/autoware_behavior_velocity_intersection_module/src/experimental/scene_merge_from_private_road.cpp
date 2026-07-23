@@ -31,6 +31,30 @@
 
 namespace autoware::behavior_velocity_planner::experimental
 {
+
+namespace
+{
+
+template <class T>
+const T & checkedRef(const std::optional<T> & value)
+{
+  if (!value) {
+    throw std::bad_optional_access();
+  }
+  return *value;
+}
+
+template <class T>
+T checkedOpt(const std::optional<T> & value)
+{
+  if (!value) {
+    throw std::bad_optional_access();
+  }
+  return *value;
+}
+
+}  // namespace
+
 namespace bg = boost::geometry;
 
 namespace
@@ -99,7 +123,7 @@ static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
   const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
 {
   const auto & path_ip = interpolated_path_info.path;
-  const auto [lane_start, end] = interpolated_path_info.lane_id_interval.value();
+  const auto [lane_start, end] = checkedOpt(interpolated_path_info.lane_id_interval);
   const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
   const size_t start =
     static_cast<size_t>(std::max<int>(0, static_cast<int>(lane_start) - vehicle_length_idx));

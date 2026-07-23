@@ -41,6 +41,30 @@
 
 namespace autoware::behavior_velocity_planner
 {
+
+namespace
+{
+
+template <class T>
+const T & checkedRef(const std::optional<T> & value)
+{
+  if (!value) {
+    throw std::bad_optional_access();
+  }
+  return *value;
+}
+
+template <class T>
+T checkedOpt(const std::optional<T> & value)
+{
+  if (!value) {
+    throw std::bad_optional_access();
+  }
+  return *value;
+}
+
+}  // namespace
+
 IntersectionModule::IntersectionModule(
   const int64_t module_id, const int64_t lane_id,
   [[maybe_unused]] std::shared_ptr<const PlannerData> planner_data,
@@ -166,7 +190,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     return prepare_data.err();
   }
   const auto [interpolated_path_info, intersection_stoplines, path_lanelets] = prepare_data.ok();
-  const auto & intersection_lanelets = intersection_lanelets_.value();
+  const auto & intersection_lanelets = checkedRef(intersection_lanelets_);
 
   // NOTE: this level is based on the updateTrafficSignalObservation() which is latest
   const auto traffic_prioritized_level = getTrafficPrioritizedLevel();
@@ -205,7 +229,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   if (!intersection_lanelets.first_attention_area()) {
     return InternalError{"attention area is empty"};
   }
-  const auto first_attention_area = intersection_lanelets.first_attention_area().value();
+  const auto first_attention_area = checkedOpt(intersection_lanelets.first_attention_area());
   const auto default_stopline_idx_opt = intersection_stoplines.default_stopline;
   if (!default_stopline_idx_opt) {
     return InternalError{"default stop line is null"};
@@ -1369,7 +1393,7 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
   const auto & current_pose = planner_data_->current_odometry->pose;
   const auto closest_idx = intersection_stoplines.closest_idx;
   const auto original_pass_judge_line_idx = intersection_stoplines.pass_judge_line;
-  const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
+  const auto occlusion_stopline_idx = checkedOpt(intersection_stoplines.occlusion_peeking_stopline);
   const size_t pass_judge_line_idx = [&]() {
     if (planner_param_.occlusion.enable) {
       // ==========================================================================================
