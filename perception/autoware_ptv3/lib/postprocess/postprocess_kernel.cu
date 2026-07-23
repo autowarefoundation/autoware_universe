@@ -26,16 +26,6 @@ namespace autoware::ptv3
 {
 namespace
 {
-struct OutputSegmentationPointType
-{
-  float x;
-  float y;
-  float z;
-  std::uint8_t class_id;
-  float probability;
-  float entropy;
-} __attribute__((packed));
-
 constexpr std::uint8_t kInvalidSemanticLabel = 255U;
 
 /**
@@ -150,7 +140,7 @@ __global__ void createVisualizationPointcloudKernel(
 
 __global__ void createSegmentationPointcloudKernel(
   const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
-  const std::uint8_t * class_id_to_semantic_label, OutputSegmentationPointType * output_points,
+  const std::uint8_t * class_id_to_semantic_label, point_types::PointXYZCPE * output_points,
   std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -407,14 +397,13 @@ void PostprocessCuda::createVisualizationPointcloud(
 
 void PostprocessCuda::createSegmentationPointcloud(
   const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-  std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points)
+  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
 {
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
-    class_id_to_semantic_label_d_.get(),
-    reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
+    class_id_to_semantic_label_d_.get(), output_points, num_classes, num_points);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
