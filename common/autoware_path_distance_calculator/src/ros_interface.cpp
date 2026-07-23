@@ -51,15 +51,14 @@ void PathDistanceCalculator::on_timer()
   if (const auto map = poll_new_data(sub_map_, last_map_)) {
     calculator_.set_map(*map);
   }
+  if (const auto route = poll_new_data(sub_route_, last_route_)) {
+    calculator_.set_route(*route);
+  }
 
   const auto pose = self_pose_listener_.get_current_pose();
   if (!pose) {
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "no pose");
     return;
-  }
-
-  if (const auto route = poll_new_data(sub_route_, last_route_)) {
-    calculator_.set_route(*route, pose->pose);
   }
 
   const auto distance = calculator_.calculate_remaining_distance(pose->pose);

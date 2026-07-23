@@ -17,10 +17,8 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
-#include <lanelet2_routing/LaneletPath.h>
 
 #include <algorithm>
 
@@ -58,15 +56,10 @@ double sum_lengths_between(
 void RouteDistanceCalculator::set_map(const autoware_map_msgs::msg::LaneletMapBin & msg)
 {
   lanelet_map_ptr_ = lanelet2_utils::remove_const(lanelet2_utils::from_autoware_map_msgs(msg));
-  routing_graph_ptr_ = lanelet2_utils::remove_const(
-    lanelet2_utils::instantiate_routing_graph_and_traffic_rules(lanelet_map_ptr_).first);
-  road_lanes_ =
-    lanelet::utils::query::roadLanelets(lanelet::utils::query::laneletLayer(lanelet_map_ptr_));
   is_map_ready_ = true;
 }
 
-void RouteDistanceCalculator::set_route(
-  const autoware_planning_msgs::msg::LaneletRoute & msg, const geometry_msgs::msg::Pose & current_pose)
+void RouteDistanceCalculator::set_route(const autoware_planning_msgs::msg::LaneletRoute & msg)
 {
   goal_pose_ = msg.goal_pose;
   is_route_ready_ = false;
@@ -76,21 +69,23 @@ void RouteDistanceCalculator::set_route(
     return;
   }
 
-  const auto current_lanelet = find_lanelet(road_lanes_, current_pose);
-  const auto goal_lanelet = find_lanelet(road_lanes_, goal_pose_);
-  if (!current_lanelet || !goal_lanelet) {
-    return;
-  }
-  goal_lanelet_ = goal_lanelet.value();
-
-  const auto route = routing_graph_ptr_->getRoute(current_lanelet.value(), goal_lanelet_, 0);
-  if (!route) {
-    return;
-  }
-
-  for (const auto & lanelet : route->shortestPath()) {
+  // LaneletRoute::segments already holds the lanelet IDs mission_planner planned the route
+  // through (accounting for lane exclusions, required lane changes, etc.), so look them up
+  // directly instead of re-deriving a path with our own shortest-path search, which could
+  // disagree with the actually planned route.
+  for (const auto & segment : msg.segments) {
+    const auto id = segment.preferred_primitive.id;
+    if (!lanelet_map_ptr_->laneletLayer.exists(id)) {
+      return;
+    }
+    const lanelet::ConstLanelet lanelet = lanelet_map_ptr_->laneletLayer.get(id);
     shortest_path_lanes_.push_back({lanelet, lanelet::geometry::length2d(lanelet)});
   }
+  if (shortest_path_lanes_.empty()) {
+    return;
+  }
+
+  goal_lanelet_ = shortest_path_lanes_.back().lanelet;
   is_route_ready_ = true;
 }
 

@@ -20,9 +20,7 @@
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <lanelet2_core/Forward.h>
-#include <lanelet2_core/utility/Optional.h>
-#include <lanelet2_routing/Route.h>
-#include <lanelet2_routing/RoutingGraph.h>
+#include <lanelet2_core/primitives/Lanelet.h>
 
 #include <optional>
 #include <vector>
@@ -30,23 +28,22 @@
 namespace autoware::path_distance_calculator
 {
 
-// Computes the remaining distance from a pose to the route goal, along the shortest path (in
-// lanelets) between them. This is plain lanelet2 logic with no ROS node dependency, so it can be
+// Computes the remaining distance from a pose to the route goal, along the route's planned
+// lanelet sequence. This is plain lanelet2 logic with no ROS node dependency, so it can be
 // constructed and exercised on its own (e.g. from a unit test).
 class RouteDistanceCalculator
 {
 public:
   void set_map(const autoware_map_msgs::msg::LaneletMapBin & msg);
 
-  // Resolves and caches the shortest path from current_pose to the route goal. Remaining
-  // distance queries below are answered against this cached path, not recomputed from scratch,
-  // matching how autoware_remaining_distance_time_calculator handles route updates.
-  void set_route(
-    const autoware_planning_msgs::msg::LaneletRoute & msg,
-    const geometry_msgs::msg::Pose & current_pose);
+  // Caches the lanelet sequence for the route: LaneletRoute::segments already contains the
+  // lanelet IDs mission_planner planned the route through (accounting for lane exclusions, lane
+  // changes, etc.), so it is looked up directly instead of re-deriving a path with our own
+  // shortest-path search, which could disagree with the actual planned route.
+  void set_route(const autoware_planning_msgs::msg::LaneletRoute & msg);
 
   // Returns nullopt if the map/route are not ready, or current_pose cannot be matched to the
-  // cached shortest path.
+  // cached lanelet sequence.
   std::optional<double> calculate_remaining_distance(
     const geometry_msgs::msg::Pose & current_pose) const;
 
@@ -61,8 +58,6 @@ private:
     const geometry_msgs::msg::Pose & current_pose) const;
 
   lanelet::LaneletMapPtr lanelet_map_ptr_;
-  lanelet::routing::RoutingGraphPtr routing_graph_ptr_;
-  lanelet::ConstLanelets road_lanes_;
   bool is_map_ready_{false};
 
   geometry_msgs::msg::Pose goal_pose_;
