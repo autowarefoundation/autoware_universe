@@ -201,18 +201,7 @@ bool VehicleTracker::updateKinematics(
     } else {
       is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance, length);
     }
-    const double pre_limit_yaw = motion_model_.getYawState();
     motion_model_.limitStates();
-    // A yaw-limit correction reversing the heading by 180° also negates the sign belief and
-    // flips the stored footprint.
-    const double limit_yaw_diff =
-      autoware_utils_math::normalize_radian(motion_model_.getYawState() - pre_limit_yaw);
-    if (std::abs(limit_yaw_diff) > M_PI_2) {
-      sign_belief_.onFlipped();
-      if (shape_model_.isFootprintValid()) {
-        shape_model_.flipFootprintXY();
-      }
-    }
   }
 
   // Low-pass filter on z position (2D motion model does not track z).
@@ -273,6 +262,11 @@ bool VehicleTracker::measure(
     sign_belief_.vote(
       raw_yaw_diff,
       in_object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE);
+    RCLCPP_INFO(
+      logger_, "SignBelief[%s] yaw vote: yaw_diff=%.3f sign_known=%d log_odds=%.3f",
+      getUuidString().c_str(), raw_yaw_diff,
+      in_object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE,
+      sign_belief_.logOdds());
   }
 
   const types::DynamicObject corrected = normalizeYaw(in_object, tracker_yaw);
@@ -293,7 +287,12 @@ bool VehicleTracker::measure(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
   // The tracked longitudinal velocity votes on the heading-sign belief once per measurement.
-  sign_belief_.voteVelocity(motion_model_.getStateElement(IDX::U));
+  const double vel_long = motion_model_.getStateElement(IDX::U);
+  const double vel_var = motion_model_.getCovarianceElement(IDX::U, IDX::U);
+  sign_belief_.voteVelocity(vel_long, vel_var);
+  RCLCPP_INFO(
+    logger_, "SignBelief[%s] velocity vote: vel_long=%.3f vel_var=%.3f log_odds=%.3f",
+    getUuidString().c_str(), vel_long, vel_var, sign_belief_.logOdds());
 
   // Belief-driven 180° flip. Velocity evidence is part of the belief, so yaw votes decide the
   // sign at low speed and the velocity sign decides above the par speed.
@@ -303,6 +302,9 @@ bool VehicleTracker::measure(
       shape_model_.flipFootprintXY();
     }
     sign_belief_.onFlipped();
+    RCLCPP_INFO(
+      logger_, "SignBelief[%s] belief flip: log_odds=%.3f", getUuidString().c_str(),
+      sign_belief_.logOdds());
   }
 
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;

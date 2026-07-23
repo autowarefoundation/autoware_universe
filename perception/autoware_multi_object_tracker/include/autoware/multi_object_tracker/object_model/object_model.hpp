@@ -122,6 +122,7 @@ struct OrientationSignBelief
   double log_odds_max{0.0};       // [-] belief clamp bound
   double flip_threshold{0.0};     // [-] flip when log_odds < -flip_threshold
   double vote_vel_par{0.0};  // [m/s] speed where a velocity vote equals an AVAILABLE yaw vote
+  double vote_vel_var{0.0};  // [m^2/s^2] velocity variance where a velocity vote halves
 };
 
 class ObjectModel
@@ -193,6 +194,7 @@ public:
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
         orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_var = sq(1.0);
         break;
 
       case ObjectModelType::NormalVehicle:
@@ -247,6 +249,7 @@ public:
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
         orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_var = sq(1.0);
         break;
 
       case ObjectModelType::BigVehicle:
@@ -301,6 +304,7 @@ public:
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
         orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_var = sq(1.0);
         break;
 
       case ObjectModelType::Bicycle:
@@ -355,6 +359,7 @@ public:
         orientation_sign_belief.log_odds_max = 4.0;
         orientation_sign_belief.flip_threshold = 2.0;
         orientation_sign_belief.vote_vel_par = kmph2mps(5.0);
+        orientation_sign_belief.vote_vel_var = sq(1.0);
         break;
 
       case ObjectModelType::Pedestrian:

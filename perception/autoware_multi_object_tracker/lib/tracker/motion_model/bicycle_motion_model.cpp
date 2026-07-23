@@ -419,10 +419,6 @@ bool BicycleMotionModel::limitStates()
   ekf_.getX(X_t);
   ekf_.getP(P_t);
 
-  // maximum reverse velocity
-  if (motion_params_.max_reverse_vel < 0 && X_t(IDX::U) < motion_params_.max_reverse_vel) {
-    flipStateOrientation(X_t, P_t);
-  }
   // maximum velocity
   if (!(-motion_params_.max_vel <= X_t(IDX::U) && X_t(IDX::U) <= motion_params_.max_vel)) {
     X_t(IDX::U) = X_t(IDX::U) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;

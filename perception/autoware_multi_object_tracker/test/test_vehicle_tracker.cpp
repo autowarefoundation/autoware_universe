@@ -474,12 +474,25 @@ TEST(OrientationSignBelief, AvailableVotesWeighMore)
 TEST(OrientationSignBelief, VelocityVoteScalesWithSpeed)
 {
   auto belief = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  belief.voteVelocity(-beliefParams().vote_vel_par);
+  belief.voteVelocity(-beliefParams().vote_vel_par, 0.0);
   EXPECT_DOUBLE_EQ(belief.logOdds(), -beliefParams().vote_available);
 
   auto slow = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  slow.voteVelocity(-0.1 * beliefParams().vote_vel_par);
+  slow.voteVelocity(-0.1 * beliefParams().vote_vel_par, 0.0);
   EXPECT_DOUBLE_EQ(slow.logOdds(), -0.1 * beliefParams().vote_available);
+}
+
+// The velocity vote is discounted by the estimate variance: half weight at vote_vel_var, near
+// zero for a poorly converged velocity.
+TEST(OrientationSignBelief, VelocityVarianceWeakensVote)
+{
+  auto halved = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  halved.voteVelocity(-beliefParams().vote_vel_par, beliefParams().vote_vel_var);
+  EXPECT_DOUBLE_EQ(halved.logOdds(), -0.5 * beliefParams().vote_available);
+
+  auto uncertain = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  uncertain.voteVelocity(-beliefParams().vote_vel_par, 1e3 * beliefParams().vote_vel_var);
+  EXPECT_NEAR(uncertain.logOdds(), 0.0, 1e-2 * beliefParams().vote_available);
 }
 
 // Against an agreeing AVAILABLE yaw vote, reverse motion below the par speed keeps the sign
@@ -488,12 +501,12 @@ TEST(OrientationSignBelief, ParSpeedSetsYawVelocityPriority)
 {
   auto slow = seededBelief(types::OrientationAvailability::UNAVAILABLE);
   slow.vote(0.0, true);
-  slow.voteVelocity(-0.5 * beliefParams().vote_vel_par);
+  slow.voteVelocity(-0.5 * beliefParams().vote_vel_par, 0.0);
   EXPECT_GT(slow.logOdds(), 0.0);
 
   auto fast = seededBelief(types::OrientationAvailability::UNAVAILABLE);
   fast.vote(0.0, true);
-  fast.voteVelocity(-2.0 * beliefParams().vote_vel_par);
+  fast.voteVelocity(-2.0 * beliefParams().vote_vel_par, 0.0);
   EXPECT_LT(fast.logOdds(), 0.0);
 }
 

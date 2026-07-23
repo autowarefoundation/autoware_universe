@@ -55,10 +55,13 @@ public:
 
   // Forward motion agrees with the heading sign, reverse motion disagrees. The vote weight grows
   // linearly with speed and matches an AVAILABLE yaw vote at vote_vel_par, so a slow reverse
-  // maneuver (e.g. parking) barely moves the belief while yaw votes dominate.
-  void voteVelocity(const double vel_long)
+  // maneuver (e.g. parking) barely moves the belief while yaw votes dominate. The vote is
+  // discounted by the velocity variance, halving at vote_vel_var; a poorly converged velocity
+  // estimate carries little weight.
+  void voteVelocity(const double vel_long, const double vel_var)
   {
-    log_odds_ += params_.vote_available * vel_long / params_.vote_vel_par;
+    const double confidence = params_.vote_vel_var / (params_.vote_vel_var + vel_var);
+    log_odds_ += params_.vote_available * confidence * vel_long / params_.vote_vel_par;
     log_odds_ = std::clamp(log_odds_, -params_.log_odds_max, params_.log_odds_max);
   }
 

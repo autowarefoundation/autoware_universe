@@ -52,9 +52,7 @@ private:
     double lr_min = 1.0;     // [m] minimum distance from the center to the rear wheel
     double wheel_base_ratio_inv =
       1 / (lf_ratio + lr_ratio);  // [-] inverse of the sum of lf_ratio and lr_ratio
-    double max_vel = 27.8;        // [m/s] maximum velocity, 100km/h
-    double max_reverse_vel =
-      -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
+    double max_vel = 27.8;  // [m/s] maximum velocity, 100km/h
     double wheel_pos_ratio =
       (lf_ratio + lr_ratio) /
       lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
