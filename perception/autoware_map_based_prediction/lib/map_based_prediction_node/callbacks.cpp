@@ -193,6 +193,12 @@ void ObjectsCallback::objectsCallback(
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
+  // Shared final pass: size the output box to cover any footprint protrusion and re-center the
+  // predicted paths on the expanded box. No-op for objects without a protruding footprint.
+  for (auto & predicted_object : output.objects) {
+    utils::expandShapeToFootprintAndRecenter(predicted_object);
+  }
+
   const auto output_stamp = output.header.stamp;
   publish(std::move(output_msg), debug_markers);
 
