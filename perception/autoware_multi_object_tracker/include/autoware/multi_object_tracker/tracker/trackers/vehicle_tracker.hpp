@@ -50,6 +50,10 @@ private:
   // Accumulated heading-sign evidence from raw detection yaws.
   OrientationSignBelief sign_belief_;
 
+  // Belief-driven 180° flip on the fused posterior: yaw votes decide the sign at low speed and
+  // the instantaneous velocity sign decides above the par speed.
+  void evaluateSignFlip(const rclcpp::Time & time);
+
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
@@ -90,10 +94,7 @@ public:
   // Heading state, sign-belief confidence, and 180° state flip; composite trackers use these
   // for heading-sign consensus across their layers.
   double getYawState() const { return motion_model_.getYawState(); }
-  double signBeliefConfidence() const
-  {
-    return std::abs(sign_belief_.agreement()) / std::sqrt(sign_belief_.variance());
-  }
+  double signBeliefConfidence() const { return sign_belief_.confidence(); }
   void flipOrientationSign();
 
   ShapeModelBase & getShapeModel() override { return shape_model_; }

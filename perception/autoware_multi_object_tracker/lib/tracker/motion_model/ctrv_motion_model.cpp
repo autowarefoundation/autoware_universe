@@ -192,7 +192,6 @@ bool CTRVMotionModel::updateStatePoseHeadVel(
   return ekf_.update(Y, C, R);
 }
 
-// 180° heading flip of the raw state: rotate yaw by pi and negate the velocity.
 bool CTRVMotionModel::flipOrientation()
 {
   if (!checkInitialized()) return false;

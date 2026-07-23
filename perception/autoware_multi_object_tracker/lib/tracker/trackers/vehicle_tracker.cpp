@@ -281,17 +281,20 @@ bool VehicleTracker::measure(
   shape_model_.updateFootprint(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
-  // Belief-driven 180° flip on the fused posterior: yaw votes decide the sign at low speed and
-  // the instantaneous velocity sign decides above the par speed.
+  evaluateSignFlip(time);
+
+  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+  removeCache();
+  return true;
+}
+
+void VehicleTracker::evaluateSignFlip(const rclcpp::Time & time)
+{
   const double vel_long = motion_model_.getStateElement(IDX::U);
   const double vel_var = motion_model_.getCovarianceElement(IDX::U, IDX::U);
   if (sign_belief_.shouldFlip(time, vel_long, vel_var)) {
     flipOrientationSign();
   }
-
-  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
-  removeCache();
-  return true;
 }
 
 // 180° heading flip of the full tracker state: motion model, stored footprint, and sign belief.
@@ -372,6 +375,8 @@ bool VehicleTracker::conditionedUpdate(
     shape_model_.updateFootprint(
       measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+    evaluateSignFlip(measurement_time);
+
     shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
     removeCache();
     return true;
@@ -388,6 +393,8 @@ bool VehicleTracker::conditionedUpdate(
     measurement_time, tracker_pose, dummy_cov, dummy_twist, dummy_cov);
   shape_model_.updateFootprint(
     measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
+
+  evaluateSignFlip(measurement_time);
 
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();

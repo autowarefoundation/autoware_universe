@@ -75,6 +75,7 @@ bool MultipleVehicleTracker::conditionedUpdate(
     measurement, prediction, measurement_time, channel_info);
   big_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
   normal_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
+  alignOrientationSigns();
 
   return true;
 }

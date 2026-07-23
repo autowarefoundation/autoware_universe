@@ -101,6 +101,8 @@ public:
 
   double agreement() const { return agreement_; }
   double variance() const { return variance_; }
+  // Yaw-vote agreement magnitude as a z-score.
+  double confidence() const { return std::abs(agreement_) / std::sqrt(variance_); }
   double fusedAgreement() const { return fused_agreement_; }
   double fusedVariance() const { return fused_variance_; }
 
