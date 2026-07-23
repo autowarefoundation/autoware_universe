@@ -8,7 +8,10 @@
   <arg name="input_odometry" default="~/input/odometry"/>
   <arg name="input_objects" default="~/input/objects"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_trajectory_ranker" exec="autoware_trajectory_ranker_node" name="trajectory_ranker_node" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var trajectory_ranker_param_path)" allow_substs="true"/>
     <param from="$(find-pkg-share autoware_trajectory_ranker)/config/metrics/trajectory_consistency.param.yaml"/>
 

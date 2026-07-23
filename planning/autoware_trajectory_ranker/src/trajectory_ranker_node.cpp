@@ -53,15 +53,19 @@ TrajectoryRanker::TrajectoryRanker(const rclcpp::NodeOptions & options)
   // Setup subscriptions
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    [this](const LaneletMapBin::ConstSharedPtr msg) { route_handler_->setMap(*msg); });
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg) {
+      route_handler_->setMap(*msg);
+    });
 
   sub_route_ = create_subscription<LaneletRoute>(
     "~/input/route", rclcpp::QoS{1}.transient_local(),
-    [this](const LaneletRoute::ConstSharedPtr msg) { route_handler_->setRoute(*msg); });
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) & msg) {
+      route_handler_->setRoute(*msg);
+    });
 
   sub_trajectories_ = create_subscription<CandidateTrajectories>(
     "~/input/candidate_trajectories", 1,
-    [this](const CandidateTrajectories::ConstSharedPtr msg) { process(msg); });
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg) { process(msg); });
 
   // Setup publishers
   pub_trajectories_ =
@@ -74,14 +78,16 @@ TrajectoryRanker::TrajectoryRanker(const rclcpp::NodeOptions & options)
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 }
 
-void TrajectoryRanker::process(const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryRanker::process(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  pub_trajectories_->publish(*score(msg));
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_trajectories_);
+  *output = *score(msg);
+  pub_trajectories_->publish(std::move(output));
 }
 
 ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
-  const CandidateTrajectories::ConstSharedPtr msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -94,19 +100,22 @@ ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
     return std::make_shared<ScoredCandidateTrajectories>(output);
   }
 
-  const auto odometry_ptr = std::const_pointer_cast<Odometry>(sub_odometry_.take_data());
-  if (odometry_ptr == nullptr) {
+  const auto odometry_ptr = sub_odometry_->take_data();
+  if (!odometry_ptr) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Odometry data is not available. Returning empty output.");
     return std::make_shared<ScoredCandidateTrajectories>(output);
   }
 
-  const auto objects_ptr = std::const_pointer_cast<PredictedObjects>(sub_objects_.take_data());
-  if (objects_ptr == nullptr) {
+  const auto objects_msg = sub_objects_->take_data();
+  if (!objects_msg) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Objects data is not available. Returning empty output.");
     return std::make_shared<ScoredCandidateTrajectories>(output);
   }
+  // CoreData stores a mutable std::shared_ptr<PredictedObjects>, so copy out of the
+  // read-only shared-memory message at the subscription boundary.
+  const auto objects_ptr = std::make_shared<PredictedObjects>(*objects_msg);
 
   const auto preferred_lanes =
     std::make_shared<lanelet::ConstLanelets>(route_handler_->getPreferredLanelets());

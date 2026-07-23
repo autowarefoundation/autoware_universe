@@ -19,6 +19,7 @@
 #include "autoware/trajectory_ranker/interface/data_interface.hpp"
 #include "autoware/trajectory_ranker/interface/metrics_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <pluginlib/class_loader.hpp>
@@ -44,7 +45,7 @@ public:
   explicit Evaluator(
     const std::shared_ptr<RouteHandler> & route_handler,
     const std::shared_ptr<VehicleInfo> & vehicle_info, const rclcpp::Logger & logger,
-    rclcpp::Node * node = nullptr)
+    autoware::agnocast_wrapper::Node * node = nullptr)
   : plugin_loader_(
       "autoware_trajectory_ranker", "autoware::trajectory_ranker::metrics::MetricInterface"),
     route_handler_{route_handler},
@@ -164,7 +165,7 @@ private:
 
   rclcpp::Logger logger_;
 
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
 };
 
 }  // namespace autoware::trajectory_ranker
