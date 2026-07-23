@@ -38,15 +38,12 @@ ShiftDecider::ShiftDecider(const rclcpp::NodeOptions & node_options)
   pub_shift_cmd_ =
     create_publisher<autoware_vehicle_msgs::msg::GearCommand>("output/gear_cmd", durable_qos);
 
-  sub_control_cmd_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<autoware_control_msgs::msg::Control>(
-      this, "input/control_cmd");
-  sub_autoware_state_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<
-      autoware_system_msgs::msg::AutowareState>(this, "input/state");
-  sub_current_gear_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<
-      autoware_vehicle_msgs::msg::GearReport>(this, "input/current_gear");
+  sub_control_cmd_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+    autoware_control_msgs::msg::Control>(this, "input/control_cmd");
+  sub_autoware_state_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+    autoware_system_msgs::msg::AutowareState>(this, "input/state");
+  sub_current_gear_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+    autoware_vehicle_msgs::msg::GearReport>(this, "input/current_gear");
 
   initTimer(0.1);
 }

@@ -42,12 +42,12 @@ private:
   void initTimer(double period_s);
 
   AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::GearCommand) pub_shift_cmd_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<autoware_control_msgs::msg::Control>::
-    SharedPtr sub_control_cmd_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<autoware_system_msgs::msg::AutowareState>::
-    SharedPtr sub_autoware_state_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<autoware_vehicle_msgs::msg::GearReport>::
-    SharedPtr sub_current_gear_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_control_msgs::msg::Control>::SharedPtr sub_control_cmd_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_system_msgs::msg::AutowareState>::SharedPtr sub_autoware_state_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_vehicle_msgs::msg::GearReport>::SharedPtr sub_current_gear_;
 
   AUTOWARE_TIMER_PTR timer_;
 
