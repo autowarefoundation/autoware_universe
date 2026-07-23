@@ -297,11 +297,7 @@ bool VehicleTracker::measure(
   // Belief-driven 180° flip. Velocity evidence is part of the belief, so yaw votes decide the
   // sign at low speed and the velocity sign decides above the par speed.
   if (sign_belief_.shouldFlip()) {
-    motion_model_.flipOrientation();
-    if (shape_model_.isFootprintValid()) {
-      shape_model_.flipFootprintXY();
-    }
-    sign_belief_.onFlipped();
+    flipOrientationSign();
     RCLCPP_INFO(
       logger_, "SignBelief[%s] belief flip: log_odds=%.3f", getUuidString().c_str(),
       sign_belief_.logOdds());
@@ -310,6 +306,17 @@ bool VehicleTracker::measure(
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();
   return true;
+}
+
+// 180° heading flip of the full tracker state: motion model, stored footprint, and sign belief.
+void VehicleTracker::flipOrientationSign()
+{
+  motion_model_.flipOrientation();
+  if (shape_model_.isFootprintValid()) {
+    shape_model_.flipFootprintXY();
+  }
+  sign_belief_.onFlipped();
+  removeCache();
 }
 
 bool VehicleTracker::getMotionState(

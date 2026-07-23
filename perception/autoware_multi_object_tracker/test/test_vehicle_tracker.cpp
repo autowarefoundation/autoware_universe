@@ -14,6 +14,7 @@
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/pedestrian_and_bicycle_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/update/orientation_sign_belief.hpp"
 #include "autoware/multi_object_tracker/tracker/update/vehicle_update_strategy.hpp"
@@ -679,6 +680,32 @@ TEST(VehicleTrackerSignFlip, OpposedVotesFlipSlowTracker)
   const double deviation =
     std::abs(autoware_utils_math::normalize_radian(trackedYaw(tracker, time) - M_PI));
   EXPECT_LT(deviation, 0.1);
+}
+
+// Composite layers agree on the heading sign: the pedestrian layer never measures yaw, so a
+// bicycle-layer belief flip must carry over to the published pedestrian heading.
+TEST(PedestrianAndBicycleTrackerSignFlip, PedestrianLayerFollowsBicycleSign)
+{
+  const types::InputChannel channel{};
+  const rclcpp::Time start(0, 0, RCL_ROS_TIME);
+  auto detection = makeVehicleDetection(start, 0.0);
+  detection.classification = {{classes::Label::PEDESTRIAN, 1.0F}};
+  PedestrianAndBicycleTracker tracker(start, detection);
+
+  rclcpp::Time time = start;
+  for (int i = 1; i <= 6; ++i) {
+    time = start + rclcpp::Duration::from_seconds(0.1 * i);
+    tracker.predict(time);
+    auto measurement = makeVehicleDetection(time, M_PI);
+    measurement.classification = detection.classification;
+    tracker.measure(measurement, time, channel);
+  }
+
+  types::DynamicObject tracked;
+  ASSERT_TRUE(tracker.getTrackedObject(time, tracked));
+  const double deviation =
+    std::abs(autoware_utils_math::normalize_radian(tf2::getYaw(tracked.pose.orientation) - M_PI));
+  EXPECT_LT(deviation, M_PI_2);
 }
 
 }  // namespace autoware::multi_object_tracker
