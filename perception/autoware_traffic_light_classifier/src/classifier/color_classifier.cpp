@@ -221,8 +221,8 @@ cv::Mat ColorClassifierCore::make_debug_image(const cv::Mat & roi_image) const
 }
 
 // ============================== ColorClassifier ==============================
-// ROS adapter: declares parameters, wires dynamic reconfigure and debug-image
-// publishing, and delegates classification to the Node-free core.
+// ROS adapter: wires dynamic reconfigure and debug-image publishing, and delegates
+// classification to the Node-free core.
 
 namespace
 {
@@ -238,37 +238,10 @@ bool update_param(
   }
   return false;
 }
-
-// Declare the 18 HSV threshold parameters on `node`, seeding each from the HSVConfig
-// defaults, and return the resulting config. Lets the constructor build the core's
-// thresholds in a single pass instead of default-constructing then reconfiguring.
-HSVConfig declare_hsv_config(rclcpp::Node * node)
-{
-  HSVConfig config;
-  config.green_min_h = node->declare_parameter("green_min_h", config.green_min_h);
-  config.green_min_s = node->declare_parameter("green_min_s", config.green_min_s);
-  config.green_min_v = node->declare_parameter("green_min_v", config.green_min_v);
-  config.green_max_h = node->declare_parameter("green_max_h", config.green_max_h);
-  config.green_max_s = node->declare_parameter("green_max_s", config.green_max_s);
-  config.green_max_v = node->declare_parameter("green_max_v", config.green_max_v);
-  config.yellow_min_h = node->declare_parameter("yellow_min_h", config.yellow_min_h);
-  config.yellow_min_s = node->declare_parameter("yellow_min_s", config.yellow_min_s);
-  config.yellow_min_v = node->declare_parameter("yellow_min_v", config.yellow_min_v);
-  config.yellow_max_h = node->declare_parameter("yellow_max_h", config.yellow_max_h);
-  config.yellow_max_s = node->declare_parameter("yellow_max_s", config.yellow_max_s);
-  config.yellow_max_v = node->declare_parameter("yellow_max_v", config.yellow_max_v);
-  config.red_min_h = node->declare_parameter("red_min_h", config.red_min_h);
-  config.red_min_s = node->declare_parameter("red_min_s", config.red_min_s);
-  config.red_min_v = node->declare_parameter("red_min_v", config.red_min_v);
-  config.red_max_h = node->declare_parameter("red_max_h", config.red_max_h);
-  config.red_max_s = node->declare_parameter("red_max_s", config.red_max_s);
-  config.red_max_v = node->declare_parameter("red_max_v", config.red_max_v);
-  return config;
-}
 }  // namespace
 
-ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr)
-: node_ptr_(node_ptr), core_(declare_hsv_config(node_ptr))
+ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr, const HSVConfig & config)
+: node_ptr_(node_ptr), core_(config)
 {
   using std::placeholders::_1;
   image_pub_ = image_transport::create_publisher(

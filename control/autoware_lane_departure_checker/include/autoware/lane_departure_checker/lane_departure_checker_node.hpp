@@ -20,6 +20,7 @@
 
 #include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -57,41 +58,49 @@ public:
 
 private:
   // Subscriber
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(nav_msgs::msg::Odometry)
-  sub_odom_ = create_polling_subscriber<nav_msgs::msg::Odometry>("~/input/odometry");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest)
-  sub_lanelet_map_bin_ =
-    create_polling_subscriber<LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest>(
-      "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute)
-  sub_route_ =
-    create_polling_subscriber<LaneletRoute>("~/input/route", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  sub_reference_trajectory_ = create_polling_subscriber<Trajectory>("~/input/reference_trajectory");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  sub_predicted_trajectory_ = create_polling_subscriber<Trajectory>("~/input/predicted_trajectory");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_adapi_v1_msgs::msg::OperationModeState)
-  sub_operation_mode_ = create_polling_subscriber<autoware_adapi_v1_msgs::msg::OperationModeState>(
-    "/api/operation_mode/state");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::ControlModeReport)
-  sub_control_mode_ = create_polling_subscriber<autoware_vehicle_msgs::msg::ControlModeReport>(
-    "/vehicle/status/control_mode");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<nav_msgs::msg::Odometry>::SharedPtr
+    sub_odom_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<nav_msgs::msg::Odometry>(
+        this, "~/input/odometry");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletMapBin, autoware::agnocast_wrapper::polling::polling_policy::Newest>::SharedPtr
+    sub_lanelet_map_bin_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletMapBin, autoware::agnocast_wrapper::polling::polling_policy::Newest>(
+      this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<LaneletRoute>::SharedPtr sub_route_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<LaneletRoute>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr
+    sub_reference_trajectory_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+        this, "~/input/reference_trajectory");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr
+    sub_predicted_trajectory_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+        this, "~/input/predicted_trajectory");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_adapi_v1_msgs::msg::OperationModeState>::SharedPtr sub_operation_mode_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_adapi_v1_msgs::msg::OperationModeState>(this, "/api/operation_mode/state");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_vehicle_msgs::msg::ControlModeReport>::SharedPtr sub_control_mode_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_vehicle_msgs::msg::ControlModeReport>(this, "/vehicle/status/control_mode");
 
   // Data Buffer
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) current_odom_;
+  std::shared_ptr<const nav_msgs::msg::Odometry> current_odom_;
   lanelet::LaneletMapPtr lanelet_map_;
   lanelet::ConstLanelets shoulder_lanelets_;
   lanelet::traffic_rules::TrafficRulesPtr traffic_rules_;
   lanelet::routing::RoutingGraphPtr routing_graph_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) route_;
+  std::shared_ptr<const LaneletRoute> route_;
   geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr cov_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) last_route_;
+  std::shared_ptr<const LaneletRoute> last_route_;
   lanelet::ConstLanelets route_lanelets_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) reference_trajectory_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) predicted_trajectory_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_adapi_v1_msgs::msg::OperationModeState)
-  operation_mode_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_vehicle_msgs::msg::ControlModeReport) control_mode_;
+  std::shared_ptr<const Trajectory> reference_trajectory_;
+  std::shared_ptr<const Trajectory> predicted_trajectory_;
+  std::shared_ptr<const autoware_adapi_v1_msgs::msg::OperationModeState> operation_mode_;
+  std::shared_ptr<const autoware_vehicle_msgs::msg::ControlModeReport> control_mode_;
 
   // Publisher
   autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node> debug_publisher_{
