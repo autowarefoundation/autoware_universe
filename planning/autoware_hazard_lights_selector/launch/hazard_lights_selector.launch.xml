@@ -5,8 +5,11 @@
   <arg name="input_hazard_lights_cmd_from_mrm_operator" default="/system/hazard_lights_cmd"/>
   <arg name="output_hazard_lights_cmd" default="/planning/hazard_lights_cmd"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_hazard_lights_selector" exec="autoware_hazard_lights_selector_node" name="autoware_hazard_lights_selector" output="screen">
     <param from="$(var hazard_lights_selector_param_path)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
 
     <remap from="input/planning/hazard_lights_command" to="$(var input_hazard_lights_cmd_from_path_planner)"/>
     <remap from="input/system/hazard_lights_command" to="$(var input_hazard_lights_cmd_from_mrm_operator)"/>
