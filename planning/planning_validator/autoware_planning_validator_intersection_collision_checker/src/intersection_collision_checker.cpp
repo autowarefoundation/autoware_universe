@@ -49,7 +49,7 @@ using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_utils::get_or_declare_parameter;
 
 void IntersectionCollisionChecker::init(
-  rclcpp::Node & node, const std::string & name,
+  autoware::agnocast_wrapper::Node & node, const std::string & name,
   const std::shared_ptr<PlanningValidatorContext> & context)
 {
   module_name_ = name;
@@ -74,8 +74,8 @@ void IntersectionCollisionChecker::init(
     node.create_publisher<StringStamped>("~/intersection_collision_checker/debug/state", 1);
 
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      &node, "intersection_collision_checker");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(&node, "intersection_collision_checker");
 
   setup_diag();
 }
