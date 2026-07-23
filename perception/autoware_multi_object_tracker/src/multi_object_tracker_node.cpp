@@ -255,12 +255,17 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     oss << "~/input/detection" << std::setfill('0') << std::setw(2) << (index + 1) << "/objects";
     std::string input_channel_topic = oss.str();
 
+    auto cb_group = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    cb_groups_measurement_.push_back(cb_group);
+    AUTOWARE_SUBSCRIPTION_OPTIONS sub_options;
+    sub_options.callback_group = cb_group;
     sub_objects_array_.at(index) =
       create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
         input_channel_topic, rclcpp::QoS{1},
         [this,
          index](AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects)
-                  msg) { this->onMeasurement(index, std::move(msg)); });
+                  msg) { this->onMeasurement(index, std::move(msg)); },
+        sub_options);
   }
 
   // odometry subscription (ego pose source when ego_source == "odometry")
@@ -317,14 +322,19 @@ void MultiObjectTracker::onMeasurement(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const rclcpp::Time current_time = this->now();
-  const auto result =
-    core::process_measurement(channel_index, msg, current_time, state_, *debugger_);
+
+  core::MeasurementProcessingResult result;
+  {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    result = core::process_measurement(channel_index, msg, current_time, state_, *debugger_);
+  }
 
   if (!result.has_objects) {
     return;
   }
 
   if (result.should_process) {
+    std::lock_guard<std::mutex> lock(state_mutex_);
     processObjects();
   }
 }
@@ -353,8 +363,11 @@ void MultiObjectTracker::onTimer()
 
   const rclcpp::Time current_time = this->now();
 
-  if (core::should_publish(current_time, params_, state_)) {
-    publish();
+  {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    if (core::should_publish(current_time, params_, state_)) {
+      publish();
+    }
   }
 }
 
