@@ -43,13 +43,22 @@ private:
   // Consumed by setObjectShape() so UnstableShapeFilter commits the new length correctly.
   BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;
 
+  // Interval [s] since the last measurement update.
+  double time_since_correction_{0.0};
+
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
   // Wheel-anchor EKF update (front or rear) plus z/height updates.
-  // Also records the anchor in shape_update_anchor_.
+  // Also records the anchor in shape_update_anchor_. `prediction` supplies the tracked body center
+  // used by the lateral (over-/under-wide polygon) anchor correction.
   bool updateWheelKinematics(
-    const UpdateStrategy & strategy, const types::DynamicObject & measurement);
+    const UpdateStrategy & strategy, const types::DynamicObject & measurement,
+    const types::DynamicObject & prediction);
+
+  // Relax the front/rear covariance asymmetry before an EKF pose update, scaled by
+  // time_since_correction_.
+  void applyAxleCovarianceBlend();
 
 public:
   VehicleTracker(
@@ -63,7 +72,6 @@ public:
 
   bool conditionedUpdate(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-    const autoware_perception_msgs::msg::Shape & tracker_shape,
     const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
 
   bool getTrackedObject(
@@ -73,7 +81,7 @@ public:
   bool getMotionState(
     const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
     geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
-  rclcpp::Time getStateTime() const override { return motion_model_.getLastUpdateTime(); }
+  rclcpp::Time getStateTime() const override { return motion_model_.getLastPredictionTime(); }
 
   ShapeModelBase & getShapeModel() override { return shape_model_; }
   const ShapeModelBase & getShapeModel() const override { return shape_model_; }
@@ -89,6 +97,12 @@ public:
   {
     if (!trust_extension) return UpdatePath::CONDITIONED;
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
+
+  // Vehicle boxes coast on partial updates; staleness on full measurements is meaningful.
+  double getElapsedTimeFromFullMeasurement(const rclcpp::Time & current_time) const override
+  {
+    return elapsedSinceLastFullMeasurement(current_time);
   }
 };
 

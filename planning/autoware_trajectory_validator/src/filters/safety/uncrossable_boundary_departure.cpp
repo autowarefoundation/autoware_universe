@@ -22,8 +22,9 @@
 namespace autoware::trajectory_validator::plugin::safety
 {
 UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext & context)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (const auto validate_context = validate_filter_context(context); !validate_context) {
     return tl::make_unexpected(validate_context.error());
   }
@@ -49,13 +50,14 @@ UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter:
       std::back_inserter(debug_markers_.markers));
   }
 
-  std::vector<MetricReport> metrics{
-    autoware_trajectory_validator::build<MetricReport>()
-      .validator_name(get_name())
-      .validator_category(category())
-      .metric_name("check_critical_departure")
-      .metric_value(is_feasible ? 1.0 : 0.0)
-      .level(!is_feasible ? MetricReport::DANGER : MetricReport::SAFE)};
+  RiskLevel risk_level;
+  risk_level.level = is_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
+  std::vector<MetricReport> metrics{autoware_trajectory_validator::build<MetricReport>()
+                                      .validator_name(get_name())
+                                      .validator_category(category())
+                                      .metric_name("check_critical_departure")
+                                      .metric_value(is_feasible ? 1.0 : 0.0)
+                                      .risk(risk_level)};
 
   return ValidationResult{is_feasible, std::move(metrics)};
 }

@@ -66,7 +66,6 @@ public:
     const types::InputChannel & channel_info) override;
   bool conditionedUpdate(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-    const autoware_perception_msgs::msg::Shape & tracker_shape,
     const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
   void mergeFootprintFrom(
@@ -106,6 +105,12 @@ public:
   {
     if (!trust_extension) return UpdatePath::CONDITIONED;
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
+
+  // Same policy as VehicleTracker: staleness on full measurements is meaningful.
+  double getElapsedTimeFromFullMeasurement(const rclcpp::Time & current_time) const override
+  {
+    return elapsedSinceLastFullMeasurement(current_time);
   }
 };
 

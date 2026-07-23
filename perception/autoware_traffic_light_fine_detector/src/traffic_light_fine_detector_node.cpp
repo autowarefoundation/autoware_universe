@@ -58,13 +58,11 @@ TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOpt
 
   const std::string calib_image_list = "";
   const double scale = 1.0;
-  const std::string cache_dir = "";
 
   auto trt_config = autoware::tensorrt_common::TrtCommonConfig(model_path, precision);
 
   trt_yolox_ = std::make_unique<autoware::tensorrt_yolox::TrtYoloX>(
-    trt_config, num_class, score_thresh_, nms_threshold, gpu_id, calib_image_list, scale,
-    cache_dir);
+    trt_config, num_class, score_thresh_, nms_threshold, gpu_id, calib_image_list, scale);
 
   batch_size_ = trt_yolox_->getBatchSize();
 

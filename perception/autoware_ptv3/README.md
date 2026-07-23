@@ -25,6 +25,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 | `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.         |
 | `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                               |
 | `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`. |
+| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected 3D objects after score filtering and IoU NMS.  |
 | `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                       |
 | `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                             |
 | `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                        |
@@ -82,7 +83,9 @@ The model was trained on the T4Dataset using approximately 4,000 frames and is a
 
 ### `Fail to create host memory`
 
-This error may occur when the system runs out of memory during TensorRT engine building. To mitigate this issue, consider reducing the `voxels_num` maximum limit in the model parameters, which controls the maximum number of voxels processed by the model. For the instance, using GPU with 8 GB of memory, setting maximum `voxels_num` to 192'000 may help to avoid this error.
+This error may occur when TensorRT cannot satisfy the memory requirements for building an engine. A `workspace_size` that is too small can prevent TensorRT from using the tactics needed for the configured input profiles. Conversely, a `workspace_size` that is too large can allow memory usage to exceed the GPU's available VRAM. A large maximum value in `encoder.voxels_num` also increases the size of TensorRT profiles and intermediate buffers.
+
+Adjust the `workspace_size` values and the maximum `encoder.voxels_num` value in `config/ptv3.param.yaml` to fit the available GPU memory. Finding a suitable balance between these parameters can resolve the issue.
 
 ## References/External links
 
