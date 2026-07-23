@@ -15,7 +15,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )
