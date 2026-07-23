@@ -87,11 +87,11 @@ void RouteInterface::update_route(const LaneletRoute & route)
 }
 
 RouteSelector::RouteSelector(const rclcpp::NodeOptions & options)
-: Node("route_selector", options), main_(get_clock()), mrm_(get_clock())
+: autoware::agnocast_wrapper::Node("route_selector", options), main_(get_clock()), mrm_(get_clock())
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
-  const auto service_qos = AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE();
+  const rclcpp::QoS service_qos = rclcpp::ServicesQoS();
   const auto durable_qos = rclcpp::QoS(1).transient_local();
 
   // Init main route interface.
@@ -152,7 +152,7 @@ void RouteSelector::publish_processing_time(
   pub_processing_time_->publish(processing_time_msg);
 }
 
-void RouteSelector::on_state(const RouteState::ConstSharedPtr msg)
+void RouteSelector::on_state(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(RouteState) & msg)
 {
   if (msg->state == RouteState::UNSET && !initialized_) {
     main_.change_state(RouteState::UNSET);
@@ -163,7 +163,7 @@ void RouteSelector::on_state(const RouteState::ConstSharedPtr msg)
   (mrm_operating_ ? mrm_ : main_).update_state(*msg);
 }
 
-void RouteSelector::on_route(const LaneletRoute::ConstSharedPtr msg)
+void RouteSelector::on_route(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) & msg)
 {
   (mrm_operating_ ? mrm_ : main_).update_route(*msg);
 }
