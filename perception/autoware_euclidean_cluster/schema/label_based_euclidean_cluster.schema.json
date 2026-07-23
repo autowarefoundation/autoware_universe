@@ -110,8 +110,7 @@
         "class_names",
         "use_shape_estimation_corrector",
         "use_shape_estimation_filter",
-        "use_boost_bbox_optimizer",
-        "shape_policy"
+        "use_boost_bbox_optimizer"
       ],
       "additionalProperties": false
     },
