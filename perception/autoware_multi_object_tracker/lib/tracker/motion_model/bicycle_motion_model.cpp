@@ -253,12 +253,22 @@ bool BicycleMotionModel::updateStatePoseWheel(
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  constexpr int DIM_Y = 2;
-  Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x, y;
+  // Derive the pre-update wheelbase and heading straight from the axle points (one hypot, no trig):
+  // t_hat = (p2 - p1) / wheelbase.
+  const double dx = getStateElement(IDX::X2) - getStateElement(IDX::X1);
+  const double dy = getStateElement(IDX::Y2) - getStateElement(IDX::Y1);
+  const double wheel_base = std::hypot(dx, dy);
+  const double cos_yaw = dx / wheel_base;
+  const double sin_yaw = dy / wheel_base;
 
-  // Measure the edge face center as an exact linear blend of the two endpoints:
-  // face = (1 + gamma) * p_near - gamma * p_far
+  // Measure the edge face center as an exact linear blend of the two endpoints, plus a wheelbase-
+  // lock row that pins the length to its current value:
+  //   row 0,1: face = (1 + gamma) * p_near - gamma * p_far
+  //   row 2:   wheelbase = (p2 - p1) . t_hat  ->  current value
+  constexpr int DIM_Y = 3;
+  Eigen::Matrix<double, DIM_Y, 1> Y;
+  Y << x, y, wheel_base;
+
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   if (measure_front) {
     // The front face anchors on p2 = (X2, Y2) with gamma_front
@@ -275,12 +285,20 @@ bool BicycleMotionModel::updateStatePoseWheel(
     C(1, IDX::Y1) = 1.0 + gamma;
     C(1, IDX::Y2) = -gamma;
   }
+  // wheelbase-lock row: holds the length so a partial cluster cannot stretch the body (which the
+  // wheel-base lever would otherwise turn into yaw).
+  C(2, IDX::X1) = -cos_yaw;
+  C(2, IDX::Y1) = -sin_yaw;
+  C(2, IDX::X2) = cos_yaw;
+  C(2, IDX::Y2) = sin_yaw;
 
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
+  constexpr double length_lock_var = 1.0e-4;  // [m^2] ~1 cm std: hold the wheelbase near-constant
+  R(2, 2) = length_lock_var;
 
   return ekf_.update(Y, C, R);
 }
@@ -437,6 +455,36 @@ bool BicycleMotionModel::adjustPosition(const double & delta_x, const double & d
   return true;
 }
 
+bool BicycleMotionModel::blendAxleCovariance(const double blend_ratio)
+{
+  if (!checkInitialized()) return false;
+  if (blend_ratio <= 0.0) return true;
+  const double alpha = std::min(blend_ratio, 1.0);
+
+  StateVec X_t;
+  StateMat P_t;
+  ekf_.getX(X_t);
+  ekf_.getP(P_t);
+
+  // S P S^T, where S swaps the rear/front axle points (X1,Y1)<->(X2,Y2) and leaves velocities
+  // alone.
+  StateMat P_swapped = P_t;
+  P_swapped.row(IDX::X1).swap(P_swapped.row(IDX::X2));
+  P_swapped.row(IDX::Y1).swap(P_swapped.row(IDX::Y2));
+  P_swapped.col(IDX::X1).swap(P_swapped.col(IDX::X2));
+  P_swapped.col(IDX::Y1).swap(P_swapped.col(IDX::Y2));
+
+  // Convex combination toward the persymmetric average scales the mean<->difference coupling by
+  // (1 - alpha); the diagonal top-up keeps every variance at or above its original value, so the
+  // smaller axle variance inflates toward the larger one and no axis tightens. PSD-preserving.
+  StateMat P_new = (1.0 - 0.5 * alpha) * P_t + (0.5 * alpha) * P_swapped;
+  P_new.diagonal() += (0.5 * alpha) * (P_swapped.diagonal() - P_t.diagonal()).cwiseAbs();
+
+  ekf_.init(X_t, P_new);  // covariance-only update
+
+  return true;
+}
+
 bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) const
 {
   /*  Motion model: static bicycle model (constant turn rate, constant velocity)
@@ -573,17 +621,19 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw_sq + q_cov_lat2 * cos_yaw_sq);
 
-  // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
-  constexpr double cross_coefficient =
-    0.1;  // [m^2] coefficient for covariance between front and rear axle
-  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * cross_coefficient;
-  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * cross_coefficient;
-  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
-  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
-  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
+  // Front/rear position process noise splits into a common-mode part C (whole-body translation from
+  // longitudinal/lateral acceleration, shared identically by both axle points) and a differential
+  // part D (wheel-base growth + heading swing) that acts on the front point only:
+  //   Q_pos = [[ C , C   ],
+  //            [ C , C+D ]]
+  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1);
+  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1);
+  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1);
+  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1);
+  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1);
 
   // covariance of velocity
   const double q_cov_vel_long = motion_params_.q_cov_acc_long * dt2;
@@ -615,9 +665,6 @@ bool BicycleMotionModel::getPredictedState(
   const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
   const double sin_yaw = (X(IDX::Y2) - X(IDX::Y1)) * wheel_base_inv;
   const double cos_yaw = (X(IDX::X2) - X(IDX::X1)) * wheel_base_inv;
-  const double sin_yaw_sq = sin_yaw * sin_yaw;
-  const double cos_yaw_sq = cos_yaw * cos_yaw;
-  const double sin_cos_yaw = sin_yaw * cos_yaw;
 
   // set position
   pose.position.x = (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) *
@@ -643,20 +690,31 @@ bool BicycleMotionModel::getPredictedState(
   twist.angular.z = X(IDX::V) * wheel_base_inv;
 
   constexpr double default_cov = 0.1 * 0.1;
-  // set pose covariance
-  pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
-  pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
-  // Jacobian: d(yaw)/d[X1,Y1,X2,Y2] = (1/L)*[sin_yaw, -cos_yaw, -sin_yaw, cos_yaw]
-  // YAW_YAW = J * P_sub * J^T (full 4x4 block, P symmetric so off-diag terms double)
-  pose_cov[XYZRPY_COV_IDX::YAW_YAW] =
-    wheel_base_inv_sq *
-    (sin_yaw_sq * P(IDX::X1, IDX::X1) - 2.0 * sin_cos_yaw * P(IDX::X1, IDX::Y1) -
-     2.0 * sin_yaw_sq * P(IDX::X1, IDX::X2) + 2.0 * sin_cos_yaw * P(IDX::X1, IDX::Y2) +
-     cos_yaw_sq * P(IDX::Y1, IDX::Y1) + 2.0 * sin_cos_yaw * P(IDX::Y1, IDX::X2) -
-     2.0 * cos_yaw_sq * P(IDX::Y1, IDX::Y2) + sin_yaw_sq * P(IDX::X2, IDX::X2) -
-     2.0 * sin_cos_yaw * P(IDX::X2, IDX::Y2) + cos_yaw_sq * P(IDX::Y2, IDX::Y2));
+  // Set pose covariance
+  // Propagate the axle-coordinate covariance [X1, Y1, X2, Y2] through a single Jacobian G so the
+  // exported (x, y, yaw) block stays consistent, correctly correlated, and PSD by construction:
+  //   center = w_rear * p1 + w_front * p2   (w_rear + w_front = 1)
+  //   yaw    = atan2(Y2 - Y1, X2 - X1),  d(yaw)/d[X1,Y1,X2,Y2] = (1/L)*[sin, -cos, -sin, cos]
+  // M = G * P_sub * G^T reproduces the exact linearized YAW_YAW and adds the position<->yaw
+  // cross-covariance that a single-axle-point copy dropped.
+  const double w_rear = motion_params_.lf_ratio * motion_params_.wheel_base_ratio_inv;
+  const double w_front = motion_params_.lr_ratio * motion_params_.wheel_base_ratio_inv;
+  Eigen::Matrix<double, 3, 4> G;
+  G << w_rear, 0.0, w_front, 0.0,  // center_x
+    0.0, w_rear, 0.0, w_front,     // center_y
+    sin_yaw * wheel_base_inv, -cos_yaw * wheel_base_inv, -sin_yaw * wheel_base_inv,
+    cos_yaw * wheel_base_inv;  // yaw
+  const Eigen::Matrix3d M = G * P.topLeftCorner<4, 4>() * G.transpose();
+
+  pose_cov[XYZRPY_COV_IDX::X_X] = M(0, 0);
+  pose_cov[XYZRPY_COV_IDX::X_Y] = M(0, 1);
+  pose_cov[XYZRPY_COV_IDX::Y_X] = M(1, 0);
+  pose_cov[XYZRPY_COV_IDX::Y_Y] = M(1, 1);
+  pose_cov[XYZRPY_COV_IDX::X_YAW] = M(0, 2);
+  pose_cov[XYZRPY_COV_IDX::YAW_X] = M(2, 0);
+  pose_cov[XYZRPY_COV_IDX::Y_YAW] = M(1, 2);
+  pose_cov[XYZRPY_COV_IDX::YAW_Y] = M(2, 1);
+  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = M(2, 2);
   pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
   pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;

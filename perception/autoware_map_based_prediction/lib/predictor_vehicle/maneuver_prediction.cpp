@@ -36,7 +36,7 @@ namespace autoware::map_based_prediction
 {
 using autoware_utils::ScopedTimeTrack;
 
-ManeuverPredictor::ManeuverPredictor(rclcpp::Node & node) : node_(node)
+ManeuverPredictor::ManeuverPredictor(autoware::agnocast_wrapper::Node & node) : node_(node)
 {
 }
 

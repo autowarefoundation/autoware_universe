@@ -27,12 +27,13 @@ The core calculation (`RouteDistanceCalculator` in `src/main.cpp`) has no ROS no
 | `~/input/map`    | `autoware_map_msgs::msg::LaneletMapBin`     | Lanelet2 map, used to look up lanelets by ID          |
 | `/tf`            | `tf2_msgs/TFMessage`                        | TF (self-pose)                                        |
 
+
 By default (see `launch/path_distance_calculator.launch.xml`), `~/input/route` is remapped to `/planning/mission_planning/route` and `~/input/map` to `/map/vector_map`.
 
 ### Output
 
-| Name         | Type                                                | Description                                                          |
-| ------------ | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| Name         | Type                                                | Description                                                     |
+| ------------ | --------------------------------------------------- | --------------------------------------------------------------- |
 | `~/distance` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Remaining distance from the self-position to the route goal [m] |
 
 ## Parameters
