@@ -72,11 +72,20 @@
     <!-- SplatSim integration (optional) -->
     <arg name="render_with_splatsim" default="true" description="Enable splatsim rendering via Docker + gRPC"/>
     <arg name="splatsim_render_camera" default="false" description="Render cameras via splatsim (false = cameras fully off in splatsim mode)"/>
-    <!-- Geographic origin of the CARLA world origin. Defaults are for CARLA 0.10.0 Odaiba
-         (MGRS 54SUE local (92008.441357, 45335.052882) reverse-projected to WGS84),
-         which carries no OpenDRIVE GeoReference. Set to 0.0/0.0 to parse from OpenDRIVE instead. -->
-    <arg name="splatsim_geo_origin_lat" default="35.645946115028" description="Latitude (deg) of the CARLA world origin for the splatsim MGRS transform"/>
-    <arg name="splatsim_geo_origin_lon" default="139.807130021877" description="Longitude (deg) of the CARLA world origin for the splatsim MGRS transform"/>
+    <!-- Manual override for the geographic origin of the CARLA world origin.
+         Leave at 0.0/0.0: by default the origin is derived from the lanelet2
+         map (see lanelet2_map_path below) by reverse-projecting map_origin
+         through the map's MGRS grid, falling back to the OpenDRIVE GeoReference.
+         Set explicitly only to bypass both. -->
+    <arg name="splatsim_geo_origin_lat" default="0.0" description="Latitude (deg) override of the CARLA world origin for the splatsim MGRS transform (0 = auto)"/>
+    <arg name="splatsim_geo_origin_lon" default="0.0" description="Longitude (deg) override of the CARLA world origin for the splatsim MGRS transform (0 = auto)"/>
+    <!-- Autoware lanelet2 map used to auto-derive the splatsim geographic origin.
+         Defaults to <map_path>/lanelet2_map.osm; empty falls back to OpenDRIVE. -->
+    <let
+      name="lanelet2_map_path_default"
+      value="$(eval &quot;__import__('os').path.join('$(var map_path)', 'lanelet2_map.osm') if '$(var map_path)'.strip() else ''&quot;)"
+    />
+    <arg name="lanelet2_map_path" default="$(var lanelet2_map_path_default)" description="Path to the Autoware lanelet2 map (*.osm) for splatsim geo-origin derivation"/>
     <arg name="splatsim_tileset_path" default="$(env HOME)/workspace/fg_plus_bg_background_v25_enu_ecef.usdz" description="Host path to the 3DGS scene (tileset.json or .usdz)"/>
     <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
     <arg name="splatsim_grpc_port" default="50051"/>
@@ -129,6 +138,7 @@
       <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>
       <param name="map_origin_y" value="$(var map_origin_y)"/>
+      <param name="lanelet2_map_path" value="$(var lanelet2_map_path)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file_resolved)"/>
       <param name="render_with_splatsim" value="$(var render_with_splatsim)"/>
