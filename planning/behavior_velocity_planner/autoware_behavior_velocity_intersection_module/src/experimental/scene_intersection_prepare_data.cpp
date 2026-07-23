@@ -295,7 +295,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     }
 
     const auto dist_to_default_stopline =
-      std::fabs(intersection_stoplines.default_stopline.value() - intersection_stoplines.closest_s);
+      intersection_stoplines.default_stopline.value() - intersection_stoplines.closest_s;
 
     if (dist_to_default_stopline > braking_dist) {
       // default stop line is feasible
