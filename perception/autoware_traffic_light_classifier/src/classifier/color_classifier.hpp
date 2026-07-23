@@ -17,18 +17,11 @@
 
 #include "classifier_interface.hpp"
 
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
-
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
 
 #include <vector>
 
@@ -140,9 +133,8 @@ private:
   cv::Scalar max_hsv_red_;
 };
 
-// Thin ROS adapter around ColorClassifierCore. Owns the node-facing concerns
-// (parameter declaration, dynamic reconfigure, debug-image publishing, logging)
-// and delegates classification to the core. Public API is unchanged.
+// Thin ROS adapter around ColorClassifierCore. Wires dynamic reconfigure and logging, and
+// delegates classification and debug-image rendering to the core.
 class ColorClassifier : public ClassifierInterface
 {
 public:
@@ -153,11 +145,11 @@ public:
     const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
 private:
   rcl_interfaces::msg::SetParametersResult parametersCallback(
     const std::vector<rclcpp::Parameter> & parameters);
-
-  image_transport::Publisher image_pub_;
 
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   rclcpp::Node * node_ptr_;

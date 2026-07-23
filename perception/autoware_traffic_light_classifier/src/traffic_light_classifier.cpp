@@ -83,6 +83,10 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
     }
   }
 
+  // Hand the classified crops back to the caller so it can request a debug view later; the debug
+  // image reflects the classifier's view, before the UNKNOWN / exposure post-processing below.
+  result.roi_images = images;
+
   // append the undetected rois as unknown
   for (const auto & input_roi : rois.rois) {
     // if the type is the target type but the roi size is zero, the roi is undetected
@@ -104,6 +108,11 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
   }
 
   return result;
+}
+
+cv::Mat TrafficLightClassifier::make_debug_image(const std::vector<cv::Mat> & roi_images) const
+{
+  return classifier_->make_debug_image(roi_images);
 }
 
 }  // namespace autoware::traffic_light

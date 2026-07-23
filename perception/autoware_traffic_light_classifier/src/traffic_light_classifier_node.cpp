@@ -75,6 +75,8 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
     classifier_ = std::make_unique<TrafficLightClassifier>(
       classifier_ptr, classify_traffic_light_type, over_exposure_threshold,
       under_exposure_threshold);
+    debug_image_pub_ = image_transport::create_publisher(
+      this, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
   }
 
   diagnostics_interface_ptr_ =
@@ -146,6 +148,17 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
       "Detected out-of-range exposure in ROI. Corresponding ROI was overwritten with UNKNOWN.");
   }
   diagnostics_interface_ptr_->publish(output_msg.header.stamp);
+
+  // Publish the debug view last, and only when a consumer is attached (building it is a cold path),
+  // so a debug-rendering failure cannot skip the primary signal output or diagnostics above.
+  if (debug_image_pub_.getNumSubscribers() > 0) {
+    const cv::Mat debug_image = classifier_->make_debug_image(result->roi_images);
+    if (!debug_image.empty()) {
+      const auto debug_image_msg =
+        cv_bridge::CvImage(std_msgs::msg::Header(), "rgb8", debug_image).toImageMsg();
+      debug_image_pub_.publish(debug_image_msg);
+    }
+  }
 }
 
 }  // namespace autoware::traffic_light

@@ -91,6 +91,7 @@ private:
   bool is_approximate_sync_;
   rclcpp::Publisher<tier4_perception_msgs::msg::TrafficLightArray>::SharedPtr
     traffic_signal_array_pub_;
+  image_transport::Publisher debug_image_pub_;
   std::unique_ptr<TrafficLightClassifier> classifier_;
 
   std::unique_ptr<autoware_utils::DiagnosticsInterface>

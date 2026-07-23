@@ -18,19 +18,12 @@
 #include "classifier_interface.hpp"
 
 #include <autoware/tensorrt_classifier/tensorrt_classifier.hpp>
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
-
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
 
 #include <memory>
 #include <string>
@@ -90,9 +83,8 @@ private:
   int batch_size_ = 0;
 };
 
-// Thin ROS adapter around CNNClassifierCore. Owns the node-facing concerns (parameter
-// declaration, label-file reading, debug-image publishing, logging) and delegates
-// classification to the core. Public API is unchanged.
+// Thin ROS adapter around CNNClassifierCore. Logs, and delegates classification and debug-image
+// rendering to the core.
 class CNNClassifier : public ClassifierInterface
 {
 public:
@@ -103,10 +95,14 @@ public:
     const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
 private:
   rclcpp::Node * node_ptr_;
-  image_transport::Publisher image_pub_;
   CNNClassifierCore core_;
+  // Per-image classification output kept from the most recent getTrafficSignals so
+  // make_debug_image can render the batch afterwards.
+  tier4_perception_msgs::msg::TrafficLightArray last_signals_;
 };
 
 }  // namespace autoware::traffic_light
