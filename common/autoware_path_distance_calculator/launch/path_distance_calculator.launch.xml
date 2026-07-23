@@ -1,8 +1,10 @@
 <launch>
-  <arg name="path" default="/planning/scenario_planning/lane_driving/behavior_planning/path"/>
+  <arg name="route" default="/planning/mission_planning/route"/>
+  <arg name="map" default="/map/vector_map"/>
   <arg name="distance" default="~/distance"/>
   <node pkg="autoware_path_distance_calculator" exec="autoware_path_distance_calculator_node" name="path_distance_calculator">
-    <remap from="~/input/path" to="$(var path)"/>
+    <remap from="~/input/route" to="$(var route)"/>
+    <remap from="~/input/map" to="$(var map)"/>
     <remap from="~/output/distance" to="$(var distance)"/>
   </node>
 </launch>
