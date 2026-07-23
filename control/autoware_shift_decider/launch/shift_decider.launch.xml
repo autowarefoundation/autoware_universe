@@ -6,6 +6,7 @@
   <node pkg="autoware_shift_decider" exec="autoware_shift_decider" name="autoware_shift_decider" output="screen">
     <remap from="input/control_cmd" to="/control/trajectory_follower/control_cmd"/>
     <remap from="input/state" to="/autoware/state"/>
+    <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
     <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
     <param from="$(var config_file)"/>
     <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
