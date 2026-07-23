@@ -90,7 +90,10 @@ public:
   // Heading state, sign-belief confidence, and 180° state flip; composite trackers use these
   // for heading-sign consensus across their layers.
   double getYawState() const { return motion_model_.getYawState(); }
-  double signBeliefLogOdds() const { return sign_belief_.logOdds(); }
+  double signBeliefConfidence() const
+  {
+    return std::abs(sign_belief_.agreement()) / std::sqrt(sign_belief_.variance());
+  }
   void flipOrientationSign();
 
   ShapeModelBase & getShapeModel() override { return shape_model_; }

@@ -55,8 +55,8 @@ bool MultipleVehicleTracker::measure(
 // is authoritative.
 void MultipleVehicleTracker::alignOrientationSigns()
 {
-  const bool big_leads = std::abs(big_vehicle_tracker_.signBeliefLogOdds()) >=
-                         std::abs(normal_vehicle_tracker_.signBeliefLogOdds());
+  const bool big_leads =
+    big_vehicle_tracker_.signBeliefConfidence() >= normal_vehicle_tracker_.signBeliefConfidence();
   VehicleTracker & leader = big_leads ? big_vehicle_tracker_ : normal_vehicle_tracker_;
   VehicleTracker & follower = big_leads ? normal_vehicle_tracker_ : big_vehicle_tracker_;
   const double yaw_diff =

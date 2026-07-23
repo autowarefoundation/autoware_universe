@@ -410,7 +410,7 @@ TEST(ExportedPoseCovariance, PositiveSemiDefinite)
 }
 
 // ---------------------------------------------------------------------------------------------
-// OrientationSignBelief — log-odds heading-sign evidence with flip hysteresis.
+// OrientationSignBelief — OU-Kalman yaw-sign evidence fused with velocity-sign evidence.
 // ---------------------------------------------------------------------------------------------
 namespace
 {
@@ -419,127 +419,150 @@ const object_model::OrientationSignBelief & beliefParams()
   return object_model::normal_vehicle.orientation_sign_belief;
 }
 
+rclcpp::Time beliefTime(const double seconds = 0.0)
+{
+  return rclcpp::Time(0, 0, RCL_ROS_TIME) + rclcpp::Duration::from_seconds(seconds);
+}
+
 OrientationSignBelief seededBelief(const types::OrientationAvailability availability)
 {
-  return OrientationSignBelief(beliefParams(), availability);
+  return OrientationSignBelief(beliefParams(), availability, beliefTime());
+}
+
+// Expected posterior of one KF update with measurement z and noise r from prior (0, Q).
+double seedAgreement(const double r)
+{
+  const double q = beliefParams().stationary_var;
+  return q / (q + r);
 }
 }  // namespace
 
 // The seeding detection counts as one agreeing vote, weighted by its availability.
 TEST(OrientationSignBelief, SeedPerAvailability)
 {
-  EXPECT_DOUBLE_EQ(seededBelief(types::OrientationAvailability::UNAVAILABLE).logOdds(), 0.0);
+  const auto unavailable = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  EXPECT_DOUBLE_EQ(unavailable.agreement(), 0.0);
+  EXPECT_DOUBLE_EQ(unavailable.variance(), beliefParams().stationary_var);
   EXPECT_DOUBLE_EQ(
-    seededBelief(types::OrientationAvailability::SIGN_UNKNOWN).logOdds(),
-    beliefParams().vote_sign_unknown);
+    seededBelief(types::OrientationAvailability::SIGN_UNKNOWN).agreement(),
+    seedAgreement(beliefParams().r_yaw_sign_unknown));
   EXPECT_DOUBLE_EQ(
-    seededBelief(types::OrientationAvailability::AVAILABLE).logOdds(),
-    beliefParams().vote_available);
+    seededBelief(types::OrientationAvailability::AVAILABLE).agreement(),
+    seedAgreement(beliefParams().r_yaw_available));
 }
 
-// Repeated agreeing/disagreeing votes saturate at the clamp bounds.
-TEST(OrientationSignBelief, AccumulationClampsAtBounds)
+// AVAILABLE votes carry more information than SIGN_UNKNOWN votes.
+TEST(OrientationSignBelief, AvailableVotesWeighMore)
 {
-  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
-  for (int i = 0; i < 20; ++i) {
-    belief.vote(0.0, false);
-  }
-  EXPECT_DOUBLE_EQ(belief.logOdds(), beliefParams().log_odds_max);
-
-  for (int i = 0; i < 40; ++i) {
-    belief.vote(M_PI, false);
-  }
-  EXPECT_DOUBLE_EQ(belief.logOdds(), -beliefParams().log_odds_max);
+  auto available = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  available.vote(beliefTime(), 0.0, true);
+  auto sign_unknown = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  sign_unknown.vote(beliefTime(), 0.0, false);
+  EXPECT_GT(available.agreement(), sign_unknown.agreement());
+  EXPECT_GT(sign_unknown.agreement(), 0.0);
+  EXPECT_LT(available.variance(), sign_unknown.variance());
 }
 
 // Near-perpendicular measurements fall in the dead zone and leave the belief unchanged.
 TEST(OrientationSignBelief, DeadZoneSkipsVote)
 {
   auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
-  const double before = belief.logOdds();
-  belief.vote(M_PI * 75.0 / 180.0, false);
-  belief.vote(-M_PI * 105.0 / 180.0, false);
-  EXPECT_DOUBLE_EQ(belief.logOdds(), before);
+  const double before = belief.agreement();
+  belief.vote(beliefTime(), M_PI * 75.0 / 180.0, false);
+  belief.vote(beliefTime(), -M_PI * 105.0 / 180.0, false);
+  EXPECT_DOUBLE_EQ(belief.agreement(), before);
 }
 
-// AVAILABLE votes carry the stronger weight.
-TEST(OrientationSignBelief, AvailableVotesWeighMore)
+// Same-time contradicting votes fuse batch-equivalently: the posterior is independent of the
+// processing order, and a mixed frame pulls weaker than a unanimous one.
+TEST(OrientationSignBelief, SimultaneousVotesCompensate)
 {
-  auto belief = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  belief.vote(M_PI, true);
-  EXPECT_DOUBLE_EQ(belief.logOdds(), -beliefParams().vote_available);
-  EXPECT_GT(beliefParams().vote_available, beliefParams().vote_sign_unknown);
-}
-
-// A velocity vote weighs linearly with speed and matches an AVAILABLE yaw vote at the par speed.
-TEST(OrientationSignBelief, VelocityVoteScalesWithSpeed)
-{
-  auto belief = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  belief.voteVelocity(-beliefParams().vote_vel_par, 0.0);
-  EXPECT_DOUBLE_EQ(belief.logOdds(), -beliefParams().vote_available);
-
-  auto slow = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  slow.voteVelocity(-0.1 * beliefParams().vote_vel_par, 0.0);
-  EXPECT_DOUBLE_EQ(slow.logOdds(), -0.1 * beliefParams().vote_available);
-}
-
-// The velocity vote is discounted by the estimate variance: half weight at vote_vel_var, near
-// zero for a poorly converged velocity.
-TEST(OrientationSignBelief, VelocityVarianceWeakensVote)
-{
-  auto halved = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  halved.voteVelocity(-beliefParams().vote_vel_par, beliefParams().vote_vel_var);
-  EXPECT_DOUBLE_EQ(halved.logOdds(), -0.5 * beliefParams().vote_available);
-
-  auto uncertain = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  uncertain.voteVelocity(-beliefParams().vote_vel_par, 1e3 * beliefParams().vote_vel_var);
-  EXPECT_NEAR(uncertain.logOdds(), 0.0, 1e-2 * beliefParams().vote_available);
-}
-
-// Against an agreeing AVAILABLE yaw vote, reverse motion below the par speed keeps the sign
-// (parked vehicles maneuver in reverse) while reverse motion above it drives the belief negative.
-TEST(OrientationSignBelief, ParSpeedSetsYawVelocityPriority)
-{
-  auto slow = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  slow.vote(0.0, true);
-  slow.voteVelocity(-0.5 * beliefParams().vote_vel_par, 0.0);
-  EXPECT_GT(slow.logOdds(), 0.0);
-
-  auto fast = seededBelief(types::OrientationAvailability::UNAVAILABLE);
-  fast.vote(0.0, true);
-  fast.voteVelocity(-2.0 * beliefParams().vote_vel_par, 0.0);
-  EXPECT_LT(fast.logOdds(), 0.0);
-}
-
-// The flip fires only past -flip_threshold, and negation on flip restores a trusted belief.
-TEST(OrientationSignBelief, FlipTriggerAndNegation)
-{
-  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
-  belief.vote(M_PI, false);
-  belief.vote(M_PI, false);
-  EXPECT_FALSE(belief.shouldFlip());  // -1.1 > -2.0
-  belief.vote(M_PI, false);
-  EXPECT_TRUE(belief.shouldFlip());  // -2.2 < -2.0
-
-  belief.onFlipped();
-  EXPECT_DOUBLE_EQ(belief.logOdds(), 2.0 * beliefParams().vote_sign_unknown);
-  EXPECT_FALSE(belief.shouldFlip());
-}
-
-// Alternating votes after a flip stay within one weight of the post-flip belief and can never
-// traverse from +flip_threshold to -flip_threshold.
-TEST(OrientationSignBelief, NoOscillationUnderAlternatingVotes)
-{
-  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
-  for (int i = 0; i < 3; ++i) {
-    belief.vote(M_PI, false);
+  const std::array<std::array<double, 3>, 3> orders = {
+    {{0.0, 0.0, M_PI}, {0.0, M_PI, 0.0}, {M_PI, 0.0, 0.0}}};
+  std::array<double, 3> results{};
+  for (size_t i = 0; i < orders.size(); ++i) {
+    auto belief = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+    for (const double yaw_diff : orders[i]) {
+      belief.vote(beliefTime(), yaw_diff, false);
+    }
+    results[i] = belief.agreement();
   }
-  ASSERT_TRUE(belief.shouldFlip());
+  EXPECT_NEAR(results[0], results[1], 1e-12);
+  EXPECT_NEAR(results[1], results[2], 1e-12);
+
+  auto unanimous = seededBelief(types::OrientationAvailability::UNAVAILABLE);
+  for (int i = 0; i < 3; ++i) {
+    unanimous.vote(beliefTime(), 0.0, false);
+  }
+  EXPECT_GT(results[0], 0.0);
+  EXPECT_GT(unanimous.agreement(), 2.0 * results[0]);
+}
+
+// Idle time relaxes the estimate toward the uninformed prior (0, stationary_var).
+TEST(OrientationSignBelief, DecayRelaxesTowardPrior)
+{
+  auto belief = seededBelief(types::OrientationAvailability::AVAILABLE);
+  const double seeded = belief.agreement();
+  belief.shouldFlip(beliefTime(10.0 * beliefParams().tau), 0.0, 1e3);
+  EXPECT_NEAR(belief.agreement(), 0.0, 1e-3 * seeded);
+  EXPECT_NEAR(belief.variance(), beliefParams().stationary_var, 1e-4);
+}
+
+// At standstill the velocity evidence carries no information: the fused posterior equals the
+// yaw-vote posterior.
+TEST(OrientationSignBelief, VelocityGatedOutAtStandstill)
+{
+  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  EXPECT_FALSE(belief.shouldFlip(beliefTime(), 0.0, 0.01));
+  EXPECT_DOUBLE_EQ(belief.fusedAgreement(), belief.agreement());
+  EXPECT_DOUBLE_EQ(belief.fusedVariance(), belief.variance());
+}
+
+// A certain reverse velocity at the par speed overrides weak agreeing yaw evidence, while the
+// same velocity with a poorly converged variance does not.
+TEST(OrientationSignBelief, VelocityOverridesAtSpeedUnlessUncertain)
+{
+  auto certain = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  EXPECT_TRUE(certain.shouldFlip(beliefTime(), -2.0 * beliefParams().vote_vel_par, 0.01));
+
+  auto uncertain = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  EXPECT_FALSE(uncertain.shouldFlip(
+    beliefTime(), -2.0 * beliefParams().vote_vel_par, 50.0 * beliefParams().vote_vel_var));
+  EXPECT_GT(uncertain.fusedAgreement(), -beliefParams().flip_min_agreement);
+}
+
+// Strong accumulated yaw evidence resists a single frame of contrary velocity.
+TEST(OrientationSignBelief, YawEvidenceResistsVelocityFrame)
+{
+  auto belief = seededBelief(types::OrientationAvailability::AVAILABLE);
+  for (int i = 0; i < 5; ++i) {
+    belief.vote(beliefTime(), 0.0, true);
+  }
+  EXPECT_FALSE(belief.shouldFlip(beliefTime(), -2.0 * beliefParams().vote_vel_par, 0.01));
+}
+
+// The flip fires only on a confidently negative fused agreement, and negation on flip restores
+// a trusted belief that alternating votes cannot re-flip.
+TEST(OrientationSignBelief, FlipNegationHysteresis)
+{
+  auto belief = seededBelief(types::OrientationAvailability::SIGN_UNKNOWN);
+  int flipped_at = -1;
+  for (int i = 1; i <= 30; ++i) {
+    belief.vote(beliefTime(), M_PI, false);
+    if (belief.shouldFlip(beliefTime(), 0.0, 1e3)) {
+      flipped_at = i;
+      break;
+    }
+  }
+  ASSERT_GT(flipped_at, 1);
+
   belief.onFlipped();
+  EXPECT_GT(belief.agreement(), 0.0);
+  EXPECT_FALSE(belief.shouldFlip(beliefTime(), 0.0, 1e3));
 
   for (int i = 0; i < 50; ++i) {
-    belief.vote(i % 2 == 0 ? M_PI : 0.0, false);
-    EXPECT_FALSE(belief.shouldFlip());
+    belief.vote(beliefTime(), i % 2 == 0 ? M_PI : 0.0, false);
+    EXPECT_FALSE(belief.shouldFlip(beliefTime(), 0.0, 1e3));
   }
 }
 
@@ -573,8 +596,7 @@ TEST(FlipOrientation, SwapsAxlesAndReversesVelocity)
   BicycleMotionModel::StateMat p_after;
   rawState(model, x_after, p_after);
 
-  const double yaw_jump =
-    autoware_utils_math::normalize_radian(model.getYawState() - yaw_before);
+  const double yaw_jump = autoware_utils_math::normalize_radian(model.getYawState() - yaw_before);
   EXPECT_NEAR(std::abs(yaw_jump), M_PI, 1e-12);
   EXPECT_DOUBLE_EQ(model.getLength(), length_before);
 
@@ -654,8 +676,8 @@ double trackedYaw(const VehicleTracker & tracker, const rclcpp::Time & time)
 }
 }  // namespace
 
-// A stationary tracker seeded with the wrong sign flips once opposing SIGN_UNKNOWN votes cross
-// the threshold (seed +w, then -w per frame: below -2.0 on the third), and stays flipped.
+// A stationary tracker seeded with the wrong sign flips once opposing SIGN_UNKNOWN votes drive
+// the agreement confidently negative, and stays flipped.
 TEST(VehicleTrackerSignFlip, OpposedVotesFlipSlowTracker)
 {
   const types::InputChannel channel{};
@@ -664,7 +686,7 @@ TEST(VehicleTrackerSignFlip, OpposedVotesFlipSlowTracker)
 
   int flipped_at = -1;
   rclcpp::Time time = start;
-  for (int i = 1; i <= 6; ++i) {
+  for (int i = 1; i <= 25; ++i) {
     time = start + rclcpp::Duration::from_seconds(0.1 * i);
     tracker.predict(time);
     tracker.measure(makeVehicleDetection(time, M_PI), time, channel);
@@ -674,7 +696,8 @@ TEST(VehicleTrackerSignFlip, OpposedVotesFlipSlowTracker)
       flipped_at = i;
     }
   }
-  EXPECT_EQ(flipped_at, 3);
+  EXPECT_GT(flipped_at, 2);
+  EXPECT_LE(flipped_at, 25);
 
   // Agreeing frames after the flip keep the corrected heading.
   const double deviation =
@@ -693,7 +716,7 @@ TEST(PedestrianAndBicycleTrackerSignFlip, PedestrianLayerFollowsBicycleSign)
   PedestrianAndBicycleTracker tracker(start, detection);
 
   rclcpp::Time time = start;
-  for (int i = 1; i <= 6; ++i) {
+  for (int i = 1; i <= 25; ++i) {
     time = start + rclcpp::Duration::from_seconds(0.1 * i);
     tracker.predict(time);
     auto measurement = makeVehicleDetection(time, M_PI);

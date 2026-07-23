@@ -18,63 +18,104 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
+#include <rclcpp/time.hpp>
+
 #include <algorithm>
 #include <cmath>
 
 namespace autoware::multi_object_tracker
 {
 
-// Log-odds belief that the tracker's heading sign is correct. Each detection votes by its raw yaw
-// sign and the tracked longitudinal velocity votes by its sign; a strongly negative belief
-// triggers a 180° flip, and negation on flip provides hysteresis against oscillation.
+// Heading-sign belief with two separated evidence sources. Detection-yaw votes accumulate in a
+// scalar OU-Kalman agreement estimate (+1 = sign correct, -1 = wrong) that relaxes toward an
+// uninformed prior over time; the tracked longitudinal velocity contributes memorylessly at
+// decision time, weighted by speed and velocity certainty. A confidently negative fused
+// agreement triggers a 180° flip, and negation on flip provides hysteresis against oscillation.
 class OrientationSignBelief
 {
 public:
   OrientationSignBelief(
     const object_model::OrientationSignBelief & params,
-    const types::OrientationAvailability initial_availability)
-  : params_(params)
+    const types::OrientationAvailability initial_availability, const rclcpp::Time & time)
+  : params_(params), variance_(params.stationary_var), last_update_time_(time)
   {
     // The seeding detection also seeds the tracker yaw, so it counts as one agreeing vote.
     if (initial_availability == types::OrientationAvailability::AVAILABLE) {
-      log_odds_ = params_.vote_available;
+      correct(1.0, params_.r_yaw_available);
     } else if (initial_availability == types::OrientationAvailability::SIGN_UNKNOWN) {
-      log_odds_ = params_.vote_sign_unknown;
+      correct(1.0, params_.r_yaw_sign_unknown);
     }
+    fused_agreement_ = agreement_;
+    fused_variance_ = variance_;
   }
 
   // yaw_diff: normalized measurement yaw minus tracker yaw [rad]
-  void vote(const double yaw_diff, const bool is_sign_known)
+  void vote(const rclcpp::Time & time, const double yaw_diff, const bool is_sign_known)
   {
+    predictTo(time);
     // Near-perpendicular boxes carry axis ambiguity, not sign evidence.
     if (std::abs(std::abs(yaw_diff) - M_PI_2) < params_.dead_zone) return;
-    const double weight = is_sign_known ? params_.vote_available : params_.vote_sign_unknown;
-    log_odds_ += std::abs(yaw_diff) < M_PI_2 ? weight : -weight;
-    log_odds_ = std::clamp(log_odds_, -params_.log_odds_max, params_.log_odds_max);
+    const double z = std::abs(yaw_diff) < M_PI_2 ? 1.0 : -1.0;
+    correct(z, is_sign_known ? params_.r_yaw_available : params_.r_yaw_sign_unknown);
   }
 
-  // Forward motion agrees with the heading sign, reverse motion disagrees. The vote weight grows
-  // linearly with speed and matches an AVAILABLE yaw vote at vote_vel_par, so a slow reverse
-  // maneuver (e.g. parking) barely moves the belief while yaw votes dominate. The vote is
-  // discounted by the velocity variance, halving at vote_vel_var; a poorly converged velocity
-  // estimate carries little weight.
-  void voteVelocity(const double vel_long, const double vel_var)
+  // Fuses the accumulated agreement with the instantaneous velocity-sign evidence. The velocity
+  // weight vanishes at standstill, saturates at vote_vel_par, and is discounted by the velocity
+  // variance, so only sustained, well-estimated motion can override the yaw evidence. The flip
+  // fires when the fused sign is wrong with high posterior confidence.
+  bool shouldFlip(const rclcpp::Time & time, const double vel_long, const double vel_var)
   {
-    const double confidence = params_.vote_vel_var / (params_.vote_vel_var + vel_var);
-    log_odds_ += params_.vote_available * confidence * vel_long / params_.vote_vel_par;
-    log_odds_ = std::clamp(log_odds_, -params_.log_odds_max, params_.log_odds_max);
+    predictTo(time);
+    const double vel_ratio = vel_long / params_.vote_vel_par;
+    const double z_vel = std::clamp(vel_ratio, -1.0, 1.0);
+    const double info_vel = std::min(vel_ratio * vel_ratio, 1.0) / params_.r_vel *
+                            params_.vote_vel_var / (params_.vote_vel_var + vel_var);
+    fused_variance_ = 1.0 / (1.0 / variance_ + info_vel);
+    fused_agreement_ = (agreement_ / variance_ + z_vel * info_vel) * fused_variance_;
+    return fused_agreement_ + params_.flip_z * std::sqrt(fused_variance_) < 0.0 &&
+           fused_agreement_ < -params_.flip_min_agreement;
   }
-
-  bool shouldFlip() const { return log_odds_ < -params_.flip_threshold; }
 
   // A 180° state flip turns every past disagreeing vote into an agreeing one.
-  void onFlipped() { log_odds_ = -log_odds_; }
+  void onFlipped()
+  {
+    agreement_ = -agreement_;
+    fused_agreement_ = -fused_agreement_;
+  }
 
-  double logOdds() const { return log_odds_; }
+  double agreement() const { return agreement_; }
+  double variance() const { return variance_; }
+  double fusedAgreement() const { return fused_agreement_; }
+  double fusedVariance() const { return fused_variance_; }
 
 private:
+  // OU relaxation toward the (0, stationary_var) prior over the elapsed time. Zero elapsed time
+  // leaves the state untouched, so near-simultaneous votes fuse batch-equivalently and
+  // contradicting detections of one frame compensate independent of processing order.
+  void predictTo(const rclcpp::Time & time)
+  {
+    const double dt = (time - last_update_time_).seconds();
+    if (dt <= 0.0) return;
+    last_update_time_ = time;
+    const double alpha = std::exp(-dt / params_.tau);
+    agreement_ *= alpha;
+    variance_ = alpha * alpha * variance_ + (1.0 - alpha * alpha) * params_.stationary_var;
+  }
+
+  // Scalar Kalman update of the agreement estimate.
+  void correct(const double z, const double r)
+  {
+    const double gain = variance_ / (variance_ + r);
+    agreement_ += gain * (z - agreement_);
+    variance_ *= (1.0 - gain);
+  }
+
   object_model::OrientationSignBelief params_;
-  double log_odds_{0.0};
+  double agreement_{0.0};
+  double variance_{0.0};
+  rclcpp::Time last_update_time_;
+  double fused_agreement_{0.0};
+  double fused_variance_{0.0};
 };
 
 }  // namespace autoware::multi_object_tracker

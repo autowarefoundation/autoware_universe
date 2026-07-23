@@ -64,7 +64,8 @@ VehicleTracker::VehicleTracker(
   object_model_(object_model),
   shape_model_(object_model),
   shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER),
-  sign_belief_(object_model.orientation_sign_belief, object.kinematics.orientation_availability)
+  sign_belief_(
+    object_model.orientation_sign_belief, object.kinematics.orientation_availability, time)
 {
   // set tracker type based on object model
   switch (object_model.type) {
@@ -257,16 +258,11 @@ bool VehicleTracker::measure(
   if (
     in_object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
     channel_info.trust_orientation) {
-    const double raw_yaw_diff = autoware_utils_math::normalize_radian(
-      tf2::getYaw(in_object.pose.orientation) - tracker_yaw);
+    const double raw_yaw_diff =
+      autoware_utils_math::normalize_radian(tf2::getYaw(in_object.pose.orientation) - tracker_yaw);
     sign_belief_.vote(
-      raw_yaw_diff,
+      time, raw_yaw_diff,
       in_object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE);
-    RCLCPP_INFO(
-      logger_, "SignBelief[%s] yaw vote: yaw_diff=%.3f sign_known=%d log_odds=%.3f",
-      getUuidString().c_str(), raw_yaw_diff,
-      in_object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE,
-      sign_belief_.logOdds());
   }
 
   const types::DynamicObject corrected = normalizeYaw(in_object, tracker_yaw);
@@ -286,21 +282,12 @@ bool VehicleTracker::measure(
   shape_model_.updateFootprint(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
-  // The tracked longitudinal velocity votes on the heading-sign belief once per measurement.
+  // Belief-driven 180° flip on the fused posterior: yaw votes decide the sign at low speed and
+  // the instantaneous velocity sign decides above the par speed.
   const double vel_long = motion_model_.getStateElement(IDX::U);
   const double vel_var = motion_model_.getCovarianceElement(IDX::U, IDX::U);
-  sign_belief_.voteVelocity(vel_long, vel_var);
-  RCLCPP_INFO(
-    logger_, "SignBelief[%s] velocity vote: vel_long=%.3f vel_var=%.3f log_odds=%.3f",
-    getUuidString().c_str(), vel_long, vel_var, sign_belief_.logOdds());
-
-  // Belief-driven 180° flip. Velocity evidence is part of the belief, so yaw votes decide the
-  // sign at low speed and the velocity sign decides above the par speed.
-  if (sign_belief_.shouldFlip()) {
+  if (sign_belief_.shouldFlip(time, vel_long, vel_var)) {
     flipOrientationSign();
-    RCLCPP_INFO(
-      logger_, "SignBelief[%s] belief flip: log_odds=%.3f", getUuidString().c_str(),
-      sign_belief_.logOdds());
   }
 
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
