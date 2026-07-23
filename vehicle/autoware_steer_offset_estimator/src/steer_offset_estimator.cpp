@@ -59,7 +59,8 @@ SteerOffsetEstimator::update(
   const double angular_velocity = twist->angular.z;
 
   update_steering_buffer(steers);
-  const auto steering_info = get_steering_at_timestamp(rclcpp::Time(previous_pose_->header.stamp));
+  const auto previous_pose = previous_pose_.value_or(PoseStamped{});
+  const auto steering_info = get_steering_at_timestamp(rclcpp::Time(previous_pose.header.stamp));
 
   // Validate input data quality
   if (velocity < params_.min_velocity) return unexpected("velocity is too low");
@@ -67,25 +68,28 @@ SteerOffsetEstimator::update(
     return unexpected("angular velocity is too high");
   if (!steering_info) return unexpected("steering angle is not available");
 
-  if (std::abs(steering_info.value().steering) > params_.max_steer) {
-    previous_steering_ = steering_info;
+  // The optional was checked above; value_or is used to avoid unchecked optional access.
+  const auto steering_info_value = steering_info.value_or(SteeringInfo{rclcpp::Time(0), 0.0});
+  if (std::abs(steering_info_value.steering) > params_.max_steer) {
+    previous_steering_ = steering_info_value;
     return unexpected("steering angle is too large");
   }
 
-  const auto steering_rate = std::invoke([this, steering_info]() -> double {
+  const auto steering_rate = std::invoke([this, &steering_info_value]() -> double {
     if (!previous_steering_) return 0.0;
     const auto steering_dt =
-      rclcpp::Duration(rclcpp::Time(steering_info->stamp) - rclcpp::Time(previous_steering_->stamp))
+      rclcpp::Duration(
+        rclcpp::Time(steering_info_value.stamp) - rclcpp::Time(previous_steering_->stamp))
         .seconds();
     return steering_dt > 1e-6
-             ? std::abs(steering_info->steering - previous_steering_->steering) / steering_dt
+             ? std::abs(steering_info_value.steering - previous_steering_->steering) / steering_dt
              : 0.0;
   });
-  previous_steering_ = steering_info;
+  previous_steering_ = steering_info_value;
 
   if (steering_rate > params_.max_steer_rate) return unexpected("steering rate is too large");
 
-  return estimate_offset(velocity, angular_velocity, steering_info.value().steering);
+  return estimate_offset(velocity, angular_velocity, steering_info_value.steering);
 }
 
 std::optional<geometry_msgs::msg::Twist> SteerOffsetEstimator::calculate_twist(
@@ -103,7 +107,9 @@ std::optional<geometry_msgs::msg::Twist> SteerOffsetEstimator::calculate_twist(
 
   // If previous pose exists, use with current pose
   if (previous_pose_) {
-    twist = utils::calc_twist_from_pose(previous_pose_.value(), poses.back());
+    // The optional was checked above; value_or is used to avoid unchecked optional access.
+    const auto previous_pose = previous_pose_.value_or(PoseStamped{});
+    twist = utils::calc_twist_from_pose(previous_pose, poses.back());
     previous_pose_ = poses.back();
     return twist;
   }
