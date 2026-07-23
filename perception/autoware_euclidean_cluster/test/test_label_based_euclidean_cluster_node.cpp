@@ -276,7 +276,7 @@ TEST_F(LabelClusterConfigBehavior, PublishesDetectedObjectsForSemanticInput)
     helper_node->create_publisher<sensor_msgs::msg::PointCloud2>("/input", rclcpp::SensorDataQoS());
 
   rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(cluster_node);
+  executor.add_node(cluster_node->get_node_base_interface());
   executor.add_node(helper_node);
 
   std::thread spin_thread([&executor]() { executor.spin(); });

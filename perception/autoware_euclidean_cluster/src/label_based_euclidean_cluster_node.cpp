@@ -332,18 +332,20 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS().keep_last(1),
     std::bind(&LabelBasedEuclideanClusterNode::on_pointcloud, this, _1));
-  objects_pub_ = AUTOWARE_CREATE_PUBLISHER2(
-    autoware_perception_msgs::msg::DetectedObjects, "output", rclcpp::QoS{1});
+  objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+    "output", rclcpp::QoS{1});
 
   // Initialize timing and debug
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
-  debug_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, "~/debug");
+  debug_publisher_ =
+    std::make_unique<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "~/debug");
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
 }
 
 void LabelBasedEuclideanClusterNode::on_pointcloud(
-  sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) & input_msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
 
@@ -355,10 +357,12 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
     return;
   }
 
-  auto output_msg = std::move(result.value());
+  // Populate ROS-specific fields and move into an allocated (potentially zero-copy) output message
+  auto processed = std::move(result.value());
+  processed.header = input_msg->header;
 
-  // Populate ROS-specific fields
-  output_msg.header = input_msg->header;
+  auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(objects_pub_);
+  *output_msg = std::move(processed);
 
   // Publish the result
   objects_pub_->publish(std::move(output_msg));
