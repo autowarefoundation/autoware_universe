@@ -10,8 +10,10 @@
   <arg name="input_vector_map" default="/map/vector_map"/>
   <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_trajectory_processor" exec="autoware_trajectory_modifier_node" name="trajectory_modifier" namespace="">
-    <env name="LD_PRELOAD" value="/opt/ros/humble/lib/libagnocast_heaphook.so"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var trajectory_modifier_param_path)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>
     <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
