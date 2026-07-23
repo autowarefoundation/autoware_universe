@@ -48,7 +48,8 @@ MppiOptimizer::MppiOptimizer(const rclcpp::NodeOptions & options) : Node("mppi_o
   mppi_interface_->setAblationOptions(
     declare_parameter<bool>("ignore_obstacles", false),
     declare_parameter<bool>("ignore_drivable_area", false),
-    declare_parameter<bool>("force_cold_start_each_step", false));
+    declare_parameter<bool>("force_cold_start_each_step", false),
+    declare_parameter<bool>("use_last_control_as_nominal", false));
 }
 
 void MppiOptimizer::on_trajectory(const Trajectory::ConstSharedPtr msg)

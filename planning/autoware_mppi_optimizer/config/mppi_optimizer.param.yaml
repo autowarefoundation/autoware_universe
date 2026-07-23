@@ -3,19 +3,20 @@
     # Vehicle actuation dynamics are loaded from $(vehicle_model)_description/config/simulator_model.param.yaml
 
     # FirstOrderDubinsBicycleCostParams (see first_order_dubins_bicycle_cost.cuh)
+    lambda: 14000.0
     desired_speed: 2.5
     speed_coeff: 500.0
-    track_coeff: 1000.0
-    heading_coeff: 500.0
+    track_coeff: 3000.0
+    heading_coeff: 1000.0
     crash_coeff: 100000.0
     boundary_threshold: 0.8
     boundary_threshold_left: -1.0
     boundary_threshold_right: -1.0
-    lateral_acceleration_coeff: 300.0
-    lateral_jerk_coeff: 3000.0
+    lateral_acceleration_coeff: 500.0
+    lateral_jerk_coeff: 1000.0
     longitudinal_jerk_coeff: 10.0
     accel_cmd_coeff: 0.0
-    steer_cmd_coeff: 1000.0
+    steer_cmd_coeff: 10.0
     goal_pos_coeff: 1000.0
     goal_speed_coeff: 200.0
     goal_yaw_coeff: 500.0
@@ -31,3 +32,5 @@
     ignore_obstacles: false
     ignore_drivable_area: true
     force_cold_start_each_step: false
+    # Warm-start u_nom from shifted previous optimized controls (else reseed from DP each cycle).
+    use_last_control_as_nominal: true

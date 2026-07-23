@@ -285,6 +285,7 @@ private:
   bool mppi_ignore_obstacles_{false};
   bool mppi_ignore_drivable_area_{false};
   bool mppi_force_cold_start_each_step_{false};
+  bool mppi_use_last_control_as_nominal_{false};
 };
 
 }  // namespace autoware::diffusion_planner

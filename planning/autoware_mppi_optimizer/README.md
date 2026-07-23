@@ -69,6 +69,7 @@ Various features can be disabled by changing the following parameters set in `mp
 ignore_obstacles: true
 ignore_drivable_area: true
 force_cold_start_each_step: true
+use_last_control_as_nominal: true
 ```
 
 Then rebuild / restart the diffusion planner and compare live MPPI to offline retune.
@@ -79,7 +80,9 @@ Notes:
 - `ignore_drivable_area` is retained as an ablation flag; on this stack boundary crash is already
   disabled in the cost (`isEgoOutsideDrivableArea` always false).
 - `force_cold_start_each_step` only resets tracking counters / arc-length (control is already
-  re-seeded from the reference via `updateImportanceSampler(u_nom)` each cycle).
+  re-seeded via `updateImportanceSampler(u_nom)` each cycle).
+- `use_last_control_as_nominal` warm-starts `u_nom` from the shifted previous optimized control
+  sequence when available; otherwise (and on cold start) reseeds from the diffusion reference.
 
 ### Replay only
 

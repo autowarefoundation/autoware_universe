@@ -53,6 +53,7 @@ namespace
 constexpr int kMppiHorizon = 80;
 constexpr int kRefHorizon = kMppiHorizon;
 constexpr float kDt = 0.1F;
+constexpr size_t kMaxIter = 10;
 constexpr int kNumRollouts = 32 * 1024;
 constexpr float kLambda = 1500.0F;
 constexpr float kInitArcLength = 1.5F;
@@ -375,6 +376,8 @@ struct FirstOrderDubinsMppiInterface::Impl
   bool ignore_obstacles{false};
   bool ignore_drivable_area{false};
   bool force_cold_start_each_step{false};
+  /** Warm-start u_nom from shifted previous u_opt when available. */
+  bool use_last_control_as_nominal{false};
 
   Impl() : feedback(&model, kDt), sampler(SAMPLER::SAMPLING_PARAMS_T{}) {}
 
@@ -434,7 +437,7 @@ struct FirstOrderDubinsMppiInterface::Impl
     sampler = SAMPLER(sp);
 
     controller = std::make_unique<Mppi>(
-      &model, &cost, &feedback, &sampler, kDt, 1, kLambda, 0.0F, kMppiHorizon, u_nom);
+      &model, &cost, &feedback, &sampler, kDt, kMaxIter, kLambda, 0.0F, kMppiHorizon, u_nom);
     auto cp = controller->getParams();
     cp.dynamics_rollout_dim_ = dim3(32, 2, 1);
     cp.cost_rollout_dim_ = dim3(32, 2, 1);
@@ -470,6 +473,15 @@ struct FirstOrderDubinsMppiInterface::Impl
     u_opt.setZero();
     arc_length = kInitArcLength;
     sim_time = 0.0F;
+  }
+
+  void seedNominalControlFromLastOptimized()
+  {
+    // Drop the control already applied at the previous cycle; hold the terminal command.
+    for (int t = 0; t < kMppiHorizon - 1; ++t) {
+      u_nom.col(t) = u_opt.col(t + 1);
+    }
+    u_nom.col(kMppiHorizon - 1) = u_opt.col(kMppiHorizon - 1);
   }
 
   void seedNominalControlFromDiffusionReference(
@@ -510,6 +522,16 @@ struct FirstOrderDubinsMppiInterface::Impl
     }
   }
 
+  void seedNominalControl(const Trajectory & reference, const size_t start_idx)
+  {
+    // After a tracking reset, step_count is 0 and u_opt was cleared — fall back to DP seed.
+    if (use_last_control_as_nominal && step_count > 0) {
+      seedNominalControlFromLastOptimized();
+      return;
+    }
+    seedNominalControlFromDiffusionReference(reference, start_idx);
+  }
+
   void updateDiffusionReference(
     const Trajectory & reference, const Odometry & odometry,
     const std::optional<geometry_msgs::msg::AccelWithCovarianceStamped> & acceleration,
@@ -540,7 +562,7 @@ struct FirstOrderDubinsMppiInterface::Impl
       resetTrackingState();
     }
     tracking_start_idx = new_start_idx;
-    seedNominalControlFromDiffusionReference(reference, tracking_start_idx);
+    seedNominalControl(reference, tracking_start_idx);
 
     const float ego_yaw = yawFromOdometry(odometry);
     const float ego_v = static_cast<float>(odometry.twist.twist.linear.x);
@@ -715,7 +737,7 @@ void FirstOrderDubinsMppiInterface::setDebugTrajectoryLogging(
 
 void FirstOrderDubinsMppiInterface::setAblationOptions(
   const bool ignore_obstacles, const bool ignore_drivable_area,
-  const bool force_cold_start_each_step)
+  const bool force_cold_start_each_step, const bool use_last_control_as_nominal)
 {
   if (!impl_) {
     throw std::runtime_error("FirstOrderDubinsMppiInterface implementation is missing");
@@ -723,12 +745,14 @@ void FirstOrderDubinsMppiInterface::setAblationOptions(
   impl_->ignore_obstacles = ignore_obstacles;
   impl_->ignore_drivable_area = ignore_drivable_area;
   impl_->force_cold_start_each_step = force_cold_start_each_step;
+  impl_->use_last_control_as_nominal = use_last_control_as_nominal;
   RCLCPP_INFO(
     mppiLogger(),
     "MPPI ablation options: ignore_obstacles=%s ignore_drivable_area=%s "
-    "force_cold_start_each_step=%s",
+    "force_cold_start_each_step=%s use_last_control_as_nominal=%s",
     ignore_obstacles ? "true" : "false", ignore_drivable_area ? "true" : "false",
-    force_cold_start_each_step ? "true" : "false");
+    force_cold_start_each_step ? "true" : "false",
+    use_last_control_as_nominal ? "true" : "false");
 }
 
 bool FirstOrderDubinsMppiInterface::copySampleCostDistribution(

@@ -225,6 +225,8 @@ void DiffusionPlanner::set_up_params()
   mppi_ignore_drivable_area_ = this->declare_parameter<bool>("ignore_drivable_area", false);
   mppi_force_cold_start_each_step_ =
     this->declare_parameter<bool>("force_cold_start_each_step", false);
+  mppi_use_last_control_as_nominal_ =
+    this->declare_parameter<bool>("use_last_control_as_nominal", false);
   autoware::mppi_optimizer::declare_first_order_dubins_mppi_cost_params(*this);
   autoware::mppi_optimizer::declare_first_order_dubins_mppi_vehicle_dynamics_params(*this);
 
@@ -642,7 +644,8 @@ void DiffusionPlanner::on_timer()
       mppi_optimizer_->setDebugTrajectoryLogging(
         enable_mppi_debug_trajectory_log_, mppi_debug_trajectory_log_directory_);
       mppi_optimizer_->setAblationOptions(
-        mppi_ignore_obstacles_, mppi_ignore_drivable_area_, mppi_force_cold_start_each_step_);
+        mppi_ignore_obstacles_, mppi_ignore_drivable_area_, mppi_force_cold_start_each_step_,
+        mppi_use_last_control_as_nominal_);
     }
 
     try {
