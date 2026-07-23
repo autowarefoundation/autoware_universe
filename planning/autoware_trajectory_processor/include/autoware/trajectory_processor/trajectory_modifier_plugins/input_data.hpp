@@ -17,8 +17,6 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__INPUT_DATA_HPP_
 
-#include <autoware/agnocast_wrapper/node.hpp>
-
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
@@ -34,16 +32,14 @@ namespace autoware::trajectory_modifier::plugin
 {
 struct InputData
 {
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) current_odometry {};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::AccelWithCovarianceStamped)
-  current_acceleration{};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::PredictedObjects)
-  predicted_objects{};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) obstacle_pointcloud {};
+  nav_msgs::msg::Odometry::ConstSharedPtr current_odometry = nullptr;
+  geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr current_acceleration = nullptr;
+  autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr predicted_objects = nullptr;
+  sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud = nullptr;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map = nullptr;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_planning_msgs::msg::LaneletRoute) route {};
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrafficLightGroupArray)
-  traffic_light_signals{};
+  autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr route = nullptr;
+  autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_light_signals =
+    nullptr;
 };
 
 }  // namespace autoware::trajectory_modifier::plugin

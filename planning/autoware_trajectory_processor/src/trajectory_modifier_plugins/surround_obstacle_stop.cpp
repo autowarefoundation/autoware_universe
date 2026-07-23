@@ -146,11 +146,7 @@ obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_in
 {
   obstacle_proximity_checker::Inputs checker_inputs;
   checker_inputs.ego_pose = input.current_odometry->pose.pose;
-  if (input.predicted_objects) {
-    checker_inputs.objects =
-      std::make_shared<const autoware_perception_msgs::msg::PredictedObjects>(
-        *input.predicted_objects);
-  }
+  checker_inputs.objects = input.predicted_objects;
 
   if (!input.obstacle_pointcloud) return checker_inputs;
 

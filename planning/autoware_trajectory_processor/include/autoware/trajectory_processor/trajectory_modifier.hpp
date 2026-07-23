@@ -20,6 +20,7 @@
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -55,6 +56,8 @@ using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::PointCloud2;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
+namespace polling = autoware::agnocast_wrapper::polling;
+
 class TrajectoryModifier : public autoware::agnocast_wrapper::Node
 {
 public:
@@ -76,25 +79,24 @@ private:
   AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) trajectories_sub_;
   AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) trajectories_pub_;
 
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry)
-  sub_current_odometry_ = create_polling_subscriber<Odometry>("~/input/odometry");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped)
-  sub_current_acceleration_ =
-    create_polling_subscriber<AccelWithCovarianceStamped>("~/input/acceleration");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects)
-  sub_objects_ = create_polling_subscriber<PredictedObjects>("~/input/objects");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PointCloud2)
-  sub_pointcloud_ = create_polling_subscriber<PointCloud2>(
-    "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos());
+  polling::PollingSubscriber<Odometry>::SharedPtr sub_current_odometry_ =
+    polling::create_polling_subscriber<Odometry>(this, "~/input/odometry");
+  polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr sub_current_acceleration_ =
+    polling::create_polling_subscriber<AccelWithCovarianceStamped>(this, "~/input/acceleration");
+  polling::PollingSubscriber<PredictedObjects>::SharedPtr sub_objects_ =
+    polling::create_polling_subscriber<PredictedObjects>(this, "~/input/objects");
+  polling::PollingSubscriber<PointCloud2>::SharedPtr sub_pointcloud_ =
+    polling::create_polling_subscriber<PointCloud2>(
+      this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos());
 
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_perception_msgs::msg::TrafficLightGroupArray)
-  sub_traffic_lights_ =
-    create_polling_subscriber<autoware_perception_msgs::msg::TrafficLightGroupArray>(
-      "~/input/traffic_signals");
+  polling::PollingSubscriber<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr
+    sub_traffic_lights_ =
+      polling::create_polling_subscriber<autoware_perception_msgs::msg::TrafficLightGroupArray>(
+        this, "~/input/traffic_signals");
   AUTOWARE_SUBSCRIPTION_PTR(autoware_map_msgs::msg::LaneletMapBin) sub_map_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_planning_msgs::msg::LaneletRoute)
-  sub_route_ = create_polling_subscriber<autoware_planning_msgs::msg::LaneletRoute>(
-    "~/input/route", rclcpp::QoS{1}.transient_local());
+  polling::PollingSubscriber<autoware_planning_msgs::msg::LaneletRoute>::SharedPtr sub_route_ =
+    polling::create_polling_subscriber<autoware_planning_msgs::msg::LaneletRoute>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
 
   AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
   debug_processing_time_detail_pub_;
