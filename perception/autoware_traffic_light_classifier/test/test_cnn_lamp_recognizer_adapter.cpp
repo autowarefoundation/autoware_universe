@@ -167,8 +167,7 @@ protected:
     // GTEST_SKIP.
     try {
       node_ = std::make_shared<rclcpp::Node>("cnn_lamp_recognizer_adapter_test", options);
-      recognizer_ =
-        std::make_shared<tl::CnnLampRecognizer>(node_.get(), tl::declare_lamp_config(node_.get()));
+      recognizer_ = std::make_shared<tl::CnnLampRecognizer>(tl::declare_lamp_config(node_.get()));
     } catch (const std::exception & e) {
       skip_reason_ = std::string("CnnLampRecognizer environment unavailable: ") + e.what();
       recognizer_.reset();

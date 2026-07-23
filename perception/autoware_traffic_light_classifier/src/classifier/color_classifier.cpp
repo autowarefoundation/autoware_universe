@@ -18,7 +18,6 @@
 #include <opencv2/imgproc/imgproc_c.h>
 
 #include <algorithm>
-#include <string>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -223,32 +222,11 @@ cv::Mat ColorClassifierCore::make_debug_image(const cv::Mat & roi_image) const
 }
 
 // ============================== ColorClassifier ==============================
-// ROS adapter: wires dynamic reconfigure and logging, and delegates classification and
-// debug-image rendering to the Node-free core.
+// Node-free adapter: delegates classification and debug rendering to the core. Dynamic reconfigure
+// lives in the node, which drives get_config / set_config below.
 
-namespace
+ColorClassifier::ColorClassifier(const HSVConfig & config) : core_(config)
 {
-// Set `value` from the parameter named `name` if present; return whether it was found.
-bool update_param(
-  const std::vector<rclcpp::Parameter> & parameters, const std::string & name, int & value)
-{
-  for (const auto & parameter : parameters) {
-    if (parameter.get_name() == name) {
-      value = parameter.as_int();
-      return true;
-    }
-  }
-  return false;
-}
-}  // namespace
-
-ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr, const HSVConfig & config)
-: node_ptr_(node_ptr), core_(config)
-{
-  using std::placeholders::_1;
-  // set parameter callback
-  set_param_res_ = node_ptr_->add_on_set_parameters_callback(
-    std::bind(&ColorClassifier::parametersCallback, this, _1));
 }
 
 bool ColorClassifier::getTrafficSignals(
@@ -256,7 +234,6 @@ bool ColorClassifier::getTrafficSignals(
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
   if (images.size() != traffic_signals.signals.size()) {
-    RCLCPP_WARN(node_ptr_->get_logger(), "image number should be equal to traffic signal number!");
     return false;
   }
 
@@ -270,9 +247,6 @@ bool ColorClassifier::getTrafficSignals(
     elements.insert(elements.end(), classified.begin(), classified.end());
   }
 
-  if (!result.success) {
-    RCLCPP_ERROR(node_ptr_->get_logger(), "failed to filter image by hsv value");
-  }
   return result.success;
 }
 
@@ -297,35 +271,14 @@ cv::Mat ColorClassifier::make_debug_image(const std::vector<cv::Mat> & images) c
   return debug_image;
 }
 
-rcl_interfaces::msg::SetParametersResult ColorClassifier::parametersCallback(
-  const std::vector<rclcpp::Parameter> & parameters)
+const HSVConfig & ColorClassifier::get_config() const
 {
-  HSVConfig config = core_.get_config();
-  update_param(parameters, "green_min_h", config.green_min_h);
-  update_param(parameters, "green_min_s", config.green_min_s);
-  update_param(parameters, "green_min_v", config.green_min_v);
-  update_param(parameters, "green_max_h", config.green_max_h);
-  update_param(parameters, "green_max_s", config.green_max_s);
-  update_param(parameters, "green_max_v", config.green_max_v);
-  update_param(parameters, "yellow_min_h", config.yellow_min_h);
-  update_param(parameters, "yellow_min_s", config.yellow_min_s);
-  update_param(parameters, "yellow_min_v", config.yellow_min_v);
-  update_param(parameters, "yellow_max_h", config.yellow_max_h);
-  update_param(parameters, "yellow_max_s", config.yellow_max_s);
-  update_param(parameters, "yellow_max_v", config.yellow_max_v);
-  update_param(parameters, "red_min_h", config.red_min_h);
-  update_param(parameters, "red_min_s", config.red_min_s);
-  update_param(parameters, "red_min_v", config.red_min_v);
-  update_param(parameters, "red_max_h", config.red_max_h);
-  update_param(parameters, "red_max_s", config.red_max_s);
-  update_param(parameters, "red_max_v", config.red_max_v);
+  return core_.get_config();
+}
 
+void ColorClassifier::set_config(const HSVConfig & config)
+{
   core_.set_config(config);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
 }
 
 }  // namespace autoware::traffic_light

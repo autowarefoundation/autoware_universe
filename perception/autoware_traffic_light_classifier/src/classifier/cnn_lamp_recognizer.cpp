@@ -541,11 +541,10 @@ cv::Mat CnnLampRecognizerCore::make_debug_image(
 }
 
 // ============================== CnnLampRecognizer ==============================
-// ROS adapter: logs and delegates recognition and debug-image rendering to the Node-free core.
+// Node-free adapter: delegates recognition and debug rendering to the core and maps its per-image
+// detections into the caller's signals.
 
-CnnLampRecognizer::CnnLampRecognizer(
-  rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config)
-: node_ptr_(node_ptr), core_(config)
+CnnLampRecognizer::CnnLampRecognizer(const CnnLampRecognizerConfig & config) : core_(config)
 {
 }
 
@@ -554,15 +553,11 @@ bool CnnLampRecognizer::getTrafficSignals(
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
   if (images.size() != traffic_signals.signals.size()) {
-    RCLCPP_WARN(
-      node_ptr_->get_logger(), "LampRecognizer: image count (%zu) != signal count (%zu)",
-      images.size(), traffic_signals.signals.size());
     return false;
   }
 
   const CnnLampRecognizerCore::DetectionResult result = core_.classify(images);
   if (!result.success) {
-    RCLCPP_ERROR(node_ptr_->get_logger(), "LampRecognizer: inference failed");
     return false;
   }
 
