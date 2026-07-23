@@ -305,7 +305,7 @@ std::optional<FirstIndexInsidePolygons> getFirstIndexInsidePolygonsByFootprint(
     return std::nullopt;
   }
 
-  const auto polygon_it = find_polygon_it(path.compute(starts_s + first_index.value()));
+  const auto polygon_it = find_polygon_it(path.compute(start_s + first_index.value()));
   if (polygon_it == polygons.end()) {
     return std::nullopt;
   }
