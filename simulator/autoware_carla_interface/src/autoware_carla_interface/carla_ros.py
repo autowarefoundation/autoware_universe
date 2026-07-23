@@ -97,6 +97,24 @@ def _parse_geo_reference(xodr_xml: str):
     return float(lat_match.group(1)), float(lon_match.group(1))
 
 
+def _parse_lanelet2_origin(osm_path: str):
+    """Return ``(lat, lon)`` of the first georeferenced node in a lanelet2 OSM map.
+
+    Autoware lanelet2 maps tag every ``<node>`` with WGS84 ``lat``/``lon``
+    (alongside its MGRS ``local_x``/``local_y``).  Any node is enough to fix the
+    MGRS grid zone, which is all the projector needs to reverse-project the
+    ``map_origin`` (CARLA world origin expressed in MGRS-local) back to WGS84.
+    """
+    tree = ET.parse(osm_path)
+    root = tree.getroot()
+    for node in root.iter("node"):
+        lat = node.get("lat")
+        lon = node.get("lon")
+        if lat is not None and lon is not None:
+            return float(lat), float(lon)
+    raise ValueError(f"No <node lat=... lon=...> found in {osm_path}")
+
+
 class carla_ros2_interface(object):
 
     def _initialize_parameters(self):
@@ -133,6 +151,11 @@ class carla_ros2_interface(object):
             # don't already coincide with the lanelet2/PCD map frame.
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            # Path to the Autoware lanelet2 map (``*.osm``).  When set, the
+            # splatsim geographic origin is derived from it (reverse-projecting
+            # map_origin through the map's MGRS grid) instead of the OpenDRIVE
+            # GeoReference or the manual splatsim_geo_origin_lat/lon override.
+            "lanelet2_map_path": (rclpy.Parameter.Type.STRING, ""),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -152,11 +175,12 @@ class carla_ros2_interface(object):
             "splatsim_restart_container": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_compress_format": (rclpy.Parameter.Type.STRING, "jpeg"),
             "splatsim_render_camera": (rclpy.Parameter.Type.BOOL, True),
-            # Geographic origin (lat/lon in decimal degrees) of the CARLA world
-            # origin, used to build the MGRS transform for splatsim.  When both
-            # are 0.0 the origin is parsed from the CARLA map's OpenDRIVE
-            # GeoReference; set them explicitly for maps that carry no OpenDRIVE
-            # (e.g. CARLA 0.10.0 Odaiba).
+            # Manual override for the geographic origin (lat/lon in decimal
+            # degrees) of the CARLA world origin, used to build the MGRS
+            # transform for splatsim.  Normally left at 0.0/0.0: the origin is
+            # derived from the lanelet2 map (lanelet2_map_path) and, failing
+            # that, from the CARLA map's OpenDRIVE GeoReference.  Set explicitly
+            # only to bypass both.
             "splatsim_geo_origin_lat": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "splatsim_geo_origin_lon": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # SplatSim LiDAR parameters
@@ -1540,7 +1564,12 @@ class carla_ros2_interface(object):
         )
 
     def _init_geo_transform(self):
-        """Compute MGRS offset from CARLA OpenDRIVE GeoReference."""
+        """Resolve the splatsim geographic origin and its MGRS offset.
+
+        The origin (lat/lon of the CARLA world origin) is resolved in priority
+        order: an explicit ``splatsim_geo_origin_lat/lon`` override, then the
+        Autoware lanelet2 map, then the CARLA OpenDRIVE GeoReference.
+        """
         if self._geo_transform_ready:
             return
         import lanelet2.core
@@ -1549,14 +1578,40 @@ class carla_ros2_interface(object):
 
         override_lat = float(self.param_values.get("splatsim_geo_origin_lat", 0.0) or 0.0)
         override_lon = float(self.param_values.get("splatsim_geo_origin_lon", 0.0) or 0.0)
+        lanelet2_map_path = str(
+            self.param_values.get("lanelet2_map_path", "") or ""
+        ).strip()
         if override_lat != 0.0 or override_lon != 0.0:
-            # Explicit geographic origin (e.g. CARLA 0.10.0 Odaiba, which
-            # carries no OpenDRIVE GeoReference).
+            # Explicit manual override, bypasses both auto-derivation paths.
             self._proj_origin = (override_lat, override_lon)
             self.logger.info(
                 "GeoTransform using explicit splatsim_geo_origin override "
-                f"(lat_0={override_lat:.8f}, lon_0={override_lon:.8f}); "
-                "skipping OpenDRIVE GeoReference"
+                f"(lat_0={override_lat:.8f}, lon_0={override_lon:.8f})"
+            )
+        elif lanelet2_map_path:
+            # Derive the CARLA world origin's lat/lon directly from the lanelet2
+            # map Autoware is loading.  The ROS map frame published here IS the
+            # map's MGRS-local frame, so map_origin (the CARLA world origin
+            # expressed in MGRS-local) reverse-projected through the map's MGRS
+            # grid gives exactly the geographic origin splatsim needs.  This
+            # guarantees the splatsim scene stays aligned with the map frame and
+            # removes any dependence on an OpenDRIVE GeoReference.
+            seed_lat, seed_lon = _parse_lanelet2_origin(lanelet2_map_path)
+            seed_projector = MGRSProjector(lanelet2.io.Origin(seed_lat, seed_lon))
+            # A forward() call locks the projector's MGRS grid code (e.g. 54SUE)
+            # from the seed node; reverse() cannot run until it is set.
+            seed_projector.forward(lanelet2.core.GPSPoint(seed_lat, seed_lon, 0.0))
+            mox = float(self.param_values.get("map_origin_x", 0.0) or 0.0)
+            moy = float(self.param_values.get("map_origin_y", 0.0) or 0.0)
+            world_origin = seed_projector.reverse(
+                lanelet2.core.BasicPoint3d(mox, moy, 0.0)
+            )
+            self._proj_origin = (world_origin.lat, world_origin.lon)
+            self.logger.info(
+                "GeoTransform derived from lanelet2 map "
+                f"'{lanelet2_map_path}': seed_node=({seed_lat:.8f}, {seed_lon:.8f}), "
+                f"map_origin=({mox:.3f}, {moy:.3f}) -> "
+                f"origin=({self._proj_origin[0]:.8f}, {self._proj_origin[1]:.8f})"
             )
         else:
             world = CarlaDataProvider.get_world()
@@ -1565,9 +1620,10 @@ class carla_ros2_interface(object):
             except RuntimeError as exc:
                 raise RuntimeError(
                     "CARLA map has no parsable OpenDRIVE GeoReference "
-                    "(e.g. CARLA 0.10.0 Odaiba). Set the splatsim_geo_origin_lat "
-                    "/ splatsim_geo_origin_lon launch args to the map's "
-                    "geographic origin so splatsim can build its MGRS transform."
+                    "(e.g. CARLA 0.10.0 Odaiba). Set lanelet2_map_path to the "
+                    "Autoware lanelet2 map, or the splatsim_geo_origin_lat / "
+                    "splatsim_geo_origin_lon launch args to the map's geographic "
+                    "origin, so splatsim can build its MGRS transform."
                 ) from exc
             self._proj_origin = _parse_geo_reference(xodr_xml)
         lat_0, lon_0 = self._proj_origin
