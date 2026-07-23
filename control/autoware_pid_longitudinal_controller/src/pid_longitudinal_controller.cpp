@@ -387,13 +387,11 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
     }
     return false;
   }();
-  if (!is_not_running) {
+  if (!is_not_running || !m_last_running_time) {
     m_last_running_time = std::make_shared<rclcpp::Time>(control_data.current_time);
   }
-  const bool stopped_condition = m_last_running_time
-                                   ? (control_data.current_time - *m_last_running_time).seconds() >
-                                       p.stopped_state_entry_duration_time
-                                   : false;
+  const bool stopped_condition = (control_data.current_time - *m_last_running_time).seconds() >
+                                 p.stopped_state_entry_duration_time;
 
   // ==========================================================================================
   // NOTE: due to removeOverlapPoints() in getControlData() m_last_valid_trajectory and
