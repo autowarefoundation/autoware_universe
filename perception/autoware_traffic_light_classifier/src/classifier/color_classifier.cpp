@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "color_classifier.hpp"
 
+#include <opencv2/imgproc.hpp>
+
 #include <opencv2/imgproc/imgproc_c.h>
 
 #include <algorithm>
@@ -221,8 +223,8 @@ cv::Mat ColorClassifierCore::make_debug_image(const cv::Mat & roi_image) const
 }
 
 // ============================== ColorClassifier ==============================
-// ROS adapter: wires dynamic reconfigure and debug-image publishing, and delegates
-// classification to the Node-free core.
+// ROS adapter: wires dynamic reconfigure and logging, and delegates classification and
+// debug-image rendering to the Node-free core.
 
 namespace
 {
@@ -244,9 +246,6 @@ ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr, const HSVConfig & conf
 : node_ptr_(node_ptr), core_(config)
 {
   using std::placeholders::_1;
-  image_pub_ = image_transport::create_publisher(
-    node_ptr_, "~/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
-
   // set parameter callback
   set_param_res_ = node_ptr_->add_on_set_parameters_callback(
     std::bind(&ColorClassifier::parametersCallback, this, _1));
@@ -263,17 +262,6 @@ bool ColorClassifier::getTrafficSignals(
 
   const ColorClassifierCore::ClassifierResult result = core_.classify(images);
 
-  // Publish one debug mosaic per ROI image only when a debug consumer is attached;
-  // make_debug_image re-runs the HSV pipeline, so it stays off the hot path.
-  if (0 < image_pub_.getNumSubscribers()) {
-    for (const auto & image : images) {
-      const auto debug_image_msg =
-        cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", core_.make_debug_image(image))
-          .toImageMsg();
-      image_pub_.publish(debug_image_msg);
-    }
-  }
-
   // Attach the core's per-image color elements to the caller's pre-populated
   // signals, preserving the traffic_light_id / traffic_light_type set upstream.
   for (size_t i = 0; i < traffic_signals.signals.size(); i++) {
@@ -286,6 +274,27 @@ bool ColorClassifier::getTrafficSignals(
     RCLCPP_ERROR(node_ptr_->get_logger(), "failed to filter image by hsv value");
   }
   return result.success;
+}
+
+cv::Mat ColorClassifier::make_debug_image(const std::vector<cv::Mat> & images) const
+{
+  // Stack each ROI's mosaic vertically. The core renders RGB-ordered pixels (raw ROI + masks) and
+  // re-runs the HSV pipeline, so this stays off the hot path. Per-ROI mosaics differ in width, so
+  // later ones are scaled to the first's width before stacking.
+  cv::Mat debug_image;
+  for (const auto & image : images) {
+    cv::Mat mosaic = core_.make_debug_image(image);
+    if (!debug_image.empty() && mosaic.cols != debug_image.cols) {
+      cv::resize(
+        mosaic, mosaic, cv::Size(debug_image.cols, mosaic.rows * debug_image.cols / mosaic.cols));
+    }
+    if (debug_image.empty()) {
+      debug_image = mosaic;
+    } else {
+      cv::vconcat(debug_image, mosaic, debug_image);
+    }
+  }
+  return debug_image;
 }
 
 rcl_interfaces::msg::SetParametersResult ColorClassifier::parametersCallback(
