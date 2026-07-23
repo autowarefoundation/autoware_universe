@@ -55,6 +55,15 @@ public:
     geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
   rclcpp::Time getStateTime() const override { return motion_model_.getLastPredictionTime(); }
 
+  // Heading state and 180° state flip; composite trackers use these for heading-sign
+  // consensus across their layers.
+  double getYawState() const { return motion_model_.getYawState(); }
+  void flipOrientationSign()
+  {
+    motion_model_.flipOrientation();
+    removeCache();
+  }
+
   ShapeModelBase & getShapeModel() override { return shape_model_; }
   const ShapeModelBase & getShapeModel() const override { return shape_model_; }
   void assembleShapeTo(types::DynamicObject & output, bool /*to_publish*/) const override

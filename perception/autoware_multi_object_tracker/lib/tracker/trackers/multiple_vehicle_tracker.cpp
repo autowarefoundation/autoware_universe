@@ -16,6 +16,10 @@
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 
+#include <autoware_utils_math/normalization.hpp>
+
+#include <cmath>
+
 namespace autoware::multi_object_tracker
 {
 MultipleVehicleTracker::MultipleVehicleTracker(
@@ -42,8 +46,24 @@ bool MultipleVehicleTracker::measure(
   normal_vehicle_tracker_.measure(object, time, channel_info);
   big_vehicle_tracker_.setLatestMeasurementTime(time);
   normal_vehicle_tracker_.setLatestMeasurementTime(time);
+  alignOrientationSigns();
 
   return true;
+}
+
+// Layers publish interchangeably and must agree on the heading sign; the stronger sign belief
+// is authoritative.
+void MultipleVehicleTracker::alignOrientationSigns()
+{
+  const bool big_leads =
+    big_vehicle_tracker_.signBeliefConfidence() >= normal_vehicle_tracker_.signBeliefConfidence();
+  VehicleTracker & leader = big_leads ? big_vehicle_tracker_ : normal_vehicle_tracker_;
+  VehicleTracker & follower = big_leads ? normal_vehicle_tracker_ : big_vehicle_tracker_;
+  const double yaw_diff =
+    autoware_utils_math::normalize_radian(leader.getYawState() - follower.getYawState());
+  if (std::abs(yaw_diff) > M_PI_2) {
+    follower.flipOrientationSign();
+  }
 }
 
 bool MultipleVehicleTracker::conditionedUpdate(
@@ -55,6 +75,7 @@ bool MultipleVehicleTracker::conditionedUpdate(
     measurement, prediction, measurement_time, channel_info);
   big_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
   normal_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
+  alignOrientationSigns();
 
   return true;
 }

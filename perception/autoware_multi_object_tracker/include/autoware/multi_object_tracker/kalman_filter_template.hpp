@@ -148,6 +148,17 @@ public:
   [[nodiscard]] Scalar getXelement(unsigned int i) const noexcept { return x_(i); }
 
   /**
+   * @brief get element of P
+   * @param i row index of P
+   * @param j column index of P
+   * @return value of the kalman filter covariance P[i, j]
+   */
+  [[nodiscard]] Scalar getPelement(unsigned int i, unsigned int j) const noexcept
+  {
+    return P_(i, j);
+  }
+
+  /**
    * @brief calculate kalman filter state and covariance by prediction model with A, B, Q matrix.
    * This is mainly for EKF with variable matrix.
    * @param u input for model
