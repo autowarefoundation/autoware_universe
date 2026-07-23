@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace autoware::detected_object_feature_remover
@@ -24,25 +25,26 @@ DetectedObjectFeatureRemover::DetectedObjectFeatureRemover(const rclcpp::NodeOpt
 : Node("detected_object_feature_remover", node_options)
 {
   pub_ = this->create_publisher<DetectedObjects>("~/output", rclcpp::QoS(1));
-  AUTOWARE_SUBSCRIPTION_OPTIONS options;
-  sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
-    DetectedObjectsWithFeature, "~/input", 1,
+  sub_ = this->create_subscription<DetectedObjectsWithFeature>(
+    "~/input", rclcpp::QoS{1},
     [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input) {
       this->objectCallback(input);
-    },
-    options);
+    });
   convert_params_.run_convex_hull_conversion =
     this->declare_parameter<bool>("run_convex_hull_conversion", false);
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ =
+    std::make_unique<autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(
+      this);
 }
 
 void DetectedObjectFeatureRemover::objectCallback(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input)
 {
-  DetectedObjects output;
-  convert::convertToDetectedObjects(*input, output, convert_params_);
-  pub_->publish(output);
-  published_time_publisher_->publish_if_subscribed(pub_, output.header.stamp);
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
+  convert::convertToDetectedObjects(*input, *output, convert_params_);
+  const auto header_stamp = output->header.stamp;
+  pub_->publish(std::move(output));
+  published_time_publisher_->publish_if_subscribed(pub_, header_stamp);
 }
 
 }  // namespace autoware::detected_object_feature_remover
