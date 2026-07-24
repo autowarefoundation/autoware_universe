@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import math
-import re
 import threading
-import xml.etree.ElementTree as ET
 
 from autoware_adapi_v1_msgs.msg import LocalizationInitializationState
 from autoware_perception_msgs.msg import PredictedObjects
@@ -69,46 +67,35 @@ from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
 
-def _parse_geo_reference(xodr_xml: str):
-    """Extract ``(lat_0, lon_0)`` from the OpenDRIVE ``<geoReference>`` PROJ string."""
-    match = re.search(
-        r"<geoReference>\s*<!\[CDATA\[(.*?)\]\]>\s*</geoReference>",
-        xodr_xml,
-        re.DOTALL,
-    )
-    if match:
-        proj_string = match.group(1).strip()
-    else:
-        root = ET.fromstring(xodr_xml)
-        geo_ref = root.find(".//geoReference")
-        if geo_ref is not None and geo_ref.text:
-            proj_string = geo_ref.text.strip()
-        else:
-            raise ValueError("No <geoReference> found in OpenDRIVE XML")
+def _origin_from_usdz(usdz_path: str):
+    """Derive ``(lat_0, lon_0)`` from a splatsim ``.usdz`` scene bundle.
 
-    lat_match = re.search(r"\+lat_0=([0-9eE.+-]+)", proj_string)
-    lon_match = re.search(r"\+lon_0=([0-9eE.+-]+)", proj_string)
-    if lat_match is None or lon_match is None:
-        raise ValueError(f"Cannot extract +lat_0/+lon_0 from GeoReference: {proj_string}")
-    return float(lat_match.group(1)), float(lon_match.group(1))
-
-
-def _parse_lanelet2_origin(osm_path: str):
-    """Return ``(lat, lon)`` of the first georeferenced node in a lanelet2 OSM map.
-
-    Autoware lanelet2 maps tag every ``<node>`` with WGS84 ``lat``/``lon``
-    (alongside its MGRS ``local_x``/``local_y``).  Any node is enough to fix the
-    MGRS grid zone, which is all the projector needs to reverse-project the
-    ``map_origin`` (CARLA world origin expressed in MGRS-local) back to WGS84.
+    ``scene.json`` stores ``world.ecef_anchor``: the 4x4 ENU->ECEF transform
+    whose translation column is the ECEF position of the ENU/world origin the
+    3DGS scene is aligned to.  Converting that point to WGS84 yields exactly the
+    geographic origin splatsim needs, so no external lanelet2 map or OpenDRIVE
+    GeoReference is required.
     """
-    tree = ET.parse(osm_path)
-    root = tree.getroot()
-    for node in root.iter("node"):
-        lat = node.get("lat")
-        lon = node.get("lon")
-        if lat is not None and lon is not None:
-            return float(lat), float(lon)
-    raise ValueError(f"No <node lat=... lon=...> found in {osm_path}")
+    import json
+    import zipfile
+
+    from pyproj import Transformer
+
+    try:
+        with zipfile.ZipFile(usdz_path) as zf:
+            with zf.open("scene.json") as f:
+                scene = json.load(f)
+        anchor = scene["world"]["ecef_anchor"]
+    except (KeyError, OSError, zipfile.BadZipFile, ValueError) as exc:
+        raise RuntimeError(
+            f"Could not read 'scene.json' -> world.ecef_anchor from splatsim scene "
+            f"'{usdz_path}'.  A splatsim .usdz bundle is required to derive the "
+            f"geographic origin."
+        ) from exc
+    x, y, z = anchor[0][3], anchor[1][3], anchor[2][3]
+    ecef_to_lla = Transformer.from_crs("EPSG:4978", "EPSG:4326", always_xy=True)
+    lon, lat, _ = ecef_to_lla.transform(x, y, z)
+    return float(lat), float(lon)
 
 
 class carla_ros2_interface(object):
@@ -130,16 +117,6 @@ class carla_ros2_interface(object):
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
-            # Offset between the CARLA world origin and the Autoware map frame origin.
-            # Needed for custom/georeferenced CARLA levels whose local coordinates
-            # don't already coincide with the lanelet2/PCD map frame.
-            "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
-            "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
-            # Path to the Autoware lanelet2 map (``*.osm``).  When set, the
-            # splatsim geographic origin is derived from it (reverse-projecting
-            # map_origin through the map's MGRS grid) instead of the OpenDRIVE
-            # GeoReference.
-            "lanelet2_map_path": (rclpy.Parameter.Type.STRING, ""),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -1115,8 +1092,10 @@ class carla_ros2_interface(object):
     def _init_geo_transform(self):
         """Resolve the splatsim geographic origin and its MGRS offset.
 
-        The origin (lat/lon of the CARLA world origin) is resolved in priority
-        order: the Autoware lanelet2 map (``lanelet2_map_path``), then the CARLA
+        The origin (lat/lon of the CARLA world origin) is read from the splatsim
+        ``.usdz`` scene: its ``world.ecef_anchor`` records the ENU->ECEF anchor
+        the 3DGS scene is aligned to, so the geographic origin comes straight
+        from the same bundle splatsim renders — with no external lanelet2 map or
         OpenDRIVE GeoReference.
         """
         if self._geo_transform_ready:
@@ -1125,41 +1104,17 @@ class carla_ros2_interface(object):
         import lanelet2.core
         import lanelet2.io
 
-        lanelet2_map_path = str(self.param_values.get("lanelet2_map_path", "") or "").strip()
-        if lanelet2_map_path:
-            # Derive the CARLA world origin's lat/lon directly from the lanelet2
-            # map Autoware is loading.  The ROS map frame published here IS the
-            # map's MGRS-local frame, so map_origin (the CARLA world origin
-            # expressed in MGRS-local) reverse-projected through the map's MGRS
-            # grid gives exactly the geographic origin splatsim needs.  This
-            # guarantees the splatsim scene stays aligned with the map frame and
-            # removes any dependence on an OpenDRIVE GeoReference.
-            seed_lat, seed_lon = _parse_lanelet2_origin(lanelet2_map_path)
-            seed_projector = MGRSProjector(lanelet2.io.Origin(seed_lat, seed_lon))
-            # A forward() call locks the projector's MGRS grid code (e.g. 54SUE)
-            # from the seed node; reverse() cannot run until it is set.
-            seed_projector.forward(lanelet2.core.GPSPoint(seed_lat, seed_lon, 0.0))
-            mox = float(self.param_values.get("map_origin_x", 0.0) or 0.0)
-            moy = float(self.param_values.get("map_origin_y", 0.0) or 0.0)
-            world_origin = seed_projector.reverse(lanelet2.core.BasicPoint3d(mox, moy, 0.0))
-            self._proj_origin = (world_origin.lat, world_origin.lon)
-            self.logger.info(
-                "GeoTransform derived from lanelet2 map "
-                f"'{lanelet2_map_path}': seed_node=({seed_lat:.8f}, {seed_lon:.8f}), "
-                f"map_origin=({mox:.3f}, {moy:.3f}) -> "
-                f"origin=({self._proj_origin[0]:.8f}, {self._proj_origin[1]:.8f})"
+        tileset_path = str(self.param_values.get("splatsim_tileset_path", "") or "").strip()
+        if not tileset_path:
+            raise RuntimeError(
+                "splatsim_tileset_path is required to derive the geographic origin "
+                "from the scene's world.ecef_anchor."
             )
-        else:
-            world = CarlaDataProvider.get_world()
-            try:
-                xodr_xml = world.get_map().to_opendrive()
-            except RuntimeError as exc:
-                raise RuntimeError(
-                    "CARLA map has no parsable OpenDRIVE GeoReference "
-                    "(e.g. CARLA 0.10.0 Odaiba). Set lanelet2_map_path to the "
-                    "Autoware lanelet2 map so splatsim can build its MGRS transform."
-                ) from exc
-            self._proj_origin = _parse_geo_reference(xodr_xml)
+        self._proj_origin = _origin_from_usdz(tileset_path)
+        self.logger.info(
+            f"GeoTransform origin from splatsim scene '{tileset_path}': "
+            f"origin=({self._proj_origin[0]:.8f}, {self._proj_origin[1]:.8f})"
+        )
         lat_0, lon_0 = self._proj_origin
 
         projector = MGRSProjector(lanelet2.io.Origin(lat_0, lon_0))

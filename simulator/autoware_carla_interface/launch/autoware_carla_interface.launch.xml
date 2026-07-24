@@ -38,11 +38,9 @@
     <!-- SplatSim integration (optional) -->
     <arg name="render_with_splatsim" default="true" description="Enable splatsim rendering via Docker + gRPC"/>
     <arg name="splatsim_render_camera" default="false" description="Render cameras via splatsim (false = cameras fully off in splatsim mode)"/>
-    <!-- Autoware lanelet2 map used to auto-derive the splatsim geographic origin.
-         Defaults to <map_path>/lanelet2_map.osm; empty falls back to OpenDRIVE. -->
-    <let name="lanelet2_map_path_default" value="$(eval &quot;__import__('os').path.join('$(var map_path)', 'lanelet2_map.osm') if '$(var map_path)'.strip() else ''&quot;)"/>
-    <arg name="lanelet2_map_path" default="$(var lanelet2_map_path_default)" description="Path to the Autoware lanelet2 map (*.osm) for splatsim geo-origin derivation"/>
-    <arg name="splatsim_tileset_path" default="$(env HOME)/workspace/fg_plus_bg_background_v25_enu_ecef.usdz" description="Host path to the 3DGS scene (tileset.json or .usdz)"/>
+    <!-- The splatsim geographic origin is derived from the scene's own
+         world.ecef_anchor (stored in the .usdz), so no lanelet2 map is needed. -->
+    <arg name="splatsim_tileset_path" description="Host path to the 3DGS scene (.usdz containing scene.json with world.ecef_anchor)"/>
     <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
     <arg name="splatsim_grpc_port" default="50051"/>
     <arg name="splatsim_use_sh" default="true"/>
@@ -70,7 +68,6 @@
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
-      <param name="lanelet2_map_path" value="$(var lanelet2_map_path)"/>
       <param name="render_with_splatsim" value="$(var render_with_splatsim)"/>
       <param name="splatsim_tileset_path" value="$(var splatsim_tileset_path)"/>
       <param name="splatsim_image" value="$(var splatsim_image)"/>
