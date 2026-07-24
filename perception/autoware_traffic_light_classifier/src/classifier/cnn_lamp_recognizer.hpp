@@ -20,20 +20,12 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
-
-// cppcheck-suppress preprocessorErrorDirective
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
 
 #include <memory>
 #include <string>
@@ -52,9 +44,9 @@ struct BBox
 struct BBoxInfo
 {
   BBox box;
-  int classId{0};  // type: circle=0, arrow=1, u-turn=2, ped=3, number=4, cross=5
+  int class_id{0};  // type: circle=0, arrow=1, u-turn=2, ped=3, number=4, cross=5
   float prob{0.f};
-  int subClassId{0};  // color: green=0, amber=1, red=2
+  int sub_class_id{0};  // color: green=0, amber=1, red=2
   float sin{0.f};
   float cos{1.f};
 };
@@ -158,20 +150,21 @@ public:
   // Map the deduplicated lamp detections into a TrafficLight's elements, honoring its
   // traffic_light_type (pedestrian forces CIRCLE). Emits a single UNKNOWN placeholder element
   // with zero confidence when unique_elements is empty.
-  static void updateTrafficSignals(
+  static void update_traffic_signals(
     const std::vector<LampElement> & unique_elements,
     tier4_perception_msgs::msg::TrafficLight & traffic_signal);
 
-  // Render one debug view onto debug_image: bounding boxes for each lamp plus a label /
-  // confidence text strip below. Mutates debug_image in place.
-  static void outputDebugImage(
-    cv::Mat & debug_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal,
+  // Build one debug view from roi_image: bounding boxes for each lamp plus a label /
+  // confidence text strip below. Returns a new image; roi_image is not modified.
+  static cv::Mat make_debug_image(
+    const cv::Mat & roi_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal,
     const std::vector<LampElement> * elements);
 
 private:
   void preprocess(const std::vector<cv::Mat> & images);
-  bool doInference(size_t batch_size);
-  void decodeTlrOutput(size_t batch_size, std::vector<std::vector<BBoxInfo>> & detections_per_roi);
+  bool do_inference(size_t batch_size);
+  void decode_tlr_output(
+    size_t batch_size, std::vector<std::vector<BBoxInfo>> & detections_per_roi);
 
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_common_;
   StreamUniquePtr stream_{makeCudaStream()};
@@ -193,23 +186,28 @@ private:
   LampRegressionArchitecture model_params_;
 };
 
-// Thin ROS adapter around CnnLampRecognizerCore. Owns the node-facing concerns (parameter
-// declaration, debug-image publishing, logging) and delegates recognition to the core. Public
-// API is unchanged.
+// Thin ROS adapter around CnnLampRecognizerCore. Logs, and delegates recognition and
+// debug-image rendering to the core.
 class CnnLampRecognizer : public ClassifierInterface
 {
 public:
-  explicit CnnLampRecognizer(rclcpp::Node * node_ptr);
+  CnnLampRecognizer(rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config);
   ~CnnLampRecognizer() override = default;
 
   bool getTrafficSignals(
     const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
 private:
   rclcpp::Node * node_ptr_;
-  image_transport::Publisher image_pub_;
   CnnLampRecognizerCore core_;
+  // Kept from the most recent getTrafficSignals so make_debug_image can render the batch: the
+  // per-image output signals (for the text labels) and the per-image raw detections (for the
+  // bounding boxes).
+  tier4_perception_msgs::msg::TrafficLightArray last_signals_;
+  std::vector<std::vector<LampElement>> last_lamps_;
 };
 
 }  // namespace autoware::traffic_light
