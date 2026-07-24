@@ -26,20 +26,32 @@ class CudaUniquePtrTest : public autoware::cuda_utils::CudaTest
 TEST_F(CudaUniquePtrTest, MakeUniqueDeviceMemory)
 {
   // Test creating a single object on device
-  auto ptr = autoware::cuda_utils::make_unique<float>();
-  EXPECT_NE(ptr.get(), nullptr);
+  cudaStream_t stream{};
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
+  {
+    auto ptr = autoware::cuda_utils::make_unique<float>(stream);
+    EXPECT_NE(ptr.get(), nullptr);
+  }
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+  CHECK_CUDA_ERROR(cudaStreamDestroy(stream));
 }
 
 TEST_F(CudaUniquePtrTest, MakeUniqueDeviceArray)
 {
   // Test creating an array on device
-  auto ptr = autoware::cuda_utils::make_unique<float[]>(100);
-  EXPECT_NE(ptr.get(), nullptr);
+  cudaStream_t stream{};
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
+  {
+    auto ptr = autoware::cuda_utils::make_unique<float[]>(100, stream);
+    EXPECT_NE(ptr.get(), nullptr);
 
-  cudaPointerAttributes attributes{};
-  CHECK_CUDA_ERROR(cudaPointerGetAttributes(&attributes, ptr.get()));
-  EXPECT_EQ(attributes.type, cudaMemoryTypeDevice);
-  EXPECT_EQ(attributes.devicePointer, ptr.get());
+    cudaPointerAttributes attributes{};
+    CHECK_CUDA_ERROR(cudaPointerGetAttributes(&attributes, ptr.get()));
+    EXPECT_EQ(attributes.type, cudaMemoryTypeDevice);
+    EXPECT_EQ(attributes.devicePointer, ptr.get());
+  }
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+  CHECK_CUDA_ERROR(cudaStreamDestroy(stream));
 }
 
 TEST_F(CudaUniquePtrTest, MakeUniqueHostMemory)
@@ -64,10 +76,14 @@ TEST_F(CudaUniquePtrTest, MakeUniqueHostArray)
 TEST_F(CudaUniquePtrTest, DeleterFunctionality)
 {
   // Test that CudaDeleter and CudaDeleterHost types exist and are usable
+  cudaStream_t stream{};
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
   {
-    auto ptr = autoware::cuda_utils::make_unique<int>();
+    auto ptr = autoware::cuda_utils::make_unique<int>(stream);
     // Deleter will be called automatically on scope exit
   }
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+  CHECK_CUDA_ERROR(cudaStreamDestroy(stream));
 
   {
     auto ptr = autoware::cuda_utils::make_unique_host<int>();
