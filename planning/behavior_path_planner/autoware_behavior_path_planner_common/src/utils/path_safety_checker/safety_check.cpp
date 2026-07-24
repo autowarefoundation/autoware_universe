@@ -572,6 +572,45 @@ bool checkSafetyWithIntegralPredictedPolygon(
   return true;
 }
 
+namespace
+{
+// Cheap axis-aligned bounding-box disjoint test used as a broad-phase before the exact polygon
+// intersects test. AABB-disjoint implies the polygons are disjoint, so it is exact (never a false
+// reject) to skip boost::geometry::intersects when the boxes don't overlap.
+struct Aabb
+{
+  double min_x, min_y, max_x, max_y;
+};
+
+Aabb aabbOf(const Polygon2d & p)
+{
+  Aabb b{
+    std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
+    std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest()};
+  for (const auto & pt : p.outer()) {
+    b.min_x = std::min(b.min_x, pt.x());
+    b.min_y = std::min(b.min_y, pt.y());
+    b.max_x = std::max(b.max_x, pt.x());
+    b.max_y = std::max(b.max_y, pt.y());
+  }
+  return b;
+}
+
+bool aabbDisjoint(const Aabb & a, const Aabb & b)
+{
+  return a.max_x < b.min_x || b.max_x < a.min_x || a.max_y < b.min_y || b.max_y < a.min_y;
+}
+
+// Exact equivalent of boost::geometry::intersects(a, b), with an AABB broad-phase reject in front.
+bool intersectsWithBroadPhase(const Polygon2d & a, const Polygon2d & b)
+{
+  if (aabbDisjoint(aabbOf(a), aabbOf(b))) {
+    return false;
+  }
+  return boost::geometry::intersects(a, b);
+}
+}  // namespace
+
 bool checkCollision(
   const PathWithLaneId & planned_path,
   const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
@@ -639,7 +678,7 @@ std::optional<Polygon2d> check_collision(
     return std::nullopt;
   }
 
-  if (boost::geometry::intersects(ego_polygon, obj_polygon)) {
+  if (intersectsWithBroadPhase(ego_polygon, obj_polygon)) {
     if (debug) {
       debug->unsafe_reason = "overlap_polygon";
       debug->expected_ego_pose = ego_pose;
@@ -683,7 +722,7 @@ std::optional<Polygon2d> check_collision(
                         obj_pose_with_poly, lon_offset, lat_margin, is_stopping_object, debug);
 
   // check intersects with extended polygon
-  if (!boost::geometry::intersects(*extended_ego_polygon_opt, extended_obj_polygon)) {
+  if (!intersectsWithBroadPhase(*extended_ego_polygon_opt, extended_obj_polygon)) {
     return std::nullopt;
   }
 
