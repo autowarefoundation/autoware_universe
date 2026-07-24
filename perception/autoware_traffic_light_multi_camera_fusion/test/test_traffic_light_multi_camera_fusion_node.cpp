@@ -64,6 +64,7 @@ struct FusionNodeOptions
   double prior_log_odds = 0.0;
   bool consistency_check_enable = false;
   bool publish_partial_matched_signal = false;
+  bool use_map_based_signal_filter = false;
 };
 
 class MultiCameraFusionIntegrationTest : public ::testing::Test
@@ -117,6 +118,8 @@ protected:
     node_options.append_parameter_override(
       "signal_consistency_check.publish_partial_matched_signal",
       options.publish_partial_matched_signal);
+    node_options.append_parameter_override(
+      "map_based_signal_filter.enable", options.use_map_based_signal_filter);
 
     node_ = std::make_shared<MultiCameraFusionNode>(node_options);
     executor_->add_node(node_);

@@ -42,6 +42,8 @@ MultiCameraFusionNode::MultiCameraFusionNode(const rclcpp::NodeOptions & node_op
     this->declare_parameter<bool>("signal_consistency_check.enable");
   fusion_config_.publish_partial_matched_signal =
     this->declare_parameter<bool>("signal_consistency_check.publish_partial_matched_signal");
+  fusion_config_.use_map_based_signal_filter =
+    this->declare_parameter<bool>("map_based_signal_filter.enable");
 
   fusion_ = MultiCameraFusion(fusion_config_);
 

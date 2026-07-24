@@ -35,6 +35,16 @@
               "default": false
             }
           }
+        },
+        "map_based_signal_filter": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "description": "Enables the rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's `light_bulbs` linestring in the lanelet2 map. Predictions whose (color, shape) is not encoded in the map are dropped from the element list; UNKNOWN elements always pass through. If every element is filtered out, the traffic light emits a fail-safe UNKNOWN signal.",
+              "default": false
+            }
+          }
         }
       },
       "required": ["message_lifespan", "approximate_sync"],
