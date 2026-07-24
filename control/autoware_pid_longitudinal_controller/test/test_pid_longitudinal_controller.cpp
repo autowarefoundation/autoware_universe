@@ -44,8 +44,11 @@ rclcpp::Time make_time(const double seconds, const rcl_clock_type_t clock_type =
 }
 
 // Helper function that builds a fully-populated, valid config equivalent to the shipped
-// default parameters (autoware_pid_longitudinal_controller.param.yaml). Tests override only the
-// fields relevant to what they verify.
+// default parameters (autoware_pid_longitudinal_controller.param.yaml), except
+// enable_keep_stopped_until_steer_convergence defaults to false here (the shipped default is
+// true) so most tests can depart from STOPPED without also driving steer convergence; only
+// KeepsStoppedUntilSteerConvergesWhenGuardEnabled opts back in. Tests override only the fields
+// relevant to what they verify.
 PidLongitudinalControllerConfig make_default_config()
 {
   PidLongitudinalControllerConfig config{};
@@ -61,7 +64,7 @@ PidLongitudinalControllerConfig make_default_config()
   config.enable_overshoot_emergency = true;
   config.enable_large_tracking_error_emergency = true;
   config.enable_slope_compensation = true;
-  config.enable_keep_stopped_until_steer_convergence = true;
+  config.enable_keep_stopped_until_steer_convergence = false;
 
   config.state_transition_params.drive_state_stop_dist = 0.5;
   config.state_transition_params.drive_state_offset_stop_dist = 1.0;
@@ -233,8 +236,7 @@ TEST(PidLongitudinalController, DepartsToDriveWhenFarFromStopAndKeepStoppedDisab
   // Arrange
   // A forward trajectory with no stop point keeps the ego far from any stop point, and disabling
   // the keep-stopped-until-steer-convergence guard lets the ego depart immediately.
-  auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
+  const auto config = make_default_config();
   PidLongitudinalController controller(config);
   const auto input_data = make_input_data(make_straight_trajectory(20, 5.0));
 
@@ -254,7 +256,8 @@ TEST(PidLongitudinalController, KeepsStoppedUntilSteerConvergesWhenGuardEnabled)
   // Arrange
   // Far from the stop point but with the keep-stopped guard enabled and steering not converged,
   // the ego must remain STOPPED even though the departure distance condition is met.
-  const auto config = make_default_config();
+  auto config = make_default_config();
+  config.enable_keep_stopped_until_steer_convergence = true;
   PidLongitudinalController controller(config);
   const auto input_data = make_input_data(make_straight_trajectory(20, 5.0));
 
@@ -298,7 +301,6 @@ TEST(PidLongitudinalController, TransitionsToStoppingNearStopPoint)
   // Reach DRIVE first (far forward trajectory, keep-stopped guard disabled), then present a stop
   // point 0.3 m ahead so the distance to the stop point falls below stopping_state_stop_dist.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
 
@@ -320,7 +322,6 @@ TEST(PidLongitudinalController, TransitionsToEmergencyWhenOvershootingStopPoint)
   // Reach DRIVE first, then present a zero-velocity trajectory whose stop point lies well behind
   // the ego (ego at x=10, stop point at x=0), i.e. the ego has overshot the stop point.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
 
@@ -345,7 +346,6 @@ TEST(PidLongitudinalController, KeepsBrakeBeforeStopWhenEnabled)
   // Keep the ego in DRIVE toward a stop point far ahead (smooth stop disabled) while brake
   // keeping is enabled, exercising the keep-brake-before-stop path.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   config.enable_smooth_stop = false;
   config.enable_brake_keeping_before_stop = true;
   PidLongitudinalController controller(config);
@@ -373,7 +373,6 @@ TEST(PidLongitudinalController, PredictsStateFromCommandHistoryWhenAutonomous)
   // command history. Drive one cycle to fill the command buffer, then run a second cycle whose
   // time is within delay_compensation_time so the history-based prediction loop executes.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   const auto trajectory = make_straight_trajectory(30, 5.0);
   controller.run(make_input_data(trajectory, 3.0, 0.0, true), make_time(0.0, RCL_ROS_TIME), true);
@@ -412,7 +411,6 @@ TEST(PidLongitudinalController, DepartsFromStoppingWhenStopPointRecedes)
   // Enter STOPPING with a nearby stop point, then present a far stop point so the distance
   // exceeds drive_state_stop_dist + drive_state_offset_stop_dist and the ego departs to DRIVE.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
   controller.run(make_input_data(make_straight_trajectory(20, 0.0, 0.3)), make_time(0.03), true);
@@ -435,7 +433,6 @@ TEST(PidLongitudinalController, RecoversFromEmergencyToDriveWhenControlReleased)
   // Drive, overshoot into EMERGENCY, then present a valid forward trajectory while not under
   // autoware control so the emergency clears and the ego returns to DRIVE.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
   controller.run(
@@ -457,7 +454,6 @@ TEST(PidLongitudinalController, DrivesInReverseForNegativeVelocityTrajectory)
   // A trajectory with negative target velocity puts the ego in the reverse shift, exercising the
   // reverse-direction sign handling in the shift, velocity-feedback, and acc-feedback paths.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   const auto reverse_trajectory = make_straight_trajectory(20, -5.0);
 
@@ -479,7 +475,8 @@ TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousContro
   // Under autonomous control, far from the stop point but with steering not converged, the ego
   // keeps STOPPED and raises a virtual wall marker. Two cycles cover the branch that also
   // considers the previous keep-stopped condition.
-  const auto config = make_default_config();
+  auto config = make_default_config();
+  config.enable_keep_stopped_until_steer_convergence = true;
   PidLongitudinalController controller(config);
   const auto trajectory = make_straight_trajectory(20, 5.0);
   controller.run(make_input_data(trajectory, 0.0, 0.0, true), make_time(0.0, RCL_ROS_TIME), false);
@@ -501,7 +498,6 @@ TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
   // Drive while running (setting the last-running time), then stand still past
   // stopped_state_entry_duration_time while not under control, so DRIVE transitions to STOPPED.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   const auto trajectory = make_straight_trajectory(20, 5.0);
   controller.run(make_input_data(trajectory, 3.0), make_time(0.0), true);
@@ -521,7 +517,6 @@ TEST(PidLongitudinalController, StaysStoppingWhileStopPointHolds)
   // Enter STOPPING, then hold the same near stop point so no exit condition fires and the ego
   // remains in STOPPING.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   const auto near_stop_trajectory = make_straight_trajectory(20, 0.0, 0.3);
   controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
@@ -541,7 +536,6 @@ TEST(PidLongitudinalController, StoppingTransitionsToEmergencyOnOvershoot)
   // Arrange
   // Enter STOPPING, then overshoot the stop point so STOPPING transitions to EMERGENCY.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
   controller.run(make_input_data(make_straight_trajectory(20, 0.0, 0.3)), make_time(0.03), true);
@@ -562,7 +556,6 @@ TEST(PidLongitudinalController, EmergencyTransitionsToStoppedAfterStandstill)
   // Drive while running, overshoot into EMERGENCY, then stay overshot past the standstill
   // duration so EMERGENCY transitions to STOPPED.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(make_input_data(make_straight_trajectory(20, 5.0), 3.0), make_time(0.0), true);
   controller.run(
@@ -584,7 +577,6 @@ TEST(PidLongitudinalController, StaysInEmergencyWhileOvershootPersistsUnderContr
   // Under autonomous control, reach EMERGENCY by overshooting and keep overshooting so the
   // emergency condition persists and the ego stays in EMERGENCY.
   auto config = make_default_config();
-  config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(
     make_input_data(make_straight_trajectory(20, 5.0), 0.0, 0.0, true),
