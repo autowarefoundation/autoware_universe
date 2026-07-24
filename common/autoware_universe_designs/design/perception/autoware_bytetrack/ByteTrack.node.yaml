@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ByteTrack.node
+
+package:
+  name: autoware_bytetrack
+  provider: autoware
+
+launch:
+  plugin: autoware::bytetrack::ByteTrackNode
+  executable: bytetrack_node_exe
+  node_output: screen
+
+# interfaces
+# uuid debug publisher (out/objects/debug/uuid) omitted.
+subscribers:
+  - name: rect
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: ~/in/rect
+
+publishers:
+  - name: objects
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: ~/out/objects
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/bytetrack.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: track
+    trigger_conditions:
+      - on_input: rect
+    outcomes:
+      - to_output: objects

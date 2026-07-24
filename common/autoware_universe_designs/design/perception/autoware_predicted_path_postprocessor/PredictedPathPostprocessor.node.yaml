@@ -1,0 +1,42 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PredictedPathPostprocessor.node
+
+package:
+  name: autoware_predicted_path_postprocessor
+  provider: autoware
+
+launch:
+  plugin: autoware::predicted_path_postprocessor::PredictedPathPostprocessorNode
+  executable: autoware_predicted_path_postprocessor_exe
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+    remap_target: ~/input/objects
+  - name: lanelet_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: ~/input/lanelet_map
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+    remap_target: ~/output/objects
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/predicted_path_postprocessor.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: postprocess
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: objects
