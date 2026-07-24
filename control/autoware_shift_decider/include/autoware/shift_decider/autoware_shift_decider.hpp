@@ -43,11 +43,17 @@ private:
 
   AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::GearCommand) pub_shift_cmd_;
   autoware::agnocast_wrapper::polling::PollingSubscriber<
-    autoware_control_msgs::msg::Control>::SharedPtr sub_control_cmd_;
+    autoware_control_msgs::msg::Control>::SharedPtr sub_control_cmd_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_control_msgs::msg::Control>(this, "input/control_cmd");
   autoware::agnocast_wrapper::polling::PollingSubscriber<
-    autoware_system_msgs::msg::AutowareState>::SharedPtr sub_autoware_state_;
+    autoware_system_msgs::msg::AutowareState>::SharedPtr sub_autoware_state_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_system_msgs::msg::AutowareState>(this, "input/state");
   autoware::agnocast_wrapper::polling::PollingSubscriber<
-    autoware_vehicle_msgs::msg::GearReport>::SharedPtr sub_current_gear_;
+    autoware_vehicle_msgs::msg::GearReport>::SharedPtr sub_current_gear_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_vehicle_msgs::msg::GearReport>(this, "input/current_gear");
 
   AUTOWARE_TIMER_PTR timer_;
 
