@@ -134,11 +134,12 @@ PidLongitudinalControllerConfig make_default_config()
 }
 
 // Helper function that builds a straight, flat trajectory along the +x axis starting at start_x.
-// Every point shares the given constant velocity and zero acceleration.
+// Every point shares the given constant velocity and zero acceleration. Points are spaced 1.0 m
+// apart, matching the scale of ego_nearest_dist_threshold used throughout these tests.
 Trajectory make_straight_trajectory(
-  const std::size_t num_points, const double spacing, const double velocity,
-  const double start_x = 0.0)
+  const std::size_t num_points, const double velocity, const double start_x = 0.0)
 {
+  constexpr double spacing = 1.0;
   Trajectory trajectory;
   for (std::size_t point_index = 0; point_index < num_points; ++point_index) {
     TrajectoryPoint point;
@@ -156,10 +157,10 @@ Trajectory make_straight_trajectory(
 // Helper function that builds a straight, flat trajectory carrying a per-point time_from_start,
 // used to exercise the temporal (time-based) trajectory path.
 Trajectory make_temporal_trajectory(
-  const std::size_t num_points, const double spacing, const double velocity, const double time_step,
+  const std::size_t num_points, const double velocity, const double time_step,
   const double stamp_sec)
 {
-  Trajectory trajectory = make_straight_trajectory(num_points, spacing, velocity);
+  Trajectory trajectory = make_straight_trajectory(num_points, velocity);
   trajectory.header.stamp = make_time(stamp_sec);
   for (std::size_t point_index = 0; point_index < num_points; ++point_index) {
     trajectory.points.at(point_index).time_from_start =
@@ -195,7 +196,7 @@ TEST(PidLongitudinalController, StaysStoppedWhenCloseToStopPoint)
   // point stays below drive_state_stop_dist and no departure is triggered.
   const auto config = make_default_config();
   PidLongitudinalController controller(config);
-  const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
+  const auto input_data = make_input_data(make_straight_trajectory(10, 0.0));
 
   // Act
   const auto result = controller.run(input_data, make_time(0.0), true);
@@ -217,7 +218,7 @@ TEST(PidLongitudinalController, StoppedStateOutputsStoppedStateCommand)
   auto config = make_default_config();
   config.max_acc_cmd_diff = 1000.0;
   PidLongitudinalController controller(config);
-  const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
+  const auto input_data = make_input_data(make_straight_trajectory(10, 0.0));
 
   // Act
   const auto result = controller.run(input_data, make_time(0.0), true);
@@ -238,7 +239,7 @@ TEST(PidLongitudinalController, DepartsToDriveWhenFarFromStopAndKeepStoppedDisab
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  const auto input_data = make_input_data(make_straight_trajectory(20, 1.0, 5.0));
+  const auto input_data = make_input_data(make_straight_trajectory(20, 5.0));
 
   // Act
   const auto result = controller.run(input_data, make_time(0.0), true);
@@ -258,7 +259,7 @@ TEST(PidLongitudinalController, KeepsStoppedUntilSteerConvergesWhenGuardEnabled)
   // the ego must remain STOPPED even though the departure distance condition is met.
   const auto config = make_default_config();
   PidLongitudinalController controller(config);
-  const auto input_data = make_input_data(make_straight_trajectory(20, 1.0, 5.0));
+  const auto input_data = make_input_data(make_straight_trajectory(20, 5.0));
 
   // Act
   const auto result = controller.run(input_data, make_time(0.0), false);
@@ -285,7 +286,7 @@ TEST(PidLongitudinalController, SetConfigAppliesNewStoppedStateCommand)
   new_config.stopped_state_params.acc = -2.0;
   controller.setConfig(new_config);
 
-  const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
+  const auto input_data = make_input_data(make_straight_trajectory(10, 0.0));
 
   // Act
   const auto result = controller.run(input_data, make_time(0.0), true);
@@ -305,10 +306,10 @@ TEST(PidLongitudinalController, TransitionsToStoppingNearStopPoint)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.0), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
 
   // Act
-  const auto near_stop_trajectory = make_straight_trajectory(20, 1.0, 0.0, 0.3);
+  const auto near_stop_trajectory = make_straight_trajectory(20, 0.0, 0.3);
   const auto result = controller.run(make_input_data(near_stop_trajectory), make_time(0.05), true);
 
   // Assert
@@ -327,10 +328,10 @@ TEST(PidLongitudinalController, TransitionsToEmergencyWhenOvershootingStopPoint)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.0), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
 
   // Act
-  const auto overshoot_trajectory = make_straight_trajectory(20, 1.0, 0.0);
+  const auto overshoot_trajectory = make_straight_trajectory(20, 0.0);
   const auto result =
     controller.run(make_input_data(overshoot_trajectory, 0.0, 10.0), make_time(1.0), true);
 
@@ -354,9 +355,9 @@ TEST(PidLongitudinalController, KeepsBrakeBeforeStopWhenEnabled)
   config.enable_smooth_stop = false;
   config.enable_brake_keeping_before_stop = true;
   PidLongitudinalController controller(config);
-  controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.0), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
 
-  auto trajectory_with_stop = make_straight_trajectory(20, 1.0, 3.0);
+  auto trajectory_with_stop = make_straight_trajectory(20, 3.0);
   trajectory_with_stop.points.at(18).longitudinal_velocity_mps = 0.0f;
   trajectory_with_stop.points.at(19).longitudinal_velocity_mps = 0.0f;
 
@@ -380,7 +381,7 @@ TEST(PidLongitudinalController, PredictsStateFromCommandHistoryWhenAutonomous)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  const auto trajectory = make_straight_trajectory(30, 1.0, 5.0);
+  const auto trajectory = make_straight_trajectory(30, 5.0);
   controller.run(make_input_data(trajectory, 3.0, 0.0, true), make_time(0.0, RCL_ROS_TIME), true);
 
   // Act
@@ -400,7 +401,7 @@ TEST(PidLongitudinalController, RawPitchSlopeSourceProducesStoppedState)
   auto config = make_default_config();
   config.slope_source = PidLongitudinalControllerConfig::SlopeSource::RAW_PITCH;
   PidLongitudinalController controller(config);
-  const auto input_data = make_input_data(make_straight_trajectory(10, 1.0, 0.0));
+  const auto input_data = make_input_data(make_straight_trajectory(10, 0.0));
 
   // Act
   const auto result = controller.run(input_data, make_time(0.0), true);
@@ -420,13 +421,12 @@ TEST(PidLongitudinalController, DepartsFromStoppingWhenStopPointRecedes)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.0), true);
-  controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0, 0.3)), make_time(0.03), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 0.0, 0.3)), make_time(0.03), true);
 
   // Act
   const auto result =
-    controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.06), true);
+    controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.06), true);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
@@ -444,13 +444,13 @@ TEST(PidLongitudinalController, RecoversFromEmergencyToDriveWhenControlReleased)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.0), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
   controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0), 0.0, 10.0), make_time(0.03), true);
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0), make_time(0.03), true);
 
   // Act
   const auto result =
-    controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.06), true);
+    controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.06), true);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
@@ -466,7 +466,7 @@ TEST(PidLongitudinalController, DrivesInReverseForNegativeVelocityTrajectory)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  const auto reverse_trajectory = make_straight_trajectory(20, 1.0, -5.0);
+  const auto reverse_trajectory = make_straight_trajectory(20, -5.0);
 
   // Act
   const auto result =
@@ -488,7 +488,7 @@ TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousContro
   // considers the previous keep-stopped condition.
   const auto config = make_default_config();
   PidLongitudinalController controller(config);
-  const auto trajectory = make_straight_trajectory(20, 1.0, 5.0);
+  const auto trajectory = make_straight_trajectory(20, 5.0);
   controller.run(make_input_data(trajectory, 0.0, 0.0, true), make_time(0.0, RCL_ROS_TIME), false);
 
   // Act
@@ -512,7 +512,7 @@ TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  const auto trajectory = make_straight_trajectory(20, 1.0, 5.0);
+  const auto trajectory = make_straight_trajectory(20, 5.0);
   controller.run(make_input_data(trajectory, 3.0), make_time(0.0), true);
 
   // Act
@@ -533,8 +533,8 @@ TEST(PidLongitudinalController, StaysStoppingWhileStopPointHolds)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  const auto near_stop_trajectory = make_straight_trajectory(20, 1.0, 0.0, 0.3);
-  controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.0), true);
+  const auto near_stop_trajectory = make_straight_trajectory(20, 0.0, 0.3);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
   controller.run(make_input_data(near_stop_trajectory), make_time(0.03), true);
 
   // Act
@@ -553,13 +553,12 @@ TEST(PidLongitudinalController, StoppingTransitionsToEmergencyOnOvershoot)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
-  controller.run(make_input_data(make_straight_trajectory(20, 1.0, 5.0)), make_time(0.0), true);
-  controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0, 0.3)), make_time(0.03), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0)), make_time(0.0), true);
+  controller.run(make_input_data(make_straight_trajectory(20, 0.0, 0.3)), make_time(0.03), true);
 
   // Act
   const auto result = controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0), 0.0, 10.0), make_time(0.06), true);
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0), make_time(0.06), true);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::EMERGENCY);
@@ -575,14 +574,13 @@ TEST(PidLongitudinalController, EmergencyTransitionsToStoppedAfterStandstill)
   auto config = make_default_config();
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
+  controller.run(make_input_data(make_straight_trajectory(20, 5.0), 3.0), make_time(0.0), true);
   controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 5.0), 3.0), make_time(0.0), true);
-  controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0), 0.0, 10.0), make_time(0.2), true);
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0), make_time(0.2), true);
 
   // Act
   const auto result = controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0), 0.0, 10.0), make_time(0.4), true);
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0), make_time(0.4), true);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
@@ -600,15 +598,15 @@ TEST(PidLongitudinalController, StaysInEmergencyWhileOvershootPersistsUnderContr
   config.enable_keep_stopped_until_steer_convergence = false;
   PidLongitudinalController controller(config);
   controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 5.0), 0.0, 0.0, true),
+    make_input_data(make_straight_trajectory(20, 5.0), 0.0, 0.0, true),
     make_time(0.0, RCL_ROS_TIME), true);
   controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0), 0.0, 10.0, true),
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0, true),
     make_time(0.03, RCL_ROS_TIME), true);
 
   // Act
   const auto result = controller.run(
-    make_input_data(make_straight_trajectory(20, 1.0, 0.0), 0.0, 10.0, true),
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0, true),
     make_time(0.06, RCL_ROS_TIME), true);
 
   // Assert
@@ -627,7 +625,7 @@ TEST(PidLongitudinalController, TemporalTrajectoryProducesValidCommand)
   auto config = make_default_config();
   config.use_temporal_trajectory = true;
   PidLongitudinalController controller(config);
-  const auto temporal_trajectory = make_temporal_trajectory(20, 1.0, 3.0, 0.1, 0.0);
+  const auto temporal_trajectory = make_temporal_trajectory(20, 3.0, 0.1, 0.0);
 
   // Act
   const auto result =
