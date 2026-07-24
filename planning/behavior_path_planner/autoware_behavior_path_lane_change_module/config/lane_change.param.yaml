@@ -51,7 +51,7 @@
       safety_check:
         allow_loose_check_for_cancel: true
         enable_target_lane_bound_check: true
-        stopped_object_velocity_threshold: 1.0 # [m/s]
+        stopped_object_velocity_threshold: 1.0 # [m/s] Object whose velocity is less than the threshold is treated as static object.
         prepare:                                        # RSS parameters used during the prepare phase, regardless of whether the ego is searching for a safe path, canceling, or transitioning to another state.
           expected_front_deceleration: -1.0             # [m/s2]
           expected_rear_deceleration: -1.0              # [m/s2]
@@ -149,7 +149,7 @@
         max_lateral_jerk: 100.0            # [m/s3]
         overhang_tolerance: 0.0             # [m]
         unsafe_hysteresis_threshold: 5     # [/]
-        deceleration_sampling_num: 5 # [/]
+        deceleration_sampling_num: 5 # [/] Used to sample the approved lane change path, specifically for checking safety against leading objects.
 
       lane_change_finish_judge_buffer: 2.0      # [m]
       finish_judge_lateral_threshold: 0.1        # [m]
