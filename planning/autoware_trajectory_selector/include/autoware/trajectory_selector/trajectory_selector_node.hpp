@@ -106,12 +106,20 @@ private:
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 
   // Polling Subscribers
-  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_odometry_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<PredictedObjects>::SharedPtr sub_objects_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_odometry_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
+      this, "~/input/odometry", 1);
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PredictedObjects>::SharedPtr sub_objects_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<PredictedObjects>(
+      this, "~/input/objects", 1);
   autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
-    sub_acceleration_;
+    sub_acceleration_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+        this, "~/input/acceleration", 1);
   autoware::agnocast_wrapper::polling::PollingSubscriber<
-    autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr sub_traffic_lights_;
+    autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr sub_traffic_lights_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_perception_msgs::msg::TrafficLightGroupArray>(this, "~/input/traffic_signals", 1);
 
   // Normal Subscribers
   AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;

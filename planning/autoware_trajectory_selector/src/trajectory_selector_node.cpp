@@ -41,16 +41,6 @@ TrajectorySelectorNode::TrajectorySelectorNode(const rclcpp::NodeOptions & node_
 
 void TrajectorySelectorNode::subscribers()
 {
-  sub_odometry_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
-    this, "~/input/odometry", 1);
-  sub_objects_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<PredictedObjects>(
-    this, "~/input/objects", 1);
-  sub_acceleration_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
-      this, "~/input/acceleration", 1);
-  sub_traffic_lights_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
-    autoware_perception_msgs::msg::TrafficLightGroupArray>(this, "~/input/traffic_signals", 1);
-
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectorySelectorNode::map_callback, this, std::placeholders::_1));
