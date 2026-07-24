@@ -17,9 +17,9 @@
       workspace_size: 8589934592  # 8 GiB
       source_reconstruction: "full"
       filter:
-        class_probability_threshold: 0.05
         classes: ["drivable_flat", "non_drivable_flat", "noise"]
         output_format: ""
+        apply_to_segmentation: false
     detection3d:
       use_head: $(var use_det3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_det3d_head.onnx"
