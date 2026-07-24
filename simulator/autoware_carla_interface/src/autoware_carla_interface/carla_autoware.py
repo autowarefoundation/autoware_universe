@@ -169,6 +169,10 @@ class InitializeInterface(object):
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
 
+        # Initialize splatsim cameras and lidars after CARLA world and ego actor are ready
+        self.interface.init_splatsim_cameras()
+        self.interface.init_splatsim_lidars()
+
         if self.use_traffic_manager:
             self._setup_traffic_manager(client)
 
