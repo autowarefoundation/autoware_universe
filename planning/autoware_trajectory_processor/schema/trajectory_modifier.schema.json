@@ -1,0 +1,630 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Modifier",
+  "type": "object",
+  "definitions": {
+    "trajectory_modifier": {
+      "type": "object",
+      "properties": {
+        "plugin_names": {
+          "type": "array",
+          "description": "List of trajectory modifier plugins to load",
+          "default": [
+            "autoware::trajectory_modifier::plugin::StopPointFixer",
+            "autoware::trajectory_modifier::plugin::ObstacleStop",
+            "autoware::trajectory_modifier::plugin::TrafficLightStop",
+            "autoware::trajectory_modifier::plugin::VelocityModifier"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "use_stop_point_fixer": {
+          "type": "boolean",
+          "description": "Enable the stop point fixer modifier plugin",
+          "default": true
+        },
+        "use_obstacle_stop": {
+          "type": "boolean",
+          "description": "Enable the obstacle stop modifier plugin",
+          "default": true
+        },
+        "use_surround_obstacle_stop": {
+          "type": "boolean",
+          "description": "Enable the surround obstacle stop modifier plugin",
+          "default": false
+        },
+        "use_traffic_light_stop": {
+          "type": "boolean",
+          "description": "Enable the traffic light stop modifier plugin",
+          "default": true
+        },
+        "use_velocity_modifier": {
+          "type": "boolean",
+          "description": "Enable the velocity modifier plugin",
+          "default": true
+        },
+        "trajectory_time_step": {
+          "type": "number",
+          "description": "Time step for trajectory modification [s]",
+          "default": 0.1,
+          "exclusiveMinimum": 0.0
+        },
+        "stop_point_fixer": {
+          "type": "object",
+          "properties": {
+            "force_stop_long_stopped_trajectories": {
+              "type": "boolean",
+              "description": "Force zero velocity trajectory for trajectories with long stops",
+              "default": true
+            },
+            "force_stop_close_stopped_trajectories": {
+              "type": "boolean",
+              "description": "Force zero velocity trajectory for trajectories with stops close to ego",
+              "default": true
+            },
+            "velocity_threshold": {
+              "type": "number",
+              "description": "Velocity threshold below which ego vehicle is considered stationary",
+              "default": 0.25,
+              "minimum": 0.0
+            },
+            "min_distance_threshold": {
+              "type": "number",
+              "description": "Minimum distance threshold to trigger trajectory replacement",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "min_stop_duration": {
+              "type": "number",
+              "description": "Minimum duration of stop to consider for trajectory replacement",
+              "default": 0.5,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "stopping_constraints": {
+          "type": "object",
+          "properties": {
+            "nominal_deceleration": {
+              "type": "number",
+              "description": "Nominal deceleration during stopping [m/s^2]",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "maximum_deceleration": {
+              "type": "number",
+              "description": "Maximum deceleration during stopping [m/s^2]",
+              "default": 4.0,
+              "minimum": 0.0
+            },
+            "jerk_limit": {
+              "type": "number",
+              "description": "Jerk limit during stopping [m/s^3]",
+              "default": 3.0,
+              "minimum": 0.0
+            },
+            "arrived_distance_threshold": {
+              "type": "number",
+              "description": "Threshold to check if the ego vehicle has arrived at the stop point [m]",
+              "default": 0.5,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "obstacle_stop": {
+          "type": "object",
+          "properties": {
+            "use_objects": {
+              "type": "boolean",
+              "description": "Enable the use of objects for obstacle stop",
+              "default": true
+            },
+            "use_pointcloud": {
+              "type": "boolean",
+              "description": "Enable the use of pointcloud for obstacle stop",
+              "default": true
+            },
+            "enable_stop_for_objects": {
+              "type": "boolean",
+              "description": "Enable stopping behavior when object is detected as obstacle",
+              "default": true
+            },
+            "enable_stop_for_pointcloud": {
+              "type": "boolean",
+              "description": "Enable stopping behavior when pointcloud is detected as obstacle",
+              "default": false
+            },
+            "stop_margin": {
+              "type": "number",
+              "description": "Distance to maintain from an obstacle when stopped [m]",
+              "default": 6.0,
+              "minimum": 0.0
+            },
+            "lateral_margin": {
+              "type": "number",
+              "description": "Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "duplicate_check_threshold": {
+              "type": "number",
+              "description": "Threshold to check if the stop point is already in the trajectory [m]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "obstacle_tracking": {
+              "type": "object",
+              "properties": {
+                "on_time_buffer": {
+                  "type": "number",
+                  "description": "Continuous detection duration to consider object/pointcloud to be persistent [s]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                },
+                "off_time_buffer": {
+                  "type": "number",
+                  "description": "Continuous non-detection duration to consider object/pointcloud as not persistent [s]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                },
+                "object_distance_th": {
+                  "type": "number",
+                  "description": "Distance threshold for object tracking [m]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                },
+                "object_yaw_th": {
+                  "type": "number",
+                  "description": "Yaw threshold for object tracking [rad]",
+                  "default": 0.1745,
+                  "minimum": 0.0
+                },
+                "pcd_distance_th": {
+                  "type": "number",
+                  "description": "Distance threshold for pointcloud tracking [m]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                },
+                "grace_period": {
+                  "type": "number",
+                  "description": "Grace period for object tracking [s]",
+                  "default": 0.2,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "objects": {
+              "type": "object",
+              "properties": {
+                "object_types": {
+                  "type": "array",
+                  "description": "Object types to consider for obstacle stop",
+                  "default": [
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "motorcycle",
+                    "bicycle",
+                    "pedestrian",
+                    "hazard"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "max_velocity_th": {
+                  "type": "number",
+                  "description": "Maximum velocity threshold for target object [m/s]",
+                  "default": 5.0,
+                  "minimum": 0.0
+                },
+                "stopped_velocity_th": {
+                  "type": "number",
+                  "description": "Velocity threshold for target object to be considered as stopped [m/s]",
+                  "default": 0.25,
+                  "minimum": 0.0
+                },
+                "max_lateral_velocity_th": {
+                  "type": "number",
+                  "description": "Maximum lateral velocity threshold for target object to be considered for obstacle stop [m/s]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                },
+                "safety_buffer": {
+                  "type": "number",
+                  "description": "Safety buffer to expand object shape [m]",
+                  "default": 0.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "pointcloud": {
+              "type": "object",
+              "properties": {
+                "height_buffer": {
+                  "type": "number",
+                  "description": "Height buffer to add above ego height [m]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                },
+                "min_height": {
+                  "type": "number",
+                  "description": "Minimum height of pointcloud [m]",
+                  "default": 0.2,
+                  "minimum": 0.0
+                },
+                "voxel_grid_filter": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X dimension of voxel grid filter [m]",
+                      "default": 0.2,
+                      "minimum": 0.0
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y dimension of voxel grid filter [m]",
+                      "default": 0.2,
+                      "minimum": 0.0
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z dimension of voxel grid filter [m]",
+                      "default": 0.2,
+                      "minimum": 0.0
+                    },
+                    "min_size": {
+                      "type": "number",
+                      "description": "Minimum size of voxel grid filter [m]",
+                      "default": 3,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "clustering": {
+                  "type": "object",
+                  "properties": {
+                    "tolerance": {
+                      "type": "number",
+                      "description": "Tolerance for clustering [m]",
+                      "default": 0.5,
+                      "minimum": 0.0
+                    },
+                    "min_height": {
+                      "type": "number",
+                      "description": "Minimum height for clustering [m]",
+                      "default": 0.5,
+                      "minimum": 0.0
+                    },
+                    "min_size": {
+                      "type": "number",
+                      "description": "Minimum size for clustering [m]",
+                      "default": 10,
+                      "minimum": 0.0
+                    },
+                    "max_size": {
+                      "type": "number",
+                      "description": "Maximum size for clustering [m]",
+                      "default": 10000,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "rss_params": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable RSS safety check",
+                  "default": true
+                },
+                "object_decel": {
+                  "type": "object",
+                  "properties": {
+                    "car": {
+                      "type": "number",
+                      "description": "Deceleration for car type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "truck": {
+                      "type": "number",
+                      "description": "Deceleration for truck type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "bus": {
+                      "type": "number",
+                      "description": "Deceleration for bus type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "trailer": {
+                      "type": "number",
+                      "description": "Deceleration for trailer type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "motorcycle": {
+                      "type": "number",
+                      "description": "Deceleration for motorcycle type objects [m/s^2]",
+                      "default": 3.0,
+                      "minimum": 0.0
+                    },
+                    "bicycle": {
+                      "type": "number",
+                      "description": "Deceleration for bicycle type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    },
+                    "pedestrian": {
+                      "type": "number",
+                      "description": "Deceleration for pedestrian type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    },
+                    "animal": {
+                      "type": "number",
+                      "description": "Deceleration for animal type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "ego_decel": {
+                  "type": "number",
+                  "description": "Deceleration for ego vehicle [m/s^2]",
+                  "default": 4.0,
+                  "minimum": 0.0
+                },
+                "reaction_time": {
+                  "type": "number",
+                  "description": "Reaction time to consider for RSS calculation [s]",
+                  "default": 0.2,
+                  "minimum": 0.0
+                },
+                "safety_margin": {
+                  "type": "number",
+                  "description": "Safety margin to consider for RSS calculation [m]",
+                  "default": 2.0,
+                  "minimum": 0.0
+                },
+                "lookahead_horizon": {
+                  "type": "number",
+                  "description": "Lookahead horizon for RSS calculation [s]",
+                  "default": 1.5,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "surround_obstacle_stop": {
+          "type": "object",
+          "properties": {
+            "use_objects": {
+              "type": "boolean",
+              "description": "Enable the use of objects for surround obstacle stop",
+              "default": true
+            },
+            "use_pointcloud": {
+              "type": "boolean",
+              "description": "Enable the use of pointcloud for surround obstacle stop",
+              "default": true
+            },
+            "object_types": {
+              "type": "array",
+              "description": "Types of objects to consider for surround obstacle stop",
+              "default": ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "front_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "truck": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "bus": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "trailer": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "motorcycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "bicycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pedestrian": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "hazard": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "animal": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "side_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "truck": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "bus": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "trailer": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "motorcycle": { "type": "number", "default": 1.0, "minimum": 0.0 },
+                "bicycle": { "type": "number", "default": 1.0, "minimum": 0.0 },
+                "pedestrian": { "type": "number", "default": 1.0, "minimum": 0.0 },
+                "hazard": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "animal": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "back_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "truck": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "bus": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "trailer": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "motorcycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "bicycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pedestrian": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "hazard": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "animal": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "hysteresis_distance": {
+              "type": "number",
+              "description": "Distance hysteresis threshold for clearing stop [m]",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "hysteresis_time": {
+              "type": "number",
+              "description": "Time hysteresis threshold for clearing stop [s]",
+              "default": 0.2,
+              "minimum": 0.0
+            },
+            "ego_stopped_vel_th": {
+              "type": "number",
+              "description": "Velocity threshold below which ego vehicle is considered stopped [m/s]",
+              "default": 0.1,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "traffic_light_stop": {
+          "type": "object",
+          "properties": {
+            "stop_margin": {
+              "type": "number",
+              "description": "Distance to maintain from a traffic light when stopped [m]",
+              "default": 0.75,
+              "minimum": 0.0
+            },
+            "stop_for_red_light": {
+              "type": "boolean",
+              "description": "Enable stopping behavior when red light is detected",
+              "default": true
+            },
+            "stop_for_amber_light": {
+              "type": "boolean",
+              "description": "Enable stopping behavior when amber light is detected",
+              "default": true
+            },
+            "treat_amber_light_as_red": {
+              "type": "boolean",
+              "description": "Treat amber light as red light",
+              "default": false
+            },
+            "treat_unknown_light_as_red": {
+              "type": "boolean",
+              "description": "Treat unknown light as red light",
+              "default": false
+            },
+            "overshoot_tolerance": {
+              "type": "number",
+              "description": "Overshoot tolerance [m]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "allow_if_cannot_stop_distance": {
+              "type": "number",
+              "description": "allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "th_stable_duration_red": {
+              "type": "number",
+              "description": "Threshold for stable duration of red light [s]",
+              "default": 0.2,
+              "minimum": 0.0
+            },
+            "th_stable_duration_amber": {
+              "type": "number",
+              "description": "Threshold for stable duration of amber light [s]",
+              "default": 0.2,
+              "minimum": 0.0
+            },
+            "th_stable_duration_unknown": {
+              "type": "number",
+              "description": "Threshold for stable duration of unknown light [s]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
+            "th_amber_rejection_hysteresis": {
+              "type": "number",
+              "description": "Threshold for amber rejection hysteresis [s]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "crossing_time_limit": {
+              "type": "number",
+              "description": "Crossing time limit [s]",
+              "default": 2.75,
+              "minimum": 0.0
+            },
+            "delay_response_time": {
+              "type": "number",
+              "description": "Delay response time used to estimate the minimum ego stopping distance [s]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "ego_stopped_vel_th": {
+              "type": "number",
+              "description": "Velocity below which ego is considered stopped when checking traffic lights [m/s]",
+              "default": 0.01,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/trajectory_modifier"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

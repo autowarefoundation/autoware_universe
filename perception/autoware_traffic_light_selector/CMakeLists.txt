@@ -7,6 +7,7 @@ autoware_package()
 
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
+  src/traffic_light_selector.cpp
   src/traffic_light_selector_node.cpp
   src/traffic_light_selector_utils.cpp
 )
@@ -19,6 +20,12 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_auto_add_gtest(${PROJECT_NAME}_test
     test/test_utils.cpp
+  )
+  ament_auto_add_gtest(${PROJECT_NAME}_selector_test
+    test/test_traffic_light_selector.cpp
+  )
+  ament_auto_add_gtest(${PROJECT_NAME}_node_test
+    test/test_traffic_light_selector_node.cpp
   )
 endif()
 

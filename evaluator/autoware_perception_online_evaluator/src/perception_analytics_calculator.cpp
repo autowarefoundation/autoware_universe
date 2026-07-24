@@ -39,7 +39,8 @@ void PerceptionAnalyticsCalculator::setLatencies(
   latencies_ = latencies;
 }
 
-FrameMetrics PerceptionAnalyticsCalculator::calculate(const tf2_ros::Buffer & tf_buffer) const
+FrameMetrics PerceptionAnalyticsCalculator::calculate(
+  const autoware::agnocast_wrapper::Buffer & tf_buffer) const
 {
   PredictedObjects::ConstSharedPtr ptr;
   {

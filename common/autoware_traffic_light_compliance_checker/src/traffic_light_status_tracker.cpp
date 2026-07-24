@@ -89,10 +89,14 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
     const bool is_amber = autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
       signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
       autoware_perception_msgs::msg::TrafficLightElement::AMBER);
+    const bool is_unknown = autoware::traffic_light_utils::hasTrafficLightColor(
+      signal.elements, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
 
     if (is_red && state_duration < params_.stable_duration_threshold_red) {
       filtered_signal.elements.clear();
     } else if (is_amber && state_duration < params_.stable_duration_threshold_amber) {
+      filtered_signal.elements.clear();
+    } else if (is_unknown && state_duration < params_.stable_duration_threshold_unknown) {
       filtered_signal.elements.clear();
     }
     filtered_signals.traffic_light_groups.push_back(filtered_signal);
@@ -106,11 +110,13 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
 void TrafficLightStatusTracker::cleanup_signal_history(const rclcpp::Time & current_time)
 {
   for (auto it = signal_history_.begin(); it != signal_history_.end();) {
-    const auto stable_duration =
-      autoware::traffic_light_utils::hasTrafficLightColor(
-        it->second.msg.elements, autoware_perception_msgs::msg::TrafficLightElement::RED)
-        ? params_.stable_duration_threshold_red
-        : params_.stable_duration_threshold_amber;
+    const bool is_red = autoware::traffic_light_utils::hasTrafficLightColor(
+      it->second.msg.elements, autoware_perception_msgs::msg::TrafficLightElement::RED);
+    const bool is_amber = autoware::traffic_light_utils::hasTrafficLightColor(
+      it->second.msg.elements, autoware_perception_msgs::msg::TrafficLightElement::AMBER);
+    const double stable_duration = is_red     ? params_.stable_duration_threshold_red
+                                   : is_amber ? params_.stable_duration_threshold_amber
+                                              : params_.stable_duration_threshold_unknown;
     if ((current_time - it->second.last_seen_time).seconds() > stable_duration) {
       it = signal_history_.erase(it);
     } else {
