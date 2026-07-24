@@ -120,7 +120,7 @@ The validated output is shown in the following table:
 
 ## Map-based Signal Filter
 
-The node includes an optional rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's `light_bulbs` linestring in the [lanelet2 vector map](https://docs.pilot.auto/reference-design/common/map-requirements/vector-map-requirements/category_traffic_light).
+The node includes an optional rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's `light_bulbs` linestring in the vector map.
 
 Setting `map_based_signal_filter.enable` to true activates the filter. When active, for each traffic light the node reads the map's `light_bulbs` points (their `color` and optional `arrow` attributes) and builds a per-traffic-light-id set of allowed (color, shape) pairs. Any ML-predicted element whose (color, shape) is not in that set is dropped **before** Bayesian group fusion, so an obviously wrong prediction cannot outvote a correct one. `UNKNOWN` color/shape elements are never filtered out.
 
