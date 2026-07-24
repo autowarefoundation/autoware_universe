@@ -64,10 +64,16 @@ private:
 
   // Polling Subscriber
   autoware::agnocast_wrapper::polling::PollingSubscriber<SteeringCommand>::SharedPtr
-    steering_cmd_sub_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr velocity_sub_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<GearCommand>::SharedPtr gear_cmd_sub_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<GateMode>::SharedPtr gate_mode_sub_;
+    steering_cmd_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<SteeringCommand>(
+        this, "in/steering_cmd");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr velocity_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(this, "in/odometry");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<GearCommand>::SharedPtr gear_cmd_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<GearCommand>(this, "in/gear_cmd");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<GateMode>::SharedPtr gate_mode_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<GateMode>(
+      this, "in/current_gate_mode");
 
   void on_pedals_cmd(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PedalsCommand) & cmd_ptr);
   void on_heartbeat(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ManualOperatorHeartbeat) & msg);
