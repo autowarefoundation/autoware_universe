@@ -21,23 +21,19 @@
 #include "autoware/pid_longitudinal_controller/pid.hpp"
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
-#include "autoware_utils/ros/marker_helper.hpp"
-#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
-#include "diagnostic_updater/diagnostic_updater.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "rclcpp/duration.hpp"
+#include "rclcpp/time.hpp"
 
 #include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
 #include "autoware_control_msgs/msg/longitudinal.hpp"
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/pose.hpp"
-#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
-#include <deque>
 #include <limits>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -51,14 +47,162 @@ namespace trajectory_follower = ::autoware::motion::control::trajectory_follower
 
 enum class ControlState { DRIVE = 0, STOPPING, STOPPED, EMERGENCY };
 
+/// \brief parameters that configure the longitudinal control algorithm, read once at
+/// construction and updatable at runtime through the parameter callback
+struct PidLongitudinalControllerConfig
+{
+  enum class SlopeSource {
+    RAW_PITCH = 0,
+    TRAJECTORY_PITCH,
+    TRAJECTORY_ADAPTIVE,
+    TRAJECTORY_GOAL_ADAPTIVE
+  };
+
+  struct StateTransitionParams
+  {
+    // drive
+    double drive_state_stop_dist;
+    double drive_state_offset_stop_dist;
+    // stopping
+    double stopping_state_stop_dist;
+    // stop
+    double stopped_state_entry_duration_time;
+    double stopped_state_entry_vel;
+    double stopped_state_entry_acc;
+    // emergency
+    double emergency_state_overshoot_stop_dist;
+  };
+
+  struct StoppedStateParams
+  {
+    double vel;
+    double acc;
+  };
+
+  struct EmergencyStateParams
+  {
+    double vel;
+    double acc;
+    double jerk;
+  };
+
+  struct PidGains
+  {
+    double kp;
+    double ki;
+    double kd;
+  };
+
+  struct PidLimits
+  {
+    double max_out;
+    double min_out;
+    double max_p_effort;
+    double min_p_effort;
+    double max_i_effort;
+    double min_i_effort;
+    double max_d_effort;
+    double min_d_effort;
+  };
+
+  // vehicle info
+  double wheel_base{0.0};
+  double front_overhang{0.0};
+
+  // control period
+  double longitudinal_ctrl_period;
+
+  // delay compensation
+  double delay_compensation_time;
+  bool use_temporal_trajectory{false};
+
+  // enable flags
+  bool enable_smooth_stop;
+  bool enable_overshoot_emergency;
+  bool enable_slope_compensation;
+  bool enable_large_tracking_error_emergency;
+  bool enable_keep_stopped_until_steer_convergence;
+
+  // smooth stop transition
+  StateTransitionParams state_transition_params;
+
+  // drive
+  PidGains pid_gains;
+  PidLimits pid_limits;
+  double lpf_vel_error_gain;
+  bool enable_integration_at_low_speed;
+  double current_vel_threshold_pid_integrate;
+  double time_threshold_before_pid_integrate;
+  double ff_scale_min{0.5};
+  double ff_scale_max{2.0};
+  bool enable_brake_keeping_before_stop;
+  double brake_keeping_acc;
+
+  // smooth stop
+  SmoothStop::Params smooth_stop_params;
+
+  // stop
+  StoppedStateParams stopped_state_params;
+
+  // emergency
+  EmergencyStateParams emergency_state_params;
+
+  // acc feedback
+  double acc_feedback_gain;
+  double lpf_acc_error_gain;
+
+  // acceleration limit
+  double max_acc;
+  double min_acc;
+
+  // jerk limit
+  double max_jerk;
+  double min_jerk;
+  double max_acc_cmd_diff;
+
+  // slope compensation
+  SlopeSource slope_source{SlopeSource::RAW_PITCH};
+  double adaptive_trajectory_velocity_th;
+  double lpf_pitch_gain;
+  double max_pitch_rad;
+  double min_pitch_rad;
+
+  // ego nearest index search
+  double ego_nearest_dist_threshold;
+  double ego_nearest_yaw_threshold;
+};
+
+struct PidLongitudinalControllerResult
+{
+  trajectory_follower::LongitudinalOutput output;
+  ControlState control_state{ControlState::STOPPED};
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_message{};
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped slope_message{};
+  std::optional<visualization_msgs::msg::MarkerArray> virtual_wall_marker{std::nullopt};
+  bool received_invalid_trajectory{false};
+  std::optional<std::string> emergency_stop_reason{std::nullopt};
+};
+
 /// \class PidLongitudinalController
-/// \brief The node class used for generating longitudinal control commands (velocity/acceleration)
-class PidLongitudinalController : public trajectory_follower::LongitudinalControllerBase
+/// \brief generates longitudinal control commands (velocity/acceleration) from a trajectory and
+/// the current vehicle state; no dependency on rclcpp::Node/rclcpp::Logger
+class PidLongitudinalController
 {
 public:
-  /// \param node Reference to the node used only for the component and parameter initialization.
-  explicit PidLongitudinalController(
-    rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater);
+  explicit PidLongitudinalController(const PidLongitudinalControllerConfig & config);
+
+  /// \brief apply an updated config, e.g. from a parameter callback, while preserving the
+  /// internal PID/filter/smooth-stop state
+  void setConfig(const PidLongitudinalControllerConfig & config);
+
+  /// \brief compute the control command for this cycle
+  /// \param [in] input_data input data containing current odometry, acceleration, and operation
+  /// mode
+  /// \param [in] current_time time captured once per control cycle by the caller
+  /// \param [in] is_steer_converged whether the lateral controller has converged its steering
+  PidLongitudinalControllerResult run(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time,
+    const bool is_steer_converged);
 
 private:
   struct Motion
@@ -93,127 +237,35 @@ private:
     double dt{0.0};
     double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
     double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
+    rclcpp::Time current_time{};  // time captured once per control cycle in run()
   };
-  rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
-  rclcpp::Clock::SharedPtr clock_;
-  rclcpp::Logger logger_;
-  // ros variables
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
-    m_pub_slope;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
-    m_pub_debug;
-  rclcpp::Publisher<MarkerArray>::SharedPtr m_pub_virtual_wall_marker;
-  std::optional<MarkerArray> m_virtual_wall_marker{std::nullopt};
-
-  rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
-  rcl_interfaces::msg::SetParametersResult paramCallback(
-    const std::vector<rclcpp::Parameter> & parameters);
 
   // pointers for ros topic
   autoware_planning_msgs::msg::Trajectory m_last_valid_trajectory;
 
-  // vehicle info
-  double m_wheel_base{0.0};
-  double m_front_overhang{0.0};
+  // configuration parameters
+  PidLongitudinalControllerConfig config;
+
   bool m_prev_vehicle_is_under_control{false};
   std::shared_ptr<rclcpp::Time> m_under_control_starting_time{nullptr};
 
   // control state
   ControlState m_control_state{ControlState::STOPPED};
 
-  // control period
-  double m_longitudinal_ctrl_period;
-
-  // delay compensation
-  double m_delay_compensation_time;
-  bool m_use_temporal_trajectory{false};
   std::optional<double> m_prev_nearest_time{std::nullopt};
-
-  // enable flags
-  bool m_enable_smooth_stop;
-  bool m_enable_overshoot_emergency;
-  bool m_enable_slope_compensation;
-  bool m_enable_large_tracking_error_emergency;
-  bool m_enable_keep_stopped_until_steer_convergence;
-
-  // smooth stop transition
-  struct StateTransitionParams
-  {
-    // drive
-    double drive_state_stop_dist;
-    double drive_state_offset_stop_dist;
-    // stopping
-    double stopping_state_stop_dist;
-    // stop
-    double stopped_state_entry_duration_time;
-    double stopped_state_entry_vel;
-    double stopped_state_entry_acc;
-    // emergency
-    double emergency_state_overshoot_stop_dist;
-  };
-  StateTransitionParams m_state_transition_params;
 
   // drive
   PIDController m_pid_vel;
   std::shared_ptr<LowpassFilter1d> m_lpf_vel_error{nullptr};
-  bool m_enable_integration_at_low_speed;
-  double m_current_vel_threshold_pid_integrate;
-  double m_time_threshold_before_pid_integrate;
-  double m_ff_scale_min{0.5};
-  double m_ff_scale_max{2.0};
-  bool m_enable_brake_keeping_before_stop;
-  double m_brake_keeping_acc;
 
   // smooth stop
   std::optional<SmoothStop> m_smooth_stop;
 
-  // stop
-  struct StoppedStateParams
-  {
-    double vel;
-    double acc;
-  };
-  StoppedStateParams m_stopped_state_params;
-
-  // emergency
-  struct EmergencyStateParams
-  {
-    double vel;
-    double acc;
-    double jerk;
-  };
-  EmergencyStateParams m_emergency_state_params;
-
-  // acc feedback
-  double m_acc_feedback_gain;
   std::shared_ptr<LowpassFilter1d> m_lpf_acc_error{nullptr};
 
-  // acceleration limit
-  double m_max_acc;
-  double m_min_acc;
-
-  // jerk limit
-  double m_max_jerk;
-  double m_min_jerk;
-  double m_max_acc_cmd_diff;
-
   // slope compensation
-  enum class SlopeSource {
-    RAW_PITCH = 0,
-    TRAJECTORY_PITCH,
-    TRAJECTORY_ADAPTIVE,
-    TRAJECTORY_GOAL_ADAPTIVE
-  };
-  SlopeSource m_slope_source{SlopeSource::RAW_PITCH};
-  double m_adaptive_trajectory_velocity_th;
   std::shared_ptr<LowpassFilter1d> m_lpf_pitch{nullptr};
-  double m_max_pitch_rad;
-  double m_min_pitch_rad;
   std::optional<double> m_previous_slope_angle{std::nullopt};
-
-  // ego nearest index search
-  double m_ego_nearest_dist_threshold;
-  double m_ego_nearest_yaw_threshold;
 
   // buffer of send command
   std::vector<autoware_control_msgs::msg::Longitudinal> m_ctrl_cmd_vec;
@@ -233,13 +285,18 @@ private:
 
   std::optional<bool> m_prev_keep_stopped_condition{std::nullopt};
 
-  std::shared_ptr<rclcpp::Time> m_last_running_time{std::make_shared<rclcpp::Time>(clock_->now())};
+  std::shared_ptr<rclcpp::Time> m_last_running_time{nullptr};
 
-  // Diagnostic
-  std::shared_ptr<diagnostic_updater::Updater>
-    diag_updater_{};  // Diagnostic updater for publishing diagnostic data.
-  void setupDiagnosticUpdater();
-  void checkControlState(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  std::optional<MarkerArray> m_virtual_wall_marker{std::nullopt};
+
+  // time captured once per control cycle in run(), and whether the lateral controller has
+  // converged its steering for this cycle
+  rclcpp::Time m_current_time{};
+  bool m_is_steer_converged{false};
+
+  // error causes raised during this run(), to be logged by the caller
+  bool m_received_invalid_trajectory{false};
+  std::optional<std::string> m_emergency_stop_reason{std::nullopt};
 
   struct ResultWithReason
   {
@@ -248,25 +305,13 @@ private:
   };
 
   /**
-   * @brief set reference trajectory with received message
-   * @param [in] msg trajectory message
-   */
-  void setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg);
-
-  bool isReady(const trajectory_follower::InputData & input_data) override;
-
-  /**
-   * @brief compute control command, and publish periodically
-   */
-  trajectory_follower::LongitudinalOutput run(
-    trajectory_follower::InputData const & input_data) override;
-
-  /**
    * @brief calculate data for controllers whose type is ControlData
    * @param [in] input_data input data containing current odometry, acceleration, and operation
    * mode
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  ControlData getControlData(const trajectory_follower::InputData & input_data);
+  ControlData getControlData(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time);
 
   /**
    * @brief calculate control command in emergency state
@@ -294,27 +339,25 @@ private:
   Motion calcCtrlCmd(const ControlData & control_data);
 
   /**
-   * @brief publish control command
+   * @brief create the control command message
    * @param [in] ctrl_cmd calculated control command to control velocity
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(const Motion & ctrl_cmd);
+  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(
+    const Motion & ctrl_cmd, const rclcpp::Time & current_time);
 
   /**
-   * @brief publish debug data
+   * @brief update debug values
    * @param [in] ctrl_cmd calculated control command to control velocity
    * @param [in] control_data data for control calculation
    */
-  void publishDebugData(const Motion & ctrl_cmd, const ControlData & control_data);
-
-  /**
-   * @brief publish the virtual wall marker created during this cycle, if any
-   */
-  void publishVirtualWallMarker();
+  void setDebugValues(const Motion & ctrl_cmd, const ControlData & control_data);
 
   /**
    * @brief calculate time between current and previous one
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  double getDt();
+  double getDt(const rclcpp::Time & current_time);
 
   /**
    * @brief calculate current velocity and acceleration
@@ -338,8 +381,9 @@ private:
   /**
    * @brief store acceleration command before slope compensation
    * @param [in] accel command before slope compensation
+   * @param [in] current_time time captured once per control cycle in run()
    */
-  void storeAccelCmd(const double accel);
+  void storeAccelCmd(const double accel, const rclcpp::Time & current_time);
 
   /**
    * @brief add acceleration to compensate for slope
@@ -400,7 +444,11 @@ private:
    */
   void updateDebugVelAcc(const ControlData & control_data);
 
-  double getTimeUnderControl();
+  /**
+   * @brief calculate elapsed time since the vehicle entered autoware control
+   * @param [in] current_time time captured once per control cycle in run()
+   */
+  double getTimeUnderControl(const rclcpp::Time & current_time);
 };
 }  // namespace autoware::motion::control::pid_longitudinal_controller
 

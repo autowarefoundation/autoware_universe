@@ -23,6 +23,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/math/accumulator.hpp>
@@ -84,47 +85,47 @@ public:
    * @brief callback on receiving an odometry
    * @param [in] odometry_msg received odometry message
    */
-  void onOdometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) odometry_msg);
+  void onOdometry(const std::shared_ptr<const Odometry> odometry_msg);
 
   /**parameters
    * @brief callback on receiving a trajectory
    * @param [in] traj_msg received trajectory message
    */
   void onTrajectory(
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) traj_msg,
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr);
+    const std::shared_ptr<const Trajectory> traj_msg,
+    const std::shared_ptr<const Odometry> ego_state_ptr);
 
   /**
    * @brief callback on receiving a reference trajectory
    * @param [in] traj_msg received trajectory message
    */
-  void onReferenceTrajectory(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) traj_msg);
+  void onReferenceTrajectory(const std::shared_ptr<const Trajectory> traj_msg);
 
   /**
    * @brief callback on receiving a dynamic objects array
    * @param [in] objects_msg received dynamic object array message
    */
-  void onObjects(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PredictedObjects) objects_msg);
+  void onObjects(const std::shared_ptr<const PredictedObjects> objects_msg);
 
   /**
    * @brief callback on receiving a modified goal
    * @param [in] modified_goal_msg received modified goal message
    */
   void onModifiedGoal(
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PoseWithUuidStamped) modified_goal_msg,
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr);
+    const std::shared_ptr<const PoseWithUuidStamped> modified_goal_msg,
+    const std::shared_ptr<const Odometry> ego_state_ptr);
 
   /**
    * @brief callback on receiving an steering status message
    * @param [in] steering_msg received steering status message
    */
-  void onSteering(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SteeringReport) steering_msg);
+  void onSteering(const std::shared_ptr<const SteeringReport> steering_msg);
 
   /**
    * @brief callback on receiving a turn indicators message
    * @param [in] blinker_msg received turn indicators message
    */
-  void onBlinker(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TurnIndicatorsReport) blinker_msg);
+  void onBlinker(const std::shared_ptr<const TurnIndicatorsReport> blinker_msg);
 
   /**
    * @brief callback on receiving a planning factors
@@ -132,7 +133,7 @@ public:
    * @param [in] module_name module name of the planning factor
    */
   void onPlanningFactors(
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PlanningFactorArray) planning_factors,
+    const std::shared_ptr<const PlanningFactorArray> planning_factors,
     const std::string & module_name);
 
   /**
@@ -143,22 +144,21 @@ public:
   /**
    * @brief add current ego lane info
    */
-  void AddLaneletMetricMsg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr);
+  void AddLaneletMetricMsg(const std::shared_ptr<const Odometry> ego_state_ptr);
 
   /**
    * @brief add current ego kinematic state
    */
   void AddKinematicStateMetricMsg(
     const AccelWithCovarianceStamped & accel_stamped,
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr);
+    const std::shared_ptr<const Odometry> ego_state_ptr);
 
   /**
    * @brief add stop count metric for a specific planning factor module
    */
   void AddStopCountMetricMsg(
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PlanningFactorArray) & planning_factors,
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) ego_state_ptr,
-    const std::string & module_name);
+    const std::shared_ptr<const PlanningFactorArray> & planning_factors,
+    const std::shared_ptr<const Odometry> ego_state_ptr, const std::string & module_name);
 
   /**
    * @brief add obstacle metric for a specific object
@@ -184,30 +184,47 @@ private:
   void onTimer();
 
   // ROS subscribers
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  traj_sub_ = create_polling_subscriber<Trajectory>("~/input/trajectory");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  ref_sub_ = create_polling_subscriber<Trajectory>("~/input/reference_trajectory");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects)
-  objects_sub_ = create_polling_subscriber<PredictedObjects>("~/input/objects");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PoseWithUuidStamped)
-  modified_goal_sub_ = create_polling_subscriber<PoseWithUuidStamped>("~/input/modified_goal");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry)
-  odometry_sub_ = create_polling_subscriber<Odometry>("~/input/odometry");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute)
-  route_subscriber_ =
-    create_polling_subscriber<LaneletRoute>("~/input/route", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletMapBin)
-  vector_map_subscriber_ = create_polling_subscriber<LaneletMapBin>(
-    "~/input/vector_map", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped)
-  accel_sub_ = create_polling_subscriber<AccelWithCovarianceStamped>("~/input/acceleration");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(SteeringReport)
-  steering_sub_ = create_polling_subscriber<SteeringReport>("~/input/steering_status");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(TurnIndicatorsReport)
-  blinker_sub_ = create_polling_subscriber<TurnIndicatorsReport>("~/input/turn_indicators_status");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr traj_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+      this, "~/input/trajectory");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr ref_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+      this, "~/input/reference_trajectory");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PredictedObjects>::SharedPtr objects_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<PredictedObjects>(
+      this, "~/input/objects");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PoseWithUuidStamped>::SharedPtr
+    modified_goal_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<PoseWithUuidStamped>(
+        this, "~/input/modified_goal");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr odometry_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
+      this, "~/input/odometry");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletRoute, autoware_utils::polling_policy::Newest>::SharedPtr route_subscriber_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletRoute, autoware_utils::polling_policy::Newest>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletMapBin, autoware_utils::polling_policy::Newest>::SharedPtr vector_map_subscriber_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletMapBin, autoware_utils::polling_policy::Newest>(
+      this, "~/input/vector_map", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    accel_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+        this, "~/input/acceleration");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<SteeringReport>::SharedPtr steering_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<SteeringReport>(
+      this, "~/input/steering_status");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<TurnIndicatorsReport>::SharedPtr
+    blinker_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<TurnIndicatorsReport>(
+        this, "~/input/turn_indicators_status");
 
-  std::unordered_map<std::string, AUTOWARE_POLLING_SUBSCRIBER_PTR(PlanningFactorArray)>
+  std::unordered_map<
+    std::string,
+    autoware::agnocast_wrapper::polling::PollingSubscriber<PlanningFactorArray>::SharedPtr>
     planning_factors_sub_;
   std::unordered_set<std::string> stop_decision_modules_;
 
