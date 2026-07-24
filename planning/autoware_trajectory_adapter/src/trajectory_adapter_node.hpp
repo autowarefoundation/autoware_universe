@@ -22,6 +22,7 @@
 
 #include <autoware_internal_planning_msgs/msg/scored_candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 
 #include <memory>
 
@@ -30,6 +31,7 @@ namespace autoware::trajectory_adapter
 
 using autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories;
 using autoware_planning_msgs::msg::Trajectory;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 
 class TrajectoryAdapterNode : public autoware::agnocast_wrapper::Node
 {
@@ -42,6 +44,7 @@ private:
   AUTOWARE_SUBSCRIPTION_PTR(ScoredCandidateTrajectories) sub_trajectories_;
 
   AUTOWARE_PUBLISHER_PTR(Trajectory) pub_trajectory_;
+  AUTOWARE_PUBLISHER_PTR(TurnIndicatorsCommand) pub_turn_indicators_;
 
   AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
   debug_processing_time_detail_pub_;

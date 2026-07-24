@@ -1,0 +1,45 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: Simpl.node
+
+package:
+  name: autoware_simpl_prediction
+  provider: autoware
+
+launch:
+  plugin: autoware::simpl_prediction::SimplNode
+  executable: autoware_simpl_prediction_exe
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    remap_target: ~/input/objects
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: ~/input/vector_map
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+    remap_target: ~/output/objects
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/simpl.param.yaml
+
+param_values:
+  - name: build_only
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: predict
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: objects

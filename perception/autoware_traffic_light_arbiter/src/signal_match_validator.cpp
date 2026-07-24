@@ -221,7 +221,7 @@ namespace autoware::traffic_light
 {
 
 autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::validate_signals(
-  const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals)
+  const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals) const
 {
   TrafficSignalArray validated_signals;
 
@@ -286,7 +286,7 @@ void SignalMatchValidator::set_pedestrian_traffic_light_ids(std::unordered_set<l
   pedestrian_traffic_light_ids_ = std::move(ids);
 }
 
-bool SignalMatchValidator::is_pedestrian_traffic_light(const lanelet::Id & signal_id)
+bool SignalMatchValidator::is_pedestrian_traffic_light(const lanelet::Id & signal_id) const
 {
   return pedestrian_traffic_light_ids_.find(signal_id) != pedestrian_traffic_light_ids_.end();
 }

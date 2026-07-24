@@ -57,9 +57,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   ament_auto_add_library(${PROJECT_NAME} SHARED
+    src/classifier_params.cpp
     src/classifier/color_classifier.cpp
     src/classifier/cnn_classifier.cpp
     src/classifier/cnn_lamp_recognizer.cpp
+    src/traffic_light_classifier.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
   )
@@ -78,9 +80,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   ament_auto_add_library(single_image_debug_inference_node SHARED
+    src/classifier_params.cpp
     src/classifier/cnn_classifier.cpp
     src/classifier/color_classifier.cpp
     src/classifier/cnn_lamp_recognizer.cpp
+    src/traffic_light_classifier.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
     src/single_image_debug_inference_node.cpp
@@ -109,7 +113,9 @@ else()
   )
 
   ament_auto_add_library(${PROJECT_NAME} SHARED
+    src/classifier_params.cpp
     src/classifier/color_classifier.cpp
+    src/traffic_light_classifier.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
   )
@@ -129,6 +135,93 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(test_utils
     test/test_utils.cpp
   )
+
+  # ROS-free unit tests for the classification core.
+  ament_auto_add_gtest(test_traffic_light_classifier
+    test/test_traffic_light_classifier.cpp
+  )
+  target_link_libraries(test_traffic_light_classifier
+    ${PROJECT_NAME}
+    ${OpenCV_LIBRARIES}
+  )
+
+  # ROS-free unit tests for the color classification core (ColorClassifierCore).
+  ament_auto_add_gtest(test_color_classifier
+    test/test_color_classifier.cpp
+  )
+  target_link_libraries(test_color_classifier
+    ${PROJECT_NAME}
+    ${OpenCV_LIBRARIES}
+  )
+
+  # ColorClassifier ROS adapter tests (the size guard needs the node's logger).
+  ament_add_ros_isolated_gtest(test_color_classifier_adapter
+    test/test_color_classifier_adapter.cpp
+  )
+  target_link_libraries(test_color_classifier_adapter
+    ${PROJECT_NAME}
+    ${OpenCV_LIBRARIES}
+  )
+
+  # Node-level integration tests (topic-driven pub/sub + diagnostics).
+  ament_add_ros_isolated_gtest(test_traffic_light_classifier_integration
+    test/test_traffic_light_classifier_integration.cpp
+  )
+  target_link_libraries(test_traffic_light_classifier_integration
+    ${PROJECT_NAME}
+    ${OpenCV_LIBRARIES}
+  )
+
+  # Tests that depend on TensorRT/CUDA code, built only when those libraries are available.
+  if(TRT_AVAIL AND CUDA_AVAIL)
+    # CNNClassifierCore tests (ROS-free): static helpers run GPU-free; the classify()
+    # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
+    ament_auto_add_gtest(test_cnn_classifier
+      test/test_cnn_classifier.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_classifier
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
+
+    # CNNClassifier adapter test (images/signals size guard): ROS-isolated, and self-skips
+    # without a GPU/model since the ctor builds the engine. TIMEOUT covers that build.
+    ament_add_ros_isolated_gtest(test_cnn_classifier_adapter
+      test/test_cnn_classifier_adapter.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_classifier_adapter
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
+
+    # CnnLampRecognizerCore tests (ROS-free): static helpers run GPU-free; the classify()
+    # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
+    ament_auto_add_gtest(test_cnn_lamp_recognizer
+      test/test_cnn_lamp_recognizer.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_lamp_recognizer
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
+
+    # CnnLampRecognizer adapter test (size guard + per-slot scatter): ROS-isolated, and
+    # self-skips without a GPU/model since the ctor builds the engine. TIMEOUT covers that build.
+    ament_add_ros_isolated_gtest(test_cnn_lamp_recognizer_adapter
+      test/test_cnn_lamp_recognizer_adapter.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_lamp_recognizer_adapter
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
+  endif()
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE

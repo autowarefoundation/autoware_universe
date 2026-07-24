@@ -1,0 +1,7 @@
+<launch>
+  <arg name="config" default="$(find-pkg-share autoware_trajectory_gate)/config/trajectory_gate.param.yaml"/>
+
+  <node pkg="autoware_trajectory_gate" exec="trajectory_gate_node">
+    <param from="$(var config)"/>
+  </node>
+</launch>

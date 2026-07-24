@@ -2,6 +2,7 @@
 <launch>
   <arg name="input_trajectories" default="~/input/trajectories"/>
   <arg name="output_trajectory" default="~/output/trajectory"/>
+  <arg name="output_turn_indicators" default="~/output/turn_indicators"/>
 
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
 
@@ -9,5 +10,6 @@
     <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
     <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
+    <remap from="~/output/turn_indicators" to="$(var output_turn_indicators)"/>
   </node>
 </launch>

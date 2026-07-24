@@ -18,6 +18,7 @@
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace planning_diagnostics
 {
@@ -124,6 +125,7 @@ Accumulator<double> calcTrajectoryCurvature(const Trajectory & traj)
   }
 
   constexpr double points_distance = 1.0;
+  constexpr double min_curvature_denominator = 1e-10;
 
   for (size_t p1_id = 0; p1_id < traj.points.size() - 2; ++p1_id) {
     // Get Point1
@@ -140,6 +142,14 @@ Accumulator<double> calcTrajectoryCurvature(const Trajectory & traj)
     // no need to check for pi, since there is no point with "points_distance" from p1.
     if (p1_id == p2_id || p1_id == p3_id || p2_id == p3_id) {
       break;
+    }
+
+    const double dist_p1_p2 = calc_distance2d(p1, p2);
+    const double dist_p2_p3 = calc_distance2d(p2, p3);
+    const double dist_p3_p1 = calc_distance2d(p3, p1);
+    const double denominator = dist_p1_p2 * dist_p2_p3 * dist_p3_p1;
+    if (std::fabs(denominator) < min_curvature_denominator) {
+      continue;
     }
 
     stat.add(calc_curvature(p1, p2, p3));
