@@ -89,7 +89,9 @@ message StreamSummary {
 
 message LidarSensorConfig {
   string name = 1;
-  // Built-in elevation table selector: "OT128" | "XT32" | "" (empty). When
+  // Built-in elevation table selector: "OT128" | "XT32" | "HDL64E" | ""
+  // (empty). A known model supplies a faithful default beam count / azimuth
+  // resolution / spin rate / range for any numeric field left at 0. When
   // ``elevation_deg`` below is set it takes precedence over this.
   string sensor_type = 2;
   uint32 n_rows = 3;              // uniform-elevation beam count (fallback)

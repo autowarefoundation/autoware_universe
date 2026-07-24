@@ -7,6 +7,7 @@
     "fstop",
     "grpcio",
     "gsplat",
+    "HDL64E",
     "pcov",
     "recentred",
     "rlog",
@@ -14,6 +15,7 @@
     "splatsim",
     "tileset",
     "usdz",
+    "Velodyne",
     "viewmat",
     "wxyz"
   ]

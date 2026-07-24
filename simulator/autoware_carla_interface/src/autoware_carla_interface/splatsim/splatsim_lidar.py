@@ -68,15 +68,19 @@ class SplatSimLidarConfig:
     splatsim_image: str = "splatsim:latest"
     grpc_port: int = 50061
     use_sh: bool = True
-    sensor_type: str = "OT128"
+    # Defaults mirror the real Velodyne HDL-64E sensor spec (CARLA's default
+    # LiDAR: min range 0.9 m, max range 120 m, 64 channels, 0.1728 deg
+    # horizontal resolution at 10 Hz). The built-in "HDL64E" table supplies the
+    # actual per-channel vertical angles, so elevation_deg is left empty.
+    sensor_type: str = "HDL64E"
     fps: float = 10.0
-    n_rows: int = 0
-    n_columns: int = 0
-    min_range_m: float = 0.0
-    max_range_m: float = 0.0
+    n_rows: int = 64
+    n_columns: int = 2083
+    min_range_m: float = 0.9
+    max_range_m: float = 120.0
     elevation_deg: tuple[float, ...] = ()
-    drop_threshold: float = 0.0
-    alpha_threshold: float = 0.0
+    drop_threshold: float = 0.5
+    alpha_threshold: float = 0.1
     pointcloud_topic: str = "/sensing/lidar/top/pointcloud_before_sync"
     frame_id: str = "velodyne_top"
     device: str = "cuda:0"
