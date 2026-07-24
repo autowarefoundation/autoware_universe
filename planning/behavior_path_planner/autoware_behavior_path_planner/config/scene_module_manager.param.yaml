@@ -1,5 +1,3 @@
-# USE ONLY WHEN THE OPTION COMPILE_WITH_OLD_ARCHITECTURE IS SET TO FALSE.
-# https://github.com/autowarefoundation/autoware_universe/blob/main/planning/behavior_path_planner/CMakeLists.txt
 # NOTE: The smaller the priority number is, the higher the module priority is.
 /**:
   ros__parameters:
@@ -20,6 +18,8 @@
       - "lane_change_right"
       - "external_request_lane_change_left"
       - "external_request_lane_change_right"
+      - "bidirectional_traffic"
+      - "direction_change"
     slot3:
       - "goal_planner"
     slot4:
@@ -76,9 +76,15 @@
       enable_simultaneous_execution_as_candidate_module: true
 
     sampling_planner:
+      enable_module: true
       enable_rtc: false
       enable_simultaneous_execution_as_approved_module: false
       enable_simultaneous_execution_as_candidate_module: false
+
+    bidirectional_traffic:
+      enable_rtc: false
+      enable_simultaneous_execution_as_approved_module: true
+      enable_simultaneous_execution_as_candidate_module: true
 
     direction_change:
       enable_rtc: false
