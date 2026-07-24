@@ -25,6 +25,16 @@ namespace autoware::component_interface_utils
 
 class ServiceException : public std::exception
 {
+private:
+  template <typename T, typename C = void>
+  struct has_success : std::false_type
+  {
+  };
+  template <typename T>
+  struct has_success<T, std::void_t<typename T::success>> : std::true_type
+  {
+  };
+
 public:
   using ResponseStatus = autoware_adapi_v1_msgs::msg::ResponseStatus;
   using ResponseStatusCode = ResponseStatus::_code_type;
@@ -39,7 +49,9 @@ public:
   template <class T>
   void set(T & status) const
   {
-    status.success = success_;
+    if constexpr (has_success<T>::value) {
+      status.success = success_;
+    }
     status.code = code_;
     status.message = message_;
   }
