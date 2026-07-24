@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import random
 import signal
 import time
@@ -77,6 +78,7 @@ class InitializeInterface(object):
         self.spawn_point = self.param_["spawn_point"]
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
+        self._spectator_initialized = False
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -166,11 +168,38 @@ class InitializeInterface(object):
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
 
+        # Place spectator camera behind ego vehicle (third-person chase view)
+        self._update_spectator()
+
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
 
+        # Initialize splatsim cameras and lidars after CARLA world and ego actor are ready
+        self.interface.init_splatsim_cameras()
+        self.interface.init_splatsim_lidars()
+
         if self.use_traffic_manager:
             self._setup_traffic_manager(client)
+
+    def _update_spectator(self):
+        """Place spectator behind spawn point once (no chase)."""
+        if not self.ego_actor or not self.world:
+            return
+        if self._spectator_initialized:
+            return
+        ego_t = self.ego_actor.get_transform()
+        yaw_rad = math.radians(ego_t.rotation.yaw)
+        self.world.get_spectator().set_transform(
+            carla.Transform(
+                carla.Location(
+                    x=ego_t.location.x - 15.0 * math.cos(yaw_rad),
+                    y=ego_t.location.y - 15.0 * math.sin(yaw_rad),
+                    z=ego_t.location.z + 5.0,
+                ),
+                carla.Rotation(pitch=-15.0, yaw=ego_t.rotation.yaw, roll=0.0),
+            )
+        )
+        self._spectator_initialized = True
 
     def run_bridge(self):
         self.bridge_loop = SensorLoop()
@@ -193,6 +222,7 @@ class InitializeInterface(object):
                     time.sleep(self.max_real_delta_seconds - delta_step)
                 self.prev_tick_wall_time = time.time()
                 self.bridge_loop._tick_sensor(timestamp)
+                self._update_spectator()
 
     def _stop_loop(self, sign, frame):
         self.bridge_loop._stop_loop()

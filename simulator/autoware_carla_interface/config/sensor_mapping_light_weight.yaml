@@ -26,6 +26,15 @@ sensor_mappings:
       lower_fov: -30.0
       rotation_frequency: 20
       noise_stddev: 0.0
+      # SplatSim rendering settings (used only when render_with_splatsim:=true).
+      sensor_type: OT128
+      fps: 10.0
+      n_rows: 0
+      n_columns: 0
+      min_range_m: 0.0
+      max_range_m: 0.0
+      drop_threshold: 0.0
+      alpha_threshold: 0.0
 
   CAM_FRONT/camera_link:
     carla_type: sensor.camera.rgb
@@ -40,6 +49,9 @@ sensor_mappings:
       image_size_x: 1080
       image_size_y: 720
       fov: 120.0
+      # SplatSim rendering settings (used only when render_with_splatsim:=true).
+      near_plane: 0.01
+      far_plane: 1000.0
 
   # IMU sensor
   tamagawa/imu_link:
