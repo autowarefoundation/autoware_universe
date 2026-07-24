@@ -30,10 +30,10 @@ SimpleTrajectoryRanker::SimpleTrajectoryRanker(const rclcpp::NodeOptions & optio
   sub_trajectories_ =
     create_subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
       "~/input/candidate_trajectories", 1,
-      [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
-        autoware_internal_planning_msgs::msg::CandidateTrajectories) & msg) {
-        trajectories_callback(msg);
-      });
+      [this](
+        const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+          autoware_internal_planning_msgs::msg::CandidateTrajectories) &
+        msg) { trajectories_callback(msg); });
 
   // Setup publishers
   pub_trajectories_ =
@@ -54,7 +54,8 @@ SimpleTrajectoryRanker::SimpleTrajectoryRanker(const rclcpp::NodeOptions & optio
 
 void SimpleTrajectoryRanker::trajectories_callback(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
-    autoware_internal_planning_msgs::msg::CandidateTrajectories) & msg)
+    autoware_internal_planning_msgs::msg::CandidateTrajectories) &
+  msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 

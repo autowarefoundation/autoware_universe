@@ -37,7 +37,8 @@ public:
 private:
   void trajectories_callback(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
-      autoware_internal_planning_msgs::msg::CandidateTrajectories) & msg);
+      autoware_internal_planning_msgs::msg::CandidateTrajectories) &
+    msg);
 
   AUTOWARE_SUBSCRIPTION_PTR(autoware_internal_planning_msgs::msg::CandidateTrajectories)
   sub_trajectories_;
