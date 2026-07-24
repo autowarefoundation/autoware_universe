@@ -15,6 +15,8 @@
 #ifndef TRAJECTORY_ADAPTER_NODE_HPP_
 #define TRAJECTORY_ADAPTER_NODE_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -31,21 +33,21 @@ using autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 
-class TrajectoryAdapterNode : public rclcpp::Node
+class TrajectoryAdapterNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit TrajectoryAdapterNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  void process(const ScoredCandidateTrajectories::ConstSharedPtr msg);
+  void process(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ScoredCandidateTrajectories) & msg);
 
-  rclcpp::Subscription<ScoredCandidateTrajectories>::SharedPtr sub_trajectories_;
+  AUTOWARE_SUBSCRIPTION_PTR(ScoredCandidateTrajectories) sub_trajectories_;
 
-  rclcpp::Publisher<Trajectory>::SharedPtr pub_trajectory_;
-  rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_;
+  AUTOWARE_PUBLISHER_PTR(Trajectory) pub_trajectory_;
+  AUTOWARE_PUBLISHER_PTR(TurnIndicatorsCommand) pub_turn_indicators_;
 
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
+  debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 

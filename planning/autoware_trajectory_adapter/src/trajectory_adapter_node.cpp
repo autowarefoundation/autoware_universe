@@ -14,7 +14,10 @@
 
 #include "trajectory_adapter_node.hpp"
 
+#include <algorithm>
+#include <functional>
 #include <memory>
+#include <utility>
 
 namespace autoware::trajectory_adapter
 {
@@ -33,7 +36,8 @@ TrajectoryAdapterNode::TrajectoryAdapterNode(const rclcpp::NodeOptions & node_op
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 }
 
-void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryAdapterNode::process(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ScoredCandidateTrajectories) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -58,11 +62,11 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
     "best generator:" << best_generator(trajectory_itr->candidate_trajectory.generator_id)
                       << " score:" << trajectory_itr->score);
 
-  const auto trajectory = autoware_planning_msgs::build<Trajectory>()
-                            .header(trajectory_itr->candidate_trajectory.header)
-                            .points(trajectory_itr->candidate_trajectory.points);
+  auto trajectory = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_trajectory_);
+  trajectory->header = trajectory_itr->candidate_trajectory.header;
+  trajectory->points = trajectory_itr->candidate_trajectory.points;
 
-  pub_trajectory_->publish(trajectory);
+  pub_trajectory_->publish(std::move(trajectory));
 
   pub_turn_indicators_->publish(trajectory_itr->candidate_trajectory.turn_indicators_command);
 }
