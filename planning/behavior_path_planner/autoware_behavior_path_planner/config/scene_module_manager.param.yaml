@@ -88,10 +88,5 @@
 
     direction_change:
       enable_rtc: false
-      enable_simultaneous_execution_as_approved_module: false
-      enable_simultaneous_execution_as_candidate_module: false
-
-    direction_change:
-      enable_rtc: false
       enable_simultaneous_execution_as_approved_module: true
       enable_simultaneous_execution_as_candidate_module: false
