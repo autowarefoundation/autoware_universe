@@ -144,7 +144,7 @@
         merging_vehicle:
           th_overhang_distance: 0.0                     # [m]
 
-        unstable_classification_time: 2.0                # [s] If the object is classified as UNKNOWN type for less than unstable_classification_time seconds, it is probably not an unknown type.
+        unstable_classification_time: 2.0                # [s] If the object is classified as UNKNOWN for less than unstable_classification_time seconds, we cannot be confident that it truly does not belong to any known class..
 
         # params for avoidance of vehicle type objects that are ambiguous as to whether they are parked.
         avoidance_for_ambiguous_vehicle:
@@ -173,7 +173,7 @@
           # "ignore" : never avoid it.
           policy: "ignore"                              # [-]
           condition:
-            th_road_border_distance: 0.8                  # [m]
+            th_road_border_distance: 0.8                  # [m] threshold distance from road border to parking vehicle
 
         avoidance_for_adjacent_lane_stop_vehicle:
           # policy for ego behavior for adjacent lane stop vehicle.
