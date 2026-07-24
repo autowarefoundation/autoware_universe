@@ -86,9 +86,6 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   sub_vector_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", durable_qos, std::bind(&MissionPlanner::on_map, this, _1));
   pub_marker_ = create_publisher<MarkerArray>("~/debug/route_marker", durable_qos);
-  sub_reroute_availability_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<RerouteAvailability>(
-      this, "~/input/reroute_availability");
 
   // NOTE: The route interface should be mutually exclusive by callback group.
   sub_modified_goal_ = create_subscription<PoseWithUuidStamped>(
@@ -109,8 +106,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 
   // Route state will be published when the node gets ready for route api after initialization,
   // otherwise the mission planner rejects the request for the API.
+  using namespace std::literals::chrono_literals;
   data_check_timer_ = autoware::agnocast_wrapper::create_timer(
-    this, get_clock(), rclcpp::Duration::from_seconds(0.1), [this] { check_initialization(); });
+    this, get_clock(), 0.1s, [this] { check_initialization(); });
   is_mission_planner_ready_ = false;
 
   logger_configure_ =

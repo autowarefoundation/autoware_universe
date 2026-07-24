@@ -95,7 +95,9 @@ private:
   AUTOWARE_SUBSCRIPTION_PTR(Odometry) sub_odometry_;
   AUTOWARE_SUBSCRIPTION_PTR(OperationModeState) sub_operation_mode_state_;
   autoware::agnocast_wrapper::polling::PollingSubscriber<RerouteAvailability>::SharedPtr
-    sub_reroute_availability_;
+    sub_reroute_availability_{
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<RerouteAvailability>(
+        this, "~/input/reroute_availability")};
 
   AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_vector_map_;
   AUTOWARE_PUBLISHER_PTR(MarkerArray) pub_marker_;
