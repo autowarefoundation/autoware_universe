@@ -33,54 +33,19 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryQPSmoother::set_up_params()
+void TrajectoryQPSmoother::on_initialize(const TrajectoryOptimizerParams & params)
 {
   auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-
-  qp_params_.weight_smoothness =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.weight_smoothness");
-  qp_params_.weight_fidelity =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.weight_fidelity");
-  qp_params_.time_step_s =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.time_step_s");
-  qp_params_.osqp_eps_abs =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.osqp_eps_abs");
-  qp_params_.osqp_eps_rel =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.osqp_eps_rel");
-  qp_params_.osqp_max_iter =
-    get_or_declare_parameter<int>(*node_ptr, "trajectory_qp_smoother.osqp_max_iter");
-  qp_params_.osqp_verbose =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.osqp_verbose");
-  qp_params_.preserve_input_trajectory_orientation = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_qp_smoother.preserve_input_trajectory_orientation");
-  qp_params_.max_distance_for_orientation_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_qp_smoother.max_distance_for_orientation_m");
-
-  // Velocity-based fidelity parameters
-  qp_params_.use_velocity_based_fidelity =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.use_velocity_based_fidelity");
-  qp_params_.velocity_threshold_mps =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.velocity_threshold_mps");
-  qp_params_.sigmoid_sharpness =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.sigmoid_sharpness");
-  qp_params_.min_fidelity_weight =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.min_fidelity_weight");
-  qp_params_.max_fidelity_weight =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.max_fidelity_weight");
-
-  // Point constraint parameters
-  qp_params_.num_constrained_points_start =
-    get_or_declare_parameter<int>(*node_ptr, "trajectory_qp_smoother.num_constrained_points_start");
-  qp_params_.num_constrained_points_end =
-    get_or_declare_parameter<int>(*node_ptr, "trajectory_qp_smoother.num_constrained_points_end");
+  enabled_ = params.use_qp_smoother;
+  qp_params_ = params.trajectory_qp_smoother;
 
   // Log configuration at startup
   RCLCPP_DEBUG(
     node_ptr->get_logger(),
     "QP Smoother: velocity-based fidelity = %s, constrained points = [start: %d, end: %d]",
     qp_params_.use_velocity_based_fidelity ? "ENABLED" : "DISABLED",
-    qp_params_.num_constrained_points_start, qp_params_.num_constrained_points_end);
+    static_cast<int>(qp_params_.num_constrained_points_start),
+    static_cast<int>(qp_params_.num_constrained_points_end));
 
   if (qp_params_.use_velocity_based_fidelity) {
     RCLCPP_DEBUG(
@@ -91,61 +56,18 @@ void TrajectoryQPSmoother::set_up_params()
   }
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryQPSmoother::update_params(const TrajectoryOptimizerParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<double>(
-    parameters, "trajectory_qp_smoother.weight_smoothness", qp_params_.weight_smoothness);
-  update_param<double>(
-    parameters, "trajectory_qp_smoother.weight_fidelity", qp_params_.weight_fidelity);
-  update_param<double>(parameters, "trajectory_qp_smoother.time_step_s", qp_params_.time_step_s);
-  update_param<double>(parameters, "trajectory_qp_smoother.osqp_eps_abs", qp_params_.osqp_eps_abs);
-  update_param<double>(parameters, "trajectory_qp_smoother.osqp_eps_rel", qp_params_.osqp_eps_rel);
-  update_param<int>(parameters, "trajectory_qp_smoother.osqp_max_iter", qp_params_.osqp_max_iter);
-  update_param<bool>(parameters, "trajectory_qp_smoother.osqp_verbose", qp_params_.osqp_verbose);
-  update_param<bool>(
-    parameters, "trajectory_qp_smoother.preserve_input_trajectory_orientation",
-    qp_params_.preserve_input_trajectory_orientation);
-  update_param<double>(
-    parameters, "trajectory_qp_smoother.max_distance_for_orientation_m",
-    qp_params_.max_distance_for_orientation_m);
-
-  // Velocity-based fidelity parameter updates
-  update_param<bool>(
-    parameters, "trajectory_qp_smoother.use_velocity_based_fidelity",
-    qp_params_.use_velocity_based_fidelity);
-  update_param<double>(
-    parameters, "trajectory_qp_smoother.velocity_threshold_mps", qp_params_.velocity_threshold_mps);
-  update_param<double>(
-    parameters, "trajectory_qp_smoother.sigmoid_sharpness", qp_params_.sigmoid_sharpness);
-  update_param<double>(
-    parameters, "trajectory_qp_smoother.min_fidelity_weight", qp_params_.min_fidelity_weight);
-  update_param<double>(
-    parameters, "trajectory_qp_smoother.max_fidelity_weight", qp_params_.max_fidelity_weight);
-
-  // Point constraint parameter updates
-  update_param<int>(
-    parameters, "trajectory_qp_smoother.num_constrained_points_start",
-    qp_params_.num_constrained_points_start);
-  update_param<int>(
-    parameters, "trajectory_qp_smoother.num_constrained_points_end",
-    qp_params_.num_constrained_points_end);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  enabled_ = params.use_qp_smoother;
+  qp_params_ = params.trajectory_qp_smoother;
 }
 
 void TrajectoryQPSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
-  if (!params.use_qp_smoother) {
+  if (!enabled_) {
     return;
   }
 
@@ -352,8 +274,10 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     f_vec[y_i] = -w_i * y_orig;
   }
 
-  const int num_points_start = std::max(0, qp_params_.num_constrained_points_start);
-  const int num_points_end = std::max(0, qp_params_.num_constrained_points_end);
+  const int num_points_start =
+    static_cast<int>(std::max<int64_t>(0, qp_params_.num_constrained_points_start));
+  const int num_points_end =
+    static_cast<int>(std::max<int64_t>(0, qp_params_.num_constrained_points_end));
 
   // Collect stop point indices from slowdown ranges, skipping any already covered by
   // the start/end hard-constraint windows to avoid duplicate constraints.

@@ -51,18 +51,10 @@ public:
 private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
   void publish_processing_time_ms(double processing_time_ms);
-  void set_up_params();
+  void update_params();
   void initialize_optimizers();
   void load_plugin(const std::string & plugin_name);
   bool initialized_optimizers_{false};
-
-  /**
-   * @brief Callback for parameter updates
-   * @param parameters Vector of updated parameters
-   * @return Set parameters result
-   */
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters);
 
   // Pluginlib loader and plugin storage
   std::unique_ptr<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>> plugin_loader_;
@@ -89,8 +81,8 @@ private:
     debug_processing_time_pub_;
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 
+  std::unique_ptr<trajectory_optimizer_node_params::ParamListener> param_listener_;
   TrajectoryOptimizerParams params_;
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 };
 
 }  // namespace autoware::trajectory_optimizer

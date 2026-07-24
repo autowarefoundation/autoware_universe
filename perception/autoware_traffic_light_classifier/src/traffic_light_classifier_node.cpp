@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "traffic_light_classifier_node.hpp"
 
+#include "classifier_params.hpp"
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
@@ -53,16 +55,16 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   int classifier_type = this->declare_parameter<int>("classifier_type");
   std::shared_ptr<ClassifierInterface> classifier_ptr;
   if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
-    classifier_ptr = std::make_shared<ColorClassifier>(this);
+    classifier_ptr = std::make_shared<ColorClassifier>(this, declare_hsv_config(this));
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CNNClassifier>(this);
+    classifier_ptr = std::make_shared<CNNClassifier>(this, declare_cnn_config(this));
 #else
     RCLCPP_ERROR(this->get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::LampRecognizer) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CnnLampRecognizer>(this);
+    classifier_ptr = std::make_shared<CnnLampRecognizer>(this, declare_lamp_config(this));
 #else
     RCLCPP_ERROR(
       this->get_logger(), "please install CUDA, CUDNN and TensorRT to use LampRecognizer");
@@ -73,6 +75,8 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
     classifier_ = std::make_unique<TrafficLightClassifier>(
       classifier_ptr, classify_traffic_light_type, over_exposure_threshold,
       under_exposure_threshold);
+    debug_image_pub_ = image_transport::create_publisher(
+      this, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
   }
 
   diagnostics_interface_ptr_ =
@@ -144,6 +148,17 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
       "Detected out-of-range exposure in ROI. Corresponding ROI was overwritten with UNKNOWN.");
   }
   diagnostics_interface_ptr_->publish(output_msg.header.stamp);
+
+  // Publish the debug view last, and only when a consumer is attached (building it is a cold path),
+  // so a debug-rendering failure cannot skip the primary signal output or diagnostics above.
+  if (debug_image_pub_.getNumSubscribers() > 0) {
+    const cv::Mat debug_image = classifier_->make_debug_image(result->roi_images);
+    if (!debug_image.empty()) {
+      const auto debug_image_msg =
+        cv_bridge::CvImage(std_msgs::msg::Header(), "rgb8", debug_image).toImageMsg();
+      debug_image_pub_.publish(debug_image_msg);
+    }
+  }
 }
 
 }  // namespace autoware::traffic_light

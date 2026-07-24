@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__TRACKER_OVERLAP_MANAGER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__TRACKER_OVERLAP_MANAGER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__TRACKER_OVERLAP_MANAGER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__TRACKER_OVERLAP_MANAGER_HPP_
 
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
@@ -60,4 +60,4 @@ private:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__TRACKER_OVERLAP_MANAGER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__MERGER__TRACKER_OVERLAP_MANAGER_HPP_

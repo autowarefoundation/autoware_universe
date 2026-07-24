@@ -19,8 +19,6 @@
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
-#include <std_msgs/msg/header.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -33,38 +31,38 @@
 namespace autoware::traffic_light
 {
 
-using MsgTE = tier4_perception_msgs::msg::TrafficLightElement;
+using tier4_perception_msgs::msg::TrafficLightElement;
 namespace
 {
-constexpr int kDebugImageWidth = 200;
-constexpr int kDebugTextHeight = 50;
-constexpr float PI = static_cast<float>(autoware_utils::pi);
-ArrowDirection angleToArrowDirection(float angle_rad)
+constexpr int debug_image_width = 200;
+constexpr int debug_text_height = 50;
+ArrowDirection angle_to_arrow_direction(float angle_rad)
 {
-  if (angle_rad >= -PI / 8.0f && angle_rad < PI / 8.0f) return ArrowDirection::UP_ARROW;
-  if (angle_rad >= PI / 8.0f && angle_rad < 3.0f * PI / 8.0f) return ArrowDirection::UP_RIGHT_ARROW;
-  if (angle_rad >= 3.0f * PI / 8.0f && angle_rad < 5.0f * PI / 8.0f)
+  constexpr float pi = static_cast<float>(autoware_utils::pi);
+  if (angle_rad >= -pi / 8.0f && angle_rad < pi / 8.0f) return ArrowDirection::UP_ARROW;
+  if (angle_rad >= pi / 8.0f && angle_rad < 3.0f * pi / 8.0f) return ArrowDirection::UP_RIGHT_ARROW;
+  if (angle_rad >= 3.0f * pi / 8.0f && angle_rad < 5.0f * pi / 8.0f)
     return ArrowDirection::RIGHT_ARROW;
-  if (angle_rad >= 5.0f * PI / 8.0f && angle_rad < 7.0f * PI / 8.0f)
+  if (angle_rad >= 5.0f * pi / 8.0f && angle_rad < 7.0f * pi / 8.0f)
     return ArrowDirection::DOWN_RIGHT_ARROW;
-  if (angle_rad >= 7.0f * PI / 8.0f || angle_rad < -7.0f * PI / 8.0f)
+  if (angle_rad >= 7.0f * pi / 8.0f || angle_rad < -7.0f * pi / 8.0f)
     return ArrowDirection::DOWN_ARROW;
-  if (angle_rad < -5.0f * PI / 8.0f) return ArrowDirection::DOWN_LEFT_ARROW;
-  if (angle_rad < -3.0f * PI / 8.0f) return ArrowDirection::LEFT_ARROW;
+  if (angle_rad < -5.0f * pi / 8.0f) return ArrowDirection::DOWN_LEFT_ARROW;
+  if (angle_rad < -3.0f * pi / 8.0f) return ArrowDirection::LEFT_ARROW;
   return ArrowDirection::UP_LEFT_ARROW;
 }
 
-static float get2DIoU(const BBox & bbox1, const BBox & bbox2)
+static float get_2d_iou(const BBox & bbox1, const BBox & bbox2)
 {
-  auto overlap1D = [](float x1min, float x1max, float x2min, float x2max) -> float {
+  auto overlap_1d = [](float x1min, float x1max, float x2min, float x2max) -> float {
     if (x1min > x2min) {
       std::swap(x1min, x2min);
       std::swap(x1max, x2max);
     }
     return x1max < x2min ? 0.0f : std::min(x1max, x2max) - x2min;
   };
-  const float overlap_x = overlap1D(bbox1.x1, bbox1.x2, bbox2.x1, bbox2.x2);
-  const float overlap_y = overlap1D(bbox1.y1, bbox1.y2, bbox2.y1, bbox2.y2);
+  const float overlap_x = overlap_1d(bbox1.x1, bbox1.x2, bbox2.x1, bbox2.x2);
+  const float overlap_y = overlap_1d(bbox1.y1, bbox1.y2, bbox2.y1, bbox2.y2);
   const float area1 = (bbox1.x2 - bbox1.x1) * (bbox1.y2 - bbox1.y1);
   const float area2 = (bbox2.x2 - bbox2.x1) * (bbox2.y2 - bbox2.y1);
   const float overlap_2d = overlap_x * overlap_y;
@@ -72,7 +70,7 @@ static float get2DIoU(const BBox & bbox1, const BBox & bbox2)
   return (u == 0.0f) ? 0.0f : overlap_2d / u;
 }
 
-static void runNms(
+static void run_nms(
   std::vector<BBoxInfo> & detections, float iou_threshold, std::vector<BBoxInfo> & out)
 {
   out.clear();
@@ -84,7 +82,7 @@ static void runNms(
     bool keep = true;
     for (const auto & j : out) {
       if (keep) {
-        const float overlap = get2DIoU(i.box, j.box);
+        const float overlap = get_2d_iou(i.box, j.box);
         keep = (overlap <= iou_threshold);
       } else {
         break;
@@ -94,21 +92,21 @@ static void runNms(
   }
 }
 
-static void convertBBoxInfoToLampElement(const BBoxInfo & box_info, LampElement & element)
+static void convert_bbox_info_to_lamp_element(const BBoxInfo & box_info, LampElement & element)
 {
-  element.color = static_cast<Color>(std::min(2, std::max(0, box_info.subClassId)));
+  element.color = static_cast<Color>(std::min(2, std::max(0, box_info.sub_class_id)));
   element.confidence = box_info.prob;
   element.box = box_info.box;
-  element.shape = static_cast<Shape>(box_info.classId);
+  element.shape = static_cast<Shape>(box_info.class_id);
   if (element.shape == Shape::ARROW) {
     // If the network outputs a near-zero direction vector (sin, cos) ~= (0, 0), the direction is
     // considered uncertain. Prefer UNKNOWN rather than biasing inputs to atan2().
-    constexpr float kDirectionVecNormSqThreshold = 1.0e-12f;  // (1e-6)^2
+    constexpr float direction_vec_norm_sq_threshold = 1.0e-12f;  // (1e-6)^2
     const float norm_sq = box_info.sin * box_info.sin + box_info.cos * box_info.cos;
-    if (norm_sq < kDirectionVecNormSqThreshold) {
+    if (norm_sq < direction_vec_norm_sq_threshold) {
       element.arrow_direction = ArrowDirection::UNKNOWN;
     } else {
-      element.arrow_direction = angleToArrowDirection(std::atan2(box_info.sin, box_info.cos));
+      element.arrow_direction = angle_to_arrow_direction(std::atan2(box_info.sin, box_info.cos));
     }
   }
 }
@@ -224,7 +222,7 @@ void CnnLampRecognizerCore::preprocess(const std::vector<cv::Mat> & images)
     input_d_.get(), blob.ptr<float>(), copy_size, cudaMemcpyHostToDevice, *stream_));
 }
 
-bool CnnLampRecognizerCore::doInference(size_t batch_size)
+bool CnnLampRecognizerCore::do_inference(size_t batch_size)
 {
   nvinfer1::Dims input_dims = trt_common_->getInputDims(0);
   input_dims.d[0] = static_cast<int32_t>(batch_size);
@@ -259,7 +257,7 @@ bool CnnLampRecognizerCore::doInference(size_t batch_size)
   return true;
 }
 
-void CnnLampRecognizerCore::decodeTlrOutput(
+void CnnLampRecognizerCore::decode_tlr_output(
   size_t batch_size, std::vector<std::vector<BBoxInfo>> & detections_per_roi)
 {
   const auto & ml_params = model_params_;
@@ -342,9 +340,9 @@ void CnnLampRecognizerCore::decodeTlrOutput(
           info.box.y1 = y1;
           info.box.x2 = x2;
           info.box.y2 = y2;
-          info.classId = type_idx;
+          info.class_id = type_idx;
           info.prob = score;
-          info.subClassId = color_idx;
+          info.sub_class_id = color_idx;
           info.sin = sin_val;
           info.cos = cos_val;
           raw.push_back(info);
@@ -352,7 +350,7 @@ void CnnLampRecognizerCore::decodeTlrOutput(
       }
     }
 
-    runNms(raw, nms_threshold_, detections_per_roi[b]);
+    run_nms(raw, nms_threshold_, detections_per_roi[b]);
   }
 }
 
@@ -372,18 +370,18 @@ CnnLampRecognizerCore::DetectionResult CnnLampRecognizerCore::classify(
     if (!flush) continue;
 
     preprocess(batch);
-    if (!doInference(current_batch_size)) {
+    if (!do_inference(current_batch_size)) {
       result.success = false;
       return result;
     }
 
     std::vector<std::vector<BBoxInfo>> detections_per_roi;
-    decodeTlrOutput(current_batch_size, detections_per_roi);
+    decode_tlr_output(current_batch_size, detections_per_roi);
     for (size_t i = 0; i < current_batch_size; ++i) {
       std::vector<LampElement> traffic_lamps;
       for (const auto & d : detections_per_roi[i]) {
         LampElement element;
-        convertBBoxInfoToLampElement(d, element);
+        convert_bbox_info_to_lamp_element(d, element);
         traffic_lamps.push_back(element);
       }
       // if multiple detections have the same shape and arrow direction
@@ -409,87 +407,84 @@ CnnLampRecognizerCore::DetectionResult CnnLampRecognizerCore::classify(
   return result;
 }
 
-void CnnLampRecognizerCore::updateTrafficSignals(
+void CnnLampRecognizerCore::update_traffic_signals(
   const std::vector<LampElement> & unique_elements,
   tier4_perception_msgs::msg::TrafficLight & traffic_signal)
 {
   traffic_signal.elements.clear();
   bool is_pedestrian = traffic_signal.traffic_light_type == 1;
   if (unique_elements.empty()) {
-    MsgTE unknown_elem;
-    unknown_elem.color = MsgTE::UNKNOWN;
-    unknown_elem.shape = MsgTE::UNKNOWN;
+    TrafficLightElement unknown_elem;
+    unknown_elem.color = TrafficLightElement::UNKNOWN;
+    unknown_elem.shape = TrafficLightElement::UNKNOWN;
     unknown_elem.confidence = 0.0;
     traffic_signal.elements.push_back(unknown_elem);
     return;
   }
   for (const auto & e : unique_elements) {
-    MsgTE element;
+    TrafficLightElement element;
     element.confidence = e.confidence;
     switch (e.color) {
       case Color::GREEN:
-        element.color = MsgTE::GREEN;
+        element.color = TrafficLightElement::GREEN;
         break;
       case Color::AMBER:
-        element.color = MsgTE::AMBER;
+        element.color = TrafficLightElement::AMBER;
         break;
       case Color::RED:
-        element.color = MsgTE::RED;
+        element.color = TrafficLightElement::RED;
         break;
       default:
-        element.color = MsgTE::UNKNOWN;
+        element.color = TrafficLightElement::UNKNOWN;
         break;
     }
     if (is_pedestrian || e.shape == Shape::PED) {
-      element.shape = MsgTE::CIRCLE;
+      element.shape = TrafficLightElement::CIRCLE;
       traffic_signal.elements.push_back(element);
       continue;
     }
     switch (e.shape) {
       case Shape::CIRCLE:
-        element.shape = MsgTE::CIRCLE;
+        element.shape = TrafficLightElement::CIRCLE;
         break;
       case Shape::ARROW:
         switch (e.arrow_direction) {
           case ArrowDirection::UP_ARROW:
-            element.shape = MsgTE::UP_ARROW;
+            element.shape = TrafficLightElement::UP_ARROW;
             break;
           case ArrowDirection::DOWN_ARROW:
-            element.shape = MsgTE::DOWN_ARROW;
+            element.shape = TrafficLightElement::DOWN_ARROW;
             break;
           case ArrowDirection::LEFT_ARROW:
-            element.shape = MsgTE::LEFT_ARROW;
+            element.shape = TrafficLightElement::LEFT_ARROW;
             break;
           case ArrowDirection::RIGHT_ARROW:
-            element.shape = MsgTE::RIGHT_ARROW;
+            element.shape = TrafficLightElement::RIGHT_ARROW;
             break;
           case ArrowDirection::UP_LEFT_ARROW:
-            element.shape = MsgTE::UP_LEFT_ARROW;
+            element.shape = TrafficLightElement::UP_LEFT_ARROW;
             break;
           case ArrowDirection::UP_RIGHT_ARROW:
-            element.shape = MsgTE::UP_RIGHT_ARROW;
+            element.shape = TrafficLightElement::UP_RIGHT_ARROW;
             break;
           case ArrowDirection::DOWN_LEFT_ARROW:
-            element.shape = MsgTE::DOWN_LEFT_ARROW;
+            element.shape = TrafficLightElement::DOWN_LEFT_ARROW;
             break;
           case ArrowDirection::DOWN_RIGHT_ARROW:
-            element.shape = MsgTE::DOWN_RIGHT_ARROW;
+            element.shape = TrafficLightElement::DOWN_RIGHT_ARROW;
             break;
           default:
-            element.shape = MsgTE::UNKNOWN;
+            element.shape = TrafficLightElement::UNKNOWN;
             element.confidence = 0.0;
             break;
         }
         break;
-      case Shape::PED:
-        element.shape = MsgTE::CIRCLE;
-        break;
       case Shape::CROSS:
-        element.shape = MsgTE::CROSS;
+        element.shape = TrafficLightElement::CROSS;
         break;
       // TODO(badai-nguyen): update u-turn, number when msgs are updated
       default:
-        element.shape = MsgTE::UNKNOWN;
+        element.shape = TrafficLightElement::UNKNOWN;
         element.confidence = 0.0;
         break;
     }
@@ -497,10 +492,11 @@ void CnnLampRecognizerCore::updateTrafficSignals(
   }
 }
 
-void CnnLampRecognizerCore::outputDebugImage(
-  cv::Mat & debug_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal,
+cv::Mat CnnLampRecognizerCore::make_debug_image(
+  const cv::Mat & roi_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal,
   const std::vector<LampElement> * elements)
 {
+  cv::Mat debug_image = roi_image.clone();
   const int img_w = debug_image.cols;
   const int img_h = debug_image.rows;
 
@@ -535,64 +531,22 @@ void CnnLampRecognizerCore::outputDebugImage(
   }
   const std::string text = label + " " + std::to_string(probability);
   const int expand_h =
-    std::max(static_cast<int>((kDebugImageWidth * debug_image.rows) / debug_image.cols), 1);
-  cv::resize(debug_image, debug_image, cv::Size(kDebugImageWidth, expand_h));
-  cv::Mat text_img(cv::Size(kDebugImageWidth, kDebugTextHeight), CV_8UC3, cv::Scalar(0, 0, 0));
+    std::max(static_cast<int>((debug_image_width * debug_image.rows) / debug_image.cols), 1);
+  cv::resize(debug_image, debug_image, cv::Size(debug_image_width, expand_h));
+  cv::Mat text_img(cv::Size(debug_image_width, debug_text_height), CV_8UC3, cv::Scalar(0, 0, 0));
   cv::putText(
     text_img, text, cv::Point(5, 25), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
   cv::vconcat(debug_image, text_img, debug_image);
+  return debug_image;
 }
 
 // ============================== CnnLampRecognizer ==============================
-// ROS adapter: declares parameters, publishes debug images, and delegates recognition to the
-// Node-free core.
+// ROS adapter: logs and delegates recognition and debug-image rendering to the Node-free core.
 
-namespace
+CnnLampRecognizer::CnnLampRecognizer(
+  rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config)
+: node_ptr_(node_ptr), core_(config)
 {
-// Declare the lamp recognizer parameters on `node` and return the config. Anchors are narrowed
-// double->float here (a ROS quirk); config-data invariants live in the core ctor, not here.
-CnnLampRecognizerConfig declare_lamp_config(rclcpp::Node * node)
-{
-  CnnLampRecognizerConfig config;
-  config.model_path = node->declare_parameter<std::string>("model_path");
-  config.precision = node->declare_parameter<std::string>("precision");
-  config.score_threshold = static_cast<float>(node->declare_parameter<double>("score_threshold"));
-  config.nms_threshold = static_cast<float>(node->declare_parameter<double>("nms_threshold"));
-  config.max_batch_size = node->declare_parameter<int>("max_batch_size");
-
-  auto & model_params = config.model_params;
-  model_params.num_anchors = node->declare_parameter<int>("model_params.num_anchors");
-  model_params.chans_per_anchor = node->declare_parameter<int>("model_params.chans_per_anchor");
-  model_params.x_index = node->declare_parameter<int>("model_params.x_index");
-  model_params.y_index = node->declare_parameter<int>("model_params.y_index");
-  model_params.w_index = node->declare_parameter<int>("model_params.w_index");
-  model_params.h_index = node->declare_parameter<int>("model_params.h_index");
-  model_params.obj_index = node->declare_parameter<int>("model_params.obj_index");
-  model_params.color_start = node->declare_parameter<int>("model_params.color_start");
-  model_params.type_start = node->declare_parameter<int>("model_params.type_start");
-  model_params.num_types = node->declare_parameter<int>("model_params.num_types");
-  model_params.num_colors = node->declare_parameter<int>("model_params.num_colors");
-  model_params.cos_index = node->declare_parameter<int>("model_params.cos_index");
-  model_params.sin_index = node->declare_parameter<int>("model_params.sin_index");
-  model_params.scale_x_y =
-    static_cast<float>(node->declare_parameter<double>("model_params.scale_x_y"));
-
-  const auto anchors_param = node->declare_parameter<std::vector<double>>("model_params.anchors");
-  model_params.anchors.clear();
-  model_params.anchors.reserve(anchors_param.size());
-  for (double v : anchors_param) {
-    model_params.anchors.push_back(static_cast<float>(v));
-  }
-
-  return config;
-}
-}  // namespace
-
-CnnLampRecognizer::CnnLampRecognizer(rclcpp::Node * node_ptr)
-: node_ptr_(node_ptr), core_(declare_lamp_config(node_ptr))
-{
-  image_pub_ = image_transport::create_publisher(
-    node_ptr_, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
 }
 
 bool CnnLampRecognizer::getTrafficSignals(
@@ -613,31 +567,37 @@ bool CnnLampRecognizer::getTrafficSignals(
   }
 
   for (size_t i = 0; i < traffic_signals.signals.size(); ++i) {
-    CnnLampRecognizerCore::updateTrafficSignals(
+    CnnLampRecognizerCore::update_traffic_signals(
       result.lamps_per_image[i], traffic_signals.signals[i]);
   }
 
-  if (image_pub_.getNumSubscribers() > 0 && !images.empty()) {
-    // build debug image by vertically concatenating each image's debug view
-    const int strip_width = 200;
-    const int strip_height = 130;
-    cv::Mat debug_img;
-    for (size_t i = 0; i < images.size(); i++) {
-      cv::Mat debug_img_i = images[i].clone();
-      CnnLampRecognizerCore::outputDebugImage(
-        debug_img_i, traffic_signals.signals[i], &result.lamps_per_image[i]);
-      cv::resize(debug_img_i, debug_img_i, cv::Size(strip_width, strip_height));
-      if (i == 0) {
-        debug_img = debug_img_i;
-      } else {
-        cv::vconcat(debug_img, debug_img_i, debug_img);
-      }
-    }
-    const auto debug_image_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "rgb8", debug_img).toImageMsg();
-    image_pub_.publish(debug_image_msg);
-  }
+  // Keep the per-image output signals and raw detections so make_debug_image can render the batch
+  // afterwards; the node owns the debug publisher and asks only when a consumer is attached.
+  last_signals_ = traffic_signals;
+  last_lamps_ = result.lamps_per_image;
+
   return true;
+}
+
+cv::Mat CnnLampRecognizer::make_debug_image(const std::vector<cv::Mat> & images) const
+{
+  // Vertically concatenate each image's debug view: boxes from the raw detections and a
+  // label / confidence strip from the output signal, each resized to a fixed strip size.
+  const int strip_width = 200;
+  const int strip_height = 130;
+  cv::Mat debug_image;
+  const size_t count = std::min({images.size(), last_signals_.signals.size(), last_lamps_.size()});
+  for (size_t i = 0; i < count; i++) {
+    cv::Mat strip =
+      CnnLampRecognizerCore::make_debug_image(images[i], last_signals_.signals[i], &last_lamps_[i]);
+    cv::resize(strip, strip, cv::Size(strip_width, strip_height));
+    if (debug_image.empty()) {
+      debug_image = strip;
+    } else {
+      cv::vconcat(debug_image, strip, debug_image);
+    }
+  }
+  return debug_image;
 }
 
 }  // namespace autoware::traffic_light

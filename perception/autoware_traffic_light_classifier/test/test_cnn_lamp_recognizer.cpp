@@ -15,39 +15,30 @@
 // cspell:ignore comlops
 
 //
-// Characterization test for CnnLampRecognizer.
+// Tests for CnnLampRecognizerCore, the Node-free lamp recognition core. Two groups, both
+// ROS-free; all Arrange-Act-Assert.
 //
-// CnnLampRecognizer is a YOLO-style TensorRT lamp detector, so it needs a GPU and the ONNX
-// model (traffic_light_lamp_recognizer_comlops.onnx, under autoware_data). This pins the
-// CURRENT end-to-end behavior of getTrafficSignals against the real model, as a safety net
-// before the planned Node/core split of cnn_lamp_recognizer.{hpp,cpp}. It self-skips
-// (GTEST_SKIP) when the GPU or model is unavailable, builds the engine once per suite
-// (SetUpTestSuite; that build takes minutes), and asserts coarsely because TensorRT output
-// is not bit-reproducible across GPU / TRT versions. The decode geometry comes from
-// model_params.*, which the launch stack feeds from lamp_recognizer_ml.param.yaml; the same
-// values are hard-coded below (lamp_model_params) so the ctor's declare_parameter calls
-// succeed.
+//  - Static helpers update_traffic_signals()/make_debug_image() need only the message types +
+//    OpenCV, so they run (no GPU/model). They pin the non-obvious mapping behavior
+//    (empty->placeholder, pedestrian->CIRCLE, confidence zeroing vs keeping, per-lamp order,
+//    clear-before-map) and the debug geometry. Plain enum->enum maps (color/arrow/cross) are
+//    left unpinned -- a test would only mirror the switch.
 //
-// SCOPE: the green-only test_data crops exercise only the simplest outputs -- one element per
-// ROI, either a green/amber CIRCLE when the lamp is detected or the UNKNOWN no-detection
-// placeholder when it is not. The remaining decode branches (arrow directions and the
-// near-zero-vector guard, pedestrian / cross / red, NMS de-duplication) are NOT covered here;
-// after the split they belong in a GPU-free core unit test.
-//
-// Inputs are the green ROI crops in test/test_data, converted BGR->RGB to match the node's RGB
-// input. Per-crop expectations are pinned as OBSERVED, not as semantically correct; each test's
-// comment records what its crop decodes to and how the assertion is shaped.
-//
-// Tests follow Arrange-Act-Assert.
+//  - The ctor builds a TensorRT engine and classify() runs inference, so both need a GPU + the
+//    ONNX model (under autoware_data). CnnLampRecognizerCoreClassifyTest self-skips when either
+//    is missing, and asserts only model-stable facts (no specific class pinned, since TRT output
+//    is not bit-reproducible). Engine built once per suite.
 //
 
 #include "../src/classifier/cnn_lamp_recognizer.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>
-#include <opencv2/opencv.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
+#include <tier4_perception_msgs/msg/traffic_light.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
@@ -64,38 +55,259 @@ namespace
 {
 namespace tl = autoware::traffic_light;
 
-using tier4_perception_msgs::msg::TrafficLightArray;
+using tier4_perception_msgs::msg::TrafficLight;
 using tier4_perception_msgs::msg::TrafficLightElement;
+
+// Confidence for lamps whose value a test does not assert (a valid, non-zero placeholder); tests
+// that exercise the confidence path pass an explicit value instead.
+constexpr float default_confidence = 1.0f;
+
+// Build one lamp detection. Group A hand-constructs these; update_traffic_signals maps them
+// independently of the model (box stays zero-default, which the mapping ignores).
+tl::LampElement make_lamp(
+  tl::Color color, tl::Shape shape, tl::ArrowDirection arrow_direction,
+  float confidence = default_confidence)
+{
+  tl::LampElement lamp;
+  lamp.color = color;
+  lamp.shape = shape;
+  lamp.arrow_direction = arrow_direction;
+  lamp.confidence = confidence;
+  return lamp;
+}
+
+// ===================== static helpers (no GPU, no model) =====================
+
+// --- output-list shape (independent of the per-element mapping) ---
+
+// An empty detection list yields a single UNKNOWN/UNKNOWN placeholder with zero confidence,
+// so downstream always sees one element per signal.
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, EmptyInputYieldsSingleUnknownPlaceholder)
+{
+  // Arrange
+  TrafficLight signal;
+  const std::vector<tl::LampElement> no_lamps;
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(no_lamps, signal);
+
+  // Assert
+  ASSERT_EQ(signal.elements.size(), 1u);
+  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::UNKNOWN);
+  EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.0f);
+}
+
+// update_traffic_signals emits one output element per input lamp, in input order (it does not
+// merge duplicates -- that is classify()'s job). Two distinct lamps must both survive and keep
+// their order, so a caller can trust element[i] came from lamp[i].
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, MultipleLampsYieldElementPerLampInOrder)
+{
+  // Arrange -- two lamps that map to distinct shapes so an order swap is visible. Confidence is
+  // not asserted here, so both use the default.
+  TrafficLight signal;
+  const std::vector<tl::LampElement> lamps{
+    make_lamp(tl::Color::GREEN, tl::Shape::CIRCLE, tl::ArrowDirection::UNKNOWN),
+    make_lamp(tl::Color::RED, tl::Shape::CROSS, tl::ArrowDirection::UNKNOWN)};
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
+
+  // Assert
+  ASSERT_EQ(signal.elements.size(), 2u);
+  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::CIRCLE);
+  EXPECT_EQ(signal.elements[1].color, TrafficLightElement::RED);
+  EXPECT_EQ(signal.elements[1].shape, TrafficLightElement::CROSS);
+}
+
+// update_traffic_signals clears the signal's existing elements before mapping, so repeated calls
+// replace rather than accumulate. A stale element left in place would be a downstream bug.
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, ClearsPreexistingElements)
+{
+  // Arrange -- a signal already carrying a stale element from a previous frame.
+  TrafficLight signal;
+  TrafficLightElement stale;
+  stale.color = TrafficLightElement::AMBER;
+  stale.shape = TrafficLightElement::CIRCLE;
+  signal.elements.push_back(stale);
+  const std::vector<tl::LampElement> lamps{
+    make_lamp(tl::Color::GREEN, tl::Shape::CIRCLE, tl::ArrowDirection::UNKNOWN)};
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
+
+  // Assert -- only the freshly mapped element remains; the stale AMBER one is gone.
+  ASSERT_EQ(signal.elements.size(), 1u);
+  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::GREEN);
+}
+
+// --- per-element mapping (pedestrian forcing, then the confidence guard) ---
+
+// A pedestrian signal forces CIRCLE regardless of the lamp's own shape, while the color and
+// confidence are preserved (contrast UnknownArrowDirectionZeroesConfidence).
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, PedestrianTypeForcesCircle)
+{
+  // Arrange -- a pedestrian signal whose lamp claims an ARROW shape.
+  TrafficLight signal;
+  signal.traffic_light_type = TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT;
+  const std::vector<tl::LampElement> lamps{
+    make_lamp(tl::Color::GREEN, tl::Shape::ARROW, tl::ArrowDirection::UP_ARROW, 0.8f)};
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
+
+  // Assert
+  ASSERT_EQ(signal.elements.size(), 1u);
+  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::CIRCLE);
+  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.8f);
+}
+
+// A PED-shaped lamp maps to CIRCLE even on a car signal (the other half of the pedestrian OR).
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, PedShapeForcesCircle)
+{
+  // Arrange
+  TrafficLight signal;
+  signal.traffic_light_type = TrafficLight::CAR_TRAFFIC_LIGHT;
+  const std::vector<tl::LampElement> lamps{
+    make_lamp(tl::Color::RED, tl::Shape::PED, tl::ArrowDirection::UNKNOWN)};
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
+
+  // Assert
+  ASSERT_EQ(signal.elements.size(), 1u);
+  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::CIRCLE);
+  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::RED);
+}
+
+// An unknown color maps to UNKNOWN but, unlike an unknown shape/arrow, does NOT zero the
+// confidence. Only the shape switch guards confidence, so a well-shaped lamp of unknown color
+// stays trusted (contrast the two ...ZeroesConfidence tests below).
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnknownColorPreservesConfidence)
+{
+  // Arrange
+  TrafficLight signal;
+  const std::vector<tl::LampElement> lamps{
+    make_lamp(tl::Color::UNKNOWN, tl::Shape::CIRCLE, tl::ArrowDirection::UNKNOWN, 0.7f)};
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
+
+  // Assert
+  ASSERT_EQ(signal.elements.size(), 1u);
+  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::CIRCLE);
+  EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.7f);
+}
+
+// An ARROW lamp whose direction is uncertain falls through to UNKNOWN, and the confidence is
+// zeroed even though the detection carried a positive one.
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnknownArrowDirectionZeroesConfidence)
+{
+  // Arrange
+  TrafficLight signal;
+  const std::vector<tl::LampElement> lamps{
+    make_lamp(tl::Color::GREEN, tl::Shape::ARROW, tl::ArrowDirection::UNKNOWN, 0.9f)};
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
+
+  // Assert
+  ASSERT_EQ(signal.elements.size(), 1u);
+  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::UNKNOWN);
+  EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.0f);
+}
+
+// A shape with no message mapping yet (e.g. U_TURN, see the TODO in update_traffic_signals) hits
+// the outer default: UNKNOWN with the confidence zeroed, even though the detection carried a
+// positive one.
+TEST(CnnLampRecognizerCoreUpdateSignalsTest, UnsupportedShapeZeroesConfidence)
+{
+  // Arrange
+  TrafficLight signal;
+  const std::vector<tl::LampElement> lamps{
+    make_lamp(tl::Color::GREEN, tl::Shape::U_TURN, tl::ArrowDirection::UNKNOWN, 0.9f)};
+
+  // Act
+  tl::CnnLampRecognizerCore::update_traffic_signals(lamps, signal);
+
+  // Assert
+  ASSERT_EQ(signal.elements.size(), 1u);
+  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::UNKNOWN);
+  EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.0f);
+}
+
+// Fill color is immaterial -- the debug tests assert geometry only.
+const cv::Scalar roi_fill_color{0, 255, 0};
+
+// make_debug_image rescales the ROI to a fixed width and stacks a fixed-height label strip below
+// it (debug_image_width / debug_text_height in the production code).
+constexpr int debug_image_width = 200;
+constexpr int debug_text_height = 50;
+
+// A non-square ROI makes an accidental rows/cols swap in the rescale detectable.
+TEST(CnnLampRecognizerCoreDebugImageTest, MosaicGeometry)
+{
+  // Arrange -- distinct width and height; one detection to draw and one signal element to
+  // drive the label strip.
+  const int roi_width = 100;
+  const int roi_height = 50;
+  const cv::Mat roi_image(roi_height, roi_width, CV_8UC3, roi_fill_color);
+
+  tl::LampElement lamp =
+    make_lamp(tl::Color::GREEN, tl::Shape::CIRCLE, tl::ArrowDirection::UNKNOWN);
+  lamp.box = tl::BBox{0.2f, 0.2f, 0.8f, 0.8f};
+  const std::vector<tl::LampElement> lamps{lamp};
+
+  TrafficLight signal;
+  TrafficLightElement element;
+  element.color = TrafficLightElement::GREEN;
+  element.shape = TrafficLightElement::CIRCLE;
+  element.confidence = 0.9f;
+  signal.elements.push_back(element);
+
+  // Act
+  const cv::Mat debug_image =
+    tl::CnnLampRecognizerCore::make_debug_image(roi_image, signal, &lamps);
+
+  // Assert -- fixed width; height = aspect-preserving scaled ROI + the label strip.
+  const int scaled_roi_height = debug_image_width * roi_height / roi_width;  // 200*50/100 = 100
+  EXPECT_EQ(debug_image.cols, debug_image_width);
+  EXPECT_EQ(debug_image.rows, scaled_roi_height + debug_text_height);
+  EXPECT_EQ(debug_image.type(), CV_8UC3);
+}
+
+// make_debug_image still produces the mosaic when no per-lamp detections are supplied
+// (elements == nullptr) -- the box-drawing branch is guarded and must not dereference it.
+TEST(CnnLampRecognizerCoreDebugImageTest, HandlesNullElements)
+{
+  // Arrange
+  const int roi_width = 100;
+  const int roi_height = 50;
+  const cv::Mat roi_image(roi_height, roi_width, CV_8UC3, roi_fill_color);
+  TrafficLight signal;  // no elements -> empty label
+
+  // Act
+  const cv::Mat debug_image =
+    tl::CnnLampRecognizerCore::make_debug_image(roi_image, signal, nullptr);
+
+  // Assert
+  const int scaled_roi_height = debug_image_width * roi_height / roi_width;
+  EXPECT_EQ(debug_image.cols, debug_image_width);
+  EXPECT_EQ(debug_image.rows, scaled_roi_height + debug_text_height);
+  EXPECT_EQ(debug_image.type(), CV_8UC3);
+}
+
+// ================== GPU-gated tests of the TensorRT classify() path ==================
 
 // Lamp recognizer model, downloaded under autoware_data by the ansible artifacts role:
 // https://awf.ml.dev.web.auto/perception/models/traffic_light_classifier/v4/traffic_light_lamp_recognizer_comlops.onnx
 constexpr char model_filename[] = "traffic_light_lamp_recognizer_comlops.onnx";
 
-// YOLO-head layout from lamp_recognizer_ml.param.yaml, the artifact the launch stack
-// feeds the node (same ansible role as the model above):
-// https://awf.ml.dev.web.auto/perception/models/traffic_light_classifier/v4/lamp_recognizer_ml.param.yaml
-// The ctor declares each of these without a default, so all must be present.
-struct LampModelParam
-{
-  const char * name;
-  int value;
-};
-const std::vector<LampModelParam> lamp_model_params{
-  {"model_params.num_anchors", 3}, {"model_params.chans_per_anchor", 16},
-  {"model_params.x_index", 0},     {"model_params.y_index", 1},
-  {"model_params.w_index", 2},     {"model_params.h_index", 3},
-  {"model_params.obj_index", 4},   {"model_params.color_start", 5},
-  {"model_params.type_start", 8},  {"model_params.num_types", 6},
-  {"model_params.num_colors", 3},  {"model_params.cos_index", 14},
-  {"model_params.sin_index", 15}};
-constexpr double scale_x_y = 2.0;
-// (w, h) per anchor; size must equal 2 * num_anchors.
-const std::vector<double> anchors{7.0, 7.0, 14.0, 14.0, 42.0, 42.0};
-
-// Resolve a file shipped under autoware_data. The on-disk layout differs between
-// setups (canonical autoware_data/ml_models/traffic_light_classifier vs. the legacy
-// flat autoware_data/traffic_light_classifier); an explicit TLC_TEST_DATA_DIR override
-// takes precedence. Returns "" when not found.
+// Resolve a file under autoware_data, trying the canonical ml_models/ layout and the legacy
+// flat one; $TLC_TEST_DATA_DIR overrides both. Returns "" when not found.
 std::string resolve_autoware_data_file(const std::string & filename)
 {
   std::vector<std::string> candidate_dirs;
@@ -116,14 +328,14 @@ std::string resolve_autoware_data_file(const std::string & filename)
   return "";
 }
 
-// Load a test_data ROI crop as RGB (cv::imread yields BGR; the node feeds the
-// classifier RGB). Throws on a missing file so a setup error fails the test clearly
-// rather than silently classifying an empty Mat.
-cv::Mat load_rgb_crop(const std::string & name)
+// Load the normal-traffic-light test crop as RGB (imread yields BGR; the classifier is fed RGB).
+// It is the only crop these tests load. Throws on a missing file so a setup error fails loudly
+// instead of classifying an empty Mat.
+cv::Mat load_rgb_crop()
 {
   const std::string path =
     ament_index_cpp::get_package_share_directory("autoware_traffic_light_classifier") +
-    "/test_data/" + name;
+    "/test_data/traffic_light_normal.png";
   const cv::Mat bgr = cv::imread(path, cv::IMREAD_COLOR);
   if (bgr.empty()) {
     throw std::runtime_error("failed to load test image: " + path);
@@ -133,10 +345,17 @@ cv::Mat load_rgb_crop(const std::string & name)
   return rgb;
 }
 
-// Builds the real CnnLampRecognizer once for the whole suite (the TensorRT engine build
-// is minutes-long). When the model or a usable GPU is missing, recognizer_ stays null
-// and skip_reason_ explains why; each test then GTEST_SKIPs.
-class CnnLampRecognizerCharacterizationTest : public ::testing::Test
+// True when a normalized box coordinate lies in the unit interval [0, 1] -- the range decode
+// clamps every coordinate to.
+bool in_unit_range(float value)
+{
+  return 0.0f <= value && value <= 1.0f;
+}
+
+// Builds the real core once per suite (the TensorRT engine build is minutes-long), straight
+// from a CnnLampRecognizerConfig -- no node. When the model or a usable GPU is missing, core_
+// stays null with a skip_reason_ and each test GTEST_SKIPs.
+class CnnLampRecognizerCoreClassifyTest : public ::testing::Test
 {
 protected:
   static void SetUpTestSuite()
@@ -150,210 +369,92 @@ protected:
       skip_reason_ = "CUDA runtime / GPU not available";
       return;
     }
-
-    rclcpp::NodeOptions options;
-    options.append_parameter_override("model_path", model_path);
-    options.append_parameter_override("precision", std::string("fp16"));
-    options.append_parameter_override("score_threshold", 0.2);
-    options.append_parameter_override("nms_threshold", 0.2);
-    options.append_parameter_override("max_batch_size", 64);
-    for (const auto & p : lamp_model_params) {
-      options.append_parameter_override(p.name, p.value);
+    // is_cuda_runtime_available() only counts devices; probe context creation too, since a broken
+    // GPU (OOM/driver) makes TensorRT abort the whole process during the engine build with an
+    // error that cannot be caught.
+    if (const cudaError_t cuda_status = cudaFree(0); cuda_status != cudaSuccess) {
+      skip_reason_ = std::string("CUDA device unusable: ") + cudaGetErrorString(cuda_status);
+      return;
     }
-    options.append_parameter_override("model_params.scale_x_y", scale_x_y);
-    options.append_parameter_override("model_params.anchors", anchors);
 
-    // Node creation can fail on a misconfigured RMW/DDS environment, and the
-    // CnnLampRecognizer ctor builds the TensorRT engine and throws on GPU/TRT failure.
-    // Treat all of these as "environment unavailable" -> skip (not fail), with a reason
-    // each test reports via GTEST_SKIP.
+    tl::CnnLampRecognizerConfig config;
+    config.model_path = model_path;
+    config.precision = "fp16";
+    config.score_threshold = 0.2f;
+    config.nms_threshold = 0.2f;
+    config.max_batch_size = 64;
+    // The YOLO-head layout matches the LampRegressionArchitecture defaults
+    // (lamp_recognizer_ml.param.yaml); only the anchors are model-specific with no default.
+    config.model_params.scale_x_y = 2.0f;
+    config.model_params.anchors = {7.f, 7.f, 14.f, 14.f, 42.f, 42.f};
+
+    // Device is usable (checked above), so a ctor throw here is a config/engine mismatch (e.g.
+    // output channels vs model_params); treat as unavailable -> skip, with a reason per test.
     try {
-      node_ = std::make_shared<rclcpp::Node>("cnn_lamp_recognizer_characterization_test", options);
-      recognizer_ = std::make_shared<tl::CnnLampRecognizer>(node_.get());
+      core_ = std::make_unique<tl::CnnLampRecognizerCore>(config);
     } catch (const std::exception & e) {
-      skip_reason_ = std::string("CnnLampRecognizer environment unavailable: ") + e.what();
-      recognizer_.reset();
-      node_.reset();
+      skip_reason_ = std::string("CnnLampRecognizerCore environment unavailable: ") + e.what();
+      core_.reset();
     }
   }
 
-  static void TearDownTestSuite()
-  {
-    recognizer_.reset();
-    node_.reset();
-  }
+  static void TearDownTestSuite() { core_.reset(); }
 
   static inline std::string skip_reason_;
-  static inline std::shared_ptr<rclcpp::Node> node_;
-  static inline std::shared_ptr<tl::CnnLampRecognizer> recognizer_;
+  static inline std::unique_ptr<tl::CnnLampRecognizerCore> core_;
 };
 
-// Each single-crop test below pins the CURRENT observed decode of one green traffic-light
-// ROI through the full path: preprocess -> TRT inference -> YOLO decode -> NMS -> element.
-// A refactor that perturbs the pipeline is caught by the pinned outputs. SHAPE is the robust
-// axis: every DETECTED crop decodes to a CIRCLE (a stable argmax), so shape is asserted exactly
-// (the strongly-dimmed crop is the exception -- no detection -> UNKNOWN, see its test). COLOR
-// is NOT robust -- the per-lamp color head reads the same physically-green lamp as amber at
-// full brightness but green once dimmed (see each test's value), so the pinned color is an
-// as-observed value, not a wide-margin argmax; under fp16 it is the assertion most likely to
-// shift across GPU / TRT versions. Confidence is only bounded, for the same reason.
-
-// The bright, un-dimmed crop decodes to a single AMBER CIRCLE element (the color head reads
-// this green lamp as amber; pinned as-observed, observed confidence ~0.98).
-TEST_F(CnnLampRecognizerCharacterizationTest, ClassifiesNormalGreenCrop)
+// Count/color/shape are NOT pinned (brittle across model updates; the mapping is covered
+// model-free by the update_traffic_signals tests). Require >=1 detection so the per-lamp checks
+// can't vacuously pass on an empty result.
+TEST_F(CnnLampRecognizerCoreClassifyTest, RealCropYieldsWellFormedDetections)
 {
-  if (!recognizer_) {
+  if (!core_) {
     GTEST_SKIP() << skip_reason_;
   }
 
   // Arrange
-  const std::vector<cv::Mat> images{load_rgb_crop("traffic_light_normal.png")};
-  TrafficLightArray signals;
-  signals.signals.resize(images.size());
+  const cv::Mat image{load_rgb_crop()};
 
   // Act
-  const bool ok = recognizer_->getTrafficSignals(images, signals);
+  const auto result = core_->classify({image});
 
   // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  ASSERT_EQ(signals.signals[0].elements.size(), 1u);
-  const auto & element = signals.signals[0].elements[0];
-  EXPECT_EQ(element.color, TrafficLightElement::AMBER);
-  EXPECT_EQ(element.shape, TrafficLightElement::CIRCLE);
-  EXPECT_GT(element.confidence, 0.0f);
-  EXPECT_LE(element.confidence, 1.0f);
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.lamps_per_image.size(), 1u);
+  ASSERT_FALSE(result.lamps_per_image[0].empty());
+  for (const auto & lamp : result.lamps_per_image[0]) {
+    EXPECT_TRUE(in_unit_range(lamp.box.x1));
+    EXPECT_TRUE(in_unit_range(lamp.box.y1));
+    EXPECT_TRUE(in_unit_range(lamp.box.x2));
+    EXPECT_TRUE(in_unit_range(lamp.box.y2));
+    EXPECT_GT(lamp.confidence, 0.0f);
+    EXPECT_LE(lamp.confidence, 1.0f);
+  }
 }
 
-// The weakly-dimmed crop decodes to a single GREEN CIRCLE element (observed confidence ~0.86).
-TEST_F(CnnLampRecognizerCharacterizationTest, ClassifiesWeaklyDimmedGreenCrop)
+// classify() returns one result vector per input image. A detected crop and a black image
+// (which yields nothing) make the slots asymmetric, so a scatter swap would empty slot 0 and
+// fill slot 1 -- identical crops could not catch that. Black keeps the empty slot model-stable:
+// no model detects a lamp in pure black. Contents are left to the update_traffic_signals tests.
+TEST_F(CnnLampRecognizerCoreClassifyTest, BatchClassificationScattersPerImageResults)
 {
-  if (!recognizer_) {
+  if (!core_) {
     GTEST_SKIP() << skip_reason_;
   }
 
-  // Arrange
-  const std::vector<cv::Mat> images{load_rgb_crop("traffic_light_dimmed_weak.png")};
-  TrafficLightArray signals;
-  signals.signals.resize(images.size());
+  // Arrange -- detected crop in slot 0, a black (featureless) image in slot 1.
+  const cv::Mat detected{load_rgb_crop()};
+  const cv::Mat black{cv::Mat::zeros(detected.size(), CV_8UC3)};
 
   // Act
-  const bool ok = recognizer_->getTrafficSignals(images, signals);
+  const auto result = core_->classify({detected, black});
 
-  // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  ASSERT_EQ(signals.signals[0].elements.size(), 1u);
-  const auto & element = signals.signals[0].elements[0];
-  EXPECT_EQ(element.color, TrafficLightElement::GREEN);
-  EXPECT_EQ(element.shape, TrafficLightElement::CIRCLE);
-  EXPECT_GT(element.confidence, 0.0f);
-  EXPECT_LE(element.confidence, 1.0f);
-}
-
-// The medium-dimmed crop decodes to a single GREEN CIRCLE element (observed confidence ~0.61).
-TEST_F(CnnLampRecognizerCharacterizationTest, ClassifiesMediumDimmedGreenCrop)
-{
-  if (!recognizer_) {
-    GTEST_SKIP() << skip_reason_;
-  }
-
-  // Arrange
-  const std::vector<cv::Mat> images{load_rgb_crop("traffic_light_dimmed_medium.png")};
-  TrafficLightArray signals;
-  signals.signals.resize(images.size());
-
-  // Act
-  const bool ok = recognizer_->getTrafficSignals(images, signals);
-
-  // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  ASSERT_EQ(signals.signals[0].elements.size(), 1u);
-  const auto & element = signals.signals[0].elements[0];
-  EXPECT_EQ(element.color, TrafficLightElement::GREEN);
-  EXPECT_EQ(element.shape, TrafficLightElement::CIRCLE);
-  EXPECT_GT(element.confidence, 0.0f);
-  EXPECT_LE(element.confidence, 1.0f);
-}
-
-// The strongly-dimmed crop drops below score_threshold, so nothing is detected. The
-// empty-detection branch of updateTrafficSignals then emits a single UNKNOWN element
-// with zero confidence -- pinning that the "no lamp found" path yields exactly one
-// placeholder element rather than an empty list.
-TEST_F(CnnLampRecognizerCharacterizationTest, StronglyDimmedCropYieldsUnknownNoDetection)
-{
-  if (!recognizer_) {
-    GTEST_SKIP() << skip_reason_;
-  }
-
-  // Arrange
-  const std::vector<cv::Mat> images{load_rgb_crop("traffic_light_dimmed_strong.png")};
-  TrafficLightArray signals;
-  signals.signals.resize(images.size());
-
-  // Act
-  const bool ok = recognizer_->getTrafficSignals(images, signals);
-
-  // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  ASSERT_EQ(signals.signals[0].elements.size(), 1u);
-  const auto & element = signals.signals[0].elements[0];
-  EXPECT_EQ(element.color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(element.shape, TrafficLightElement::UNKNOWN);
-  EXPECT_FLOAT_EQ(element.confidence, 0.0f);
-}
-
-// Two ROIs in one call must scatter to their own signal slots (getTrafficSignals loops
-// images into batches and writes signals[signal_i + i] per image). Pairing the normal
-// crop (detected -> AMBER CIRCLE) with the strongly-dimmed crop (no detection -> UNKNOWN)
-// gives the slots distinct outputs, so a swapped mapping or a collapse to one image is
-// caught directly by the per-slot color/shape (not just by element counts).
-TEST_F(CnnLampRecognizerCharacterizationTest, BatchClassificationScattersPerImageResults)
-{
-  if (!recognizer_) {
-    GTEST_SKIP() << skip_reason_;
-  }
-
-  // Arrange -- normal (detected) in slot 0, strongly-dimmed (undetected) in slot 1.
-  const cv::Mat detected = load_rgb_crop("traffic_light_normal.png");
-  const cv::Mat undetected = load_rgb_crop("traffic_light_dimmed_strong.png");
-  TrafficLightArray batched;
-  batched.signals.resize(2);
-
-  // Act
-  const bool ok = recognizer_->getTrafficSignals({detected, undetected}, batched);
-
-  // Assert -- slot 0 keeps the AMBER CIRCLE detection, slot 1 the UNKNOWN placeholder.
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(batched.signals.size(), 2u);
-  ASSERT_EQ(batched.signals[0].elements.size(), 1u);
-  ASSERT_EQ(batched.signals[1].elements.size(), 1u);
-  EXPECT_EQ(batched.signals[0].elements[0].color, TrafficLightElement::AMBER);
-  EXPECT_EQ(batched.signals[0].elements[0].shape, TrafficLightElement::CIRCLE);
-  EXPECT_EQ(batched.signals[1].elements[0].color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(batched.signals[1].elements[0].shape, TrafficLightElement::UNKNOWN);
-}
-
-// A mismatched images/signals count is rejected before any inference (the guard stays
-// in the ROS adapter after the core/adapter split).
-TEST_F(CnnLampRecognizerCharacterizationTest, MismatchedImageSignalCountReturnsFalse)
-{
-  if (!recognizer_) {
-    GTEST_SKIP() << skip_reason_;
-  }
-
-  // Arrange -- one image but two signal slots.
-  const std::vector<cv::Mat> images{load_rgb_crop("traffic_light_normal.png")};
-  TrafficLightArray signals;
-  signals.signals.resize(2);
-
-  // Act
-  const bool ok = recognizer_->getTrafficSignals(images, signals);
-
-  // Assert
-  EXPECT_FALSE(ok);
+  // Assert -- one result vector per input, scattered to the correct slot.
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.lamps_per_image.size(), 2u);
+  EXPECT_FALSE(result.lamps_per_image[0].empty());
+  EXPECT_TRUE(result.lamps_per_image[1].empty());
 }
 
 }  // namespace
@@ -361,8 +462,5 @@ TEST_F(CnnLampRecognizerCharacterizationTest, MismatchedImageSignalCountReturnsF
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  rclcpp::init(argc, argv);
-  const int ret = RUN_ALL_TESTS();
-  rclcpp::shutdown();
-  return ret;
+  return RUN_ALL_TESTS();
 }
