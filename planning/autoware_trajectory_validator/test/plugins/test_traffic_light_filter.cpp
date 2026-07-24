@@ -190,12 +190,12 @@ protected:
   {
     auto odometry = std::make_shared<nav_msgs::msg::Odometry>(*context_.odometry);
     odometry->twist.twist.linear.x = velocity;
-    context_.odometry = odometry;
+    context_.odometry = to_context_ptr(odometry);
 
     auto accel =
       std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>(*context_.acceleration);
     accel->accel.accel.linear.x = acceleration;
-    context_.acceleration = accel;
+    context_.acceleration = to_context_ptr(accel);
   }
 
   void expect_feasibility(
@@ -674,7 +674,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithUnknownStabilityFiltering)
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
-  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
 
   expect_feasibility(points, false, "Should be infeasible after UNKNOWN stability threshold");
 }
@@ -707,7 +707,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleAfterUnknownStableDurationThreshold)
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
-  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
 
   expect_feasibility(points, false, "Should reject after UNKNOWN threshold");
 }
@@ -740,18 +740,18 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleAfterUnknownStableDurationThresholdFr
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.5);
-  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
   set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
   expect_feasibility(points, true, "Should be feasible immediately after changing to UNKNOWN");
 
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.9);
-  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
   expect_feasibility(points, true, "Should still be feasible before UNKNOWN threshold");
 
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.2);
-  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
   expect_feasibility(points, false, "Should reject after UNKNOWN is stable from state change");
 }
 
@@ -778,7 +778,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithUnknownStabilityFilteringWhenEgoS
 
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.twist.twist.linear.x = 0.0;
-  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
 
   set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
   auto points = create_trajectory(0.0, 10.0, 5.0);
@@ -813,11 +813,11 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithUnknownSignalHistoryCleanup)
   set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
   expect_feasibility(points, true, "Should be feasible because UNKNOWN signal is not stable yet");
 
-  context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
+  context_.traffic_light_signals = to_context_ptr(std::make_shared<TrafficLightGroupArray>());
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
-  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
 
   expect_feasibility(points, true);
 
