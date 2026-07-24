@@ -148,9 +148,7 @@ void TrajectorySelectorNode::concatenate_and_validate()
   auto validated_trajectories =
     validator_ptr_->validate_trajectories(concatenated_trajectories, context_opt.value());
 
-  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_trajectories_);
-  *output = std::move(validated_trajectories);
-  pub_trajectories_->publish(std::move(output));
+  pub_trajectories_->publish(validated_trajectories);
 }
 
 void TrajectorySelectorNode::update_parameters()
