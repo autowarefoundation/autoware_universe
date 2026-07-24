@@ -19,8 +19,6 @@
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
-#include <std_msgs/msg/header.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -543,55 +541,12 @@ cv::Mat CnnLampRecognizerCore::make_debug_image(
 }
 
 // ============================== CnnLampRecognizer ==============================
-// ROS adapter: declares parameters, publishes debug images, and delegates recognition to the
-// Node-free core.
+// ROS adapter: logs and delegates recognition and debug-image rendering to the Node-free core.
 
-namespace
+CnnLampRecognizer::CnnLampRecognizer(
+  rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config)
+: node_ptr_(node_ptr), core_(config)
 {
-// Declare the lamp recognizer parameters on `node` and return the config. Anchors are narrowed
-// double->float here (a ROS quirk); config-data invariants live in the core ctor, not here.
-CnnLampRecognizerConfig declare_lamp_config(rclcpp::Node * node)
-{
-  CnnLampRecognizerConfig config;
-  config.model_path = node->declare_parameter<std::string>("model_path");
-  config.precision = node->declare_parameter<std::string>("precision");
-  config.score_threshold = static_cast<float>(node->declare_parameter<double>("score_threshold"));
-  config.nms_threshold = static_cast<float>(node->declare_parameter<double>("nms_threshold"));
-  config.max_batch_size = node->declare_parameter<int>("max_batch_size");
-
-  auto & model_params = config.model_params;
-  model_params.num_anchors = node->declare_parameter<int>("model_params.num_anchors");
-  model_params.chans_per_anchor = node->declare_parameter<int>("model_params.chans_per_anchor");
-  model_params.x_index = node->declare_parameter<int>("model_params.x_index");
-  model_params.y_index = node->declare_parameter<int>("model_params.y_index");
-  model_params.w_index = node->declare_parameter<int>("model_params.w_index");
-  model_params.h_index = node->declare_parameter<int>("model_params.h_index");
-  model_params.obj_index = node->declare_parameter<int>("model_params.obj_index");
-  model_params.color_start = node->declare_parameter<int>("model_params.color_start");
-  model_params.type_start = node->declare_parameter<int>("model_params.type_start");
-  model_params.num_types = node->declare_parameter<int>("model_params.num_types");
-  model_params.num_colors = node->declare_parameter<int>("model_params.num_colors");
-  model_params.cos_index = node->declare_parameter<int>("model_params.cos_index");
-  model_params.sin_index = node->declare_parameter<int>("model_params.sin_index");
-  model_params.scale_x_y =
-    static_cast<float>(node->declare_parameter<double>("model_params.scale_x_y"));
-
-  const auto anchors_param = node->declare_parameter<std::vector<double>>("model_params.anchors");
-  model_params.anchors.clear();
-  model_params.anchors.reserve(anchors_param.size());
-  for (double v : anchors_param) {
-    model_params.anchors.push_back(static_cast<float>(v));
-  }
-
-  return config;
-}
-}  // namespace
-
-CnnLampRecognizer::CnnLampRecognizer(rclcpp::Node * node_ptr)
-: node_ptr_(node_ptr), core_(declare_lamp_config(node_ptr))
-{
-  image_pub_ = image_transport::create_publisher(
-    node_ptr_, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
 }
 
 bool CnnLampRecognizer::getTrafficSignals(
@@ -616,26 +571,33 @@ bool CnnLampRecognizer::getTrafficSignals(
       result.lamps_per_image[i], traffic_signals.signals[i]);
   }
 
-  if (image_pub_.getNumSubscribers() > 0 && !images.empty()) {
-    // build debug image by vertically concatenating each image's debug view
-    const int strip_width = 200;
-    const int strip_height = 130;
-    cv::Mat debug_img;
-    for (size_t i = 0; i < images.size(); i++) {
-      cv::Mat debug_img_i = CnnLampRecognizerCore::make_debug_image(
-        images[i], traffic_signals.signals[i], &result.lamps_per_image[i]);
-      cv::resize(debug_img_i, debug_img_i, cv::Size(strip_width, strip_height));
-      if (i == 0) {
-        debug_img = debug_img_i;
-      } else {
-        cv::vconcat(debug_img, debug_img_i, debug_img);
-      }
-    }
-    const auto debug_image_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "rgb8", debug_img).toImageMsg();
-    image_pub_.publish(debug_image_msg);
-  }
+  // Keep the per-image output signals and raw detections so make_debug_image can render the batch
+  // afterwards; the node owns the debug publisher and asks only when a consumer is attached.
+  last_signals_ = traffic_signals;
+  last_lamps_ = result.lamps_per_image;
+
   return true;
+}
+
+cv::Mat CnnLampRecognizer::make_debug_image(const std::vector<cv::Mat> & images) const
+{
+  // Vertically concatenate each image's debug view: boxes from the raw detections and a
+  // label / confidence strip from the output signal, each resized to a fixed strip size.
+  const int strip_width = 200;
+  const int strip_height = 130;
+  cv::Mat debug_image;
+  const size_t count = std::min({images.size(), last_signals_.signals.size(), last_lamps_.size()});
+  for (size_t i = 0; i < count; i++) {
+    cv::Mat strip =
+      CnnLampRecognizerCore::make_debug_image(images[i], last_signals_.signals[i], &last_lamps_[i]);
+    cv::resize(strip, strip, cv::Size(strip_width, strip_height));
+    if (debug_image.empty()) {
+      debug_image = strip;
+    } else {
+      cv::vconcat(debug_image, strip, debug_image);
+    }
+  }
+  return debug_image;
 }
 
 }  // namespace autoware::traffic_light

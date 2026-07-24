@@ -20,20 +20,12 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
-
-// cppcheck-suppress preprocessorErrorDirective
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
 
 #include <memory>
 #include <string>
@@ -194,23 +186,28 @@ private:
   LampRegressionArchitecture model_params_;
 };
 
-// Thin ROS adapter around CnnLampRecognizerCore. Owns the node-facing concerns (parameter
-// declaration, debug-image publishing, logging) and delegates recognition to the core. Public
-// API is unchanged.
+// Thin ROS adapter around CnnLampRecognizerCore. Logs, and delegates recognition and
+// debug-image rendering to the core.
 class CnnLampRecognizer : public ClassifierInterface
 {
 public:
-  explicit CnnLampRecognizer(rclcpp::Node * node_ptr);
+  CnnLampRecognizer(rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config);
   ~CnnLampRecognizer() override = default;
 
   bool getTrafficSignals(
     const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
 private:
   rclcpp::Node * node_ptr_;
-  image_transport::Publisher image_pub_;
   CnnLampRecognizerCore core_;
+  // Kept from the most recent getTrafficSignals so make_debug_image can render the batch: the
+  // per-image output signals (for the text labels) and the per-image raw detections (for the
+  // bounding boxes).
+  tier4_perception_msgs::msg::TrafficLightArray last_signals_;
+  std::vector<std::vector<LampElement>> last_lamps_;
 };
 
 }  // namespace autoware::traffic_light
