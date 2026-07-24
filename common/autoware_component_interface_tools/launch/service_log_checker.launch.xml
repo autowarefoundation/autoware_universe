@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<launch>
-  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
-
-  <node pkg="autoware_component_interface_tools" exec="service_log_checker_node">
-    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
-  </node>
-</launch>
