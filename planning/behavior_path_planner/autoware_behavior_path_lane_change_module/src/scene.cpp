@@ -1775,17 +1775,26 @@ NormalLaneChange::find_colliding_object_if_all_paths_collide(
   std::vector<ExtendedPredictedObject> colliding_objects;
   std::unordered_set<size_t> objects_idx;
 
-  const auto check_for_collision = [&](const auto & ego_predicted_path, const auto & object) {
+  const auto check_for_collision = [&](
+                                      const auto & ego_predicted_path, const auto & object,
+                                      auto * ego_interp_cache) {
     return is_colliding(
-      lane_change_path, object, ego_predicted_path, rss_params, debug_data, is_approved);
+      lane_change_path, object, ego_predicted_path, rss_params, debug_data, is_approved,
+      ego_interp_cache);
   };
 
   const auto check_for_collisions = [&](const auto & ego_predicted_path) {
     std::vector<ExtendedPredictedObject> current_colliding_objects;
     current_colliding_objects.reserve(objects.size());
 
+    // One memo per ego_predicted_path: the ego interpolation at a given time is the same for
+    // every object checked against this path, so share it across the loop below instead of
+    // recomputing it once per object.
+    utils::path_safety_checker::EgoInterpCache ego_interp_cache;
+
     for (const auto & [idx, object] : objects | ranges::views::enumerate) {
-      const auto is_colliding_object = check_for_collision(ego_predicted_path, object);
+      const auto is_colliding_object =
+        check_for_collision(ego_predicted_path, object, &ego_interp_cache);
       if (!is_colliding_object) {
         continue;
       }
@@ -1855,7 +1864,8 @@ PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
 bool NormalLaneChange::is_colliding(
   const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
   const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
-  CollisionCheckDebugMap & debug_data, const bool is_approved) const
+  CollisionCheckDebugMap & debug_data, const bool is_approved,
+  utils::path_safety_checker::EgoInterpCache * ego_interp_cache) const
 {
   constexpr auto is_colliding{true};
 
@@ -1908,7 +1918,8 @@ bool NormalLaneChange::is_colliding(
       if (
         const auto collided_polygon_opt = check_collision(
           lane_change_path.path, bpp_param.vehicle_info, ego_predicted_path, obj_pose_with_poly,
-          selected_rss_param, th_yaw_diff, safety_check_max_vel, hysteresis_factor, debug_ptr)) {
+          selected_rss_param, th_yaw_diff, safety_check_max_vel, hysteresis_factor, debug_ptr,
+          ego_interp_cache)) {
         collided_polygons.push_back(*collided_polygon_opt);
       }
     }
