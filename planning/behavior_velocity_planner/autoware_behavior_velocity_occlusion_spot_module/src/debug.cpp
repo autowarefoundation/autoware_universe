@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "occlusion_spot_utils.hpp"
 #include "scene_occlusion_spot.hpp"
+#include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/debug.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
@@ -36,7 +35,7 @@ using autoware_utils::create_marker_color;
 using autoware_utils::create_marker_orientation;
 using autoware_utils::create_marker_position;
 using autoware_utils::create_marker_scale;
-using occlusion_spot_utils::PossibleCollisionInfo;
+using utils::PossibleCollisionInfo;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
@@ -148,7 +147,7 @@ MarkerArray makePolygonMarker(
   debug_marker.ns = ns;
   for (const auto & poly : polygons) {
     for (const auto & p : poly) {
-      geometry_msgs::msg::Point point = create_marker_position(p.x(), p.y(), z + 0.5);
+      Point point = create_marker_position(p.x(), p.y(), z + 0.5);
       debug_marker.points.push_back(point);
     }
     debug_markers.markers.push_back(debug_marker);
@@ -176,7 +175,7 @@ MarkerArray makeSlicePolygonMarker(
   debug_marker.ns = ns;
   for (const auto & slice : slices) {
     for (const auto & p : slice.outer()) {
-      geometry_msgs::msg::Point point = create_marker_position(p.x(), p.y(), z);
+      Point point = create_marker_position(p.x(), p.y(), z);
       debug_marker.points.push_back(point);
     }
     debug_markers.markers.push_back(debug_marker);
