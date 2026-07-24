@@ -200,14 +200,16 @@ private:
   autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr odometry_sub_ =
     autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
       this, "~/input/odometry");
-  autoware::agnocast_wrapper::polling::PollingSubscriber<LaneletRoute>::SharedPtr
-    route_subscriber_ =
-      autoware::agnocast_wrapper::polling::create_polling_subscriber<LaneletRoute>(
-        this, "~/input/route", rclcpp::QoS{1}.transient_local());
-  autoware::agnocast_wrapper::polling::PollingSubscriber<LaneletMapBin>::SharedPtr
-    vector_map_subscriber_ =
-      autoware::agnocast_wrapper::polling::create_polling_subscriber<LaneletMapBin>(
-        this, "~/input/vector_map", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletRoute, autoware_utils::polling_policy::Newest>::SharedPtr route_subscriber_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletRoute, autoware_utils::polling_policy::Newest>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletMapBin, autoware_utils::polling_policy::Newest>::SharedPtr vector_map_subscriber_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletMapBin, autoware_utils::polling_policy::Newest>(
+      this, "~/input/vector_map", rclcpp::QoS{1}.transient_local());
   autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
     accel_sub_ =
       autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
