@@ -228,7 +228,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutMapAndSignals)
 {
   const auto points = create_trajectory(0.0, 1.0);
   context_.lanelet_map = nullptr;
-  context_.traffic_light_signals = nullptr;
+  context_.traffic_light_signals = {};
   autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
   candidate_trajectory.points = points;
   EXPECT_FALSE(filter_->is_feasible(candidate_trajectory, context_))
@@ -250,7 +250,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutSignals)
 {
   auto points = create_trajectory(0.0, 1.0);
   create_and_set_map(0, 0);
-  context_.traffic_light_signals = nullptr;
+  context_.traffic_light_signals = {};
   autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
   candidate_trajectory.points = points;
   EXPECT_FALSE(filter_->is_feasible(candidate_trajectory, context_))
@@ -262,7 +262,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutRoute)
 {
   auto points = create_trajectory(0.0, 1.0);
   create_and_set_map(0, 0);
-  context_.route = nullptr;
+  context_.route = {};
   autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
   candidate_trajectory.points = points;
   EXPECT_FALSE(filter_->is_feasible(candidate_trajectory, context_).has_value())
