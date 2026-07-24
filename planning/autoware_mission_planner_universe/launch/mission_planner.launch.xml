@@ -9,18 +9,22 @@
   <arg name="visualization_topic_name" default="/planning/mission_planning/route_marker"/>
   <arg name="mission_planner_param_path" default="$(find-pkg-share autoware_mission_planner_universe)/config/mission_planner.param.yaml"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
+  <node pkg="autoware_mission_planner_universe" exec="mission_planner" name="mission_planner" namespace="" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+    <param from="$(var mission_planner_param_path)"/>
+    <remap from="~/input/modified_goal" to="$(var modified_goal_topic_name)"/>
+    <remap from="~/input/vector_map" to="$(var map_topic_name)"/>
+    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+    <remap from="~/input/operation_mode_state" to="/system/operation_mode/state"/>
+    <remap from="~/input/reroute_availability" to="/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/output/is_reroute_available"/>
+    <remap from="~/route" to="route"/>
+    <remap from="~/state" to="state"/>
+    <remap from="~/debug/route_marker" to="$(var visualization_topic_name)"/>
+  </node>
+
   <node_container pkg="rclcpp_components" exec="component_container_mt" name="mission_planner_container" namespace="">
-    <composable_node pkg="autoware_mission_planner_universe" plugin="autoware::mission_planner_universe::MissionPlanner" name="mission_planner" namespace="">
-      <param from="$(var mission_planner_param_path)"/>
-      <remap from="~/input/modified_goal" to="$(var modified_goal_topic_name)"/>
-      <remap from="~/input/vector_map" to="$(var map_topic_name)"/>
-      <remap from="~/input/odometry" to="/localization/kinematic_state"/>
-      <remap from="~/input/operation_mode_state" to="/system/operation_mode/state"/>
-      <remap from="~/input/reroute_availability" to="/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/output/is_reroute_available"/>
-      <remap from="~/route" to="route"/>
-      <remap from="~/state" to="state"/>
-      <remap from="~/debug/route_marker" to="$(var visualization_topic_name)"/>
-    </composable_node>
     <composable_node pkg="autoware_mission_planner_universe" plugin="autoware::mission_planner_universe::RouteSelector" name="route_selector" namespace="">
       <remap from="~/planner/clear_route" to="mission_planner/clear_route"/>
       <remap from="~/planner/set_lanelet_route" to="mission_planner/set_lanelet_route"/>

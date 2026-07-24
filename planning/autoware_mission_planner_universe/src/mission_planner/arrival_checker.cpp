@@ -22,7 +22,8 @@
 namespace autoware::mission_planner_universe
 {
 
-ArrivalChecker::ArrivalChecker(rclcpp::Node * node) : vehicle_stop_checker_(node)
+ArrivalChecker::ArrivalChecker(autoware::agnocast_wrapper::Node * node)
+: vehicle_stop_checker_(node, 10.0 /* velocity_buffer_time_sec */)
 {
   const double angle_deg = node->declare_parameter<double>("arrival_check_angle_deg");
   angle_ = autoware_utils::deg2rad(angle_deg);
@@ -45,6 +46,14 @@ void ArrivalChecker::set_goal(const PoseWithUuidStamped & goal)
 {
   // Ignore the modified goal for the previous route using uuid.
   goal_with_uuid_ = goal;
+}
+
+void ArrivalChecker::add_odometry(const Odometry & odometry)
+{
+  geometry_msgs::msg::TwistStamped current_velocity;
+  current_velocity.header = odometry.header;
+  current_velocity.twist = odometry.twist.twist;
+  vehicle_stop_checker_.addTwist(current_velocity);
 }
 
 bool ArrivalChecker::is_arrived(const PoseStamped & pose) const

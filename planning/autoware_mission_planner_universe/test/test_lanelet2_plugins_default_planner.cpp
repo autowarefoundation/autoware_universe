@@ -85,13 +85,13 @@ protected:
     // NOTE: vehicle width and length set by test_vehicle_info.param.yaml are as follows
     // vehicle_width: 1.83, vehicle_length: 4.77
 
-    node_ = std::make_shared<rclcpp::Node>("test_node", options);
+    node_ = std::make_shared<autoware::agnocast_wrapper::Node>("test_node", options);
     planner_.initialize(node_.get());
   }
 
   ~DefaultPlannerTest() override { rclcpp::shutdown(); }
 
-  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<autoware::agnocast_wrapper::Node> node_;
 
   DefaultPlanner planner_;
 };

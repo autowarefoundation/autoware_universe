@@ -56,12 +56,12 @@ std::string route_state_to_string(const uint8_t state)
 }  // namespace
 
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
-: Node("mission_planner", options),
+: autoware::agnocast_wrapper::Node("mission_planner", options),
   arrival_checker_(this),
   plugin_loader_(
     "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
   tf_buffer_(get_clock()),
-  tf_listener_(tf_buffer_),
+  tf_listener_(tf_buffer_, *this),
   odometry_(nullptr),
   map_ptr_(nullptr)
 {
@@ -107,11 +107,13 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   // Route state will be published when the node gets ready for route api after initialization,
   // otherwise the mission planner rejects the request for the API.
   using namespace std::literals::chrono_literals;
-  data_check_timer_ =
-    rclcpp::create_timer(this, get_clock(), 0.1s, [this] { check_initialization(); });
+  data_check_timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), 0.1s, [this] { check_initialization(); });
   is_mission_planner_ready_ = false;
 
-  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
+  logger_configure_ =
+    std::make_unique<autoware_utils::BasicLoggerLevelConfigure<autoware::agnocast_wrapper::Node>>(
+      this);
   pub_processing_time_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/debug/processing_time_ms", 1);
 }
@@ -169,9 +171,10 @@ void MissionPlanner::check_initialization()
   data_check_timer_ = nullptr;
 }
 
-void MissionPlanner::on_odometry(const Odometry::ConstSharedPtr msg)
+void MissionPlanner::on_odometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) & msg)
 {
   odometry_ = msg;
+  arrival_checker_.add_odometry(*msg);
 
   // NOTE: Do not check in the other states as goal may change.
   if (state_.state == RouteState::SET) {
@@ -184,12 +187,13 @@ void MissionPlanner::on_odometry(const Odometry::ConstSharedPtr msg)
   }
 }
 
-void MissionPlanner::on_operation_mode_state(const OperationModeState::ConstSharedPtr msg)
+void MissionPlanner::on_operation_mode_state(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(OperationModeState) & msg)
 {
   operation_mode_state_ = msg;
 }
 
-void MissionPlanner::on_map(const LaneletMapBin::ConstSharedPtr msg)
+void MissionPlanner::on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
   map_ptr_ = msg;
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
@@ -216,7 +220,8 @@ void MissionPlanner::change_state(RouteState::_state_type state)
   pub_state_->publish(state_);
 }
 
-void MissionPlanner::on_modified_goal(const PoseWithUuidStamped::ConstSharedPtr msg)
+void MissionPlanner::on_modified_goal(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PoseWithUuidStamped) & msg)
 {
   RCLCPP_INFO(get_logger(), "Received modified goal.");
 
@@ -303,7 +308,7 @@ void MissionPlanner::on_set_lanelet_route(
   }
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.take_data();
+    const auto reroute_availability = sub_reroute_availability_->take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         ResponseCode::ERROR_INVALID_STATE,
@@ -382,7 +387,7 @@ void MissionPlanner::on_set_preferred_primitive(
                           : false;
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.take_data();
+    const auto reroute_availability = sub_reroute_availability_->take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
@@ -456,7 +461,7 @@ void MissionPlanner::on_set_waypoint_route(
                           : false;
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.take_data();
+    const auto reroute_availability = sub_reroute_availability_->take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         ResponseCode::ERROR_INVALID_STATE,
