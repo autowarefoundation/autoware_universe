@@ -40,8 +40,7 @@ pluginlib_export_plugin_description_file(autoware_mission_planner_universe plugi
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
-  test/test_lanelet2_plugins_default_planner.cpp
-  test/test_utility_functions.cpp
+    test/test_utility_functions.cpp
   )
   target_link_libraries(test_${PROJECT_NAME}
     ${PROJECT_NAME}_lanelet2_plugins
@@ -49,6 +48,18 @@ if(BUILD_TESTING)
   ament_target_dependencies(test_${PROJECT_NAME}
     autoware_test_utils
   )
+
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_default_planner
+      test/test_lanelet2_plugins_default_planner.cpp
+    )
+    target_link_libraries(test_${PROJECT_NAME}_default_planner
+      ${PROJECT_NAME}_lanelet2_plugins
+    )
+    ament_target_dependencies(test_${PROJECT_NAME}_default_planner
+      autoware_test_utils
+    )
+  endif()
 endif()
 
 ament_auto_package(
