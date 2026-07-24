@@ -214,13 +214,6 @@ trajectory_processor_params:
         default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard]
         description: Types of objects to consider for obstacle stop
         read_only: false
-      max_velocity_th:
-        type: double
-        default_value: 5.0
-        description: Maximum velocity threshold for target object to be considered for obstacle stop [m/s]
-        validation:
-          bounds<>: [0.0, 100.0]
-        read_only: false
       stopped_velocity_th:
         type: double
         default_value: 0.25

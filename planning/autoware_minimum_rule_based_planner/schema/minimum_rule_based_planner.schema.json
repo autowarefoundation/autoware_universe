@@ -257,12 +257,6 @@
                     "type": "string"
                   }
                 },
-                "max_velocity_th": {
-                  "type": "number",
-                  "description": "Max velocity threshold [m/s]",
-                  "default": 1.0,
-                  "minimum": 0.0
-                },
                 "stopped_velocity_th": {
                   "type": "number",
                   "description": "Velocity threshold for target object to be considered as stopped [m/s]",

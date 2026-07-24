@@ -335,13 +335,13 @@ ObjectState get_object_state_at_time(
     motion_utils::findNearestSegmentIndex(trajectory_points, predicted_obj_pose.position);
   const auto p1 = trajectory_points.at(nearest_seg).pose.position;
   const auto p2 = trajectory_points.at(nearest_seg + 1).pose.position;
-  auto lon_vel = std::invoke([&]() -> double {
+  auto lon_vel = [&]() {
     const auto traj_dir = Eigen::Vector2d(p2.x - p1.x, p2.y - p1.y).normalized();
     const Eigen::Rotation2Dd obj_rot(tf2::getYaw(predicted_obj_pose.orientation));
     const auto obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
     const auto obj_vel_vector = obj_rot * Eigen::Vector2d(obj_vel.x, obj_vel.y);
     return std::max(0.0, obj_vel_vector.dot(traj_dir));
-  });
+  }();
 
   const auto obj_polygon = autoware_utils::to_polygon2d(predicted_obj_pose, object.shape);
   auto min_arc_length = std::numeric_limits<double>::max();
@@ -413,14 +413,15 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   geometry_msgs::msg::Point nearest_collision_point;
   bool found_collision = false;
   bool is_dynamic_collision = false;
-  auto curr_arc_length = 0.0;
 
   for (const auto & object : target_objects.objects) {
     auto last_p = trajectory_points.front().pose.position;
+    auto curr_arc_length = 0.0;
     for (const auto & traj_p : trajectory_points) {
       const auto t = rclcpp::Duration(traj_p.time_from_start).seconds();
       if (t > lookahead_horizon) break;
       curr_arc_length += autoware_utils::calc_distance2d(last_p, traj_p.pose.position);
+      last_p = traj_p.pose.position;
       const auto target_ego_vel = traj_p.longitudinal_velocity_mps;
       const auto obj_state = get_object_state_at_time(trajectory_points, object, t);
       const auto [safe, dynamic] =
@@ -433,7 +434,6 @@ std::optional<CollisionPoint> get_nearest_object_collision(
         nearest_collision_point = obj_state.nearest_point;
         is_dynamic_collision = dynamic;
       }
-      last_p = traj_p.pose.position;
       break;
     }
   }

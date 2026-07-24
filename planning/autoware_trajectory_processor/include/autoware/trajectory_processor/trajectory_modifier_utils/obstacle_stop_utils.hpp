@@ -246,17 +246,14 @@ struct ObjectFilter
   /**
    * @brief Construct a filter from allowed type names and speed thresholds.
    * @param object_type_strings Allowed object classes (see string_to_object_type).
-   * @param max_velocity_th Remove objects with longitudinal twist.x above this [m/s].
    * @param stopped_velocity_th Used when filtering by target area for "moving" vs stopped.
    * @param max_lateral_velocity_th Lateral speed threshold for the exiting-object heuristic [m/s].
    * @param safety_buffer Safety buffer to expand object shape [m].
    */
   ObjectFilter(
-    const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th,
-    const double safety_buffer)
-  : max_velocity_th_(max_velocity_th),
-    stopped_velocity_th_(stopped_velocity_th),
+    const std::vector<std::string> & object_type_strings, const double stopped_velocity_th,
+    const double max_lateral_velocity_th, const double safety_buffer)
+  : stopped_velocity_th_(stopped_velocity_th),
     max_lateral_velocity_th_(max_lateral_velocity_th),
     safety_buffer_(safety_buffer)
   {
@@ -276,8 +273,6 @@ struct ObjectFilter
       std::remove_if(
         objects.objects.begin(), objects.objects.end(),
         [&](const auto & object) {
-          if (object.kinematics.initial_twist_with_covariance.twist.linear.x > max_velocity_th_)
-            return true;
           const auto label =
             object.classification.empty()
               ? ObjectClassification::UNKNOWN
@@ -307,16 +302,14 @@ struct ObjectFilter
    * @brief Update allow-listed types and velocity thresholds without reconstructing the filter.
    */
   void set_params(
-    const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th,
-    const double safety_buffer)
+    const std::vector<std::string> & object_type_strings, const double stopped_velocity_th,
+    const double max_lateral_velocity_th, const double safety_buffer)
   {
     object_types_.clear();
     for (const auto & object_type_string : object_type_strings) {
       if (string_to_object_type.count(object_type_string) == 0) continue;
       object_types_.emplace(string_to_object_type.at(object_type_string));
     }
-    max_velocity_th_ = max_velocity_th;
     stopped_velocity_th_ = stopped_velocity_th;
     max_lateral_velocity_th_ = max_lateral_velocity_th;
     safety_buffer_ = safety_buffer;
@@ -324,7 +317,6 @@ struct ObjectFilter
 
 private:
   std::unordered_set<ObjectType> object_types_;
-  double max_velocity_th_;
   double stopped_velocity_th_;
   double max_lateral_velocity_th_;
   double safety_buffer_;

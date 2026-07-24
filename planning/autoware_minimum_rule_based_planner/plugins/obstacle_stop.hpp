@@ -59,8 +59,7 @@ public:
     {
       const auto & p = params_.objects;
       object_filter_->set_params(
-        p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
-        p.safety_buffer);
+        p.object_types, p.stopped_velocity_th, p.max_lateral_velocity_th, p.safety_buffer);
     }
 
     {

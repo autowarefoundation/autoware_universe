@@ -55,9 +55,8 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
       params_.pointcloud.clustering.max_size);
 
   object_filter_ = std::make_unique<trajectory_processor::utils::obstacle_stop::ObjectFilter>(
-    params_.objects.object_types, params_.objects.max_velocity_th,
-    params_.objects.stopped_velocity_th, params_.objects.max_lateral_velocity_th,
-    params_.objects.safety_buffer);
+    params_.objects.object_types, params_.objects.stopped_velocity_th,
+    params_.objects.max_lateral_velocity_th, params_.objects.safety_buffer);
 
   pub_clustered_pointcloud_ =
     get_node_ptr()->create_publisher<PointCloud2>("~/obstacle_stop/debug/cluster_points", 1);
@@ -195,7 +194,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = get_nearest_object_collision(
-    traj_points, context_->vehicle_info, active_objects, object_decel_map_,
+    traj_points, context_->vehicle_info, predicted_objects, object_decel_map_,
     params_.rss_params.ego_decel, params_.rss_params.reaction_time,
     params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
     params_.rss_params.lookahead_horizon, colliding_object, params_.rss_params.enable);
