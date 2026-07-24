@@ -72,16 +72,6 @@ void ActiveGeneratorPanel::onInitialize()
   subscribe();
 }
 
-void ActiveGeneratorPanel::load(const rviz_common::Config & config)
-{
-  Panel::load(config);
-}
-
-void ActiveGeneratorPanel::save(rviz_common::Config config) const
-{
-  Panel::save(config);
-}
-
 void ActiveGeneratorPanel::processMessage(
   const autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories::ConstSharedPtr msg)
 {

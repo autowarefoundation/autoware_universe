@@ -39,8 +39,6 @@ public:
 
 protected:
   void onInitialize() override;
-  void load(const rviz_common::Config & config) override;
-  void save(rviz_common::Config config) const override;
 
 private:
   void processMessage(
