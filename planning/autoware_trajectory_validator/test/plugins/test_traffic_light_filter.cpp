@@ -37,17 +37,6 @@ using autoware_perception_msgs::msg::TrafficLightGroup;
 using autoware_perception_msgs::msg::TrafficLightGroupArray;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
-namespace
-{
-// Wraps a std::shared_ptr in the agnocast message_ptr type used by ValidatorContext fields.
-template <typename T>
-AUTOWARE_MESSAGE_CONST_SHARED_PTR(T)
-to_context_ptr(const std::shared_ptr<T> & ptr)
-{
-  return AUTOWARE_MESSAGE_CONST_SHARED_PTR(T)(std::shared_ptr<const T>(ptr));
-}
-}  // namespace
-
 class TrafficLightFilterTest : public ::testing::Test
 {
 protected:
@@ -93,15 +82,15 @@ protected:
     params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
     filter_->update_parameters(params);
 
-    context_.traffic_light_signals = to_context_ptr(std::make_shared<TrafficLightGroupArray>());
-    context_.route = to_context_ptr(std::make_shared<autoware_planning_msgs::msg::LaneletRoute>());
+    context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
+    context_.route = std::make_shared<autoware_planning_msgs::msg::LaneletRoute>();
     auto acceleration = std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>();
     acceleration->accel.accel.linear.x = 0.0f;
-    context_.acceleration = to_context_ptr(acceleration);
+    context_.acceleration = acceleration;
     auto odometry = std::make_shared<nav_msgs::msg::Odometry>();
     odometry->header.stamp = node_->now();
     odometry->twist.twist.linear.x = 5.0f;
-    context_.odometry = to_context_ptr(odometry);
+    context_.odometry = odometry;
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
@@ -141,7 +130,7 @@ protected:
     autoware_planning_msgs::msg::LaneletSegment segment;
     segment.preferred_primitive.id = lanelet.id();
     route->segments.push_back(segment);
-    context_.route = to_context_ptr(route);
+    context_.route = route;
   }
 
   // Helper to set traffic light signal
@@ -160,7 +149,7 @@ protected:
     group.elements.push_back(element);
     signals->traffic_light_groups.push_back(group);
 
-    context_.traffic_light_signals = to_context_ptr(signals);
+    context_.traffic_light_signals = signals;
   }
 
   // Helper to create a straight trajectory
@@ -190,12 +179,12 @@ protected:
   {
     auto odometry = std::make_shared<nav_msgs::msg::Odometry>(*context_.odometry);
     odometry->twist.twist.linear.x = velocity;
-    context_.odometry = to_context_ptr(odometry);
+    context_.odometry = odometry;
 
     auto accel =
       std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>(*context_.acceleration);
     accel->accel.accel.linear.x = acceleration;
-    context_.acceleration = to_context_ptr(accel);
+    context_.acceleration = accel;
   }
 
   void expect_feasibility(
@@ -228,7 +217,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutMapAndSignals)
 {
   const auto points = create_trajectory(0.0, 1.0);
   context_.lanelet_map = nullptr;
-  context_.traffic_light_signals = {};
+  context_.traffic_light_signals = nullptr;
   autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
   candidate_trajectory.points = points;
   EXPECT_FALSE(filter_->is_feasible(candidate_trajectory, context_))
@@ -250,7 +239,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutSignals)
 {
   auto points = create_trajectory(0.0, 1.0);
   create_and_set_map(0, 0);
-  context_.traffic_light_signals = {};
+  context_.traffic_light_signals = nullptr;
   autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
   candidate_trajectory.points = points;
   EXPECT_FALSE(filter_->is_feasible(candidate_trajectory, context_))
@@ -262,7 +251,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutRoute)
 {
   auto points = create_trajectory(0.0, 1.0);
   create_and_set_map(0, 0);
-  context_.route = {};
+  context_.route = nullptr;
   autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
   candidate_trajectory.points = points;
   EXPECT_FALSE(filter_->is_feasible(candidate_trajectory, context_).has_value())
@@ -674,7 +663,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithUnknownStabilityFiltering)
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   expect_feasibility(points, false, "Should be infeasible after UNKNOWN stability threshold");
 }
@@ -707,7 +696,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleAfterUnknownStableDurationThreshold)
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   expect_feasibility(points, false, "Should reject after UNKNOWN threshold");
 }
@@ -740,18 +729,18 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleAfterUnknownStableDurationThresholdFr
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.5);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
   expect_feasibility(points, true, "Should be feasible immediately after changing to UNKNOWN");
 
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.9);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   expect_feasibility(points, true, "Should still be feasible before UNKNOWN threshold");
 
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.2);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   expect_feasibility(points, false, "Should reject after UNKNOWN is stable from state change");
 }
 
@@ -778,7 +767,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithUnknownStabilityFilteringWhenEgoS
 
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.twist.twist.linear.x = 0.0;
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
   auto points = create_trajectory(0.0, 10.0, 5.0);
@@ -813,11 +802,11 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithUnknownSignalHistoryCleanup)
   set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
   expect_feasibility(points, true, "Should be feasible because UNKNOWN signal is not stable yet");
 
-  context_.traffic_light_signals = to_context_ptr(std::make_shared<TrafficLightGroupArray>());
+  context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(1.1);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   expect_feasibility(points, true);
 
@@ -855,7 +844,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithStabilityFiltering)
   set_traffic_light_signal(light_id, TrafficLightElement::RED);
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp = node_->now();
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   // Immediately check, should be feasible because of stability threshold
   expect_feasibility(points, true, "Should be feasible because signal is not stable yet");
@@ -863,13 +852,13 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithStabilityFiltering)
   // Advance time by 0.5s (less than 1s threshold)
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.5);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   expect_feasibility(points, true, "Should still be feasible after 0.5s");
 
   // Advance time by another 0.6s (total 1.1s > 1s threshold)
   odometry.header.stamp =
     rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.6);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   expect_feasibility(points, false, "Should be infeasible after stability threshold is exceeded");
 }
 
@@ -901,7 +890,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberHysteresis)
   // Advance time by 1s (less than 2s hysteresis)
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(1.0);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   // Move ego closer to 5m from stop line. Now cannot stop (5m away at 10m/s)
   auto points2 = create_trajectory(15.0, 30.0, 10.0);
@@ -910,7 +899,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberHysteresis)
 
   // Advance time by another 1.1s (total 2.1s > 2s hysteresis)
   odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(1.1);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   // Now it should be feasible if it cannot stop
   expect_feasibility(points2, true, "Should be feasible after hysteresis duration");
@@ -938,10 +927,10 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalHistoryCleanup)
   expect_feasibility(points, true);
 
   // 2. Stop sending signal for 2.0s
-  context_.traffic_light_signals = to_context_ptr(std::make_shared<TrafficLightGroupArray>());
+  context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(2.0);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
 
   // Trigger cleanup
   expect_feasibility(points, true);
@@ -975,7 +964,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalStateChange)
   // 2. Advance 0.5s, still AMBER
   nav_msgs::msg::Odometry odometry = *context_.odometry;
   odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(0.5);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   expect_feasibility(points, true);
 
   // 3. Switch to RED
@@ -985,11 +974,11 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalStateChange)
 
   // 4. Advance another 0.6s (total from AMBER start is 1.1s, but from RED start is 0.6s)
   odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(0.6);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   expect_feasibility(points, true, "Should still be feasible (0.6s < 1.0s)");
 
   // 5. Advance another 0.5s (total from RED start is 1.1s > 1.0s duration threshold)
   odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(0.5);
-  context_.odometry = to_context_ptr(std::make_shared<nav_msgs::msg::Odometry>(odometry));
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
   expect_feasibility(points, false, "Should be unfeasible (stable RED signal)");
 }

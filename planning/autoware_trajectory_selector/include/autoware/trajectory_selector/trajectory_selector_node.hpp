@@ -20,6 +20,7 @@
 #include "autoware_trajectory_selector/autoware_trajectory_selector_param.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory_concatenator/trajectory_concatenator_wrapper.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -105,11 +106,12 @@ private:
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 
   // Polling Subscribers
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) sub_odometry_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects) sub_objects_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped) sub_acceleration_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_perception_msgs::msg::TrafficLightGroupArray)
-  sub_traffic_lights_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_odometry_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PredictedObjects>::SharedPtr sub_objects_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    sub_acceleration_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr sub_traffic_lights_;
 
   // Normal Subscribers
   AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;
