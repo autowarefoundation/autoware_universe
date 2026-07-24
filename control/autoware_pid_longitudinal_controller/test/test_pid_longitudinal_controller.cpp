@@ -203,8 +203,7 @@ TEST(PidLongitudinalController, StaysStoppedWhenCloseToStopPoint)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, config.stopped_state_params.vel);
   // The stopped-state acceleration is negative by config; slope compensation may further adjust
   // it, but STOPPED must never command a positive (accelerating) output.
   EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
@@ -225,10 +224,8 @@ TEST(PidLongitudinalController, StoppedStateOutputsStoppedStateCommand)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.acceleration, static_cast<float>(config.stopped_state_params.acc));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, config.stopped_state_params.vel);
+  EXPECT_FLOAT_EQ(result.output.control_cmd.acceleration, config.stopped_state_params.acc);
 }
 
 TEST(PidLongitudinalController, DepartsToDriveWhenFarFromStopAndKeepStoppedDisabled)
@@ -266,8 +263,7 @@ TEST(PidLongitudinalController, KeepsStoppedUntilSteerConvergesWhenGuardEnabled)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, config.stopped_state_params.vel);
   EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
@@ -293,9 +289,7 @@ TEST(PidLongitudinalController, SetConfigAppliesNewStoppedStateCommand)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.acceleration,
-    static_cast<float>(new_config.stopped_state_params.acc));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.acceleration, new_config.stopped_state_params.acc);
 }
 
 TEST(PidLongitudinalController, TransitionsToStoppingNearStopPoint)
@@ -408,8 +402,7 @@ TEST(PidLongitudinalController, RawPitchSlopeSourceProducesStoppedState)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, config.stopped_state_params.vel);
   EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
@@ -498,10 +491,8 @@ TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousContro
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
   EXPECT_TRUE(result.virtual_wall_marker.has_value());
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.acceleration, static_cast<float>(config.stopped_state_params.acc));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, config.stopped_state_params.vel);
+  EXPECT_FLOAT_EQ(result.output.control_cmd.acceleration, config.stopped_state_params.acc);
 }
 
 TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
@@ -520,8 +511,7 @@ TEST(PidLongitudinalController, DrivesToStoppedAfterStandstillDuration)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, config.stopped_state_params.vel);
   EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
@@ -584,8 +574,7 @@ TEST(PidLongitudinalController, EmergencyTransitionsToStoppedAfterStandstill)
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
-  EXPECT_FLOAT_EQ(
-    result.output.control_cmd.velocity, static_cast<float>(config.stopped_state_params.vel));
+  EXPECT_FLOAT_EQ(result.output.control_cmd.velocity, config.stopped_state_params.vel);
   EXPECT_LT(result.output.control_cmd.acceleration, 0.0);
 }
 
