@@ -18,6 +18,7 @@
 #include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware/universe_utils/ros/uuid_helper.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
@@ -36,6 +37,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -288,6 +290,47 @@ struct ObjectDecisionsTracker
     return history_per_object.at(object);
   }
 };
+/// @brief Track the duration since an object is being detected
+class ObjectDetectionTracker
+{
+  rclcpp::Time current_time_;
+  std::unordered_map<std::string, rclcpp::Time> first_detection_times_;
+
+  /// @brief update the tracker, adding new objects and removing no longer detected ones
+public:
+  void update(
+    const std::vector<std::shared_ptr<motion_velocity_planner::PlannerData::Object>> & objects,
+    const rclcpp::Time & current_time)
+  {
+    current_time_ = current_time;
+    std::unordered_set<std::string> current_uuids;
+    current_uuids.reserve(objects.size());
+    for (const auto & object : objects) {
+      const auto uuid = universe_utils::toHexString(object->predicted_object.object_id);
+      current_uuids.insert(uuid);
+      first_detection_times_.try_emplace(uuid, current_time);
+    }
+
+    for (auto it = first_detection_times_.begin(); it != first_detection_times_.end();) {
+      if (current_uuids.find(it->first) == current_uuids.end()) {
+        it = first_detection_times_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
+  /// @brief return the duration since first detecting the given object
+  std::optional<double> get_detection_duration(const std::string & uuid) const
+  {
+    const auto it = first_detection_times_.find(uuid);
+    if (it == first_detection_times_.end()) {
+      return std::nullopt;
+    }
+    return (current_time_ - it->second).seconds();
+  }
+};
+
 /// @brief Object represented by its uuid, corner footprints, current footprint, position,
 /// collisions with ego, classification label
 struct Object
