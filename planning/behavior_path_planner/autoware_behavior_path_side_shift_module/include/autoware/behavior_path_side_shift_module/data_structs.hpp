@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2023-2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
@@ -46,6 +47,9 @@ struct SideShiftParameters
   double drivable_area_width;
   double drivable_area_height;
   double shift_request_time_limit;
+  double max_shift_magnitude;
+  double min_shift_gap;
+  double unit_shift_amount;
   DrivableAreaCheckMode drivable_area_check_mode;
   double min_drivable_area_margin;
   bool publish_debug_marker;
@@ -56,6 +60,26 @@ struct SideShiftDebugData
   std::shared_ptr<PathShifter> path_shifter{};
   ShiftLineArray shift_lines{};
   double current_request{0.0};
+};
+
+/**
+ * @brief Shared state for the inserted (actually applied) lateral offset [m].
+ *        The manager owns this and passes it to the scene; the scene updates it
+ *        whenever inserted_lateral_offset_ changes; the manager reads it periodically to publish.
+ */
+struct InsertedLateralOffsetState
+{
+  std::atomic<double> value{0.0};
+};
+
+/**
+ * @brief Shared state for the requested lateral offset [m] coming from external commands.
+ *        The manager owns this and passes it to the scene; the manager updates it when a new
+ *        lateral offset command is received; the scene reads it in updateData().
+ */
+struct RequestedLateralOffsetState
+{
+  std::atomic<double> value{0.0};
 };
 
 }  // namespace autoware::behavior_path_planner

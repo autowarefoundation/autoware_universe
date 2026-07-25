@@ -19,6 +19,7 @@
 
   <depend>autoware_behavior_path_planner</depend>
   <depend>autoware_behavior_path_planner_common</depend>
+  <depend>autoware_common_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_utils</depend>
