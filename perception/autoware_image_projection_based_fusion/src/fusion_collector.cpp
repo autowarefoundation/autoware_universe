@@ -31,7 +31,8 @@ namespace autoware::image_projection_based_fusion
 template <class Msg3D, class Msg2D, class ExportObj>
 FusionCollector<Msg3D, Msg2D, ExportObj>::FusionCollector(
   std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && ros2_parent_node, std::size_t rois_number,
-  const std::vector<Det2dStatus<Msg2D>> & det2d_status_list, bool debug_mode)
+  const std::vector<Det2dStatus<Msg2D>> & det2d_status_list, bool debug_mode,
+  rclcpp::CallbackGroup::SharedPtr timer_callback_group)
 : ros2_parent_node_(std::move(ros2_parent_node)),
   rois_number_(rois_number),
   det2d_status_list_(det2d_status_list),
@@ -43,12 +44,14 @@ FusionCollector<Msg3D, Msg2D, ExportObj>::FusionCollector(
   const auto period_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
     std::chrono::duration<double>(init_timeout_sec));
 
-  timer_ =
-    rclcpp::create_timer(ros2_parent_node_, ros2_parent_node_->get_clock(), period_ns, [this]() {
+  timer_ = rclcpp::create_timer(
+    ros2_parent_node_, ros2_parent_node_->get_clock(), period_ns,
+    [this]() {
       std::lock_guard<std::mutex> fusion_lock(fusion_mutex_);
       if (status_ == CollectorStatus::Finished) return;
       fusion_callback();
-    });
+    },
+    timer_callback_group);
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
