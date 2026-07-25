@@ -196,7 +196,7 @@ sensing/autoware_radar_static_pointcloud_filter/** taekjin.lee@tier4.jp yoshi.ri
 sensing/autoware_radar_threshold_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_radar_tracks_noise_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 sensing/livox/autoware_livox_tag_filter/** kenzo.lobos@tier4.jp ryohsuke.mitsudome@tier4.jp
-simulator/autoware_carla_interface/** masaya.kataoka@tier4.jp maxime.clement@tier4.jp mradityagio@gmail.com
+simulator/autoware_carla_interface/** bin.wang@tier4.jp masaya.kataoka@tier4.jp maxime.clement@tier4.jp mradityagio@gmail.com
 simulator/autoware_dummy_traffic_light_publisher/** junya.sasaki@tier4.jp takayuki.akamine@tier4.jp
 simulator/autoware_fault_injection/** junya.sasaki@tier4.jp keisuke.shima@tier4.jp
 simulator/autoware_vehicle_door_simulator/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
@@ -233,6 +233,7 @@ vehicle/autoware_raw_vehicle_cmd_converter/** kosuke.takeuchi@tier4.jp kyoichi.s
 vehicle/autoware_steer_offset_estimator/** alqudah.mohammad@tier4.jp taiki.tanaka@tier4.jp taiki.yamada@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/autoware_bag_time_manager_rviz_plugin/** junya.sasaki@tier4.jp taiki.tanaka@tier4.jp
 visualization/autoware_traffic_light_rviz_plugin/** takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp
+visualization/tier4_active_generator_rviz_plugin/** hayate.sugahara@tier4.jp satoshi.ota@tier4.jp takumi.odashima@tier4.jp
 visualization/tier4_adapi_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.jp kosuke.takeuchi@tier4.jp
 visualization/tier4_camera_view_rviz_plugin/** makoto.ybauta@tier4.jp uken.ryu@tier4.jp
 visualization/tier4_control_mode_rviz_plugin/** kyoichi.sugahara@tier4.jp naoto.hiramatsu@tier4.jp shohei.sakai@tier4.jp yukinari.hisaki.2@tier4.jp
