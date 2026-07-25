@@ -28,27 +28,80 @@
 
 namespace autoware::cuda_utils
 {
-struct CudaDeleter
+namespace detail
 {
-  void operator()(void * p) const { CHECK_CUDA_ERROR(::cudaFree(p)); }
+inline bool is_default_stream(cudaStream_t stream)
+{
+  return stream == nullptr || stream == cudaStreamLegacy;
+}
+}  // namespace detail
+
+class CudaDeleter
+{
+public:
+  explicit CudaDeleter(cudaStream_t stream = nullptr) : stream_(stream) {}
+
+  void operator()(void * p) const
+  {
+    if (!p) {
+      return;
+    }
+    if (!detail::is_default_stream(stream_)) {
+      CHECK_CUDA_ERROR(::cudaFreeAsync(p, stream_));
+    } else {
+      CHECK_CUDA_ERROR(::cudaFree(p));
+    }
+  }
+
+private:
+  cudaStream_t stream_;
 };
 template <typename T>
 using CudaUniquePtr = std::unique_ptr<T, CudaDeleter>;
 
 template <typename T>
-typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtr<T>> make_unique(
-  const std::size_t n)
+typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtr<T>> make_unique(
+  const std::size_t n, cudaStream_t stream)
+{
+  if (detail::is_default_stream(stream)) {
+    throw std::invalid_argument("Stream cannot be null or legacy.");
+  }
+
+  using U = typename std::remove_extent_t<T>;
+  U * p{nullptr};
+  CHECK_CUDA_ERROR(::cudaMallocAsync(reinterpret_cast<void **>(&p), sizeof(U) * n, stream));
+  return CudaUniquePtr<T>{p, CudaDeleter{stream}};
+}
+
+template <typename T>
+typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtr<T>> make_unique(cudaStream_t stream)
+{
+  if (detail::is_default_stream(stream)) {
+    throw std::invalid_argument("Stream cannot be null or legacy.");
+  }
+
+  T * p{nullptr};
+  CHECK_CUDA_ERROR(::cudaMallocAsync(reinterpret_cast<void **>(&p), sizeof(T), stream));
+  return CudaUniquePtr<T>{p, CudaDeleter{stream}};
+}
+
+// TODO(mojomex): Deprecate once https://github.com/orgs/autowarefoundation/discussions/7167 is
+// resolved
+template <typename T>
+typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtr<T>> make_unique(const std::size_t n)
 {
   using U = typename std::remove_extent_t<T>;
-  U * p;
+  U * p{nullptr};
   CHECK_CUDA_ERROR(::cudaMalloc(reinterpret_cast<void **>(&p), sizeof(U) * n));
   return CudaUniquePtr<T>{p};
 }
 
+// TODO(mojomex): Deprecate once https://github.com/orgs/autowarefoundation/discussions/7167 is
+// resolved
 template <typename T>
-CudaUniquePtr<T> make_unique()
+typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtr<T>> make_unique()
 {
-  T * p;
+  T * p{nullptr};
   CHECK_CUDA_ERROR(::cudaMalloc(reinterpret_cast<void **>(&p), sizeof(T)));
   return CudaUniquePtr<T>{p};
 }
@@ -60,7 +113,7 @@ template <typename T>
 CudaPooledUniquePtr<T> make_unique(const std::size_t n, cudaStream_t stream, cudaMemPool_t pool)
 {
   using U = typename std::remove_extent_t<T>;
-  T * ptr = nullptr;
+  T * ptr{nullptr};
 
   CHECK_CUDA_ERROR(
     cudaMallocFromPoolAsync(reinterpret_cast<void **>(&ptr), sizeof(U) * n, pool, stream));
@@ -92,19 +145,20 @@ template <typename T>
 using CudaUniquePtrHost = std::unique_ptr<T, CudaDeleterHost>;
 
 template <typename T>
-typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtrHost<T>> make_unique_host(
+typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtrHost<T>> make_unique_host(
   const std::size_t n, unsigned int flag)
 {
   using U = typename std::remove_extent_t<T>;
-  U * p;
+  U * p{nullptr};
   CHECK_CUDA_ERROR(::cudaHostAlloc(reinterpret_cast<void **>(&p), sizeof(U) * n, flag));
   return CudaUniquePtrHost<T>{p};
 }
 
 template <typename T>
-CudaUniquePtrHost<T> make_unique_host(unsigned int flag = cudaHostAllocDefault)
+typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtrHost<T>> make_unique_host(
+  unsigned int flag = cudaHostAllocDefault)
 {
-  T * p;
+  T * p{nullptr};
   CHECK_CUDA_ERROR(::cudaHostAlloc(reinterpret_cast<void **>(&p), sizeof(T), flag));
   return CudaUniquePtrHost<T>{p};
 }
