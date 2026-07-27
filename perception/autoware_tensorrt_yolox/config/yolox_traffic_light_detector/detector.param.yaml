@@ -4,7 +4,7 @@ calibration_image_list_path: "" # Path to a file which contains path to images. 
 
 # refine segmentation mask by overlay roi class
 # disable when sematic segmentation accuracy is good enough
-is_roi_overlap_segmentation: true
+is_roi_overlap_segmentation: false
 
 # minimum existence_probability of detected roi considered to replace segmentation
 overlap_roi_score_threshold: 0.3
