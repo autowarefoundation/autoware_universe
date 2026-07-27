@@ -1,5 +1,8 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_hazard_status_converter" exec="autoware_hazard_status_converter_node" name="hazard_status_converter">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(find-pkg-share autoware_hazard_status_converter)/config/hazard_status_converter.param.yaml"/>
     <remap from="~/diagnostics_graph" to="/diagnostics_graph"/>
     <remap from="~/hazard_status" to="/system/emergency/hazard_status"/>

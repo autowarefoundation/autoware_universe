@@ -15,6 +15,7 @@
 #include "converter.hpp"
 
 #include <memory>
+#include <utility>
 
 namespace autoware::diagnostic_graph_utils
 {
@@ -29,14 +30,14 @@ ConverterNode::ConverterNode(const rclcpp::NodeOptions & options) : Node("conver
 
 void ConverterNode::on_update(DiagGraph::ConstSharedPtr graph)
 {
-  DiagnosticArray array;
-  array.header.stamp = graph->updated_stamp();
+  auto array = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_array_);
+  array->header.stamp = graph->updated_stamp();
   for (const auto & unit : graph->units()) {
     if (unit->path_or_name().empty()) continue;
-    array.status.push_back(unit->create_diagnostic_status());
+    array->status.push_back(unit->create_diagnostic_status());
   }
 
-  pub_array_->publish(array);
+  pub_array_->publish(std::move(array));
 }
 
 }  // namespace autoware::diagnostic_graph_utils
