@@ -95,7 +95,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     container = ComposableNodeContainer(
-        name=NODE_NAME + "_container",
+        name=POINTCLOUD_CONTAINER_NAME.name,
         namespace=ns,
         package=LaunchConfiguration("container_package"),
         executable=LaunchConfiguration("container_executable"),
