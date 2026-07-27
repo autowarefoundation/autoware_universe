@@ -88,7 +88,7 @@ bool hasDirectionChangeTag(const lanelet::ConstLanelet & lanelet)
 }
 }  // namespace
 
-void DefaultPlanner::initialize_common(rclcpp::Node * node)
+void DefaultPlanner::initialize_common(autoware::agnocast_wrapper::Node * node)
 {
   is_graph_ready_ = false;
   node_ = node;
@@ -107,18 +107,19 @@ void DefaultPlanner::initialize_common(rclcpp::Node * node)
   route_handler_.setAllowArea(param_.allow_area);
 }
 
-void DefaultPlanner::initialize(rclcpp::Node * node)
+void DefaultPlanner::initialize(autoware::agnocast_wrapper::Node * node)
 {
   initialize_common(node);
   map_subscriber_ = node_->create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{10}.transient_local(),
-    std::bind(&DefaultPlanner::map_callback, this, std::placeholders::_1));
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) msg) { map_callback(*msg); });
 }
 
-void DefaultPlanner::initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg)
+void DefaultPlanner::initialize(
+  autoware::agnocast_wrapper::Node * node, const LaneletMapBin::ConstSharedPtr msg)
 {
   initialize_common(node);
-  map_callback(msg);
+  map_callback(*msg);
 }
 
 bool DefaultPlanner::ready() const
@@ -126,9 +127,9 @@ bool DefaultPlanner::ready() const
   return is_graph_ready_;
 }
 
-void DefaultPlanner::map_callback(const LaneletMapBin::ConstSharedPtr msg)
+void DefaultPlanner::map_callback(const LaneletMapBin & msg)
 {
-  route_handler_.setMap(*msg);
+  route_handler_.setMap(msg);
   is_graph_ready_ = true;
 }
 

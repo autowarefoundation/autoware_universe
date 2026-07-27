@@ -47,8 +47,9 @@ class DefaultPlanner : public mission_planner_universe::PlannerPlugin
 public:
   DefaultPlanner() : vehicle_info_(), is_graph_ready_(false), param_(), node_(nullptr) {}
 
-  void initialize(rclcpp::Node * node) override;
-  void initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg) override;
+  void initialize(autoware::agnocast_wrapper::Node * node) override;
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, const LaneletMapBin::ConstSharedPtr msg) override;
   [[nodiscard]] bool ready() const override;
   LaneletRoute plan(const RoutePoints & points) override;
   void updateRoute(const PlannerPlugin::LaneletRoute & route) override;
@@ -71,12 +72,12 @@ protected:
 
   DefaultPlannerParameters param_;
 
-  rclcpp::Node * node_;
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr map_subscriber_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr pub_goal_footprint_marker_;
+  autoware::agnocast_wrapper::Node * node_;
+  AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) map_subscriber_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) pub_goal_footprint_marker_;
 
-  void initialize_common(rclcpp::Node * node);
-  void map_callback(const LaneletMapBin::ConstSharedPtr msg);
+  void initialize_common(autoware::agnocast_wrapper::Node * node);
+  void map_callback(const LaneletMapBin & msg);
 
   /**
    * @brief check if the goal_footprint is within the lanelets closest to the goal plus the
