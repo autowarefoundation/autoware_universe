@@ -38,7 +38,7 @@ void LatencyValidator::validate(
   ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const
 {
   res.latency = (node.now() - control_cmd.stamp).seconds();
-  res.is_valid_latency = res.latency < latency_validator_params_.nominal_latency;
+  res.is_valid_latency = res.latency < params_.nominal_latency;
 }
 
 void TrajectoryValidator::validate(
