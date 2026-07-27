@@ -25,12 +25,7 @@
 namespace autoware::multi_object_tracker
 {
 
-// Heading-sign belief with two separated evidence sources. Detection-yaw votes accumulate in a
-// scalar OU-Kalman agreement estimate (+1 = sign correct, -1 = wrong) that relaxes toward an
-// uninformed prior over time; the tracked longitudinal velocity contributes memorylessly at
-// decision time, weighted by speed and velocity certainty. A confidently negative fused
-// agreement triggers a 180° flip, and negation on flip provides hysteresis against oscillation.
-// Class-independent tuning constants shared by every vehicle tracker.
+// Tuning constants for OrientationSignBelief; one set applies to all vehicle classes.
 struct OrientationSignBeliefParams
 {
   double tau{3.0};                 // [s] evidence memory time constant
@@ -45,6 +40,11 @@ struct OrientationSignBeliefParams
   double flip_min_agreement{0.2};  // [-] fused-agreement magnitude floor for flipping
 };
 
+// Heading-sign belief with two separated evidence sources. Detection-yaw votes accumulate in a
+// scalar OU-Kalman agreement estimate (+1 = sign correct, -1 = wrong) that relaxes toward an
+// uninformed prior over time; the tracked longitudinal velocity contributes memorylessly at
+// decision time, weighted by speed and velocity certainty. A confidently negative fused
+// agreement triggers a 180° flip, and negation on flip provides hysteresis against oscillation.
 class OrientationSignBelief
 {
 public:
