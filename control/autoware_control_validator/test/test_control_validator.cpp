@@ -104,7 +104,7 @@ protected:
   }
   void TearDown() override { rclcpp::shutdown(); }
 
-  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<ControlValidator> node_;
   std::shared_ptr<TrajectoryValidator> trajectory_validator_;
 };
 
@@ -207,7 +207,7 @@ protected:
   }
   void TearDown() override { rclcpp::shutdown(); }
 
-  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<ControlValidator> node_;
   std::shared_ptr<AccelerationValidator> acceleration_validator_;
 };
 

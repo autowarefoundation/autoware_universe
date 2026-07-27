@@ -8,6 +8,7 @@ ament_auto_add_library(autoware_control_validator_helpers SHARED
   src/utils.cpp
   src/debug_marker.cpp
 )
+autoware_agnocast_wrapper_setup(autoware_control_validator_helpers)
 
 # control validator
 ament_auto_add_library(autoware_control_validator_component SHARED
@@ -15,9 +16,11 @@ ament_auto_add_library(autoware_control_validator_component SHARED
   src/control_validator.cpp
 )
 target_link_libraries(autoware_control_validator_component autoware_control_validator_helpers)
-rclcpp_components_register_node(autoware_control_validator_component
+autoware_agnocast_wrapper_register_node(autoware_control_validator_component
   PLUGIN "autoware::control_validator::ControlValidator"
   EXECUTABLE autoware_control_validator_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 rosidl_generate_interfaces(
@@ -36,7 +39,7 @@ else()
   target_link_libraries(autoware_control_validator_component "${cpp_typesupport_target}")
 endif()
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
   file(GLOB_RECURSE TEST_SOURCES test/*.cpp)
   ament_add_gtest(test_autoware_control_validator
     ${TEST_SOURCES}
