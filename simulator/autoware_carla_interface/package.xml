@@ -19,7 +19,10 @@
   <exec_depend>python3-pyproj</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <depend>autoware_adapi_v1_msgs</depend>
-  <depend>autoware_lanelet2_extension_python</depend>
+  <!-- Python-only dependency (used from carla_ros.py / splatsim). Keep it as an
+       exec_depend so ament_auto does not find_package() it at build time, which
+       would trip its ament_cmake export in downstream configuration. -->
+  <exec_depend>autoware_lanelet2_extension_python</exec_depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>cv_bridge</depend>
