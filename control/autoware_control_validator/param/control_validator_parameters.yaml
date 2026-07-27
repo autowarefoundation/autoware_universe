@@ -12,6 +12,9 @@ control_validator:
     description: Low-pass filter gain for filtering vehicle and target velocity.
 
   acceleration_validator:
+    acc_lpf_gain:
+      type: double
+      description: Low-pass filter gain for the acceleration validator.
     thresholds:
       acc_error_offset:
         type: double
@@ -19,9 +22,6 @@ control_validator:
       acc_error_scale:
         type: double
         description: Scale threshold to validate the vehicle acceleration.
-    acc_lpf_gain:
-      type: double
-      description: Low-pass filter gain for the acceleration validator.
 
   latency_validator:
     thresholds:
@@ -37,18 +37,18 @@ control_validator:
 
   overrun_validator:
     thresholds:
+      assumed_delay_time:
+        type: double
+        description: Assumed delay for over run estimation [s].
+      assumed_limit_acc:
+        type: double
+        description: Assumed acceleration for over run estimation [m/s^2].
       overrun_stop_point_dist:
         type: double
         description: Threshold distance to overrun stop point [m].
       will_overrun_stop_point_dist:
         type: double
         description: Threshold distance to predict overrun of the stop point [m].
-      assumed_limit_acc:
-        type: double
-        description: Assumed acceleration for over run estimation [m/s^2].
-      assumed_delay_time:
-        type: double
-        description: Assumed delay for over run estimation [s].
 
   trajectory_validator:
     thresholds:
