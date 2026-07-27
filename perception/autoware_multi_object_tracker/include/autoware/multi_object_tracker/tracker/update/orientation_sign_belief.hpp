@@ -42,7 +42,7 @@ struct OrientationSignBeliefParams
 
 // Heading-sign belief with two separated evidence sources. Detection-yaw votes accumulate in a
 // scalar OU-Kalman agreement estimate (+1 = sign correct, -1 = wrong) that relaxes toward an
-// uninformed prior over time; the tracked longitudinal velocity contributes memorylessly at
+// uninformed prior over time; the tracked longitudinal velocity contributes memory-less at
 // decision time, weighted by speed and velocity certainty. A confidently negative fused
 // agreement triggers a 180° flip, and negation on flip provides hysteresis against oscillation.
 class OrientationSignBelief
