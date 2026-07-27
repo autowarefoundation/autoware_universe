@@ -207,7 +207,7 @@ Polygon2d convertObjToPolygon(const PredictedObject & obj)
 
 std::optional<geometry_msgs::msg::TransformStamped> getTransform(
   const std::string & target_frame, const std::string & source_frame,
-  const tf2_ros::Buffer & tf_buffer, const rclcpp::Logger & logger)
+  const autoware::agnocast_wrapper::Buffer & tf_buffer, const rclcpp::Logger & logger)
 {
   geometry_msgs::msg::TransformStamped tf_current_pose;
   try {
