@@ -142,6 +142,7 @@ TEST_F(LabelClusterConfigBehavior, AcceptsLowercaseConfiguredLabels)
     rclcpp::Parameter("class_names.truck", std::string("truck")),
     rclcpp::Parameter("class_names.tractor_unit", std::string("trailer")),
     rclcpp::Parameter("class_names.pedestrian", std::string("pedestrian")),
+    rclcpp::Parameter("label_cluster_params.pedestrian.min_probability", 0.6),
     rclcpp::Parameter("label_cluster_params.pedestrian.tolerance_m", 0.3),
     rclcpp::Parameter(
       "confusable_label_groups.truck_trailer.labels", std::vector<std::string>{"truck", "trailer"}),
@@ -157,6 +158,7 @@ TEST_F(LabelClusterConfigBehavior, AcceptsLowercaseConfiguredLabels)
   EXPECT_TRUE(node->has_parameter("class_names.truck"));
   EXPECT_TRUE(node->has_parameter("class_names.tractor_unit"));
   EXPECT_TRUE(node->has_parameter("class_names.pedestrian"));
+  EXPECT_TRUE(node->has_parameter("label_cluster_params.pedestrian.min_probability"));
   EXPECT_TRUE(node->has_parameter("label_cluster_params.pedestrian.tolerance_m"));
   EXPECT_TRUE(node->has_parameter("confusable_label_groups.truck_trailer.labels"));
   EXPECT_TRUE(node->has_parameter("confusable_label_groups.truck_trailer.cross_label_tolerance_m"));

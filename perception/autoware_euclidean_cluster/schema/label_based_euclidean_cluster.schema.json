@@ -49,7 +49,7 @@
         },
         "min_probability": {
           "type": "number",
-          "description": "Minimum semantic probability required for a point to be used.",
+          "description": "Minimum average semantic probability required for an output cluster.",
           "default": 0.3
         },
         "class_names": {
@@ -78,7 +78,7 @@
         },
         "label_cluster_params": {
           "type": "object",
-          "description": "Optional per-label overrides. Keys are label names (car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, unknown).",
+          "description": "Optional per-label clustering and cluster filtering overrides. Keys are label names (car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, unknown).",
           "properties": {
             "unknown": { "$ref": "#/definitions/cluster_override_params" },
             "car": { "$ref": "#/definitions/cluster_override_params" },
@@ -117,7 +117,7 @@
     },
     "cluster_override_params": {
       "type": "object",
-      "description": "Per-label overrides for VoxelGridBasedEuclideanCluster. Omitted keys fall back to the global default.",
+      "description": "Per-label overrides for VoxelGridBasedEuclideanCluster and output cluster filtering. Omitted keys fall back to the global default.",
       "properties": {
         "use_height": { "type": "boolean" },
         "tolerance_m": { "type": "number" },
@@ -126,7 +126,8 @@
         "min_points_per_voxel": { "type": "integer" },
         "large_cluster_voxel_count_threshold": { "type": "integer" },
         "large_cluster_max_points_per_voxel": { "type": "integer" },
-        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 }
+        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 },
+        "min_probability": { "type": "number" }
       },
       "additionalProperties": false
     },

@@ -256,26 +256,22 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   const auto max_voxels_per_cluster = static_cast<int>(
     autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_voxels_per_cluster"));
 
-  auto default_cluster = std::make_shared<VoxelGridBasedEuclideanCluster>(
-    use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
-    max_voxels_per_cluster);
+  const ClusterOptions default_options{
+    std::make_shared<VoxelGridBasedEuclideanCluster>(
+      use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
+      large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+      max_voxels_per_cluster),
+    min_probability};
 
-  // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters
-  std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>>
-    label_cluster_executers;
+  // Build effective per-label options from label_cluster_params.<label_name>.* parameters.
+  // Give every configured label its own executor so future executor-local caches or buffers cannot
+  // leak state across labels, even when a block only overrides output filtering.
+  std::unordered_map<std::uint8_t, ClusterOptions> label_options;
   {
     for (const auto & entry : load_label_cluster_parameter_prefixes(options)) {
       const auto & label_name = entry.first;
       const auto & label_prefix = entry.second;
       auto has = [&](const std::string & key) { return this->has_parameter(label_prefix + key); };
-      if (
-        !has("tolerance_m") && !has("min_points_per_cluster") && !has("use_height") &&
-        !has("voxel_leaf_size_m") && !has("min_points_per_voxel") &&
-        !has("large_cluster_voxel_count_threshold") && !has("large_cluster_max_points_per_voxel") &&
-        !has("max_voxels_per_cluster")) {
-        continue;
-      }
 
       auto get_bool = [&](const std::string & key, bool def) -> bool {
         return has(key) ? this->get_parameter(label_prefix + key).as_bool() : def;
@@ -300,16 +296,21 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       };
 
       const auto label = object_recognition_utils::toLabel(normalize_object_label_name(label_name));
-      label_cluster_executers[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
-        get_bool("use_height", use_height),
-        get_int("min_points_per_cluster", min_points_per_cluster),
-        get_float("tolerance_m", tolerance), get_float("voxel_leaf_size_m", voxel_leaf_size),
-        get_int("min_points_per_voxel", min_points_per_voxel),
-        get_int("large_cluster_voxel_count_threshold", large_cluster_voxel_count_threshold),
-        get_int("large_cluster_max_points_per_voxel", large_cluster_max_points_per_voxel),
-        get_int("max_voxels_per_cluster", max_voxels_per_cluster));
+      label_options.emplace(
+        label,
+        ClusterOptions{
+          std::make_shared<VoxelGridBasedEuclideanCluster>(
+            get_bool("use_height", use_height),
+            get_int("min_points_per_cluster", min_points_per_cluster),
+            get_float("tolerance_m", tolerance), get_float("voxel_leaf_size_m", voxel_leaf_size),
+            get_int("min_points_per_voxel", min_points_per_voxel),
+            get_int("large_cluster_voxel_count_threshold", large_cluster_voxel_count_threshold),
+            get_int("large_cluster_max_points_per_voxel", large_cluster_max_points_per_voxel),
+            get_int("max_voxels_per_cluster", max_voxels_per_cluster)),
+          get_float("min_probability", min_probability)});
 
-      RCLCPP_INFO(get_logger(), "Using custom cluster params for label '%s'", label_name.c_str());
+      RCLCPP_INFO(
+        get_logger(), "Using per-label cluster options for label '%s'", label_name.c_str());
     }
   }
 
@@ -324,8 +325,8 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
 
   // Create the core clustering processor
   processor_ = std::make_unique<LabelBasedEuclideanCluster>(
-    class_id_to_object_label, min_probability, shape_policy, default_cluster,
-    label_cluster_executers, shape_estimator, confusable_groups);
+    class_id_to_object_label, shape_policy, default_options, label_options, shape_estimator,
+    confusable_groups);
 
   // Set up ROS pub/sub
   using std::placeholders::_1;

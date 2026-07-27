@@ -9,7 +9,12 @@
     large_cluster_voxel_count_threshold: 50
     large_cluster_max_points_per_voxel: 100
     max_voxels_per_cluster: 2000
-    # Per-label clustering parameter overrides.
+
+    # Cluster filtering by average confidence
+    min_probability: 0.3
+
+    # Per-label clustering and filtering parameter overrides.
+    # Optional min_probability in each label block overrides global min_probability.
     label_cluster_params:
       pedestrian:
         tolerance_m: 0.3
@@ -42,9 +47,6 @@
         labels: ["truck", "trailer"]
         cross_label_tolerance_m: 0.5
         max_merged_size_m: 25.0
-
-    # Point filtering by semantic confidence
-    min_probability: 0.3
 
     # Semantic label selection and mapping
     # YAML declaration order is treated as the input class_id order.
