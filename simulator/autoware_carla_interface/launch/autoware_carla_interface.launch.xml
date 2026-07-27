@@ -36,11 +36,11 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
     <!-- SplatSim integration (optional) -->
-    <arg name="render_with_splatsim" default="true" description="Enable splatsim rendering via Docker + gRPC"/>
+    <arg name="render_with_splatsim" default="false" description="Enable splatsim rendering via Docker + gRPC"/>
     <arg name="splatsim_render_camera" default="false" description="Render cameras via splatsim (false = cameras fully off in splatsim mode)"/>
     <!-- The splatsim geographic origin is derived from the scene's own
          world.ecef_anchor (stored in the .usdz), so no lanelet2 map is needed. -->
-    <arg name="splatsim_tileset_path" description="Host path to the 3DGS scene (.usdz containing scene.json with world.ecef_anchor)"/>
+    <arg name="splatsim_tileset_path" default="" description="Host path to the 3DGS scene (.usdz containing scene.json with world.ecef_anchor); required only when render_with_splatsim:=true"/>
     <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
     <arg name="splatsim_grpc_port" default="50051"/>
     <arg name="splatsim_use_sh" default="true"/>
