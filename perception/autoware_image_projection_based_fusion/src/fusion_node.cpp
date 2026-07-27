@@ -148,17 +148,6 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
 
   // debugger
   debug_mode_ = declare_parameter<bool>("debug_mode");
-  // The debugger uses image_transport, which requires a real rclcpp::Node and cannot run under an
-  // AgnocastOnly executor, so debug_mode is unsupported when the node is agnocast-backed.
-#ifdef USE_AGNOCAST_ENABLED
-  if (debug_mode_ && autoware::agnocast_wrapper::use_agnocast()) {
-    RCLCPP_WARN(
-      get_logger(),
-      "debug_mode is not supported in Agnocast mode (image_transport requires rclcpp::Node). "
-      "Forcing debug_mode=false.");
-    debug_mode_ = false;
-  }
-#endif
   if (debug_mode_) {
     std::vector<std::string> input_camera_topics;
     input_camera_topics.resize(rois_number_);
@@ -169,16 +158,8 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     }
     auto image_buffer_size =
       static_cast<std::size_t>(declare_parameter<int32_t>("image_buffer_size"));
-#ifdef USE_AGNOCAST_ENABLED
-    // Guarded above: in agnocast mode debug_mode_ is forced false, so this branch only runs
-    // when the underlying node is rclcpp::Node and get_rclcpp_node() is safe.
-    auto rclcpp_node = this->get_rclcpp_node();
-    debugger_ = std::make_shared<Debugger>(
-      rclcpp_node.get(), rois_number_, image_buffer_size, input_camera_topics);
-#else
     debugger_ =
       std::make_shared<Debugger>(this, rois_number_, image_buffer_size, input_camera_topics);
-#endif
 
     // input topic timing publisher
     debug_internal_pub_ =
