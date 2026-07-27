@@ -205,8 +205,7 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineOnVertexIsNoOp)
 // A query point offset laterally from a straight polyline snaps to the foot of the perpendicular.
 TEST_F(UtilsTest, ProjectPoseOntoPolylineLateralOffset)
 {
-  const std::vector<Eigen::Matrix4d> polyline{
-    make_pose(0.0, 0.0, 0.0), make_pose(10.0, 0.0, 0.0)};
+  const std::vector<Eigen::Matrix4d> polyline{make_pose(0.0, 0.0, 0.0), make_pose(10.0, 0.0, 0.0)};
 
   const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(3.0, 2.0, polyline).pose;
 
@@ -218,8 +217,7 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineLateralOffset)
 // A query point past the end of the polyline is clamped to the closest endpoint.
 TEST_F(UtilsTest, ProjectPoseOntoPolylineClampsToEndpoint)
 {
-  const std::vector<Eigen::Matrix4d> polyline{
-    make_pose(0.0, 0.0, 0.0), make_pose(10.0, 0.0, 0.0)};
+  const std::vector<Eigen::Matrix4d> polyline{make_pose(0.0, 0.0, 0.0), make_pose(10.0, 0.0, 0.0)};
 
   const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(15.0, 5.0, polyline).pose;
 
