@@ -183,8 +183,7 @@ class SplatSimDockerManager:
             return
         if self._reused:
             _log(
-                f"Container '{self._container_name}' was reused, "
-                f"leaving it running on shutdown"
+                f"Container '{self._container_name}' was reused, " f"leaving it running on shutdown"
             )
             self._container = None
             return
