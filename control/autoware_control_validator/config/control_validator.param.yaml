@@ -43,7 +43,7 @@
       # Longer time constant to avoid reacting to instantaneous velocity changes
       vel_lpf_gain: 0.985 # Time constant 2.0s at 30msec sampling period
 
-    trajectory_validator:
+    yaw_validator:
       thresholds:
         yaw_deviation_error: 1.0
         yaw_deviation_warn: 0.5

@@ -61,21 +61,15 @@ using Params = ::control_validator::Params;
 class LatencyValidator
 {
 public:
-  explicit LatencyValidator(const Params & params)
-  : latency_validator_params_(params.latency_validator)
-  {
-  }
+  explicit LatencyValidator(const Params & params) : params_(params.latency_validator) {}
 
-  void update_parameters(const Params & params)
-  {
-    latency_validator_params_ = params.latency_validator;
-  }
+  void update_parameters(const Params & params) { params_ = params.latency_validator; }
 
   void validate(
     ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const;
 
 private:
-  Params::LatencyValidator latency_validator_params_;
+  Params::LatencyValidator params_;
 };
 
 /**
@@ -86,22 +80,16 @@ private:
 class TrajectoryValidator
 {
 public:
-  explicit TrajectoryValidator(const Params & params)
-  : trajectory_validator_params_(params.trajectory_validator)
-  {
-  }
+  explicit TrajectoryValidator(const Params & params) : params_(params.trajectory_validator) {}
 
-  void update_parameters(const Params & params)
-  {
-    trajectory_validator_params_ = params.trajectory_validator;
-  }
+  void update_parameters(const Params & params) { params_ = params.trajectory_validator; }
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
     const Trajectory & reference_trajectory);
 
 private:
-  Params::TrajectoryValidator trajectory_validator_params_;
+  Params::TrajectoryValidator params_;
   std::optional<Trajectory> prev_reference_trajectory_;
 };
 
@@ -113,15 +101,13 @@ class LateralJerkValidator
 {
 public:
   LateralJerkValidator(const rclcpp::Logger & logger, const Params & params)
-  : logger_{logger},
-    lateral_jerk_validator_params_{params.lateral_jerk_validator},
-    measured_vel_lpf{params.vel_lpf_gain}
+  : logger_{logger}, params_{params.lateral_jerk_validator}, measured_vel_lpf{params.vel_lpf_gain}
   {
   }
 
   void update_parameters(const Params & params)
   {
-    lateral_jerk_validator_params_ = params.lateral_jerk_validator;
+    params_ = params.lateral_jerk_validator;
     measured_vel_lpf.setGain(params.vel_lpf_gain);
   }
 
@@ -131,7 +117,7 @@ public:
 
 private:
   rclcpp::Logger logger_;
-  Params::LateralJerkValidator lateral_jerk_validator_params_;
+  Params::LateralJerkValidator params_;
   std::unique_ptr<Control> prev_control_cmd_{};
   autoware::signal_processing::LowpassFilter1d measured_vel_lpf;
 };
@@ -145,7 +131,7 @@ class AccelerationValidator
 public:
   friend class AccelerationValidatorTest;
   explicit AccelerationValidator(const Params & params)
-  : acceleration_validator_params_{params.acceleration_validator},
+  : params_{params.acceleration_validator},
     desired_acc_lpf{params.acceleration_validator.acc_lpf_gain},
     measured_acc_lpf{params.acceleration_validator.acc_lpf_gain}
   {
@@ -153,9 +139,9 @@ public:
 
   void update_parameters(const Params & params)
   {
-    acceleration_validator_params_ = params.acceleration_validator;
-    desired_acc_lpf.setGain(acceleration_validator_params_.acc_lpf_gain);
-    measured_acc_lpf.setGain(acceleration_validator_params_.acc_lpf_gain);
+    params_ = params.acceleration_validator;
+    desired_acc_lpf.setGain(params_.acc_lpf_gain);
+    measured_acc_lpf.setGain(params_.acc_lpf_gain);
   }
 
   void validate(
@@ -165,7 +151,7 @@ public:
 private:
   bool is_in_error_range() const;
 
-  Params::AccelerationValidator acceleration_validator_params_;
+  Params::AccelerationValidator params_;
   autoware::signal_processing::LowpassFilter1d desired_acc_lpf;
   autoware::signal_processing::LowpassFilter1d measured_acc_lpf;
 };
@@ -178,7 +164,7 @@ class VelocityValidator
 {
 public:
   explicit VelocityValidator(const Params & params)
-  : velocity_validator_params_{params.velocity_validator},
+  : params_{params.velocity_validator},
     vehicle_vel_lpf{params.vel_lpf_gain},
     target_vel_lpf{params.vel_lpf_gain},
     over_velocity_vehicle_vel_lpf{params.velocity_validator.vel_lpf_gain},
@@ -188,11 +174,11 @@ public:
 
   void update_parameters(const Params & params)
   {
-    velocity_validator_params_ = params.velocity_validator;
+    params_ = params.velocity_validator;
     vehicle_vel_lpf.setGain(params.vel_lpf_gain);
     target_vel_lpf.setGain(params.vel_lpf_gain);
-    over_velocity_vehicle_vel_lpf.setGain(velocity_validator_params_.vel_lpf_gain);
-    over_velocity_target_vel_lpf.setGain(velocity_validator_params_.vel_lpf_gain);
+    over_velocity_vehicle_vel_lpf.setGain(params_.vel_lpf_gain);
+    over_velocity_target_vel_lpf.setGain(params_.vel_lpf_gain);
   }
 
   void validate(
@@ -200,7 +186,7 @@ public:
     const Odometry & kinematics);
 
 private:
-  Params::VelocityValidator velocity_validator_params_;
+  Params::VelocityValidator params_;
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
   autoware::signal_processing::LowpassFilter1d target_vel_lpf;
   autoware::signal_processing::LowpassFilter1d over_velocity_vehicle_vel_lpf;
@@ -215,13 +201,13 @@ class OverrunValidator
 {
 public:
   explicit OverrunValidator(const Params & params)
-  : overrun_validator_params_{params.overrun_validator}, vehicle_vel_lpf{params.vel_lpf_gain}
+  : params_{params.overrun_validator}, vehicle_vel_lpf{params.vel_lpf_gain}
   {
   }
 
   void update_parameters(const Params & params)
   {
-    overrun_validator_params_ = params.overrun_validator;
+    params_ = params.overrun_validator;
     vehicle_vel_lpf.setGain(params.vel_lpf_gain);
   }
 
@@ -230,7 +216,7 @@ public:
     const Odometry & kinematics);
 
 private:
-  Params::OverrunValidator overrun_validator_params_;
+  Params::OverrunValidator params_;
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
 };
 
@@ -241,16 +227,16 @@ private:
 class YawValidator
 {
 public:
-  explicit YawValidator(const Params & params) : yaw_validator_params_(params.yaw_validator) {}
+  explicit YawValidator(const Params & params) : params_(params.yaw_validator) {}
 
-  void update_parameters(const Params & params) { yaw_validator_params_ = params.yaw_validator; }
+  void update_parameters(const Params & params) { params_ = params.yaw_validator; }
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
     const Odometry & kinematics) const;
 
 private:
-  Params::YawValidator yaw_validator_params_;
+  Params::YawValidator params_;
 };
 
 /**
