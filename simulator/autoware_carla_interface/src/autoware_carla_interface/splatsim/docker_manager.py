@@ -173,15 +173,28 @@ class SplatSimDockerManager:
             self._container_dead = True
 
     def stop(self) -> None:
-        """Stop and remove the container (idempotent)."""
-        if self._container is not None:
-            try:
-                self._container.stop(timeout=10)
-                _log(f"Container stopped: {self._container.short_id}")
-            except Exception as exc:
-                _log(f"Error stopping container: {exc}")
-            try:
-                self._container.remove(force=True)
-            except Exception:
-                pass
+        """Stop and remove the container (idempotent).
+
+        A container that was reused (i.e. started externally before the
+        bridge) is left running: this manager did not create it, so it must
+        not tear it down on shutdown.
+        """
+        if self._container is None:
+            return
+        if self._reused:
+            _log(
+                f"Container '{self._container_name}' was reused, "
+                f"leaving it running on shutdown"
+            )
             self._container = None
+            return
+        try:
+            self._container.stop(timeout=10)
+            _log(f"Container stopped: {self._container.short_id}")
+        except Exception as exc:
+            _log(f"Error stopping container: {exc}")
+        try:
+            self._container.remove(force=True)
+        except Exception:
+            pass
+        self._container = None
