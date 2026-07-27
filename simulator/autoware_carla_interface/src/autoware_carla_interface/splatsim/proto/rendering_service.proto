@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package splatsim.v1;
+
+// ── Shared sub-messages ──────────────────────────────────────────────
+
+message Timestamp {
+  int32 sec = 1;
+  uint32 nanosec = 2;
+}
+
+message CameraIntrinsics {
+  double fx = 1;
+  double fy = 2;
+  double cx = 3;
+  double cy = 4;
+  uint32 width = 5;
+  uint32 height = 6;
+}
+
+message Vector3 {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message Quaternion {
+  // wxyz convention (matching gsplat / splatsim convention).
+  double w = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+}
+
+message Pose {
+  Vector3 position = 1;
+  Quaternion rotation = 2;
+}
+
+// ── Initialization ───────────────────────────────────────────────────
+
+message InitializeRequest {
+  // Scene
+  string scene_path = 1;  // path to a v2 scene USDZ (.usdz)
+  bool use_sh = 2;
+
+  // Camera
+  CameraIntrinsics intrinsics = 3;
+  Pose initial_pose = 4;
+
+  // Rendering schedule
+  double frame_rate = 5;          // Hz (e.g. 30.0)
+  Timestamp clock_initial = 6;    // starting time for frame scheduling
+
+  // DDS publishing
+  string image_topic = 7;
+  string camera_info_topic = 8;
+  string frame_id = 9;
+
+  // Renderer settings
+  float near_plane = 10;
+  float far_plane = 11;
+  string device = 12;             // "cuda" or "cuda:0" etc.
+  Vector3 background_color = 13;  // RGB [0, 1]
+  string compress_format = 14;    // "jpeg", "png", or "" for raw Image
+}
+
+message InitializeResponse {
+  bool success = 1;
+  string message = 2;
+  Vector3 scene_origin = 3;      // re-centering origin (mean of Gaussian positions)
+  Vector3 ecef_translation = 4;  // scene anchor ECEF translation
+  repeated double ecef_rotation = 5;  // scene anchor ECEF rotation (9 doubles, row-major 3x3)
+}
+
+// ── Camera data streaming ────────────────────────────────────────────
+
+message CameraData {
+  Timestamp stamp = 1;
+  Pose pose = 2;
+}
+
+message StreamSummary {
+  uint64 frames_rendered = 1;
+  uint64 poses_received = 2;
+}
+
+// ── LiDAR data streaming ─────────────────────────────────────────────
+
+message LidarSensorConfig {
+  string name = 1;
+  // Built-in elevation table selector: "OT128" | "XT32" | "HDL64E" | ""
+  // (empty). A known model supplies a faithful default beam count / azimuth
+  // resolution / spin rate / range for any numeric field left at 0. When
+  // ``elevation_deg`` below is set it takes precedence over this.
+  string sensor_type = 2;
+  uint32 n_rows = 3;              // uniform-elevation beam count (fallback)
+  uint32 n_columns = 4;           // azimuth samples per revolution
+  double fps = 5;                 // spin rate (Hz); also the render cadence
+  double min_range_m = 6;
+  double max_range_m = 7;
+  // Sensor mount pose in the base_link frame (sensor-in-base). The rotation
+  // is a wxyz quaternion. No inversion is applied — this is the genuine
+  // sensor→base extrinsic.
+  Pose extrinsic = 8;
+  // Explicit per-beam elevation table in degrees, any order. When non-empty
+  // it overrides ``sensor_type`` and the uniform ``n_rows`` fallback.
+  repeated double elevation_deg = 9;
+  // DDS publishing.
+  string pointcloud_topic = 10;
+  string frame_id = 11;
+  // Return gating. 0 selects the server defaults (drop=0.5, alpha=0.1).
+  double drop_threshold = 12;
+  double alpha_threshold = 13;
+}
+
+message InitializeLidarRequest {
+  // The scene must already be loaded via Initialize.
+  LidarSensorConfig sensor = 1;
+}
+
+message LidarData {
+  Timestamp stamp = 1;
+  // base_link → world pose (position + wxyz quaternion). The server applies
+  // the sensor→base extrinsic from InitializeLidar internally.
+  Pose pose = 2;
+}
+
+// ── Service definition ───────────────────────────────────────────────
+
+service RenderingService {
+  // Load scene, create renderer and publishers. Blocks until ready.
+  rpc Initialize(InitializeRequest) returns (InitializeResponse);
+
+  // Client streams timestamped camera poses. Server renders at frame_rate
+  // cadence and publishes via DDS. Returns summary when stream closes.
+  rpc StreamCameraData(stream CameraData) returns (StreamSummary);
+
+  // Add a LiDAR sensor to the already-loaded scene. Call Initialize first.
+  rpc InitializeLidar(InitializeLidarRequest) returns (InitializeResponse);
+
+  // Client streams timestamped base_link poses. Server renders the LiDAR
+  // panorama at the sensor's spin rate and publishes sensor_msgs/PointCloud2
+  // via DDS. Returns summary when the stream closes.
+  rpc StreamLidarData(stream LidarData) returns (StreamSummary);
+}

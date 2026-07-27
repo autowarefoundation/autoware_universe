@@ -40,6 +40,35 @@ rclcpp_components_register_node(${PROJECT_NAME}_operation_mode_component
 )
 
 # ============================================================================
+# SplatSim gRPC proto (vendored from the tier4/splatsim release, generated here)
+# ============================================================================
+# rendering_service.proto is vendored from the pinned SplatSim release
+# (SPLATSIM_VERSION). The generated *_pb2*.py modules are NOT committed; they are
+# regenerated on every build so they stay in sync with the installed
+# protobuf/grpc runtime and no generated code is linted. The autoware build
+# sandbox has no outbound internet, so the proto is vendored rather than fetched;
+# refresh it with tools/update_splatsim_proto.sh when bumping SPLATSIM_VERSION.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+set(SPLATSIM_VERSION "v1.2.0")
+set(_splatsim_proto_dir "${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}/splatsim/proto")
+set(_splatsim_proto_file "${_splatsim_proto_dir}/rendering_service.proto")
+
+if(NOT EXISTS "${_splatsim_proto_file}")
+  message(FATAL_ERROR "SplatSim proto not found: ${_splatsim_proto_file}")
+endif()
+
+message(STATUS "Generating SplatSim gRPC stubs (${SPLATSIM_VERSION}) from ${_splatsim_proto_file}")
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_splatsim_proto.py"
+    --proto "${_splatsim_proto_file}"
+    --out-dir "${_splatsim_proto_dir}"
+  RESULT_VARIABLE _splatsim_gen_result)
+if(NOT _splatsim_gen_result EQUAL 0)
+  message(FATAL_ERROR "Failed to generate SplatSim proto Python modules")
+endif()
+
+# ============================================================================
 # Python Package Installation
 # ============================================================================
 
