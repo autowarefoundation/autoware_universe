@@ -62,7 +62,7 @@ namespace autoware::pointcloud_preprocessor
 {
 VoxelGridDownsampleFilterComponent::VoxelGridDownsampleFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("VoxelGridDownsampleFilter", options)
+: FilterBase("VoxelGridDownsampleFilter", options)
 {
   // set initial parameters
   {
