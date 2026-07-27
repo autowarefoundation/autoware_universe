@@ -33,7 +33,7 @@ struct DetectorParameters
   std::string label_path;
   std::string semseg_color_map_path;
   std::string roi_remap_path;
-  std::string roi_to_semseg_remap_path;
+  std::string roi_to_semantic_segmentation_remap_path;
   // kept so the ctor can construct a `ParameterReader` in the same mode when it
   // reads follow-up parameters (e.g. `build_only`).
   bool use_manifest{};
@@ -43,7 +43,7 @@ struct DetectorParameters
 //
 // Manifest mode (`config_dir` set): pulls values from the yaml files listed
 // in `<config_dir>/parameters.manifest.yaml`, and validates that path values are
-// relative to `config_dir` or `model_data_dir`.
+// relative to `config_dir` or `model_dir`.
 //
 // Classic mode (`config_dir` empty): declares each parameter individually so
 // the launcher's `<param>` overrides drive the values. Kept during the
@@ -53,15 +53,15 @@ DetectorParameters read_detector_parameters(rclcpp::Node & node)
   const auto config_dir = node.declare_parameter<std::string>("config_dir", "");
   DetectorParameters parameters;
   parameters.use_manifest = !config_dir.empty();
-  std::string model_data_dir;
+  std::string model_dir;
   if (parameters.use_manifest) {
-    model_data_dir = node.declare_parameter<std::string>("model_data_dir");
+    model_dir = node.declare_parameter<std::string>("model_dir");
     load_parameters_from_manifest(node, config_dir);
-    load_parameters_from_manifest(node, model_data_dir);
+    load_parameters_from_manifest(node, model_dir);
   } else {
     RCLCPP_WARN(
       node.get_logger(),
-      "Running in classic parameter mode. Set `config_dir` (and `model_data_dir`) "
+      "Running in classic parameter mode. Set `config_dir` (and `model_dir`) "
       "to switch to the manifest-driven layout.");
   }
 
@@ -90,17 +90,16 @@ DetectorParameters read_detector_parameters(rclcpp::Node & node)
     const auto join_or_empty = [](const std::filesystem::path & root, const std::string & rel) {
       return rel.empty() ? std::string{} : join_relative(root, rel);
     };
-    config.model_path = join_relative(model_data_dir, p.required("model_file").as_string());
-    parameters.label_path = join_relative(model_data_dir, p.required("label_file").as_string());
+    config.model_path = join_relative(model_dir, p.required("model_file").as_string());
+    parameters.label_path = join_relative(model_dir, p.required("label_file").as_string());
     parameters.semseg_color_map_path = join_or_empty(
-      model_data_dir,
-      p.optional("colormap_file", rclcpp::ParameterValue(std::string{})).as_string());
+      model_dir, p.optional("colormap_file", rclcpp::ParameterValue(std::string{})).as_string());
     parameters.roi_remap_path = join_or_empty(
-      model_data_dir,
-      p.optional("roi_remap_file", rclcpp::ParameterValue(std::string{})).as_string());
-    parameters.roi_to_semseg_remap_path = join_or_empty(
-      model_data_dir,
-      p.optional("roi_to_semseg_remap_file", rclcpp::ParameterValue(std::string{})).as_string());
+      model_dir, p.optional("roi_remap_file", rclcpp::ParameterValue(std::string{})).as_string());
+    parameters.roi_to_semantic_segmentation_remap_path = join_or_empty(
+      model_dir,
+      p.optional("roi_to_semantic_segmentation_remap_file", rclcpp::ParameterValue(std::string{}))
+        .as_string());
   } else {
     config.model_path = node.declare_parameter<std::string>("model_path");
     parameters.label_path = node.declare_parameter<std::string>("label_path");
@@ -108,7 +107,7 @@ DetectorParameters read_detector_parameters(rclcpp::Node & node)
       node.declare_parameter<std::string>("semantic_segmentation_color_map_path", "");
     // an empty remap path disables label remapping
     parameters.roi_remap_path = node.declare_parameter<std::string>("roi_remap_path");
-    parameters.roi_to_semseg_remap_path =
+    parameters.roi_to_semantic_segmentation_remap_path =
       node.declare_parameter<std::string>("roi_to_semantic_segmentation_remap_path", "");
   }
 
@@ -135,7 +134,8 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   // read the label / remap / color-map files into structured data outside the detector
   try {
     config.roi_labels = load_label_maps(
-      parameters.label_path, parameters.roi_remap_path, parameters.roi_to_semseg_remap_path);
+      parameters.label_path, parameters.roi_remap_path,
+      parameters.roi_to_semantic_segmentation_remap_path);
     config.semseg_color_map = load_segmentation_colormap(parameters.semseg_color_map_path);
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load label files: %s", e.what());
