@@ -11,24 +11,6 @@ control_validator:
     type: double
     description: Low-pass filter gain for filtering vehicle and target velocity.
 
-  latency_validator:
-    thresholds:
-      nominal_latency:
-        type: double
-        description: Threshold of the control latency [s].
-
-  trajectory_validator:
-    thresholds:
-      max_distance_deviation:
-        type: double
-        description: Invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m].
-
-  lateral_jerk_validator:
-    thresholds:
-      lateral_jerk:
-        type: double
-        description: Invalid threshold of the lateral jerk for steering rate validation [m/s^3].
-
   acceleration_validator:
     thresholds:
       acc_error_offset:
@@ -40,6 +22,39 @@ control_validator:
     acc_lpf_gain:
       type: double
       description: Low-pass filter gain for the acceleration validator.
+
+  latency_validator:
+    thresholds:
+      nominal_latency:
+        type: double
+        description: Threshold of the control latency [s].
+
+  lateral_jerk_validator:
+    thresholds:
+      lateral_jerk:
+        type: double
+        description: Invalid threshold of the lateral jerk for steering rate validation [m/s^3].
+
+  overrun_validator:
+    thresholds:
+      overrun_stop_point_dist:
+        type: double
+        description: Threshold distance to overrun stop point [m].
+      will_overrun_stop_point_dist:
+        type: double
+        description: Threshold distance to predict overrun of the stop point [m].
+      assumed_limit_acc:
+        type: double
+        description: Assumed acceleration for over run estimation [m/s^2].
+      assumed_delay_time:
+        type: double
+        description: Assumed delay for over run estimation [s].
+
+  trajectory_validator:
+    thresholds:
+      max_distance_deviation:
+        type: double
+        description: Invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m].
 
   velocity_validator: # previously over_velocity
     hold_velocity_error_until_stop:
@@ -58,21 +73,6 @@ control_validator:
     vel_lpf_gain:
       type: double
       description: Low-pass filter gain for filtering vehicle and target velocity in the over velocity check.
-
-  overrun_validator:
-    thresholds:
-      overrun_stop_point_dist:
-        type: double
-        description: Threshold distance to overrun stop point [m].
-      will_overrun_stop_point_dist:
-        type: double
-        description: Threshold distance to predict overrun of the stop point [m].
-      assumed_limit_acc:
-        type: double
-        description: Assumed acceleration for over run estimation [m/s^2].
-      assumed_delay_time:
-        type: double
-        description: Assumed delay for over run estimation [s].
 
   yaw_validator:
     thresholds:
