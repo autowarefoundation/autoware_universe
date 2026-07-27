@@ -51,10 +51,6 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_, *this)
 {
-  // Cache the node name in a member so debug publishers (which store a const char*) keep a
-  // stable string; agnocast_wrapper::Node::get_name() returns std::string by value.
-  self_node_name_ = get_name();
-
   // set rois_number
   rois_number_ = static_cast<std::size_t>(declare_parameter<int32_t>("rois_number"));
   if (rois_number_ < 1) {
@@ -187,7 +183,7 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     // input topic timing publisher
     debug_internal_pub_ =
       std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-        this, self_node_name_.c_str());
+        this, get_name());
   }
   collector_debug_mode_ = declare_parameter<bool>("collector_debug_mode");
 
@@ -206,7 +202,7 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ =
       std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-        this, self_node_name_.c_str());
+        this, get_name());
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
   }
@@ -380,7 +376,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 
-  // debug (ROI timestamp interval)
+  // debug
   if (debug_internal_pub_) {
     for (std::size_t rois_id = 0; rois_id < rois_number_; ++rois_id) {
       auto rois_timestamp = diagnostic_id_to_stamp_map_[rois_id];

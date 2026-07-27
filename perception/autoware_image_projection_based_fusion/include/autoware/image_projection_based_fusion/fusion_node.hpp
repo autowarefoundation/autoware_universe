@@ -182,9 +182,6 @@ protected:
   // output publisher
   AUTOWARE_PUBLISHER_PTR(ExportObj) pub_ptr_;
 
-  // cached node name (stable storage for debug publishers that keep a const char*)
-  std::string self_node_name_;
-
   // debugger
   std::shared_ptr<Debugger> debugger_;
   std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
