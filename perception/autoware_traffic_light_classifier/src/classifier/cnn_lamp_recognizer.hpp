@@ -23,7 +23,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
@@ -186,12 +185,12 @@ private:
   LampRegressionArchitecture model_params_;
 };
 
-// Thin ROS adapter around CnnLampRecognizerCore. Logs, and delegates recognition and
-// debug-image rendering to the core.
+// Thin, Node-free adapter around CnnLampRecognizerCore: delegates recognition and debug rendering
+// to the core, and maps its per-image detections into the caller's signals.
 class CnnLampRecognizer : public ClassifierInterface
 {
 public:
-  CnnLampRecognizer(rclcpp::Node * node_ptr, const CnnLampRecognizerConfig & config);
+  explicit CnnLampRecognizer(const CnnLampRecognizerConfig & config);
   ~CnnLampRecognizer() override = default;
 
   bool getTrafficSignals(
@@ -201,7 +200,6 @@ public:
   cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
 
 private:
-  rclcpp::Node * node_ptr_;
   CnnLampRecognizerCore core_;
   // Kept from the most recent getTrafficSignals so make_debug_image can render the batch: the
   // per-image output signals (for the text labels) and the per-image raw detections (for the

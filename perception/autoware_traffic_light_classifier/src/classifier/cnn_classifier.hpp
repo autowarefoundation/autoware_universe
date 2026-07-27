@@ -19,7 +19,6 @@
 
 #include <autoware/tensorrt_classifier/tensorrt_classifier.hpp>
 #include <opencv2/core/core.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -83,12 +82,12 @@ private:
   int batch_size_ = 0;
 };
 
-// Thin ROS adapter around CNNClassifierCore. Logs, and delegates classification and debug-image
-// rendering to the core.
+// Thin, Node-free adapter around CNNClassifierCore: delegates classification and debug rendering
+// to the core, and maps its per-image output into the caller's signals.
 class CNNClassifier : public ClassifierInterface
 {
 public:
-  CNNClassifier(rclcpp::Node * node_ptr, const CNNConfig & config);
+  explicit CNNClassifier(const CNNConfig & config);
   virtual ~CNNClassifier() = default;
 
   bool getTrafficSignals(
@@ -98,7 +97,6 @@ public:
   cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
 
 private:
-  rclcpp::Node * node_ptr_;
   CNNClassifierCore core_;
   // Per-image classification output kept from the most recent getTrafficSignals so
   // make_debug_image can render the batch afterwards.

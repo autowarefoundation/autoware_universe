@@ -151,10 +151,10 @@ cv::Mat CNNClassifierCore::make_debug_image(
 }
 
 // ============================== CNNClassifier ==============================
-// ROS adapter: logs and delegates classification and debug-image rendering to the Node-free core.
+// Node-free adapter: delegates classification and debug rendering to the core and maps its
+// per-image output into the caller's signals.
 
-CNNClassifier::CNNClassifier(rclcpp::Node * node_ptr, const CNNConfig & config)
-: node_ptr_(node_ptr), core_(config)
+CNNClassifier::CNNClassifier(const CNNConfig & config) : core_(config)
 {
 }
 
@@ -163,13 +163,11 @@ bool CNNClassifier::getTrafficSignals(
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
   if (images.size() != traffic_signals.signals.size()) {
-    RCLCPP_WARN(node_ptr_->get_logger(), "image number should be equal to traffic signal number!");
     return false;
   }
 
   const CNNClassifierCore::ClassifierResult result = core_.classify(images);
   if (!result.success) {
-    RCLCPP_ERROR(node_ptr_->get_logger(), "failed to classify traffic light image by cnn");
     return false;
   }
 
