@@ -89,6 +89,8 @@ public:
 
   int call_count = 0;
   std::vector<cv::Mat> received_images;
+  // Recorded by make_debug_image so a test can confirm the wrapper forwards roi_images here.
+  mutable std::vector<cv::Mat> debug_images_received;
 
   bool getTrafficSignals(
     const std::vector<cv::Mat> & images,
@@ -109,6 +111,13 @@ public:
       signal.elements.push_back(element);
     }
     return true;
+  }
+
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override
+  {
+    debug_images_received = images;
+    // The row count encodes the batch size so callers can verify what was forwarded.
+    return cv::Mat(static_cast<int>(images.size()), 1, CV_8UC3, cv::Scalar(0, 0, 0));
   }
 };
 
@@ -196,6 +205,41 @@ protected:
 
   std::shared_ptr<FakeClassifier> fake_classifier_;
 };
+
+// --------------------------------------------------------------------------
+// roi_images is the *classified subset* -- the valid, target-type ROIs in
+// classification order -- NOT the input ROIs and NOT the post-processed output
+// signals (which also carry appended-UNKNOWN slots). make_debug_image forwards
+// exactly that subset to the backend. This 1:1 alignment between roi_images[i]
+// and the backend's per-image view is what lets the node render debug crops
+// correctly; if roi_images were ever set to the final signals, debug labels and
+// crops would silently fall out of sync.
+// --------------------------------------------------------------------------
+TEST_F(TrafficLightClassifierTest, RoiImagesAreClassifiedSubsetForwardedToDebug)
+{
+  // Arrange: three ROIs of which only one is classified --
+  //   id=1 valid car      -> classified (the sole entry in roi_images)
+  //   id=2 zero-sized car  -> appended to signals as UNKNOWN, NOT in roi_images
+  //   id=3 pedestrian type -> dropped entirely (in neither)
+  auto classifier = make_classifier(no_over_threshold, no_under_threshold);
+  const auto image = make_solid_image(gray);
+  TrafficLightRoiArray rois;
+  rois.rois.push_back(make_valid_roi(/*id=*/1));
+  rois.rois.push_back(make_zero_sized_roi(/*id=*/2));
+  rois.rois.push_back(make_roi(/*id=*/3, pedestrian_type, 0, 0, 16, 16));
+
+  // Act
+  const auto result = classifier.classify(image, rois);
+  ASSERT_TRUE(result.has_value());
+  classifier.make_debug_image(result->roi_images);
+
+  // Assert: roi_images holds only the 1 classified ROI -- distinct from both the 3
+  // inputs and the 2 output signals (classified + appended-UNKNOWN) -- and that same
+  // subset is exactly what make_debug_image hands the backend.
+  EXPECT_EQ(result->roi_images.size(), 1u);
+  EXPECT_EQ(result->signals.signals.size(), 2u);
+  EXPECT_EQ(fake_classifier_->debug_images_received.size(), 1u);
+}
 
 // --------------------------------------------------------------------------
 // No ROIs -> empty result, no exposure flags, and the backend is never invoked
