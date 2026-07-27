@@ -29,8 +29,12 @@ class ClassifierInterface
 public:
   virtual ~ClassifierInterface() = default;
   virtual bool getTrafficSignals(
-    const std::vector<cv::Mat> & input_image,
+    const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) = 0;
+
+  // One composite RGB debug view for the batch, rendered from the most recent getTrafficSignals
+  // call. Returns an empty Mat when there is nothing to show.
+  virtual cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const = 0;
 };
 }  // namespace autoware::traffic_light
 

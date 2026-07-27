@@ -1315,6 +1315,17 @@ CandidateOutput StaticObstacleAvoidanceModule::planCandidate() const
 
   auto shifted_path = data.candidate_path;
 
+  // In rare cases, updateData() returns early (e.g. after a modified goal),
+  // so fillShiftLine() is skipped and shifted_path remains empty.
+  // planWaitingApproval() may still call planCandidate(). Without this guard,
+  // findEgoIndex(shifted_path) would call validateNonEmpty() and throw
+  // std::invalid_argument.
+  if (shifted_path.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000, "Candidate path is empty. Skip planning candidate.");
+    return output;
+  }
+
   if (data.safe_shift_line.empty()) {
     const size_t ego_idx = planner_data_->findEgoIndex(shifted_path.path.points);
     utils::clipPathLength(

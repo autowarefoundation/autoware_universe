@@ -1,0 +1,35 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: PoseInstabilityDetector.node
+package:
+  name: autoware_pose_instability_detector
+  provider: autoware
+launch:
+  plugin: autoware::pose_instability_detector::PoseInstabilityDetector
+  executable: autoware_pose_instability_detector_node
+# interfaces
+subscribers:
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: twist
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+publishers:
+  - name: diff_pose
+    message_type: geometry_msgs/msg/PoseStamped
+    remap_target: ~/debug/diff_pose
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+# parameters
+param_files:
+  - name: pose_instability_detector_param
+    default: config/pose_instability_detector.param.yaml
+param_values: []
+# processes
+processes:
+  - name: detect_pose_instability
+    trigger_conditions:
+      - periodic: 2.0 # Hz (timer_period 0.5 s)
+    outcomes:
+      - to_output: diff_pose
+      - to_output: diagnostics

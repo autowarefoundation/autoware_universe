@@ -10,9 +10,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 target_link_libraries(${PROJECT_NAME} yaml-cpp)
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::component_interface_tools::ServiceLogChecker"
   EXECUTABLE service_log_checker_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)

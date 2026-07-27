@@ -1,0 +1,41 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: DiagnosticGraphConverter.node
+
+package:
+  name: autoware_diagnostic_graph_utils
+  provider: autoware
+
+launch:
+  plugin: autoware::diagnostic_graph_utils::ConverterNode
+  executable: converter_node
+  node_output: screen
+
+# interfaces
+# subscribes the diagnostic graph (struct + status) and republishes it as a flat DiagnosticArray.
+subscribers:
+  - name: diag_graph_struct
+    message_type: tier4_system_msgs/msg/DiagGraphStruct
+    global: /diagnostics_graph/struct
+  - name: diag_graph_status
+    message_type: tier4_system_msgs/msg/DiagGraphStatus
+    global: /diagnostics_graph/status
+
+publishers:
+  - name: diagnostics_array
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics_array
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - on_input: diag_graph_status
+    outcomes:
+      - to_output: diagnostics_array

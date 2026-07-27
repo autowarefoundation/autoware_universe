@@ -76,7 +76,11 @@ std::uint8_t getSemanticType(const std::string & class_name)
     return Label::BICYCLE;
   } else if (class_name == "PEDESTRIAN") {
     return Label::PEDESTRIAN;
-  } else {  // CONSTRUCTION_VEHICLE, BARRIER, TRAFFIC_CONE
+  } else if (class_name == "TRAFFIC_CONE") {
+    return Label::HAZARD;
+  } else if (class_name == "BARRIER") {  // BARRIER, TRAFFIC_CONE
+    return Label::HAZARD;
+  } else {  // CONSTRUCTION_VEHICLE
     return Label::UNKNOWN;
   }
 }

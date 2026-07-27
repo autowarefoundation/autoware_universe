@@ -1191,10 +1191,12 @@ TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionOnVelodynePointclou
     generate_pointcloud_msg(true, timestamp, velodyne_points, velodyne_azimuths);
   auto angle_conversion_opt =
     distortion_corrector_2d_->try_compute_angle_conversion(velodyne_pointcloud);
-  EXPECT_TRUE(angle_conversion_opt.has_value());
+  ASSERT_TRUE(angle_conversion_opt.has_value());
+  const auto angle_conversion =
+    angle_conversion_opt.value_or(autoware::pointcloud_preprocessor::AngleConversion{});
 
-  EXPECT_EQ(angle_conversion_opt->sign, -1);
-  EXPECT_NEAR(angle_conversion_opt->offset_rad, 0, standard_tolerance);
+  EXPECT_EQ(angle_conversion.sign, -1);
+  EXPECT_NEAR(angle_conversion.offset_rad, 0, standard_tolerance);
 }
 
 TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionOnHesaiPointcloud)
@@ -1213,9 +1215,11 @@ TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionOnHesaiPointcloud)
   auto angle_conversion_opt =
     distortion_corrector_2d_->try_compute_angle_conversion(hesai_pointcloud);
 
-  EXPECT_TRUE(angle_conversion_opt.has_value());
-  EXPECT_EQ(angle_conversion_opt->sign, -1);
-  EXPECT_NEAR(angle_conversion_opt->offset_rad, autoware_utils::pi / 2, standard_tolerance);
+  ASSERT_TRUE(angle_conversion_opt.has_value());
+  const auto angle_conversion =
+    angle_conversion_opt.value_or(autoware::pointcloud_preprocessor::AngleConversion{});
+  EXPECT_EQ(angle_conversion.sign, -1);
+  EXPECT_NEAR(angle_conversion.offset_rad, autoware_utils::pi / 2, standard_tolerance);
 }
 
 TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionCartesianPointcloud)
@@ -1237,9 +1241,11 @@ TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionCartesianPointcloud
   auto angle_conversion_opt =
     distortion_corrector_2d_->try_compute_angle_conversion(cartesian_pointcloud);
 
-  EXPECT_TRUE(angle_conversion_opt.has_value());
-  EXPECT_EQ(angle_conversion_opt->sign, 1);
-  EXPECT_NEAR(angle_conversion_opt->offset_rad, 0, standard_tolerance);
+  ASSERT_TRUE(angle_conversion_opt.has_value());
+  const auto angle_conversion =
+    angle_conversion_opt.value_or(autoware::pointcloud_preprocessor::AngleConversion{});
+  EXPECT_EQ(angle_conversion.sign, 1);
+  EXPECT_NEAR(angle_conversion.offset_rad, 0, standard_tolerance);
 }
 
 TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionOnRandomPointcloud)
@@ -1259,9 +1265,11 @@ TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionOnRandomPointcloud)
   auto pointcloud = generate_pointcloud_msg(true, timestamp, points, azimuths);
   auto angle_conversion_opt = distortion_corrector_2d_->try_compute_angle_conversion(pointcloud);
 
-  EXPECT_TRUE(angle_conversion_opt.has_value());
-  EXPECT_EQ(angle_conversion_opt->sign, 1);
-  EXPECT_NEAR(angle_conversion_opt->offset_rad, autoware_utils::pi * 3 / 2, standard_tolerance);
+  ASSERT_TRUE(angle_conversion_opt.has_value());
+  const auto angle_conversion =
+    angle_conversion_opt.value_or(autoware::pointcloud_preprocessor::AngleConversion{});
+  EXPECT_EQ(angle_conversion.sign, 1);
+  EXPECT_NEAR(angle_conversion.offset_rad, autoware_utils::pi * 3 / 2, standard_tolerance);
 }
 
 TEST_F(DistortionCorrectorTest, TestTryComputeAngleConversionOnBadAzimuthPointcloud)

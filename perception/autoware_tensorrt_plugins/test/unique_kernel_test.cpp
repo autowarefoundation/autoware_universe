@@ -78,14 +78,19 @@ TEST(ReferenceKernelsTest, UniqueMatchesCpuReference)
   DeviceBuffer<std::int64_t> unique_d(input.size());
   DeviceBuffer<std::int64_t> inverse_d(input.size());
   DeviceBuffer<std::int64_t> counts_d(input.size());
+  DeviceBuffer<std::int64_t> num_unique_d(1U);
   DeviceBuffer<std::uint8_t> workspace_d(get_unique_workspace_size(input.size()));
 
   copy_to_device(input_d.get(), input);
 
-  const auto num_unique = unique(
-    input_d.get(), unique_d.get(), inverse_d.get(), counts_d.get(), workspace_d.get(), input.size(),
-    get_unique_workspace_size(input.size()), stream.get());
+  ASSERT_EQ(
+    unique(
+      input_d.get(), unique_d.get(), inverse_d.get(), counts_d.get(), num_unique_d.get(),
+      workspace_d.get(), input.size(), get_unique_workspace_size(input.size()), stream.get()),
+    cudaSuccess);
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
+
+  const auto num_unique = copy_to_host(num_unique_d.get(), 1U).front();
 
   const auto unique_values = copy_to_host(unique_d.get(), static_cast<std::size_t>(num_unique));
   const auto inverse_indices = copy_to_host(inverse_d.get(), input.size());
@@ -94,6 +99,28 @@ TEST(ReferenceKernelsTest, UniqueMatchesCpuReference)
   EXPECT_EQ(unique_values, reference.unique_values);
   EXPECT_EQ(inverse_indices, reference.inverse_indices);
   EXPECT_EQ(counts, reference.counts);
+}
+
+TEST(ReferenceKernelsTest, UniqueEmptyInputWritesZeroCount)
+{
+  SKIP_TEST_IF_CUDA_UNAVAILABLE();
+
+  CudaStreamGuard stream;
+  DeviceBuffer<std::int64_t> input_d(1U);
+  DeviceBuffer<std::int64_t> unique_d(1U);
+  DeviceBuffer<std::int64_t> inverse_d(1U);
+  DeviceBuffer<std::int64_t> counts_d(1U);
+  DeviceBuffer<std::int64_t> num_unique_d(1U);
+  DeviceBuffer<std::uint8_t> workspace_d(1U);
+
+  ASSERT_EQ(
+    unique(
+      input_d.get(), unique_d.get(), inverse_d.get(), counts_d.get(), num_unique_d.get(),
+      workspace_d.get(), 0U, 0U, stream.get()),
+    cudaSuccess);
+  ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
+
+  EXPECT_EQ(copy_to_host(num_unique_d.get(), 1U).front(), 0);
 }
 
 }  // namespace

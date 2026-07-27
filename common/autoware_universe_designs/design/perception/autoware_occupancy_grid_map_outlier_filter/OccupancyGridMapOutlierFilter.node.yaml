@@ -1,0 +1,45 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: OccupancyGridMapOutlierFilter.node
+
+package:
+  name: autoware_occupancy_grid_map_outlier_filter
+  provider: autoware
+
+launch:
+  plugin: autoware::occupancy_grid_map_outlier_filter::OccupancyGridMapOutlierFilterComponent
+  executable: autoware_occupancy_grid_map_outlier_filter_node
+  node_output: screen
+
+# interfaces
+# pointcloud + occupancy_grid_map are message_filters-synced; debug pubs omitted.
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud
+  - name: occupancy_grid_map
+    message_type: nav_msgs/msg/OccupancyGrid
+    remap_target: ~/input/occupancy_grid_map
+
+publishers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/occupancy_grid_map_outlier_filter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - and:
+          - on_input: pointcloud
+          - on_input: occupancy_grid_map
+    outcomes:
+      - to_output: pointcloud

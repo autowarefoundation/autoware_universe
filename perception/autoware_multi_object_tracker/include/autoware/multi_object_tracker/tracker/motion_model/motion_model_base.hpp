@@ -20,6 +20,7 @@
 #include <Eigen/Core>
 #include <rclcpp/rclcpp.hpp>
 
+#include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -33,14 +34,27 @@ private:
   double dt_max_{0.11};  // [s] maximum time interval for prediction
 
 protected:
-  rclcpp::Time last_update_time_;
+  rclcpp::Time last_prediction_time_;
   KalmanFilterTemplate<StateSize, MeasurementSize> ekf_;
   // Cache for prediction to avoid repeated allocations
   mutable KalmanFilterTemplate<StateSize, MeasurementSize> tmp_ekf_for_no_update_;
   // Dimensionality constants (accessible to derived classes)
   static constexpr int DIM = StateSize;
 
+  // Residual kinematic state not estimated by the EKF (all models are 2D in x/y).
+  double z_{0.0};
+  geometry_msgs::msg::Quaternion orientation_{[] {
+    geometry_msgs::msg::Quaternion q;
+    q.w = 1.0;
+    return q;
+  }()};
+
 public:
+  void setZ(double z) noexcept { z_ = z; }
+  void updateZ(double z, double gain) noexcept { z_ = (1.0 - gain) * z_ + gain * z; }
+  void setOrientation(const geometry_msgs::msg::Quaternion & q) noexcept { orientation_ = q; }
+  double getZ() const noexcept { return z_; }
+  const geometry_msgs::msg::Quaternion & getOrientation() const noexcept { return orientation_; }
   // Add these type aliases for convenience
   using KalmanFilter = KalmanFilterTemplate<StateSize, MeasurementSize>;
   using StateVec = typename KalmanFilter::StateVec;
@@ -50,13 +64,14 @@ public:
   using ProcessMat = typename KalmanFilter::ProcessMat;
   using MeasModelMat = typename KalmanFilter::MeasModelMat;
 
-  MotionModel() : last_update_time_(rclcpp::Time(0, 0)) {}
+  MotionModel() : last_prediction_time_(rclcpp::Time(0, 0)) {}
   virtual ~MotionModel() = default;
 
   bool checkInitialized() const noexcept { return is_initialized_; }
+  rclcpp::Time getLastPredictionTime() const noexcept { return last_prediction_time_; }
   double getDeltaTime(const rclcpp::Time & time) const noexcept
   {
-    return (time - last_update_time_).seconds();
+    return (time - last_prediction_time_).seconds();
   }
   void setMaxDeltaTime(const double dt_max) noexcept { dt_max_ = dt_max; }
   double getStateElement(unsigned int idx) const noexcept { return ekf_.getXelement(idx); }
@@ -82,8 +97,8 @@ bool MotionModel<StateSize, MeasurementSize>::initialize(
   // initialize Kalman filter
   ekf_.init(X, P);
 
-  // set last_update_time_
-  last_update_time_ = time;
+  // set last_prediction_time_
+  last_prediction_time_ = time;
 
   // set initialized flag
   is_initialized_ = true;
@@ -114,10 +129,10 @@ bool MotionModel<StateSize, MeasurementSize>::predictState(const rclcpp::Time & 
 
   for (uint32_t i = 0; i < repeat; ++i) {
     if (!predictStateStep(dt_, ekf_)) return false;
-    last_update_time_ += dt_duration;
+    last_prediction_time_ += dt_duration;
   }
-  // reset the last_update_time_ to the prediction time
-  last_update_time_ = time;
+  // reset the last_prediction_time_ to the prediction time
+  last_prediction_time_ = time;
   return true;
 }
 

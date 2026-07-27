@@ -75,7 +75,8 @@ MultiCameraFusionNode::MultiCameraFusionNode(const rclcpp::NodeOptions & node_op
     [this](const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg) {
       this->map_callback(msg);
     });
-  signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
+  signal_pub_ =
+    AUTOWARE_CREATE_PUBLISHER2(NewSignalArrayType, "~/output/traffic_signals", rclcpp::QoS{1});
 
   diagnostics_interface_ptr_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic light conflict status");

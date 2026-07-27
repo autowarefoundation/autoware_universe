@@ -12,7 +12,7 @@
             "type": "string"
           },
           "description": "Predicted classes' names.",
-          "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
+          "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN", "TRAFFIC_CONE", "BARRIER"],
           "uniqueItems": true
         },
         "voxels_num": {

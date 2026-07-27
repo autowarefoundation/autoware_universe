@@ -58,7 +58,7 @@
             "type": "integer"
           },
           "description": "TensorRT optimization profile for number of points [min, opt, max].",
-          "default": [5000, 60000, 120000]
+          "default": [5000, 80000, 160000]
         },
         "num_unique_coors": {
           "type": "array",

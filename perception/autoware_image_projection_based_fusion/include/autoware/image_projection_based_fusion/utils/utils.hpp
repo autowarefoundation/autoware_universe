@@ -69,6 +69,8 @@ struct ObjClassIoUThresh
   float MOTORCYCLE;
   float BICYCLE;
   float PEDESTRIAN;
+  float ANIMAL;
+  float HAZARD;
   float get_class_iou_thresh(const uint8_t label);
 };
 

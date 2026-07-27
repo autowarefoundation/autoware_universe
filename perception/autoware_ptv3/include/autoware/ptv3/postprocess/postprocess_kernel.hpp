@@ -62,6 +62,7 @@ private:
 
   CudaUniquePtr<std::uint32_t[]> filtered_mask_d_{nullptr};
   CudaUniquePtr<float[]> color_map_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> class_id_to_semantic_label_d_{nullptr};
   CudaUniquePtr<std::uint32_t[]> filter_class_indices_d_{nullptr};
   cudaStream_t stream_;
 };

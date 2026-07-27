@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_BASE_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_BASE_HPP_
 
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <list>
