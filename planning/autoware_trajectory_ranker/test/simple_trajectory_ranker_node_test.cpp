@@ -77,7 +77,7 @@ protected:
     rclcpp::WallRate rate(10);
     int count = 0;
     while (!output_msg && count < 100) {  // Spin for a limited time to avoid infinite loop
-      rclcpp::spin_some(node);
+      rclcpp::spin_some(node->get_rclcpp_node());
       rate.sleep();
       count++;
     }
