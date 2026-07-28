@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3/experimental/semantic_label.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
+
+#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
 
 #include <math_constants.h>
 
@@ -28,10 +29,12 @@ namespace autoware::ptv3
 {
 namespace
 {
-constexpr std::uint8_t kInvalidSemanticLabel = 255U;
+using autoware::object_recognition_utils::PointCloudClassification;
+
+constexpr std::uint8_t kInvalidClassification = 255U;
 
 /**
- * @brief Convert a PTv3 class name to the consolidated SemanticLabel value.
+ * @brief Convert a PTv3 class name to the consolidated PointCloudClassification value.
  *
  * @details The input class name is normalized to uppercase before comparison, so matching is
  * case-insensitive for ASCII letters. Expected names are derived from
@@ -48,17 +51,17 @@ constexpr std::uint8_t kInvalidSemanticLabel = 255U;
  * - vertical_thin -> HAZARD
  * - barrier -> STRUCTURE
  * - drivable_flat -> FLAT_SURFACE
- * - non_drivable_flat -> STRUCTURE
+ * - non_drivable_flat -> FLAT_SURFACE
  * - building -> STRUCTURE
  * - static_clutter -> STRUCTURE
  * - vegetation -> VEGETATION
  * - noise -> NOISE
  *
  * @param class_name PTv3 class name string from runtime configuration.
- * @return SemanticLabel enum value encoded as std::uint8_t.
+ * @return PointCloudClassification enum value encoded as std::uint8_t.
  * @throws std::runtime_error if class_name is not supported.
  */
-std::uint8_t semanticLabelFromClassName(const std::string & class_name)
+std::uint8_t classificationFromClassName(const std::string & class_name)
 {
   std::string normalized_class_name = class_name;
   std::transform(
@@ -66,38 +69,38 @@ std::uint8_t semanticLabelFromClassName(const std::string & class_name)
     [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
 
   if (normalized_class_name == "CAR") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::CAR);
+    return static_cast<std::uint8_t>(PointCloudClassification::CAR);
   }
   if (normalized_class_name == "TRUCK") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::TRUCK);
+    return static_cast<std::uint8_t>(PointCloudClassification::TRUCK);
   }
   if (normalized_class_name == "BUS") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::BUS);
+    return static_cast<std::uint8_t>(PointCloudClassification::BUS);
   }
   if (normalized_class_name == "BICYCLE") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::BICYCLE);
+    return static_cast<std::uint8_t>(PointCloudClassification::BICYCLE);
   }
   if (normalized_class_name == "PEDESTRIAN") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::PEDESTRIAN);
+    return static_cast<std::uint8_t>(PointCloudClassification::PEDESTRIAN);
   }
   if (
     normalized_class_name == "TRAFFIC_CONE" || normalized_class_name == "DEBRIS" ||
     normalized_class_name == "VERTICAL_THIN") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::HAZARD);
+    return static_cast<std::uint8_t>(PointCloudClassification::HAZARD);
   }
-  if (normalized_class_name == "DRIVABLE_FLAT") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::FLAT_SURFACE);
+  if (normalized_class_name == "DRIVABLE_FLAT" || normalized_class_name == "NON_DRIVABLE_FLAT") {
+    return static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
   }
   if (
-    normalized_class_name == "NON_DRIVABLE_FLAT" || normalized_class_name == "BARRIER" ||
-    normalized_class_name == "BUILDING" || normalized_class_name == "STATIC_CLUTTER") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::STRUCTURE);
+    normalized_class_name == "BARRIER" || normalized_class_name == "BUILDING" ||
+    normalized_class_name == "STATIC_CLUTTER") {
+    return static_cast<std::uint8_t>(PointCloudClassification::STRUCTURE);
   }
   if (normalized_class_name == "VEGETATION") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::VEGETATION);
+    return static_cast<std::uint8_t>(PointCloudClassification::VEGETATION);
   }
   if (normalized_class_name == "NOISE") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::NOISE);
+    return static_cast<std::uint8_t>(PointCloudClassification::NOISE);
   }
 
   throw std::runtime_error(
@@ -105,19 +108,20 @@ std::uint8_t semanticLabelFromClassName(const std::string & class_name)
 }
 
 /**
- * @brief Build lookup table from runtime class_names index to segmented class_id (SemanticLabel).
+ * @brief Build lookup table from runtime class_names index to segmented class_id
+ * (PointCloudClassification).
  * @details The model output label index is determined by class_names order in parameters. This
  * lookup keeps postprocess robust even when class_names order changes.
  *
  * @param class_names List of PTv3 class names from runtime configuration.
- * @return Lookup table mapping class_id to SemanticLabel.
+ * @return Lookup table mapping class_id to PointCloudClassification.
  */
-std::vector<std::uint8_t> makeClassIdToSemanticLabelLut(
+std::vector<std::uint8_t> makeClassIdToClassificationLut(
   const std::vector<std::string> & class_names)
 {
-  std::vector<std::uint8_t> lut(class_names.size(), kInvalidSemanticLabel);
+  std::vector<std::uint8_t> lut(class_names.size(), kInvalidClassification);
   for (std::size_t i = 0; i < class_names.size(); ++i) {
-    lut[i] = semanticLabelFromClassName(class_names[i]);
+    lut[i] = classificationFromClassName(class_names[i]);
   }
   return lut;
 }
@@ -142,7 +146,7 @@ __global__ void createVisualizationPointcloudKernel(
 
 __global__ void createSegmentationPointcloudKernel(
   const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
-  const std::uint8_t * class_id_to_semantic_label, const std::uint32_t * filter_class_indices,
+  const std::uint8_t * class_id_to_classification, const std::uint32_t * filter_class_indices,
   std::size_t num_filter_classes, std::uint32_t * output_num_points,
   point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
 {
@@ -183,10 +187,9 @@ __global__ void createSegmentationPointcloudKernel(
   output_points[idx].y = input_point.y;
   output_points[idx].z = input_point.z;
   output_points[idx].class_id =
-    has_valid_label ? class_id_to_semantic_label[label] : kInvalidSemanticLabel;
-  output_points[output_idx].probability =
-    has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
-  output_points[output_idx].entropy = entropy;
+    has_valid_label ? class_id_to_classification[label] : kInvalidClassification;
+  output_points[idx].probability = has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
+  output_points[idx].entropy = entropy;
 }
 
 __global__ void reconstructPartialKernel(
@@ -389,13 +392,13 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
     color_map_d_.get(), config_.colors_rgb_.data(), config_.colors_rgb_.size() * sizeof(float),
     cudaMemcpyHostToDevice, stream_);
 
-  class_id_to_semantic_label_d_ =
+  class_id_to_classification_d_ =
     autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.segmentation_class_names_.size());
-  const auto class_id_to_semantic_label_lut =
-    makeClassIdToSemanticLabelLut(config_.segmentation_class_names_);
+  const auto class_id_to_classification_lut =
+    makeClassIdToClassificationLut(config_.segmentation_class_names_);
   cudaMemcpyAsync(
-    class_id_to_semantic_label_d_.get(), class_id_to_semantic_label_lut.data(),
-    class_id_to_semantic_label_lut.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice, stream_);
+    class_id_to_classification_d_.get(), class_id_to_classification_lut.data(),
+    class_id_to_classification_lut.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice, stream_);
 
   if (!config_.filter_class_indices_.empty()) {
     filter_class_indices_d_ =
@@ -434,7 +437,7 @@ std::size_t PostprocessCuda::createSegmentationPointcloud(
 
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
-    class_id_to_semantic_label_d_.get(), filter_class_indices_d_.get(), num_filter_classes,
+    class_id_to_classification_d_.get(), filter_class_indices_d_.get(), num_filter_classes,
     filtered_mask_d_.get(), output_points, num_classes, num_points);
 
   std::uint32_t num_segmented_points = 0;

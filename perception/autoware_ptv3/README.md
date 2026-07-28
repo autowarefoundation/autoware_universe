@@ -38,14 +38,14 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 The `~/output/pointcloud/segmentation` topic uses the naturally aligned `PointXYZCPE` point type.
 Its `point_step` is 24 bytes.
 
-| Field         | Data type | Offset | Description                                                                  |
-| ------------- | --------- | -----: | ---------------------------------------------------------------------------- |
-| `x`           | `FLOAT32` |      0 | X coordinate in meters.                                                      |
-| `y`           | `FLOAT32` |      4 | Y coordinate in meters.                                                      |
-| `z`           | `FLOAT32` |      8 | Z coordinate in meters.                                                      |
-| `class_id`    | `UINT8`   |     12 | Predicted class encoded as `SemanticLabel`; 255 represents an invalid label. |
-| `probability` | `FLOAT32` |     16 | Probability of the predicted class.                                          |
-| `entropy`     | `FLOAT32` |     20 | Shannon entropy normalized by the logarithm of the number of classes.        |
+| Field         | Data type | Offset | Description                                                                                                                 |
+| ------------- | --------- | -----: | --------------------------------------------------------------------------------------------------------------------------- |
+| `x`           | `FLOAT32` |      0 | X coordinate in meters.                                                                                                     |
+| `y`           | `FLOAT32` |      4 | Y coordinate in meters.                                                                                                     |
+| `z`           | `FLOAT32` |      8 | Z coordinate in meters.                                                                                                     |
+| `class_id`    | `UINT8`   |     12 | Predicted class encoded as `autoware::object_recognition_utils::PointCloudClassification`; 255 represents an invalid label. |
+| `probability` | `FLOAT32` |     16 | Probability of the predicted class.                                                                                         |
+| `entropy`     | `FLOAT32` |     20 | Shannon entropy normalized by the logarithm of the number of classes.                                                       |
 
 Bytes 13 through 15 are alignment padding. The output is intentionally not packed so that the
 floating-point fields remain naturally aligned on both the CPU and GPU.

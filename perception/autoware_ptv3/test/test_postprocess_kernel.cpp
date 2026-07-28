@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3/experimental/semantic_label.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
 #include "ptv3_test_fixture.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
 #include <autoware/point_types/types.hpp>
 
 #include <cuda_runtime_api.h>
@@ -37,7 +37,9 @@ namespace test
 class PostprocessKernelTest : public PTv3CudaTest
 {
 protected:
-  static constexpr std::uint8_t kInvalidSemanticLabel = 255U;
+  using PointCloudClassification = autoware::object_recognition_utils::PointCloudClassification;
+
+  static constexpr std::uint8_t kInvalidClassification = 255U;
   static constexpr std::size_t kNumClasses = 2;
 
   PTv3Config makeSegmentationConfig() const
@@ -102,19 +104,19 @@ TEST_F(PostprocessKernelTest, CreateSegmentationPointcloud)
     EXPECT_FLOAT_EQ(output_points[i].z, features[i * 4 + 2]);
   }
 
-  EXPECT_EQ(output_points[0].class_id, static_cast<std::uint8_t>(experimental::SemanticLabel::CAR));
+  EXPECT_EQ(output_points[0].class_id, static_cast<std::uint8_t>(PointCloudClassification::CAR));
   EXPECT_FLOAT_EQ(output_points[0].probability, 0.9F);
   EXPECT_FLOAT_EQ(output_points[0].entropy, expectedEntropy(0.9F, 0.1F));
 
   EXPECT_EQ(
-    output_points[1].class_id, static_cast<std::uint8_t>(experimental::SemanticLabel::VEGETATION));
+    output_points[1].class_id, static_cast<std::uint8_t>(PointCloudClassification::VEGETATION));
   EXPECT_FLOAT_EQ(output_points[1].probability, 0.6F);
   EXPECT_FLOAT_EQ(output_points[1].entropy, expectedEntropy(0.4F, 0.6F));
 
   // Invalid labels carry no class distribution, so the entropy keeps the NaN default of
   // point_types::PointXYZCPE.
   for (const std::size_t i : {std::size_t{2}, std::size_t{3}}) {
-    EXPECT_EQ(output_points[i].class_id, kInvalidSemanticLabel);
+    EXPECT_EQ(output_points[i].class_id, kInvalidClassification);
     EXPECT_FLOAT_EQ(output_points[i].probability, 0.0F);
     EXPECT_TRUE(std::isnan(output_points[i].entropy));
   }
