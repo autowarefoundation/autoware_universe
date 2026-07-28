@@ -12,8 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/component_interface_specs/perception.hpp"
 #include "autoware/component_interface_specs_universe/perception.hpp"
 #include "gtest/gtest.h"
+
+#include <type_traits>
+
+// Proves the universe symbols are re-exports of the canonical core types, not
+// redefinitions: consumers see one definition, one version authority (R-IF-12).
+TEST(perception_universe, reexports_core)
+{
+  namespace core = autoware::component_interface_specs::perception;
+  namespace universe = autoware::component_interface_specs_universe::perception;
+  static_assert(std::is_same_v<universe::ObjectRecognition, core::ObjectRecognition>);
+  static_assert(std::is_same_v<universe::TrafficSignals, core::TrafficSignals>);
+  static_assert(std::is_same_v<universe::DetectedObjects, core::DetectedObjects>);
+  SUCCEED();
+}
 
 TEST(perception, interface)
 {

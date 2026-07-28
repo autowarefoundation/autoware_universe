@@ -15,22 +15,20 @@
 #ifndef AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__MAP_HPP_
 #define AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__MAP_HPP_
 
-#include <rclcpp/qos.hpp>
+#include <autoware/component_interface_specs/map.hpp>
 
-#include <autoware_map_msgs/msg/map_projector_info.hpp>
-
+// Re-export the core specs so universe consumers keep resolving the canonical
+// (single-version-authority) type. See R-IF-12: core is the sole definition.
+// PointCloudMap is re-exported for consumer convenience but stays excluded from
+// the versioned Specs tuple (heavy-raw confinement, design section 5).
 namespace autoware::component_interface_specs_universe::map
 {
-
-struct MapProjectorInfo
-{
-  using Message = autoware_map_msgs::msg::MapProjectorInfo;
-  static constexpr char name[] = "/map/map_projector_info";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
-};
-
+using autoware::component_interface_specs::map::GetDifferentialPointCloudMap;
+using autoware::component_interface_specs::map::MapProjectorInfo;
+using autoware::component_interface_specs::map::PointCloudMap;
+using autoware::component_interface_specs::map::Specs;
+using autoware::component_interface_specs::map::VectorMap;
+using autoware::component_interface_specs::map::version;
 }  // namespace autoware::component_interface_specs_universe::map
 
 #endif  // AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__MAP_HPP_
