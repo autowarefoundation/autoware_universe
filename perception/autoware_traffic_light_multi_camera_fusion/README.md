@@ -122,9 +122,9 @@ The validated output is shown in the following table:
 
 The node includes an optional rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's `light_bulbs` linestring in the vector map.
 
-Setting `map_based_signal_filter.enable` to true activates the filter. When active, for each traffic light the node reads the map's `light_bulbs` points (their `color` and optional `arrow` attributes) and builds a per-traffic-light-id set of allowed (color, shape) pairs. Any ML-predicted element whose (color, shape) is not in that set is dropped **before** Bayesian group fusion, so an obviously wrong prediction cannot outvote a correct one.
+Setting `map_based_signal_filter.enable` to true activates the filter. When active, for each traffic light the node reads the map's `light_bulbs` points (their `color` and optional `arrow` attributes) and builds a per-traffic-light-id set of allowed (color, shape) pairs. Any incoming ML prediction whose (color, shape) is not in that set is dropped as soon as it arrives, so a map-invalid prediction cannot beat a valid one from another camera.
 
-If every element of a traffic light's signal is filtered out, the node emits an UNKNOWN fail-safe for that traffic light. If the map has no `light_bulbs` for a given traffic light id, the filter is a no-op for that id — we cannot filter what the map does not describe.
+If every element of a signal is filtered out, that signal becomes an UNKNOWN fail-safe. If the map has no `light_bulbs` for a given traffic light id, the filter is a no-op for that id — we cannot filter what the map does not describe.
 
 The vector map is always subscribed (the node needs it to map traffic-light-ids to regulatory-element-ids); the `enable` flag only controls whether the filter runs.
 
