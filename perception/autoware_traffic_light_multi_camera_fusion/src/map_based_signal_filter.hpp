@@ -33,8 +33,8 @@ namespace autoware::traffic_light
  * declared on a traffic light's `light_bulbs` linestring in the lanelet2 map.
  *
  * A prediction whose (color, shape) pair is not encoded on the map is treated as an ML error
- * and dropped from the element list. UNKNOWN color/shape elements always pass through so the
- * classifier can still signal low confidence.
+ * and dropped from the element list. Elements with UNKNOWN color or shape are also dropped;
+ * if a record ends up empty, downstream fusion emits a failsafe (UNKNOWN, UNKNOWN) signal.
  *
  * If the lanelet2 map does not carry `light_bulbs` for a given traffic light id, the filter
  * is a no-op for that id — we cannot filter what we cannot describe.
@@ -56,7 +56,7 @@ public:
 
   /**
    * @brief Filter the element list in place. Elements whose (color, shape) is absent from the
-   * map's declared bulbs are erased. UNKNOWN color/shape elements pass through unchanged.
+   * map's declared bulbs are erased. Elements with UNKNOWN color or shape are also erased.
    *
    * @return true if any element was removed.
    */

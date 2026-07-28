@@ -129,14 +129,11 @@ bool MapBasedSignalFilter::filter_elements(
   const auto & allowed = it->second;
 
   const auto original_size = elements.size();
+  // remove all color/shape that does not exist in the map
   elements.erase(
     std::remove_if(
       elements.begin(), elements.end(),
       [&allowed](const T4Element & element) {
-        // preserve UNKNOWN elements
-        if (element.color == T4Element::UNKNOWN || element.shape == T4Element::UNKNOWN) {
-          return false;
-        }
         return allowed.count({element.color, element.shape}) == 0;
       }),
     elements.end());

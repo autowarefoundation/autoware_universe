@@ -200,8 +200,10 @@ TEST(MapBasedSignalFilter, FilterDropsAllInvalidElementsProducingEmpty)
   EXPECT_TRUE(elements.empty());
 }
 
-TEST(MapBasedSignalFilter, UnknownElementsAlwaysPassThrough)
+TEST(MapBasedSignalFilter, FullUnknownElementIsDropped)
 {
+  // A fully-UNKNOWN element carries no bulb the map can validate. Drop it and let the
+  // downstream failsafe path resynthesize UNKNOWN if the record ends up empty.
   auto light_bulbs_linestring =
     make_light_bulbs_linestring(200, TRAFFIC_LIGHT_ID, {make_bulb_point(20, "red")});
   const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
@@ -209,12 +211,49 @@ TEST(MapBasedSignalFilter, UnknownElementsAlwaysPassThrough)
 
   std::vector<T4Element> elements = {
     make_element(T4Element::UNKNOWN, T4Element::UNKNOWN),
-    make_element(T4Element::GREEN, T4Element::CIRCLE),  // not allowed -> should be removed
+    make_element(T4Element::RED, T4Element::CIRCLE),
   };
   EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
   ASSERT_EQ(elements.size(), 1u);
-  EXPECT_EQ(elements[0].color, T4Element::UNKNOWN);
-  EXPECT_EQ(elements[0].shape, T4Element::UNKNOWN);
+  EXPECT_EQ(elements[0].color, T4Element::RED);
+  EXPECT_EQ(elements[0].shape, T4Element::CIRCLE);
+}
+
+TEST(MapBasedSignalFilter, PartialUnknownElementIsDropped)
+{
+  // Partial UNKNOWN (only color OR only shape UNKNOWN) is treated the same as fully UNKNOWN:
+  // the classifier's output is not trustworthy enough to feed into fusion.
+  auto light_bulbs_linestring = make_light_bulbs_linestring(
+    200, TRAFFIC_LIGHT_ID, {make_bulb_point(20, "red"), make_bulb_point(21, "green", "left")});
+  const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
+  const MapBasedSignalFilter filter(lanelet_map);
+
+  std::vector<T4Element> elements = {
+    make_element(T4Element::RED, T4Element::UNKNOWN),
+    make_element(T4Element::UNKNOWN, T4Element::LEFT_ARROW),
+    make_element(T4Element::RED, T4Element::CIRCLE),
+  };
+  EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
+  ASSERT_EQ(elements.size(), 1u);
+  EXPECT_EQ(elements[0].color, T4Element::RED);
+  EXPECT_EQ(elements[0].shape, T4Element::CIRCLE);
+}
+
+TEST(MapBasedSignalFilter, OnlyUnknownElementsProduceEmpty)
+{
+  // A record of nothing but UNKNOWN elements empties out. The failsafe path in
+  // MultiCameraFusion::fuse is responsible for producing the (UNKNOWN, UNKNOWN) signal.
+  auto light_bulbs_linestring =
+    make_light_bulbs_linestring(200, TRAFFIC_LIGHT_ID, {make_bulb_point(20, "red")});
+  const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
+  const MapBasedSignalFilter filter(lanelet_map);
+
+  std::vector<T4Element> elements = {
+    make_element(T4Element::UNKNOWN, T4Element::UNKNOWN),
+    make_element(T4Element::RED, T4Element::UNKNOWN),
+  };
+  EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
+  EXPECT_TRUE(elements.empty());
 }
 
 TEST(MapBasedSignalFilter, IdWithoutBulbsIsNotFilteredAgainst)
