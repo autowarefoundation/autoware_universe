@@ -1,0 +1,33 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: MotionEvaluator.node
+package:
+  name: autoware_planning_evaluator
+  provider: autoware
+launch:
+  plugin: planning_diagnostics::MotionEvaluatorNode
+  executable: motion_evaluator
+  node_output: screen
+# interfaces
+# NOTE: metrics are written to a JSON file in the ROS logging directory
+# (`<log_dir>/autoware_metrics/`); this node publishes no output topic.
+subscribers:
+  - name: twist
+    message_type: nav_msgs/msg/Odometry
+publishers: []
+# parameters
+param_files: []
+param_values:
+  - name: output_metrics
+    type: bool
+    default: false
+  - name: selected_metrics
+    type: string_array
+    default: []
+# processes
+processes:
+  - name: evaluate_motion
+    trigger_conditions:
+      - on_input: twist
+    outcomes:
+      - terminal: null
