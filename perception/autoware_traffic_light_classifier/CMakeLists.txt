@@ -145,7 +145,7 @@ if(BUILD_TESTING)
     ${OpenCV_LIBRARIES}
   )
 
-  # ROS-free unit tests for the color classification core (ColorClassifierCore).
+  # ROS-free unit tests for the color classification core (ColorClassifier).
   ament_auto_add_gtest(test_color_classifier
     test/test_color_classifier.cpp
   )
@@ -165,7 +165,7 @@ if(BUILD_TESTING)
 
   # Tests that depend on TensorRT/CUDA code, built only when those libraries are available.
   if(TRT_AVAIL AND CUDA_AVAIL)
-    # CNNClassifierCore tests (ROS-free): static helpers run GPU-free; the classify()
+    # CNNClassifier tests (ROS-free): static helpers run GPU-free; the classify()
     # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
     ament_auto_add_gtest(test_cnn_classifier
       test/test_cnn_classifier.cpp
@@ -177,7 +177,7 @@ if(BUILD_TESTING)
       ${CUDA_LIBRARIES}
     )
 
-    # CnnLampRecognizerCore tests (ROS-free): static helpers run GPU-free; the classify()
+    # CnnLampRecognizer tests (ROS-free): static helpers run GPU-free; the classify()
     # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
     ament_auto_add_gtest(test_cnn_lamp_recognizer
       test/test_cnn_lamp_recognizer.cpp
