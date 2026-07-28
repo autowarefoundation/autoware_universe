@@ -40,7 +40,7 @@ protected:
   Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> allow_remapping_by_area_matrix_;
   Eigen::MatrixXd min_area_matrix_;
   Eigen::MatrixXd max_area_matrix_;
-  int num_labels_;
+  int num_labels_{0};
 };
 
 }  // namespace autoware::bevfusion

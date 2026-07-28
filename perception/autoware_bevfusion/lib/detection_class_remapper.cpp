@@ -14,22 +14,99 @@
 
 #include <autoware/bevfusion/detection_class_remapper.hpp>
 
+#include <cmath>
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
+#include <string>
 #include <vector>
+
 namespace autoware::bevfusion
 {
+
+namespace
+{
+
+constexpr char kAllowRemappingByAreaMatrix[] = "allow_remapping_by_area_matrix";
+constexpr char kMinAreaMatrix[] = "min_area_matrix";
+constexpr char kMaxAreaMatrix[] = "max_area_matrix";
+
+void validateSameSize(
+  const std::size_t lhs_size, const std::size_t rhs_size, const char * lhs_name,
+  const char * rhs_name)
+{
+  if (lhs_size != rhs_size) {
+    throw std::invalid_argument(
+      std::string(lhs_name) + " and " + rhs_name + " must have the same size");
+  }
+}
+
+std::size_t validateNonEmptyMatrixSize(const std::size_t matrix_size)
+{
+  if (matrix_size == 0U) {
+    throw std::invalid_argument("Detection class remapper matrices must not be empty");
+  }
+
+  return matrix_size;
+}
+
+int validateAndGetNumLabels(
+  const std::vector<std::int64_t> & allow_remapping_by_area_matrix,
+  const std::vector<double> & min_area_matrix, const std::vector<double> & max_area_matrix)
+{
+  const auto matrix_size = validateNonEmptyMatrixSize(allow_remapping_by_area_matrix.size());
+  validateSameSize(
+    matrix_size, min_area_matrix.size(), kAllowRemappingByAreaMatrix, kMinAreaMatrix);
+  validateSameSize(
+    matrix_size, max_area_matrix.size(), kAllowRemappingByAreaMatrix, kMaxAreaMatrix);
+
+  const auto num_labels = static_cast<int>(std::sqrt(matrix_size));
+  if (static_cast<std::size_t>(num_labels) * static_cast<std::size_t>(num_labels) != matrix_size) {
+    throw std::invalid_argument("Detection class remapper matrices must define a square matrix");
+  }
+
+  return num_labels;
+}
+
+struct RemapContext
+{
+  int num_labels;
+  const Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> & allow_remapping_by_area_matrix;
+  const Eigen::MatrixXd & min_area_matrix;
+  const Eigen::MatrixXd & max_area_matrix;
+
+  bool shouldRemapLabel(
+    const int source_label, const int target_label, const float bev_area) const
+  {
+    return allow_remapping_by_area_matrix(source_label, target_label) &&
+           bev_area >= min_area_matrix(source_label, target_label) &&
+           bev_area <= max_area_matrix(source_label, target_label);
+  }
+
+  std::uint8_t remapLabel(const std::uint8_t label, const float bev_area) const
+  {
+    if (static_cast<int>(label) >= num_labels) {
+      return label;
+    }
+
+    for (int target_label = 0; target_label < num_labels; ++target_label) {
+      if (shouldRemapLabel(label, target_label, bev_area)) {
+        return static_cast<std::uint8_t>(target_label);
+      }
+    }
+
+    return label;
+  }
+};
+
+}  // namespace
 
 void DetectionClassRemapper::setParameters(
   const std::vector<std::int64_t> & allow_remapping_by_area_matrix,
   const std::vector<double> & min_area_matrix, const std::vector<double> & max_area_matrix)
 {
-  assert(allow_remapping_by_area_matrix.size() == min_area_matrix.size());
-  assert(allow_remapping_by_area_matrix.size() == max_area_matrix.size());
-  assert(
-    std::pow(static_cast<int>(std::sqrt(min_area_matrix.size())), 2) == min_area_matrix.size());
-
-  num_labels_ = static_cast<int>(std::sqrt(min_area_matrix.size()));
+  num_labels_ =
+    validateAndGetNumLabels(allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
   Eigen::Map<const Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic>>
     allow_remapping_by_area_matrix_tmp(
@@ -53,20 +130,14 @@ void DetectionClassRemapper::setParameters(
 
 void DetectionClassRemapper::mapClasses(autoware_perception_msgs::msg::DetectedObjects & msg)
 {
+  const RemapContext context{
+    num_labels_, allow_remapping_by_area_matrix_, min_area_matrix_, max_area_matrix_};
+
   for (auto & object : msg.objects) {
     const float bev_area = object.shape.dimensions.x * object.shape.dimensions.y;
 
     for (auto & classification : object.classification) {
-      auto & label = classification.label;
-
-      for (int i = 0; i < num_labels_; ++i) {
-        if (
-          allow_remapping_by_area_matrix_(label, i) && bev_area >= min_area_matrix_(label, i) &&
-          bev_area <= max_area_matrix_(label, i)) {
-          label = i;
-          break;
-        }
-      }
+      classification.label = context.remapLabel(classification.label, bev_area);
     }
   }
 }
