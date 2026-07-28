@@ -90,6 +90,13 @@ void MultiCameraFusionNode::traffic_signal_roi_callback(
 {
   rclcpp::Time stamp(roi_msg->header.stamp);
 
+  if (!fusion_config_.lanelet_map_ptr) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "Vector map has not arrived yet. No traffic light groups will be published until it is "
+      "received.");
+  }
+
   const MultiCameraFusionResult result = fusion_.fuse(*cam_info_msg, *roi_msg, *signal_msg);
   for (const auto & unmapped_id : result.unmapped_traffic_light_ids) {
     RCLCPP_WARN_STREAM(
