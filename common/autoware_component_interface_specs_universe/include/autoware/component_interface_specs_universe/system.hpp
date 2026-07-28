@@ -25,7 +25,6 @@ namespace autoware::component_interface_specs_universe::system
 {
 using autoware::component_interface_specs::system::ChangeAutowareControl;
 using autoware::component_interface_specs::system::ChangeOperationMode;
-using autoware::component_interface_specs::system::HazardStatus;
 using autoware::component_interface_specs::system::MrmState;
 using autoware::component_interface_specs::system::OperationModeState;
 using autoware::component_interface_specs::system::Specs;
