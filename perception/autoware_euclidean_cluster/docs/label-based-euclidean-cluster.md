@@ -4,8 +4,9 @@
 
 ## Purpose
 
-`label_based_euclidean_cluster` converts a semantically segmented pointcloud into `DetectedObjects`.
+`label_based_euclidean_cluster` converts object-compatible semantic pointcloud labels into `DetectedObjects`.
 It groups points by semantic class, clusters each label bucket independently, and estimates a shape for every resulting cluster.
+Non-object semantic labels are published as segment pointclouds.
 
 This node is intended for segmented pointcloud inputs that provide semantic labels as `class_id`, and optionally per-point confidence as `probability`.
 
@@ -13,9 +14,9 @@ This node is intended for segmented pointcloud inputs that provide semantic labe
 
 ### Input
 
-| Name    | Type                            | Description                                 |
-| ------- | ------------------------------- | ------------------------------------------- |
-| `input` | `sensor_msgs::msg::PointCloud2` | segmented pointcloud with `x`, `y`, and `z` |
+| Name                 | Type                            | Description                                 |
+| -------------------- | ------------------------------- | ------------------------------------------- |
+| `~/input/pointcloud` | `sensor_msgs::msg::PointCloud2` | segmented pointcloud with `x`, `y`, and `z` |
 
 Optional input fields used by the node:
 
@@ -24,52 +25,23 @@ Optional input fields used by the node:
 
 ### Output
 
-| Name     | Type                                             | Description                            |
-| -------- | ------------------------------------------------ | -------------------------------------- |
-| `output` | `autoware_perception_msgs::msg::DetectedObjects` | detected objects estimated per cluster |
-
-The packaged launch file remaps these by default to the following topics:
-
-- `input` -> `/perception/ptv3/segmented/pointcloud`
-- `output` -> `objects`
+| Name                  | Type                                             | Description                                     |
+| --------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `~/output/objects`    | `autoware_perception_msgs::msg::DetectedObjects` | detected objects estimated per cluster          |
+| `~/output/pointcloud` | `sensor_msgs::msg::PointCloud2`                  | non-object semantic points with original fields |
 
 ## Processing Flow
 
 1. Validate that the incoming pointcloud contains `x`, `y`, and `z`.
-2. Read the configured `class_names.*` mapping in YAML declaration order and treat that order as the incoming `class_id` index.
-3. Drop points whose mapped class is configured as `ignore`.
+2. Interpret `class_id` values as `SemanticLabel`.
+3. Send object-compatible SemanticLabels through clustering and copy non-object or unknown SemanticLabels to `output_segments`.
 4. If the pointcloud has a `probability` field, drop points with `probability < min_probability`.
-5. Split the remaining points into buckets keyed by the mapped Autoware object label.
+5. Split object-compatible points into buckets keyed by the Autoware object label.
 6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
 7. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
 8. Compute the average semantic probability for each output cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label filtered cloud, rather than rematching points by coordinate.
 9. Estimate a shape and pose for each cluster with `ShapeEstimator`.
 10. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
-11. Publish one `DetectedObject` per cluster.
-
-## Label Mapping
-
-`class_names.<original_class_name>` maps each incoming semantic class to an Autoware object class.
-
-- YAML declaration order defines the `class_id` expected in the input pointcloud.
-- Entries mapped to `ignore` are skipped before clustering.
-- Unsupported mapped labels are ignored with a warning.
-
-Supported mapped labels are:
-
-- `unknown`
-- `car`
-- `bus`
-- `truck`
-- `motorcycle`
-- `bicycle`
-- `pedestrian`
-- `animal`
-- `trailer`
-- `hazard`
-- `ignore`
-
-If no supported non-ignored mapping remains after parsing `class_names.*`, the node throws during startup.
 
 ## Shape Estimation Behavior
 
@@ -170,17 +142,14 @@ confusable_label_groups:
 
 ## Default Configuration Notes
 
-The default parameter file keeps common road users and filters out map/background classes.
-
-- `car`, `bus`, `truck`, `motorcycle`, `bicycle`, and `pedestrian` are preserved directly.
-- `tractor_unit` and `semi_trailer` are mapped to `trailer`.
-- several small or ambiguous classes such as `train`, `pushable_pullable`, `traffic_cone`, and `debris` are mapped to `unknown`.
-- ground and background classes such as `drivable_surface`, `vegetation`, and `other_stuff` are mapped to `ignore`.
+The default parameter file keeps shared clustering and shape-estimation parameters only.
+Object selection is derived from `SemanticLabel` compatibility.
 
 ## Assumptions / Known Limits
 
 - The node assumes the incoming pointcloud already represents semantically segmented points.
-- `class_id` is interpreted only by order in `class_names.*`; changing YAML order changes the expected semantic index mapping.
+- `class_id` values are interpreted as `SemanticLabel` values.
+- Non-object or unknown `SemanticLabel` values are copied to `output/pointcloud` with the original point fields preserved.
 - When the input has no `class_id` field, all points are clustered together as `UNKNOWN`.
 - When the input has no `probability` field, every point is treated as confidence `1.0`.
 - Clustering is spatial only; there is no temporal association or tracking.

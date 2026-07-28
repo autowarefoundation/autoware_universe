@@ -51,10 +51,15 @@ enum ShapePolicy : uint8_t {
 class LabelBasedEuclideanCluster
 {
 public:
-  using result_t = tl::expected<autoware_perception_msgs::msg::DetectedObjects, std::string>;
+  struct Output
+  {
+    autoware_perception_msgs::msg::DetectedObjects objects;
+    sensor_msgs::msg::PointCloud2 segments;
+  };
+
+  using result_t = tl::expected<Output, std::string>;
 
   /// @brief Construct with full configuration for clustering and shape estimation.
-  /// @param class_id_to_object_label Mapping from input class ID to Autoware object label.
   /// @param min_probability Minimum confidence threshold for points.
   /// @param shape_policy Strategy for shape estimation (ALL_POLYGON or LABEL_DEPEND).
   /// @param default_cluster Default cluster executer used when no per-label override exists.
@@ -62,7 +67,6 @@ public:
   /// @param shape_estimator Shape estimator for converting clusters to DetectedObjects.
   /// @param confusable_groups Optional label groups for post-clustering merge.
   LabelBasedEuclideanCluster(
-    const std::unordered_map<std::uint8_t, std::uint8_t> & class_id_to_object_label,
     float min_probability, ShapePolicy shape_policy,
     std::shared_ptr<EuclideanClusterInterface> default_cluster,
     const std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>> &
@@ -70,17 +74,16 @@ public:
     std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator,
     const std::vector<ConfusableLabelGroup> & confusable_groups = {});
 
-  /// @brief Process an input semantic point cloud and return detected objects.
+  /// @brief Process an input semantic point cloud and return detected objects and segments.
   ///
-  /// Note: Returned DetectedObjects will have empty frame_id and timestamp.
+  /// Note: Returned messages will have empty frame_id and timestamp.
   /// The caller (ROS node) must populate these fields from the input message.
   ///
   /// @param input_msg Input point cloud with xyz, and optionally class_id / probability.
-  /// @return Detected objects without frame_id or timestamp populated, or an error string.
+  /// @return Output messages without frame_id or timestamp populated, or an error string.
   [[nodiscard]] result_t process(const sensor_msgs::msg::PointCloud2 & input_msg);
 
 private:
-  std::unordered_map<std::uint8_t, std::uint8_t> class_id_to_object_label_;
   float min_probability_;
   ShapePolicy shape_policy_;
   std::shared_ptr<EuclideanClusterInterface> default_cluster_;
