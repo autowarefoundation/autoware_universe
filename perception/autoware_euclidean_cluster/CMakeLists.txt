@@ -29,6 +29,7 @@ target_link_libraries(${PROJECT_NAME}_lib
 
 ament_target_dependencies(${PROJECT_NAME}_lib
   autoware_object_recognition_utils
+  autoware_point_types
   autoware_shape_estimation
 )
 
@@ -101,6 +102,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_label_based_euclidean_cluster
     ${PROJECT_NAME}_lib
   )
+  ament_target_dependencies(test_label_based_euclidean_cluster
+    autoware_object_recognition_utils
+    autoware_point_types
+  )
   ament_auto_add_gtest(test_label_based_euclidean_cluster_node
     test/test_label_based_euclidean_cluster_node.cpp
   )
@@ -109,6 +114,10 @@ if(BUILD_TESTING)
   )
   target_link_libraries(test_label_based_euclidean_cluster_node
     ${PROJECT_NAME}_label_based_node_core
+  )
+  ament_target_dependencies(test_label_based_euclidean_cluster_node
+    autoware_object_recognition_utils
+    autoware_point_types
   )
 endif()
 
