@@ -74,19 +74,19 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   std::shared_ptr<ClassifierInterface> classifier_ptr;
   if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
     // Keep a typed handle so the node can drive the color backend's dynamic reconfigure.
-    color_classifier_ = std::make_shared<ColorClassifier>(declare_hsv_config(this));
+    color_classifier_ = std::make_shared<ColorClassifierCore>(declare_hsv_config(this));
     set_param_res_ = this->add_on_set_parameters_callback(
       std::bind(&TrafficLightClassifierNodelet::on_set_parameters_callback, this, _1));
     classifier_ptr = color_classifier_;
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CNNClassifier>(declare_cnn_config(this));
+    classifier_ptr = std::make_shared<CNNClassifierCore>(declare_cnn_config(this));
 #else
     RCLCPP_ERROR(this->get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::LampRecognizer) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CnnLampRecognizer>(declare_lamp_config(this));
+    classifier_ptr = std::make_shared<CnnLampRecognizerCore>(declare_lamp_config(this));
 #else
     RCLCPP_ERROR(
       this->get_logger(), "please install CUDA, CUDNN and TensorRT to use LampRecognizer");

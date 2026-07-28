@@ -56,6 +56,7 @@ namespace
 namespace tl = autoware::traffic_light;
 
 using tier4_perception_msgs::msg::TrafficLight;
+using tier4_perception_msgs::msg::TrafficLightArray;
 using tier4_perception_msgs::msg::TrafficLightElement;
 
 // Confidence for lamps whose value a test does not assert (a valid, non-zero placeholder); tests
@@ -417,7 +418,7 @@ TEST_F(CnnLampRecognizerCoreClassifyTest, RealCropYieldsWellFormedDetections)
   const cv::Mat image{load_rgb_crop()};
 
   // Act
-  const auto result = core_->classify({image});
+  const auto result = core_->infer({image});
 
   // Assert
   ASSERT_TRUE(result.success);
@@ -448,13 +449,37 @@ TEST_F(CnnLampRecognizerCoreClassifyTest, BatchClassificationScattersPerImageRes
   const cv::Mat black{cv::Mat::zeros(detected.size(), CV_8UC3)};
 
   // Act
-  const auto result = core_->classify({detected, black});
+  const auto result = core_->infer({detected, black});
 
   // Assert -- one result vector per input, scattered to the correct slot.
   ASSERT_TRUE(result.success);
   ASSERT_EQ(result.lamps_per_image.size(), 2u);
   EXPECT_FALSE(result.lamps_per_image[0].empty());
   EXPECT_TRUE(result.lamps_per_image[1].empty());
+}
+
+// classify() maps into caller-owned signals and merges one result per slot, so a signal count
+// that disagrees with the images is rejected up front -- before inference and before any per-slot
+// access in the merge loop. A regression here is an out-of-range read, not just a wrong return
+// value. (Formerly pinned in test_cnn_lamp_recognizer_adapter.cpp; folded here after the adapter
+// collapsed into the core.)
+TEST_F(CnnLampRecognizerCoreClassifyTest, ClassifyRejectsMismatchedImageSignalCount)
+{
+  if (!core_) {
+    GTEST_SKIP() << skip_reason_;
+  }
+
+  // Arrange -- one image but two signal slots. The guard returns before inference, so a dummy
+  // crop (never classified) is enough.
+  const std::vector<cv::Mat> images{cv::Mat(4, 4, CV_8UC3, cv::Scalar(0, 0, 0))};
+  TrafficLightArray signals;
+  signals.signals.resize(2);
+
+  // Act
+  const bool ok = core_->classify(images, signals);
+
+  // Assert
+  EXPECT_FALSE(ok);
 }
 
 }  // namespace

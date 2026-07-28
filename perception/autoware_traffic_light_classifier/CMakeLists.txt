@@ -154,15 +154,6 @@ if(BUILD_TESTING)
     ${OpenCV_LIBRARIES}
   )
 
-  # ColorClassifier ROS adapter tests (the size guard needs the node's logger).
-  ament_add_ros_isolated_gtest(test_color_classifier_adapter
-    test/test_color_classifier_adapter.cpp
-  )
-  target_link_libraries(test_color_classifier_adapter
-    ${PROJECT_NAME}
-    ${OpenCV_LIBRARIES}
-  )
-
   # Node-level integration tests (topic-driven pub/sub + diagnostics).
   ament_add_ros_isolated_gtest(test_traffic_light_classifier_integration
     test/test_traffic_light_classifier_integration.cpp
@@ -186,18 +177,6 @@ if(BUILD_TESTING)
       ${CUDA_LIBRARIES}
     )
 
-    # CNNClassifier adapter test (images/signals size guard): ROS-isolated, and self-skips
-    # without a GPU/model since the ctor builds the engine. TIMEOUT covers that build.
-    ament_add_ros_isolated_gtest(test_cnn_classifier_adapter
-      test/test_cnn_classifier_adapter.cpp
-      TIMEOUT 600
-    )
-    target_link_libraries(test_cnn_classifier_adapter
-      ${PROJECT_NAME}
-      ${OpenCV_LIBRARIES}
-      ${CUDA_LIBRARIES}
-    )
-
     # CnnLampRecognizerCore tests (ROS-free): static helpers run GPU-free; the classify()
     # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
     ament_auto_add_gtest(test_cnn_lamp_recognizer
@@ -205,18 +184,6 @@ if(BUILD_TESTING)
       TIMEOUT 600
     )
     target_link_libraries(test_cnn_lamp_recognizer
-      ${PROJECT_NAME}
-      ${OpenCV_LIBRARIES}
-      ${CUDA_LIBRARIES}
-    )
-
-    # CnnLampRecognizer adapter test (size guard + per-slot scatter): ROS-isolated, and
-    # self-skips without a GPU/model since the ctor builds the engine. TIMEOUT covers that build.
-    ament_add_ros_isolated_gtest(test_cnn_lamp_recognizer_adapter
-      test/test_cnn_lamp_recognizer_adapter.cpp
-      TIMEOUT 600
-    )
-    target_link_libraries(test_cnn_lamp_recognizer_adapter
       ${PROJECT_NAME}
       ${OpenCV_LIBRARIES}
       ${CUDA_LIBRARIES}

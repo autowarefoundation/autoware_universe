@@ -43,7 +43,7 @@ CNNClassifierCore::CNNClassifierCore(const CNNConfig & config)
   batch_size_ = classifier_->getBatchSize();
 }
 
-CNNClassifierCore::ClassifierResult CNNClassifierCore::classify(const std::vector<cv::Mat> & images)
+CNNClassifierCore::ClassifierResult CNNClassifierCore::infer(const std::vector<cv::Mat> & images)
 {
   ClassifierResult result;
   result.signals.signals.resize(images.size());
@@ -150,15 +150,10 @@ cv::Mat CNNClassifierCore::make_debug_image(
   return debug_image;
 }
 
-// ============================== CNNClassifier ==============================
-// Node-free adapter: delegates classification and debug rendering to the core and maps its
-// per-image output into the caller's signals.
+// classify() and make_debug_image() implement ClassifierInterface: they wrap infer() with the
+// caller-signal mapping and the batch debug composition.
 
-CNNClassifier::CNNClassifier(const CNNConfig & config) : core_(config)
-{
-}
-
-bool CNNClassifier::getTrafficSignals(
+bool CNNClassifierCore::classify(
   const std::vector<cv::Mat> & images,
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
@@ -166,27 +161,26 @@ bool CNNClassifier::getTrafficSignals(
     return false;
   }
 
-  const CNNClassifierCore::ClassifierResult result = core_.classify(images);
+  const ClassifierResult result = infer(images);
   if (!result.success) {
     return false;
   }
 
-  // Attach the core's per-image elements to the caller's pre-populated signals,
-  // preserving the traffic_light_id / traffic_light_type set upstream.
+  // Attach the per-image elements to the caller's pre-populated signals, preserving the
+  // traffic_light_id / traffic_light_type set upstream.
   for (size_t i = 0; i < traffic_signals.signals.size(); i++) {
     auto & elements = traffic_signals.signals[i].elements;
     const auto & classified = result.signals.signals[i].elements;
     elements.insert(elements.end(), classified.begin(), classified.end());
   }
 
-  // Keep the per-image classification so make_debug_image can render it afterwards; the node
-  // owns the debug publisher and requests the image only when a consumer is attached.
+  // Keep the per-image classification so make_debug_image can render it afterwards.
   last_signals_ = result.signals;
 
   return true;
 }
 
-cv::Mat CNNClassifier::make_debug_image(const std::vector<cv::Mat> & images) const
+cv::Mat CNNClassifierCore::make_debug_image(const std::vector<cv::Mat> & images) const
 {
   // Stack each ROI's debug view (fixed 200 px wide) into one vertical strip.
   cv::Mat debug_image;

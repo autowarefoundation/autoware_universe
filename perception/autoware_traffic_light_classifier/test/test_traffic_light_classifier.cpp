@@ -92,7 +92,7 @@ public:
   // Recorded by make_debug_image so a test can confirm the wrapper forwards roi_images here.
   mutable std::vector<cv::Mat> debug_images_received;
 
-  bool getTrafficSignals(
+  bool classify(
     const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override
   {

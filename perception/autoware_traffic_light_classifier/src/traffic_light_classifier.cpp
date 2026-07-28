@@ -78,7 +78,7 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
   // classify the images
   result.signals.signals.resize(images.size());
   if (!images.empty()) {
-    if (!classifier_->getTrafficSignals(images, result.signals)) {
+    if (!classifier_->classify(images, result.signals)) {
       return std::nullopt;
     }
   }

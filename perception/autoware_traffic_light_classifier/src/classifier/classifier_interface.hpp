@@ -28,12 +28,15 @@ class ClassifierInterface
 {
 public:
   virtual ~ClassifierInterface() = default;
-  virtual bool getTrafficSignals(
+  // Classify each ROI image and map the result into the caller-owned signals (elements appended,
+  // traffic_light_id / type preserved). Returns false on a size mismatch or inference failure.
+  virtual bool classify(
     const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) = 0;
 
-  // One composite RGB debug view for the batch, rendered from the most recent getTrafficSignals
-  // call. Returns an empty Mat when there is nothing to show.
+  // One composite RGB debug view for the batch, rendered from the most recent classify() call.
+  // Returns an empty Mat when there is nothing to show. The caller (the node) invokes it only when
+  // a debug consumer is attached, so this stays off the hot path.
   virtual cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const = 0;
 };
 }  // namespace autoware::traffic_light

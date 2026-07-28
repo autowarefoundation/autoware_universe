@@ -46,7 +46,7 @@ struct CNNConfig
 // (e.g. MobileNet-v2 or EfficientNet-b1). Its constructor builds a TensorRT engine, so
 // instantiating it needs a GPU and the model; decode_label and make_debug_image are
 // static so they can be exercised without one.
-class CNNClassifierCore
+class CNNClassifierCore : public ClassifierInterface
 {
 public:
   // One signal per input image, elements populated by the label decode. traffic_light_id
@@ -61,9 +61,19 @@ public:
   // std::invalid_argument if mean/std are not size 3 (a TrtClassifier precondition).
   explicit CNNClassifierCore(const CNNConfig & config);
 
-  // Classify each ROI image into one signal, batching up to the model's static batch
-  // size. NON-const: TrtClassifier::doInference mutates the engine's internal buffers.
-  ClassifierResult classify(const std::vector<cv::Mat> & images);
+  // Classify each ROI and append the decoded elements to the caller's signals (preserving
+  // traffic_light_id / type). Stashes the per-image result for make_debug_image. Returns false on
+  // a size mismatch or inference failure. NON-const: inference mutates the engine's buffers.
+  bool classify(
+    const std::vector<cv::Mat> & images,
+    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
+
+  // Composite debug view for the batch, rendered from the most recent classify() call.
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
+  // Run the model over each ROI and return the raw per-image classification. NON-const:
+  // TrtClassifier::doInference mutates the engine's internal buffers.
+  ClassifierResult infer(const std::vector<cv::Mat> & images);
 
   // Decode one model label string into per-lamp elements: comma-separated lamps, each a
   // "color-shape" token, a bare color (-> CIRCLE), a bare shape (-> GREEN), or "unknown".
@@ -80,26 +90,8 @@ private:
   std::unique_ptr<autoware::tensorrt_classifier::TrtClassifier> classifier_;
   std::vector<std::string> labels_;
   int batch_size_ = 0;
-};
-
-// Thin, Node-free adapter around CNNClassifierCore: delegates classification and debug rendering
-// to the core, and maps its per-image output into the caller's signals.
-class CNNClassifier : public ClassifierInterface
-{
-public:
-  explicit CNNClassifier(const CNNConfig & config);
-  virtual ~CNNClassifier() = default;
-
-  bool getTrafficSignals(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
-
-  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
-
-private:
-  CNNClassifierCore core_;
-  // Per-image classification output kept from the most recent getTrafficSignals so
-  // make_debug_image can render the batch afterwards.
+  // Per-image classification kept from the most recent classify() so make_debug_image can render
+  // the batch afterwards.
   tier4_perception_msgs::msg::TrafficLightArray last_signals_;
 };
 
