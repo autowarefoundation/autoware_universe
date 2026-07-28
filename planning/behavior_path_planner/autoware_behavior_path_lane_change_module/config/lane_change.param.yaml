@@ -7,6 +7,7 @@
       backward_length_buffer_for_blocking_object: 3.0 # [m]
       backward_length_from_intersection: 5.0 # [m]
       enable_stopped_vehicle_buffer: true
+      overhang_tolerance: 0.0 # [m]
 
       # turn signal
       min_length_for_turn_signal_activation: 10.0 # [m]
