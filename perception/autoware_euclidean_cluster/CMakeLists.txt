@@ -86,7 +86,7 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME}_label_based_node_core)
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_label_based_node_core
   PLUGIN "autoware::euclidean_cluster::LabelBasedEuclideanClusterNode"
   EXECUTABLE label_based_euclidean_cluster_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
