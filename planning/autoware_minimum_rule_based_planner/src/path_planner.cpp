@@ -1188,9 +1188,8 @@ bool PathPlanner::update_current_lanelet(const geometry_msgs::msg::Pose & curren
 {
   if (!current_lanelet_) {
     lanelet::ConstLanelet closest;
-    if (
-      lanelet::utils::query::getClosestLanelet(
-        route_context_.route_lanelets, current_pose, &closest)) {
+    if (lanelet::utils::query::getClosestLanelet(
+          route_context_.route_lanelets, current_pose, &closest)) {
       current_lanelet_ = closest;
       return true;
     }
@@ -1223,17 +1222,15 @@ bool PathPlanner::update_current_lanelet(const geometry_msgs::msg::Pose & curren
     }
   }
 
-  if (
-    lanelet::utils::query::getClosestLaneletWithConstrains(
-      candidates, current_pose, &*current_lanelet_,
-      params_.path_planning.ego_nearest_lanelet.dist_threshold,
-      params_.path_planning.ego_nearest_lanelet.yaw_threshold)) {
+  if (lanelet::utils::query::getClosestLaneletWithConstrains(
+        candidates, current_pose, &*current_lanelet_,
+        params_.path_planning.ego_nearest_lanelet.dist_threshold,
+        params_.path_planning.ego_nearest_lanelet.yaw_threshold)) {
     return true;
   }
 
-  if (
-    lanelet::utils::query::getClosestLanelet(
-      route_context_.route_lanelets, current_pose, &*current_lanelet_)) {
+  if (lanelet::utils::query::getClosestLanelet(
+        route_context_.route_lanelets, current_pose, &*current_lanelet_)) {
     return true;
   }
 
@@ -1257,9 +1254,8 @@ std::optional<PathWithLaneId> PathPlanner::plan_path(
       return *current_lanelet_;
     }
     lanelet::ConstLanelet closest;
-    if (
-      lanelet::utils::query::getClosestLanelet(
-        route_context_.preferred_lanelets, current_pose, &closest)) {
+    if (lanelet::utils::query::getClosestLanelet(
+          route_context_.preferred_lanelets, current_pose, &closest)) {
       route_context_.closest_preferred_lanelet = closest;
       return *route_context_.closest_preferred_lanelet;
     }

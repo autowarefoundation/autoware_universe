@@ -85,9 +85,7 @@ StaticObstacleAvoidanceModule::StaticObstacleAvoidanceModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
-: SceneModuleInterface{
-    name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
-    planning_factor_interface},  // NOLINT
+: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
   helper_{std::make_shared<AvoidanceHelper>(parameters)},
   parameters_{parameters},
   generator_{parameters}
@@ -1575,10 +1573,9 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
       const size_t start_idx = shift_line.start_idx;
       const size_t end_idx = shift_line.end_idx;
 
-      if (
-        is_return_shift(
-          shift_line.start_shift_length, shift_line.end_shift_length,
-          parameters_->lateral_small_shift_threshold)) {
+      if (is_return_shift(
+            shift_line.start_shift_length, shift_line.end_shift_length,
+            parameters_->lateral_small_shift_threshold)) {
         continue;
       }
 
@@ -1660,10 +1657,9 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
   if (is_close_distance_avoidance) {
     return parameters_->policy_close_distance_avoidance == "manual";
   }
-  if (
-    is_return_shift(
-      shift_line.start_shift_length, shift_line.end_shift_length,
-      parameters_->lateral_small_shift_threshold)) {
+  if (is_return_shift(
+        shift_line.start_shift_length, shift_line.end_shift_length,
+        parameters_->lateral_small_shift_threshold)) {
     return false;
   }
 

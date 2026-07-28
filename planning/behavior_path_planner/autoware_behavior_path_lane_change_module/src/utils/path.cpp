@@ -507,9 +507,8 @@ LaneChangePath construct_candidate_path(
     point.lane_ids = target_lane_reference_path.points.at(*nearest_idx).lane_ids;
   }
 
-  if (
-    utils::lane_change::is_intersecting_no_lane_change_lines(
-      common_data_ptr, lane_change_info.length, shifted_path.path.points)) {
+  if (utils::lane_change::is_intersecting_no_lane_change_lines(
+        common_data_ptr, lane_change_info.length, shifted_path.path.points)) {
     throw std::logic_error("Intersect no lane change lines.");
   }
 
@@ -733,9 +732,8 @@ std::optional<LaneChangePath> get_candidate_path(
   info.lane_changing_start = prepare_segment.points.back().point.pose;
   info.lane_changing_end = lane_changing_candidate.poses.back();
 
-  if (
-    utils::lane_change::is_intersecting_no_lane_change_lines(
-      common_data_ptr, info.length, shifted_path.path.points)) {
+  if (utils::lane_change::is_intersecting_no_lane_change_lines(
+        common_data_ptr, info.length, shifted_path.path.points)) {
     throw std::logic_error("Intersect no lane change lines.");
   }
 

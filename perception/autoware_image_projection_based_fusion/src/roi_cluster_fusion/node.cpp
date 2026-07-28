@@ -174,9 +174,8 @@ void RoiClusterFusionNode::fuse_on_single_image(
       }
 
       Eigen::Vector2d projected_point;
-      if (
-        det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-          cv::Point3d(*iter_x, *iter_y, *iter_z), projected_point)) {
+      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+            cv::Point3d(*iter_x, *iter_y, *iter_z), projected_point)) {
         const int px = static_cast<int>(projected_point.x());
         const int py = static_cast<int>(projected_point.y());
 

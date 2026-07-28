@@ -126,9 +126,8 @@ std::optional<std::pair<double, double>> compute_time_interval_for_passing_line(
     const auto & base_pose = path_point.point.pose;
     const auto path_point_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(base_pose));
-    if (
-      boost::geometry::intersects(
-        path_point_footprint, lanelet::utils::to2D(line1).basicLineString())) {
+    if (boost::geometry::intersects(
+          path_point_footprint, lanelet::utils::to2D(line1).basicLineString())) {
       entry_time = time;
       break;
     }
@@ -143,9 +142,8 @@ std::optional<std::pair<double, double>> compute_time_interval_for_passing_line(
     const auto & base_pose = path_point.point.pose;
     const auto path_point_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(base_pose));
-    if (
-      boost::geometry::intersects(
-        path_point_footprint, lanelet::utils::to2D(line2).basicLineString())) {
+    if (boost::geometry::intersects(
+          path_point_footprint, lanelet::utils::to2D(line2).basicLineString())) {
       exit_time = time;
       break;
     }

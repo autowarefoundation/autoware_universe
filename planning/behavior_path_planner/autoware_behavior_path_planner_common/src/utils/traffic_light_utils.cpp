@@ -149,9 +149,8 @@ bool isTrafficSignalStop(
         continue;
       }
 
-      if (
-        autoware::traffic_light_utils::isTrafficSignalStop(
-          lanelet, traffic_signal_stamped.value().signal)) {
+      if (autoware::traffic_light_utils::isTrafficSignalStop(
+            lanelet, traffic_signal_stamped.value().signal)) {
         return true;
       }
     }
