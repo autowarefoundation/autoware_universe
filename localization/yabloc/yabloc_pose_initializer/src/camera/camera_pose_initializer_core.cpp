@@ -133,9 +133,10 @@ std::optional<double> CameraPoseInitializer::estimate_pose(
   query_pose.position.z = position.z();
 
   std::optional<double> lane_angle_rad = std::nullopt;
-  if (const auto current_lanelet_opt =
-        autoware::experimental::lanelet2_utils::get_closest_lanelet(const_lanelets_, query_pose);
-      current_lanelet_opt) {
+  if (
+    const auto current_lanelet_opt =
+      autoware::experimental::lanelet2_utils::get_closest_lanelet(const_lanelets_, query_pose);
+    current_lanelet_opt) {
     lane_angle_rad = autoware::experimental::lanelet2_utils::get_lanelet_angle(
       current_lanelet_opt.value(),
       autoware::experimental::lanelet2_utils::from_ros(query_pose.position).basicPoint());
