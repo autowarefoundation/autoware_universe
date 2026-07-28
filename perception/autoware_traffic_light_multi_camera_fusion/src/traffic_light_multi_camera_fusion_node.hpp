@@ -18,6 +18,8 @@
 #include "multi_camera_fusion.hpp"
 
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/message_filters.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -30,20 +32,15 @@
 #include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
-
 #include <memory>
 #include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-namespace mf = message_filters;
+namespace mf = autoware::agnocast_wrapper::message_filters;
 
-class MultiCameraFusionNode : public rclcpp::Node
+class MultiCameraFusionNode : public autoware::agnocast_wrapper::Node
 {
 public:
   using CamInfoType = sensor_msgs::msg::CameraInfo;
@@ -61,10 +58,12 @@ public:
 
 private:
   void traffic_signal_roi_callback(
-    const CamInfoType::ConstSharedPtr cam_info_msg, const RoiArrayType::ConstSharedPtr roi_msg,
-    const SignalArrayType::ConstSharedPtr signal_msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CamInfoType) & cam_info_msg,
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(RoiArrayType) & roi_msg,
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SignalArrayType) & signal_msg);
 
-  void map_callback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
+  void map_callback(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & input_msg);
 
   void publish_diagnostics(
     const std::vector<ConflictInfo> & conflicted_regulatory_element_status, rclcpp::Time stamp);
@@ -80,14 +79,15 @@ private:
   std::vector<std::unique_ptr<mf::Subscriber<CamInfoType>>> cam_info_subs_;
   std::vector<std::unique_ptr<ExactSync>> exact_sync_subs_;
   std::vector<std::unique_ptr<ApproximateSync>> approximate_sync_subs_;
-  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_map_msgs::msg::LaneletMapBin) map_sub_;
 
   AUTOWARE_PUBLISHER_PTR(NewSignalArrayType) signal_pub_;
 
   MultiCameraFusionConfig fusion_config_{};
   MultiCameraFusion fusion_{};
 
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  std::unique_ptr<autoware_utils::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
+    diagnostics_interface_ptr_;
 };
 }  // namespace autoware::traffic_light
 #endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
