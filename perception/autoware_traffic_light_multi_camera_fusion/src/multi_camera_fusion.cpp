@@ -14,6 +14,7 @@
 
 #include "multi_camera_fusion.hpp"
 
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/time.hpp>
 
@@ -183,29 +184,32 @@ MultiCameraFusion::MultiCameraFusion(const MultiCameraFusionConfig & config)
 MultiCameraFusionResult MultiCameraFusion::fuse(
   const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals)
 {
+  // Filter the ML predictions against the map BEFORE the record enters the per-camera
+  // best-view selection, so that a map-invalid prediction cannot beat a map-valid one from
+  // another camera on confidence alone. Any signal whose elements are all rejected becomes an
+  // UNKNOWN failsafe so the priority ranker treats it as low-confidence.
+  SignalArrayType filtered_signals = signals;
+  if (map_based_signal_filter_) {
+    for (auto & signal : filtered_signals.signals) {
+      signal.elements =
+        map_based_signal_filter_->filter_elements(signal.traffic_light_id, signal.elements);
+      if (signal.elements.empty()) {
+        traffic_light_utils::setSignalUnknown(signal, 0.0f);
+      }
+    }
+  }
+
   /*
   Insert the received record array to the table.
   Attention should be payed that this record array might not have the newest timestamp
   */
-  record_arr_set_.insert(utils::FusionRecordArr{cam_info.header, cam_info, rois, signals});
+  record_arr_set_.insert(utils::FusionRecordArr{cam_info.header, cam_info, rois, filtered_signals});
 
   MultiCameraFusionResult result;
   std::map<IdType, utils::FusionRecord> fused_record_map =
     multi_camera_fusion(record_arr_set_, config_.message_lifespan);
   result.unmapped_traffic_light_ids =
     find_unmapped_traffic_light_ids(fused_record_map, traffic_light_id_to_regulatory_ele_id_);
-  if (map_based_signal_filter_) {
-    for (auto & [traffic_light_id, record] : fused_record_map) {
-      record.signal.elements =
-        map_based_signal_filter_->filter_elements(traffic_light_id, record.signal.elements);
-      if (record.signal.elements.empty()) {
-        // every element was rejected by the map filter — replace with an UNKNOWN element so
-        // downstream group fusion still emits a group (via the failsafe path) instead of
-        // silently dropping the traffic light.
-        record = utils::generate_failsafe_record(record);
-      }
-    }
-  }
   GroupFusionResult group_result = group_fusion(fused_record_map);
   result.conflicted_regulatory_element_status = group_result.conflicts;
 
