@@ -4,6 +4,10 @@ project(autoware_control_validator)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+generate_parameter_library(control_validator_parameters
+  param/control_validator_parameters.yaml
+)
+
 ament_auto_add_library(autoware_control_validator_helpers SHARED
   src/utils.cpp
   src/debug_marker.cpp
@@ -14,7 +18,14 @@ ament_auto_add_library(autoware_control_validator_component SHARED
   include/autoware/control_validator/control_validator.hpp
   src/control_validator.cpp
 )
-target_link_libraries(autoware_control_validator_component autoware_control_validator_helpers)
+target_link_libraries(autoware_control_validator_component
+  autoware_control_validator_helpers
+  control_validator_parameters
+)
+# generate_parameter_library pulls in parameter_traits, which uses deprecated symbols.
+target_compile_options(autoware_control_validator_component PUBLIC
+  -Wno-error=deprecated-declarations
+)
 rclcpp_components_register_node(autoware_control_validator_component
   PLUGIN "autoware::control_validator::ControlValidator"
   EXECUTABLE autoware_control_validator_node
@@ -44,7 +55,10 @@ if(BUILD_TESTING)
   ament_target_dependencies(test_autoware_control_validator
     ament_index_cpp
   )
-  target_link_libraries(test_autoware_control_validator autoware_control_validator_component)
+  target_link_libraries(test_autoware_control_validator
+    autoware_control_validator_component
+    control_validator_parameters
+  )
 endif()
 
 ament_auto_package(
