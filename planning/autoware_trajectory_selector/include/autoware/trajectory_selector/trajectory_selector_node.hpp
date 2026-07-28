@@ -16,13 +16,14 @@
 #define AUTOWARE__TRAJECTORY_SELECTOR__TRAJECTORY_SELECTOR_NODE_HPP_
 
 #include "autoware/trajectory_validator/detail/validator_context.hpp"
-#include "autoware/trajectory_validator/trajectory_validator_wrapper.hpp"
 #include "autoware_trajectory_selector/autoware_trajectory_selector_param.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory_concatenator/trajectory_concatenator_wrapper.hpp>
+#include <autoware/trajectory_ranker/trajectory_ranker_wrapper.hpp>
+#include <autoware/trajectory_validator/trajectory_validator_wrapper.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tl_expected/expected.hpp>
@@ -41,11 +42,18 @@ namespace autoware::trajectory_selector
 {
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
+using autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+
+using autoware_trajectory_validator::msg::RiskLevel;
+using trajectory_ranker::RankerInputTrajectories;
+using trajectory_ranker::RankerInputTrajectory;
+using trajectory_ranker::TrajectorySource;
+using trajectory_validator::ValidationReports;
 
 /**
  * @brief Concatenates candidate trajectories from multiple planners, validates them, and
@@ -94,13 +102,21 @@ private:
   void on_trajectories(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg);
 
   /**
-   * @brief Concatenates buffered trajectories, validates them, and publishes the result.
+   * @brief Concatenates buffered trajectories, validates them, ranks them, and publishes the
+   * result.
    */
-  void concatenate_and_validate();
+  void process_trajectories();
 
   /** @brief Collects the latest sensor data needed for validation; returns an error string if any
    * mandatory input is unavailable. */
   tl::expected<trajectory_validator::FilterContext, std::string> take_validator_data();
+
+  /** @brief Collects the latest data needed for ranking */
+  trajectory_ranker::RankerContext take_ranker_data(
+    const CandidateTrajectories & candidate_trajectories);
+
+  trajectory_ranker::RankerInputTrajectories to_ranker_input_trajectories(
+    const CandidateTrajectories & trajectories, const ValidationReports & validation_reports);
 
   /** @brief Update parameters */
   void update_parameters();
@@ -110,9 +126,11 @@ private:
 
   std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorWrapper> concatenator_ptr_;
   std::unique_ptr<trajectory_validator::TrajectoryValidatorWrapper> validator_ptr_;
+  std::unique_ptr<trajectory_ranker::TrajectoryRankerWrapper> ranker_ptr_;
   AUTOWARE_TIMER_PTR timer_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   LaneletRoute::ConstSharedPtr route_ptr_;
+  std::shared_ptr<route_handler::RouteHandler> route_handler_ptr_;
 
   // Polling Subscribers
   autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_odometry_ =
@@ -137,7 +155,9 @@ private:
   AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) sub_trajectories_backup_;
 
   // Publishers
-  AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) pub_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) pub_concatenated_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) pub_validated_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(ScoredCandidateTrajectories) pub_scored_trajectories_;
   AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail) pub_processing_time_detail_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
