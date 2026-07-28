@@ -30,6 +30,9 @@ private:
   VehicleTracker normal_vehicle_tracker_;
   VehicleTracker big_vehicle_tracker_;
 
+  // Heading-sign consensus across the layers; the stronger sign belief is authoritative.
+  void alignOrientationSigns();
+
   // Inner tracker that backs the published object for the current highest-prob label.
   VehicleTracker & activeInner()
   {

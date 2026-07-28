@@ -75,6 +75,10 @@ public:
   }
   void setMaxDeltaTime(const double dt_max) noexcept { dt_max_ = dt_max; }
   double getStateElement(unsigned int idx) const noexcept { return ekf_.getXelement(idx); }
+  double getCovarianceElement(unsigned int i, unsigned int j) const noexcept
+  {
+    return ekf_.getPelement(i, j);
+  }
   void getStateVector(StateVec & X) const noexcept { ekf_.getX(X); }
 
   bool initialize(const rclcpp::Time & time, const StateVec & X, const StateMat & P);

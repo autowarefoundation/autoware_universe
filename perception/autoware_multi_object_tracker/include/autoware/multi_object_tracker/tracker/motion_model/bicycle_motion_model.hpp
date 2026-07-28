@@ -53,8 +53,6 @@ private:
     double wheel_base_ratio_inv =
       1 / (lf_ratio + lr_ratio);  // [-] inverse of the sum of lf_ratio and lr_ratio
     double max_vel = 27.8;        // [m/s] maximum velocity, 100km/h
-    double max_reverse_vel =
-      -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
     double wheel_pos_ratio =
       (lf_ratio + lr_ratio) /
       lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
@@ -65,6 +63,10 @@ private:
       (0.5 - lr_ratio) / (lf_ratio + lr_ratio);  // [-] protrusion from rear wheel position ratio
     double q_cov_length = 0.25;                  // [m^2] covariance of the length uncertainty, 0.5m
   } motion_params_;
+
+  // 180° heading flip on a raw state/covariance pair: swap the axle points about the body
+  // center, negate the longitudinal velocity, swap the matching covariance rows/cols.
+  void flipStateOrientation(StateVec & X, StateMat & P) const;
 
 public:
   BicycleMotionModel();
@@ -126,6 +128,10 @@ public:
   bool blendAxleCovariance(const double blend_ratio);
 
   bool limitStates();
+
+  // Rotate the tracked heading 180°: swap the axle points about the body center and negate the
+  // longitudinal velocity.
+  bool flipOrientation();
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 

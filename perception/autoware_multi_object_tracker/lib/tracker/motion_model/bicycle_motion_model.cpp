@@ -367,6 +367,53 @@ bool BicycleMotionModel::updateStateLength(
   return true;
 }
 
+void BicycleMotionModel::flipStateOrientation(StateVec & X, StateMat & P) const
+{
+  // rotate the object orientation by 180 degrees
+  // replace X1 and Y1 with X2 and Y2
+  const double x_center =
+    (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) *
+    motion_params_.wheel_base_ratio_inv;
+  const double y_center =
+    (X(IDX::Y1) * motion_params_.lf_ratio + X(IDX::Y2) * motion_params_.lr_ratio) *
+    motion_params_.wheel_base_ratio_inv;
+  const double x1_rel = X(IDX::X1) - x_center;
+  const double y1_rel = X(IDX::Y1) - y_center;
+  const double x2_rel = X(IDX::X2) - x_center;
+  const double y2_rel = X(IDX::Y2) - y_center;
+
+  X(IDX::X1) = x_center + x2_rel;
+  X(IDX::Y1) = y_center + y2_rel;
+  X(IDX::X2) = x_center + x1_rel;
+  X(IDX::Y2) = y_center + y1_rel;
+
+  // reverse longitudinal velocity (U) direction
+  X(IDX::U) = -X(IDX::U);
+  // horizontal velocity does not change
+
+  // covariance transform T*P*T^T: swap the axle rows/columns and negate the U cross-covariances
+  // U self-variance remains unchanged
+  P.row(IDX::X1).swap(P.row(IDX::X2));
+  P.row(IDX::Y1).swap(P.row(IDX::Y2));
+  P.col(IDX::X1).swap(P.col(IDX::X2));
+  P.col(IDX::Y1).swap(P.col(IDX::Y2));
+  P.row(IDX::U) *= -1.0;
+  P.col(IDX::U) *= -1.0;
+}
+
+bool BicycleMotionModel::flipOrientation()
+{
+  if (!checkInitialized()) return false;
+
+  StateVec X_t;
+  StateMat P_t;
+  ekf_.getX(X_t);
+  ekf_.getP(P_t);
+  flipStateOrientation(X_t, P_t);
+  ekf_.init(X_t, P_t);
+  return true;
+}
+
 bool BicycleMotionModel::limitStates()
 {
   StateVec X_t;
@@ -374,37 +421,6 @@ bool BicycleMotionModel::limitStates()
   ekf_.getX(X_t);
   ekf_.getP(P_t);
 
-  // maximum reverse velocity
-  if (motion_params_.max_reverse_vel < 0 && X_t(IDX::U) < motion_params_.max_reverse_vel) {
-    // rotate the object orientation by 180 degrees
-    // replace X1 and Y1 with X2 and Y2
-    const double x_center =
-      (X_t(IDX::X1) * motion_params_.lf_ratio + X_t(IDX::X2) * motion_params_.lr_ratio) *
-      motion_params_.wheel_base_ratio_inv;
-    const double y_center =
-      (X_t(IDX::Y1) * motion_params_.lf_ratio + X_t(IDX::Y2) * motion_params_.lr_ratio) *
-      motion_params_.wheel_base_ratio_inv;
-    const double x1_rel = X_t(IDX::X1) - x_center;
-    const double y1_rel = X_t(IDX::Y1) - y_center;
-    const double x2_rel = X_t(IDX::X2) - x_center;
-    const double y2_rel = X_t(IDX::Y2) - y_center;
-
-    X_t(IDX::X1) = x_center + x2_rel;
-    X_t(IDX::Y1) = y_center + y2_rel;
-    X_t(IDX::X2) = x_center + x1_rel;
-    X_t(IDX::Y2) = y_center + y1_rel;
-
-    // reverse the velocity
-    X_t(IDX::U) = -X_t(IDX::U);
-    // rotation velocity does not change
-
-    // replace covariance
-    // Swap rows and columns
-    P_t.row(IDX::X1).swap(P_t.row(IDX::X2));
-    P_t.row(IDX::Y1).swap(P_t.row(IDX::Y2));
-    P_t.col(IDX::X1).swap(P_t.col(IDX::X2));
-    P_t.col(IDX::Y1).swap(P_t.col(IDX::Y2));
-  }
   // maximum velocity
   if (!(-motion_params_.max_vel <= X_t(IDX::U) && X_t(IDX::U) <= motion_params_.max_vel)) {
     X_t(IDX::U) = X_t(IDX::U) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;
