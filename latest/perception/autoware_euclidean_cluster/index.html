@@ -23119,7 +23119,8 @@
 <div><h1 id="autoware_euclidean_cluster">autoware_euclidean_cluster<a class="headerlink" href="#autoware_euclidean_cluster" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
 <p>autoware_euclidean_cluster is a package for clustering points into smaller parts to classify objects.</p>
-<p>This package has two clustering methods: <code>euclidean_cluster</code> and <code>voxel_grid_based_euclidean_cluster</code>.</p>
+<p>This package has three clustering methods: <code>euclidean_cluster</code>, <code>voxel_grid_based_euclidean_cluster</code>,
+and <code>label_based_euclidean_cluster</code>.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <h3 id="euclidean_cluster">euclidean_cluster<a class="headerlink" href="#euclidean_cluster" title="Permanent link">#</a></h3>
 <p><code>pcl::EuclideanClusterExtraction</code> is applied to points. See <a href="https://pcl.readthedocs.io/projects/tutorials/en/master/cluster_extraction.html">official document</a> for details.</p>

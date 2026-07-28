@@ -8012,17 +8012,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#label-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Label Mapping
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#shape-estimation-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23127,17 +23116,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#label-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Label Mapping
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#shape-estimation-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23192,8 +23170,9 @@
 
 <div><h1 id="label_based_euclidean_cluster">label_based_euclidean_cluster<a class="headerlink" href="#label_based_euclidean_cluster" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p><code>label_based_euclidean_cluster</code> converts a semantically segmented pointcloud into <code>DetectedObjects</code>.
-It groups points by semantic class, clusters each label bucket independently, and estimates a shape for every resulting cluster.</p>
+<p><code>label_based_euclidean_cluster</code> converts object-compatible semantic pointcloud labels into <code>DetectedObjects</code>.
+It groups points by semantic class, clusters each label bucket independently, and estimates a shape for every resulting cluster.
+Non-object semantic labels are published as segment pointclouds.</p>
 <p>This node is intended for segmented pointcloud inputs that provide semantic labels as <code>class_id</code>, and optionally per-point confidence as <code>probability</code>.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
@@ -23207,7 +23186,7 @@ It groups points by semantic class, clusters each label bucket independently, an
 </thead>
 <tbody>
 <tr>
-<td><code>input</code></td>
+<td><code>~/input/pointcloud</code></td>
 <td><code>sensor_msgs::msg::PointCloud2</code></td>
 <td>segmented pointcloud with <code>x</code>, <code>y</code>, and <code>z</code></td>
 </tr>
@@ -23229,53 +23208,30 @@ It groups points by semantic class, clusters each label bucket independently, an
 </thead>
 <tbody>
 <tr>
-<td><code>output</code></td>
+<td><code>~/output/objects</code></td>
 <td><code>autoware_perception_msgs::msg::DetectedObjects</code></td>
 <td>detected objects estimated per cluster</td>
 </tr>
+<tr>
+<td><code>~/output/pointcloud</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>non-object semantic points with original fields</td>
+</tr>
 </tbody>
 </table>
-<p>The packaged launch file remaps these by default to the following topics:</p>
-<ul>
-<li><code>input</code> -&gt; <code>/perception/ptv3/segmented/pointcloud</code></li>
-<li><code>output</code> -&gt; <code>objects</code></li>
-</ul>
 <h2 id="processing-flow">Processing Flow<a class="headerlink" href="#processing-flow" title="Permanent link">#</a></h2>
 <ol>
 <li>Validate that the incoming pointcloud contains <code>x</code>, <code>y</code>, and <code>z</code>.</li>
-<li>Read the configured <code>class_names.*</code> mapping in YAML declaration order and treat that order as the incoming <code>class_id</code> index.</li>
-<li>Drop points whose mapped class is configured as <code>ignore</code>.</li>
+<li>Interpret <code>class_id</code> values as <code>SemanticLabel</code>.</li>
+<li>Send object-compatible SemanticLabels through clustering and copy non-object or unknown SemanticLabels to <code>output_segments</code>.</li>
 <li>If the pointcloud has a <code>probability</code> field, drop points with <code>probability &lt; min_probability</code>.</li>
-<li>Split the remaining points into buckets keyed by the mapped Autoware object label.</li>
+<li>Split object-compatible points into buckets keyed by the Autoware object label.</li>
 <li>Run <code>VoxelGridBasedEuclideanCluster</code> independently for each label bucket, using the per-label parameter overrides from <code>label_cluster_params.*</code> where configured and the global defaults otherwise.</li>
 <li>Merge over-segmented clusters across labels that belong to the same confusable label group (<code>confusable_label_groups.*</code>).</li>
 <li>Compute the average semantic probability for each output cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label filtered cloud, rather than rematching points by coordinate.</li>
 <li>Estimate a shape and pose for each cluster with <code>ShapeEstimator</code>.</li>
 <li>If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.</li>
-<li>Publish one <code>DetectedObject</code> per cluster.</li>
 </ol>
-<h2 id="label-mapping">Label Mapping<a class="headerlink" href="#label-mapping" title="Permanent link">#</a></h2>
-<p><code>class_names.&lt;original_class_name&gt;</code> maps each incoming semantic class to an Autoware object class.</p>
-<ul>
-<li>YAML declaration order defines the <code>class_id</code> expected in the input pointcloud.</li>
-<li>Entries mapped to <code>ignore</code> are skipped before clustering.</li>
-<li>Unsupported mapped labels are ignored with a warning.</li>
-</ul>
-<p>Supported mapped labels are:</p>
-<ul>
-<li><code>unknown</code></li>
-<li><code>car</code></li>
-<li><code>bus</code></li>
-<li><code>truck</code></li>
-<li><code>motorcycle</code></li>
-<li><code>bicycle</code></li>
-<li><code>pedestrian</code></li>
-<li><code>animal</code></li>
-<li><code>trailer</code></li>
-<li><code>hazard</code></li>
-<li><code>ignore</code></li>
-</ul>
-<p>If no supported non-ignored mapping remains after parsing <code>class_names.*</code>, the node throws during startup.</p>
 <h2 id="shape-estimation-behavior">Shape Estimation Behavior<a class="headerlink" href="#shape-estimation-behavior" title="Permanent link">#</a></h2>
 <p>After clustering, the node converts each cluster into a <code>DetectedObject</code>.</p>
 <ul>
@@ -23463,17 +23419,13 @@ confusable_label_groups:
     cross_label_tolerance_m: 0.5
     max_merged_size_m: 25.0</code></p>
 <h2 id="default-configuration-notes">Default Configuration Notes<a class="headerlink" href="#default-configuration-notes" title="Permanent link">#</a></h2>
-<p>The default parameter file keeps common road users and filters out map/background classes.</p>
-<ul>
-<li><code>car</code>, <code>bus</code>, <code>truck</code>, <code>motorcycle</code>, <code>bicycle</code>, and <code>pedestrian</code> are preserved directly.</li>
-<li><code>tractor_unit</code> and <code>semi_trailer</code> are mapped to <code>trailer</code>.</li>
-<li>several small or ambiguous classes such as <code>train</code>, <code>pushable_pullable</code>, <code>traffic_cone</code>, and <code>debris</code> are mapped to <code>unknown</code>.</li>
-<li>ground and background classes such as <code>drivable_surface</code>, <code>vegetation</code>, and <code>other_stuff</code> are mapped to <code>ignore</code>.</li>
-</ul>
+<p>The default parameter file keeps shared clustering and shape-estimation parameters only.
+Object selection is derived from <code>SemanticLabel</code> compatibility.</p>
 <h2 id="assumptions-known-limits">Assumptions / Known Limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
 <li>The node assumes the incoming pointcloud already represents semantically segmented points.</li>
-<li><code>class_id</code> is interpreted only by order in <code>class_names.*</code>; changing YAML order changes the expected semantic index mapping.</li>
+<li><code>class_id</code> values are interpreted as <code>SemanticLabel</code> values.</li>
+<li>Non-object or unknown <code>SemanticLabel</code> values are copied to <code>output/pointcloud</code> with the original point fields preserved.</li>
 <li>When the input has no <code>class_id</code> field, all points are clustered together as <code>UNKNOWN</code>.</li>
 <li>When the input has no <code>probability</code> field, every point is treated as confidence <code>1.0</code>.</li>
 <li>Clustering is spatial only; there is no temporal association or tracking.</li>
