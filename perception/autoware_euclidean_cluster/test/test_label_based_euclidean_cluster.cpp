@@ -16,7 +16,7 @@
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <autoware/object_recognition_utils/object_classification.hpp>
-#include <autoware/ptv3/experimental/semantic_label.hpp>
+#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
 #include <autoware/shape_estimation/shape_estimator.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
@@ -31,7 +31,7 @@
 
 namespace autoware::euclidean_cluster
 {
-using autoware::ptv3::experimental::SemanticLabel;
+using autoware::object_recognition_utils::PointCloudClassification;
 using autoware_perception_msgs::msg::ObjectClassification;
 
 class LabelBasedEuclideanClusterTest : public ::testing::Test
@@ -139,7 +139,7 @@ protected:
 };
 
 // ============================================================================
-// SemanticLabel Tests
+// PointCloudClassification Tests
 // ============================================================================
 
 TEST_F(LabelBasedEuclideanClusterTest, EmptyPointCloudReturnsEmptyObjects)
@@ -208,7 +208,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
     x_vals.push_back(5.0f + static_cast<float>(i) * 0.05f);
     y_vals.push_back(0.0f);
     z_vals.push_back(0.0f);
-    class_vals.push_back(static_cast<std::uint8_t>(SemanticLabel::PEDESTRIAN));
+    class_vals.push_back(static_cast<std::uint8_t>(PointCloudClassification::PEDESTRIAN));
     prob_vals.push_back(1.0f);
   }
   auto pc = create_pointcloud(
@@ -327,7 +327,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ShapeIsPopulated)
   }
 }
 
-TEST_F(LabelBasedEuclideanClusterTest, InvalidSemanticLabelsAreOutputAsSegments)
+TEST_F(LabelBasedEuclideanClusterTest, InvalidClassificationsAreOutputAsSegments)
 {
   LabelBasedEuclideanCluster cluster(
     0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
@@ -357,7 +357,7 @@ TEST_F(LabelBasedEuclideanClusterTest, SemanticNonObjectLabelsAreOutputAsSegment
     0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
-  const auto flat_surface = static_cast<std::uint8_t>(SemanticLabel::FLAT_SURFACE);
+  const auto flat_surface = static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
   auto pc = create_pointcloud(
     {0.0f, 0.1f, 0.2f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
     {flat_surface, flat_surface, flat_surface}, {0.9f, 0.8f, 0.7f});

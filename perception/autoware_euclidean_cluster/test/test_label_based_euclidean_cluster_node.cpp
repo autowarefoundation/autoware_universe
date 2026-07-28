@@ -14,7 +14,7 @@
 
 #include "../src/label_based_euclidean_cluster_node.hpp"
 
-#include <autoware/ptv3/experimental/semantic_label.hpp>
+#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -34,7 +34,7 @@
 
 namespace autoware::euclidean_cluster
 {
-using autoware::ptv3::experimental::SemanticLabel;
+using autoware::object_recognition_utils::PointCloudClassification;
 
 class LabelClusterConfigBehavior : public ::testing::Test
 {
@@ -321,8 +321,8 @@ TEST_F(LabelClusterConfigBehavior, PublishesSemanticNonObjectsAsSegments)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  auto input_msg =
-    make_semantic_pointcloud(4, static_cast<std::uint8_t>(SemanticLabel::FLAT_SURFACE), 0.95F);
+  auto input_msg = make_semantic_pointcloud(
+    4, static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE), 0.95F);
   input_pub->publish(input_msg);
 
   {

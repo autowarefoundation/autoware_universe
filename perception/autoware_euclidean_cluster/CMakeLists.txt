@@ -28,7 +28,7 @@ target_link_libraries(${PROJECT_NAME}_lib
 )
 
 ament_target_dependencies(${PROJECT_NAME}_lib
-  autoware_ptv3
+  autoware_object_recognition_utils
   autoware_shape_estimation
 )
 

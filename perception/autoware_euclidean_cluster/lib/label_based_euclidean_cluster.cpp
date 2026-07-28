@@ -16,7 +16,7 @@
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_classification.hpp>
-#include <autoware/ptv3/experimental/semantic_label_helper.hpp>
+#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -100,16 +100,16 @@ void append_segment_point(
   output.row_step = output.point_step * output.width;
 }
 
-/// @brief Add a SemanticLabel point to object buckets or segment output.
+/// @brief Add a PointCloudClassification point to object buckets or segment output.
 void append_classified_point(
   SplitPointcloudResult & result, const pcl::PointXYZ & point, const std::uint8_t class_id,
   const float probability, const sensor_msgs::msg::PointCloud2 & input,
   const std::size_t point_index)
 {
-  namespace ptv3 = autoware::ptv3::experimental;
+  namespace utils = autoware::object_recognition_utils;
 
-  const auto semantic_label = static_cast<ptv3::SemanticLabel>(class_id);
-  const auto object_label = ptv3::try_into_object(semantic_label);
+  const auto classification = static_cast<utils::PointCloudClassification>(class_id);
+  const auto object_label = utils::try_into_object(classification);
   if (object_label) {
     result.object_points[*object_label].push_back(SemanticPoint{point, probability, class_id});
     return;

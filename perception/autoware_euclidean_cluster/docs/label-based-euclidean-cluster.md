@@ -33,8 +33,8 @@ Optional input fields used by the node:
 ## Processing Flow
 
 1. Validate that the incoming pointcloud contains `x`, `y`, and `z`.
-2. Interpret `class_id` values as `SemanticLabel`.
-3. Send object-compatible SemanticLabels through clustering and copy non-object or unknown SemanticLabels to `output_segments`.
+2. Interpret `class_id` values as `PointCloudClassification`.
+3. Send object-compatible classifications through clustering and copy non-object or unknown classifications to `output_segments`.
 4. If the pointcloud has a `probability` field, drop points with `probability < min_probability`.
 5. Split object-compatible points into buckets keyed by the Autoware object label.
 6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
@@ -143,13 +143,13 @@ confusable_label_groups:
 ## Default Configuration Notes
 
 The default parameter file keeps shared clustering and shape-estimation parameters only.
-Object selection is derived from `SemanticLabel` compatibility.
+Object selection is derived from `PointCloudClassification` compatibility.
 
 ## Assumptions / Known Limits
 
 - The node assumes the incoming pointcloud already represents semantically segmented points.
-- `class_id` values are interpreted as `SemanticLabel` values.
-- Non-object or unknown `SemanticLabel` values are copied to `output/pointcloud` with the original point fields preserved.
+- `class_id` values are interpreted as `PointCloudClassification` values.
+- Non-object or unknown `PointCloudClassification` values are copied to `output/pointcloud` with the original point fields preserved.
 - When the input has no `class_id` field, all points are clustered together as `UNKNOWN`.
 - When the input has no `probability` field, every point is treated as confidence `1.0`.
 - Clustering is spatial only; there is no temporal association or tracking.
