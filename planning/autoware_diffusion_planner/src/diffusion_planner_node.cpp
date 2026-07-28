@@ -599,7 +599,7 @@ void DiffusionPlanner::on_timer()
   pub_trajectory_->publish(planner_output.trajectory);
   pub_trajectories_->publish(planner_output.candidate_trajectories);
   pub_objects_->publish(planner_output.predicted_objects);
-  pub_turn_indicators_->publish(planner_output.turn_indicator_command);
+  pub_turn_indicators_->publish(planner_output.turn_indicators_command);
 
   publish_planning_factor(planner_output.trajectory);
 

@@ -78,10 +78,14 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
   // classify the images
   result.signals.signals.resize(images.size());
   if (!images.empty()) {
-    if (!classifier_->getTrafficSignals(images, result.signals)) {
+    if (!classifier_->classify(images, result.signals)) {
       return std::nullopt;
     }
   }
+
+  // Hand the classified crops back to the caller so it can request a debug view later; the debug
+  // image reflects the classifier's view, before the UNKNOWN / exposure post-processing below.
+  result.roi_images = images;
 
   // append the undetected rois as unknown
   for (const auto & input_roi : rois.rois) {
@@ -104,6 +108,11 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
   }
 
   return result;
+}
+
+cv::Mat TrafficLightClassifier::make_debug_image(const std::vector<cv::Mat> & roi_images) const
+{
+  return classifier_->make_debug_image(roi_images);
 }
 
 }  // namespace autoware::traffic_light

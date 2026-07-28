@@ -24,6 +24,10 @@ on:
         required: false
         default: ""
         type: string
+      upload-coverage:
+        default: false
+        required: false
+        type: boolean
     secrets:
       codecov-token:
         required: true
@@ -131,13 +135,13 @@ jobs:
           underlay-workspace: /opt/autoware
 
       - name: Upload coverage to CodeCov
-        if: ${{ steps.test.outputs.coverage-report-files != '' && contains(inputs.container, '-cuda') && inputs.rosdistro == 'jazzy' }}
+        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.upload-coverage }}
+        # Intentionally flagless: flagging this partial upload would suppress the full-suite carryforward.
         uses: codecov/codecov-action@v6
         with:
           files: ${{ steps.test.outputs.coverage-report-files }}
           fail_ci_if_error: false
           verbose: true
-          flags: full-suite
           token: ${{ secrets.codecov-token }}
           disable_search: true
           # Disable gcov and xcode plugins, keeping only pycoverage.

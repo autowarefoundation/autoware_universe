@@ -34,6 +34,10 @@ double get2dIoU(
 double get2dGeneralizedIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object);
 
+// Minimum distance between the two footprint boundaries; 0 when the shapes touch or overlap.
+double get2dMinimumGap(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object);
+
 bool get2dPrecisionRecallGIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   double & precision, double & recall, double & generalized_iou);

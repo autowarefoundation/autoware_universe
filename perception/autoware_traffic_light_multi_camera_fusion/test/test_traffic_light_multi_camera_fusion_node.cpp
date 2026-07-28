@@ -122,7 +122,7 @@ protected:
       "map_based_signal_filter.enable", options.use_map_based_signal_filter);
 
     node_ = std::make_shared<MultiCameraFusionNode>(node_options);
-    executor_->add_node(node_);
+    executor_->add_node(node_->get_node_base_interface());
   }
 
   void TearDown() override

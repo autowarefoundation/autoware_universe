@@ -63,9 +63,55 @@
           "default": false,
           "description": "Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds"
         },
+        "use_temporal_mpt_optimizer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Temporal MPT optimizer plugin (acados-based kinematic bicycle MPC for combined geometry and velocity optimization)"
+        },
+        "max_vel": {
+          "type": "number",
+          "default": 11.1,
+          "minimum": 0,
+          "description": "Default maximum velocity used when no external velocity limit is available [m/s]"
+        },
+        "limit": {
+          "type": "object",
+          "properties": {
+            "max_acc": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Maximum acceleration limit for velocity smoothing [m/s^2]"
+            },
+            "min_acc": {
+              "type": "number",
+              "default": -2.5,
+              "maximum": 0,
+              "description": "Minimum acceleration limit for velocity smoothing [m/s^2]"
+            },
+            "max_jerk": {
+              "type": "number",
+              "default": 1.5,
+              "minimum": 0,
+              "description": "Maximum jerk limit for velocity smoothing [m/s^3]"
+            },
+            "min_jerk": {
+              "type": "number",
+              "default": -1.5,
+              "maximum": 0,
+              "description": "Minimum jerk limit for velocity smoothing [m/s^3]"
+            }
+          },
+          "required": ["max_acc", "min_acc", "max_jerk", "min_jerk"]
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
+            "remove_close_points": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable removal of close proximity points"
+            },
             "resample_close_points": {
               "type": "boolean",
               "default": true,
@@ -91,6 +137,7 @@
             }
           },
           "required": [
+            "remove_close_points",
             "resample_close_points",
             "min_dist_to_remove_m",
             "min_dist_to_resample_m",
@@ -212,6 +259,59 @@
             "ego_nearest_dist_threshold_m",
             "ego_nearest_yaw_threshold_deg",
             "acceleration_moving_average_window"
+          ]
+        },
+        "trajectory_temporal_mpt_optimizer": {
+          "type": "object",
+          "properties": {
+            "cg_distance_from_rear_axle_ratio": {
+              "type": "number",
+              "default": 0.8,
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Ratio of wheel base from rear axle to bicycle center of gravity. lr = ratio * wheel_base, lf = wheel_base - lr."
+            },
+            "min_points_for_optimization": {
+              "type": "integer",
+              "default": 2,
+              "minimum": 2,
+              "maximum": 1000,
+              "description": "Minimum number of trajectory points required to run temporal MPT optimization."
+            },
+            "enable_debug_info": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable debug logging for temporal MPT solver failures."
+            },
+            "publish_debug_topics": {
+              "type": "boolean",
+              "default": false,
+              "description": "Publish temporal MPT input, output, status, and control debug topics."
+            },
+            "write_replay_fixture": {
+              "type": "boolean",
+              "default": false,
+              "description": "Write replay fixture files when temporal MPT solving fails."
+            },
+            "replay_fixture_directory": {
+              "type": "string",
+              "default": "~/.ros/autoware_temporal_mpt_replay",
+              "description": "Directory used for temporal MPT replay fixture files."
+            },
+            "log_replay_fixture_to_console": {
+              "type": "boolean",
+              "default": false,
+              "description": "Log temporal MPT replay fixture contents to console when solving fails."
+            }
+          },
+          "required": [
+            "cg_distance_from_rear_axle_ratio",
+            "min_points_for_optimization",
+            "enable_debug_info",
+            "publish_debug_topics",
+            "write_replay_fixture",
+            "replay_fixture_directory",
+            "log_replay_fixture_to_console"
           ]
         },
         "trajectory_extender": {
@@ -418,6 +518,12 @@
               "minimum": 0,
               "description": "Maximum lateral acceleration [m/s²]"
             },
+            "min_limited_speed_mps": {
+              "type": "number",
+              "default": 3.0,
+              "minimum": 0,
+              "description": "Minimum speed when applying lateral acceleration limit [m/s]"
+            },
             "set_engage_speed": {
               "type": "boolean",
               "default": false,
@@ -437,6 +543,55 @@
               "type": "boolean",
               "default": false,
               "description": "Enable jerk-filtered velocity smoothing"
+            },
+            "continuous_jerk_smoother": {
+              "type": "object",
+              "properties": {
+                "jerk_weight": {
+                  "type": "number",
+                  "default": 30.0,
+                  "minimum": 0,
+                  "description": "Weight for jerk minimization in velocity smoothing"
+                },
+                "over_v_weight": {
+                  "type": "number",
+                  "default": 3000.0,
+                  "minimum": 0,
+                  "description": "Weight for velocity limit violation slack"
+                },
+                "over_a_weight": {
+                  "type": "number",
+                  "default": 30.0,
+                  "minimum": 0,
+                  "description": "Weight for acceleration limit violation slack"
+                },
+                "over_j_weight": {
+                  "type": "number",
+                  "default": 10.0,
+                  "minimum": 0,
+                  "description": "Weight for jerk limit violation slack"
+                },
+                "velocity_tracking_weight": {
+                  "type": "number",
+                  "default": 1.0,
+                  "minimum": 0,
+                  "description": "Weight for tracking reference velocity"
+                },
+                "accel_tracking_weight": {
+                  "type": "number",
+                  "default": 300.0,
+                  "minimum": 0,
+                  "description": "Weight for tracking reference acceleration"
+                }
+              },
+              "required": [
+                "jerk_weight",
+                "over_v_weight",
+                "over_a_weight",
+                "over_j_weight",
+                "velocity_tracking_weight",
+                "accel_tracking_weight"
+              ]
             }
           },
           "required": [
@@ -445,10 +600,12 @@
             "target_pull_out_speed_mps",
             "target_pull_out_acc_mps2",
             "max_lateral_accel_mps2",
+            "min_limited_speed_mps",
             "set_engage_speed",
             "limit_speed",
             "limit_lateral_acceleration",
-            "smooth_velocities"
+            "smooth_velocities",
+            "continuous_jerk_smoother"
           ]
         },
         "elastic_band_params": {
@@ -559,7 +716,8 @@
         "use_trajectory_extender",
         "use_velocity_optimizer",
         "use_kinematic_feasibility_enforcer",
-        "use_mpt_optimizer"
+        "use_mpt_optimizer",
+        "use_temporal_mpt_optimizer"
       ]
     }
   },

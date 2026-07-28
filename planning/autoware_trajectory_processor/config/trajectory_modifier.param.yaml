@@ -135,7 +135,11 @@
       treat_amber_light_as_red: false
       treat_unknown_light_as_red: false
       overshoot_tolerance: 0.0 # [m]
+      allow_if_cannot_stop_distance: 0.0 # [m]
       th_stable_duration_red: 0.2 # [s]
       th_stable_duration_amber: 0.2 # [s]
+      th_stable_duration_unknown: 0.0 # [s]
       th_amber_rejection_hysteresis: 0.5 # [s]
       crossing_time_limit: 2.75 # [s]
+      delay_response_time: 0.5 # [s]
+      ego_stopped_vel_th: 0.01 # [m/s]
