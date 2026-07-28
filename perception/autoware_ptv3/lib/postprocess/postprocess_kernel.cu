@@ -16,7 +16,7 @@
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
 
-#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
+#include <autoware/point_types/types.hpp>
 
 #include <math_constants.h>
 
@@ -29,9 +29,7 @@ namespace autoware::ptv3
 {
 namespace
 {
-using autoware::object_recognition_utils::PointCloudClassification;
-
-constexpr std::uint8_t kInvalidClassification = 255U;
+using autoware::point_types::PointCloudClassification;
 
 /**
  * @brief Convert a PTv3 class name to the consolidated PointCloudClassification value.
@@ -119,7 +117,8 @@ std::uint8_t classificationFromClassName(const std::string & class_name)
 std::vector<std::uint8_t> makeClassIdToClassificationLut(
   const std::vector<std::string> & class_names)
 {
-  std::vector<std::uint8_t> lut(class_names.size(), kInvalidClassification);
+  std::vector<std::uint8_t> lut(
+    class_names.size(), static_cast<std::uint8_t>(PointCloudClassification::INVALID));
   for (std::size_t i = 0; i < class_names.size(); ++i) {
     lut[i] = classificationFromClassName(class_names[i]);
   }
@@ -186,8 +185,9 @@ __global__ void createSegmentationPointcloudKernel(
   output_points[idx].x = input_point.x;
   output_points[idx].y = input_point.y;
   output_points[idx].z = input_point.z;
-  output_points[idx].class_id =
-    has_valid_label ? class_id_to_classification[label] : kInvalidClassification;
+  output_points[idx].class_id = has_valid_label
+                                  ? class_id_to_classification[label]
+                                  : static_cast<std::uint8_t>(PointCloudClassification::INVALID);
   output_points[idx].probability = has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
   output_points[idx].entropy = entropy;
 }

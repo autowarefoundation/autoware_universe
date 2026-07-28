@@ -17,7 +17,6 @@
 #include "ptv3_test_fixture.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
 #include <autoware/point_types/types.hpp>
 
 #include <cuda_runtime_api.h>
@@ -37,9 +36,8 @@ namespace test
 class PostprocessKernelTest : public PTv3CudaTest
 {
 protected:
-  using PointCloudClassification = autoware::object_recognition_utils::PointCloudClassification;
+  using PointCloudClassification = autoware::point_types::PointCloudClassification;
 
-  static constexpr std::uint8_t kInvalidClassification = 255U;
   static constexpr std::size_t kNumClasses = 2;
 
   PTv3Config makeSegmentationConfig() const
@@ -116,7 +114,8 @@ TEST_F(PostprocessKernelTest, CreateSegmentationPointcloud)
   // Invalid labels carry no class distribution, so the entropy keeps the NaN default of
   // point_types::PointXYZCPE.
   for (const std::size_t i : {std::size_t{2}, std::size_t{3}}) {
-    EXPECT_EQ(output_points[i].class_id, kInvalidClassification);
+    EXPECT_EQ(
+      output_points[i].class_id, static_cast<std::uint8_t>(PointCloudClassification::INVALID));
     EXPECT_FLOAT_EQ(output_points[i].probability, 0.0F);
     EXPECT_TRUE(std::isnan(output_points[i].entropy));
   }

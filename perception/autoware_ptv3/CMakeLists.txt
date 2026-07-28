@@ -87,7 +87,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ${autoware_cuda_utils_INCLUDE_DIRS}
   )
   ament_target_dependencies(${PROJECT_NAME}_cuda_lib
-    autoware_object_recognition_utils
     autoware_point_types
   )
 
