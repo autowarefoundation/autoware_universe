@@ -50,6 +50,11 @@ Its `point_step` is 24 bytes.
 Bytes 13 through 15 are alignment padding. The output is intentionally not packed so that the
 floating-point fields remain naturally aligned on both the CPU and GPU.
 
+Points with an invalid label (`class_id` = 255) have no class distribution: their `probability` is
+`0.0` and their `entropy` is `NaN`, which is the default value of
+`autoware::point_types::PointXYZCPE::entropy` and means "not available". Consumers must therefore
+guard against `NaN` before using the `entropy` field.
+
 ## Parameters
 
 ### PTv3Node node

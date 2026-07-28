@@ -17,6 +17,8 @@
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
 
+#include <math_constants.h>
+
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
@@ -152,30 +154,35 @@ __global__ void createSegmentationPointcloudKernel(
   const auto input_point = input_features[idx];
   const auto label = labels[idx];
   const bool has_valid_label = label >= 0 && static_cast<std::size_t>(label) < num_classes;
+
+  // Points without a valid label have no meaningful class distribution, so the entropy is left as
+  // NaN, which is the default value of point_types::PointXYZCPE::entropy and denotes
+  // "not available". Note that the default member initializer does not apply here because the
+  // output buffer is raw device memory, hence the explicit assignment below.
+  float entropy = CUDART_NAN_F;
   if (has_valid_label) {
     for (std::size_t i = 0; i < num_filter_classes; ++i) {
       if (filter_class_indices[i] == static_cast<std::uint32_t>(label)) {
         return;
       }
     }
-  }
 
-  float entropy = 0.0f;
-  for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-    const auto probability = pred_probs[idx * num_classes + class_idx];
-    if (probability > 0.0f) {
-      entropy -= probability * logf(probability);
+    entropy = 0.0f;
+    for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
+      const auto probability = pred_probs[idx * num_classes + class_idx];
+      if (probability > 0.0f) {
+        entropy -= probability * logf(probability);
+      }
+    }
+    if (num_classes > 1) {
+      entropy /= logf(static_cast<float>(num_classes));
     }
   }
-  if (num_classes > 1) {
-    entropy /= logf(static_cast<float>(num_classes));
-  }
 
-  const auto output_idx = atomicAdd(output_num_points, 1U);
-  output_points[output_idx].x = input_point.x;
-  output_points[output_idx].y = input_point.y;
-  output_points[output_idx].z = input_point.z;
-  output_points[output_idx].class_id =
+  output_points[idx].x = input_point.x;
+  output_points[idx].y = input_point.y;
+  output_points[idx].z = input_point.z;
+  output_points[idx].class_id =
     has_valid_label ? class_id_to_semantic_label[label] : kInvalidSemanticLabel;
   output_points[output_idx].probability =
     has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;

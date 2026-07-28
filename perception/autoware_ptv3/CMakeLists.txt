@@ -177,6 +177,8 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       ${CUDA_INCLUDE_DIRS}
     )
 
+    ament_target_dependencies(postprocess_kernel_test autoware_point_types)
+
   endif()
 
   ament_auto_package(
