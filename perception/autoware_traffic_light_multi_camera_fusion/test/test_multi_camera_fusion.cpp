@@ -730,6 +730,51 @@ TEST(MultiCameraFusionFuse, MapBasedFilterProtectsValidPredictionFromInvalidHigh
     result, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
 }
 
+TEST(
+  MultiCameraFusionFuse, MapBasedFilterProtectsValidInputFromSameCameraInvalidHigherConfidenceInput)
+{
+  // Arrange
+  // Single camera observe the SAME traffic light id. First input reports a map-valid (RED, CIRCLE)
+  // at conf 0.7. Second input reports a map-invalid (GREEN, LEFT_ARROW) at conf 0.9.
+  //
+  // With the filter at fuse() entry, Second input signal empties out and is replaced with a
+  // (UNKNOWN, UNKNOWN) failsafe before the per-camera best-view selection runs. The priority
+  // ranker's "recognized > unknown" rule then picks valid RED CIRCLE of first input.
+  //
+  // Without input-side filtering, second input would win the per-camera contest on confidence
+  // (both signals are recognized), its invalid element would then be erased by the filter,
+  // and valid observation would be lost entirely.
+  auto config = make_default_config();
+  config.use_map_based_signal_filter = true;
+  config.lanelet_map_ptr = make_lanelet_map_with_circle_only_bulbs();
+  MultiCameraFusion fusion(config);
+
+  const auto valid_camera_0_input =
+    make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.7f));
+
+  T4Element arrow_element;
+  arrow_element.color = T4Element::GREEN;
+  arrow_element.shape = T4Element::LEFT_ARROW;
+  arrow_element.status = T4Element::SOLID_ON;
+  arrow_element.confidence = 0.9f;
+  TrafficLight invalid_signal;
+  invalid_signal.traffic_light_id = LEFT_TRAFFIC_LIGHT_ID;  // same id
+  invalid_signal.elements.push_back(arrow_element);
+  const auto invalid_camera_0_input = make_fusion_input("camera0", invalid_signal);
+
+  // Act
+  fusion.fuse(
+    valid_camera_0_input.camera_info, valid_camera_0_input.roi_array,
+    valid_camera_0_input.signal_array);
+  const auto result = fusion.fuse(
+    invalid_camera_0_input.camera_info, invalid_camera_0_input.roi_array,
+    invalid_camera_0_input.signal_array);
+
+  // Assert
+  expect_single_fused_color_and_shape(
+    result, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
+}
+
 TEST(MultiCameraFusionFuse, MapBasedFilterIsInactiveWhenLightBulbsMissingForId)
 {
   // Arrange
