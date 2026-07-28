@@ -20,6 +20,7 @@
 #include <lanelet2_core/LaneletMap.h>
 
 #include <algorithm>
+#include <iterator>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -119,25 +120,25 @@ bool MapBasedSignalFilter::has_rules_for(IdType traffic_light_id) const
   return it != allowed_bulbs_.end() && !it->second.empty();
 }
 
-bool MapBasedSignalFilter::filter_elements(
-  IdType traffic_light_id, std::vector<T4Element> & elements) const
+std::vector<T4Element> MapBasedSignalFilter::filter_elements(
+  IdType traffic_light_id, const std::vector<T4Element> & elements) const
 {
   const auto it = allowed_bulbs_.find(traffic_light_id);
   if (it == allowed_bulbs_.end() || it->second.empty()) {
-    return false;
+    return elements;
   }
   const auto & allowed = it->second;
 
-  const auto original_size = elements.size();
-  // remove all color/shape that does not exist in the map
-  elements.erase(
-    std::remove_if(
-      elements.begin(), elements.end(),
-      [&allowed](const T4Element & element) {
-        return allowed.count({element.color, element.shape}) == 0;
-      }),
-    elements.end());
-  return elements.size() != original_size;
+  std::vector<T4Element> filtered;
+  filtered.reserve(elements.size());
+  // keep only color/shape pairs declared on the map (UNKNOWN can never be declared, so
+  // UNKNOWN elements are dropped by the same rule)
+  std::copy_if(
+    elements.begin(), elements.end(), std::back_inserter(filtered),
+    [&allowed](const T4Element & element) {
+      return allowed.count({element.color, element.shape}) != 0;
+    });
+  return filtered;
 }
 
 std::set<MapBasedSignalFilter::ColorShape> MapBasedSignalFilter::get_allowed_bulbs(

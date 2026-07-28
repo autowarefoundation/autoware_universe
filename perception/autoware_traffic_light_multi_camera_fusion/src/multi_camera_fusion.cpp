@@ -196,7 +196,8 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
     find_unmapped_traffic_light_ids(fused_record_map, traffic_light_id_to_regulatory_ele_id_);
   if (map_based_signal_filter_) {
     for (auto & [traffic_light_id, record] : fused_record_map) {
-      map_based_signal_filter_->filter_elements(traffic_light_id, record.signal.elements);
+      record.signal.elements =
+        map_based_signal_filter_->filter_elements(traffic_light_id, record.signal.elements);
       if (record.signal.elements.empty()) {
         // every element was rejected by the map filter — replace with an UNKNOWN element so
         // downstream group fusion still emits a group (via the failsafe path) instead of

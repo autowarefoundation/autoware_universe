@@ -55,14 +55,14 @@ public:
   bool has_rules_for(IdType traffic_light_id) const;
 
   /**
-   * @brief Filter the element list in place. Elements whose (color, shape) is absent from the
-   * map's declared bulbs are erased. Elements with UNKNOWN color or shape are also erased.
-   *
-   * @return true if any element was removed.
+   * @brief Return a filtered copy of the given element list. Elements whose (color, shape) is
+   * absent from the map's declared bulbs are dropped; elements with UNKNOWN color or shape are
+   * dropped for the same reason (the map never declares UNKNOWN bulbs). If the given traffic
+   * light id has no declared bulbs, the input is returned unchanged.
    */
-  bool filter_elements(
+  std::vector<tier4_perception_msgs::msg::TrafficLightElement> filter_elements(
     IdType traffic_light_id,
-    std::vector<tier4_perception_msgs::msg::TrafficLightElement> & elements) const;
+    const std::vector<tier4_perception_msgs::msg::TrafficLightElement> & elements) const;
 
   /**
    * @brief Test hook. Returns the set of (color, shape) pairs declared for a traffic light id,

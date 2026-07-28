@@ -110,9 +110,9 @@ TEST(MapBasedSignalFilter, NullLaneletMapProducesEmptyFilter)
   const MapBasedSignalFilter filter(lanelet::LaneletMapConstPtr{});
 
   EXPECT_FALSE(filter.has_rules_for(TRAFFIC_LIGHT_ID));
-  std::vector<T4Element> elements = {make_element(T4Element::RED, T4Element::CIRCLE)};
-  EXPECT_FALSE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  ASSERT_EQ(elements.size(), 1u);
+  const std::vector<T4Element> elements = {make_element(T4Element::RED, T4Element::CIRCLE)};
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  ASSERT_EQ(filtered.size(), 1u);
 }
 
 TEST(MapBasedSignalFilter, BulbsWithoutArrowAttributeMapToCircleShape)
@@ -158,14 +158,14 @@ TEST(MapBasedSignalFilter, FilterDropsElementsOutsideAllowedSet)
   const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
   const MapBasedSignalFilter filter(lanelet_map);
 
-  std::vector<T4Element> elements = {
+  const std::vector<T4Element> elements = {
     make_element(T4Element::RED, T4Element::CIRCLE),
     make_element(T4Element::GREEN, T4Element::LEFT_ARROW),
   };
-  EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  ASSERT_EQ(elements.size(), 1u);
-  EXPECT_EQ(elements[0].color, T4Element::RED);
-  EXPECT_EQ(elements[0].shape, T4Element::CIRCLE);
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  ASSERT_EQ(filtered.size(), 1u);
+  EXPECT_EQ(filtered[0].color, T4Element::RED);
+  EXPECT_EQ(filtered[0].shape, T4Element::CIRCLE);
 }
 
 TEST(MapBasedSignalFilter, FilterKeepsAllElementsWhenAllValid)
@@ -177,12 +177,12 @@ TEST(MapBasedSignalFilter, FilterKeepsAllElementsWhenAllValid)
   const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
   const MapBasedSignalFilter filter(lanelet_map);
 
-  std::vector<T4Element> elements = {
+  const std::vector<T4Element> elements = {
     make_element(T4Element::RED, T4Element::CIRCLE),
     make_element(T4Element::GREEN, T4Element::LEFT_ARROW),
   };
-  EXPECT_FALSE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  EXPECT_EQ(elements.size(), 2u);
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  EXPECT_EQ(filtered.size(), 2u);
 }
 
 TEST(MapBasedSignalFilter, FilterDropsAllInvalidElementsProducingEmpty)
@@ -192,12 +192,12 @@ TEST(MapBasedSignalFilter, FilterDropsAllInvalidElementsProducingEmpty)
   const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
   const MapBasedSignalFilter filter(lanelet_map);
 
-  std::vector<T4Element> elements = {
+  const std::vector<T4Element> elements = {
     make_element(T4Element::GREEN, T4Element::LEFT_ARROW),
     make_element(T4Element::AMBER, T4Element::CIRCLE),
   };
-  EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  EXPECT_TRUE(elements.empty());
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  EXPECT_TRUE(filtered.empty());
 }
 
 TEST(MapBasedSignalFilter, FullUnknownElementIsDropped)
@@ -209,14 +209,14 @@ TEST(MapBasedSignalFilter, FullUnknownElementIsDropped)
   const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
   const MapBasedSignalFilter filter(lanelet_map);
 
-  std::vector<T4Element> elements = {
+  const std::vector<T4Element> elements = {
     make_element(T4Element::UNKNOWN, T4Element::UNKNOWN),
     make_element(T4Element::RED, T4Element::CIRCLE),
   };
-  EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  ASSERT_EQ(elements.size(), 1u);
-  EXPECT_EQ(elements[0].color, T4Element::RED);
-  EXPECT_EQ(elements[0].shape, T4Element::CIRCLE);
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  ASSERT_EQ(filtered.size(), 1u);
+  EXPECT_EQ(filtered[0].color, T4Element::RED);
+  EXPECT_EQ(filtered[0].shape, T4Element::CIRCLE);
 }
 
 TEST(MapBasedSignalFilter, PartialUnknownElementIsDropped)
@@ -228,15 +228,15 @@ TEST(MapBasedSignalFilter, PartialUnknownElementIsDropped)
   const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
   const MapBasedSignalFilter filter(lanelet_map);
 
-  std::vector<T4Element> elements = {
+  const std::vector<T4Element> elements = {
     make_element(T4Element::RED, T4Element::UNKNOWN),
     make_element(T4Element::UNKNOWN, T4Element::LEFT_ARROW),
     make_element(T4Element::RED, T4Element::CIRCLE),
   };
-  EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  ASSERT_EQ(elements.size(), 1u);
-  EXPECT_EQ(elements[0].color, T4Element::RED);
-  EXPECT_EQ(elements[0].shape, T4Element::CIRCLE);
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  ASSERT_EQ(filtered.size(), 1u);
+  EXPECT_EQ(filtered[0].color, T4Element::RED);
+  EXPECT_EQ(filtered[0].shape, T4Element::CIRCLE);
 }
 
 TEST(MapBasedSignalFilter, OnlyUnknownElementsProduceEmpty)
@@ -248,12 +248,12 @@ TEST(MapBasedSignalFilter, OnlyUnknownElementsProduceEmpty)
   const auto lanelet_map = make_map_with_single_traffic_light({light_bulbs_linestring});
   const MapBasedSignalFilter filter(lanelet_map);
 
-  std::vector<T4Element> elements = {
+  const std::vector<T4Element> elements = {
     make_element(T4Element::UNKNOWN, T4Element::UNKNOWN),
     make_element(T4Element::RED, T4Element::UNKNOWN),
   };
-  EXPECT_TRUE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  EXPECT_TRUE(elements.empty());
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  EXPECT_TRUE(filtered.empty());
 }
 
 TEST(MapBasedSignalFilter, IdWithoutBulbsIsNotFilteredAgainst)
@@ -264,11 +264,11 @@ TEST(MapBasedSignalFilter, IdWithoutBulbsIsNotFilteredAgainst)
 
   EXPECT_FALSE(filter.has_rules_for(TRAFFIC_LIGHT_ID));
 
-  std::vector<T4Element> elements = {make_element(T4Element::GREEN, T4Element::LEFT_ARROW)};
-  EXPECT_FALSE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  ASSERT_EQ(elements.size(), 1u);
-  EXPECT_EQ(elements[0].color, T4Element::GREEN);
-  EXPECT_EQ(elements[0].shape, T4Element::LEFT_ARROW);
+  const std::vector<T4Element> elements = {make_element(T4Element::GREEN, T4Element::LEFT_ARROW)};
+  const auto filtered = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  ASSERT_EQ(filtered.size(), 1u);
+  EXPECT_EQ(filtered[0].color, T4Element::GREEN);
+  EXPECT_EQ(filtered[0].shape, T4Element::LEFT_ARROW);
 }
 
 TEST(MapBasedSignalFilter, UnknownIdInMapIsNotFilteredAgainst)
@@ -282,11 +282,11 @@ TEST(MapBasedSignalFilter, UnknownIdInMapIsNotFilteredAgainst)
 
   EXPECT_FALSE(filter.has_rules_for(UNMAPPED_TRAFFIC_LIGHT_ID));
 
-  std::vector<T4Element> elements = {make_element(T4Element::GREEN, T4Element::LEFT_ARROW)};
-  EXPECT_FALSE(filter.filter_elements(UNMAPPED_TRAFFIC_LIGHT_ID, elements));
-  ASSERT_EQ(elements.size(), 1u);
-  EXPECT_EQ(elements[0].color, T4Element::GREEN);
-  EXPECT_EQ(elements[0].shape, T4Element::LEFT_ARROW);
+  const std::vector<T4Element> elements = {make_element(T4Element::GREEN, T4Element::LEFT_ARROW)};
+  const auto filtered = filter.filter_elements(UNMAPPED_TRAFFIC_LIGHT_ID, elements);
+  ASSERT_EQ(filtered.size(), 1u);
+  EXPECT_EQ(filtered[0].color, T4Element::GREEN);
+  EXPECT_EQ(filtered[0].shape, T4Element::LEFT_ARROW);
 }
 
 TEST(MapBasedSignalFilter, BulbsWithoutTrafficLightIdAttributeAreIgnored)
@@ -313,8 +313,11 @@ TEST(MapBasedSignalFilter, BulbsForDifferentTrafficLightIdAreKeyedCorrectly)
   EXPECT_TRUE(filter.has_rules_for(OTHER_TRAFFIC_LIGHT_ID));
   EXPECT_FALSE(filter.has_rules_for(TRAFFIC_LIGHT_ID));
 
-  std::vector<T4Element> elements = {make_element(T4Element::GREEN, T4Element::LEFT_ARROW)};
-  EXPECT_FALSE(filter.filter_elements(TRAFFIC_LIGHT_ID, elements));
-  EXPECT_TRUE(filter.filter_elements(OTHER_TRAFFIC_LIGHT_ID, elements));
-  EXPECT_TRUE(elements.empty());
+  const std::vector<T4Element> elements = {make_element(T4Element::GREEN, T4Element::LEFT_ARROW)};
+  // no rules for TRAFFIC_LIGHT_ID -> pass through unchanged
+  const auto filtered_unmapped = filter.filter_elements(TRAFFIC_LIGHT_ID, elements);
+  EXPECT_EQ(filtered_unmapped.size(), 1u);
+  // rules exist for OTHER_TRAFFIC_LIGHT_ID and disallow LEFT_ARROW -> filtered to empty
+  const auto filtered_other = filter.filter_elements(OTHER_TRAFFIC_LIGHT_ID, elements);
+  EXPECT_TRUE(filtered_other.empty());
 }
