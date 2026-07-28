@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <autoware/pointcloud_preprocessor/concatenate_data/collector_matching_strategy.hpp>
+#include <autoware/pointcloud_preprocessor/concatenate_data/collector_matcher.hpp>
 
-template class autoware::pointcloud_preprocessor::NaiveMatchingStrategy<
+template class autoware::pointcloud_preprocessor::NaiveCollectorMatcher<
   autoware::pointcloud_preprocessor::PointCloud2Traits>;
-template class autoware::pointcloud_preprocessor::AdvancedMatchingStrategy<
+template class autoware::pointcloud_preprocessor::AdvancedCollectorMatcher<
   autoware::pointcloud_preprocessor::PointCloud2Traits>;
