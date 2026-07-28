@@ -61,7 +61,8 @@ private:
   std::vector<std::string> input_camera_topics_;
   std::vector<AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::Image)> image_subs_;
   std::vector<AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image)> image_pubs_;
-  std::vector<boost::circular_buffer<sensor_msgs::msg::Image::ConstSharedPtr>> image_buffers_;
+  std::vector<boost::circular_buffer<AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Image)>>
+    image_buffers_;
 
   std::size_t image_buffer_size_;
 };

@@ -15,7 +15,6 @@
 #include "autoware/image_projection_based_fusion/debugger.hpp"
 
 #include <algorithm>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -70,8 +69,7 @@ void Debugger::imageCallback(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Image) input_image_msg,
   const std::size_t image_id)
 {
-  image_buffers_.at(image_id).push_front(
-    std::make_shared<const sensor_msgs::msg::Image>(*input_image_msg));
+  image_buffers_.at(image_id).push_front(input_image_msg);
 }
 
 void Debugger::clear()
@@ -84,8 +82,7 @@ void Debugger::clear()
 
 void Debugger::publishImage(const std::size_t image_id, const rclcpp::Time & stamp)
 {
-  const boost::circular_buffer<sensor_msgs::msg::Image::ConstSharedPtr> & image_buffer =
-    image_buffers_.at(image_id);
+  const auto & image_buffer = image_buffers_.at(image_id);
   const auto & image_pub = image_pubs_.at(image_id);
   const bool draw_iou_score =
     max_iou_for_image_rois_.size() > 0 && max_iou_for_image_rois_.size() == image_rois_.size();
@@ -95,7 +92,7 @@ void Debugger::publishImage(const std::size_t image_id, const rclcpp::Time & sta
       continue;
     }
 
-    auto cv_ptr = cv_bridge::toCvCopy(image_buffer.at(i), image_buffer.at(i)->encoding);
+    auto cv_ptr = cv_bridge::toCvCopy(*image_buffer.at(i), image_buffer.at(i)->encoding);
     // draw obstacle points
     for (const auto & point : obstacle_points_) {
       cv::circle(
