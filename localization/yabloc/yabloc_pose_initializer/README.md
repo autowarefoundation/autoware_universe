@@ -53,9 +53,9 @@ Converted model URL
 
 #### Output
 
-| Name                | Type                                   | Description             |
-| ------------------- | -------------------------------------- | ----------------------- |
-| `output/candidates` | `visualization_msgs::msg::MarkerArray` | initial pose candidates |
+| Name                    | Type                                   | Description             |
+| ----------------------- | -------------------------------------- | ----------------------- |
+| `debug/init_candidates` | `visualization_msgs::msg::MarkerArray` | initial pose candidates |
 
 ### Parameters
 

@@ -556,6 +556,12 @@
               "default": 0.0,
               "minimum": 0.0
             },
+            "allow_if_cannot_stop_distance": {
+              "type": "number",
+              "description": "allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
             "th_stable_duration_red": {
               "type": "number",
               "description": "Threshold for stable duration of red light [s]",
@@ -568,6 +574,12 @@
               "default": 0.2,
               "minimum": 0.0
             },
+            "th_stable_duration_unknown": {
+              "type": "number",
+              "description": "Threshold for stable duration of unknown light [s]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
             "th_amber_rejection_hysteresis": {
               "type": "number",
               "description": "Threshold for amber rejection hysteresis [s]",
@@ -578,6 +590,18 @@
               "type": "number",
               "description": "Crossing time limit [s]",
               "default": 2.75,
+              "minimum": 0.0
+            },
+            "delay_response_time": {
+              "type": "number",
+              "description": "Delay response time used to estimate the minimum ego stopping distance [s]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "ego_stopped_vel_th": {
+              "type": "number",
+              "description": "Velocity below which ego is considered stopped when checking traffic lights [m/s]",
+              "default": 0.01,
               "minimum": 0.0
             }
           },

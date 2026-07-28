@@ -17,18 +17,10 @@
 
 #include "classifier_interface.hpp"
 
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
-
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
 
 #include <vector>
 
@@ -62,7 +54,7 @@ struct HSVConfig
 // Node-free core of the HSV color classifier. Depends only on OpenCV and the
 // perception message types -- no rclcpp, image_transport, or logging -- so it can
 // be constructed and unit-tested without a running node.
-class ColorClassifierCore
+class ColorClassifierCore : public ClassifierInterface
 {
 public:
   // Per-batch result: one signal (with a single color element) per input image,
@@ -76,19 +68,28 @@ public:
 
   explicit ColorClassifierCore(const HSVConfig & config = HSVConfig{});
 
-  // Classify each ROI image (a cropped traffic-light region) into a
-  // TrafficLightElement by HSV color band.
-  ClassifierResult classify(const std::vector<cv::Mat> & images) const;
+  // Classify each ROI and append its color element to the caller's signals (preserving
+  // traffic_light_id / type). Returns false on a size mismatch or an HSV pipeline error.
+  bool classify(
+    const std::vector<cv::Mat> & images,
+    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
-  // Render one debug mosaic for a single ROI image. Independent of
-  // classify: it re-runs the HSV pipeline internally, so the caller
-  // invokes it only when a debug consumer is attached (a cold path).
+  // Composite debug view for the batch: one mosaic per ROI stacked vertically. Re-runs the HSV
+  // pipeline, so the caller invokes it only when a debug consumer is attached (a cold path).
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
+  // Classify each ROI image (a cropped traffic-light region) into a TrafficLightElement by HSV
+  // color band, returning the raw per-image result (signals' id / type are left unset).
+  ClassifierResult infer(const std::vector<cv::Mat> & images) const;
+
+  // Render one debug mosaic for a single ROI image (the per-ROI building block of the batch
+  // make_debug_image above).
   cv::Mat make_debug_image(const cv::Mat & roi_image) const;
 
   // Replace the HSV thresholds and rebuild the color bands (dynamic reconfigure).
   void set_config(const HSVConfig & config);
 
-  // Current HSV thresholds. The ROS adapter reads these to apply incremental
+  // Current HSV thresholds. The node's parameter callback reads these to apply incremental
   // parameter updates (read-modify-write) without keeping its own copy.
   const HSVConfig & get_config() const;
 
@@ -138,31 +139,6 @@ private:
   cv::Scalar max_hsv_yellow_;
   cv::Scalar min_hsv_red_;
   cv::Scalar max_hsv_red_;
-};
-
-// Thin ROS adapter around ColorClassifierCore. Owns the node-facing concerns
-// (parameter declaration, dynamic reconfigure, debug-image publishing, logging)
-// and delegates classification to the core. Public API is unchanged.
-class ColorClassifier : public ClassifierInterface
-{
-public:
-  explicit ColorClassifier(rclcpp::Node * node_ptr);
-  virtual ~ColorClassifier() = default;
-
-  bool getTrafficSignals(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
-
-private:
-  rcl_interfaces::msg::SetParametersResult parametersCallback(
-    const std::vector<rclcpp::Parameter> & parameters);
-
-  image_transport::Publisher image_pub_;
-
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
-  rclcpp::Node * node_ptr_;
-
-  ColorClassifierCore core_;
 };
 
 }  // namespace autoware::traffic_light

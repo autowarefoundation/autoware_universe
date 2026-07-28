@@ -92,7 +92,7 @@ TEST(ColorClassifierCoreTest, ClassifiesByHsvBand)
   const std::vector<cv::Mat> images{green_image, amber_image, red_image};
 
   // Act
-  const auto result = core.classify(images);
+  const auto result = core.infer(images);
 
   // Assert
   ASSERT_TRUE(result.success);
@@ -107,6 +107,24 @@ TEST(ColorClassifierCoreTest, ClassifiesByHsvBand)
   EXPECT_EQ(element_at(result.signals, 2).color, TrafficLightElement::RED);
 }
 
+// classify() (the ClassifierInterface entry) returns false, without touching the caller's signals,
+// when the image count does not match the pre-sized signal count. This size guard used to live in
+// the ROS adapter; it now lives in the core, so it is exercised ROS-free here.
+TEST(ColorClassifierCoreTest, ClassifyRejectsMismatchedImageSignalCount)
+{
+  // Arrange: one image, but a signal array pre-sized for two.
+  tl::ColorClassifierCore core;
+  const std::vector<cv::Mat> images{green_image};
+  tier4_perception_msgs::msg::TrafficLightArray signals;
+  signals.signals.resize(2);
+
+  // Act
+  const bool ok = core.classify(images, signals);
+
+  // Assert
+  EXPECT_FALSE(ok);
+}
+
 // An image outside every color band yields UNKNOWN with zero confidence.
 TEST(ColorClassifierCoreTest, OutOfBandImageIsUnknown)
 {
@@ -115,7 +133,7 @@ TEST(ColorClassifierCoreTest, OutOfBandImageIsUnknown)
   const std::vector<cv::Mat> images{black_image};
 
   // Act
-  const auto result = core.classify(images);
+  const auto result = core.infer(images);
 
   // Assert
   ASSERT_TRUE(result.success);
@@ -140,7 +158,7 @@ TEST(ColorClassifierCoreTest, AmbiguousEvidenceIsUnknown)
   const std::vector<cv::Mat> images{ambiguous_image};
 
   // Act
-  const auto result = core.classify(images);
+  const auto result = core.infer(images);
 
   // Assert
   ASSERT_TRUE(result.success);
@@ -158,7 +176,7 @@ TEST(ColorClassifierCoreTest, MatchedConfidenceIsPositiveAndBounded)
   const std::vector<cv::Mat> images{green_image};  // unsaturated_side -> below clamp
 
   // Act
-  const auto result = core.classify(images);
+  const auto result = core.infer(images);
 
   // Assert
   ASSERT_TRUE(result.success);
@@ -179,7 +197,7 @@ TEST(ColorClassifierCoreTest, SaturatedConfidenceClampsToOne)
   const std::vector<cv::Mat> images{green_image_saturated};  // saturated_side -> at/over clamp
 
   // Act
-  const auto result = core.classify(images);
+  const auto result = core.infer(images);
 
   // Assert
   ASSERT_TRUE(result.success);
@@ -201,7 +219,7 @@ TEST(ColorClassifierCoreTest, ConfigDrivesClassification)
   const std::vector<cv::Mat> images{green_image};
 
   // Act
-  const auto result = core.classify(images);
+  const auto result = core.infer(images);
 
   // Assert
   ASSERT_TRUE(result.success);
@@ -217,7 +235,7 @@ TEST(ColorClassifierCoreTest, EmptyBatchSucceeds)
   const std::vector<cv::Mat> images;
 
   // Act
-  const auto result = core.classify(images);
+  const auto result = core.infer(images);
 
   // Assert
   EXPECT_TRUE(result.success);

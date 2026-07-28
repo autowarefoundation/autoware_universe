@@ -184,8 +184,6 @@ void DiffusionPlanner::set_up_params()
   params_.build_only = this->declare_parameter<bool>("build_only", false);
   params_.planning_frequency_hz = this->declare_parameter<double>("planning_frequency_hz", 10.0);
   params_.ignore_neighbors = this->declare_parameter<bool>("ignore_neighbors", false);
-  params_.ignore_unknown_neighbors =
-    this->declare_parameter<bool>("ignore_unknown_neighbors", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
@@ -297,8 +295,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<std::string>(parameters, "model.backend", temp_params.backend);
     update_param<std::string>(parameters, "model.precision", temp_params.trt_precision);
     update_param<bool>(parameters, "model.use_cuda_graph", temp_params.use_cuda_graph);
-    update_param<bool>(
-      parameters, "ignore_unknown_neighbors", temp_params.ignore_unknown_neighbors);
     update_param<bool>(parameters, "ignore_neighbors", temp_params.ignore_neighbors);
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
@@ -603,7 +599,7 @@ void DiffusionPlanner::on_timer()
   pub_trajectory_->publish(planner_output.trajectory);
   pub_trajectories_->publish(planner_output.candidate_trajectories);
   pub_objects_->publish(planner_output.predicted_objects);
-  pub_turn_indicators_->publish(planner_output.turn_indicator_command);
+  pub_turn_indicators_->publish(planner_output.turn_indicators_command);
 
   publish_planning_factor(planner_output.trajectory);
 

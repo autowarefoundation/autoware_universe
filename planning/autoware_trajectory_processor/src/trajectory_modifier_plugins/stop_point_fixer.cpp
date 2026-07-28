@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/stop_point_fixer.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/stop_point_fixer.hpp"
 
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
 #include <rclcpp/logging.hpp>
 

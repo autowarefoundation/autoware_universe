@@ -38,6 +38,22 @@ For the optimization, a Quadratic Programming (QP) solver is used and two option
   algorithm (for more details see the related papers at
   the [Citing OSQP](https://web.stanford.edu/~boyd/papers/admm_distr_stats.html) section):
 
+### Trajectory Reference Mode
+
+The `trajectory_reference_mode` parameter selects how the MPC tracks the reference trajectory:
+
+- `spatial` (default): the reference trajectory is indexed by distance, and the time step of each
+  prediction point is calculated from distance and velocity.
+- `temporal`: the reference trajectory's `time_from_start` field is used directly, and the ego's
+  position along the trajectory is estimated from a predicted time (based on the previous nearest
+  time and the control period) corrected by an observed nearest time from the current pose.
+
+This parameter is normally declared once at the `autoware_trajectory_follower_node` level (see
+[trajectory_follower_node.param.yaml](../autoware_trajectory_follower_node/param/trajectory_follower_node.param.yaml))
+and shared with the longitudinal controller. It is also declared here with the same `spatial`
+default so that this node keeps working when run standalone (e.g. in tests). The default value
+keeps the existing spatial behavior unchanged.
+
 ### Filtering
 
 Filtering is required for good noise reduction.
@@ -142,6 +158,19 @@ Defined in the `steering_offset` namespace. This logic is designed as simple as 
 | Name                       | Type    | Description                                                                       | Default value |
 | :------------------------- | :------ | :-------------------------------------------------------------------------------- | :------------ |
 | publish_debug_trajectories | boolean | publish predicted trajectory and resampled reference trajectory for debug purpose | true          |
+
+When `trajectory_reference_mode` is `temporal`, the `~/debug/nearest_info` topic and the
+diagnostic message additionally contain the following fields, which describe how the current
+nearest time on the trajectory was determined:
+
+| Name                      | Description                                                              |
+| :------------------------ | :----------------------------------------------------------------------- |
+| temporal_predicted_time   | nearest time predicted from the previous nearest time and control period |
+| temporal_observed_time    | nearest time observed from the current ego pose, if found                |
+| temporal_fused_time       | nearest time actually used, fusing the predicted and observed times      |
+| temporal_observation_used | whether an observed nearest time was found and used (1.0) or not (0.0)   |
+| temporal_window_min       | lower bound of the time window used to search for the observed time      |
+| temporal_window_max       | upper bound of the time window used to search for the observed time      |
 
 ### How to tune MPC parameters
 

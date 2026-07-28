@@ -47,11 +47,13 @@ struct PTv3ConfigParams
   std::vector<std::string> segmentation_class_names = {"background", "car"};
   std::vector<std::string> serialization_orders = {"z", "z-trans"};
   std::vector<std::int64_t> pooling_strides = {2, 2};
+  std::vector<std::int64_t> enc_channels = {8, 16, 32};
   std::vector<std::int64_t> palette = {0, 0, 0, 255, 0, 0};
   float filter_class_probability_threshold = 0.5F;
   std::vector<std::string> filter_classes = {};
   std::string filter_output_format = "xyzi";
   std::string source_reconstruction = "partial";
+  std::vector<std::int64_t> dec_depths = {0, 0};
 };
 
 inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
@@ -59,9 +61,9 @@ inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
   return PTv3Config(
     params.use_seg3d_head, params.use_det3d_head, params.plugins_path, params.cloud_capacity,
     params.voxels_num, params.point_cloud_range, params.voxel_size, params.segmentation_class_names,
-    params.serialization_orders, params.pooling_strides, params.palette,
+    params.serialization_orders, params.pooling_strides, params.enc_channels, params.palette,
     params.filter_class_probability_threshold, params.filter_classes, params.filter_output_format,
-    params.source_reconstruction);
+    params.source_reconstruction, params.dec_depths);
 }
 
 // Base fixture for all autoware_ptv3 CUDA unit tests: owns a CUDA stream and the

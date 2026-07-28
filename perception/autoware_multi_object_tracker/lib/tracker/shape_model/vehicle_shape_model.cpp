@@ -127,9 +127,9 @@ void VehicleShapeModel::mergeFrom(
   const auto transformed = shapes::transformFootprint(footprint, src_pose, winner_pose);
   // Only union with the existing footprint if it is still within the freshness window; otherwise
   // discard the stale stored geometry and start fresh with the incoming footprint.
+  const double existing_age = (latest_measurement_time - last_footprint_update_time_).seconds();
   const bool existing_fresh =
-    footprint_valid_ &&
-    (latest_measurement_time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
+    footprint_valid_ && existing_age >= 0.0 && existing_age < FOOTPRINT_TIMEOUT_S;
   footprint_ = existing_fresh ? shapes::unionFootprints(footprint_, transformed) : transformed;
   footprint_valid_ = true;
   last_footprint_update_time_ = latest_measurement_time;
@@ -142,8 +142,9 @@ void VehicleShapeModel::exportTo(types::DynamicObject & output, double vehicle_l
   output.shape.dimensions.y = width_;
   output.shape.dimensions.z = height_;
 
+  const double footprint_age = (output.time - last_footprint_update_time_).seconds();
   const bool footprint_fresh =
-    footprint_valid_ && (output.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
+    footprint_valid_ && footprint_age >= 0.0 && footprint_age < FOOTPRINT_TIMEOUT_S;
   if (footprint_fresh) {
     output.shape.footprint = footprint_;
   } else {

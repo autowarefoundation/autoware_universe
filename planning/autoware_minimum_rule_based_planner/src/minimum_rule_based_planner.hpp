@@ -15,7 +15,7 @@
 #ifndef MINIMUM_RULE_BASED_PLANNER_HPP_
 #define MINIMUM_RULE_BASED_PLANNER_HPP_
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 #include "path_planner.hpp"
 #include "velocity_smoother.hpp"
 

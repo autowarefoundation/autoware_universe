@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Node-level integration test for TrafficLightArbiter: the ROS layer only —
+// Node-level integration test for TrafficLightArbiterNode: the ROS layer only —
 // input topics reach the core, parameters route in, the output is republished,
 // and the Node's publish/skip decisions hold. The arbitration *rules* live
-// ROS-free in test_traffic_light_arbiter_core.cpp; a test that observes a rule
+// ROS-free in test_traffic_light_arbiter.cpp; a test that observes a rule
 // here does so only to prove the wire carries it, and names the owning core test.
 
-#include "autoware/traffic_light_arbiter/traffic_light_arbiter.hpp"
+#include "autoware/traffic_light_arbiter/traffic_light_arbiter_node.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <rclcpp/executors/single_threaded_executor.hpp>
@@ -44,7 +44,7 @@
 namespace
 {
 
-using autoware::traffic_light::TrafficLightArbiter;
+using autoware::traffic_light::TrafficLightArbiterNode;
 using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 using TrafficLightGroup = autoware_perception_msgs::msg::TrafficLightGroup;
@@ -138,7 +138,7 @@ protected:
       rclcpp::Parameter("source_priority", source_priority),
       rclcpp::Parameter("enable_signal_matching", enable_signal_matching),
     });
-    arbiter_ = std::make_shared<TrafficLightArbiter>(options);
+    arbiter_ = std::make_shared<TrafficLightArbiterNode>(options);
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(arbiter_->get_node_base_interface());
     executor_->add_node(test_node_);
@@ -236,7 +236,7 @@ protected:
   }
 
   rclcpp::Node::SharedPtr test_node_;
-  std::shared_ptr<TrafficLightArbiter> arbiter_;
+  std::shared_ptr<TrafficLightArbiterNode> arbiter_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
 
   rclcpp::Publisher<LaneletMapBin>::SharedPtr map_pub_;
