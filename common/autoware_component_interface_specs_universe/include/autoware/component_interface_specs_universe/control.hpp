@@ -29,7 +29,7 @@ namespace autoware::component_interface_specs_universe::control
 {
 
 // Re-export the core specs so universe consumers keep resolving the canonical
-// (single-version-authority) type. See R-IF-12: core is the sole definition.
+// (single-version-authority) type; core is the sole definition and version authority.
 using autoware::component_interface_specs::control::ControlCommand;
 using autoware::component_interface_specs::control::GearCommand;
 using autoware::component_interface_specs::control::HazardLightsCommand;
@@ -38,7 +38,8 @@ using autoware::component_interface_specs::control::TurnIndicatorsCommand;
 using autoware::component_interface_specs::control::version;
 
 // tier4-only specs kept here: they are typed on tier4_* messages and stay
-// unversioned until the vendor partition (parent doc P3). Not part of core Specs.
+// unversioned until vendor-specific specs get their own versioned registry
+// separate from core's OSS-facing Specs tuple; they are not part of it yet.
 struct ActuationCommand
 {
   using Message = tier4_vehicle_msgs::msg::ActuationCommandStamped;

@@ -18,7 +18,7 @@
 #include <autoware/component_interface_specs/perception.hpp>
 
 // Re-export the core specs so universe consumers keep resolving the canonical
-// (single-version-authority) type. See R-IF-12: core is the sole definition.
+// (single-version-authority) type; core is the sole definition and version authority.
 namespace autoware::component_interface_specs_universe::perception
 {
 using autoware::component_interface_specs::perception::DetectedObjects;

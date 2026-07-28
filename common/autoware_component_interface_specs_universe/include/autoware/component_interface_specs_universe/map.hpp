@@ -18,10 +18,11 @@
 #include <autoware/component_interface_specs/map.hpp>
 
 // Re-export the core specs so universe consumers keep resolving the canonical
-// (single-version-authority) type. See R-IF-12: core is the sole definition.
+// (single-version-authority) type; core is the sole definition and version authority.
 // PointCloudMap is intentionally NOT re-exported: its spec (/map/point_cloud_map)
 // is a never-published topic with no universe consumer, and it is excluded from the
-// versioned Specs tuple anyway (heavy-raw confinement, design section 5).
+// versioned Specs tuple anyway, since it is a raw, high-bandwidth topic that
+// core deliberately keeps out of the versioned spec set.
 namespace autoware::component_interface_specs_universe::map
 {
 using autoware::component_interface_specs::map::GetDifferentialPointCloudMap;

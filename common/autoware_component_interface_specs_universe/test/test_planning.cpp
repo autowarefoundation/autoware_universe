@@ -19,7 +19,7 @@
 #include <type_traits>
 
 // Proves the universe symbols are re-exports of the canonical core types, not
-// redefinitions: consumers see one definition, one version authority (R-IF-12).
+// redefinitions: consumers see one definition, one version authority.
 TEST(planning_universe, reexports_core)
 {
   namespace core = autoware::component_interface_specs::planning;

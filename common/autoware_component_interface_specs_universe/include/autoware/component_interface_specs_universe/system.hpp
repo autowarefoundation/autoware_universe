@@ -18,9 +18,9 @@
 #include <autoware/component_interface_specs/system.hpp>
 
 // Re-export the core specs so universe consumers keep resolving the canonical
-// (single-version-authority) type. See R-IF-12: core is the sole definition.
-// MrmState was promoted universe -> core; existing consumers keep compiling via
-// this re-export (design section 4, promote-on-port).
+// (single-version-authority) type; core is the sole definition and version authority.
+// MrmState was promoted from universe to core; existing consumers keep
+// compiling unchanged via this re-export, since the type identity is preserved.
 namespace autoware::component_interface_specs_universe::system
 {
 using autoware::component_interface_specs::system::ChangeAutowareControl;

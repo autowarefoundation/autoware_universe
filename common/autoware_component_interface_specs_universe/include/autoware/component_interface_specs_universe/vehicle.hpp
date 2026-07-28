@@ -27,7 +27,7 @@ namespace autoware::component_interface_specs_universe::vehicle
 {
 
 // Re-export the core specs so universe consumers keep resolving the canonical
-// (single-version-authority) type. See R-IF-12: core is the sole definition.
+// (single-version-authority) type; core is the sole definition and version authority.
 using autoware::component_interface_specs::vehicle::GearStatus;
 using autoware::component_interface_specs::vehicle::HazardLightStatus;
 using autoware::component_interface_specs::vehicle::Specs;
@@ -37,7 +37,8 @@ using autoware::component_interface_specs::vehicle::VelocityStatus;
 using autoware::component_interface_specs::vehicle::version;
 
 // tier4/adapi-only specs kept here: they are typed on tier4_* / door messages
-// and stay unversioned until the vendor partition (parent doc P3). Not core Specs.
+// and stay unversioned until vendor-specific specs get their own versioned
+// registry separate from core's OSS-facing Specs tuple; they are not part of it yet.
 struct EnergyStatus
 {
   using Message = tier4_vehicle_msgs::msg::BatteryStatus;
