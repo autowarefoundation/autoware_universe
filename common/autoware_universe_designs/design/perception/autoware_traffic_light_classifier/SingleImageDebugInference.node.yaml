@@ -1,0 +1,31 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: SingleImageDebugInference.node
+
+package:
+  name: autoware_traffic_light_classifier
+  provider: autoware
+
+launch:
+  plugin: autoware::traffic_light::SingleImageDebugInferenceNode
+  executable: single_image_debug_inference
+  node_output: screen
+
+# interfaces
+# standalone debug tool: loads an image from the image_path parameter and runs
+# classifier inference in an OpenCV window. no ROS topic interface.
+subscribers: []
+
+publishers: []
+
+# parameters
+param_files: []
+
+param_values:
+  - name: image_path
+    type: string
+    default: ""
+
+# processes
+processes: []
