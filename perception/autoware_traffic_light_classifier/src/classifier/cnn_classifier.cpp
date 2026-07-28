@@ -151,13 +151,11 @@ cv::Mat CNNClassifierCore::make_debug_image(
 }
 
 // ============================== CNNClassifier ==============================
-// ROS adapter: publishes debug images, logs, and delegates classification to the Node-free core.
+// Node-free adapter: delegates classification and debug rendering to the core and maps its
+// per-image output into the caller's signals.
 
-CNNClassifier::CNNClassifier(rclcpp::Node * node_ptr, const CNNConfig & config)
-: node_ptr_(node_ptr), core_(config)
+CNNClassifier::CNNClassifier(const CNNConfig & config) : core_(config)
 {
-  image_pub_ = image_transport::create_publisher(
-    node_ptr_, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
 }
 
 bool CNNClassifier::getTrafficSignals(
@@ -165,26 +163,12 @@ bool CNNClassifier::getTrafficSignals(
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
   if (images.size() != traffic_signals.signals.size()) {
-    RCLCPP_WARN(node_ptr_->get_logger(), "image number should be equal to traffic signal number!");
     return false;
   }
 
   const CNNClassifierCore::ClassifierResult result = core_.classify(images);
   if (!result.success) {
-    RCLCPP_ERROR(node_ptr_->get_logger(), "failed to classify traffic light image by cnn");
     return false;
-  }
-
-  // Publish one debug image per ROI only when a debug consumer is attached.
-  if (0 < image_pub_.getNumSubscribers()) {
-    for (size_t i = 0; i < images.size(); i++) {
-      const auto debug_image_msg =
-        cv_bridge::CvImage(
-          std_msgs::msg::Header(), "rgb8",
-          CNNClassifierCore::make_debug_image(images[i], result.signals.signals[i]))
-          .toImageMsg();
-      image_pub_.publish(debug_image_msg);
-    }
   }
 
   // Attach the core's per-image elements to the caller's pre-populated signals,
@@ -195,7 +179,27 @@ bool CNNClassifier::getTrafficSignals(
     elements.insert(elements.end(), classified.begin(), classified.end());
   }
 
+  // Keep the per-image classification so make_debug_image can render it afterwards; the node
+  // owns the debug publisher and requests the image only when a consumer is attached.
+  last_signals_ = result.signals;
+
   return true;
+}
+
+cv::Mat CNNClassifier::make_debug_image(const std::vector<cv::Mat> & images) const
+{
+  // Stack each ROI's debug view (fixed 200 px wide) into one vertical strip.
+  cv::Mat debug_image;
+  const size_t count = std::min(images.size(), last_signals_.signals.size());
+  for (size_t i = 0; i < count; i++) {
+    cv::Mat strip = CNNClassifierCore::make_debug_image(images[i], last_signals_.signals[i]);
+    if (debug_image.empty()) {
+      debug_image = strip;
+    } else {
+      cv::vconcat(debug_image, strip, debug_image);
+    }
+  }
+  return debug_image;
 }
 
 }  // namespace autoware::traffic_light

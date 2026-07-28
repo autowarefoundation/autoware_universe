@@ -117,8 +117,7 @@ protected:
     // "environment unavailable" -> skip (not fail), with a reason the test reports.
     try {
       node_ = std::make_shared<rclcpp::Node>("cnn_classifier_adapter_test", options);
-      classifier_ =
-        std::make_shared<tl::CNNClassifier>(node_.get(), tl::declare_cnn_config(node_.get()));
+      classifier_ = std::make_shared<tl::CNNClassifier>(tl::declare_cnn_config(node_.get()));
     } catch (const std::exception & e) {
       skip_reason_ = std::string("CNNClassifier environment unavailable: ") + e.what();
       classifier_.reset();

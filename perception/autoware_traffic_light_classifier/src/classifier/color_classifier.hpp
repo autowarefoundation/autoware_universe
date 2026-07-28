@@ -17,18 +17,10 @@
 
 #include "classifier_interface.hpp"
 
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
-
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
 
 #include <vector>
 
@@ -140,28 +132,26 @@ private:
   cv::Scalar max_hsv_red_;
 };
 
-// Thin ROS adapter around ColorClassifierCore. Owns the node-facing concerns
-// (parameter declaration, dynamic reconfigure, debug-image publishing, logging)
-// and delegates classification to the core. Public API is unchanged.
+// Thin, Node-free adapter around ColorClassifierCore: delegates classification and debug-image
+// rendering to the core. Exposes get_config / set_config so the node can drive dynamic reconfigure.
 class ColorClassifier : public ClassifierInterface
 {
 public:
-  ColorClassifier(rclcpp::Node * node_ptr, const HSVConfig & config);
+  explicit ColorClassifier(const HSVConfig & config);
   virtual ~ColorClassifier() = default;
 
   bool getTrafficSignals(
     const std::vector<cv::Mat> & images,
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
+
+  // Pass-through helpers over the core's HSV thresholds, used by the node's parameter callback
+  // to apply dynamic reconfigure (read-modify-write).
+  const HSVConfig & get_config() const;
+  void set_config(const HSVConfig & config);
+
 private:
-  rcl_interfaces::msg::SetParametersResult parametersCallback(
-    const std::vector<rclcpp::Parameter> & parameters);
-
-  image_transport::Publisher image_pub_;
-
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
-  rclcpp::Node * node_ptr_;
-
   ColorClassifierCore core_;
 };
 
