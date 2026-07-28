@@ -470,6 +470,13 @@ trajectory_processor_params:
       validation:
         bounds<>: [0.0, 100.0]
       read_only: false
+    min_lookahead_distance:
+      type: double
+      default_value: 20.0
+      description: Minimum forward trajectory length to scan for traffic light stop lines even at low ego speed [m]
+      validation:
+        bounds<>: [0.0, 300.0]
+      read_only: false
     th_stable_duration_red:
       type: double
       default_value: 0.2

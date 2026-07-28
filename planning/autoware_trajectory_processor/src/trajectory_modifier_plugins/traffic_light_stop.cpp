@@ -63,6 +63,7 @@ void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryProcessorP
   enabled_ = params.use_traffic_light_stop;
   params_ = params.traffic_light_stop;
   stopping_params_ = params.stopping_constraints;
+  trajectory_time_step_ = params.trajectory_time_step;
 
   checker_ =
     std::make_unique<autoware::traffic_light_compliance_checker::TrafficLightComplianceChecker>(
@@ -74,6 +75,7 @@ void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryProcessorP
   enabled_ = params.use_traffic_light_stop;
   params_ = params.traffic_light_stop;
   stopping_params_ = params.stopping_constraints;
+  trajectory_time_step_ = params.trajectory_time_step;
   checker_->update_parameters(to_checker_params(params));
 }
 

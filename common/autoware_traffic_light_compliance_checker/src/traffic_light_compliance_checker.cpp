@@ -270,7 +270,6 @@ ComplianceResult TrafficLightComplianceChecker::check_with_filtered_signals(
 
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint> trajectory;
   lanelet::BasicLineString2d trajectory_ls;
-
   // Floor by min_lookahead_distance so low ego speed still covers nearby stop lines,
   // while keeping the comfortable-stop cap so far lights are not over-checked
   // (important for traffic_light_filter which rejects trajectories).
