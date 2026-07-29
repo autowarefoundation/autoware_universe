@@ -63,6 +63,13 @@ message InitializeRequest {
   string device = 12;             // "cuda" or "cuda:0" etc.
   Vector3 background_color = 13;  // RGB [0, 1]
   string compress_format = 14;    // "jpeg", "png", or "" for raw Image
+
+  // Level-of-Detail. Controls the initial LoD state. When left unset LoD
+  // starts enabled (distance-adaptive Gaussian filtering); set false to
+  // start with LoD off. The LoD index is always pre-computed at load time,
+  // so LoD can be toggled at runtime afterwards via SetLod regardless of
+  // this initial value.
+  optional bool enable_lod = 15;
 }
 
 message InitializeResponse {
@@ -126,6 +133,19 @@ message LidarData {
   Pose pose = 2;
 }
 
+message SetLodRequest {
+  // Turn distance-adaptive LoD Gaussian filtering on (true) or off (false).
+  bool enabled = 1;
+}
+
+message SetLodResponse {
+  bool success = 1;
+  // Effective LoD state after the call. Note this stays false when no LoD
+  // index was pre-computed for the scene (nothing to filter).
+  bool enabled = 2;
+  string message = 3;
+}
+
 // ── Service definition ───────────────────────────────────────────────
 
 service RenderingService {
@@ -143,4 +163,8 @@ service RenderingService {
   // panorama at the sensor's spin rate and publishes sensor_msgs/PointCloud2
   // via DDS. Returns summary when the stream closes.
   rpc StreamLidarData(stream LidarData) returns (StreamSummary);
+
+  // Toggle distance-adaptive LoD Gaussian filtering at runtime. The render
+  // loop reads the scene's LoD state per frame. Requires Initialize first.
+  rpc SetLod(SetLodRequest) returns (SetLodResponse);
 }

@@ -97,6 +97,39 @@ def _origin_from_usdz(usdz_path: str):
     return float(lat), float(lon)
 
 
+def _parse_geo_reference(xodr_xml: str):
+    """Extract ``(lat_0, lon_0)`` from the OpenDRIVE ``<geoReference>`` PROJ string.
+
+    This is the geographic origin of the CARLA world / ROS-map ENU frame that the
+    streamed splatsim poses are expressed in.  It is distinct from the usdz scene
+    ecef_anchor (which places the 3DGS gaussians and is handled by the tileset
+    transform); conflating the two is what misaligns the LiDAR to zero points.
+    """
+    import re
+    import xml.etree.ElementTree as ET
+
+    match = re.search(
+        r"<geoReference>\s*<!\[CDATA\[(.*?)\]\]>\s*</geoReference>",
+        xodr_xml,
+        re.DOTALL,
+    )
+    if match:
+        proj_string = match.group(1).strip()
+    else:
+        root = ET.fromstring(xodr_xml)
+        geo_ref = root.find(".//geoReference")
+        if geo_ref is not None and geo_ref.text:
+            proj_string = geo_ref.text.strip()
+        else:
+            raise ValueError("No <geoReference> found in OpenDRIVE XML")
+
+    lat_match = re.search(r"\+lat_0=([0-9eE.+-]+)", proj_string)
+    lon_match = re.search(r"\+lon_0=([0-9eE.+-]+)", proj_string)
+    if lat_match is None or lon_match is None:
+        raise ValueError(f"Cannot extract +lat_0/+lon_0 from GeoReference: {proj_string}")
+    return float(lat_match.group(1)), float(lon_match.group(1))
+
+
 class carla_ros2_interface(object):
 
     def _initialize_parameters(self):
@@ -129,6 +162,7 @@ class carla_ros2_interface(object):
             "splatsim_grpc_port": (rclpy.Parameter.Type.INTEGER, 50051),
             "splatsim_lidar_grpc_port": (rclpy.Parameter.Type.INTEGER, 50061),
             "splatsim_use_sh": (rclpy.Parameter.Type.BOOL, True),
+            "splatsim_enable_lod": (rclpy.Parameter.Type.BOOL, True),
             "splatsim_device": (rclpy.Parameter.Type.STRING, "cuda:0"),
             "splatsim_restart_container": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_compress_format": (rclpy.Parameter.Type.STRING, "jpeg"),
@@ -1091,11 +1125,15 @@ class carla_ros2_interface(object):
     def _init_geo_transform(self):
         """Resolve the splatsim geographic origin and its MGRS offset.
 
-        The origin (lat/lon of the CARLA world origin) is read from the splatsim
-        ``.usdz`` scene: its ``world.ecef_anchor`` records the ENU->ECEF anchor
-        the 3DGS scene is aligned to, so the geographic origin comes straight
-        from the same bundle splatsim renders — with no external lanelet2 map or
-        OpenDRIVE GeoReference.
+        The origin (lat/lon of the CARLA world origin) is parsed from the CARLA
+        map's OpenDRIVE ``<geoReference>`` (+lat_0/+lon_0): this is the true
+        geographic origin of the CARLA / ROS-map ENU frame the streamed poses are
+        expressed in, which is what ``CoordinateTransformer.proj_origin`` expects.
+        The splatsim scene's own placement is handled separately via the tileset
+        ECEF transform, so the usdz ``ecef_anchor`` must NOT be used as the origin
+        here (doing so misaligns the sensor to zero points whenever the scene
+        anchor differs from the CARLA world origin).  Falls back to the usdz
+        anchor only when the OpenDRIVE has no parsable geoReference.
         """
         if self._geo_transform_ready:
             return
@@ -1103,15 +1141,31 @@ class carla_ros2_interface(object):
         import lanelet2.core
         import lanelet2.io
 
-        tileset_path = str(self.param_values.get("splatsim_tileset_path", "") or "").strip()
-        if not tileset_path:
-            raise RuntimeError(
-                "splatsim_tileset_path is required to derive the geographic origin "
-                "from the scene's world.ecef_anchor."
+        from .modules.carla_data_provider import CarlaDataProvider
+
+        # Narrow the catch to the "no parsable geoReference" cases (e.g. CARLA
+        # 0.10 Odaiba) so an unexpected error surfaces instead of silently
+        # reverting to the usdz anchor -- the wrong origin this fix exists to
+        # avoid. On that expected failure, fall back to the usdz ecef_anchor.
+        try:
+            xodr_xml = CarlaDataProvider.get_world().get_map().to_opendrive()
+            self._proj_origin = _parse_geo_reference(xodr_xml)
+            source = "CARLA OpenDRIVE geoReference"
+        except (RuntimeError, ValueError) as exc:
+            self.logger.warning(
+                f"Could not parse CARLA OpenDRIVE geoReference ({exc}); "
+                "falling back to splatsim usdz ecef_anchor."
             )
-        self._proj_origin = _origin_from_usdz(tileset_path)
+            tileset_path = str(self.param_values.get("splatsim_tileset_path", "") or "").strip()
+            if not tileset_path:
+                raise RuntimeError(
+                    "No CARLA OpenDRIVE geoReference and no splatsim_tileset_path; "
+                    "cannot derive the geographic origin."
+                )
+            self._proj_origin = _origin_from_usdz(tileset_path)
+            source = f"splatsim scene '{tileset_path}'"
         self.logger.info(
-            f"GeoTransform origin from splatsim scene '{tileset_path}': "
+            f"GeoTransform origin from {source}: "
             f"origin=({self._proj_origin[0]:.8f}, {self._proj_origin[1]:.8f})"
         )
         lat_0, lon_0 = self._proj_origin
@@ -1184,6 +1238,7 @@ class carla_ros2_interface(object):
             "splatsim_image": p["splatsim_image"],
             "grpc_port": grpc_port,
             "use_sh": p["splatsim_use_sh"],
+            "enable_lod": p["splatsim_enable_lod"],
             "device": p["splatsim_device"],
             "restart_container": p["splatsim_restart_container"],
             "compress_format": p.get("splatsim_compress_format", ""),
@@ -1255,6 +1310,7 @@ class carla_ros2_interface(object):
             "splatsim_image": p["splatsim_image"],
             "grpc_port": grpc_port,
             "use_sh": p["splatsim_use_sh"],
+            "enable_lod": p["splatsim_enable_lod"],
             "device": p["splatsim_device"],
             "restart_container": p["splatsim_restart_container"],
             "fps": params.get("fps", cfg.frequency_hz),

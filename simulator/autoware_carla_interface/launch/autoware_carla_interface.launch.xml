@@ -48,6 +48,7 @@
     />
     <arg name="splatsim_grpc_port" default="50051"/>
     <arg name="splatsim_use_sh" default="true"/>
+    <arg name="splatsim_enable_lod" default="true"/>
     <arg name="splatsim_device" default="cuda:0"/>
     <arg name="splatsim_restart_container" default="false" description="Force restart splatsim container even if already running"/>
     <arg name="splatsim_compress_format" default="jpeg" description="Image compression format: 'jpeg', 'png', or '' for raw"/>
@@ -77,6 +78,7 @@
       <param name="splatsim_image" value="$(var splatsim_image)"/>
       <param name="splatsim_grpc_port" value="$(var splatsim_grpc_port)"/>
       <param name="splatsim_use_sh" value="$(var splatsim_use_sh)"/>
+      <param name="splatsim_enable_lod" value="$(var splatsim_enable_lod)"/>
       <param name="splatsim_device" value="$(var splatsim_device)"/>
       <param name="splatsim_restart_container" value="$(var splatsim_restart_container)"/>
       <param name="splatsim_compress_format" value="$(var splatsim_compress_format)"/>

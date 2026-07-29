@@ -68,6 +68,11 @@ class SplatSimLidarConfig:
     splatsim_image: str = "ghcr.io/tier4/splatsim:latest-sm{arch}"
     grpc_port: int = 50061
     use_sh: bool = True
+    # Distance-adaptive LoD Gaussian filtering (server-side). Passed to the
+    # scene at Initialize; True keeps LoD on (its server default), False forces
+    # it off. Requires a splatsim build with the gRPC LoD path (tier4/splatsim
+    # PR #78); older servers ignore the unknown field and always run without LoD.
+    enable_lod: bool = True
     # Defaults mirror the real Velodyne HDL-64E sensor spec (CARLA's default
     # LiDAR: min range 0.9 m, max range 120 m, 64 channels, 0.1728 deg
     # horizontal resolution at 10 Hz). The built-in "HDL64E" table supplies the
@@ -138,6 +143,7 @@ class SplatSimLidar:
             use_sh=config.use_sh,
             frame_rate=config.fps,
             device=config.device,
+            enable_lod=config.enable_lod,
         )
         resp = self._grpc.initialize(init_request)
         if not resp.success:

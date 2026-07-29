@@ -146,6 +146,22 @@ class SplatSimDockerManager:
         splatsim_log_level = os.environ.get("SPLATSIM_LOG_LEVEL")
         if splatsim_log_level:
             env["SPLATSIM_LOG_LEVEL"] = splatsim_log_level
+        # Propagate ROS 2 DDS settings so the container's CycloneDDS PointCloud2
+        # publisher joins the same graph as the Autoware side.  Both run with
+        # --network=host, so pinning CycloneDDS to the loopback interface matches
+        # the Autoware devcontainer's lo-only config and lets discovery succeed
+        # over the shared host lo (default all-interface discovery does not reach
+        # the lo-restricted subscriber).  ROS_DOMAIN_ID / RMW must match too.
+        env["ROS_DOMAIN_ID"] = os.environ.get("ROS_DOMAIN_ID", "0")
+        env["RMW_IMPLEMENTATION"] = os.environ.get(
+            "RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp"
+        )
+        env["CYCLONEDDS_URI"] = os.environ.get(
+            "SPLATSIM_CYCLONEDDS_URI",
+            '<CycloneDDS><Domain Id="any"><General>'
+            '<Interfaces><NetworkInterface name="lo" priority="default" multicast="default"/></Interfaces>'
+            "<AllowMulticast>default</AllowMulticast></General></Domain></CycloneDDS>",
+        )
         run_kwargs = {
             "image": self._image,
             "command": f"splatsim-grpc-server --port {self._grpc_port}",
@@ -157,6 +173,21 @@ class SplatSimDockerManager:
         }
         if self._container_name:
             run_kwargs["name"] = self._container_name
+        # TEMPORARY dev-only escape hatch: shadow-mount a host copy of the
+        # container's PointCloud2 publisher, e.g. to switch its DDS QoS to
+        # BEST_EFFORT so it matches Autoware's SensorDataQoS (a RELIABLE writer
+        # stalls per-frame on ~2 MB LiDAR messages and caps FPS). The real fix
+        # is a one-line QoS change in tier4/splatsim's publisher shipped in the
+        # GHCR image; drop this hatch once that lands. Off unless the env var is
+        # set. The bind source is a HOST path (resolved by the host daemon) and
+        # the target is splatsim's private layout, so it is inherently coupled to
+        # the image internals -- keep it opt-in, never a default.
+        pc_patch = os.environ.get("SPLATSIM_PC_PUBLISHER_PATCH")
+        if pc_patch:
+            run_kwargs["volumes"][pc_patch] = {
+                "bind": "/workspace/splatsim/src/splatsim/cyclonedds/pointcloud2_publisher.py",
+                "mode": "ro",
+            }
         # Refresh registry-qualified images (e.g. ghcr.io/tier4/splatsim:latest-sm89)
         # so the newest GHCR build is used instead of a stale local tag. Bare local
         # tags (e.g. "splatsim:latest") are left untouched. Best-effort: fall back to

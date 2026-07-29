@@ -60,6 +60,9 @@ class SplatSimCameraConfig:
     splatsim_image: str = "ghcr.io/tier4/splatsim:latest-sm{arch}"
     grpc_port: int = 50051
     use_sh: bool = True
+    # Distance-adaptive LoD Gaussian filtering (server-side); see
+    # SplatSimLidarConfig.enable_lod. Ignored by pre-LoD splatsim servers.
+    enable_lod: bool = True
     frame_rate: float = 20.0
     image_topic: str = "/splatsim/image_raw"
     camera_info_topic: str = "/splatsim/camera_info"
@@ -140,6 +143,7 @@ class SplatSimRGBCamera:
             device=config.device,
             background_color=pb2.Vector3(x=0.0, y=0.0, z=0.0),
             compress_format=config.compress_format,
+            enable_lod=config.enable_lod,
         )
         resp = self._grpc.initialize(init_request)
         if not resp.success:
