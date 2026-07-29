@@ -153,9 +153,7 @@ class SplatSimDockerManager:
         # over the shared host lo (default all-interface discovery does not reach
         # the lo-restricted subscriber).  ROS_DOMAIN_ID / RMW must match too.
         env["ROS_DOMAIN_ID"] = os.environ.get("ROS_DOMAIN_ID", "0")
-        env["RMW_IMPLEMENTATION"] = os.environ.get(
-            "RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp"
-        )
+        env["RMW_IMPLEMENTATION"] = os.environ.get("RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp")
         env["CYCLONEDDS_URI"] = os.environ.get(
             "SPLATSIM_CYCLONEDDS_URI",
             '<CycloneDDS><Domain Id="any"><General>'
