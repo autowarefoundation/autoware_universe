@@ -153,11 +153,6 @@ validator:
       default_value: 0.0
       description: Minimum duration an UNKNOWN signal must be seen before it is considered active (seconds)
       read_only: false
-    amber_rejection_hysteresis_duration:
-      type: double
-      default_value: 0.0
-      description: Hysteresis duration to persist an AMBER rejection (seconds)
-      read_only: false
     ego_stopped_velocity_threshold:
       type: double
       default_value: 0.01
@@ -173,6 +168,17 @@ validator:
         type: double
         default_value: 2.0
         description: jerk limit to calculate the stop distance used as trajectory length limit
+        read_only: false
+    amber_rejection:
+      hysteresis_duration:
+        type: double
+        default_value: 0.0
+        description: Hysteresis duration to persist an AMBER rejection (seconds)
+        read_only: false
+      reject_if_stop_detected:
+        type: bool
+        default_value: false
+        description: Reject if we detect a previous stop attempt from input trajectory
         read_only: false
 
   boundary_departure:

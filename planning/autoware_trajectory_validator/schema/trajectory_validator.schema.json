@@ -192,12 +192,6 @@
               "default": 0.0,
               "minimum": 0.0
             },
-            "amber_rejection_hysteresis_duration": {
-              "type": "number",
-              "description": "Duration to persist an AMBER rejection state to prevent flipping [s].",
-              "default": 0.0,
-              "minimum": 0.0
-            },
             "ego_stopped_velocity_threshold": {
               "type": "number",
               "description": "Velocity threshold below which stability and hysteresis filters are bypassed [m/s].",
@@ -216,6 +210,24 @@
                   "type": "number",
                   "description": "Jerk limit used together with `deceleration_limit` to compute the trajectory scan length [m/s³].",
                   "default": 2.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "amber_rejection": {
+              "type": "object",
+              "properties": {
+                "hysteresis_duration": {
+                  "type": "number",
+                  "description": "Hysteresis duration to persist an AMBER rejection [s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "reject_if_stop_detected": {
+                  "type": "boolean",
+                  "description": "Reject if we detect a previous stop attempt from input trajectory.",
+                  "default": false
                 }
               },
               "required": [],

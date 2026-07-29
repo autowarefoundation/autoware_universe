@@ -36,16 +36,6 @@
 
 namespace
 {
-autoware::traffic_light_compliance_checker::StatusTrackerParameters to_status_tracker_parameters(
-  const autoware::traffic_light_compliance_checker::Parameters & parameters)
-{
-  autoware::traffic_light_compliance_checker::StatusTrackerParameters p{};
-  p.stable_duration_threshold_red = parameters.stable_duration_threshold_red;
-  p.stable_duration_threshold_amber = parameters.stable_duration_threshold_amber;
-  p.stable_duration_threshold_unknown = parameters.stable_duration_threshold_unknown;
-  return p;
-}
-
 using autoware::traffic_light_compliance_checker::StopLineInfo;
 
 /// @brief get stop lines where ego need to stop, and their corresponding signals from the given
@@ -102,8 +92,7 @@ TrafficLightComplianceChecker::TrafficLightComplianceChecker(
   const Parameters & parameters, const vehicle_info_utils::VehicleInfo & vehicle_info)
 : params_(parameters),
   vehicle_info_(vehicle_info),
-  status_tracker_(
-    std::make_unique<TrafficLightStatusTracker>(to_status_tracker_parameters(parameters)))
+  status_tracker_(std::make_unique<TrafficLightStatusTracker>(parameters.status_tracker_parameters))
 {
 }
 
@@ -112,7 +101,7 @@ TrafficLightComplianceChecker::~TrafficLightComplianceChecker() = default;
 void TrafficLightComplianceChecker::update_parameters(const Parameters & parameters)
 {
   params_ = parameters;
-  status_tracker_->update_parameters(to_status_tracker_parameters(parameters));
+  status_tracker_->update_parameters(parameters.status_tracker_parameters);
 }
 
 tl::expected<ComplianceResult, std::string> TrafficLightComplianceChecker::check(
@@ -146,7 +135,7 @@ std::vector<int64_t> TrafficLightComplianceChecker::get_force_reject_amber_ids(
     return force_reject_amber_ids;
   }
   for (const auto & [id, rejected_time] : amber_rejection_history_) {
-    if ((current_time - rejected_time).seconds() <= params_.amber_rejection_hysteresis_duration) {
+    if ((current_time - rejected_time).seconds() <= params_.amber_rejection.hysteresis_duration) {
       force_reject_amber_ids.push_back(id);
     }
   }
@@ -168,13 +157,22 @@ void TrafficLightComplianceChecker::update_amber_rejection_history(
       amber_rejection_history_[violation.traffic_light_id] = current_time;
     }
   }
+
+  for (const auto & detected_stop_amber_id : result.detected_stop_amber_ids) {
+    if (
+      std::find(
+        force_reject_amber_ids.begin(), force_reject_amber_ids.end(), detected_stop_amber_id) ==
+      force_reject_amber_ids.end()) {
+      amber_rejection_history_[detected_stop_amber_id] = current_time;
+    }
+  }
 }
 
 void TrafficLightComplianceChecker::cleanup_amber_rejection_history(
   const rclcpp::Time & current_time)
 {
   for (auto it = amber_rejection_history_.begin(); it != amber_rejection_history_.end();) {
-    if ((current_time - it->second).seconds() > params_.amber_rejection_hysteresis_duration) {
+    if ((current_time - it->second).seconds() > params_.amber_rejection.hysteresis_duration) {
       it = amber_rejection_history_.erase(it);
     } else {
       ++it;
@@ -182,12 +180,12 @@ void TrafficLightComplianceChecker::cleanup_amber_rejection_history(
   }
 }
 
-std::vector<Violation> TrafficLightComplianceChecker::get_red_light_violations(
+ComplianceResult TrafficLightComplianceChecker::get_red_light_violations(
   const std::vector<StopLineInfo> & red_stop_lines,
   const lanelet::BasicLineString2d & trajectory_ls,
   const std::optional<lanelet::BasicPoint2d> & stop_point, const double distance_offset) const
 {
-  std::vector<Violation> violations;
+  ComplianceResult result;
   for (const auto & red_stop_line : red_stop_lines) {
     auto distance_to_stop_line = 0.0;
     lanelet::BasicPoints2d intersection_points;
@@ -205,21 +203,21 @@ std::vector<Violation> TrafficLightComplianceChecker::get_red_light_violations(
       intersection_points.empty() ||
       is_stop_point_within_margin_from_stop_line(stop_point, red_stop_line.line))
       continue;
-    violations.emplace_back(
+    result.violations.emplace_back(
       ViolationType::RED_LIGHT, red_stop_line.line, red_stop_line.traffic_light_id,
       intersection_points.front(), distance_to_stop_line + distance_offset);
   }
-  return violations;
+  return result;
 }
 
-std::vector<Violation> TrafficLightComplianceChecker::get_amber_light_violations(
+ComplianceResult TrafficLightComplianceChecker::get_amber_light_violations(
   const std::vector<StopLineInfo> & amber_stop_lines,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const lanelet::BasicLineString2d & trajectory_ls,
   const std::optional<lanelet::BasicPoint2d> & stop_point,
   const std::vector<int64_t> & force_reject_amber_ids, const double distance_offset) const
 {
-  std::vector<Violation> violations;
+  ComplianceResult result;
   for (const auto & amber_stop_line : amber_stop_lines) {
     auto distance_to_stop_line = 0.0;
     std::optional<double> amber_stop_line_crossing_time;
@@ -246,8 +244,11 @@ std::vector<Violation> TrafficLightComplianceChecker::get_amber_light_violations
 
     if (
       !amber_stop_line_crossing_time ||
-      is_stop_point_within_margin_from_stop_line(stop_point, amber_stop_line.line))
+      is_stop_point_within_margin_from_stop_line(stop_point, amber_stop_line.line)) {
+      if (stop_point.has_value())
+        result.detected_stop_amber_ids.push_back(amber_stop_line.traffic_light_id);
       continue;
+    }
 
     const auto current_velocity = trajectory.front().longitudinal_velocity_mps;
     const auto current_acceleration = trajectory.front().acceleration_mps2;
@@ -260,12 +261,12 @@ std::vector<Violation> TrafficLightComplianceChecker::get_amber_light_violations
       is_force_reject || !can_pass_amber_light(
                            distance_to_stop_line, current_velocity, current_acceleration,
                            *amber_stop_line_crossing_time)) {
-      violations.emplace_back(
+      result.violations.emplace_back(
         ViolationType::AMBER_LIGHT, amber_stop_line.line, amber_stop_line.traffic_light_id,
         intersection_point, distance_to_stop_line + distance_offset);
     }
   }
-  return violations;
+  return result;
 }
 
 tl::expected<ComplianceResult, std::string>
@@ -334,18 +335,16 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
 
   ComplianceResult result;
   if (check_red_lights) {
-    result.violations =
-      get_red_light_violations(red_stop_lines, trajectory_ls, stop_point, backward_length);
+    result = get_red_light_violations(red_stop_lines, trajectory_ls, stop_point, backward_length);
   }
   if (check_amber_lights) {
-    const auto amber_light_violations =
-      params_.treat_amber_light_as_red_light
-        ? get_red_light_violations(amber_stop_lines, trajectory_ls, stop_point, backward_length)
-        : get_amber_light_violations(
-            amber_stop_lines, trajectory, trajectory_ls, stop_point, force_reject_amber_ids,
-            backward_length);
+    const auto amber_light_result = get_amber_light_violations(
+      amber_stop_lines, trajectory, trajectory_ls, stop_point, force_reject_amber_ids,
+      backward_length);
     result.violations.insert(
-      result.violations.end(), amber_light_violations.begin(), amber_light_violations.end());
+      result.violations.end(), amber_light_result.violations.begin(),
+      amber_light_result.violations.end());
+    result.detected_stop_amber_ids = amber_light_result.detected_stop_amber_ids;
   }
 
   if (ego_stopping_distance.has_value() && params_.allow_if_cannot_stop_distance > 0.0) {

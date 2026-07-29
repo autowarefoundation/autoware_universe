@@ -42,8 +42,10 @@
       stable_duration_threshold_red: 0.0 # [s] minimum duration a red light must be seen before it is considered active
       stable_duration_threshold_amber: 0.0 # [s] minimum duration an amber light must be seen before it is considered active
       stable_duration_threshold_unknown: 0.0 # [s] minimum duration an unknown light must be seen before it is considered active
-      amber_rejection_hysteresis_duration: 0.0 # [s] duration to persist an amber rejection
       ego_stopped_velocity_threshold: 0.01 # [m/s] velocity below which ego is considered fully stopped
       checked_trajectory_length:  # maximum length of the planned trajectory that is scanned for traffic light stop lines.
         deceleration_limit: 2.0  # [m/s^2] deceleration limit to calculate the stop distance used as trajectory length limit
         jerk_limit: 2.0  # [m/s^3] jerk limit to calculate the stop distance used as trajectory length limit
+      amber_rejection:
+        hysteresis_duration: 0.0 # [s] hysteresis duration to persist an AMBER rejection
+        reject_if_stop_detected: false # reject if we detect a previous stop attempt from input trajectory

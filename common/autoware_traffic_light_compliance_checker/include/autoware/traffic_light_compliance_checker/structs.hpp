@@ -82,6 +82,7 @@ struct Violation
 struct ComplianceResult
 {
   std::vector<Violation> violations;
+  std::vector<int64_t> detected_stop_amber_ids;
 };
 
 /// @brief parameters for traffic light signal status tracking
@@ -103,16 +104,19 @@ struct Parameters
   bool treat_unknown_light_as_red_light{false};
   double stop_overshoot_margin{0.5};
   double allow_if_cannot_stop_distance{0.0};
-  double stable_duration_threshold_red{0.0};
-  double stable_duration_threshold_amber{0.0};
-  double stable_duration_threshold_unknown{0.0};
-  double amber_rejection_hysteresis_duration{0.0};
+  double min_lookahead_distance{0.0};
   double ego_stopped_velocity_threshold{0.01};
+  StatusTrackerParameters status_tracker_parameters;
   struct CheckedTrajectoryLength
   {
     double deceleration_limit{2.0};
     double jerk_limit{2.0};
   } checked_trajectory_length;
+  struct AmberRejection
+  {
+    double hysteresis_duration{0.0};
+    bool reject_if_stop_detected{false};
+  } amber_rejection;
 };
 
 }  // namespace autoware::traffic_light_compliance_checker

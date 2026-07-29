@@ -82,12 +82,12 @@ private:
     const std::vector<int64_t> & force_reject_amber_ids, const bool check_red_lights,
     const bool check_amber_lights) const;
 
-  std::vector<Violation> get_red_light_violations(
+  ComplianceResult get_red_light_violations(
     const std::vector<StopLineInfo> & red_stop_lines,
     const lanelet::BasicLineString2d & trajectory_ls,
     const std::optional<lanelet::BasicPoint2d> & stop_point,
     const double distance_offset = 0.0) const;
-  std::vector<Violation> get_amber_light_violations(
+  ComplianceResult get_amber_light_violations(
     const std::vector<StopLineInfo> & amber_stop_lines,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
     const lanelet::BasicLineString2d & trajectory_ls,
