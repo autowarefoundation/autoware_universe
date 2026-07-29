@@ -58,6 +58,7 @@ struct TrackerSnapshot
   std::vector<types::ExistenceProbability> existence_probs;
   // Filled lazily for trackers that appear in a gated pair.
   std::optional<bool> confident;
+  std::optional<bool> publish_confident;
   std::optional<bool> object_valid;
   types::DynamicObject object;
 };

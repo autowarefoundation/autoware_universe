@@ -40,6 +40,7 @@ using detail::compareWinnerSubstance;
 using detail::DecisionContext;
 using detail::ensureConfident;
 using detail::ensureObject;
+using detail::ensurePublishConfident;
 using detail::findCandidatePairs;
 using detail::isRedundant;
 using detail::TrackerSnapshot;
@@ -147,15 +148,16 @@ std::vector<TrackerSnapshot> buildSnapshots(
 // Outcome of one pair: no merge, or a directional merge in which the survivor absorbs the other.
 enum class PairDecision { NoMerge, LeftAbsorbsRight, RightAbsorbsLeft };
 
-// Ranking picks the survivor; it must be confident and carry a parametric shape (never
-// polygon-only), and the pair must be spatially redundant. Otherwise the pair does not merge.
+// Ranking picks the survivor; it must be confident now and at the publish horizon, and carry a
+// parametric shape (never polygon-only), and the pair must be spatially redundant. Otherwise the
+// pair does not merge.
 PairDecision decidePair(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx)
 {
   const bool a_survives = compareForSurvival(a, b, ctx) > 0;
   TrackerSnapshot & winner = a_survives ? a : b;
   TrackerSnapshot & loser = a_survives ? b : a;
 
-  if (!ensureConfident(winner, ctx)) {
+  if (!ensureConfident(winner, ctx) || !ensurePublishConfident(winner, ctx)) {
     return PairDecision::NoMerge;
   }
   const auto * winner_object = ensureObject(winner, ctx.time);

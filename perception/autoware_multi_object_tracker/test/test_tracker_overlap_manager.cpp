@@ -23,6 +23,7 @@
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 #include "test_bench.hpp"
 
+#include <autoware_utils_geometry/msg/covariance.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
@@ -41,6 +42,7 @@ namespace
 
 namespace mot = autoware::multi_object_tracker;
 namespace mot_detail = autoware::multi_object_tracker::detail;
+using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 using std::chrono_literals::operator""ms;
 
 constexpr int kSpinStrong = 12;
@@ -153,6 +155,17 @@ std::shared_ptr<mot::Tracker> makePolygonTracker(
   tracker->initializeExistenceProbabilities(channel.index, obj.existence_probability);
   spinUp(tracker, obj, time, n_updates, channel);
   return tracker;
+}
+
+// Bbox car whose noisy position measurements keep a young tracker's publish-horizon covariance
+// large.
+mot::types::DynamicObject makeNoisyCarObject(const rclcpp::Time & time)
+{
+  auto obj = makeBboxObject(0.0, 0.0, 4.5, 1.8, mot::classes::Label::CAR, time);
+  obj.kinematics.has_position_covariance = true;
+  obj.pose_covariance[XYZRPY_COV_IDX::X_X] = 1.0;
+  obj.pose_covariance[XYZRPY_COV_IDX::Y_Y] = 1.0;
+  return obj;
 }
 
 std::shared_ptr<mot::Tracker> makePedestrianAndBicycleTracker(
@@ -543,4 +556,51 @@ TEST_F(TrackerOverlapManagerTest, OutcomeIsIndependentOfListOrder)
       EXPECT_EQ(survivors, *reference);
     }
   }
+}
+
+TEST_F(TrackerOverlapManagerTest, PublishUnconfidentWinnerDefersMergeAndKeepsLoserPublished)
+{
+  // Young winner: confident at merge time, unconfident at the publish horizon.
+  const auto winner_time = mergeTime() - rclcpp::Duration(100ms);
+  const auto car_obj = makeNoisyCarObject(winner_time);
+  auto winner = makeVehicleTracker(car_obj, winner_time, 1, channel_);
+  const auto fragment_obj = makePolygonObject(1.0, 0.0, 0.8, baseTime());
+  auto loser = makePolygonTracker(fragment_obj, baseTime(), kSpinStrong, channel_);
+
+  ASSERT_TRUE(winner->isConfident(cache_, std::nullopt, mergeTime()));
+  ASSERT_FALSE(winner->isConfident(cache_, std::nullopt, std::nullopt));
+  ASSERT_TRUE(loser->isConfident(cache_, std::nullopt, std::nullopt));
+
+  std::list<std::shared_ptr<mot::Tracker>> trackers{loser, winner};
+  runMerge(trackers, mergeTime());
+
+  // The merge defers: both trackers survive and the loser stays exportable.
+  EXPECT_EQ(trackers.size(), 2U);
+  EXPECT_TRUE(std::any_of(
+    trackers.begin(), trackers.end(), [&](const auto & tracker) { return tracker == loser; }));
+  EXPECT_TRUE(std::any_of(
+    trackers.begin(), trackers.end(), [&](const auto & tracker) { return tracker == winner; }));
+  EXPECT_TRUE(loser->isConfident(cache_, std::nullopt, std::nullopt));
+}
+
+TEST_F(TrackerOverlapManagerTest, DeferredMergeAppliesOnceWinnerPublishConfident)
+{
+  const auto winner_time = mergeTime() - rclcpp::Duration(100ms);
+  const auto car_obj = makeNoisyCarObject(winner_time);
+  auto winner = makeVehicleTracker(car_obj, winner_time, 1, channel_);
+  const auto fragment_obj = makePolygonObject(1.0, 0.0, 0.8, baseTime());
+  auto loser = makePolygonTracker(fragment_obj, baseTime(), kSpinStrong, channel_);
+
+  std::list<std::shared_ptr<mot::Tracker>> trackers{loser, winner};
+  runMerge(trackers, mergeTime());
+  ASSERT_EQ(trackers.size(), 2U);
+
+  // The deferred pair is re-discovered once the matured winner clears the publish horizon.
+  spinUp(winner, car_obj, mergeTime(), kSpinStrong, channel_);
+  const auto late_merge_time = mergeTime() + rclcpp::Duration(100ms) * (kSpinStrong + 1);
+  ASSERT_TRUE(winner->isConfident(cache_, std::nullopt, std::nullopt));
+
+  runMerge(trackers, late_merge_time);
+  ASSERT_EQ(trackers.size(), 1U);
+  EXPECT_EQ(trackers.front(), winner);
 }

@@ -112,6 +112,15 @@ bool ensureConfident(TrackerSnapshot & snap, const DecisionContext & ctx)
   return *snap.confident;
 }
 
+bool ensurePublishConfident(TrackerSnapshot & snap, const DecisionContext & ctx)
+{
+  if (!snap.publish_confident) {
+    snap.publish_confident =
+      snap.tracker->isConfident(ctx.threshold_cache, ctx.ego_pose, std::nullopt);
+  }
+  return *snap.publish_confident;
+}
+
 const types::DynamicObject * ensureObject(TrackerSnapshot & snap, const rclcpp::Time & time)
 {
   if (!snap.object_valid) {
