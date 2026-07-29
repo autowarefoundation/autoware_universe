@@ -576,10 +576,12 @@ TEST_F(TrackerOverlapManagerTest, PublishUnconfidentWinnerDefersMergeAndKeepsLos
 
   // The merge defers: both trackers survive and the loser stays exportable.
   EXPECT_EQ(trackers.size(), 2U);
-  EXPECT_TRUE(std::any_of(
-    trackers.begin(), trackers.end(), [&](const auto & tracker) { return tracker == loser; }));
-  EXPECT_TRUE(std::any_of(
-    trackers.begin(), trackers.end(), [&](const auto & tracker) { return tracker == winner; }));
+  EXPECT_TRUE(std::any_of(trackers.begin(), trackers.end(), [&](const auto & tracker) {
+    return tracker == loser;
+  }));
+  EXPECT_TRUE(std::any_of(trackers.begin(), trackers.end(), [&](const auto & tracker) {
+    return tracker == winner;
+  }));
   EXPECT_TRUE(loser->isConfident(cache_, std::nullopt, std::nullopt));
 }
 
