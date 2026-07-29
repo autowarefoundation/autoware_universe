@@ -65,7 +65,7 @@ class SplatSimLidarConfig:
     """Tunable parameters for a :class:`SplatSimLidar`."""
 
     tileset_path: str
-    splatsim_image: str = "splatsim:latest"
+    splatsim_image: str = "ghcr.io/tier4/splatsim:latest-sm{arch}"
     grpc_port: int = 50061
     use_sh: bool = True
     # Defaults mirror the real Velodyne HDL-64E sensor spec (CARLA's default

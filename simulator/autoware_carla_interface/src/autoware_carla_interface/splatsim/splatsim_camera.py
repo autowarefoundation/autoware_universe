@@ -57,7 +57,7 @@ class SplatSimCameraConfig:
     """Tunable parameters for a :class:`SplatSimRGBCamera`."""
 
     tileset_path: str
-    splatsim_image: str = "splatsim:latest"
+    splatsim_image: str = "ghcr.io/tier4/splatsim:latest-sm{arch}"
     grpc_port: int = 50051
     use_sh: bool = True
     frame_rate: float = 20.0

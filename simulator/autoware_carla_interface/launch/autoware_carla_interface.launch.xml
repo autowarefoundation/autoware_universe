@@ -41,7 +41,7 @@
     <!-- The splatsim geographic origin is derived from the scene's own
          world.ecef_anchor (stored in the .usdz), so no lanelet2 map is needed. -->
     <arg name="splatsim_tileset_path" default="" description="Host path to the 3DGS scene (.usdz containing scene.json with world.ecef_anchor); required only when render_with_splatsim:=true"/>
-    <arg name="splatsim_image" default="splatsim:latest" description="Docker image for splatsim"/>
+    <arg name="splatsim_image" default="ghcr.io/tier4/splatsim:latest-sm{arch}" description="Docker image for splatsim (pulled from GHCR; '{arch}' is auto-resolved to the host GPU compute capability, e.g. sm86/sm89/sm120)"/>
     <arg name="splatsim_grpc_port" default="50051"/>
     <arg name="splatsim_use_sh" default="true"/>
     <arg name="splatsim_device" default="cuda:0"/>

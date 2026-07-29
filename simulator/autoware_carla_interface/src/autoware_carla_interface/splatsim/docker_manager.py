@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import sys
+import subprocess
 import threading
 import time
 
@@ -30,6 +31,33 @@ import grpc
 def _log(msg: str) -> None:
     """Print to stderr so it always appears in the ROS 2 launch terminal."""
     print(f"[splatsim-docker] {msg}", file=sys.stderr, flush=True)
+
+
+def _detect_cuda_arch(default: str = "89") -> str:
+    """Host GPU compute capability as an sm string (e.g. '8.9' -> '89', '12.0' -> '120').
+
+    Used to auto-select the matching GHCR splatsim image tag (``latest-sm<arch>``),
+    so the pulled image follows the host GPU. Falls back to *default* (sm_89, Ada)
+    when ``nvidia-smi`` is unavailable.
+    """
+    try:
+        out = (
+            subprocess.run(
+                ["nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=True,
+            )
+            .stdout.strip()
+            .splitlines()[0]
+            .strip()
+        )
+        major, _, minor = out.partition(".")
+        return f"{int(major)}{int(minor)}"
+    except Exception as exc:  # noqa: BLE001
+        _log(f"WARNING: GPU compute-cap detection failed ({exc}); defaulting to sm_{default}")
+        return default
 
 
 class SplatSimDockerManager:
@@ -104,6 +132,13 @@ class SplatSimDockerManager:
 
         tileset_dir = str(Path(tileset_host_path).resolve().parent)
 
+        # Auto-resolve an "{arch}" placeholder in the image tag from the host GPU's
+        # compute capability so the matching GHCR build is pulled automatically
+        # (e.g. ghcr.io/tier4/splatsim:latest-sm{arch} -> ...-sm86 / ...-sm89 / ...-sm120).
+        if "{arch}" in self._image:
+            self._image = self._image.replace("{arch}", _detect_cuda_arch())
+            _log(f"Resolved GPU-specific splatsim image: {self._image}")
+
         _log(
             f"Starting container (image={self._image}, name={self._container_name}, mount={tileset_dir} -> /data)"
         )
@@ -122,6 +157,20 @@ class SplatSimDockerManager:
         }
         if self._container_name:
             run_kwargs["name"] = self._container_name
+        # Refresh registry-qualified images (e.g. ghcr.io/tier4/splatsim:latest-sm89)
+        # so the newest GHCR build is used instead of a stale local tag. Bare local
+        # tags (e.g. "splatsim:latest") are left untouched. Best-effort: fall back to
+        # whatever is available locally if the pull fails (offline / auth).
+        if "/" in self._image:
+            repo, _, tag = self._image.rpartition(":")
+            if not repo:
+                repo, tag = self._image, "latest"
+            try:
+                _log(f"Pulling {self._image} from registry ...")
+                self._client.images.pull(repo, tag=tag or "latest")
+                _log(f"Pull complete: {self._image}")
+            except docker.errors.APIError as exc:
+                _log(f"WARNING: pull failed ({exc}); using local image if present")
         self._container = self._client.containers.run(**run_kwargs)
         _log(f"Container started: {self._container.short_id}")
         self._log_thread = threading.Thread(
