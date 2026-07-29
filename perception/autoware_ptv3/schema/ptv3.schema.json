@@ -6,27 +6,23 @@
     "filter": {
       "type": "object",
       "properties": {
-        "class_probability_threshold": {
-          "type": "number",
-          "description": "If any filter class probability reaches this threshold, the point is excluded from the filtered output cloud.",
-          "minimum": 0.0,
-          "maximum": 1.0
-        },
         "classes": {
           "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Class names to filter out from the filtered output cloud when their probability exceeds the threshold.",
+          "items": { "type": "string" },
+          "description": "Class names to filter out from the filtered output cloud.",
           "uniqueItems": true
         },
         "output_format": {
           "type": "string",
           "description": "Filtered output point format. Empty string preserves the input format.",
           "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
+        },
+        "apply_to_segmentation": {
+          "type": "boolean",
+          "description": "Whether to also remove filter.classes from the segmentation pointcloud output."
         }
       },
-      "required": ["class_probability_threshold", "classes", "output_format"],
+      "required": ["classes", "output_format", "apply_to_segmentation"],
       "additionalProperties": false
     },
     "post_process_params": {

@@ -201,7 +201,6 @@ PTv3Config make_test_config()
   params.point_cloud_range = {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F};
   params.segmentation_class_names = {"class"};
   params.palette = {0, 0, 0};
-  params.filter_class_probability_threshold = 0.0F;
   params.filter_output_format = "XYZI";
   params.source_reconstruction = "none";
   return makeConfig(params);
