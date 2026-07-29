@@ -148,16 +148,21 @@ std::vector<TrackerSnapshot> buildSnapshots(
 // Outcome of one pair: no merge, or a directional merge in which the survivor absorbs the other.
 enum class PairDecision { NoMerge, LeftAbsorbsRight, RightAbsorbsLeft };
 
-// Ranking picks the survivor; it must be confident now and at the publish horizon, and carry a
-// parametric shape (never polygon-only), and the pair must be spatially redundant. Otherwise the
-// pair does not merge.
+// Ranking picks the survivor; it must be confident and carry a parametric shape (never
+// polygon-only), the publish horizon must not drop it while keeping the loser, and the pair must be
+// spatially redundant. Otherwise the pair does not merge.
 PairDecision decidePair(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx)
 {
   const bool a_survives = compareForSurvival(a, b, ctx) > 0;
   TrackerSnapshot & winner = a_survives ? a : b;
   TrackerSnapshot & loser = a_survives ? b : a;
 
-  if (!ensureConfident(winner, ctx) || !ensurePublishConfident(winner, ctx)) {
+  if (!ensureConfident(winner, ctx)) {
+    return PairDecision::NoMerge;
+  }
+  // An exported tracker is never erased for one the publish gate would drop; when neither is
+  // exported the pair still consolidates.
+  if (!ensurePublishConfident(winner, ctx) && ensurePublishConfident(loser, ctx)) {
     return PairDecision::NoMerge;
   }
   const auto * winner_object = ensureObject(winner, ctx.time);
