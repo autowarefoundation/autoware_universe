@@ -182,14 +182,16 @@ __global__ void createSegmentationPointcloudKernel(
     }
   }
 
-  output_points[idx].x = input_point.x;
-  output_points[idx].y = input_point.y;
-  output_points[idx].z = input_point.z;
-  output_points[idx].class_id = has_valid_label
-                                  ? class_id_to_classification[label]
-                                  : static_cast<std::uint8_t>(PointCloudClassification::INVALID);
-  output_points[idx].probability = has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
-  output_points[idx].entropy = entropy;
+  const auto output_idx = atomicAdd(output_num_points, 1U);
+  output_points[output_idx].x = input_point.x;
+  output_points[output_idx].y = input_point.y;
+  output_points[output_idx].z = input_point.z;
+  output_points[output_idx].class_id =
+    has_valid_label ? class_id_to_classification[label]
+                    : static_cast<std::uint8_t>(PointCloudClassification::INVALID);
+  output_points[output_idx].probability =
+    has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
+  output_points[output_idx].entropy = entropy;
 }
 
 __global__ void reconstructPartialKernel(
