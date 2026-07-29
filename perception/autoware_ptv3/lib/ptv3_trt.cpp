@@ -181,8 +181,9 @@ void PTv3TRT::initPtr()
   stage_feat_d_.clear();
   stage_feat_d_.reserve(config_.enc_channels_.size());
   for (std::size_t stage = 0; stage < config_.enc_channels_.size(); ++stage) {
-    stage_feat_d_.push_back(autoware::cuda_utils::make_unique<float[]>(
-      config_.stage_voxel_capacity(stage) * config_.enc_channels_[stage]));
+    stage_feat_d_.push_back(
+      autoware::cuda_utils::make_unique<float[]>(
+        config_.stage_voxel_capacity(stage) * config_.enc_channels_[stage]));
   }
 
   compact_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
@@ -550,10 +551,11 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   stage_views.reserve(serialized_pooling_stages_d_.size());
   for (auto & stage : serialized_pooling_stages_d_) {
-    stage_views.push_back(SerializedPoolingDeviceStageView{
-      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-      stage.serialized_inverse.get()});
+    stage_views.push_back(
+      SerializedPoolingDeviceStageView{
+        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+        stage.serialized_inverse.get()});
   }
 
   pre_ptr_->generateSerializedPoolingMetadata(
