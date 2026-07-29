@@ -1,11 +1,37 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for Centerpoint ML model",
+  "title": "Parameters for Centerpoint ML model package",
   "type": "object",
   "definitions": {
-    "centerpoint_ml_package": {
+    "ml_package": {
       "type": "object",
       "properties": {
+        "encoder_onnx_path": {
+          "type": "string",
+          "description": "VoxelFeatureEncoder ONNX file, relative to model_path (absolute paths allowed)."
+        },
+        "encoder_engine_path": {
+          "type": "string",
+          "description": "VoxelFeatureEncoder TensorRT Engine file, relative to model_path (absolute paths allowed)."
+        },
+        "head_onnx_path": {
+          "type": "string",
+          "description": "DetectionHead ONNX file, relative to model_path (absolute paths allowed)."
+        },
+        "head_engine_path": {
+          "type": "string",
+          "description": "DetectionHead TensorRT Engine file, relative to model_path (absolute paths allowed)."
+        },
+        "class_remapper_param_path": {
+          "type": "string",
+          "description": "Class remapper parameter file, relative to model_path (absolute paths allowed)."
+        },
+        "trt_precision": {
+          "type": "string",
+          "description": "TensorRT inference precision.",
+          "default": "fp16",
+          "enum": ["fp32", "fp16"]
+        },
         "model_params": {
           "type": "object",
           "description": "Parameters for model configuration.",
@@ -102,7 +128,15 @@
           }
         }
       },
-      "required": ["model_params"]
+      "required": [
+        "encoder_onnx_path",
+        "encoder_engine_path",
+        "head_onnx_path",
+        "head_engine_path",
+        "class_remapper_param_path",
+        "trt_precision",
+        "model_params"
+      ]
     }
   },
   "properties": {
@@ -110,7 +144,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/centerpoint_ml_package"
+          "$ref": "#/definitions/ml_package"
         }
       },
       "required": ["ros__parameters"]

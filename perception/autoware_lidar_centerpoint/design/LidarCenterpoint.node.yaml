@@ -34,17 +34,10 @@ param_files:
   - name: common_param_path
     default: config/centerpoint_common.param.yaml
     schema: schema/centerpoint_common.schema.json
-  - name: model_param_path
-    default: config/centerpoint.param.yaml
-    schema: schema/centerpoint.schema.json
-    allow_substs: true
   - name: ml_package_param_path
-    default: config/centerpoint_ml_package.param.yaml
-    schema: schema/centerpoint_ml_package.schema.json
+    default: config/ml_package.param.yaml
+    schema: schema/ml_package.schema.json
     allow_substs: true
-  - name: class_remapper_param_path
-    default: config/detection_class_remapper.param.yaml
-    schema: schema/detection_class_remapper.schema.json
 
 param_values:
   - name: build_only
@@ -55,22 +48,10 @@ param_values:
     type: str
     default: lidar_centerpoint
     description: The name of the logger for this node.
-  - name: encoder_onnx_path
+  - name: model_path
     type: str
-    default: $(var data_path)/centerpoint/pts_voxel_encoder_centerpoint.onnx
-    description: The path to the encoder ONNX model.
-  - name: encoder_engine_path
-    type: str
-    default: $(var data_path)/centerpoint/pts_voxel_encoder_centerpoint.engine
-    description: The path to the encoder engine file.
-  - name: head_onnx_path
-    type: str
-    default: $(var data_path)/centerpoint/pts_backbone_neck_head_centerpoint.onnx
-    description: The path to the head ONNX model.
-  - name: head_engine_path
-    type: str
-    default: $(var data_path)/centerpoint/pts_backbone_neck_head_centerpoint.engine
-    description: The path to the head engine file.
+    default: $(var data_path)/lidar_centerpoint/base
+    description: The directory containing the model artifacts.
 
 # processes
 processes:
