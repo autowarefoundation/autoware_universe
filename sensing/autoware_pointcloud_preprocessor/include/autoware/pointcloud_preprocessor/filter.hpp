@@ -446,6 +446,13 @@ private:
   std::shared_ptr<ExactTimeSyncPolicy> sync_input_indices_e_;
   std::shared_ptr<ApproximateTimeSyncPolicy> sync_input_indices_a_;
 
+  // Builds a Policy<PointCloud2, PointIndices> synchronizer over sub_input_filter_ /
+  // sub_indices_filter_ and registers callback on it. Shared by the exact- and
+  // approximate-time branches of subscribe(), which otherwise only differ in this type.
+  template <template <typename...> class Policy, typename Callback>
+  std::shared_ptr<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>> make_sync(
+    Callback callback);
+
   /** \brief Get a matrix for conversion from the original frame to the target frame */
   bool calculate_transform_matrix(
     const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & from,

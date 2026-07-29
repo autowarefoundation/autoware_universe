@@ -123,6 +123,17 @@ void autoware::pointcloud_preprocessor::Filter::subscribe()
   subscribe(filter_name);
 }
 
+template <template <typename...> class Policy, typename Callback>
+auto autoware::pointcloud_preprocessor::Filter::make_sync(Callback callback)
+  -> std::shared_ptr<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>>
+{
+  auto sync = std::make_shared<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>>(
+    max_queue_size_);
+  sync->connectInput(sub_input_filter_, sub_indices_filter_);
+  sync->registerCallback(std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
+  return sync;
+}
+
 void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & filter_name)
 {
   // TODO(sykwer): Change the corresponding node to subscribe to `faster_input_indices_callback`
@@ -143,15 +154,9 @@ void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & fi
       this, "indices", rclcpp::SensorDataQoS().keep_last(max_queue_size_).get_rmw_qos_profile());
 
     if (approximate_sync_) {
-      sync_input_indices_a_ = std::make_shared<ApproximateTimeSyncPolicy>(max_queue_size_);
-      sync_input_indices_a_->connectInput(sub_input_filter_, sub_indices_filter_);
-      sync_input_indices_a_->registerCallback(
-        std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
+      sync_input_indices_a_ = make_sync<sync_policies::ApproximateTime>(callback);
     } else {
-      sync_input_indices_e_ = std::make_shared<ExactTimeSyncPolicy>(max_queue_size_);
-      sync_input_indices_e_->connectInput(sub_input_filter_, sub_indices_filter_);
-      sync_input_indices_e_->registerCallback(
-        std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
+      sync_input_indices_e_ = make_sync<sync_policies::ExactTime>(callback);
     }
   } else {
     // Subscribe in an old fashion to input only (no filters)
