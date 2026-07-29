@@ -35,7 +35,6 @@
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
 #include <autoware_planning_msgs/srv/set_preferred_primitive.hpp>
 #include <autoware_planning_msgs/srv/set_waypoint_route.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <tier4_planning_msgs/msg/reroute_availability.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -61,7 +60,6 @@ using autoware_planning_msgs::srv::SetLaneletRoute;
 using autoware_planning_msgs::srv::SetPreferredPrimitive;
 using autoware_planning_msgs::srv::SetWaypointRoute;
 using geometry_msgs::msg::Pose;
-using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 using std_msgs::msg::Header;
 using tier4_planning_msgs::msg::RerouteAvailability;

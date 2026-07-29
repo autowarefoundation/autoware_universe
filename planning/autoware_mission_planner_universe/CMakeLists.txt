@@ -47,6 +47,20 @@ if(BUILD_TESTING)
   ament_target_dependencies(test_${PROJECT_NAME}
     autoware_test_utils
   )
+
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_arrival_checker
+    test/test_arrival_checker.cpp
+    src/mission_planner/arrival_checker.cpp
+  )
+  ament_target_dependencies(test_${PROJECT_NAME}_arrival_checker
+    autoware_utils
+    autoware_planning_msgs
+    geometry_msgs
+    nav_msgs
+    rclcpp
+    tf2
+    tf2_geometry_msgs
+  )
 endif()
 
 ament_auto_package(
