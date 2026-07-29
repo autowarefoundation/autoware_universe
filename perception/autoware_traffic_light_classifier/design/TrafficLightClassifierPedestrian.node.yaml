@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::traffic_light::TrafficLightClassifierNodelet
+  plugin: autoware::traffic_light::TrafficLightClassifierNode
   executable: traffic_light_classifier_node
   node_output: screen
 

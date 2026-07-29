@@ -41,7 +41,7 @@ bool update_param(
 }
 }  // namespace
 
-TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeOptions & options)
+TrafficLightClassifierNode::TrafficLightClassifierNode(const rclcpp::NodeOptions & options)
 : Node("traffic_light_classifier_node", options)
 {
   const auto classify_traffic_light_type =
@@ -56,35 +56,38 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   if (is_approximate_sync_) {
     approximate_sync_.reset(new ApproximateSync(ApproximateSyncPolicy(10), image_sub_, roi_sub_));
     approximate_sync_->registerCallback(
-      std::bind(&TrafficLightClassifierNodelet::imageRoiCallback, this, _1, _2));
+      std::bind(&TrafficLightClassifierNode::image_roi_callback, this, _1, _2));
   } else {
     sync_.reset(new Sync(SyncPolicy(10), image_sub_, roi_sub_));
     sync_->registerCallback(
-      std::bind(&TrafficLightClassifierNodelet::imageRoiCallback, this, _1, _2));
+      std::bind(&TrafficLightClassifierNode::image_roi_callback, this, _1, _2));
   }
 
   traffic_signal_array_pub_ = this->create_publisher<tier4_perception_msgs::msg::TrafficLightArray>(
     "~/output/traffic_signals", rclcpp::QoS{1});
 
-  using std::chrono_literals::operator""ms;
-  timer_ = rclcpp::create_timer(
-    this, get_clock(), 100ms, std::bind(&TrafficLightClassifierNodelet::connectCb, this));
+  // Subscribe unconditionally; message_filters delivers synchronized image + ROI pairs to
+  // image_roi_callback. (Previously a 100 ms timer-driven connectCb subscribed lazily, only while
+  // the output had subscribers; always-on is simpler, and the callback no-ops until classifier_
+  // is set.)
+  image_sub_.subscribe(this, "~/input/image", "raw", rmw_qos_profile_sensor_data);
+  roi_sub_.subscribe(this, "~/input/rois", rclcpp::QoS{1}.get_rmw_qos_profile());
 
   int classifier_type = this->declare_parameter<int>("classifier_type");
   std::shared_ptr<ClassifierInterface> classifier_ptr;
-  if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
+  if (classifier_type == TrafficLightClassifierNode::ClassifierType::HSVFilter) {
     // Keep a typed handle so the node can drive the color backend's dynamic reconfigure.
     color_classifier_ = std::make_shared<ColorClassifier>(declare_hsv_config(this));
     set_param_res_ = this->add_on_set_parameters_callback(
-      std::bind(&TrafficLightClassifierNodelet::on_set_parameters_callback, this, _1));
+      std::bind(&TrafficLightClassifierNode::on_set_parameters_callback, this, _1));
     classifier_ptr = color_classifier_;
-  } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
+  } else if (classifier_type == TrafficLightClassifierNode::ClassifierType::CNN) {
 #if ENABLE_GPU
     classifier_ptr = std::make_shared<CNNClassifier>(declare_cnn_config(this));
 #else
     RCLCPP_ERROR(this->get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
-  } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::LampRecognizer) {
+  } else if (classifier_type == TrafficLightClassifierNode::ClassifierType::LampRecognizer) {
 #if ENABLE_GPU
     auto lamp_config = declare_lamp_config(this);
     // The recognizer needs its traffic-light type at construction (pedestrian lamps force CIRCLE);
@@ -114,21 +117,7 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   }
 }
 
-void TrafficLightClassifierNodelet::connectCb()
-{
-  // set callbacks only when there are subscribers to this node
-  if (
-    traffic_signal_array_pub_->get_subscription_count() == 0 &&
-    traffic_signal_array_pub_->get_intra_process_subscription_count() == 0) {
-    image_sub_.unsubscribe();
-    roi_sub_.unsubscribe();
-  } else if (!image_sub_.getSubscriber()) {
-    image_sub_.subscribe(this, "~/input/image", "raw", rmw_qos_profile_sensor_data);
-    roi_sub_.subscribe(this, "~/input/rois", rclcpp::QoS{1}.get_rmw_qos_profile());
-  }
-}
-
-void TrafficLightClassifierNodelet::imageRoiCallback(
+void TrafficLightClassifierNode::image_roi_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
   const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_rois_msg)
 {
@@ -187,7 +176,7 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
   }
 }
 
-rcl_interfaces::msg::SetParametersResult TrafficLightClassifierNodelet::on_set_parameters_callback(
+rcl_interfaces::msg::SetParametersResult TrafficLightClassifierNode::on_set_parameters_callback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
   HSVConfig config = color_classifier_->get_config();
@@ -222,4 +211,4 @@ rcl_interfaces::msg::SetParametersResult TrafficLightClassifierNodelet::on_set_p
 
 #include <rclcpp_components/register_node_macro.hpp>
 
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::traffic_light::TrafficLightClassifierNodelet)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::traffic_light::TrafficLightClassifierNode)

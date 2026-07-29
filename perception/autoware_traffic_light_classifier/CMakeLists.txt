@@ -75,7 +75,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     stdc++fs
   )
   rclcpp_components_register_node(${PROJECT_NAME}
-    PLUGIN "autoware::traffic_light::TrafficLightClassifierNodelet"
+    PLUGIN "autoware::traffic_light::TrafficLightClassifierNode"
     EXECUTABLE traffic_light_classifier_node
   )
 
@@ -124,7 +124,7 @@ else()
   )
 
   rclcpp_components_register_node(${PROJECT_NAME}
-    PLUGIN "autoware::traffic_light::TrafficLightClassifierNodelet"
+    PLUGIN "autoware::traffic_light::TrafficLightClassifierNode"
     EXECUTABLE traffic_light_classifier_node
   )
 
