@@ -91,7 +91,7 @@ void append_classified_point(SplitResult & result, const PointXYZCPE & point)
 {
   namespace utils = autoware::object_recognition_utils;
 
-  const auto classification = static_cast<utils::PointCloudClassification>(point.class_id);
+  const auto classification = static_cast<point_types::PointCloudClassification>(point.class_id);
   const auto object_label = utils::try_into_object(classification);
   if (object_label) {
     result.object_points[*object_label].push_back(point);
