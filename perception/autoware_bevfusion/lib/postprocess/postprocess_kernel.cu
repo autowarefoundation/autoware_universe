@@ -21,10 +21,6 @@
 #include <cub/cub.cuh>
 #include <cub/device/device_radix_sort.cuh>
 
-#include <thrust/count.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-
 #include <cstdint>
 
 namespace autoware::bevfusion
