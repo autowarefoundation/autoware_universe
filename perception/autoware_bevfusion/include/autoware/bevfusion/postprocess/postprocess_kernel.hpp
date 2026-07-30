@@ -16,7 +16,7 @@
 #define AUTOWARE__BEVFUSION__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 
 #include "autoware/bevfusion/bevfusion_config.hpp"
-#include "autoware/bevfusion/circle_nms_kernel.hpp"
+#include "autoware/bevfusion/postprocess/circle_nms_kernel.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>

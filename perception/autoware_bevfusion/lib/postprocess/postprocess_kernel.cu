@@ -140,21 +140,16 @@ PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t st
   sorted_bboxes_d_ptr_ = autoware::cuda_utils::make_unique<Box3D[]>(config_.num_proposals_);
 
   // Initialize device memory for bbox scores and indices for argsort
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    bboxes_score_d_ptr_.get(), 0.f, config_.num_proposals_ * sizeof(float), cudaMemcpyHostToDevice,
-    stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    sorted_bboxes_score_d_ptr_.get(), 0.f, config_.num_proposals_ * sizeof(float),
-    cudaMemcpyHostToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    bboxes_score_d_ptr_.get(), 0.f, config_.num_proposals_ * sizeof(float), stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    sorted_bboxes_score_d_ptr_.get(), 0.f, config_.num_proposals_ * sizeof(float), stream_));
 
   // MemsetAsync to zero for bboxes
   CHECK_CUDA_ERROR(
     cudaMemsetAsync(bboxes_d_ptr_.get(), 0, config_.num_proposals_ * sizeof(Box3D), stream_));
   CHECK_CUDA_ERROR(cudaMemsetAsync(
     sorted_bboxes_d_ptr_.get(), 0, config_.num_proposals_ * sizeof(Box3D), stream_));
-
-  // Initialize temporary storage for radix sort
-  std::uint64_t * uint64_nullptr = nullptr;
 
   CHECK_CUDA_ERROR(
     cub::DeviceRadixSort::SortPairsDescending(
@@ -168,7 +163,7 @@ PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t st
   sort_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(sort_workspace_size_);
 
   // Initialize CircleNMS
-  circle_nms_ptr_ = std::make_unique<CircleNMS>(config_, stream);
+  circle_nms_ptr_ = std::make_unique<CircleNMS>(config_, stream_);
 }
 
 // cspell: ignore divup
@@ -198,12 +193,15 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
 
   // supress by NMS
   const auto num_final_det_boxes3d = circle_nms_ptr_->circleNMS(sorted_bboxes_d_ptr_.get(), stream);
+  det_boxes3d.resize(num_final_det_boxes3d);
 
-  final_det_boxes3d_d.resize(num_final_det_boxes3d);
-
+  // Do not copy if there are no detected boxes
+  if (num_final_det_boxes3d == 0) {
+    return cudaGetLastError();
+  }
   // memcpy device to host
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    det_boxes3d.data(), bboxes_d_ptr_.get(), num_final_det_boxes3d * sizeof(Box3D),
+    det_boxes3d.data(), sorted_bboxes_d_ptr_.get(), num_final_det_boxes3d * sizeof(Box3D),
     cudaMemcpyDeviceToHost, stream));
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
