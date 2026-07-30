@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
-#include "autoware/pointcloud_preprocessor/concatenate_data/collector_matching_strategy.hpp"
+#include "autoware/pointcloud_preprocessor/concatenate_data/collector_matcher.hpp"
 
-template class autoware::pointcloud_preprocessor::NaiveMatchingStrategy<
+template class autoware::pointcloud_preprocessor::NaiveCollectorMatcher<
   autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
-template class autoware::pointcloud_preprocessor::AdvancedMatchingStrategy<
+template class autoware::pointcloud_preprocessor::AdvancedCollectorMatcher<
   autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
