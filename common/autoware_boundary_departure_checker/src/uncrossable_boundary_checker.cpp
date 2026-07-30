@@ -38,7 +38,8 @@ void UncrossableBoundaryChecker::update_parameters(const UncrossableBoundaryDepa
 }
 
 DepartureResult UncrossableBoundaryChecker::update_departure_status(
-  const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state)
+  const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state,
+  HysteresisState & state)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -55,13 +56,13 @@ DepartureResult UncrossableBoundaryChecker::update_departure_status(
     evaluator_ptr_->evaluate(predicted_traj, footprints_sides, ego_state);
 
   const auto hysteresis_result =
-    update_and_judge(hysteresis_state_, evaluation_result, param_, ego_state.current_time_s);
+    update_and_judge(state, evaluation_result, param_, ego_state.current_time_s);
 
-  hysteresis_state_ = hysteresis_result.updated_state;
+  state = hysteresis_result.updated_state;
 
   result.status = hysteresis_result.status;
-  result.debug_markers = debug::create_debug_markers(
-    hysteresis_state_, footprints, ego_state, param_.enable_developer_marker);
+  result.debug_markers =
+    debug::create_debug_markers(state, footprints, ego_state, param_.enable_developer_marker);
   return result;
 }
 

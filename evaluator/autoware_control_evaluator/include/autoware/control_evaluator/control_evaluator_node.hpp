@@ -20,6 +20,7 @@
 #include "autoware_utils/math/accumulator.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -98,27 +99,39 @@ public:
   void onTimer();
 
 private:
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry)
-  odometry_sub_ = create_polling_subscriber<Odometry>("~/input/odometry");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped)
-  accel_sub_ = create_polling_subscriber<AccelWithCovarianceStamped>("~/input/acceleration");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory)
-  traj_sub_ = create_polling_subscriber<Trajectory>("~/input/trajectory");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest)
-  route_subscriber_ =
-    create_polling_subscriber<LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest>(
-      "~/input/route", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest)
-  vector_map_subscriber_ =
-    create_polling_subscriber<LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest>(
-      "~/input/vector_map", rclcpp::QoS{1}.transient_local());
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PathWithLaneId)
-  behavior_path_subscriber_ = create_polling_subscriber<PathWithLaneId>("~/input/behavior_path");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(SteeringReport)
-  steering_sub_ = create_polling_subscriber<SteeringReport>("~/input/steering_status");
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects)
-  objects_sub_ = create_polling_subscriber<PredictedObjects>("~/input/objects");
-  std::unordered_map<std::string, AUTOWARE_POLLING_SUBSCRIBER_PTR(PlanningFactorArray)>
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr odometry_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
+      this, "~/input/odometry");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    accel_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+        this, "~/input/acceleration");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr traj_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+      this, "~/input/trajectory");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletRoute, autoware::agnocast_wrapper::polling::polling_policy::Newest>::SharedPtr
+    route_subscriber_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletRoute, autoware::agnocast_wrapper::polling::polling_policy::Newest>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    LaneletMapBin, autoware::agnocast_wrapper::polling::polling_policy::Newest>::SharedPtr
+    vector_map_subscriber_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      LaneletMapBin, autoware::agnocast_wrapper::polling::polling_policy::Newest>(
+      this, "~/input/vector_map", rclcpp::QoS{1}.transient_local());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PathWithLaneId>::SharedPtr
+    behavior_path_subscriber_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<PathWithLaneId>(
+        this, "~/input/behavior_path");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<SteeringReport>::SharedPtr steering_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<SteeringReport>(
+      this, "~/input/steering_status");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PredictedObjects>::SharedPtr objects_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<PredictedObjects>(
+      this, "~/input/objects");
+  std::unordered_map<
+    std::string,
+    autoware::agnocast_wrapper::polling::PollingSubscriber<PlanningFactorArray>::SharedPtr>
     planning_factors_sub_;
   std::unordered_map<std::string, Accumulator<double>> stop_deviation_accumulators_;
   std::unordered_map<std::string, Accumulator<double>> stop_deviation_abs_accumulators_;

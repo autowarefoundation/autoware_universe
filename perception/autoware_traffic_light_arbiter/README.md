@@ -6,11 +6,11 @@ This package receives traffic signals from perception and external (e.g., V2X) c
 
 ## TrafficLightArbiter
 
-A node that merges traffic light/signal state from image recognition and external (e.g., V2X) systems to provide to a planning component. Merging is only applied to `elements` in the `TrafficLightGroup` msg, not to `predictions`.
+Merges traffic light/signal state from image recognition and external (e.g., V2X) systems to provide to a planning component. Merging is only applied to `elements` in the `TrafficLightGroup` msg, not to `predictions`.
 
 ### Signal Match Validator
 
-When `enable_signal_matching` is set to true, this node validates the match between perception signals and external signals.
+When `enable_signal_matching` is set to true, perception and external signals are validated against each other.
 The table below outlines how the matching process determines the output based on the combination of perception and external signal colors. Each cell represents the outcome when a specific color from a perception signal (columns) intersects with a color from an external signal (rows).
 
 | External \ Perception | RED     | AMBER   | GREEN   | UNKNOWN | Not Received |
