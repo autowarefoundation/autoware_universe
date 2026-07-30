@@ -14,17 +14,10 @@
 
 #include "scene_occlusion_spot.hpp"
 
-#include "occlusion_spot_utils.hpp"
-#include "risk_predictive_braking.hpp"
-
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-
-#include <boost/optional.hpp>
-
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <autoware/trajectory/utils/crop.hpp>
+#include <autoware/trajectory/utils/find_nearest.hpp>
+#include <autoware/trajectory/utils/pretty_build.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -38,10 +31,12 @@
     RCLCPP_INFO_STREAM_THROTTLE(logger_, *clock_, 3000, time_msg); \
   }
 
+namespace autoware::behavior_velocity_planner
+{
 namespace
 {
-namespace utils = autoware::behavior_velocity_planner::occlusion_spot_utils;
-using autoware_perception_msgs::msg::PredictedObject;
+using utils::PossibleCollisionInfo;
+
 std::vector<PredictedObject> extractStuckVehicle(
   const std::vector<PredictedObject> & vehicles, const double stop_velocity)
 {
@@ -55,14 +50,9 @@ std::vector<PredictedObject> extractStuckVehicle(
 }
 }  // namespace
 
-namespace autoware::behavior_velocity_planner
-{
-namespace utils = occlusion_spot_utils;
-
 OcclusionSpotModule::OcclusionSpotModule(
-  const int64_t module_id, const std::shared_ptr<const PlannerData> & planner_data,
-  const PlannerParam & planner_param, const rclcpp::Logger & logger,
-  const rclcpp::Clock::SharedPtr clock,
+  const lanelet::Id module_id, const PlannerData & planner_data, const PlannerParam & planner_param,
+  const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
@@ -78,100 +68,110 @@ OcclusionSpotModule::OcclusionSpotModule(
     debug_data_.detection_type = "object";
   }
   if (param_.use_partition_lanelet) {
-    const lanelet::LaneletMapConstPtr & ll = planner_data->route_handler_->getLaneletMapPtr();
+    const lanelet::LaneletMapConstPtr & ll = planner_data.route_handler_->getLaneletMapPtr();
     planning_utils::getAllPartitionLanelets(ll, partition_lanelets_);
   }
 }
 
-bool OcclusionSpotModule::modifyPathVelocity(PathWithLaneId * path)
+bool OcclusionSpotModule::modifyPathVelocity(
+  Trajectory & path, [[maybe_unused]] const std::vector<Point> & left_bound,
+  [[maybe_unused]] const std::vector<Point> & right_bound, const PlannerData & planner_data)
 {
-  if (param_.is_show_processing_time) stop_watch_.tic("total_processing_time");
-  debug_data_.resetData();
-  if (path->points.size() < 2) {
-    return true;
+  if (param_.is_show_processing_time) {
+    stop_watch_.tic("total_processing_time");
   }
+
+  auto new_path = path;
+
+  debug_data_.resetData();
+
   // set planner data
   {
-    param_.v.max_stop_jerk = planner_data_->max_stop_jerk_threshold;
-    param_.v.max_stop_accel = planner_data_->max_stop_acceleration_threshold;
-    param_.v.v_ego = planner_data_->current_velocity->twist.linear.x;
-    param_.v.a_ego = planner_data_->current_acceleration->accel.accel.linear.x;
-    param_.v.delay_time = planner_data_->system_delay;
+    param_.v.max_stop_jerk = planner_data.max_stop_jerk_threshold;
+    param_.v.max_stop_accel = planner_data.max_stop_acceleration_threshold;
+    param_.v.v_ego = planner_data.current_velocity->twist.linear.x;
+    param_.v.a_ego = planner_data.current_acceleration->accel.accel.linear.x;
+    param_.v.delay_time = planner_data.system_delay;
     param_.detection_area_max_length =
       planning_utils::calcJudgeLineDistWithJerkLimit(
         param_.v.v_ego, param_.v.a_ego, param_.v.non_effective_accel, param_.v.non_effective_jerk,
-        planner_data_->delay_response_time) +
+        planner_data.delay_response_time) +
       param_.detection_area_offset;  // To fill difference between planned and measured acc
   }
-  const geometry_msgs::msg::Pose ego_pose = planner_data_->current_odometry->pose;
-  PathWithLaneId clipped_path;
-  utils::clipPathByLength(*path, clipped_path, param_.detection_area_length);
-  PathWithLaneId path_interpolated;
-  //! never change this interpolation interval(will affect module accuracy)
-  splineInterpolate(clipped_path, 1.0, path_interpolated, logger_);
-  const geometry_msgs::msg::Point start_point = path_interpolated.points.at(0).point.pose.position;
-  const auto ego_segment_idx = autoware::motion_utils::findNearestSegmentIndex(
-    path_interpolated.points, ego_pose, param_.dist_thr, param_.angle_thr);
-  if (!ego_segment_idx) return true;
-  const size_t start_point_segment_idx =
-    autoware::motion_utils::findNearestSegmentIndex(path_interpolated.points, start_point);
-  const auto offset = autoware::motion_utils::calcSignedArcLength(
-    path_interpolated.points, ego_pose.position, *ego_segment_idx, start_point,
-    start_point_segment_idx);
-  const double offset_from_start_to_ego = -offset;
+
+  const auto & ego_pose = planner_data.current_odometry->pose;
+
+  new_path.crop(0., param_.detection_area_length);
+
+  const auto s_ego = autoware::experimental::trajectory::find_first_nearest_index(
+    new_path, ego_pose, param_.dist_thr, param_.angle_thr);
+  if (!s_ego) {
+    return true;
+  }
+  const auto offset_from_start_to_ego = -*s_ego;
+
   const bool show_time = param_.is_show_processing_time;
   if (show_time) stop_watch_.tic("processing_time");
-  PathWithLaneId predicted_path;
-  if (param_.pass_judge == utils::PASS_JUDGE::CURRENT_VELOCITY) {
-    predicted_path = utils::applyVelocityToPath(path_interpolated, param_.v.v_ego);
-  } else if (param_.pass_judge == utils::PASS_JUDGE::SMOOTH_VELOCITY) {
-    if (!smoothPath(path_interpolated, predicted_path, planner_data_)) {
-      predicted_path = utils::applyVelocityToPath(path_interpolated, param_.v.v_ego);
-      // use current ego velocity in path if optimization failure
+
+  if (param_.pass_judge == utils::PASS_JUDGE::SMOOTH_VELOCITY) {
+    const auto smoothed_path = smoothPath(new_path, planner_data);
+    if (smoothed_path) {
+      new_path = smoothed_path.value();
+    } else {
+      utils::applyVelocityToPath(new_path, param_.v.v_ego);
     }
+  } else {
+    utils::applyVelocityToPath(new_path, param_.v.v_ego);
   }
   DEBUG_PRINT(show_time, "apply velocity [ms]: ", stop_watch_.toc("processing_time", true));
-  const size_t ego_seg_idx = findEgoSegmentIndex(predicted_path.points);
-  if (!utils::buildDetectionAreaPolygon(
-        debug_data_.detection_area_polygons, predicted_path, ego_pose, ego_seg_idx, param_)) {
+
+  if (!utils::buildDetectionAreaPolygons(
+        debug_data_.detection_area_polygons, new_path, *s_ego, param_)) {
     return true;  // path point is not enough
   }
   DEBUG_PRINT(show_time, "generate poly[ms]: ", stop_watch_.toc("processing_time", true));
-  std::vector<utils::PossibleCollisionInfo> possible_collisions;
+
+  std::vector<PossibleCollisionInfo> possible_collisions;
   // extract only close lanelet
   if (param_.use_partition_lanelet) {
     planning_utils::extractClosePartition(
       ego_pose.position, partition_lanelets_, debug_data_.close_partition);
   }
   DEBUG_PRINT(show_time, "extract[ms]: ", stop_watch_.toc("processing_time", true));
-  const auto objects_ptr = planner_data_->predicted_objects;
+
+  const auto objects_ptr = planner_data.predicted_objects;
   const auto vehicles =
     utils::extractVehicles(objects_ptr, ego_pose.position, param_.detection_area_length);
   const std::vector<PredictedObject> filtered_vehicles =
     utils::filterVehiclesByDetectionArea(vehicles, debug_data_.detection_area_polygons);
   DEBUG_PRINT(show_time, "filter obj[ms]: ", stop_watch_.toc("processing_time", true));
+
   if (param_.detection_method == utils::DETECTION_METHOD::OCCUPANCY_GRID) {
-    const auto & occ_grid_ptr = planner_data_->occupancy_grid;
-    if (!occ_grid_ptr) return true;  // no data
+    const auto & occ_grid_ptr = planner_data.occupancy_grid;
+    if (!occ_grid_ptr) {
+      return true;  // no data
+    }
+
     grid_map::GridMap grid_map;
     Polygons2d stuck_vehicle_foot_prints;
     Polygons2d moving_vehicle_foot_prints;
     utils::categorizeVehicles(
       filtered_vehicles, stuck_vehicle_foot_prints, moving_vehicle_foot_prints,
       param_.stuck_vehicle_vel);
+
     // occ -> image
     // find out occlusion from erode occlusion candidate num iter is strength of filter
-    const int num_iter = static_cast<int>(
-      (param_.detection_area.min_occlusion_spot_size / occ_grid_ptr->info.resolution) - 1);
+    const int num_iter =
+      param_.detection_area.min_occlusion_spot_size / occ_grid_ptr->info.resolution - 1;
     grid_utils::denoiseOccupancyGridCV(
       occ_grid_ptr, stuck_vehicle_foot_prints, moving_vehicle_foot_prints, grid_map, param_.grid,
       param_.is_show_cv_window, num_iter, param_.use_object_info,
       param_.use_moving_object_ray_cast);
     DEBUG_PRINT(show_time, "grid [ms]: ", stop_watch_.toc("processing_time", true));
+
     // Note: Don't consider offset from path start to ego here
     if (!utils::generatePossibleCollisionsFromGridMap(
-          possible_collisions, grid_map, path_interpolated, offset_from_start_to_ego, param_,
-          debug_data_)) {
+          possible_collisions, grid_map, new_path, offset_from_start_to_ego, param_, debug_data_)) {
       // no occlusion spot
       return true;
     }
@@ -179,25 +179,31 @@ bool OcclusionSpotModule::modifyPathVelocity(PathWithLaneId * path)
     const auto stuck_vehicles = extractStuckVehicle(filtered_vehicles, param_.stuck_vehicle_vel);
     // Note: Don't consider offset from path start to ego here
     if (!utils::generatePossibleCollisionsFromObjects(
-          possible_collisions, path_interpolated, param_, offset_from_start_to_ego,
-          stuck_vehicles)) {
+          possible_collisions, new_path, param_, offset_from_start_to_ego, stuck_vehicles)) {
       // no occlusion spot
       return true;
     }
   }
   DEBUG_PRINT(show_time, "occlusion [ms]: ", stop_watch_.toc("processing_time", true));
   DEBUG_PRINT(show_time, "num collision:", possible_collisions.size());
-  utils::calcSlowDownPointsForPossibleCollision(0, path_interpolated, 0.0, possible_collisions);
+
+  utils::calcSlowDownPointsForPossibleCollision(new_path, 0.0, possible_collisions);
+
   // Note: Consider offset from path start to ego here
   utils::handleCollisionOffset(possible_collisions, offset_from_start_to_ego);
+
   // apply safe velocity using ebs and pbs deceleration
   utils::applySafeVelocityConsideringPossibleCollision(
-    path, possible_collisions, debug_data_.debug_poses, param_);
+    new_path, possible_collisions, debug_data_.debug_poses, param_);
   debug_data_.baselink_to_front = param_.baselink_to_front;
+
   // these debug topics needs computation resource
-  debug_data_.z = path->points.front().point.pose.position.z;
+  debug_data_.z = new_path.compute(0).point.pose.position.z;
   debug_data_.possible_collisions = possible_collisions;
+
+  path = new_path;
   DEBUG_PRINT(show_time, "total [ms]: ", stop_watch_.toc("total_processing_time", true));
+
   return true;
 }
 

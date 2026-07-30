@@ -14,8 +14,6 @@
 
 #include "utils.hpp"
 
-#include "../risk_predictive_braking.hpp"
-
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory/utils/crop.hpp>
@@ -28,12 +26,14 @@
 #include <limits>
 #include <vector>
 
-namespace autoware::behavior_velocity_planner::experimental
+namespace autoware::behavior_velocity_planner
 {
 namespace utils
 {
 namespace
 {
+using autoware_perception_msgs::msg::ObjectClassification;
+
 bool isBlockedByPartition(const LineString2d & direction, const BasicPolygons2d & partitions)
 {
   return std::any_of(partitions.begin(), partitions.end(), [&](const lanelet::BasicPolygon2d & p) {
@@ -110,11 +110,10 @@ lanelet::ArcCoordinates getOcclusionPoint(
  *            |     Vehicle      |   obstacle
  *             ------------------
  */
-occlusion_spot_utils::PossibleCollisionInfo calculateCollisionPathPointFromOcclusionSpot(
+PossibleCollisionInfo calculateCollisionPathPointFromOcclusionSpot(
   const lanelet::ArcCoordinates & arc_coord_occlusion,
   const lanelet::ArcCoordinates & arc_coord_occlusion_with_offset,
-  const lanelet::BasicLineString2d & path_line_string,
-  const occlusion_spot_utils::PlannerParam & param)
+  const lanelet::BasicLineString2d & path_line_string, const PlannerParam & param)
 {
   constexpr auto calcPosition =
     [](const lanelet::BasicLineString2d & line_string, const lanelet::ArcCoordinates & arc) {
@@ -126,7 +125,7 @@ occlusion_spot_utils::PossibleCollisionInfo calculateCollisionPathPointFromOcclu
       return position;
     };
 
-  occlusion_spot_utils::PossibleCollisionInfo pc;
+  PossibleCollisionInfo pc;
   // ttv: time to vehicle for pedestrian
   // ttc: time to collision for ego vehicle
   const auto ttv = std::abs(arc_coord_occlusion_with_offset.distance / param.pedestrian_vel);
@@ -151,12 +150,10 @@ occlusion_spot_utils::PossibleCollisionInfo calculateCollisionPathPointFromOcclu
   return pc;
 }
 
-std::optional<occlusion_spot_utils::PossibleCollisionInfo>
-generateOneNotableCollisionFromOcclusionSpot(
+std::optional<PossibleCollisionInfo> generateOneNotableCollisionFromOcclusionSpot(
   const grid_map::GridMap & grid, const std::vector<grid_map::Position> & occlusion_spot_positions,
   const double offset_from_start_to_ego, const Point2d base_point, const Trajectory & path,
-  const occlusion_spot_utils::PlannerParam & param,
-  const occlusion_spot_utils::DebugData & debug_data)
+  const PlannerParam & param, const DebugData & debug_data)
 {
   const auto path_line_string = to_line_string_2d(path);
 
@@ -166,7 +163,7 @@ generateOneNotableCollisionFromOcclusionSpot(
   const auto & wheel_tread = param.wheel_tread;
   auto distance_lower_bound = std::numeric_limits<double>::max();
 
-  occlusion_spot_utils::PossibleCollisionInfo candidate;
+  PossibleCollisionInfo candidate;
   auto has_collision = false;
   const auto & partition_lanelets = debug_data.close_partition;
 
@@ -328,7 +325,46 @@ bool createDetectionAreaPolygons(
 
   return true;
 }
+
+Polygon2d toFootprintPolygon(const PredictedObject & object, const double scale = 1.0)
+{
+  const Pose & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
+  Polygon2d obj_footprint = autoware_utils::to_polygon2d(object);
+  // upscale foot print for noise
+  obj_footprint = upScalePolygon(obj_pose.position, obj_footprint, scale);
+  return obj_footprint;
+}
 }  // namespace
+
+SafeMotion calculateSafeMotion(const Velocity & v, const double ttv)
+{
+  SafeMotion sm;
+  const double j_max = v.safety_ratio * v.max_stop_jerk;
+  const double a_max = v.safety_ratio * v.max_stop_accel;
+  const double t1 = v.delay_time;
+  double t2 = a_max / j_max;
+  double & v_safe = sm.safe_velocity;
+  double & stop_dist = sm.stop_dist;
+  if (ttv <= t1) {
+    // delay
+    v_safe = 0;
+    stop_dist = 0;
+  } else if (ttv <= t2 + t1) {
+    // delay + const jerk
+    t2 = ttv - t1;
+    v_safe = -0.5 * j_max * t2 * t2;
+    stop_dist = v_safe * t1 - j_max * t2 * t2 * t2 / 6;
+  } else {
+    const double t3 = ttv - t2 - t1;
+    // delay + const jerk + const accel
+    const double v2 = -0.5 * j_max * t2 * t2;
+    v_safe = v2 - a_max * t3;
+    stop_dist = v_safe * t1 - j_max * t2 * t2 * t2 / 6 + v2 * t3 - 0.5 * a_max * t3 * t3;
+  }
+  // Note: safe_margin controls behavior insert point
+  stop_dist += v.safe_margin;
+  return sm;
+}
 
 void applyVelocityToPath(Trajectory & path, const double velocity)
 {
@@ -337,8 +373,7 @@ void applyVelocityToPath(Trajectory & path, const double velocity)
 }
 
 bool buildDetectionAreaPolygons(
-  Polygons2d & polygons, const Trajectory & path, const double s_ego,
-  const occlusion_spot_utils::PlannerParam & param)
+  Polygons2d & polygons, const Trajectory & path, const double s_ego, const PlannerParam & param)
 {
   polygons.clear();
 
@@ -357,10 +392,100 @@ bool buildDetectionAreaPolygons(
   return createDetectionAreaPolygons(polygons, path, s_ego, detection_range, param.pedestrian_vel);
 }
 
+void handleCollisionOffset(
+  std::vector<PossibleCollisionInfo> & possible_collisions, const double offset)
+{
+  for (auto & pc : possible_collisions) {
+    pc.arc_lane_dist_at_collision.length -= offset;
+  }
+}
+
+bool isStuckVehicle(const PredictedObject & obj, const double min_vel)
+{
+  if (!isVehicle(obj)) return false;
+  const auto & obj_vel_norm = std::hypot(
+    obj.kinematics.initial_twist_with_covariance.twist.linear.x,
+    obj.kinematics.initial_twist_with_covariance.twist.linear.y);
+  return obj_vel_norm <= min_vel;
+}
+
+bool isMovingVehicle(const PredictedObject & obj, const double min_vel)
+{
+  if (!isVehicle(obj)) return false;
+  const auto & obj_vel_norm = std::hypot(
+    obj.kinematics.initial_twist_with_covariance.twist.linear.x,
+    obj.kinematics.initial_twist_with_covariance.twist.linear.y);
+  return obj_vel_norm > min_vel;
+}
+
+std::vector<PredictedObject> extractVehicles(
+  const PredictedObjects::ConstSharedPtr objects_ptr, const Point & ego_position,
+  const double distance)
+{
+  std::vector<PredictedObject> vehicles;
+  for (const auto & obj : objects_ptr->objects) {
+    if (isVehicle(obj)) {
+      const auto & o = obj.kinematics.initial_pose_with_covariance.pose.position;
+      const auto & p = ego_position;
+      // Don't consider far vehicle
+      if (std::hypot(p.x - o.x, p.y - o.y) > distance) continue;
+      vehicles.emplace_back(obj);
+    }
+  }
+  return vehicles;
+}
+
+std::vector<PredictedObject> filterVehiclesByDetectionArea(
+  const std::vector<PredictedObject> & objs, const Polygons2d & polys)
+{
+  std::vector<PredictedObject> filtered_obj;
+  // stuck points by predicted objects
+  for (const auto & object : objs) {
+    // check if the footprint is in the stuck detect area
+    const auto obj_footprint = autoware_utils::to_polygon2d(object);
+    for (const auto & p : polys) {
+      if (!bg::disjoint(obj_footprint, p)) {
+        filtered_obj.emplace_back(object);
+      }
+    }
+  }
+  return filtered_obj;
+}
+
+bool isVehicle(const PredictedObject & obj)
+{
+  const auto & label = obj.classification.at(0).label;
+  return (
+    label == ObjectClassification::CAR || label == ObjectClassification::TRUCK ||
+    label == ObjectClassification::BUS || label == ObjectClassification::TRAILER);
+}
+
+void categorizeVehicles(
+  const std::vector<PredictedObject> & vehicles, Polygons2d & stuck_vehicle_foot_prints,
+  Polygons2d & moving_vehicle_foot_prints, const double stuck_vehicle_vel)
+{
+  moving_vehicle_foot_prints.clear();
+  stuck_vehicle_foot_prints.clear();
+  /**
+   * Note: these parameters are use to reduce noise in occupancy grid
+   * up_scale: case predicted poly is larger than actual
+   * down_scale: case predicted poly is smaller than actual
+   */
+  const double up_scale = 1.5;
+  const double down_scale = 0.8;
+  for (const auto & vehicle : vehicles) {
+    if (isMovingVehicle(vehicle, stuck_vehicle_vel)) {
+      moving_vehicle_foot_prints.emplace_back(toFootprintPolygon(vehicle, up_scale));
+    } else if (isStuckVehicle(vehicle, stuck_vehicle_vel)) {
+      stuck_vehicle_foot_prints.emplace_back(toFootprintPolygon(vehicle, down_scale));
+    }
+  }
+}
+
 bool generatePossibleCollisionsFromGridMap(
-  std::vector<occlusion_spot_utils::PossibleCollisionInfo> & possible_collisions,
-  const grid_map::GridMap & grid, const Trajectory & path, const double offset_from_start_to_ego,
-  const occlusion_spot_utils::PlannerParam & param, occlusion_spot_utils::DebugData & debug_data)
+  std::vector<PossibleCollisionInfo> & possible_collisions, const grid_map::GridMap & grid,
+  const Trajectory & path, const double offset_from_start_to_ego, const PlannerParam & param,
+  DebugData & debug_data)
 {
   auto distance_lower_bound = std::numeric_limits<double>::max();
   const auto & da_polygons = debug_data.detection_area_polygons;
@@ -403,9 +528,9 @@ bool generatePossibleCollisionsFromGridMap(
 }
 
 bool generatePossibleCollisionsFromObjects(
-  std::vector<occlusion_spot_utils::PossibleCollisionInfo> & possible_collisions,
-  const Trajectory & path, const occlusion_spot_utils::PlannerParam & param,
-  const double offset_from_start_to_ego, const std::vector<PredictedObject> & dyn_objects)
+  std::vector<PossibleCollisionInfo> & possible_collisions, const Trajectory & path,
+  const PlannerParam & param, const double offset_from_start_to_ego,
+  const std::vector<PredictedObject> & dyn_objects)
 {
   const auto path_line_string = to_line_string_2d(path);
 
@@ -436,7 +561,7 @@ bool generatePossibleCollisionsFromObjects(
 
 void calcSlowDownPointsForPossibleCollision(
   const Trajectory & path, const double offset,
-  std::vector<occlusion_spot_utils::PossibleCollisionInfo> & possible_collisions)
+  std::vector<PossibleCollisionInfo> & possible_collisions)
 {
   if (possible_collisions.empty()) {
     return;
@@ -444,9 +569,7 @@ void calcSlowDownPointsForPossibleCollision(
 
   std::sort(
     possible_collisions.begin(), possible_collisions.end(),
-    [](
-      const occlusion_spot_utils::PossibleCollisionInfo & pc1,
-      const occlusion_spot_utils::PossibleCollisionInfo & pc2) {
+    [](const PossibleCollisionInfo & pc1, const PossibleCollisionInfo & pc2) {
       return pc1.arc_lane_dist_at_collision.length < pc2.arc_lane_dist_at_collision.length;
     });
 
@@ -467,9 +590,8 @@ void calcSlowDownPointsForPossibleCollision(
 }
 
 void applySafeVelocityConsideringPossibleCollision(
-  Trajectory & path, std::vector<occlusion_spot_utils::PossibleCollisionInfo> & possible_collisions,
-  std::vector<geometry_msgs::msg::Pose> & debug_poses,
-  const occlusion_spot_utils::PlannerParam & param)
+  Trajectory & path, std::vector<PossibleCollisionInfo> & possible_collisions,
+  std::vector<geometry_msgs::msg::Pose> & debug_poses, const PlannerParam & param)
 {
   const auto & v0 = param.v.v_ego;
   const auto & a0 = param.v.a_ego;
@@ -510,4 +632,4 @@ void applySafeVelocityConsideringPossibleCollision(
   }
 }
 }  // namespace utils
-}  // namespace autoware::behavior_velocity_planner::experimental
+}  // namespace autoware::behavior_velocity_planner

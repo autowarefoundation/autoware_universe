@@ -12,18 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "occlusion_spot_utils.hpp"
-#include "risk_predictive_braking.hpp"
 #include "utils.hpp"
 
 #include <gtest/gtest.h>
 
 #include <cmath>
-#include <limits>
 
 TEST(safeMotion, delay_jerk_acceleration)
 {
-  namespace utils = autoware::behavior_velocity_planner::occlusion_spot_utils;
+  namespace utils = autoware::behavior_velocity_planner::utils;
   using utils::calculateSafeMotion;
   /**
    * @brief check if calculation is correct in below parameter

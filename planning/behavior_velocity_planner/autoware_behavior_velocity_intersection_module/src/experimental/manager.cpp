@@ -14,6 +14,8 @@
 
 #include "manager.hpp"
 
+#include "autoware/behavior_velocity_intersection_module/experimental/util.hpp"
+
 #include <autoware/lanelet2_utils/topology.hpp>
 
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
@@ -312,14 +314,11 @@ void IntersectionModuleManager::launchNewModules(
   const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
   const PlannerData & planner_data)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   const auto routing_graph = planner_data.route_handler_->getRoutingGraphPtr();
   const auto lanelet_map = planner_data.route_handler_->getLaneletMapPtr();
 
   const auto lanelets =
-    planning_utils::getLaneletsOnPath(path_msg, lanelet_map, planner_data.current_odometry->pose);
+    util::getLaneletsOnPathFromCurrent(path, lanelet_map, planner_data.current_odometry->pose);
   // run occlusion detection only in the first intersection
   for (size_t i = 0; i < lanelets.size(); i++) {
     const auto ll = lanelets.at(i);
@@ -386,11 +385,8 @@ std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 IntersectionModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
-  const auto lane_set = planning_utils::getLaneletsOnPath(
-    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+  const auto lane_set = util::getLaneletsOnPathFromCurrent(
+    path, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
   return [lane_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     const auto intersection_module = std::dynamic_pointer_cast<IntersectionModule>(scene_module);
@@ -529,14 +525,11 @@ void MergeFromPrivateModuleManager::launchNewModules(
   const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
   const PlannerData & planner_data)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   const auto routing_graph = planner_data.route_handler_->getRoutingGraphPtr();
   const auto lanelet_map = planner_data.route_handler_->getLaneletMapPtr();
 
   const auto lanelets =
-    planning_utils::getLaneletsOnPath(path_msg, lanelet_map, planner_data.current_odometry->pose);
+    util::getLaneletsOnPathFromCurrent(path, lanelet_map, planner_data.current_odometry->pose);
   for (size_t i = 0; i < lanelets.size(); i++) {
     const auto ll = lanelets.at(i);
     const auto lane_id = ll.id();
@@ -605,11 +598,8 @@ std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 MergeFromPrivateModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
-  const auto lane_set = planning_utils::getLaneletsOnPath(
-    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+  const auto lane_set = util::getLaneletsOnPathFromCurrent(
+    path, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
   return [lane_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
     const auto merge_from_private_module =
