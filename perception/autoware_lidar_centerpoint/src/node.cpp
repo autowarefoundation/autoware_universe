@@ -92,6 +92,14 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
       }
     }
   }
+  // matrices are indexed by ObjectClassification label on both axes
+  if (
+    allow_remapping_by_area_matrix.size() == 0 || min_area_matrix.size() == 0 ||
+    max_area_matrix.size() == 0) {
+    throw std::invalid_argument(
+      "Class remapper matrices must be non-empty squares of equal size: " +
+      class_remapper_param_path);
+  }
 
   // Distance-based score thresholds
   const std::vector<double> distance_bin_upper_limits_double =
