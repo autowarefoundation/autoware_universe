@@ -46,8 +46,16 @@ void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParam
   ego_nearest_param_ = EgoNearestParam(node_ptr);
   common_param_ = CommonParam(node_ptr);
   smoother_time_keeper_ptr_ = std::make_shared<SmootherTimekeeper>();
-  eb_path_smoother_ptr_ = std::make_shared<EBPathSmoother>(
-    node_ptr, false, ego_nearest_param_, common_param_, smoother_time_keeper_ptr_);
+
+  // Declare the elastic band parameters in the node layer and inject them, together
+  // with a debug publisher/logger/clock, into the node-independent smoother.
+  const auto eb_param = autoware::path_smoother::declare_eb_param(node_ptr);
+  eb_debug_publisher_ptr_ =
+    std::make_shared<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      node_ptr, "~/debug");
+  eb_path_smoother_ptr_ = std::make_shared<EBPathSmootherT>(
+    false, ego_nearest_param_, common_param_, eb_param, node_ptr->get_logger(),
+    *node_ptr->get_clock(), eb_debug_publisher_ptr_, smoother_time_keeper_ptr_);
   eb_path_smoother_ptr_->initialize(false, common_param_);
   eb_path_smoother_ptr_->resetPreviousData();
 }

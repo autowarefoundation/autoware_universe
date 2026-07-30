@@ -69,6 +69,15 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} acados_interface)
 
+# The library instantiates the node-type templates for autoware::agnocast_wrapper::Node, so it
+# needs the agnocast headers when Agnocast is enabled and must agree with its consumers on
+# USE_AGNOCAST_ENABLED.
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  find_package(agnocastlib REQUIRED)
+  ament_target_dependencies(${PROJECT_NAME} agnocastlib)
+endif()
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::path_optimizer::PathOptimizer"
   EXECUTABLE path_optimizer_node

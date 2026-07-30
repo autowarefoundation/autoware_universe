@@ -91,11 +91,16 @@ struct TimeKeeper
 struct CommonParam
 {
   CommonParam() = default;
-  explicit CommonParam(rclcpp::Node * node)
+  // Templated on the node type so the parameters can be declared on either
+  // rclcpp::Node or autoware::agnocast_wrapper::Node. The struct itself stays
+  // node-independent (plain values).
+  template <typename NodeT>
+  explicit CommonParam(NodeT * node)
   {
     output_backward_traj_length =
-      node->declare_parameter<double>("common.output_backward_traj_length");
-    output_delta_arc_length = node->declare_parameter<double>("common.output_delta_arc_length");
+      node->template declare_parameter<double>("common.output_backward_traj_length");
+    output_delta_arc_length =
+      node->template declare_parameter<double>("common.output_delta_arc_length");
   }
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)
@@ -115,10 +120,12 @@ struct CommonParam
 struct EgoNearestParam
 {
   EgoNearestParam() = default;
-  explicit EgoNearestParam(rclcpp::Node * node)
+  // Templated on the node type (see CommonParam above).
+  template <typename NodeT>
+  explicit EgoNearestParam(NodeT * node)
   {
-    dist_threshold = node->declare_parameter<double>("ego_nearest_dist_threshold");
-    yaw_threshold = node->declare_parameter<double>("ego_nearest_yaw_threshold");
+    dist_threshold = node->template declare_parameter<double>("ego_nearest_dist_threshold");
+    yaw_threshold = node->template declare_parameter<double>("ego_nearest_yaw_threshold");
   }
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)

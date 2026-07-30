@@ -32,13 +32,13 @@
 #include <nav_msgs/msg/detail/odometry__struct.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::utils
 {
 
 using autoware::path_smoother::CommonParam;
-using autoware::path_smoother::EBPathSmoother;
 using autoware::path_smoother::EgoNearestParam;
 using autoware::path_smoother::PlannerData;
 using autoware::path_smoother::ReplanChecker;
@@ -50,10 +50,6 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-
-void smooth_trajectory_with_elastic_band(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const std::shared_ptr<EBPathSmoother> & eb_path_smoother_ptr);
 
 /**
  * @brief Checks if a trajectory point is valid.
@@ -84,6 +80,13 @@ void copy_trajectory_orientation(
 rclcpp::Logger get_logger();
 
 /**
+ * @brief Logs an error message, throttled to at most once per 5 seconds.
+ *
+ * @param message The message to log.
+ */
+void log_error_throttle(const std::string & message);
+
+/**
  * @brief generates a 3 point trajectory to prevent downstream issues
  * @param trajectory with less than 3 points.
  * @param odom ego odometry. To check if the ego vehicle is properly stopped.
@@ -110,6 +113,28 @@ double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
 void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt = false,
   const double constant_dt = 0.1);
+
+// Templated on the smoother type so the same helper works with the elastic band
+// smoother instantiated against either rclcpp::Node or agnocast_wrapper::Node.
+// Only smoothTrajectory()/resetPreviousData() are required of EBPathSmootherT.
+// Defined here (rather than in utils.cpp) so it can be instantiated for any
+// smoother type by the caller.
+template <typename EBPathSmootherT>
+void smooth_trajectory_with_elastic_band(
+  TrajectoryPoints & traj_points, const Odometry & current_odometry,
+  const std::shared_ptr<EBPathSmootherT> & eb_path_smoother_ptr)
+{
+  if (!eb_path_smoother_ptr) {
+    log_error_throttle("Elastic band path smoother is not initialized");
+    return;
+  }
+  constexpr size_t minimum_points_for_elastic_band = 3;
+  if (traj_points.empty() || traj_points.size() < minimum_points_for_elastic_band) {
+    return;
+  }
+  traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
+  eb_path_smoother_ptr->resetPreviousData();
+}
 
 };  // namespace autoware::trajectory_optimizer::utils
 

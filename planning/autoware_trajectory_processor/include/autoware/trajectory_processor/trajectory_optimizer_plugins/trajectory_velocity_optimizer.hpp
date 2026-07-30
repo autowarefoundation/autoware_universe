@@ -20,8 +20,9 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
@@ -73,9 +74,9 @@ protected:
 private:
   std::shared_ptr<ContinuousJerkSmoother> continuous_jerk_smoother_{nullptr};
   TrajectoryVelocityOptimizerParams velocity_params_;
-  std::shared_ptr<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>
+  autoware::agnocast_wrapper::polling::PollingSubscriber<VelocityLimit>::SharedPtr
     sub_planning_velocity_;
-  rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
+  AUTOWARE_PUBLISHER_PTR(VelocityLimit) pub_velocity_limit_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

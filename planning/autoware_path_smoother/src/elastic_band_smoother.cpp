@@ -97,8 +97,13 @@ ElasticBandSmoother::ElasticBandSmoother(const rclcpp::NodeOptions & node_option
     common_param_ = CommonParam(this);
   }
 
+  // Declare the elastic band parameters in the node layer and inject them, together
+  // with a debug publisher/logger/clock, into the node-independent smoother.
+  const auto eb_param = declare_eb_param(static_cast<rclcpp::Node *>(this));
+  eb_debug_publisher_ptr_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
   eb_path_smoother_ptr_ = std::make_shared<EBPathSmoother>(
-    this, enable_debug_info_, ego_nearest_param_, common_param_, time_keeper_ptr_);
+    enable_debug_info_, ego_nearest_param_, common_param_, eb_param, get_logger(), *get_clock(),
+    eb_debug_publisher_ptr_, time_keeper_ptr_);
   replan_checker_ptr_ = std::make_shared<ReplanChecker>(this, ego_nearest_param_);
 
   // reset planners

@@ -19,6 +19,7 @@
 
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>

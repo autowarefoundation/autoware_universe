@@ -20,6 +20,8 @@
 #include "autoware/path_smoother/replan_checker.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -34,10 +36,13 @@ namespace autoware::trajectory_optimizer::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware::path_smoother::CommonParam;
-using autoware::path_smoother::EBPathSmoother;
 using autoware::path_smoother::EgoNearestParam;
 using autoware::path_smoother::ReplanChecker;
 using SmootherTimekeeper = autoware::path_smoother::TimeKeeper;
+// The elastic band smoother is instantiated against the agnocast wrapper node type so
+// that it can publish through Agnocast when enabled.
+using EBPathSmootherT =
+  autoware::path_smoother::BasicEBPathSmoother<autoware::agnocast_wrapper::Node>;
 
 class TrajectoryEBSmootherOptimizer : public TrajectoryOptimizerPluginBase
 {
@@ -54,7 +59,10 @@ protected:
 private:
   CommonParam common_param_{};
   EgoNearestParam ego_nearest_param_;
-  std::shared_ptr<EBPathSmoother> eb_path_smoother_ptr_{nullptr};
+  std::shared_ptr<EBPathSmootherT> eb_path_smoother_ptr_{nullptr};
+  // Debug publisher injected into the (node-independent) elastic band smoother.
+  std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    eb_debug_publisher_ptr_{nullptr};
   mutable std::shared_ptr<SmootherTimekeeper> smoother_time_keeper_ptr_{nullptr};
 };
 }  // namespace autoware::trajectory_optimizer::plugin

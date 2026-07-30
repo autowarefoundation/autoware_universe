@@ -149,9 +149,14 @@ PathOptimizer::PathOptimizer(const rclcpp::NodeOptions & node_options)
 
   // create core algorithm pointers with parameter declaration
   replan_checker_ptr_ = std::make_shared<ReplanChecker>(this, ego_nearest_param_);
+  // Declare the MPT parameters in the node layer and inject them, together with a debug
+  // publisher/logger, into the node-independent optimizer.
+  const auto mpt_param = declare_mpt_param(static_cast<rclcpp::Node *>(this), vehicle_info_);
+  mpt_debug_publisher_ptr_ =
+    std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
   mpt_optimizer_ptr_ = std::make_shared<MPTOptimizer>(
-    this, enable_debug_info_, ego_nearest_param_, vehicle_info_, traj_param_, debug_data_ptr_,
-    time_keeper_);
+    enable_debug_info_, ego_nearest_param_, vehicle_info_, traj_param_, mpt_param, get_logger(),
+    mpt_debug_publisher_ptr_, debug_data_ptr_, time_keeper_);
 
   // reset planners
   // NOTE: This function must be called after core algorithms (e.g. mpt_optimizer_) have been

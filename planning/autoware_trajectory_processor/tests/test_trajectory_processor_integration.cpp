@@ -210,7 +210,9 @@ protected:
 
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(modifier_node_);
-    executor_->add_node(optimizer_node_);
+    // TrajectoryOptimizer is an autoware::agnocast_wrapper::Node, which is not an rclcpp::Node,
+    // so it is added through its node base interface.
+    executor_->add_node(optimizer_node_->get_node_base_interface());
     executor_->add_node(test_node_);
   }
 

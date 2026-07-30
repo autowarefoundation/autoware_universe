@@ -21,7 +21,9 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_trajectory_processor/trajectory_optimizer_param.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -36,9 +38,11 @@ namespace autoware::trajectory_optimizer::plugin
 
 using autoware::path_optimizer::DebugData;
 using autoware::path_optimizer::EgoNearestParam;
-using autoware::path_optimizer::MPTOptimizer;
 using autoware::path_optimizer::PlannerData;
 using autoware::path_optimizer::TrajectoryParam;
+// The MPT optimizer is instantiated against the agnocast wrapper node type so it can
+// publish through Agnocast when enabled.
+using MPTOptimizerT = autoware::path_optimizer::BasicMPTOptimizer<autoware::agnocast_wrapper::Node>;
 
 struct MPTParams
 {
@@ -80,10 +84,13 @@ protected:
 
 private:
   // Core MPT optimizer instance
-  std::shared_ptr<MPTOptimizer> mpt_optimizer_ptr_;
+  std::shared_ptr<MPTOptimizerT> mpt_optimizer_ptr_;
+  // Debug publisher injected into the (node-independent) MPT optimizer.
+  std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    mpt_debug_publisher_ptr_;
 
   // Debug visualization
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_markers_pub_;
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) debug_markers_pub_;
 
   // Vehicle information
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;

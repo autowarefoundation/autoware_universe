@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <!-- Resolve the Agnocast environment (LD_PRELOAD heaphook / container selection) based on the
+       ENABLE_AGNOCAST environment variable. Provides the ld_preload_value launch configuration. -->
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="trajectory_optimizer_param_path" default="$(find-pkg-share autoware_trajectory_processor)/config/trajectory_optimizer.param.yaml"/>
   <arg name="elastic_band_param_path" default="$(find-pkg-share autoware_trajectory_processor)/config/trajectory_smoothing/elastic_band_smoother.param.yaml"/>
   <arg name="common_param_path" default="$(find-pkg-share autoware_core_planning)/config/common.param.yaml"/>
@@ -21,6 +25,8 @@
   <arg name="output_current_velocity_limit_mps" default="/planning/scenario_planning/current_max_velocity"/>
 
   <node pkg="autoware_trajectory_processor" exec="autoware_trajectory_optimizer_node" name="trajectory_optimizer_node" output="screen">
+    <!-- Preload the Agnocast heaphook when Agnocast is enabled (no-op otherwise). -->
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var trajectory_optimizer_param_path)" allow_substs="true"/>
     <param from="$(var common_param_path)"/>
     <param from="$(var elastic_band_param_path)" allow_substs="true"/>

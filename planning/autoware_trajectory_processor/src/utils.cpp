@@ -86,22 +86,6 @@ TrajectoryPoints generate_three_point_stopped_trajectory(
   return {base_link_point, offset_point_1, offset_point_2};
 }
 
-void smooth_trajectory_with_elastic_band(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const std::shared_ptr<EBPathSmoother> & eb_path_smoother_ptr)
-{
-  if (!eb_path_smoother_ptr) {
-    log_error_throttle("Elastic band path smoother is not initialized");
-    return;
-  }
-  constexpr size_t minimum_points_for_elastic_band = 3;
-  if (traj_points.empty() || traj_points.size() < minimum_points_for_elastic_band) {
-    return;
-  }
-  traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
-  eb_path_smoother_ptr->resetPreviousData();
-}
-
 double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
 {
   constexpr double min_dt_threshold = 1e-9;

@@ -67,6 +67,8 @@ private:
 
   // algorithms
   std::shared_ptr<EBPathSmoother> eb_path_smoother_ptr_{nullptr};
+  // Debug publisher injected into the (node-independent) elastic band smoother.
+  std::shared_ptr<autoware_utils_debug::DebugPublisher> eb_debug_publisher_ptr_{nullptr};
   std::shared_ptr<ReplanChecker> replan_checker_ptr_{nullptr};
 
   // parameters
