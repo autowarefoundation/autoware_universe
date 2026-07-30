@@ -533,12 +533,10 @@ TEST_F(BehaviorPathPlanningUtilTest, calcLaneAroundPose)
   {
     const auto lane = calcLaneAroundPose(
       planner_data_->route_handler, planner_data_->self_odometry->pose.pose, 10.0, 0.0);
-    // TODO(Koichi98): assert the whole sequence ({1001, 1011}) instead. The number of lanelets
-    // returned here currently depends on whether route_handler's rclcpp::ok() guard lets the
-    // forward traversal run at all, which it does not in this test binary. Tighten this once
-    // autowarefoundation/autoware_core#1289 has removed that guard.
-    ASSERT_FALSE(lane.empty());
+    // The forward traversal covers the requested 10 m with the next lanelet in the route.
+    ASSERT_EQ(lane.size(), 2);
     EXPECT_EQ(lane.front().id(), 1001);
+    EXPECT_EQ(lane.back().id(), 1011);
   }
 }
 
