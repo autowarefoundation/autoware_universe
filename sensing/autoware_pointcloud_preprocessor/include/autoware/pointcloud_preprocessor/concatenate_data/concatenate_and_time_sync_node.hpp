@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -22,11 +21,8 @@
 #include <vector>
 
 // ROS includes
-#include "cloud_collector.hpp"
-#include "collector_matcher.hpp"
-#include "combine_cloud_handler.hpp"
+#include "cloud_concatenator.hpp"
 #include "concatenation_diagnostics.hpp"
-#include "matching_strategy_type.hpp"
 #include "traits.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
@@ -71,13 +67,6 @@ public:
     ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage> && concatenated_cloud_result,
     std::shared_ptr<CollectorInfoBase> collector_info);
 
-  void manage_collector_list();
-  void delete_collector(CloudCollector<MsgTraits> & cloud_collector);
-
-  std::list<std::shared_ptr<CloudCollector<MsgTraits>>> get_cloud_collectors();
-
-  void add_cloud_collector(const std::shared_ptr<CloudCollector<MsgTraits>> & collector);
-
 private:
   struct Parameters
   {
@@ -112,15 +101,20 @@ private:
     double now_sec{0.0};
   };
 
-  std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>>
-    combine_cloud_handler_;
-  std::list<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collectors_;
-  std::unique_ptr<CollectorMatcher<MsgTraits>> collector_matcher_;
+  // The matching/combining core shared with the offline (Python) pipeline. The node drives its
+  // arrival clock with ROS time: subscription callbacks call process_cloud(..., now()), and
+  // timeout_timer_ (a one-shot re-armed from next_deadline()) calls
+  // close_expired_collectors(now()).
+  std::unique_ptr<CloudConcatenator<PointCloudMessage>> concatenator_;
+  rclcpp::TimerBase::SharedPtr timeout_timer_;
+  CloudConcatenatorStats reported_stats_{};
+
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_;
   std::unordered_set<std::string> frames_with_loaded_transform_;
 
-  bool init_collector_list_{false};
-  static constexpr const int num_of_collectors{3};
+  // Cap of concurrently open collectors (the concatenator discards the oldest beyond this),
+  // matching the fixed collector pool the node used historically.
+  static constexpr const std::size_t num_of_collectors{3};
 
   // default postfix name for synchronized pointcloud
   static constexpr const char * default_sync_topic_postfix = "_synchronized";
@@ -156,9 +150,16 @@ private:
 
   std::string replace_sync_topic_name_postfix(
     const std::string & original_topic_name, const std::string & postfix);
-  void initialize_collector_list();
-  typename std::list<std::shared_ptr<CloudCollector<MsgTraits>>>::iterator
-  find_and_reset_oldest_collector();
+
+  // Publish every emitted frame (reconstructing the collector info the diagnostics expect) and
+  // replenish the combine buffers afterwards.
+  void publish_frames(std::vector<ConcatenatedFrame<PointCloudMessage>> && frames);
+  // Surface concatenator stat increments (force-dropped collectors, duplicate-topic inserts) as
+  // throttled warnings.
+  void report_concatenator_warnings();
+  // Re-arm (or cancel) the one-shot timeout timer from the concatenator's next deadline.
+  void schedule_timeout_timer();
+  void on_timeout_timer();
 };
 
 class PointCloudConcatenateDataSynchronizerComponent
