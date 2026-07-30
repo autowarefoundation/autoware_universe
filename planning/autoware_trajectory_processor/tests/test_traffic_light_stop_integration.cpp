@@ -235,7 +235,8 @@ protected:
     tl.overshoot_tolerance = 0.0;
     tl.th_stable_duration_red = 0.0;
     tl.th_stable_duration_amber = 0.0;
-    tl.th_amber_rejection_hysteresis = 0.0;
+    tl.amber_rejection.th_hysteresis = 0.0;
+    tl.amber_rejection.reject_if_stop_detected = false;
     tl.crossing_time_limit = 2.75;
   }
 

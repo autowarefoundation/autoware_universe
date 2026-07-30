@@ -77,12 +77,12 @@ struct Violation
     return arc_length_to_cross_point < other.arc_length_to_cross_point;
   }
 };
+using Violations = std::vector<Violation>;
 
 /// @brief result of compliance check
 struct ComplianceResult
 {
-  std::vector<Violation> violations;
-  std::vector<int64_t> detected_stop_amber_ids;
+  Violations violations;
 };
 
 /// @brief parameters for traffic light signal status tracking

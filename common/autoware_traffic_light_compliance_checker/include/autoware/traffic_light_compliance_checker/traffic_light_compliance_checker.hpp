@@ -70,29 +70,26 @@ private:
   [[nodiscard]] std::vector<int64_t> get_force_reject_amber_ids(
     const rclcpp::Time & current_time, bool is_ego_stopped) const;
 
-  void update_amber_rejection_history(
-    const ComplianceResult & result, const rclcpp::Time & current_time,
-    const std::vector<int64_t> & force_reject_amber_ids);
-
   void cleanup_amber_rejection_history(const rclcpp::Time & current_time);
 
-  [[nodiscard]] tl::expected<ComplianceResult, std::string> check_with_filtered_signals(
+  [[nodiscard]] ComplianceResult check_with_filtered_signals(
     const Inputs & input,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & filtered_signals,
     const std::vector<int64_t> & force_reject_amber_ids, const bool check_red_lights,
-    const bool check_amber_lights) const;
+    const bool check_amber_lights);
 
-  ComplianceResult get_red_light_violations(
+  Violations get_red_light_violations(
     const std::vector<StopLineInfo> & red_stop_lines,
     const lanelet::BasicLineString2d & trajectory_ls,
     const std::optional<lanelet::BasicPoint2d> & stop_point,
     const double distance_offset = 0.0) const;
-  ComplianceResult get_amber_light_violations(
+  Violations get_amber_light_violations(
     const std::vector<StopLineInfo> & amber_stop_lines,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
     const lanelet::BasicLineString2d & trajectory_ls,
     const std::optional<lanelet::BasicPoint2d> & stop_point,
-    const std::vector<int64_t> & force_reject_amber_ids, const double distance_offset = 0.0) const;
+    const std::vector<int64_t> & force_reject_amber_ids, const rclcpp::Time & current_time,
+    const double distance_offset = 0.0) const;
 
   /// @brief return the red and amber stop lines related to the given traffic light groups
   [[nodiscard]] std::pair<std::vector<StopLineInfo>, std::vector<StopLineInfo>> get_stop_lines(
@@ -110,10 +107,13 @@ private:
     const double distance_to_stop_line, const double current_velocity,
     const double current_acceleration, const double time_to_cross_stop_line) const;
 
+  bool is_allow_if_cannot_stop(const double distance_to_cross_point) const;
+
   Parameters params_;
   vehicle_info_utils::VehicleInfo vehicle_info_;
   std::unique_ptr<TrafficLightStatusTracker> status_tracker_;
-  std::unordered_map<int64_t, rclcpp::Time> amber_rejection_history_;
+  mutable std::unordered_map<int64_t, rclcpp::Time> amber_rejection_history_;
+  std::optional<double> ego_stopping_distance_;
 };
 
 }  // namespace autoware::traffic_light_compliance_checker
