@@ -69,7 +69,7 @@ public:
     const std::size_t truncated_points, const std::size_t twist_queue_size,
     const std::size_t max_twist_queue_size, const std::size_t dropped_twists,
     const std::size_t imu_queue_size, const std::size_t max_imu_queue_size,
-    const std::size_t dropped_imus)
+    const std::size_t dropped_imus, const bool ring_overflow)
   : input_points_(input_points),
     max_input_points_(max_input_points),
     truncated_points_(truncated_points),
@@ -78,7 +78,8 @@ public:
     dropped_twists_(dropped_twists),
     imu_queue_size_(imu_queue_size),
     max_imu_queue_size_(max_imu_queue_size),
-    dropped_imus_(dropped_imus)
+    dropped_imus_(dropped_imus),
+    ring_overflow_(ring_overflow)
   {
   }
 
@@ -93,11 +94,12 @@ public:
     interface.add_key_value("IMU queue size", imu_queue_size_);
     interface.add_key_value("Maximum IMU queue size", max_imu_queue_size_);
     interface.add_key_value("Dropped IMU count", dropped_imus_);
+    interface.add_key_value("Ring organization overflow", ring_overflow_);
   }
 
   [[nodiscard]] std::optional<std::pair<int, std::string>> evaluate_status() const override
   {
-    if (truncated_points_ > 0 || dropped_twists_ > 0 || dropped_imus_ > 0) {
+    if (truncated_points_ > 0 || dropped_twists_ > 0 || dropped_imus_ > 0 || ring_overflow_) {
       return std::make_pair(
         diagnostic_msgs::msg::DiagnosticStatus::ERROR,
         "[ERROR]: input bounds exceeded; truncated_points=" + std::to_string(truncated_points_) +
@@ -117,6 +119,7 @@ private:
   std::size_t imu_queue_size_;
   std::size_t max_imu_queue_size_;
   std::size_t dropped_imus_;
+  bool ring_overflow_;
 };
 
 }  // namespace
@@ -140,6 +143,10 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   bool enable_ring_outlier_filter = declare_parameter<bool>("enable_ring_outlier_filter");
   input_bounds_params_.max_input_point_count =
     static_cast<std::size_t>(declare_parameter<int64_t>("max_input_point_count"));
+  input_bounds_params_.max_ring_count =
+    static_cast<int>(declare_parameter<int64_t>("max_ring_count"));
+  input_bounds_params_.max_points_per_ring =
+    static_cast<int>(declare_parameter<int64_t>("max_points_per_ring"));
   const auto max_twist_frequency_hz = declare_parameter<double>("max_twist_frequency_hz");
   const auto max_imu_frequency_hz = declare_parameter<double>("max_imu_frequency_hz");
   input_bounds_params_.max_twist_subscriber_queue_size =
@@ -152,8 +159,10 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   input_bounds_params_.max_imu_queue_size =
     static_cast<std::size_t>(std::ceil(max_imu_frequency_hz));
 
-  if (input_bounds_params_.max_input_point_count == 0) {
-    throw std::runtime_error("max_input_point_count must be positive");
+  if (
+    input_bounds_params_.max_input_point_count == 0 || input_bounds_params_.max_ring_count <= 0 ||
+    input_bounds_params_.max_points_per_ring <= 0) {
+    throw std::runtime_error("Pointcloud preprocessor capacity parameters must be positive");
   }
 
   RingOutlierFilterParameters ring_outlier_filter_parameters;
@@ -242,8 +251,12 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
     use_3d_undistortion_ ? CudaPointcloudPreprocessor::UndistortionType::Undistortion3D
                          : CudaPointcloudPreprocessor::UndistortionType::Undistortion2D;
 
-  cuda_pointcloud_preprocessor_ = std::make_unique<CudaPointcloudPreprocessor>();
-  cuda_pointcloud_preprocessor_->setMaxInputPointCount(input_bounds_params_.max_input_point_count);
+  const PreprocessorCapacity preprocessor_capacity{
+    input_bounds_params_.max_input_point_count, input_bounds_params_.max_ring_count,
+    input_bounds_params_.max_points_per_ring,
+    input_bounds_params_.max_twist_queue_size + input_bounds_params_.max_imu_queue_size};
+  cuda_pointcloud_preprocessor_ =
+    std::make_unique<CudaPointcloudPreprocessor>(preprocessor_capacity);
   cuda_pointcloud_preprocessor_->setRingOutlierFilterParameters(ring_outlier_filter_parameters);
   cuda_pointcloud_preprocessor_->setRingOutlierFilterActive(enable_ring_outlier_filter);
   cuda_pointcloud_preprocessor_->setCropBoxParameters(crop_box_parameters);
@@ -583,7 +596,7 @@ void CudaPointcloudPreprocessorNode::publishDiagnostics(
     latest_input_bounds_status_.truncated_point_count, twist_queue_.size(),
     input_bounds_params_.max_twist_queue_size, latest_input_bounds_status_.dropped_twist_count,
     angular_velocity_queue_.size(), input_bounds_params_.max_imu_queue_size,
-    latest_input_bounds_status_.dropped_imu_count);
+    latest_input_bounds_status_.dropped_imu_count, stats.ring_overflow);
 
   diagnostics_interface_->clear();
 
