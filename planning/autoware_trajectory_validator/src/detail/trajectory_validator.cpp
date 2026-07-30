@@ -104,15 +104,14 @@ TrajectoryValidatorReport TrajectoryValidator::process(
       report.num_feasible_trajectories++;
     }
 
-    // remove metrics from inactive plugins so that they dont affect final trajectory risk level
-    combined_metrics.erase(
-      std::remove_if(
-        combined_metrics.begin(), combined_metrics.end(),
-        [&](const auto & metric) { return active_filter_names.count(metric.validator_name) == 0; }),
-      combined_metrics.end());
+    // only consider metrics from active filters for final trajectory risk level
+    std::vector<autoware_trajectory_validator::msg::MetricReport> active_metrics;
+    std::copy_if(
+      combined_metrics.begin(), combined_metrics.end(), std::back_inserter(active_metrics),
+      [&](const auto & metric) { return active_filter_names.count(metric.validator_name) > 0; });
 
     RiskLevel risk_level;
-    risk_level.level = worst_risk_level(combined_metrics);
+    risk_level.level = worst_risk_level(active_metrics);
     report.validation_reports.push_back(
       autoware_trajectory_validator::build<autoware_trajectory_validator::msg::ValidationReport>()
         .trajectory_stamp(candidate_trajectory.header.stamp)
