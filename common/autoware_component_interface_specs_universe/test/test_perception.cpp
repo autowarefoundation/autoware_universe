@@ -26,7 +26,6 @@ TEST(perception_universe, reexports_core)
   namespace universe = autoware::component_interface_specs_universe::perception;
   static_assert(std::is_same_v<universe::ObjectRecognition, core::ObjectRecognition>);
   static_assert(std::is_same_v<universe::TrafficSignals, core::TrafficSignals>);
-  static_assert(std::is_same_v<universe::DetectedObjects, core::DetectedObjects>);
   SUCCEED();
 }
 

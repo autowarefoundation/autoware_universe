@@ -21,7 +21,6 @@
 // (single-version-authority) type; core is the sole definition and version authority.
 namespace autoware::component_interface_specs_universe::perception
 {
-using autoware::component_interface_specs::perception::DetectedObjects;
 using autoware::component_interface_specs::perception::ObjectRecognition;
 using autoware::component_interface_specs::perception::Specs;
 using autoware::component_interface_specs::perception::TrafficSignals;
