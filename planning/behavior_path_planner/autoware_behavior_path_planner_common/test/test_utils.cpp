@@ -533,8 +533,10 @@ TEST_F(BehaviorPathPlanningUtilTest, calcLaneAroundPose)
   {
     const auto lane = calcLaneAroundPose(
       planner_data_->route_handler, planner_data_->self_odometry->pose.pose, 10.0, 0.0);
-    EXPECT_EQ(lane.size(), 1);
+    // The forward traversal covers the requested 10 m with the next lanelet in the route.
+    ASSERT_EQ(lane.size(), 2);
     EXPECT_EQ(lane.front().id(), 1001);
+    EXPECT_EQ(lane.back().id(), 1011);
   }
 }
 
