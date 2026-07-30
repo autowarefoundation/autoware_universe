@@ -23,6 +23,7 @@ namespace autoware::component_interface_specs_universe::perception
 {
 using autoware::component_interface_specs::perception::ObjectRecognition;
 using autoware::component_interface_specs::perception::Specs;
+using autoware::component_interface_specs::perception::TrackedObjects;
 using autoware::component_interface_specs::perception::TrafficSignals;
 using autoware::component_interface_specs::perception::version;
 }  // namespace autoware::component_interface_specs_universe::perception

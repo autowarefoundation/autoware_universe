@@ -26,6 +26,7 @@
 namespace autoware::component_interface_specs_universe::map
 {
 using autoware::component_interface_specs::map::GetDifferentialPointCloudMap;
+using autoware::component_interface_specs::map::GetPartialPointCloudMap;
 using autoware::component_interface_specs::map::MapProjectorInfo;
 using autoware::component_interface_specs::map::Specs;
 using autoware::component_interface_specs::map::VectorMap;

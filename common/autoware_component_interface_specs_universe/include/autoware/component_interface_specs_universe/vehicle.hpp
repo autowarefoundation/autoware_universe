@@ -28,6 +28,7 @@ namespace autoware::component_interface_specs_universe::vehicle
 
 // Re-export the core specs so universe consumers keep resolving the canonical
 // (single-version-authority) type; core is the sole definition and version authority.
+using autoware::component_interface_specs::vehicle::ControlModeStatus;
 using autoware::component_interface_specs::vehicle::GearStatus;
 using autoware::component_interface_specs::vehicle::HazardLightStatus;
 using autoware::component_interface_specs::vehicle::Specs;

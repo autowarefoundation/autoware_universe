@@ -31,8 +31,10 @@ namespace autoware::component_interface_specs_universe::control
 // Re-export the core specs so universe consumers keep resolving the canonical
 // (single-version-authority) type; core is the sole definition and version authority.
 using autoware::component_interface_specs::control::ControlCommand;
+using autoware::component_interface_specs::control::ControlModeRequest;
 using autoware::component_interface_specs::control::GearCommand;
 using autoware::component_interface_specs::control::HazardLightsCommand;
+using autoware::component_interface_specs::control::PredictedTrajectory;
 using autoware::component_interface_specs::control::Specs;
 using autoware::component_interface_specs::control::TurnIndicatorsCommand;
 using autoware::component_interface_specs::control::version;
