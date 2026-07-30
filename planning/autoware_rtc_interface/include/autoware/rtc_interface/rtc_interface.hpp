@@ -29,8 +29,10 @@
 #include "tier4_rtc_msgs/srv/cooperate_commands.hpp"
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::rtc_interface
@@ -47,10 +49,16 @@ using tier4_rtc_msgs::srv::AutoMode;
 using tier4_rtc_msgs::srv::CooperateCommands;
 using unique_identifier_msgs::msg::UUID;
 
-class RTCInterface
+/// @brief Publishes the decision status of a planning module and receives execution commands.
+///
+/// @tparam NodeT the node type owning this interface. Only the instantiations explicitly provided
+/// by this package can be linked against: `rclcpp::Node` (aliased as `RTCInterface` below) and
+/// `autoware::agnocast_wrapper::Node`.
+template <class NodeT = rclcpp::Node>
+class BasicRTCInterface
 {
 public:
-  RTCInterface(rclcpp::Node * node, const std::string & name, const bool enable_rtc = true);
+  BasicRTCInterface(NodeT * node, const std::string & name, const bool enable_rtc = true);
   void publishCooperateStatus(const rclcpp::Time & stamp);
   /// @brief update the cooperate status of the module identified by the given UUID
   /// @param[in] uuid unique ID of the module
@@ -93,12 +101,24 @@ private:
   rclcpp::Logger getLogger() const;
   bool isLocked() const;
 
-  rclcpp::Publisher<CooperateStatusArray>::SharedPtr pub_statuses_;
-  rclcpp::Publisher<AutoModeStatus>::SharedPtr pub_auto_mode_status_;
-  rclcpp::Service<CooperateCommands>::SharedPtr srv_commands_;
-  rclcpp::Service<AutoMode>::SharedPtr srv_auto_mode_;
+  // The publisher handle type depends on NodeT: rclcpp::Node yields rclcpp::Publisher, while
+  // autoware::agnocast_wrapper::Node yields its own publisher wrapper. Deduce it from the node
+  // instead of naming it, so that this header stays independent of the wrapper.
+  using CooperateStatusPublisherPtr =
+    decltype(std::declval<NodeT *>()->template create_publisher<CooperateStatusArray>(
+      std::string{}, 1));
+  using AutoModeStatusPublisherPtr =
+    decltype(std::declval<NodeT *>()->template create_publisher<AutoModeStatus>(std::string{}, 1));
+
+  CooperateStatusPublisherPtr pub_statuses_;
+  AutoModeStatusPublisherPtr pub_auto_mode_status_;
+  // The service and timer handles are only held to keep them alive; they are never dereferenced
+  // after construction. Holding them type-erased keeps the layout of this class independent of
+  // NodeT, which matters because it is held by value in several planning modules.
+  std::shared_ptr<void> srv_commands_;
+  std::shared_ptr<void> srv_auto_mode_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  std::shared_ptr<void> timer_;
   rclcpp::Clock::SharedPtr clock_;
   rclcpp::Logger logger_;
 
@@ -118,6 +138,8 @@ private:
 public:
   friend class RTCInterfaceTest;
 };
+
+using RTCInterface = BasicRTCInterface<rclcpp::Node>;
 
 }  // namespace autoware::rtc_interface
 
