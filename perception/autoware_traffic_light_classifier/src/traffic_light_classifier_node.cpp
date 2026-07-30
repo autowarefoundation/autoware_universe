@@ -13,14 +13,34 @@
 // limitations under the License.
 #include "traffic_light_classifier_node.hpp"
 
+#include "classifier_params.hpp"
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::traffic_light
 {
+namespace
+{
+// Set `value` from the parameter named `name` if present; return whether it was found.
+bool update_param(
+  const std::vector<rclcpp::Parameter> & parameters, const std::string & name, int & value)
+{
+  for (const auto & parameter : parameters) {
+    if (parameter.get_name() == name) {
+      value = parameter.as_int();
+      return true;
+    }
+  }
+  return false;
+}
+}  // namespace
+
 TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeOptions & options)
 : Node("traffic_light_classifier_node", options)
 {
@@ -53,16 +73,20 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   int classifier_type = this->declare_parameter<int>("classifier_type");
   std::shared_ptr<ClassifierInterface> classifier_ptr;
   if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
-    classifier_ptr = std::make_shared<ColorClassifier>(this);
+    // Keep a typed handle so the node can drive the color backend's dynamic reconfigure.
+    color_classifier_ = std::make_shared<ColorClassifierCore>(declare_hsv_config(this));
+    set_param_res_ = this->add_on_set_parameters_callback(
+      std::bind(&TrafficLightClassifierNodelet::on_set_parameters_callback, this, _1));
+    classifier_ptr = color_classifier_;
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CNNClassifier>(this);
+    classifier_ptr = std::make_shared<CNNClassifierCore>(declare_cnn_config(this));
 #else
     RCLCPP_ERROR(this->get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::LampRecognizer) {
 #if ENABLE_GPU
-    classifier_ptr = std::make_shared<CnnLampRecognizer>(this);
+    classifier_ptr = std::make_shared<CnnLampRecognizerCore>(declare_lamp_config(this));
 #else
     RCLCPP_ERROR(
       this->get_logger(), "please install CUDA, CUDNN and TensorRT to use LampRecognizer");
@@ -73,6 +97,8 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
     classifier_ = std::make_unique<TrafficLightClassifier>(
       classifier_ptr, classify_traffic_light_type, over_exposure_threshold,
       under_exposure_threshold);
+    debug_image_pub_ = image_transport::create_publisher(
+      this, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
   }
 
   diagnostics_interface_ptr_ =
@@ -144,6 +170,48 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
       "Detected out-of-range exposure in ROI. Corresponding ROI was overwritten with UNKNOWN.");
   }
   diagnostics_interface_ptr_->publish(output_msg.header.stamp);
+
+  // Publish the debug view last, and only when a consumer is attached (building it is a cold path),
+  // so a debug-rendering failure cannot skip the primary signal output or diagnostics above.
+  if (debug_image_pub_.getNumSubscribers() > 0) {
+    const cv::Mat debug_image = classifier_->make_debug_image(result->roi_images);
+    if (!debug_image.empty()) {
+      const auto debug_image_msg =
+        cv_bridge::CvImage(std_msgs::msg::Header(), "rgb8", debug_image).toImageMsg();
+      debug_image_pub_.publish(debug_image_msg);
+    }
+  }
+}
+
+rcl_interfaces::msg::SetParametersResult TrafficLightClassifierNodelet::on_set_parameters_callback(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  HSVConfig config = color_classifier_->get_config();
+  update_param(parameters, "green_min_h", config.green_min_h);
+  update_param(parameters, "green_min_s", config.green_min_s);
+  update_param(parameters, "green_min_v", config.green_min_v);
+  update_param(parameters, "green_max_h", config.green_max_h);
+  update_param(parameters, "green_max_s", config.green_max_s);
+  update_param(parameters, "green_max_v", config.green_max_v);
+  update_param(parameters, "yellow_min_h", config.yellow_min_h);
+  update_param(parameters, "yellow_min_s", config.yellow_min_s);
+  update_param(parameters, "yellow_min_v", config.yellow_min_v);
+  update_param(parameters, "yellow_max_h", config.yellow_max_h);
+  update_param(parameters, "yellow_max_s", config.yellow_max_s);
+  update_param(parameters, "yellow_max_v", config.yellow_max_v);
+  update_param(parameters, "red_min_h", config.red_min_h);
+  update_param(parameters, "red_min_s", config.red_min_s);
+  update_param(parameters, "red_min_v", config.red_min_v);
+  update_param(parameters, "red_max_h", config.red_max_h);
+  update_param(parameters, "red_max_s", config.red_max_s);
+  update_param(parameters, "red_max_v", config.red_max_v);
+
+  color_classifier_->set_config(config);
+
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+  return result;
 }
 
 }  // namespace autoware::traffic_light
