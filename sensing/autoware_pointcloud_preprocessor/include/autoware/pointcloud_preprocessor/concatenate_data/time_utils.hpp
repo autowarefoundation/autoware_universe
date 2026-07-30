@@ -19,7 +19,7 @@
 #include <chrono>
 #include <cstdint>
 
-/// Package-internal stamp arithmetic for builtin_interfaces::msg::Time, replacing rclcpp::Time.
+/// Stamp arithmetic for builtin_interfaces::msg::Time, replacing rclcpp::Time.
 namespace autoware::pointcloud_preprocessor
 {
 

@@ -14,8 +14,8 @@
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler_base.hpp"
 
-#include "conversion.hpp"
-#include "time_utils.hpp"
+#include "autoware/pointcloud_preprocessor/concatenate_data/conversion.hpp"
+#include "autoware/pointcloud_preprocessor/concatenate_data/time_utils.hpp"
 
 #include <algorithm>
 #include <chrono>

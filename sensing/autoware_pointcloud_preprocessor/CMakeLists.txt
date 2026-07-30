@@ -312,6 +312,7 @@ add_library(concatenate_core SHARED
   src/concatenate_data/combine_cloud_handler.cpp
   src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/concatenation_diagnostics.cpp
+  src/concatenate_data/cloud_concatenator.cpp
   src/concatenate_data/matching_policy.cpp
 )
 target_include_directories(concatenate_core PUBLIC
@@ -379,6 +380,10 @@ if(BUILD_TESTING)
     test/test_concatenation_diagnostics.cpp
   )
 
+  ament_add_gtest(test_cloud_concatenator
+    test/test_cloud_concatenator.cpp
+  )
+
   ament_add_gtest(test_polar_voxel_outlier_filter_node
     test/test_polar_voxel_outlier_filter_node.cpp
   )
@@ -418,6 +423,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenation_info concatenate_data)
   target_link_libraries(test_matching_policy concatenate_core)
   target_link_libraries(test_concatenation_diagnostics concatenate_core)
+  target_link_libraries(test_cloud_concatenator concatenate_core)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
