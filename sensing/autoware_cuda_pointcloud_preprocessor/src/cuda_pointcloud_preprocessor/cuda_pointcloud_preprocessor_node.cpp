@@ -146,6 +146,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
     queue_size_from_frequency(max_twist_frequency_hz);
   input_bounds_params_.max_imu_subscriber_queue_size =
     queue_size_from_frequency(max_imu_frequency_hz);
+  // TODO(mojomex): equates to 1s of messages, should be made tighter in the future
   input_bounds_params_.max_twist_queue_size =
     static_cast<std::size_t>(std::ceil(max_twist_frequency_hz));
   input_bounds_params_.max_imu_queue_size =
