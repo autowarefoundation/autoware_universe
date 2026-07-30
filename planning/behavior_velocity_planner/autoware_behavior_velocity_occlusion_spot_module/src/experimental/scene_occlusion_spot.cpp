@@ -276,17 +276,11 @@ bool OcclusionSpotModule::modifyPathVelocity(
   if (show_time) stop_watch_.tic("processing_time");
 
   if (param_.pass_judge == occlusion_spot_utils::PASS_JUDGE::SMOOTH_VELOCITY) {
-    PathWithLaneId cropped_path_msg;
-    cropped_path_msg.points = new_path.restore();
-    PathWithLaneId smoothed_path_msg;
-    if (smoothPath(cropped_path_msg, smoothed_path_msg, planner_data)) {
-      const auto smoothed_path =
-        autoware::experimental::trajectory::pretty_build(smoothed_path_msg.points);
-      if (smoothed_path) {
-        new_path = *smoothed_path;
-      } else {
-        utils::applyVelocityToPath(new_path, param_.v.v_ego);
-      }
+    const auto smoothed_path = smoothPath(new_path, planner_data);
+    if (smoothed_path) {
+      new_path = smoothed_path.value();
+    } else {
+      utils::applyVelocityToPath(new_path, param_.v.v_ego);
     }
   } else {
     utils::applyVelocityToPath(new_path, param_.v.v_ego);
