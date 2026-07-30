@@ -34,7 +34,7 @@ TEST(sensing, interface)
   {
     using autoware::component_interface_specs_universe::sensing::VehicleVelocityConverterTwist;
     VehicleVelocityConverterTwist twist;
-    size_t depth = 1;
+    size_t depth = 10;
     EXPECT_EQ(twist.depth, depth);
     EXPECT_EQ(twist.reliability, RMW_QOS_POLICY_RELIABILITY_RELIABLE);
     EXPECT_EQ(twist.durability, RMW_QOS_POLICY_DURABILITY_VOLATILE);
