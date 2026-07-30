@@ -16,6 +16,7 @@
 #define AUTOWARE__BEVFUSION__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 
 #include "autoware/bevfusion/bevfusion_config.hpp"
+#include "autoware/bevfusion/circle_nms_kernel.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
@@ -23,6 +24,7 @@
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 
+#include <memory>
 #include <vector>
 
 namespace autoware::bevfusion
@@ -45,6 +47,22 @@ private:
   // For distance-based and class-based score thresholding
   CudaUniquePtr<float[]> distance_bin_upper_limits_d_ptr_{nullptr};
   CudaUniquePtr<float[]> score_thresholds_d_ptr_{nullptr};
+  CudaUniquePtr<float[]> yaw_norm_thresholds_d_ptr_{nullptr};
+
+  // For argsort
+  // BBoxes score is used as a key to sort BBoxes in descending order.
+  CudaUniquePtr<float[]> bboxes_score_d_ptr_{nullptr};
+  CudaUniquePtr<float[]> sorted_bboxes_score_d_ptr_{nullptr};
+
+  // Memory to save sorted Bboxes
+  CudaUniquePtr<Box3D[]> bboxes_d_ptr_{nullptr};
+  CudaUniquePtr<Box3D[]> sorted_bboxes_d_ptr_{nullptr};
+
+  std::size_t sort_workspace_size_ = 0;
+  CudaUniquePtr<std::uint8_t[]> sort_workspace_d_{nullptr};
+
+  // For Circle NMS
+  std::unique_ptr<CircleNMS> circle_nms_ptr_{nullptr};
 };
 
 }  // namespace autoware::bevfusion
