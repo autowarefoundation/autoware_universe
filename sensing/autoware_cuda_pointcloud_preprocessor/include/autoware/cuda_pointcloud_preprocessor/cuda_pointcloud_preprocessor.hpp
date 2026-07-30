@@ -115,8 +115,8 @@ private:
   thrust::device_vector<std::int32_t> device_max_ring_;
   thrust::device_vector<std::int32_t> device_max_points_per_ring_;
 
-  thrust::device_vector<std::uint8_t> device_sort_workspace_;
-  std::size_t sort_workspace_bytes_{0};
+  thrust::device_vector<std::uint8_t> device_scratch_workspace_;
+  std::size_t workspace_bytes_{0};
 
   // Pointcloud preprocessing buffers
   thrust::device_vector<InputPointType> device_transformed_points_;
@@ -129,6 +129,7 @@ private:
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
+  thrust::device_vector<std::uint32_t> device_processing_stats_;
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
