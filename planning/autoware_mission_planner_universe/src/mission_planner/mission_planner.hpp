@@ -74,8 +74,8 @@ public:
 
 private:
   ArrivalChecker arrival_checker_;
-  pluginlib::ClassLoader<AgnocastPlannerPlugin> plugin_loader_;
-  std::shared_ptr<AgnocastPlannerPlugin> planner_;
+  pluginlib::ClassLoader<PlannerPlugin> plugin_loader_;
+  std::shared_ptr<PlannerPlugin> planner_;
 
   std::string map_frame_;
   autoware::agnocast_wrapper::Buffer tf_buffer_;

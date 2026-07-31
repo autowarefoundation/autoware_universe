@@ -86,62 +86,55 @@ bool hasDirectionChangeTag(const lanelet::ConstLanelet & lanelet)
   const std::string direction_change_tag = lanelet.attributeOr("direction_change", "none");
   return direction_change_tag == "yes";
 }
+
+/// @brief Declare a parameter without a default value, i.e. an override must be provided.
+template <typename T>
+T declare_parameter(
+  const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr & parameters,
+  const std::string & name)
+{
+  return parameters->declare_parameter(name, rclcpp::ParameterValue{T{}}.get_type()).get<T>();
+}
+
+template <typename T>
+T declare_parameter(
+  const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr & parameters,
+  const std::string & name, const T & default_value)
+{
+  return parameters->declare_parameter(name, rclcpp::ParameterValue{default_value}).get<T>();
+}
 }  // namespace
 
-template <typename NodeT>
-void DefaultPlannerT<NodeT>::initialize_common(NodeT * node)
+void DefaultPlanner::initialize(const Context & context)
 {
   is_graph_ready_ = false;
-  node_ = node;
+  context_ = context;
+  vehicle_info_ = context_.vehicle_info;
 
-  const auto durable_qos = rclcpp::QoS(1).transient_local();
-  pub_goal_footprint_marker_ =
-    node_->template create_publisher<MarkerArray>("~/debug/goal_footprint", durable_qos);
-
-  vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_).getVehicleInfo();
+  const auto & parameters = context_.parameters;
   param_.goal_angle_threshold_deg =
-    node_->template declare_parameter<double>("goal_angle_threshold_deg");
-  param_.enable_correct_goal_pose =
-    node_->template declare_parameter<bool>("enable_correct_goal_pose");
+    declare_parameter<double>(parameters, "goal_angle_threshold_deg");
+  param_.enable_correct_goal_pose = declare_parameter<bool>(parameters, "enable_correct_goal_pose");
   param_.consider_no_drivable_lanes =
-    node_->template declare_parameter<bool>("consider_no_drivable_lanes");
+    declare_parameter<bool>(parameters, "consider_no_drivable_lanes");
   param_.check_footprint_inside_lanes =
-    node_->template declare_parameter<bool>("check_footprint_inside_lanes");
-  param_.allow_area = node_->template declare_parameter<bool>("allow_area", false);
+    declare_parameter<bool>(parameters, "check_footprint_inside_lanes");
+  param_.allow_area = declare_parameter<bool>(parameters, "allow_area", false);
   route_handler_.setAllowArea(param_.allow_area);
 }
 
-template <typename NodeT>
-void DefaultPlannerT<NodeT>::initialize(NodeT * node)
-{
-  initialize_common(node);
-  map_subscriber_ = node_->template create_subscription<LaneletMapBin>(
-    "~/input/vector_map", rclcpp::QoS{10}.transient_local(),
-    [this](const LaneletMapBin & msg) { map_callback(msg); });
-}
-
-template <typename NodeT>
-void DefaultPlannerT<NodeT>::initialize(NodeT * node, const LaneletMapBin::ConstSharedPtr msg)
-{
-  initialize_common(node);
-  map_callback(*msg);
-}
-
-template <typename NodeT>
-bool DefaultPlannerT<NodeT>::ready() const
+bool DefaultPlanner::ready() const
 {
   return is_graph_ready_;
 }
 
-template <typename NodeT>
-void DefaultPlannerT<NodeT>::map_callback(const LaneletMapBin & msg)
+void DefaultPlanner::set_map(const LaneletMapBin & map)
 {
-  route_handler_.setMap(msg);
+  route_handler_.setMap(map);
   is_graph_ready_ = true;
 }
 
-template <typename NodeT>
-typename DefaultPlannerT<NodeT>::MarkerArray DefaultPlannerT<NodeT>::visualize(
+PlannerPlugin::MarkerArray DefaultPlanner::visualize(
   const LaneletRoute & route, float goal_lanelet_transparency) const
 {
   lanelet::ConstLanelets route_lanelets;
@@ -161,7 +154,7 @@ typename DefaultPlannerT<NodeT>::MarkerArray DefaultPlannerT<NodeT>::visualize(
         const auto area = route_handler_.getAreaFromId(prim.id);
         visualization_msgs::msg::Marker m;
         m.header.frame_id = "map";
-        m.header.stamp = node_->now();
+        m.header.stamp = context_.clock->now();
         m.ns = "route_areas";
         m.id = area_id++;
         m.action = visualization_msgs::msg::Marker::ADD;
@@ -218,8 +211,7 @@ typename DefaultPlannerT<NodeT>::MarkerArray DefaultPlannerT<NodeT>::visualize(
   return route_marker_array;
 }
 
-template <typename NodeT>
-visualization_msgs::msg::MarkerArray DefaultPlannerT<NodeT>::visualize_debug_footprint(
+visualization_msgs::msg::MarkerArray DefaultPlanner::visualize_debug_footprint(
   autoware_utils::LinearRing2d goal_footprint)
 {
   visualization_msgs::msg::MarkerArray msg;
@@ -248,8 +240,7 @@ visualization_msgs::msg::MarkerArray DefaultPlannerT<NodeT>::visualize_debug_foo
   return msg;
 }
 
-template <typename NodeT>
-bool DefaultPlannerT<NodeT>::check_goal_footprint_inside_lanes(
+bool DefaultPlanner::check_goal_footprint_inside_lanes(
   const lanelet::ConstLanelets & lanelets_near_goal,
   const autoware_utils::Polygon2d & goal_footprint) const
 {
@@ -289,10 +280,9 @@ bool DefaultPlannerT<NodeT>::check_goal_footprint_inside_lanes(
   return boost::geometry::covered_by(goal_footprint, lane_polygon);
 }
 
-template <typename NodeT>
-bool DefaultPlannerT<NodeT>::is_goal_valid(const geometry_msgs::msg::Pose & goal)
+bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
 {
-  const auto logger = node_->get_logger();
+  const auto logger = context_.logger;
 
   const auto goal_lanelet_pt = experimental::lanelet2_utils::from_ros(goal.position);
 
@@ -358,7 +348,7 @@ bool DefaultPlannerT<NodeT>::is_goal_valid(const geometry_msgs::msg::Pose & goal
   lanelets_near_goal.insert(lanelets_near_goal.end(), next_lanelets.begin(), next_lanelets.end());
 
   const autoware_utils::LinearRing2d goal_footprint = vehicle_info_.createFootprint(0.0, goal);
-  pub_goal_footprint_marker_->publish(visualize_debug_footprint(goal_footprint));
+  context_.publish_debug_marker(visualize_debug_footprint(goal_footprint));
   const auto polygon_footprint = convert_linear_ring_to_polygon(goal_footprint);
 
   // check if goal footprint exceeds lane when the goal isn't in parking_lot
@@ -406,11 +396,9 @@ bool DefaultPlannerT<NodeT>::is_goal_valid(const geometry_msgs::msg::Pose & goal
   return is_in_parking_lot(parking_lots, goal_lanelet_pt);
 }
 
-template <typename NodeT>
-typename DefaultPlannerT<NodeT>::LaneletRoute DefaultPlannerT<NodeT>::plan(
-  const RoutePoints & points)
+PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
 {
-  const auto logger = node_->get_logger();
+  const auto logger = context_.logger;
 
   std::stringstream log_ss;
   for (const auto & point : points) {
@@ -516,8 +504,7 @@ typename DefaultPlannerT<NodeT>::LaneletRoute DefaultPlannerT<NodeT>::plan(
   return route_msg;
 }
 
-template <typename NodeT>
-geometry_msgs::msg::Pose DefaultPlannerT<NodeT>::refine_goal_height(
+geometry_msgs::msg::Pose DefaultPlanner::refine_goal_height(
   const Pose & goal, const RouteSections & route_sections)
 {
   const auto & pref = route_sections.back().preferred_primitive;
@@ -528,14 +515,14 @@ geometry_msgs::msg::Pose DefaultPlannerT<NodeT>::refine_goal_height(
     const auto area = route_handler_.getAreaFromId(pref.id);
     goal_height = project_goal_to_area(area, goal_pt);
     RCLCPP_DEBUG(
-      node_->get_logger(), "[DefaultPlanner] refine_goal_height: goal on area id=%ld z=%.3f",
-      pref.id, goal_height);
+      context_.logger, "[DefaultPlanner] refine_goal_height: goal on area id=%ld z=%.3f", pref.id,
+      goal_height);
   } else {
     const auto goal_lanelet = route_handler_.getLaneletsFromId(pref.id);
     goal_height = project_goal_to_map(goal_lanelet, goal_pt);
     RCLCPP_DEBUG(
-      node_->get_logger(), "[DefaultPlanner] refine_goal_height: goal on lane id=%ld z=%.3f",
-      pref.id, goal_height);
+      context_.logger, "[DefaultPlanner] refine_goal_height: goal on lane id=%ld z=%.3f", pref.id,
+      goal_height);
   }
 
   Pose refined_goal = goal;
@@ -543,20 +530,15 @@ geometry_msgs::msg::Pose DefaultPlannerT<NodeT>::refine_goal_height(
   return refined_goal;
 }
 
-template <typename NodeT>
-void DefaultPlannerT<NodeT>::updateRoute(const LaneletRoute & route)
+void DefaultPlanner::updateRoute(const PlannerPlugin::LaneletRoute & route)
 {
   route_handler_.setRoute(route);
 }
 
-template <typename NodeT>
-void DefaultPlannerT<NodeT>::clearRoute()
+void DefaultPlanner::clearRoute()
 {
   route_handler_.clearRoute();
 }
-
-template class DefaultPlannerT<rclcpp::Node>;
-template class DefaultPlannerT<autoware::agnocast_wrapper::Node>;
 
 }  // namespace autoware::mission_planner_universe::lanelet2
 
@@ -564,6 +546,3 @@ template class DefaultPlannerT<autoware::agnocast_wrapper::Node>;
 PLUGINLIB_EXPORT_CLASS(
   autoware::mission_planner_universe::lanelet2::DefaultPlanner,
   autoware::mission_planner_universe::PlannerPlugin)
-PLUGINLIB_EXPORT_CLASS(
-  autoware::mission_planner_universe::lanelet2::AgnocastDefaultPlanner,
-  autoware::mission_planner_universe::AgnocastPlannerPlugin)

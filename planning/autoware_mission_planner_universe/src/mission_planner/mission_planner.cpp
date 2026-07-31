@@ -74,8 +74,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 : autoware::agnocast_wrapper::Node("mission_planner", options),
   arrival_checker_(get_arrival_checker_threshold(*this)),
   plugin_loader_(
-    "autoware_mission_planner_universe",
-    "autoware::mission_planner_universe::AgnocastPlannerPlugin"),
+    "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
   tf_buffer_(get_clock()),
   tf_listener_(tf_buffer_, *this),
   odometry_(nullptr),
@@ -91,7 +90,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   goal_lanelet_transparency_ = declare_parameter<float>("goal_lanelet_transparency");
   planner_ = plugin_loader_.createSharedInstance(
     "autoware::mission_planner_universe::lanelet2::DefaultPlanner");
-  planner_->initialize(this);
+  planner_->initialize(PlannerPlugin::make_context(*this));
 
   const auto durable_qos = rclcpp::QoS(1).transient_local();
   sub_odometry_ = create_subscription<Odometry>(
@@ -211,6 +210,7 @@ void MissionPlanner::on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBi
   map_ptr_ = msg;
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_ptr_));
+  planner_->set_map(*map_ptr_);
 }
 
 Pose MissionPlanner::transform_pose(const Pose & pose, const Header & header)
@@ -623,7 +623,7 @@ LaneletRoute MissionPlanner::create_route(
   const Header & header, const std::vector<Pose> & waypoints, const Pose & start_pose,
   const Pose & goal_pose, const UUID & uuid, const bool allow_goal_modification)
 {
-  AgnocastPlannerPlugin::RoutePoints points;
+  PlannerPlugin::RoutePoints points;
   points.push_back(start_pose);
   for (const auto & waypoint : waypoints) {
     points.push_back(transform_pose(waypoint, header));

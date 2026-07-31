@@ -1,5 +1,3 @@
 <library path="autoware_mission_planner_universe_lanelet2_plugins">
   <class type="autoware::mission_planner_universe::lanelet2::DefaultPlanner" base_class_type="autoware::mission_planner_universe::PlannerPlugin"/>
-  <!-- Same lookup name as above, for loaders whose base class is the agnocast_wrapper::Node instantiation. -->
-  <class name="autoware::mission_planner_universe::lanelet2::DefaultPlanner" type="autoware::mission_planner_universe::lanelet2::AgnocastDefaultPlanner" base_class_type="autoware::mission_planner_universe::AgnocastPlannerPlugin"/>
 </library>
