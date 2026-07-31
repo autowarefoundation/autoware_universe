@@ -28,15 +28,17 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 {
   const auto tl_stop_p = params.traffic_light_stop;
   const auto stopping_params = params.stopping_constraints;
-  autoware::traffic_light_compliance_checker::Parameters p;
+  autoware::traffic_light_compliance_checker::Parameters p{};
   p.deceleration_limit = stopping_params.maximum_deceleration;
   p.jerk_limit = stopping_params.jerk_limit;
+  p.delay_response_time = 0.0;
   p.crossing_time_limit = tl_stop_p.crossing_time_limit;
   p.treat_amber_light_as_red_light = tl_stop_p.treat_amber_light_as_red;
   p.treat_unknown_light_as_red_light = tl_stop_p.treat_unknown_light_as_red;
   p.stop_overshoot_margin = tl_stop_p.overshoot_tolerance;
   p.allow_if_cannot_stop_distance = tl_stop_p.allow_if_cannot_stop_distance;
   p.min_lookahead_distance = tl_stop_p.min_lookahead_distance;
+  p.ego_stopped_velocity_threshold = 0.01;
   p.status_tracker_parameters.stable_duration_threshold_red = tl_stop_p.th_stable_duration_red;
   p.status_tracker_parameters.stable_duration_threshold_amber = tl_stop_p.th_stable_duration_amber;
   p.status_tracker_parameters.stable_duration_threshold_unknown =

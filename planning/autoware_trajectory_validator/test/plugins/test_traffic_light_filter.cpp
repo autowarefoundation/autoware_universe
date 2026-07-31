@@ -162,6 +162,17 @@ protected:
     return points;
   }
 
+  /// Trajectory that cruises then ends with zero velocity at stop_x (stop attempt).
+  static std::vector<TrajectoryPoint> create_trajectory_with_stop_at(
+    double start_x, double stop_x, float cruise_velocity = 5.0)
+  {
+    auto points = create_trajectory(start_x, stop_x, cruise_velocity);
+    if (!points.empty()) {
+      points.back().longitudinal_velocity_mps = 0.0F;
+    }
+    return points;
+  }
+
   void set_ego_motion(const double velocity, const double acceleration)
   {
     auto odometry = std::make_shared<nav_msgs::msg::Odometry>(*context_.odometry);
@@ -779,6 +790,59 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberHysteresis)
 
   // Now it should be feasible if it cannot stop
   expect_feasibility(points2, true, "Should be feasible after hysteresis duration");
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightWhenPreviousStopIsDetected)
+{
+  const lanelet::Id light_id = 501;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  auto params = params_;
+  params.traffic_light.amber_rejection.reject_if_stop_detected = true;
+  params.traffic_light.amber_rejection.hysteresis_duration = 5.0;
+  params.traffic_light.stop_overshoot_margin = 0.5;
+  params.traffic_light.allow_if_cannot_stop_distance = 0.0;
+  params.traffic_light.crossing_time_limit = 100.0;
+  filter_->update_parameters(params);
+
+  auto stopping_points = create_trajectory_with_stop_at(0.0, stop_x, 5.0);
+  expect_feasibility(
+    stopping_points, true, "Should be feasible when trajectory stops within threshold");
+
+  set_ego_motion(10.0, 0.0);
+  auto crossing_points = create_trajectory(0.0, 10.0, 10.0);
+  expect_feasibility(
+    crossing_points, false,
+    "Should be infeasible after a prior stop attempt while reject_if_stop_detected is true");
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWhenRejectIfStopDetectedIsDisabled)
+{
+  const lanelet::Id light_id = 502;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  auto params = params_;
+  params.traffic_light.amber_rejection.reject_if_stop_detected = false;
+  params.traffic_light.amber_rejection.hysteresis_duration = 5.0;
+  params.traffic_light.stop_overshoot_margin = 0.5;
+  params.traffic_light.allow_if_cannot_stop_distance = 0.0;
+  params.traffic_light.crossing_time_limit = 100.0;
+  filter_->update_parameters(params);
+
+  auto stopping_points = create_trajectory_with_stop_at(0.0, stop_x, 5.0);
+  expect_feasibility(
+    stopping_points, true, "Should be feasible when trajectory stops within threshold");
+
+  set_ego_motion(10.0, 0.0);
+  auto crossing_points = create_trajectory(0.0, 10.0, 10.0);
+  expect_feasibility(
+    crossing_points, true, "Should be feasible when reject_if_stop_detected is false");
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalHistoryCleanup)
