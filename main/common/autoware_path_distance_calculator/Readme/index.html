@@ -22906,9 +22906,20 @@
 
 <div><h1 id="autoware_path_distance_calculator">autoware_path_distance_calculator<a class="headerlink" href="#autoware_path_distance_calculator" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>This node publishes a distance from the closest path point from the self-position to the end point of the path.
-Note that the distance means the arc-length along the path, not the Euclidean distance between the two points.</p>
+<p>This node publishes the remaining distance from the self-position to the route goal.
+The distance is the arc-length along the route's planned lanelet sequence between the current position and the goal, not the Euclidean distance between the two points.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<p>On every timer tick (1 Hz):</p>
+<ol>
+<li>If a new map or route message has arrived, it is handed to the calculator.<ul>
+<li>On a new map, the lanelet2 map is (re)built.</li>
+<li>On a new route, the lanelet sequence is cached from <code>LaneletRoute::segments[].preferred_primitive.id</code>, looked up directly in the map. This is the lanelet sequence mission_planner actually planned the route through (accounting for lane exclusions, required lane changes, etc.), so it is used as-is instead of re-deriving a path with an independent shortest-path search, which could disagree with the actually planned route.</li>
+</ul>
+</li>
+<li>The self-position is matched to a lanelet in the cached sequence, and the remaining distance is computed as the sum of: the remaining length in the current lanelet, the full length of every lanelet strictly between the current and goal lanelet, and the length up to the goal pose within the goal lanelet.</li>
+<li>The result is published. If the map/route are not ready yet, or the self-position cannot be matched to the cached sequence, nothing is published for that tick.</li>
+</ol>
+<p>The core calculation (<code>RouteDistanceCalculator</code> in <code>src/main.cpp</code>) has no ROS node dependency; <code>src/ros_interface.cpp</code> only wires up polling subscribers, the timer, and the publisher around it.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -22921,9 +22932,14 @@ Note that the distance means the arc-length along the path, not the Euclidean di
 </thead>
 <tbody>
 <tr>
-<td><code>/planning/scenario_planning/lane_driving/behavior_planning/path</code></td>
-<td><code>autoware_planning_msgs::msg::Path</code></td>
-<td>Reference path</td>
+<td><code>~/input/route</code></td>
+<td><code>autoware_planning_msgs::msg::LaneletRoute</code></td>
+<td>Route, used to resolve the goal and the planned lanelet sequence</td>
+</tr>
+<tr>
+<td><code>~/input/map</code></td>
+<td><code>autoware_map_msgs::msg::LaneletMapBin</code></td>
+<td>Lanelet2 map, used to look up lanelets by ID</td>
 </tr>
 <tr>
 <td><code>/tf</code></td>
@@ -22932,6 +22948,7 @@ Note that the distance means the arc-length along the path, not the Euclidean di
 </tr>
 </tbody>
 </table>
+<p>By default (see <code>launch/path_distance_calculator.launch.xml</code>), <code>~/input/route</code> is remapped to <code>/planning/mission_planning/route</code> and <code>~/input/map</code> to <code>/map/vector_map</code>.</p>
 <h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
 <table>
 <thead>
@@ -22945,7 +22962,7 @@ Note that the distance means the arc-length along the path, not the Euclidean di
 <tr>
 <td><code>~/distance</code></td>
 <td><code>autoware_internal_debug_msgs::msg::Float64Stamped</code></td>
-<td>Publish a distance from the closest path point from the self-position to the end point of the path[m]</td>
+<td>Remaining distance from the self-position to the route goal [m]</td>
 </tr>
 </tbody>
 </table>
@@ -22955,7 +22972,10 @@ Note that the distance means the arc-length along the path, not the Euclidean di
 <h3 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">#</a></h3>
 <p>None.</p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
-<p>TBD.</p></div>
+<ul>
+<li>The lanelet sequence is cached from <code>LaneletRoute::segments</code> when a new route message is received; it is not recomputed while driving on that same route. If the vehicle temporarily leaves that cached lanelet sequence without a reroute (e.g. a lane change to pass an obstacle), the self-position cannot be matched to the cached sequence and no distance is published until the vehicle returns to a lanelet on it.</li>
+<li>No distance is published until both a route and a map have been received and the self-position can be matched to a lanelet on the cached sequence.</li>
+</ul></div>
 
 
 
