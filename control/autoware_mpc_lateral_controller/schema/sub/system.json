@@ -26,6 +26,11 @@
           "description": "trajectory tracking mode: \"spatial\" (indexes the trajectory by distance) or \"temporal\" (uses the trajectory's time_from_start directly). Normally set once at the `autoware_trajectory_follower_node` level; declared here as well only as a fallback default for standalone use of this node.",
           "enum": ["spatial", "temporal"],
           "default": "spatial"
+        },
+        "use_trajectory_steering_for_feedforward": {
+          "type": "boolean",
+          "description": "in temporal mode, use trajectory steering for feed-forward when at least one input steering value is nonzero; otherwise use geometric curvature",
+          "default": true
         }
       },
       "required": [
