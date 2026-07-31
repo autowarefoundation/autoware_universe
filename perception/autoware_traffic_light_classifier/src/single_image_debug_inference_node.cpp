@@ -75,10 +75,10 @@ public:
       "classifier_type",
       static_cast<int>(TrafficLightClassifierNodelet::ClassifierType::HSVFilter));
     if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
-      classifier_ptr_ = std::make_unique<ColorClassifierCore>(declare_hsv_config(this));
+      classifier_ptr_ = std::make_unique<ColorClassifier>(declare_hsv_config(this));
     } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
 #if ENABLE_GPU
-      classifier_ptr_ = std::make_unique<CNNClassifierCore>(declare_cnn_config(this));
+      classifier_ptr_ = std::make_unique<CNNClassifier>(declare_cnn_config(this));
 #else
       RCLCPP_ERROR(get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
@@ -124,14 +124,14 @@ private:
         return;
       }
       cv::cvtColor(crop, crop, cv::COLOR_BGR2RGB);
-      tier4_perception_msgs::msg::TrafficLightArray traffic_signal;
-      if (!classifier_ptr_->classify({crop}, traffic_signal)) {
+      const auto traffic_signal = classifier_ptr_->classify({crop});
+      if (!traffic_signal) {
         RCLCPP_ERROR(get_logger(), "failed to classify image");
         return;
       }
       cv::Scalar color;
       cv::Scalar text_color;
-      for (const auto & element : traffic_signal.signals[0].elements) {
+      for (const auto & element : traffic_signal->signals[0].elements) {
         auto color_str = toString(element.color);
         auto shape_str = toString(element.shape);
         auto confidence_str = std::to_string(element.confidence);
