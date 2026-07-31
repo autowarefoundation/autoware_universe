@@ -61,7 +61,8 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-class VoxelGridDownsampleFilterComponent : public autoware::pointcloud_preprocessor::Filter
+class VoxelGridDownsampleFilterComponent
+: public autoware::pointcloud_preprocessor::FilterBase<autoware::agnocast_wrapper::Node>
 {
 protected:
   void filter(
@@ -79,7 +80,7 @@ private:
   float voxel_size_z_;
 
   /** \brief Parameter service callback result : needed to be hold */
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);

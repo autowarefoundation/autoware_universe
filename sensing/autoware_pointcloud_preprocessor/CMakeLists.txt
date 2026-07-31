@@ -3,6 +3,9 @@ project(autoware_pointcloud_preprocessor)
 
 find_package(autoware_cmake REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  find_package(agnocastlib REQUIRED)
+endif()
 autoware_package()
 
 # Suppress CGAL warning
@@ -35,6 +38,8 @@ target_include_directories(pointcloud_preprocessor_filter_base PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
   ${autoware_point_types_INCLUDE_DIRS}
+  ${agnocastlib_INCLUDE_DIRS}
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
 ament_target_dependencies(pointcloud_preprocessor_filter_base
@@ -48,7 +53,14 @@ ament_target_dependencies(pointcloud_preprocessor_filter_base
   pcl_ros
   autoware_point_types
   managed_transform_buffer
+  autoware_agnocast_wrapper
 )
+
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  ament_target_dependencies(pointcloud_preprocessor_filter_base SYSTEM agnocastlib)
+endif()
+
+autoware_agnocast_wrapper_setup(pointcloud_preprocessor_filter_base)
 
 add_library(faster_voxel_grid_downsample_filter SHARED
   src/downsample_filter/faster_voxel_grid_downsample_filter.cpp
@@ -161,9 +173,12 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 
 # ========== Down Sampler Filter ==========
 # -- Voxel Grid Downsample Filter --
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::VoxelGridDownsampleFilterComponent"
-  EXECUTABLE voxel_grid_downsample_filter_node)
+  EXECUTABLE voxel_grid_downsample_filter_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
 
 # -- Pickup Based Voxel Grid Downsample Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
