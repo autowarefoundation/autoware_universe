@@ -55,8 +55,9 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
       params_.pointcloud.clustering.max_size);
 
   object_filter_ = std::make_unique<trajectory_processor::utils::obstacle_stop::ObjectFilter>(
-    params_.objects.object_types, params_.objects.stopped_velocity_th,
-    params_.objects.max_lateral_velocity_th, params_.objects.safety_buffer);
+    params_.objects.target_objects.bbox, params_.objects.target_objects.polygon,
+    params_.objects.stopped_velocity_th, params_.objects.max_lateral_velocity_th,
+    params_.objects.safety_buffer);
 
   pub_clustered_pointcloud_ =
     get_node_ptr()->create_publisher<PointCloud2>("~/obstacle_stop/debug/cluster_points", 1);

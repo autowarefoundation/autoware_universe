@@ -160,10 +160,18 @@ minimum_rule_based_planner:
       validation:
         bounds<>: [0.0, 10.0]
     objects:
-      object_types:
-        type: string_array
-        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard]
-        description: object types to consider for obstacle stop
+      target_objects:
+        bbox:
+          type: string_array
+          default_value:
+            [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard, unknown]
+          description: types of bounding box shaped objects to consider for obstacle stop
+          read_only: false
+        polygon:
+          type: string_array
+          default_value: [car, truck, bus, trailer, pedestrian, hazard, unknown]
+          description: types of polygon shaped objects to consider for obstacle stop
+          read_only: false
       stopped_velocity_th:
         type: double
         default_value: 0.3
@@ -332,12 +340,18 @@ minimum_rule_based_planner:
       default_value: false
       description: enable the use of pointcloud for surround obstacle stop
       read_only: false
-    object_types:
-      type: string_array
-      default_value:
-        [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard, animal, unknown]
-      description: types of objects to consider for surround obstacle stop
-      read_only: false
+    target_objects:
+      bbox:
+        type: string_array
+        default_value:
+          [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard, animal, unknown]
+        description: types of bounding box shaped objects to consider for surround obstacle stop
+        read_only: false
+      polygon:
+        type: string_array
+        default_value: [car, truck, bus, trailer, pedestrian, hazard, animal, unknown]
+        description: types of polygon shaped objects to consider for surround obstacle stop
+        read_only: false
     base_distance_th:
       &distance_th_template {
         type: double,

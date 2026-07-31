@@ -620,13 +620,14 @@ void ObstacleTracker::update_objects(
         existing_object.object.kinematics.initial_pose_with_covariance.pose.position);
       if (distance > min_distance) continue;
       // ignore orientation difference for cylinder objects
+      const bool is_symmetric =
+        std::abs(object.shape.dimensions.x - object.shape.dimensions.y) < 0.1;
       const auto yaw_diff =
-        object.shape.type == autoware_perception_msgs::msg::Shape::CYLINDER
-          ? 0.0
-          : std::abs(
-              autoware_utils_geometry::calc_yaw_deviation(
-                object.kinematics.initial_pose_with_covariance.pose,
-                existing_object.object.kinematics.initial_pose_with_covariance.pose));
+        is_symmetric ? 0.0
+                     : std::abs(
+                         autoware_utils_geometry::calc_yaw_deviation(
+                           object.kinematics.initial_pose_with_covariance.pose,
+                           existing_object.object.kinematics.initial_pose_with_covariance.pose));
       if (yaw_diff > object_yaw_th_) continue;
       min_distance = distance;
       closest_uuid = uuid;

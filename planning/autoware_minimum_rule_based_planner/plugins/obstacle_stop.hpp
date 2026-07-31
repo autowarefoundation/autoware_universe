@@ -59,7 +59,8 @@ public:
     {
       const auto & p = params_.objects;
       object_filter_->set_params(
-        p.object_types, p.stopped_velocity_th, p.max_lateral_velocity_th, p.safety_buffer);
+        p.target_objects.bbox, p.target_objects.polygon, p.stopped_velocity_th,
+        p.max_lateral_velocity_th, p.safety_buffer);
     }
 
     {
