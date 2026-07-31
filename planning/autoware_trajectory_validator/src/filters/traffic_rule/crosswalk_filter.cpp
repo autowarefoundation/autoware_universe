@@ -169,14 +169,13 @@ std::vector<CrosswalkOnTrajectory> filter_crosswalks_intersecting_trajectory(
       std::optional<lanelet::BasicPoints2d> stop_line;
       for (const auto & sl : stop_lines) {
         const auto stop_line_2d = lanelet::utils::to2D(sl).basicLineString();
-        auto distance = 0.0;
         lanelet::BasicPoints2d intersection_points;
         boost::geometry::intersection(traj_seg, stop_line_2d, intersection_points);
         if (!intersection_points.empty()) {
-          distance += static_cast<double>(
-            boost::geometry::distance(traj_seg.front(), intersection_points.front()));
+          const auto distance = checked_length + static_cast<double>(boost::geometry::distance(
+                                                   traj_seg.front(), intersection_points.front()));
           if (distance < distance_to_stop_line) {
-            distance_to_stop_line = checked_length + distance;
+            distance_to_stop_line = distance;
             stop_line = stop_line_2d;
           }
         }
@@ -558,27 +557,26 @@ void CrosswalkFilter::update_debug_data(
 
   double remaining_time{};
   auto add_objects_marker = [&](const auto & cw) {
+    if (crosswalk_objects_map_.count(cw.crosswalk_info.crosswalk->id()) == 0) return;
     int obj_id = 0;
     remaining_time = 0.0;
-    if (crosswalk_objects_map_.count(cw.crosswalk_info.crosswalk->id())) {
-      auto min_obj_duration = params_.stop_duration;
-      for (const auto & cw_object : crosswalk_objects_map_[cw.crosswalk_info.crosswalk->id()]) {
-        const auto obj_duration = (cw_object.last_seen_time - cw_object.first_seen_time).seconds();
-        const auto color = cw_object.ignore ? green : red;
-        auto obj_polygon = autoware_utils_geometry::to_polygon2d(
-          cw_object.object.kinematics.initial_pose_with_covariance.pose, cw_object.object.shape);
-        add_polygon_marker(obj_polygon.outer(), "target_objects", obj_id, color);
-        if (!cw_object.ignore) {
-          add_text_marker(
-            std::to_string(obj_duration),
-            cw_object.object.kinematics.initial_pose_with_covariance.pose,
-            "target_objects_duration", obj_id, white);
-          min_obj_duration = std::min(min_obj_duration, obj_duration);
-        }
-        obj_id++;
+    auto min_obj_duration = params_.stop_duration;
+    for (const auto & cw_object : crosswalk_objects_map_[cw.crosswalk_info.crosswalk->id()]) {
+      const auto obj_duration = (cw_object.last_seen_time - cw_object.first_seen_time).seconds();
+      const auto color = cw_object.ignore ? green : red;
+      auto obj_polygon = autoware_utils_geometry::to_polygon2d(
+        cw_object.object.kinematics.initial_pose_with_covariance.pose, cw_object.object.shape);
+      add_polygon_marker(obj_polygon.outer(), "target_objects", obj_id, color);
+      if (!cw_object.ignore) {
+        add_text_marker(
+          std::to_string(obj_duration),
+          cw_object.object.kinematics.initial_pose_with_covariance.pose, "target_objects_duration",
+          obj_id, white);
+        min_obj_duration = std::min(min_obj_duration, obj_duration);
       }
-      remaining_time = params_.stop_duration - min_obj_duration;
+      obj_id++;
     }
+    remaining_time = params_.stop_duration - min_obj_duration;
   };
 
   auto get_arrival_linestring = [&](const TargetCrosswalk & cw) {
