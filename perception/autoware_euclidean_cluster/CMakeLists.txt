@@ -86,7 +86,7 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME}_label_based_node_core)
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_label_based_node_core
   PLUGIN "autoware::euclidean_cluster::LabelBasedEuclideanClusterNode"
   EXECUTABLE label_based_euclidean_cluster_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
@@ -101,15 +101,17 @@ if(BUILD_TESTING)
   target_link_libraries(test_label_based_euclidean_cluster
     ${PROJECT_NAME}_lib
   )
-  ament_auto_add_gtest(test_label_based_euclidean_cluster_node
-    test/test_label_based_euclidean_cluster_node.cpp
-  )
-  target_include_directories(test_label_based_euclidean_cluster_node PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-  )
-  target_link_libraries(test_label_based_euclidean_cluster_node
-    ${PROJECT_NAME}_label_based_node_core
-  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_auto_add_gtest(test_label_based_euclidean_cluster_node
+      test/test_label_based_euclidean_cluster_node.cpp
+    )
+    target_include_directories(test_label_based_euclidean_cluster_node PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_label_based_euclidean_cluster_node
+      ${PROJECT_NAME}_label_based_node_core
+    )
+  endif()
 endif()
 
 autoware_ament_auto_package(INSTALL_TO_SHARE
