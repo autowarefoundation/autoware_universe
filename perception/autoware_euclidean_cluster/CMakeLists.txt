@@ -102,7 +102,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_label_based_euclidean_cluster
     ${PROJECT_NAME}_lib
   )
-  ament_target_dependencies(test_label_based_euclidean_cluster_node
+  ament_target_dependencies(test_label_based_euclidean_cluster
     autoware_object_recognition_utils
     autoware_point_types
   )
