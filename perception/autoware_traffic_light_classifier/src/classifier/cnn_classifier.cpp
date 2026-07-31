@@ -23,16 +23,18 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-// ============================= CNNClassifierCore =============================
+// ============================= CNNClassifier =============================
 // Node-free CNN (TensorRT) classification core.
 
-CNNClassifierCore::CNNClassifierCore(const CNNConfig & config)
+CNNClassifier::CNNClassifier(const CNNConfig & config)
 {
   if (config.mean.size() != 3 || config.std.size() != 3) {
     throw std::invalid_argument("mean and std must be of size 3");
@@ -43,7 +45,7 @@ CNNClassifierCore::CNNClassifierCore(const CNNConfig & config)
   batch_size_ = classifier_->getBatchSize();
 }
 
-CNNClassifierCore::ClassifierResult CNNClassifierCore::infer(const std::vector<cv::Mat> & images)
+CNNClassifier::ClassifierResult CNNClassifier::infer(const std::vector<cv::Mat> & images)
 {
   ClassifierResult result;
   result.signals.signals.resize(images.size());
@@ -81,7 +83,7 @@ CNNClassifierCore::ClassifierResult CNNClassifierCore::infer(const std::vector<c
   return result;
 }
 
-std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifierCore::decode_label(
+std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifier::decode_label(
   const std::string & label, float confidence)
 {
   // label names are assumed to be comma-separated to represent each lamp
@@ -120,7 +122,7 @@ std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifierCore::
   return elements;
 }
 
-cv::Mat CNNClassifierCore::make_debug_image(
+cv::Mat CNNClassifier::make_debug_image(
   const cv::Mat & roi_image, const tier4_perception_msgs::msg::TrafficLight & signal)
 {
   float confidence = 0.0f;
@@ -153,40 +155,27 @@ cv::Mat CNNClassifierCore::make_debug_image(
 // classify() and make_debug_image() implement ClassifierInterface: they wrap infer() with the
 // caller-signal mapping and the batch debug composition.
 
-bool CNNClassifierCore::classify(
-  const std::vector<cv::Mat> & images,
-  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
+std::optional<tier4_perception_msgs::msg::TrafficLightArray> CNNClassifier::classify(
+  const std::vector<cv::Mat> & images)
 {
-  if (images.size() != traffic_signals.signals.size()) {
-    return false;
-  }
-
-  const ClassifierResult result = infer(images);
+  ClassifierResult result = infer(images);
   if (!result.success) {
-    return false;
-  }
-
-  // Attach the per-image elements to the caller's pre-populated signals, preserving the
-  // traffic_light_id / traffic_light_type set upstream.
-  for (size_t i = 0; i < traffic_signals.signals.size(); i++) {
-    auto & elements = traffic_signals.signals[i].elements;
-    const auto & classified = result.signals.signals[i].elements;
-    elements.insert(elements.end(), classified.begin(), classified.end());
+    return std::nullopt;
   }
 
   // Keep the per-image classification so make_debug_image can render it afterwards.
   last_signals_ = result.signals;
 
-  return true;
+  return std::move(result.signals);
 }
 
-cv::Mat CNNClassifierCore::make_debug_image(const std::vector<cv::Mat> & images) const
+cv::Mat CNNClassifier::make_debug_image(const std::vector<cv::Mat> & images) const
 {
   // Stack each ROI's debug view (fixed 200 px wide) into one vertical strip.
   cv::Mat debug_image;
   const size_t count = std::min(images.size(), last_signals_.signals.size());
   for (size_t i = 0; i < count; i++) {
-    cv::Mat strip = CNNClassifierCore::make_debug_image(images[i], last_signals_.signals[i]);
+    cv::Mat strip = CNNClassifier::make_debug_image(images[i], last_signals_.signals[i]);
     if (debug_image.empty()) {
       debug_image = strip;
     } else {

@@ -24,6 +24,7 @@
 #include <functional>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -31,6 +32,7 @@
 namespace autoware::traffic_light
 {
 
+using tier4_perception_msgs::msg::TrafficLight;
 using tier4_perception_msgs::msg::TrafficLightElement;
 namespace
 {
@@ -113,20 +115,21 @@ static void convert_bbox_info_to_lamp_element(const BBoxInfo & box_info, LampEle
 
 }  // namespace
 
-// ============================= CnnLampRecognizerCore =============================
+// ============================= CnnLampRecognizer =============================
 // Node-free YOLO-style lamp recognition core (TensorRT).
 
-CnnLampRecognizerCore::CnnLampRecognizerCore(const CnnLampRecognizerConfig & config)
+CnnLampRecognizer::CnnLampRecognizer(const CnnLampRecognizerConfig & config)
 : max_batch_size_(config.max_batch_size),
   score_threshold_(config.score_threshold),
   nms_threshold_(config.nms_threshold),
+  traffic_light_type_(config.traffic_light_type),
   model_params_(config.model_params)
 {
   // The core owns its decode invariants (so a directly-built core is correct): anchors carry (w,h)
   // per anchor, bbox_offset derives from scale_x_y. Checked before the engine build -> fail fast.
   if (static_cast<int>(model_params_.anchors.size()) != 2 * model_params_.num_anchors) {
     throw std::runtime_error(
-      "CnnLampRecognizerCore: anchors must contain 2 * num_anchors values (w,h per anchor)");
+      "CnnLampRecognizer: anchors must contain 2 * num_anchors values (w,h per anchor)");
   }
   model_params_.bbox_offset = 0.5f * (model_params_.scale_x_y - 1.0f);
 
@@ -208,7 +211,7 @@ CnnLampRecognizerCore::CnnLampRecognizerCore(const CnnLampRecognizerConfig & con
   input_d_ = autoware::cuda_utils::make_unique<float[]>(input_vol);
 }
 
-void CnnLampRecognizerCore::preprocess(const std::vector<cv::Mat> & images)
+void CnnLampRecognizer::preprocess(const std::vector<cv::Mat> & images)
 {
   const float scale = 1.0f / 255.0f;
   const cv::Size input_size(input_width_, input_height_);
@@ -222,7 +225,7 @@ void CnnLampRecognizerCore::preprocess(const std::vector<cv::Mat> & images)
     input_d_.get(), blob.ptr<float>(), copy_size, cudaMemcpyHostToDevice, *stream_));
 }
 
-bool CnnLampRecognizerCore::do_inference(size_t batch_size)
+bool CnnLampRecognizer::do_inference(size_t batch_size)
 {
   nvinfer1::Dims input_dims = trt_common_->getInputDims(0);
   input_dims.d[0] = static_cast<int32_t>(batch_size);
@@ -257,7 +260,7 @@ bool CnnLampRecognizerCore::do_inference(size_t batch_size)
   return true;
 }
 
-void CnnLampRecognizerCore::decode_tlr_output(
+void CnnLampRecognizer::decode_tlr_output(
   size_t batch_size, std::vector<std::vector<BBoxInfo>> & detections_per_roi)
 {
   const auto & ml_params = model_params_;
@@ -354,8 +357,7 @@ void CnnLampRecognizerCore::decode_tlr_output(
   }
 }
 
-CnnLampRecognizerCore::DetectionResult CnnLampRecognizerCore::infer(
-  const std::vector<cv::Mat> & images)
+CnnLampRecognizer::DetectionResult CnnLampRecognizer::infer(const std::vector<cv::Mat> & images)
 {
   DetectionResult result;
   result.lamps_per_image.reserve(images.size());
@@ -407,12 +409,12 @@ CnnLampRecognizerCore::DetectionResult CnnLampRecognizerCore::infer(
   return result;
 }
 
-void CnnLampRecognizerCore::update_traffic_signals(
-  const std::vector<LampElement> & unique_elements,
+void CnnLampRecognizer::update_traffic_signals(
+  const std::vector<LampElement> & unique_elements, uint8_t traffic_light_type,
   tier4_perception_msgs::msg::TrafficLight & traffic_signal)
 {
   traffic_signal.elements.clear();
-  bool is_pedestrian = traffic_signal.traffic_light_type == 1;
+  bool is_pedestrian = traffic_light_type == TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT;
   if (unique_elements.empty()) {
     TrafficLightElement unknown_elem;
     unknown_elem.color = TrafficLightElement::UNKNOWN;
@@ -492,7 +494,7 @@ void CnnLampRecognizerCore::update_traffic_signals(
   }
 }
 
-cv::Mat CnnLampRecognizerCore::make_debug_image(
+cv::Mat CnnLampRecognizer::make_debug_image(
   const cv::Mat & roi_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal,
   const std::vector<LampElement> * elements)
 {
@@ -543,21 +545,21 @@ cv::Mat CnnLampRecognizerCore::make_debug_image(
 // classify() and make_debug_image() implement ClassifierInterface: they wrap infer() with the
 // per-signal update_traffic_signals mapping and the batch debug composition.
 
-bool CnnLampRecognizerCore::classify(
-  const std::vector<cv::Mat> & images,
-  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
+std::optional<tier4_perception_msgs::msg::TrafficLightArray> CnnLampRecognizer::classify(
+  const std::vector<cv::Mat> & images)
 {
-  if (images.size() != traffic_signals.signals.size()) {
-    return false;
-  }
-
   const DetectionResult result = infer(images);
   if (!result.success) {
-    return false;
+    return std::nullopt;
   }
 
-  for (size_t i = 0; i < traffic_signals.signals.size(); ++i) {
-    update_traffic_signals(result.lamps_per_image[i], traffic_signals.signals[i]);
+  tier4_perception_msgs::msg::TrafficLightArray traffic_signals;
+  traffic_signals.signals.resize(images.size());
+  for (size_t i = 0; i < images.size(); ++i) {
+    // Pass the configured type so update_traffic_signals can force CIRCLE for pedestrian lamps;
+    // traffic_light_id / type themselves are left for the caller to associate.
+    update_traffic_signals(
+      result.lamps_per_image[i], traffic_light_type_, traffic_signals.signals[i]);
   }
 
   // Keep the per-image output signals and raw detections so make_debug_image can render the batch
@@ -565,10 +567,12 @@ bool CnnLampRecognizerCore::classify(
   last_signals_ = traffic_signals;
   last_lamps_ = result.lamps_per_image;
 
-  return true;
+  // No std::move: returning the whole local implicitly moves into the optional (CNN / Color return
+  // a member subobject instead, which is not implicitly moved, so those need an explicit move).
+  return traffic_signals;
 }
 
-cv::Mat CnnLampRecognizerCore::make_debug_image(const std::vector<cv::Mat> & images) const
+cv::Mat CnnLampRecognizer::make_debug_image(const std::vector<cv::Mat> & images) const
 {
   // Vertically concatenate each image's debug view: boxes from the raw detections and a
   // label / confidence strip from the output signal, each resized to a fixed strip size.
@@ -578,7 +582,7 @@ cv::Mat CnnLampRecognizerCore::make_debug_image(const std::vector<cv::Mat> & ima
   const size_t count = std::min({images.size(), last_signals_.signals.size(), last_lamps_.size()});
   for (size_t i = 0; i < count; i++) {
     cv::Mat strip =
-      CnnLampRecognizerCore::make_debug_image(images[i], last_signals_.signals[i], &last_lamps_[i]);
+      CnnLampRecognizer::make_debug_image(images[i], last_signals_.signals[i], &last_lamps_[i]);
     cv::resize(strip, strip, cv::Size(strip_width, strip_height));
     if (debug_image.empty()) {
       debug_image = strip;

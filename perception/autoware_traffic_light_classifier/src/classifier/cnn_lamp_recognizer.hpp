@@ -24,9 +24,12 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 
+#include <tier4_perception_msgs/msg/traffic_light.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -108,12 +111,12 @@ struct LampRegressionArchitecture
   int cos_index{14};
   int sin_index{15};
   float scale_x_y{2.0f};
-  /// YOLO center decode offset; derived by CnnLampRecognizerCore from scale_x_y.
+  /// YOLO center decode offset; derived by CnnLampRecognizer from scale_x_y.
   float bbox_offset{0.5f};
   std::vector<float> anchors;
 };
 
-// Plain config for CnnLampRecognizerCore (the core does no ROS parameter reading of its own).
+// Plain config for CnnLampRecognizer (the core does no ROS parameter reading of its own).
 // The core ctor validates the anchors size and derives bbox_offset, so it owns those invariants.
 struct CnnLampRecognizerConfig
 {
@@ -123,11 +126,15 @@ struct CnnLampRecognizerConfig
   float nms_threshold{0.f};
   int max_batch_size{0};
   LampRegressionArchitecture model_params;
+  // The traffic-light type this recognizer serves (car / pedestrian). A single node instance
+  // classifies one type, so it is fixed at construction; classify() passes it to
+  // update_traffic_signals, which forces CIRCLE for pedestrian lamps.
+  uint8_t traffic_light_type{tier4_perception_msgs::msg::TrafficLight::CAR_TRAFFIC_LIGHT};
 };
 
 // Node-free lamp recognition core (ONNX/TensorRT): per-lamp bbox + color + type + angle. The
 // ctor builds a TensorRT engine (needs a GPU + model); the static helpers need neither.
-class CnnLampRecognizerCore : public ClassifierInterface
+class CnnLampRecognizer : public ClassifierInterface
 {
 public:
   // One entry per input image: the deduplicated lamp detections (geometry + color + shape +
@@ -140,14 +147,15 @@ public:
 
   // Builds the TensorRT engine from config.model_path and stores the decode parameters. Throws
   // std::runtime_error if the engine setup fails or its output channels do not match model_params.
-  explicit CnnLampRecognizerCore(const CnnLampRecognizerConfig & config);
+  explicit CnnLampRecognizer(const CnnLampRecognizerConfig & config);
 
-  // Detect lamps and map them into the caller's signals via update_traffic_signals (preserving
-  // traffic_light_type). Stashes the per-image detections + signals for make_debug_image. Returns
-  // false on a size mismatch or inference failure. NON-const: inference mutates engine buffers.
-  bool classify(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
+  // Detect lamps and return one signal per image, mapped via update_traffic_signals. Each signal's
+  // traffic_light_type is stamped from the configured type (so pedestrian lamps force CIRCLE);
+  // traffic_light_id is left unset for the caller. Stashes the per-image detections + signals for
+  // make_debug_image. Returns std::nullopt on inference failure. NON-const: inference mutates
+  // engine buffers.
+  std::optional<tier4_perception_msgs::msg::TrafficLightArray> classify(
+    const std::vector<cv::Mat> & images) override;
 
   // Composite debug view for the batch, rendered from the most recent classify() call.
   cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;
@@ -156,11 +164,12 @@ public:
   // inference mutates the engine's internal buffers.
   DetectionResult infer(const std::vector<cv::Mat> & images);
 
-  // Map the deduplicated lamp detections into a TrafficLight's elements, honoring its
-  // traffic_light_type (pedestrian forces CIRCLE). Emits a single UNKNOWN placeholder element
-  // with zero confidence when unique_elements is empty.
+  // Map the deduplicated lamp detections into a TrafficLight's elements. traffic_light_type
+  // (pedestrian forces CIRCLE) is passed explicitly rather than read from traffic_signal, so the
+  // caller need not pre-stamp the signal. Emits a single UNKNOWN placeholder element with zero
+  // confidence when unique_elements is empty.
   static void update_traffic_signals(
-    const std::vector<LampElement> & unique_elements,
+    const std::vector<LampElement> & unique_elements, uint8_t traffic_light_type,
     tier4_perception_msgs::msg::TrafficLight & traffic_signal);
 
   // Build one debug view from roi_image: bounding boxes for each lamp plus a label /
@@ -191,6 +200,7 @@ private:
   int output_grid_w_;
   float score_threshold_;
   float nms_threshold_;
+  uint8_t traffic_light_type_;
 
   LampRegressionArchitecture model_params_;
 

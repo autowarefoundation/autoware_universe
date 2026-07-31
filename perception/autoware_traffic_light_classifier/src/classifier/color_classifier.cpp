@@ -18,30 +18,32 @@
 #include <opencv2/imgproc/imgproc_c.h>
 
 #include <algorithm>
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-// ============================ ColorClassifierCore ============================
+// ============================ ColorClassifier ============================
 // Node-free HSV classification core.
 
-ColorClassifierCore::ColorClassifierCore(const HSVConfig & config)
+ColorClassifier::ColorClassifier(const HSVConfig & config)
 {
   set_config(config);
 }
 
-void ColorClassifierCore::set_config(const HSVConfig & config)
+void ColorClassifier::set_config(const HSVConfig & config)
 {
   hsv_config_ = config;
   update_thresholds();
 }
 
-const HSVConfig & ColorClassifierCore::get_config() const
+const HSVConfig & ColorClassifier::get_config() const
 {
   return hsv_config_;
 }
 
-void ColorClassifierCore::update_thresholds()
+void ColorClassifier::update_thresholds()
 {
   min_hsv_green_ =
     cv::Scalar(hsv_config_.green_min_h, hsv_config_.green_min_s, hsv_config_.green_min_v);
@@ -55,7 +57,7 @@ void ColorClassifierCore::update_thresholds()
   max_hsv_red_ = cv::Scalar(hsv_config_.red_max_h, hsv_config_.red_max_s, hsv_config_.red_max_v);
 }
 
-bool ColorClassifierCore::filter_hsv(
+bool ColorClassifier::filter_hsv(
   const cv::Mat & roi_image, cv::Mat & green_filtered_image, cv::Mat & yellow_filtered_image,
   cv::Mat & red_filtered_image) const
 {
@@ -71,8 +73,7 @@ bool ColorClassifierCore::filter_hsv(
   return true;
 }
 
-ColorClassifierCore::ClassifierResult ColorClassifierCore::infer(
-  const std::vector<cv::Mat> & images) const
+ColorClassifier::ClassifierResult ColorClassifier::infer(const std::vector<cv::Mat> & images) const
 {
   ClassifierResult result;
   result.success = true;
@@ -87,8 +88,7 @@ ColorClassifierCore::ClassifierResult ColorClassifierCore::infer(
   return result;
 }
 
-ColorClassifierCore::PipelineResult ColorClassifierCore::run_pipeline(
-  const cv::Mat & roi_image) const
+ColorClassifier::PipelineResult ColorClassifier::run_pipeline(const cv::Mat & roi_image) const
 {
   PipelineResult result;
   cv::Mat green_filtered_image;
@@ -123,7 +123,7 @@ ColorClassifierCore::PipelineResult ColorClassifierCore::run_pipeline(
   return result;
 }
 
-tier4_perception_msgs::msg::TrafficLightElement ColorClassifierCore::classify_element(
+tier4_perception_msgs::msg::TrafficLightElement ColorClassifier::classify_element(
   const PipelineStages & stages)
 {
   const cv::Mat & green_denoised_image = stages.green.denoised;
@@ -159,7 +159,7 @@ tier4_perception_msgs::msg::TrafficLightElement ColorClassifierCore::classify_el
   return element;
 }
 
-cv::Mat ColorClassifierCore::make_debug_image(const cv::Mat & roi_image) const
+cv::Mat ColorClassifier::make_debug_image(const cv::Mat & roi_image) const
 {
   const PipelineStages stages = run_pipeline(roi_image).stages;
 
@@ -225,28 +225,17 @@ cv::Mat ColorClassifierCore::make_debug_image(const cv::Mat & roi_image) const
 // caller-signal mapping and the batch debug composition. Dynamic reconfigure runs in the node,
 // which drives get_config / set_config above.
 
-bool ColorClassifierCore::classify(
-  const std::vector<cv::Mat> & images,
-  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
+std::optional<tier4_perception_msgs::msg::TrafficLightArray> ColorClassifier::classify(
+  const std::vector<cv::Mat> & images)
 {
-  if (images.size() != traffic_signals.signals.size()) {
-    return false;
+  ClassifierResult result = infer(images);
+  if (!result.success) {
+    return std::nullopt;
   }
-
-  const ClassifierResult result = infer(images);
-
-  // Attach the per-image color elements to the caller's pre-populated signals, preserving the
-  // traffic_light_id / traffic_light_type set upstream.
-  for (size_t i = 0; i < traffic_signals.signals.size(); i++) {
-    auto & elements = traffic_signals.signals[i].elements;
-    const auto & classified = result.signals.signals[i].elements;
-    elements.insert(elements.end(), classified.begin(), classified.end());
-  }
-
-  return result.success;
+  return std::move(result.signals);
 }
 
-cv::Mat ColorClassifierCore::make_debug_image(const std::vector<cv::Mat> & images) const
+cv::Mat ColorClassifier::make_debug_image(const std::vector<cv::Mat> & images) const
 {
   // Stack each ROI's mosaic vertically. Per-ROI mosaics differ in width, so later ones are scaled
   // to the first's width before stacking.

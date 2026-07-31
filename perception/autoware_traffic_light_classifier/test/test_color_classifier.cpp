@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //
-// Unit tests for ColorClassifierCore.
+// Unit tests for ColorClassifier.
 //
 // The core is constructed from an HSVConfig and its classify() and
 // make_debug_image() are exercised over in-memory cv::Mat inputs.
@@ -45,7 +45,7 @@ using tier4_perception_msgs::msg::TrafficLightElement;
 // yields N*N matching pixels (erode/dilate preserve a solid region), so side <
 // confidence_saturation_side keeps confidence in (0, 1) and side >= it clamps to
 // exactly 1.0. They must be kept in sync with the 20*20 divisor in
-// ColorClassifierCore::classify_element.
+// ColorClassifier::classify_element.
 // TODO(follow-up): once production exposes the saturation threshold as a named
 // constant, derive the sizes from it and drop this manual sync.
 constexpr int confidence_saturation_side = 20;
@@ -56,7 +56,7 @@ static_assert(
   "sizes must straddle the confidence saturation threshold");
 
 // Solid image whose every pixel maps to the given OpenCV HSV triple, built in
-// HSV then converted to BGR (ColorClassifierCore::filter_hsv does BGR2HSV).
+// HSV then converted to BGR (ColorClassifier::filter_hsv does BGR2HSV).
 cv::Mat make_solid_hsv_image(int h, int s, int v, int size = unsaturated_side)
 {
   cv::Mat hsv(size, size, CV_8UC3, cv::Scalar(h, s, v));
@@ -85,10 +85,10 @@ const TrafficLightElement & element_at(const TrafficLightArray & signals, std::s
 }
 
 // One batched call classifies each in-band solid into its HSV band.
-TEST(ColorClassifierCoreTest, ClassifiesByHsvBand)
+TEST(ColorClassifierTest, ClassifiesByHsvBand)
 {
   // Arrange
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   const std::vector<cv::Mat> images{green_image, amber_image, red_image};
 
   // Act
@@ -107,29 +107,11 @@ TEST(ColorClassifierCoreTest, ClassifiesByHsvBand)
   EXPECT_EQ(element_at(result.signals, 2).color, TrafficLightElement::RED);
 }
 
-// classify() (the ClassifierInterface entry) returns false, without touching the caller's signals,
-// when the image count does not match the pre-sized signal count. This size guard used to live in
-// the ROS adapter; it now lives in the core, so it is exercised ROS-free here.
-TEST(ColorClassifierCoreTest, ClassifyRejectsMismatchedImageSignalCount)
-{
-  // Arrange: one image, but a signal array pre-sized for two.
-  tl::ColorClassifierCore core;
-  const std::vector<cv::Mat> images{green_image};
-  tier4_perception_msgs::msg::TrafficLightArray signals;
-  signals.signals.resize(2);
-
-  // Act
-  const bool ok = core.classify(images, signals);
-
-  // Assert
-  EXPECT_FALSE(ok);
-}
-
 // An image outside every color band yields UNKNOWN with zero confidence.
-TEST(ColorClassifierCoreTest, OutOfBandImageIsUnknown)
+TEST(ColorClassifierTest, OutOfBandImageIsUnknown)
 {
   // Arrange
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   const std::vector<cv::Mat> images{black_image};
 
   // Act
@@ -147,12 +129,12 @@ TEST(ColorClassifierCoreTest, OutOfBandImageIsUnknown)
 // wins only when its ratio strictly beats BOTH others, so a tie falls through to
 // UNKNOWN. Distinct from OutOfBandImageIsUnknown, where there is no evidence at
 // all; here each half is individually a confident match (see ClassifiesByHsvBand).
-TEST(ColorClassifierCoreTest, AmbiguousEvidenceIsUnknown)
+TEST(ColorClassifierTest, AmbiguousEvidenceIsUnknown)
 {
   // Arrange -- half green / half red. Equal-sized blocks keep the green and red
   // pixel counts symmetric through the mirror-symmetric erode/dilate, so
   // green_ratio == red_ratio exactly and neither strictly dominates.
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   cv::Mat ambiguous_image;
   cv::hconcat(green_image, red_image, ambiguous_image);
   const std::vector<cv::Mat> images{ambiguous_image};
@@ -169,10 +151,10 @@ TEST(ColorClassifierCoreTest, AmbiguousEvidenceIsUnknown)
 // A matched color below the saturation pixel count reports confidence strictly
 // inside (0, 1) -- enough to confirm a match scores positive without yet hitting
 // the clamp (the clamp itself is covered by SaturatedConfidenceClampsToOne).
-TEST(ColorClassifierCoreTest, MatchedConfidenceIsPositiveAndBounded)
+TEST(ColorClassifierTest, MatchedConfidenceIsPositiveAndBounded)
 {
   // Arrange
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   const std::vector<cv::Mat> images{green_image};  // unsaturated_side -> below clamp
 
   // Act
@@ -190,10 +172,10 @@ TEST(ColorClassifierCoreTest, MatchedConfidenceIsPositiveAndBounded)
 // std::min(1.0, ...) upper bound. This pins the current pixel-count formula; a
 // contract test would instead assert "a strong-enough match reaches 1.0" without
 // depending on the 20*20 threshold.
-TEST(ColorClassifierCoreTest, SaturatedConfidenceClampsToOne)
+TEST(ColorClassifierTest, SaturatedConfidenceClampsToOne)
 {
   // Arrange
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   const std::vector<cv::Mat> images{green_image_saturated};  // saturated_side -> at/over clamp
 
   // Act
@@ -209,10 +191,10 @@ TEST(ColorClassifierCoreTest, SaturatedConfidenceClampsToOne)
 // The thresholds actually drive classification: narrowing the green band to
 // exclude the green image's hue turns its result from GREEN into UNKNOWN. Also
 // exercises set_config() rebuilding the bands.
-TEST(ColorClassifierCoreTest, ConfigDrivesClassification)
+TEST(ColorClassifierTest, ConfigDrivesClassification)
 {
   // Arrange
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   tl::HSVConfig config;     // defaults
   config.green_max_h = 60;  // green hue 85 now out of band
   core.set_config(config);
@@ -228,10 +210,10 @@ TEST(ColorClassifierCoreTest, ConfigDrivesClassification)
 }
 
 // An empty batch is a successful no-op.
-TEST(ColorClassifierCoreTest, EmptyBatchSucceeds)
+TEST(ColorClassifierTest, EmptyBatchSucceeds)
 {
   // Arrange
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   const std::vector<cv::Mat> images;
 
   // Act
@@ -247,10 +229,10 @@ TEST(ColorClassifierCoreTest, EmptyBatchSucceeds)
 // mosaic of the ROI -- a raw row on top, then the green / yellow / red rows, each
 // showing filtered | binarized | denoised -- rendered in color. A non-square ROI
 // makes an accidental rows/cols swap detectable.
-TEST(ColorClassifierCoreTest, DebugImageMosaicGeometry)
+TEST(ColorClassifierTest, DebugImageMosaicGeometry)
 {
   // Arrange -- distinct width and height so the 3x vs 4x factors can't be confused.
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
   const int roi_width = 12;
   const int roi_height = 8;
   cv::Mat roi;
@@ -270,10 +252,10 @@ TEST(ColorClassifierCoreTest, DebugImageMosaicGeometry)
 // different mosaics (their raw strips and lit color panels both differ). Robust
 // against the exact layout -- it only pins that make_debug_image renders the
 // input rather than a constant/blank image.
-TEST(ColorClassifierCoreTest, DebugImageReflectsInput)
+TEST(ColorClassifierTest, DebugImageReflectsInput)
 {
   // Arrange
-  tl::ColorClassifierCore core;
+  tl::ColorClassifier core;
 
   // Act
   const cv::Mat green_debug = core.make_debug_image(green_image);

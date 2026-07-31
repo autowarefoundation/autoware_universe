@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //
-// Tests for CNNClassifierCore, the Node-free CNN classification core.
+// Tests for CNNClassifier, the Node-free CNN classification core.
 //
 // Two groups, both ROS-free (constructed directly from a CNNConfig, no node):
 //
@@ -22,7 +22,7 @@
 //
 //  - The ctor builds a TensorRT engine and classify() runs inference, so both need
 //    a GPU + the ONNX model (downloaded under autoware_data). The
-//    CnnClassifierCoreClassifyTest fixture below exercises that path against the real
+//    CnnClassifierClassifyTest fixture below exercises that path against the real
 //    model and self-skips (GTEST_SKIP) when the GPU or model is unavailable. Asserts
 //    are coarse because TensorRT output is not bit-reproducible across GPU / TRT
 //    versions, and the engine is built once per suite (SetUpTestSuite) since that build
@@ -58,16 +58,15 @@ namespace
 namespace tl = autoware::traffic_light;
 
 using tier4_perception_msgs::msg::TrafficLight;
-using tier4_perception_msgs::msg::TrafficLightArray;
 using tier4_perception_msgs::msg::TrafficLightElement;
 
 // ===================== static helpers (no GPU, no model) =====================
 
 // A single "color-shape" token decodes to one element with both fields mapped.
-TEST(CnnClassifierCoreDecodeLabelTest, ColorShapeToken)
+TEST(CnnClassifierDecodeLabelTest, ColorShapeToken)
 {
   // Arrange / Act
-  const auto elements = tl::CNNClassifierCore::decode_label("red-cross", 0.5f);
+  const auto elements = tl::CNNClassifier::decode_label("red-cross", 0.5f);
 
   // Assert
   ASSERT_EQ(elements.size(), 1u);
@@ -78,10 +77,10 @@ TEST(CnnClassifierCoreDecodeLabelTest, ColorShapeToken)
 // Comma-separated tokens decode to one element each, and the per-token branches differ:
 // a bare color implies a CIRCLE shape while a "color-shape" token maps the shape. This
 // pins both the comma loop and the per-token branch selection in one case.
-TEST(CnnClassifierCoreDecodeLabelTest, CommaSeparatedLampsDecodePerToken)
+TEST(CnnClassifierDecodeLabelTest, CommaSeparatedLampsDecodePerToken)
 {
   // Arrange / Act
-  const auto elements = tl::CNNClassifierCore::decode_label("red,red-right", 0.5f);
+  const auto elements = tl::CNNClassifier::decode_label("red,red-right", 0.5f);
 
   // Assert
   ASSERT_EQ(elements.size(), 2u);
@@ -92,10 +91,10 @@ TEST(CnnClassifierCoreDecodeLabelTest, CommaSeparatedLampsDecodePerToken)
 }
 
 // A bare "unknown" token maps both color and shape to UNKNOWN.
-TEST(CnnClassifierCoreDecodeLabelTest, UnknownToken)
+TEST(CnnClassifierDecodeLabelTest, UnknownToken)
 {
   // Arrange / Act
-  const auto elements = tl::CNNClassifierCore::decode_label("unknown", 0.5f);
+  const auto elements = tl::CNNClassifier::decode_label("unknown", 0.5f);
 
   // Assert
   ASSERT_EQ(elements.size(), 1u);
@@ -104,10 +103,10 @@ TEST(CnnClassifierCoreDecodeLabelTest, UnknownToken)
 }
 
 // A bare color token implies a CIRCLE shape.
-TEST(CnnClassifierCoreDecodeLabelTest, BareColorImpliesCircle)
+TEST(CnnClassifierDecodeLabelTest, BareColorImpliesCircle)
 {
   // Arrange / Act
-  const auto elements = tl::CNNClassifierCore::decode_label("green", 0.5f);
+  const auto elements = tl::CNNClassifier::decode_label("green", 0.5f);
 
   // Assert
   ASSERT_EQ(elements.size(), 1u);
@@ -117,10 +116,10 @@ TEST(CnnClassifierCoreDecodeLabelTest, BareColorImpliesCircle)
 
 // A bare shape token (no color prefix) defaults the color to GREEN -- the surprising
 // fall-through branch worth pinning.
-TEST(CnnClassifierCoreDecodeLabelTest, BareShapeDefaultsToGreen)
+TEST(CnnClassifierDecodeLabelTest, BareShapeDefaultsToGreen)
 {
   // Arrange / Act
-  const auto elements = tl::CNNClassifierCore::decode_label("right", 0.5f);
+  const auto elements = tl::CNNClassifier::decode_label("right", 0.5f);
 
   // Assert
   ASSERT_EQ(elements.size(), 1u);
@@ -129,13 +128,13 @@ TEST(CnnClassifierCoreDecodeLabelTest, BareShapeDefaultsToGreen)
 }
 
 // The passed confidence is propagated to every decoded lamp element.
-TEST(CnnClassifierCoreDecodeLabelTest, ConfidencePropagatedToEveryLamp)
+TEST(CnnClassifierDecodeLabelTest, ConfidencePropagatedToEveryLamp)
 {
   // Arrange
   const float confidence = 0.75f;
 
   // Act
-  const auto elements = tl::CNNClassifierCore::decode_label("red,green-right,unknown", confidence);
+  const auto elements = tl::CNNClassifier::decode_label("red,green-right,unknown", confidence);
 
   // Assert
   ASSERT_EQ(elements.size(), 3u);
@@ -144,9 +143,9 @@ TEST(CnnClassifierCoreDecodeLabelTest, ConfidencePropagatedToEveryLamp)
   }
 }
 
-// make_debug_image lays out the ROI resized to a fixed 200px width above a 50px text
-// strip. A non-square ROI makes an accidental rows/cols swap detectable.
-TEST(CnnClassifierCoreDebugImageTest, MosaicGeometry)
+// make_debug_image lays out the ROI resized to a fixed 200px width above a 50px text strip.
+// A non-square ROI makes an accidental rows/cols swap detectable.
+TEST(CnnClassifierDebugImageTest, MosaicGeometry)
 {
   // Arrange -- distinct width and height; one element so the label strip is exercised.
   const int roi_width = 100;
@@ -160,7 +159,7 @@ TEST(CnnClassifierCoreDebugImageTest, MosaicGeometry)
   signal.elements.push_back(element);
 
   // Act
-  const cv::Mat debug_image = tl::CNNClassifierCore::make_debug_image(roi, signal);
+  const cv::Mat debug_image = tl::CNNClassifier::make_debug_image(roi, signal);
 
   // Assert -- width fixed at 200, height = scaled ROI (200*50/100 == 100) + 50px strip.
   EXPECT_EQ(debug_image.cols, 200);
@@ -169,7 +168,7 @@ TEST(CnnClassifierCoreDebugImageTest, MosaicGeometry)
 }
 
 // make_debug_image returns a fresh Mat and does not mutate the input ROI.
-TEST(CnnClassifierCoreDebugImageTest, DoesNotMutateInput)
+TEST(CnnClassifierDebugImageTest, DoesNotMutateInput)
 {
   // Arrange
   const int roi_width = 100;
@@ -183,7 +182,7 @@ TEST(CnnClassifierCoreDebugImageTest, DoesNotMutateInput)
   signal.elements.push_back(element);
 
   // Act
-  tl::CNNClassifierCore::make_debug_image(roi, signal);
+  tl::CNNClassifier::make_debug_image(roi, signal);
 
   // Assert
   EXPECT_EQ(roi.cols, roi_width);
@@ -192,13 +191,13 @@ TEST(CnnClassifierCoreDebugImageTest, DoesNotMutateInput)
 
 // ================== GPU-gated tests of the TensorRT classify() path ==================
 
-// CAR CNN classifier artifacts, downloaded under autoware_data (see the ansible
-// artifacts role). The model's static batch size is 1.
+// CAR CNN classifier artifacts, downloaded under autoware_data (see the ansible artifacts role).
+// The model's static batch size is 1.
 constexpr char model_filename[] = "traffic_light_classifier_mobilenetv2_batch_1.onnx";
 constexpr char label_filename[] = "lamp_labels.txt";
 
 // Normalization from config/car_traffic_light_classifier.param.yaml. CNNConfig takes
-// std::vector<float> directly (the ROS adapter narrows from the double params).
+// std::vector<float> directly.
 const std::vector<float> default_mean{123.675f, 116.28f, 103.53f};
 const std::vector<float> default_std{58.395f, 57.12f, 57.375f};
 
@@ -226,8 +225,8 @@ std::string resolve_autoware_data_file(const std::string & filename)
   return "";
 }
 
-// Read the label file into per-line labels (the core takes the pre-read lines so it does
-// no file I/O of its own -- the ROS adapter normally does this read).
+// Read the label file into per-line labels. The core takes the pre-read lines so it does
+// no file I/O of its own.
 std::vector<std::string> read_label_lines(const std::string & path)
 {
   std::ifstream labels_file(path);
@@ -257,11 +256,11 @@ cv::Mat load_test_data()
   return rgb;
 }
 
-// Builds the real CNNClassifierCore once for the whole suite (the TensorRT engine build
+// Builds the real CNNClassifier once for the whole suite (the TensorRT engine build
 // is minutes-long). When the model or a usable GPU is missing, core_ stays null and
 // skip_reason_ explains why; each test then GTEST_SKIPs. No node is involved -- the core
 // is constructed straight from a CNNConfig.
-class CnnClassifierCoreClassifyTest : public ::testing::Test
+class CnnClassifierClassifyTest : public ::testing::Test
 {
 protected:
   static void SetUpTestSuite()
@@ -287,9 +286,9 @@ protected:
     // The core ctor builds the TensorRT engine and throws on GPU/TRT failure. Treat that
     // as "environment unavailable" -> skip (not fail), with a reason each test reports.
     try {
-      core_ = std::make_unique<tl::CNNClassifierCore>(config);
+      core_ = std::make_unique<tl::CNNClassifier>(config);
     } catch (const std::exception & e) {
-      skip_reason_ = std::string("CNNClassifierCore environment unavailable: ") + e.what();
+      skip_reason_ = std::string("CNNClassifier environment unavailable: ") + e.what();
       core_.reset();
     }
   }
@@ -297,7 +296,7 @@ protected:
   static void TearDownTestSuite() { core_.reset(); }
 
   static inline std::string skip_reason_;
-  static inline std::unique_ptr<tl::CNNClassifierCore> core_;
+  static inline std::unique_ptr<tl::CNNClassifier> core_;
 };
 
 // Drives the full classify() path on a real ROI crop -- preprocess -> TRT inference ->
@@ -308,7 +307,7 @@ protected:
 // model-parameter update. Only the confidence range is asserted -- softmax normalization
 // is the core's own guarantee and is stable across models, while the exact value is not
 // reproducible across GPU / TRT versions.
-TEST_F(CnnClassifierCoreClassifyTest, ClassifiesNormalCropToWellFormedElement)
+TEST_F(CnnClassifierClassifyTest, ClassifiesNormalCropToWellFormedElement)
 {
   if (!core_) {
     GTEST_SKIP() << skip_reason_;
@@ -335,7 +334,7 @@ TEST_F(CnnClassifierCoreClassifyTest, ClassifiesNormalCropToWellFormedElement)
 // inputs must produce identical outputs whatever the model predicts, the two confidences
 // must be equal. Both properties hold across model updates, so no specific class is
 // pinned. (Swap detection is not the goal here; with identical inputs it is a no-op.)
-TEST_F(CnnClassifierCoreClassifyTest, BatchClassificationYieldsResultPerImage)
+TEST_F(CnnClassifierClassifyTest, BatchClassificationYieldsResultPerImage)
 {
   if (!core_) {
     GTEST_SKIP() << skip_reason_;
@@ -356,30 +355,6 @@ TEST_F(CnnClassifierCoreClassifyTest, BatchClassificationYieldsResultPerImage)
   EXPECT_FLOAT_EQ(
     result.signals.signals[0].elements[0].confidence,
     result.signals.signals[1].elements[0].confidence);
-}
-
-// classify() maps into caller-owned signals and merges one element per slot, so a signal
-// count that disagrees with the images is rejected up front -- before inference and before
-// any per-slot access in the merge loop. A regression here is an out-of-range read, not
-// just a wrong return value. (Formerly pinned in test_cnn_classifier_adapter.cpp; folded
-// here after the adapter collapsed into the core.)
-TEST_F(CnnClassifierCoreClassifyTest, ClassifyRejectsMismatchedImageSignalCount)
-{
-  if (!core_) {
-    GTEST_SKIP() << skip_reason_;
-  }
-
-  // Arrange -- one image but two signal slots. The guard returns before inference, so a
-  // dummy crop (never classified) is enough.
-  const std::vector<cv::Mat> images{cv::Mat(4, 4, CV_8UC3, cv::Scalar(0, 0, 0))};
-  TrafficLightArray signals;
-  signals.signals.resize(2);
-
-  // Act
-  const bool ok = core_->classify(images, signals);
-
-  // Assert
-  EXPECT_FALSE(ok);
 }
 
 }  // namespace
