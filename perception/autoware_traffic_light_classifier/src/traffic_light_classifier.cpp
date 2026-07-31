@@ -42,11 +42,12 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
   const cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoiArray & rois) const
 {
   Result result;
-  result.signals.signals.resize(rois.rois.size());
 
   std::vector<cv::Mat> images;
+  // Valid ROIs in classification order (parallel to `images`). The classifier returns elements
+  // only, so we zip each ROI's traffic_light_id / type back onto the output afterwards.
+  std::vector<const tier4_perception_msgs::msg::TrafficLightRoi *> valid_rois;
   std::vector<size_t> exposure_out_of_range_indices;
-  size_t idx_valid_roi = 0;
   for (const auto & input_roi : rois.rois) {
     // ignore if the roi is not the type to be classified
     if (input_roi.traffic_light_type != classify_traffic_light_type_) {
@@ -57,30 +58,40 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
       continue;
     }
 
-    // set traffic light id and type
-    result.signals.signals[idx_valid_roi].traffic_light_id = input_roi.traffic_light_id;
-    result.signals.signals[idx_valid_roi].traffic_light_type = input_roi.traffic_light_type;
-
     const sensor_msgs::msg::RegionOfInterest & roi = input_roi.roi;
     auto roi_img = image(cv::Rect(roi.x_offset, roi.y_offset, roi.width, roi.height));
     const double brightness = utils::compute_brightness(roi_img);
     if (brightness >= over_exposure_threshold_) {
-      exposure_out_of_range_indices.emplace_back(idx_valid_roi);
+      exposure_out_of_range_indices.emplace_back(images.size());
       result.detected_over_exposure = true;
     } else if (brightness <= under_exposure_threshold_) {
-      exposure_out_of_range_indices.emplace_back(idx_valid_roi);
+      exposure_out_of_range_indices.emplace_back(images.size());
       result.detected_under_exposure = true;
     }
+    valid_rois.emplace_back(&input_roi);
     images.emplace_back(roi_img);
-    idx_valid_roi++;
   }
 
   // classify the images
-  result.signals.signals.resize(images.size());
   if (!images.empty()) {
-    if (!classifier_->classify(images, result.signals)) {
+    auto classified = classifier_->classify(images);
+    if (!classified) {
       return std::nullopt;
     }
+    result.signals = std::move(*classified);
+  }
+
+  // One signal per input image is the ClassifierInterface contract. Enforce it here, at the one
+  // place that relies on it: a backend returning a different count would break the per-index
+  // traffic_light_id / type association below (and, for a longer result, read out of bounds).
+  if (result.signals.signals.size() != images.size()) {
+    return std::nullopt;
+  }
+
+  // The classifier leaves traffic_light_id / type unset; associate them by position.
+  for (size_t i = 0; i < result.signals.signals.size(); i++) {
+    result.signals.signals[i].traffic_light_id = valid_rois[i]->traffic_light_id;
+    result.signals.signals[i].traffic_light_type = valid_rois[i]->traffic_light_type;
   }
 
   // Hand the classified crops back to the caller so it can request a debug view later; the debug

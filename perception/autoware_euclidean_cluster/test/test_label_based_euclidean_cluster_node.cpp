@@ -234,7 +234,7 @@ TEST_F(LabelClusterConfigBehavior, PublishesDetectedObjectsForSemanticInput)
     "/input/pointcloud", rclcpp::SensorDataQoS());
 
   rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(cluster_node);
+  executor.add_node(cluster_node->get_node_base_interface());
   executor.add_node(helper_node);
 
   std::thread spin_thread([&executor]() { executor.spin(); });
@@ -287,7 +287,7 @@ TEST_F(LabelClusterConfigBehavior, PublishesSemanticNonObjectsAsSegments)
     "/input/pointcloud", rclcpp::SensorDataQoS());
 
   rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(cluster_node);
+  executor.add_node(cluster_node->get_node_base_interface());
   executor.add_node(helper_node);
 
   std::thread spin_thread([&executor]() { executor.spin(); });
