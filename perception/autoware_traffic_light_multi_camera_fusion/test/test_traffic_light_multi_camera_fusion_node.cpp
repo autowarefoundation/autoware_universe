@@ -119,7 +119,7 @@ protected:
       options.publish_partial_matched_signal);
 
     node_ = std::make_shared<MultiCameraFusionNode>(node_options);
-    executor_->add_node(node_);
+    executor_->add_node(node_->get_node_base_interface());
   }
 
   void TearDown() override

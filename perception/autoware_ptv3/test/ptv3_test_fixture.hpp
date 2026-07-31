@@ -49,9 +49,9 @@ struct PTv3ConfigParams
   std::vector<std::int64_t> pooling_strides = {2, 2};
   std::vector<std::int64_t> enc_channels = {8, 16, 32};
   std::vector<std::int64_t> palette = {0, 0, 0, 255, 0, 0};
-  float filter_class_probability_threshold = 0.5F;
   std::vector<std::string> filter_classes = {};
   std::string filter_output_format = "xyzi";
+  bool filter_apply_to_segmentation = false;
   std::string source_reconstruction = "partial";
   std::vector<std::int64_t> dec_depths = {0, 0};
 };
@@ -62,7 +62,7 @@ inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
     params.use_seg3d_head, params.use_det3d_head, params.plugins_path, params.cloud_capacity,
     params.voxels_num, params.point_cloud_range, params.voxel_size, params.segmentation_class_names,
     params.serialization_orders, params.pooling_strides, params.enc_channels, params.palette,
-    params.filter_class_probability_threshold, params.filter_classes, params.filter_output_format,
+    params.filter_classes, params.filter_output_format, params.filter_apply_to_segmentation,
     params.source_reconstruction, params.dec_depths);
 }
 

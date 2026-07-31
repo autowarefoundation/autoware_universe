@@ -582,7 +582,9 @@ void NormalLaneChange::insert_stop_point_on_current_lanes(
   const auto & bpp_param_ptr = common_data_ptr_->bpp_param_ptr;
   const auto dist_to_terminal_stop = std::invoke([&]() -> double {
     const auto & curr_lanes_poly = common_data_ptr_->lanes_polygon_ptr->current;
-    if (!utils::isEgoWithinOriginalLane(curr_lanes_poly, getEgoPose(), *bpp_param_ptr)) {
+    if (!utils::isEgoWithinOriginalLane(
+          curr_lanes_poly, getEgoPose(), *bpp_param_ptr,
+          lane_change_parameters_->overhang_tolerance)) {
       return dist_from_path_front + dist_to_terminal_start;
     }
 
