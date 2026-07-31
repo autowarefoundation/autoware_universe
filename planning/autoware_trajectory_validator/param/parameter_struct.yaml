@@ -94,7 +94,7 @@ validator:
       default_value: false
       description: whether to use the embedded trajectory time to evaluate the stop duration
       read_only: false
-  
+
   traffic_light:
     deceleration_limit:
       type: double
