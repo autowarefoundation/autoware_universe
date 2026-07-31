@@ -86,39 +86,41 @@ bool hasDirectionChangeTag(const lanelet::ConstLanelet & lanelet)
   const std::string direction_change_tag = lanelet.attributeOr("direction_change", "none");
   return direction_change_tag == "yes";
 }
+
+/// @brief Declare a parameter without a default value, i.e. an override must be provided.
+template <typename T>
+T declare_parameter(
+  const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr & parameters,
+  const std::string & name)
+{
+  return parameters->declare_parameter(name, rclcpp::ParameterValue{T{}}.get_type()).get<T>();
+}
+
+template <typename T>
+T declare_parameter(
+  const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr & parameters,
+  const std::string & name, const T & default_value)
+{
+  return parameters->declare_parameter(name, rclcpp::ParameterValue{default_value}).get<T>();
+}
 }  // namespace
 
-void DefaultPlanner::initialize_common(rclcpp::Node * node)
+void DefaultPlanner::initialize(const Context & context)
 {
   is_graph_ready_ = false;
-  node_ = node;
+  context_ = context;
+  vehicle_info_ = context_.vehicle_info;
 
-  const auto durable_qos = rclcpp::QoS(1).transient_local();
-  pub_goal_footprint_marker_ =
-    node_->create_publisher<MarkerArray>("~/debug/goal_footprint", durable_qos);
-
-  vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_).getVehicleInfo();
-  param_.goal_angle_threshold_deg = node_->declare_parameter<double>("goal_angle_threshold_deg");
-  param_.enable_correct_goal_pose = node_->declare_parameter<bool>("enable_correct_goal_pose");
-  param_.consider_no_drivable_lanes = node_->declare_parameter<bool>("consider_no_drivable_lanes");
+  const auto & parameters = context_.parameters;
+  param_.goal_angle_threshold_deg =
+    declare_parameter<double>(parameters, "goal_angle_threshold_deg");
+  param_.enable_correct_goal_pose = declare_parameter<bool>(parameters, "enable_correct_goal_pose");
+  param_.consider_no_drivable_lanes =
+    declare_parameter<bool>(parameters, "consider_no_drivable_lanes");
   param_.check_footprint_inside_lanes =
-    node_->declare_parameter<bool>("check_footprint_inside_lanes");
-  param_.allow_area = node_->declare_parameter<bool>("allow_area", false);
+    declare_parameter<bool>(parameters, "check_footprint_inside_lanes");
+  param_.allow_area = declare_parameter<bool>(parameters, "allow_area", false);
   route_handler_.setAllowArea(param_.allow_area);
-}
-
-void DefaultPlanner::initialize(rclcpp::Node * node)
-{
-  initialize_common(node);
-  map_subscriber_ = node_->create_subscription<LaneletMapBin>(
-    "~/input/vector_map", rclcpp::QoS{10}.transient_local(),
-    std::bind(&DefaultPlanner::map_callback, this, std::placeholders::_1));
-}
-
-void DefaultPlanner::initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg)
-{
-  initialize_common(node);
-  map_callback(msg);
 }
 
 bool DefaultPlanner::ready() const
@@ -126,9 +128,9 @@ bool DefaultPlanner::ready() const
   return is_graph_ready_;
 }
 
-void DefaultPlanner::map_callback(const LaneletMapBin::ConstSharedPtr msg)
+void DefaultPlanner::set_map(const LaneletMapBin & map)
 {
-  route_handler_.setMap(*msg);
+  route_handler_.setMap(map);
   is_graph_ready_ = true;
 }
 
@@ -152,7 +154,7 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
         const auto area = route_handler_.getAreaFromId(prim.id);
         visualization_msgs::msg::Marker m;
         m.header.frame_id = "map";
-        m.header.stamp = node_->now();
+        m.header.stamp = context_.clock->now();
         m.ns = "route_areas";
         m.id = area_id++;
         m.action = visualization_msgs::msg::Marker::ADD;
@@ -280,7 +282,7 @@ bool DefaultPlanner::check_goal_footprint_inside_lanes(
 
 bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
 {
-  const auto logger = node_->get_logger();
+  const auto logger = context_.logger;
 
   const auto goal_lanelet_pt = experimental::lanelet2_utils::from_ros(goal.position);
 
@@ -346,7 +348,7 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
   lanelets_near_goal.insert(lanelets_near_goal.end(), next_lanelets.begin(), next_lanelets.end());
 
   const autoware_utils::LinearRing2d goal_footprint = vehicle_info_.createFootprint(0.0, goal);
-  pub_goal_footprint_marker_->publish(visualize_debug_footprint(goal_footprint));
+  context_.publish_debug_marker(visualize_debug_footprint(goal_footprint));
   const auto polygon_footprint = convert_linear_ring_to_polygon(goal_footprint);
 
   // check if goal footprint exceeds lane when the goal isn't in parking_lot
@@ -396,7 +398,7 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
 
 PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
 {
-  const auto logger = node_->get_logger();
+  const auto logger = context_.logger;
 
   std::stringstream log_ss;
   for (const auto & point : points) {
@@ -513,14 +515,14 @@ geometry_msgs::msg::Pose DefaultPlanner::refine_goal_height(
     const auto area = route_handler_.getAreaFromId(pref.id);
     goal_height = project_goal_to_area(area, goal_pt);
     RCLCPP_DEBUG(
-      node_->get_logger(), "[DefaultPlanner] refine_goal_height: goal on area id=%ld z=%.3f",
-      pref.id, goal_height);
+      context_.logger, "[DefaultPlanner] refine_goal_height: goal on area id=%ld z=%.3f", pref.id,
+      goal_height);
   } else {
     const auto goal_lanelet = route_handler_.getLaneletsFromId(pref.id);
     goal_height = project_goal_to_map(goal_lanelet, goal_pt);
     RCLCPP_DEBUG(
-      node_->get_logger(), "[DefaultPlanner] refine_goal_height: goal on lane id=%ld z=%.3f",
-      pref.id, goal_height);
+      context_.logger, "[DefaultPlanner] refine_goal_height: goal on lane id=%ld z=%.3f", pref.id,
+      goal_height);
   }
 
   Pose refined_goal = goal;
