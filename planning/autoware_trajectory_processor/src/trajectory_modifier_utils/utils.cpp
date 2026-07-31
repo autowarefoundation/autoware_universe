@@ -143,7 +143,7 @@ bool insert_stop_point(
     return true;
   }
 
-  auto stop_idx = idx;
+  size_t stop_idx{};
   if (std::abs(distance - stop_point_arc_length) < overlap_threshold) {
     stop_idx = idx;
   } else if (std::abs(distance + seg_length - stop_point_arc_length) < overlap_threshold) {
