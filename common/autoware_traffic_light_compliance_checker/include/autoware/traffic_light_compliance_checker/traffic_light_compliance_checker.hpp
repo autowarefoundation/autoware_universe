@@ -104,8 +104,9 @@ private:
 
   /// @brief return true if ego can safely pass an amber traffic light
   [[nodiscard]] bool can_pass_amber_light(
-    const double distance_to_stop_line, const double current_velocity,
-    const double current_acceleration, const double time_to_cross_stop_line) const;
+    const int64_t traffic_light_id, const double distance_to_stop_line,
+    const double current_velocity, const double current_acceleration,
+    const double time_to_cross_stop_line) const;
 
   bool is_allow_if_cannot_stop(const double distance_to_cross_point) const;
 

@@ -46,6 +46,13 @@ public:
     const autoware_perception_msgs::msg::TrafficLightGroupArray & signals,
     const rclcpp::Time & current_time, bool is_ego_stopped);
 
+  [[nodiscard]] double get_duration(const int64_t traffic_light_id) const
+  {
+    const auto it = signal_history_.find(traffic_light_id);
+    if (it == signal_history_.end()) return 0.0;
+    return (it->second.last_seen_time - it->second.first_seen_time).seconds();
+  }
+
 private:
   void cleanup_signal_history(const rclcpp::Time & current_time);
 

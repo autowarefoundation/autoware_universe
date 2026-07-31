@@ -239,8 +239,8 @@ Violations TrafficLightComplianceChecker::get_amber_light_violations(
                              amber_stop_line.traffic_light_id) != force_reject_amber_ids.end();
 
     bool can_pass = can_pass_amber_light(
-      distance_to_stop_line, current_velocity, current_acceleration,
-      *amber_stop_line_crossing_time);
+      amber_stop_line.traffic_light_id, distance_to_stop_line, current_velocity,
+      current_acceleration, *amber_stop_line_crossing_time);
 
     if (!is_force_reject && can_pass) continue;
 
@@ -379,7 +379,7 @@ bool TrafficLightComplianceChecker::is_stop_point_within_margin_from_stop_line(
 }
 
 bool TrafficLightComplianceChecker::can_pass_amber_light(
-  const double distance_to_stop_line, const double current_velocity,
+  const int64_t traffic_light_id, const double distance_to_stop_line, const double current_velocity,
   const double current_acceleration, const double time_to_cross_stop_line) const
 {
   const double decel_limit = params_.deceleration_limit;
@@ -388,9 +388,12 @@ bool TrafficLightComplianceChecker::can_pass_amber_light(
   const auto distance_for_ego_to_stop = autoware::motion_utils::calculate_stop_distance(
     current_velocity, current_acceleration, decel_limit, jerk_limit, delay_response_time);
 
+  const auto crossing_time_limit =
+    std::max(0.0, params_.crossing_time_limit - status_tracker_->get_duration(traffic_light_id));
+
   const bool can_stop =
     distance_for_ego_to_stop.has_value() && *distance_for_ego_to_stop <= distance_to_stop_line;
-  const bool can_pass_in_time = time_to_cross_stop_line <= params_.crossing_time_limit;
+  const bool can_pass_in_time = time_to_cross_stop_line <= crossing_time_limit;
   const bool can_pass = !can_stop && can_pass_in_time;
   return can_pass;
 }
