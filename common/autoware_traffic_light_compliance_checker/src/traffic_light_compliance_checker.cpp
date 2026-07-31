@@ -119,6 +119,11 @@ tl::expected<ComplianceResult, std::string> TrafficLightComplianceChecker::check
   const auto force_reject_amber_ids =
     get_force_reject_amber_ids(input.current_time, is_ego_stopped);
 
+  ego_stopping_distance_ = autoware::motion_utils::calculate_stop_distance(
+    input.current_velocity, input.current_acceleration,
+    params_.checked_trajectory_length.deceleration_limit,
+    params_.checked_trajectory_length.jerk_limit, params_.delay_response_time);
+
   auto result = check_with_filtered_signals(
     input, filtered_signals, force_reject_amber_ids, check_red_lights, check_amber_lights);
 
@@ -257,7 +262,7 @@ ComplianceResult TrafficLightComplianceChecker::check_with_filtered_signals(
   const Inputs & input,
   const autoware_perception_msgs::msg::TrafficLightGroupArray & filtered_signals,
   const std::vector<int64_t> & force_reject_amber_ids, const bool check_red_lights,
-  const bool check_amber_lights)
+  const bool check_amber_lights) const
 {
   if (input.trajectory.empty() || (!check_red_lights && !check_amber_lights)) {
     return ComplianceResult{};
@@ -265,10 +270,7 @@ ComplianceResult TrafficLightComplianceChecker::check_with_filtered_signals(
 
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint> trajectory;
   lanelet::BasicLineString2d trajectory_ls;
-  ego_stopping_distance_ = autoware::motion_utils::calculate_stop_distance(
-    input.current_velocity, input.current_acceleration,
-    params_.checked_trajectory_length.deceleration_limit,
-    params_.checked_trajectory_length.jerk_limit, params_.delay_response_time);
+
   // Floor by min_lookahead_distance so low ego speed still covers nearby stop lines,
   // while keeping the comfortable-stop cap so far lights are not over-checked
   // (important for traffic_light_filter which rejects trajectories).
