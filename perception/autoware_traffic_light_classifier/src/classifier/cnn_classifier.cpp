@@ -101,19 +101,19 @@ std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifier::deco
       // found "-" delimiter in the label string
       std::vector<std::string> color_and_shape;
       boost::algorithm::split(color_and_shape, lamp_label, boost::is_any_of("-"));
-      element.color = utils::convertColorStringtoT4(color_and_shape.at(0));
-      element.shape = utils::convertShapeStringtoT4(color_and_shape.at(1));
+      element.color = utils::convert_color_string_to_t4(color_and_shape.at(0));
+      element.shape = utils::convert_shape_string_to_t4(color_and_shape.at(1));
     } else {
       if (lamp_label == std::string("unknown")) {
         // if the label is unknown, set UNKNOWN to color and shape
         element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      } else if (utils::isColorLabel(lamp_label)) {
-        element.color = utils::convertColorStringtoT4(lamp_label);
+      } else if (utils::is_color_label(lamp_label)) {
+        element.color = utils::convert_color_string_to_t4(lamp_label);
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
       } else {
         element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-        element.shape = utils::convertShapeStringtoT4(lamp_label);
+        element.shape = utils::convert_shape_string_to_t4(lamp_label);
       }
     }
     element.confidence = confidence;
@@ -129,8 +129,8 @@ cv::Mat CNNClassifier::make_debug_image(
   std::string label;
   for (std::size_t i = 0; i < signal.elements.size(); i++) {
     const auto & light = signal.elements.at(i);
-    const auto light_label =
-      utils::convertColorT4toString(light.color) + "-" + utils::convertShapeT4toString(light.shape);
+    const auto light_label = utils::convert_color_t4_to_string(light.color) + "-" +
+                             utils::convert_shape_t4_to_string(light.shape);
     label += light_label;
     // all lamp confidences are the same
     confidence = light.confidence;

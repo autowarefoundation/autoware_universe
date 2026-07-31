@@ -522,8 +522,8 @@ cv::Mat CnnLampRecognizer::make_debug_image(
   std::string label;
   for (std::size_t i = 0; i < traffic_signal.elements.size(); i++) {
     auto light = traffic_signal.elements.at(i);
-    const auto light_label =
-      utils::convertColorT4toString(light.color) + "-" + utils::convertShapeT4toString(light.shape);
+    const auto light_label = utils::convert_color_t4_to_string(light.color) + "-" +
+                             utils::convert_shape_t4_to_string(light.shape);
     label += light_label;
     // all lamp confidence are the same
     probability = light.confidence;
