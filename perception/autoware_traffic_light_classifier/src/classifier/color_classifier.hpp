@@ -22,13 +22,13 @@
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
+#include <optional>
 #include <vector>
 
 namespace autoware::traffic_light
 {
 // HSV thresholds for the green / yellow / red bands. Defaults are the single
-// source of truth for the classifier's out-of-the-box behavior; the ROS adapter
-// exposes them as node parameters.
+// source of truth for the classifier's out-of-the-box behavior.
 struct HSVConfig
 {
   int green_min_h = 50;
@@ -54,7 +54,7 @@ struct HSVConfig
 // Node-free core of the HSV color classifier. Depends only on OpenCV and the
 // perception message types -- no rclcpp, image_transport, or logging -- so it can
 // be constructed and unit-tested without a running node.
-class ColorClassifierCore : public ClassifierInterface
+class ColorClassifier : public ClassifierInterface
 {
 public:
   // Per-batch result: one signal (with a single color element) per input image,
@@ -66,13 +66,12 @@ public:
     bool success = false;
   };
 
-  explicit ColorClassifierCore(const HSVConfig & config = HSVConfig{});
+  explicit ColorClassifier(const HSVConfig & config = HSVConfig{});
 
-  // Classify each ROI and append its color element to the caller's signals (preserving
-  // traffic_light_id / type). Returns false on a size mismatch or an HSV pipeline error.
-  bool classify(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
+  // Classify each ROI and return one signal (single color element) per image; id / type are left
+  // unset for the caller to associate. Returns std::nullopt on an HSV pipeline error.
+  std::optional<tier4_perception_msgs::msg::TrafficLightArray> classify(
+    const std::vector<cv::Mat> & images) override;
 
   // Composite debug view for the batch: one mosaic per ROI stacked vertically. Re-runs the HSV
   // pipeline, so the caller invokes it only when a debug consumer is attached (a cold path).

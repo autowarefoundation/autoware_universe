@@ -25,12 +25,13 @@
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-// Configuration for CNNClassifierCore. model_path is a file path (TrtClassifier loads
+// Configuration for CNNClassifier. model_path is a file path (TrtClassifier loads
 // the model itself); labels are the pre-read label-file lines, so the core does no file
 // I/O of its own.
 struct CNNConfig
@@ -46,7 +47,7 @@ struct CNNConfig
 // (e.g. MobileNet-v2 or EfficientNet-b1). Its constructor builds a TensorRT engine, so
 // instantiating it needs a GPU and the model; decode_label and make_debug_image are
 // static so they can be exercised without one.
-class CNNClassifierCore : public ClassifierInterface
+class CNNClassifier : public ClassifierInterface
 {
 public:
   // One signal per input image, elements populated by the label decode. traffic_light_id
@@ -59,14 +60,13 @@ public:
 
   // Builds the TensorRT engine from config.model_path and stores the label table. Throws
   // std::invalid_argument if mean/std are not size 3 (a TrtClassifier precondition).
-  explicit CNNClassifierCore(const CNNConfig & config);
+  explicit CNNClassifier(const CNNConfig & config);
 
-  // Classify each ROI and append the decoded elements to the caller's signals (preserving
-  // traffic_light_id / type). Stashes the per-image result for make_debug_image. Returns false on
-  // a size mismatch or inference failure. NON-const: inference mutates the engine's buffers.
-  bool classify(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
+  // Classify each ROI and return one signal per image carrying the decoded elements; id / type are
+  // left unset for the caller to associate. Stashes the per-image result for make_debug_image.
+  // Returns std::nullopt on inference failure. NON-const: inference mutates the engine's buffers.
+  std::optional<tier4_perception_msgs::msg::TrafficLightArray> classify(
+    const std::vector<cv::Mat> & images) override;
 
   // Composite debug view for the batch, rendered from the most recent classify() call.
   cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override;

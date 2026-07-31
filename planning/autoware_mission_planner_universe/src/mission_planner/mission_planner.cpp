@@ -74,7 +74,8 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 : autoware::agnocast_wrapper::Node("mission_planner", options),
   arrival_checker_(get_arrival_checker_threshold(*this)),
   plugin_loader_(
-    "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
+    "autoware_mission_planner_universe",
+    "autoware::mission_planner_universe::AgnocastPlannerPlugin"),
   tf_buffer_(get_clock()),
   tf_listener_(tf_buffer_, *this),
   odometry_(nullptr),
@@ -622,7 +623,7 @@ LaneletRoute MissionPlanner::create_route(
   const Header & header, const std::vector<Pose> & waypoints, const Pose & start_pose,
   const Pose & goal_pose, const UUID & uuid, const bool allow_goal_modification)
 {
-  PlannerPlugin::RoutePoints points;
+  AgnocastPlannerPlugin::RoutePoints points;
   points.push_back(start_pose);
   for (const auto & waypoint : waypoints) {
     points.push_back(transform_pose(waypoint, header));

@@ -28,6 +28,9 @@
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
+#include <functional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::mission_planner_universe::lanelet2
@@ -42,17 +45,26 @@ struct DefaultPlannerParameters
   bool allow_area;
 };
 
-class DefaultPlanner : public mission_planner_universe::PlannerPlugin
+/// @brief Lanelet2 based implementation of the mission planner plugin.
+/// @tparam NodeT type of the node the planner is initialized with. The publisher and subscription
+/// handle types are derived from NodeT, so the implementation is independent of the node type.
+template <typename NodeT>
+class DefaultPlannerT : public mission_planner_universe::PlannerPluginT<NodeT>
 {
 public:
-  DefaultPlanner() : vehicle_info_(), is_graph_ready_(false), param_(), node_(nullptr) {}
+  // Redeclared as non-dependent types so that they can be used without `typename`.
+  using RoutePoints = std::vector<geometry_msgs::msg::Pose>;
+  using LaneletRoute = autoware_planning_msgs::msg::LaneletRoute;
+  using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+  using MarkerArray = visualization_msgs::msg::MarkerArray;
 
-  void initialize(autoware::agnocast_wrapper::Node * node) override;
-  void initialize(
-    autoware::agnocast_wrapper::Node * node, const LaneletMapBin::ConstSharedPtr msg) override;
+  DefaultPlannerT() : vehicle_info_(), is_graph_ready_(false), param_(), node_(nullptr) {}
+
+  void initialize(NodeT * node) override;
+  void initialize(NodeT * node, const LaneletMapBin::ConstSharedPtr msg) override;
   [[nodiscard]] bool ready() const override;
   LaneletRoute plan(const RoutePoints & points) override;
-  void updateRoute(const PlannerPlugin::LaneletRoute & route) override;
+  void updateRoute(const LaneletRoute & route) override;
   void clearRoute() override;
   [[nodiscard]] MarkerArray visualize(
     const LaneletRoute & route, float goal_lanelet_transparency = 0.05) const override;
@@ -67,16 +79,24 @@ public:
 protected:
   using RouteSections = std::vector<autoware_planning_msgs::msg::LaneletSegment>;
   using Pose = geometry_msgs::msg::Pose;
+  using MapSubscriptionPtr =
+    decltype(std::declval<NodeT &>().template create_subscription<LaneletMapBin>(
+      std::declval<const std::string &>(), std::declval<const rclcpp::QoS &>(),
+      std::declval<std::function<void(const LaneletMapBin &)>>()));
+  using MarkerArrayPublisherPtr =
+    decltype(std::declval<NodeT &>().template create_publisher<MarkerArray>(
+      std::declval<const std::string &>(), std::declval<const rclcpp::QoS &>()));
+
   bool is_graph_ready_;
   autoware::route_handler::RouteHandler route_handler_;
 
   DefaultPlannerParameters param_;
 
-  autoware::agnocast_wrapper::Node * node_;
-  AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) map_subscriber_;
-  AUTOWARE_PUBLISHER_PTR(MarkerArray) pub_goal_footprint_marker_;
+  NodeT * node_;
+  MapSubscriptionPtr map_subscriber_;
+  MarkerArrayPublisherPtr pub_goal_footprint_marker_;
 
-  void initialize_common(autoware::agnocast_wrapper::Node * node);
+  void initialize_common(NodeT * node);
   void map_callback(const LaneletMapBin & msg);
 
   /**
@@ -105,6 +125,9 @@ protected:
    */
   Pose refine_goal_height(const Pose & goal, const RouteSections & route_sections);
 };
+
+using DefaultPlanner = DefaultPlannerT<rclcpp::Node>;
+using AgnocastDefaultPlanner = DefaultPlannerT<autoware::agnocast_wrapper::Node>;
 
 }  // namespace autoware::mission_planner_universe::lanelet2
 
