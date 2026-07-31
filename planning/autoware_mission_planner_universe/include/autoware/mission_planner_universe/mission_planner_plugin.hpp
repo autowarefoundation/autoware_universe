@@ -28,7 +28,12 @@
 namespace autoware::mission_planner_universe
 {
 
-class PlannerPlugin
+/// @brief Interface of the mission planner plugins.
+/// @tparam NodeT type of the node the plugin is initialized with. Each instantiation is an
+/// independent pluginlib base class, so the same plugin implementation can be exported for several
+/// node types.
+template <typename NodeT>
+class PlannerPluginT
 {
 public:
   using RoutePoints = std::vector<geometry_msgs::msg::Pose>;
@@ -36,9 +41,9 @@ public:
   using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using MarkerArray = visualization_msgs::msg::MarkerArray;
 
-  virtual ~PlannerPlugin() = default;
-  virtual void initialize(rclcpp::Node * node) = 0;
-  virtual void initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg) = 0;
+  virtual ~PlannerPluginT() = default;
+  virtual void initialize(NodeT * node) = 0;
+  virtual void initialize(NodeT * node, const LaneletMapBin::ConstSharedPtr msg) = 0;
   virtual bool ready() const = 0;
   virtual LaneletRoute plan(const RoutePoints & points) = 0;
   virtual MarkerArray visualize(
@@ -47,6 +52,8 @@ public:
   virtual void clearRoute() = 0;
   virtual const autoware::route_handler::RouteHandler & getRouteHandler() const = 0;
 };
+
+using PlannerPlugin = PlannerPluginT<rclcpp::Node>;
 
 }  // namespace autoware::mission_planner_universe
 
