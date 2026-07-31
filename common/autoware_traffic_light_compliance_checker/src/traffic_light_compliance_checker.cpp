@@ -222,7 +222,7 @@ Violations TrafficLightComplianceChecker::get_amber_light_violations(
     if (
       !amber_stop_line_crossing_time ||
       is_stop_point_within_margin_from_stop_line(stop_point, amber_stop_line.line)) {
-      if (stop_point.has_value())
+      if (stop_point.has_value() && params_.amber_rejection.reject_if_stop_detected)
         amber_rejection_history_[amber_stop_line.traffic_light_id] = current_time;
       continue;
     }
