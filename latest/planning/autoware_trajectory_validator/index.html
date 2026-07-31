@@ -14,7 +14,7 @@
         <link rel="prev" href="../autoware_trajectory_selector/">
       
       
-        <link rel="next" href="docs/TrafficLightFilter/">
+        <link rel="next" href="docs/CrosswalkFilter/">
       
       
         
@@ -22897,6 +22897,11 @@
 <td><code>traffic_rule</code></td>
 <td>Rejects trajectories that cross red, amber, or configured unknown traffic-light stop lines.</td>
 </tr>
+<tr>
+<td><code>traffic_rule::CrosswalkFilter</code></td>
+<td><code>traffic_rule</code></td>
+<td>Rejects trajectories that violate crosswalk traffic rules.</td>
+</tr>
 </tbody>
 </table>
 <h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
@@ -23046,6 +23051,83 @@
 <td>Maximum allowed steering rate [rad/s].</td>
 <td>0.3</td>
 <td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.object_types</td>
+<td>array</td>
+<td>List of object types to consider as target object (e.g., 'pedestrian', 'bicycle').</td>
+<td>['pedestrian', 'bicycle']</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>crosswalk.lon_detection_margin</td>
+<td>float</td>
+<td>Longitudinal extrusion length of sidewalk-side from crosswalk edge [m].</td>
+<td>2.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.lat_detection_margin</td>
+<td>float</td>
+<td>Lateral extrusion length of sidewalk-side from crosswalk edge [m].</td>
+<td>1.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.object_clear_time_th</td>
+<td>float</td>
+<td>Duration threshold to clear target object when no longer seen [s].</td>
+<td>0.3</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.distance_hysteresis_th</td>
+<td>float</td>
+<td>Hysteresis threshold to consider the object as the same object [m].</td>
+<td>0.3</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.overshoot_tolerance</td>
+<td>float</td>
+<td>Maximum overshoot distance allowed to consider the trajectory feasible [m].</td>
+<td>0.1</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.nominal_deceleration</td>
+<td>float</td>
+<td>Nominal deceleration to calculate the stop distance used as trajectory length limit [m/s²].</td>
+<td>1.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.nominal_jerk</td>
+<td>float</td>
+<td>Nominal jerk to calculate the stop distance used as trajectory length limit [m/s³].</td>
+<td>1.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.stop_duration</td>
+<td>float</td>
+<td>Minimum duration of the stop to consider the trajectory feasible [s].</td>
+<td>3.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.arrived_distance_threshold</td>
+<td>float</td>
+<td>Threshold to check if the ego vehicle has arrived at crosswalk stop line [m].</td>
+<td>5.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>crosswalk.use_trajectory_time</td>
+<td>boolean</td>
+<td>Whether to use the embedded trajectory time to evaluate the stop duration.</td>
+<td>False</td>
+<td>N/A</td>
 </tr>
 <tr>
 <td>traffic_light.deceleration_limit</td>
@@ -23276,13 +23358,13 @@
         
         
           
-          <a href="docs/TrafficLightFilter/" class="md-footer__link md-footer__link--next" aria-label="Next: Traffic Light Filter">
+          <a href="docs/CrosswalkFilter/" class="md-footer__link md-footer__link--next" aria-label="Next: Crosswalk Filter">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Traffic Light Filter
+                Crosswalk Filter
               </div>
             </div>
             <div class="md-footer__button md-icon">
