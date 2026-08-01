@@ -98,5 +98,5 @@ private:
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
-#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_OUTLIER_FILTER__CUB_EXECUTOR_HPP_
 /* *INDENT-ON* */
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_OUTLIER_FILTER__CUB_EXECUTOR_HPP_

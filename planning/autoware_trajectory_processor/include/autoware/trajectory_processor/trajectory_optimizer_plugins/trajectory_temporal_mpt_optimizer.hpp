@@ -98,4 +98,3 @@ private:
 }  // namespace autoware::trajectory_optimizer::plugin
 // clang-format off
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_HPP_  // NOLINT
-// clang-format on

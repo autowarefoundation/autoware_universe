@@ -136,4 +136,3 @@ private:
 }  // namespace autoware::motion_velocity_planner
 // clang-format off
 #endif  // OPTIMIZATION_BASED_PLANNER__OPTIMIZATION_BASED_PLANNER_HPP_  // NOLINT
-// clang-format on
