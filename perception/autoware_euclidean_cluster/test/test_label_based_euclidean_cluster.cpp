@@ -16,7 +16,9 @@
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <autoware/object_recognition_utils/object_classification.hpp>
-#include <autoware/ptv3/experimental/semantic_label.hpp>
+#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
 #include <autoware/shape_estimation/shape_estimator.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
@@ -25,13 +27,16 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 namespace autoware::euclidean_cluster
 {
-using autoware::ptv3::experimental::SemanticLabel;
+using autoware::object_recognition_utils::PointCloudClassification;
+using autoware::point_types::PointXYZCPE;
 using autoware_perception_msgs::msg::ObjectClassification;
 
 class LabelBasedEuclideanClusterTest : public ::testing::Test
@@ -60,7 +65,9 @@ protected:
   std::shared_ptr<VoxelGridBasedEuclideanCluster> default_cluster_;
   std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator_;
 
-  /// @brief Create a minimal PointCloud2 message with xyz and optionally class_id/probability
+  /// @brief Create a PointXYZCPE point cloud; class_id defaults to CAR and probability to 1.0.
+  /// @details `entropy` keeps the quiet NaN default of PointXYZCPE, as published for points whose
+  /// entropy is unavailable.
   sensor_msgs::msg::PointCloud2 create_pointcloud(
     const std::vector<float> & x, const std::vector<float> & y, const std::vector<float> & z,
     const std::vector<uint8_t> & class_ids = {}, const std::vector<float> & probabilities = {})
@@ -69,77 +76,31 @@ protected:
     msg.height = 1;
     msg.width = x.size();
     msg.is_dense = true;
-
-    // Add xyz fields
-    msg.fields.push_back(sensor_msgs::msg::PointField());
-    msg.fields[0].name = "x";
-    msg.fields[0].offset = 0;
-    msg.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[0].count = 1;
-
-    msg.fields.push_back(sensor_msgs::msg::PointField());
-    msg.fields[1].name = "y";
-    msg.fields[1].offset = 4;
-    msg.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[1].count = 1;
-
-    msg.fields.push_back(sensor_msgs::msg::PointField());
-    msg.fields[2].name = "z";
-    msg.fields[2].offset = 8;
-    msg.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[2].count = 1;
-
-    uint32_t offset = 12;
-
-    // Add class_id field if provided
-    if (!class_ids.empty()) {
-      msg.fields.push_back(sensor_msgs::msg::PointField());
-      msg.fields[3].name = "class_id";
-      msg.fields[3].offset = offset;
-      msg.fields[3].datatype = sensor_msgs::msg::PointField::UINT8;
-      msg.fields[3].count = 1;
-      offset += 1;
-    }
-
-    // Add probability field if provided
-    if (!probabilities.empty()) {
-      msg.fields.push_back(sensor_msgs::msg::PointField());
-      auto prob_idx = msg.fields.size() - 1;
-      msg.fields[prob_idx].name = "probability";
-      msg.fields[prob_idx].offset = offset;
-      msg.fields[prob_idx].datatype = sensor_msgs::msg::PointField::FLOAT32;
-      msg.fields[prob_idx].count = 1;
-      offset += 4;
-    }
-
-    msg.point_step = offset;
+    msg.is_bigendian = false;
+    msg.fields = autoware::point_types::create_fields_point_xyzcpe();
+    msg.point_step = sizeof(PointXYZCPE);
     msg.row_step = msg.point_step * msg.width;
-    msg.data.resize(msg.row_step * msg.height);
+    msg.data.resize(static_cast<std::size_t>(msg.row_step) * msg.height);
 
-    // Write data
     for (size_t i = 0; i < x.size(); ++i) {
-      const size_t base = i * msg.point_step;
-      std::memcpy(&msg.data[base + 0], &x[i], sizeof(float));
-      std::memcpy(&msg.data[base + 4], &y[i], sizeof(float));
-      std::memcpy(&msg.data[base + 8], &z[i], sizeof(float));
-
-      uint32_t local_offset = 12;
-      if (!class_ids.empty()) {
-        msg.data[base + local_offset] = class_ids[i];
-        local_offset += 1;
-      }
-
-      if (!probabilities.empty()) {
-        std::memcpy(&msg.data[base + local_offset], &probabilities[i], sizeof(float));
-      }
+      PointXYZCPE point;
+      point.x = x[i];
+      point.y = y[i];
+      point.z = z[i];
+      point.class_id = class_ids.empty() ? kCarClassId : class_ids[i];
+      point.probability = probabilities.empty() ? 1.0F : probabilities[i];
+      std::memcpy(&msg.data[i * msg.point_step], &point, sizeof(PointXYZCPE));
     }
 
     return msg;
   }
+
+  static constexpr std::uint8_t kCarClassId =
+    static_cast<std::uint8_t>(PointCloudClassification::CAR);
 };
 
 // ============================================================================
-// SemanticLabel Tests
+// PointCloudClassification Tests
 // ============================================================================
 
 TEST_F(LabelBasedEuclideanClusterTest, EmptyPointCloudReturnsEmptyObjects)
@@ -159,7 +120,7 @@ TEST_F(LabelBasedEuclideanClusterTest, EmptyPointCloudReturnsEmptyObjects)
   EXPECT_EQ(result->segments.width, 0U);
 }
 
-TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithoutClassIdUsesDefaultLabel)
+TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithDefaultClassIdUsesCarLabel)
 {
   LabelBasedEuclideanCluster cluster(
     0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
@@ -180,10 +141,10 @@ TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithoutClassIdUsesDefaultLabel)
 
   // Assert
   ASSERT_TRUE(result.has_value());
-  // Even if no clusters form, the processing should complete without errors
-  // If clusters do form, they should use UNKNOWN label (default when no class_id field)
+  // Even if no clusters form, the processing should complete without errors.
+  // If clusters do form, they carry the CAR label the helper writes into class_id.
   for (const auto & obj : result->objects.objects) {
-    EXPECT_EQ(obj.classification[0].label, ObjectClassification::UNKNOWN);
+    EXPECT_EQ(obj.classification[0].label, ObjectClassification::CAR);
   }
 }
 
@@ -208,7 +169,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
     x_vals.push_back(5.0f + static_cast<float>(i) * 0.05f);
     y_vals.push_back(0.0f);
     z_vals.push_back(0.0f);
-    class_vals.push_back(static_cast<std::uint8_t>(SemanticLabel::PEDESTRIAN));
+    class_vals.push_back(static_cast<std::uint8_t>(PointCloudClassification::PEDESTRIAN));
     prob_vals.push_back(1.0f);
   }
   auto pc = create_pointcloud(
@@ -327,7 +288,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ShapeIsPopulated)
   }
 }
 
-TEST_F(LabelBasedEuclideanClusterTest, InvalidSemanticLabelsAreOutputAsSegments)
+TEST_F(LabelBasedEuclideanClusterTest, InvalidClassificationsAreOutputAsSegments)
 {
   LabelBasedEuclideanCluster cluster(
     0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
@@ -357,7 +318,7 @@ TEST_F(LabelBasedEuclideanClusterTest, SemanticNonObjectLabelsAreOutputAsSegment
     0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
-  const auto flat_surface = static_cast<std::uint8_t>(SemanticLabel::FLAT_SURFACE);
+  const auto flat_surface = static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
   auto pc = create_pointcloud(
     {0.0f, 0.1f, 0.2f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
     {flat_surface, flat_surface, flat_surface}, {0.9f, 0.8f, 0.7f});
@@ -384,6 +345,59 @@ TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenRequiredFieldsAreMissing)
   pc.width = 1;
   pc.is_dense = true;
   // Intentionally missing x/y/z field definitions
+
+  const auto result = cluster.process(pc);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_FALSE(result.error().empty());
+}
+
+TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenLayoutIsNotPointXYZCPE)
+{
+  LabelBasedEuclideanCluster cluster(
+    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+
+  // A PointXYZI cloud carries x/y/z but is not a PointXYZCPE cloud.
+  sensor_msgs::msg::PointCloud2 pc;
+  pc.height = 1;
+  pc.width = 1;
+  pc.is_dense = true;
+  pc.fields = autoware::point_types::create_fields_point_xyzi();
+  pc.point_step = sizeof(autoware::point_types::PointXYZI);
+  pc.row_step = pc.point_step * pc.width;
+  pc.data.resize(pc.row_step);
+
+  const auto result = cluster.process(pc);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_FALSE(result.error().empty());
+}
+
+TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenPointStepDoesNotMatchPointXYZCPE)
+{
+  LabelBasedEuclideanCluster cluster(
+    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+
+  // The PointXYZCPE fields with extra per-point padding are not a densely packed cloud.
+  auto pc = create_pointcloud({0.0f}, {0.0f}, {0.0f});
+  pc.point_step = sizeof(PointXYZCPE) + 4U;
+  pc.row_step = pc.point_step * pc.width;
+  pc.data.resize(pc.row_step);
+
+  const auto result = cluster.process(pc);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_FALSE(result.error().empty());
+}
+
+TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenDataSizeDoesNotAgreeWithPointCount)
+{
+  LabelBasedEuclideanCluster cluster(
+    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+
+  // More bytes than width * height * point_step would overrun the converted cloud.
+  auto pc = create_pointcloud({0.0f}, {0.0f}, {0.0f});
+  pc.data.resize(pc.data.size() * 4U);
 
   const auto result = cluster.process(pc);
   ASSERT_FALSE(result.has_value());

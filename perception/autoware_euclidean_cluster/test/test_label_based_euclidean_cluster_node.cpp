@@ -14,7 +14,9 @@
 
 #include "../src/label_based_euclidean_cluster_node.hpp"
 
-#include <autoware/ptv3/experimental/semantic_label.hpp>
+#include <autoware/object_recognition_utils/pointcloud_classification.hpp>
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -34,7 +36,8 @@
 
 namespace autoware::euclidean_cluster
 {
-using autoware::ptv3::experimental::SemanticLabel;
+using autoware::object_recognition_utils::PointCloudClassification;
+using autoware::point_types::PointXYZCPE;
 
 class LabelClusterConfigBehavior : public ::testing::Test
 {
@@ -81,6 +84,7 @@ protected:
     return options;
   }
 
+  /// @brief Create a PointXYZCPE cloud, the point type the node expects on its input topic.
   static sensor_msgs::msg::PointCloud2 make_semantic_pointcloud(
     const std::size_t point_count, const std::uint8_t class_id, const float probability)
   {
@@ -90,47 +94,20 @@ protected:
     msg.width = static_cast<std::uint32_t>(point_count);
     msg.is_bigendian = false;
     msg.is_dense = true;
-
-    msg.fields.resize(5);
-    msg.fields[0].name = "x";
-    msg.fields[0].offset = 0;
-    msg.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[0].count = 1;
-
-    msg.fields[1].name = "y";
-    msg.fields[1].offset = 4;
-    msg.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[1].count = 1;
-
-    msg.fields[2].name = "z";
-    msg.fields[2].offset = 8;
-    msg.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[2].count = 1;
-
-    msg.fields[3].name = "class_id";
-    msg.fields[3].offset = 12;
-    msg.fields[3].datatype = sensor_msgs::msg::PointField::UINT8;
-    msg.fields[3].count = 1;
-
-    msg.fields[4].name = "probability";
-    msg.fields[4].offset = 13;
-    msg.fields[4].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[4].count = 1;
-
-    msg.point_step = 17;
+    msg.fields = autoware::point_types::create_fields_point_xyzcpe();
+    msg.point_step = sizeof(PointXYZCPE);
     msg.row_step = msg.point_step * msg.width;
     msg.data.resize(msg.row_step);
 
     for (std::size_t i = 0; i < point_count; ++i) {
-      const std::size_t base = i * msg.point_step;
-      const float x = static_cast<float>(i) * 0.05F;
-      const float y = 0.0F;
-      const float z = 0.0F;
-      std::memcpy(&msg.data[base + 0], &x, sizeof(float));
-      std::memcpy(&msg.data[base + 4], &y, sizeof(float));
-      std::memcpy(&msg.data[base + 8], &z, sizeof(float));
-      msg.data[base + 12] = class_id;
-      std::memcpy(&msg.data[base + 13], &probability, sizeof(float));
+      // entropy keeps its quiet NaN default, as published for points without an entropy value.
+      PointXYZCPE point;
+      point.x = static_cast<float>(i) * 0.05F;
+      point.y = 0.0F;
+      point.z = 0.0F;
+      point.class_id = class_id;
+      point.probability = probability;
+      std::memcpy(&msg.data[i * msg.point_step], &point, sizeof(PointXYZCPE));
     }
 
     return msg;
@@ -321,8 +298,8 @@ TEST_F(LabelClusterConfigBehavior, PublishesSemanticNonObjectsAsSegments)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  auto input_msg =
-    make_semantic_pointcloud(4, static_cast<std::uint8_t>(SemanticLabel::FLAT_SURFACE), 0.95F);
+  auto input_msg = make_semantic_pointcloud(
+    4, static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE), 0.95F);
   input_pub->publish(input_msg);
 
   {
