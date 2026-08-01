@@ -23173,7 +23173,7 @@
 <p><code>label_based_euclidean_cluster</code> converts object-compatible semantic pointcloud labels into <code>DetectedObjects</code>.
 It groups points by semantic class, clusters each label bucket independently, and estimates a shape for every resulting cluster.
 Non-object semantic labels are published as segment pointclouds.</p>
-<p>This node is intended for segmented pointcloud inputs that provide semantic labels as <code>class_id</code>, and optionally per-point confidence as <code>probability</code>.</p>
+<p>This node is intended for segmented pointcloud inputs published as <code>autoware::point_types::PointXYZCPE</code>, which carry the semantic label as <code>class_id</code> and the per-point confidence as <code>probability</code>.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -23188,14 +23188,19 @@ Non-object semantic labels are published as segment pointclouds.</p>
 <tr>
 <td><code>~/input/pointcloud</code></td>
 <td><code>sensor_msgs::msg::PointCloud2</code></td>
-<td>segmented pointcloud with <code>x</code>, <code>y</code>, and <code>z</code></td>
+<td>segmented <code>autoware::point_types::PointXYZCPE</code> cloud</td>
 </tr>
 </tbody>
 </table>
-<p>Optional input fields used by the node:</p>
+<p>The input point type is assumed to be <code>autoware::point_types::PointXYZCPE</code>, that is a densely packed
+24-byte point with the following fields. Clouds with any other layout are rejected and reported with
+a throttled warning.</p>
 <ul>
-<li><code>class_id</code> (<code>uint8</code>): semantic class index for each point.</li>
+<li><code>x</code>, <code>y</code>, <code>z</code> (<code>float32</code>): point position.</li>
+<li><code>class_id</code> (<code>uint8</code>): <code>PointCloudClassification</code> value for each point.</li>
 <li><code>probability</code> (<code>float32</code>): semantic confidence for each point.</li>
+<li><code>entropy</code> (<code>float32</code>): normalized prediction entropy, <code>NaN</code> when it is unavailable. Not used by
+  this node, but preserved in the segment output.</li>
 </ul>
 <h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
 <table>
@@ -23221,10 +23226,10 @@ Non-object semantic labels are published as segment pointclouds.</p>
 </table>
 <h2 id="processing-flow">Processing Flow<a class="headerlink" href="#processing-flow" title="Permanent link">#</a></h2>
 <ol>
-<li>Validate that the incoming pointcloud contains <code>x</code>, <code>y</code>, and <code>z</code>.</li>
-<li>Interpret <code>class_id</code> values as <code>SemanticLabel</code>.</li>
-<li>Send object-compatible SemanticLabels through clustering and copy non-object or unknown SemanticLabels to <code>output_segments</code>.</li>
-<li>If the pointcloud has a <code>probability</code> field, drop points with <code>probability &lt; min_probability</code>.</li>
+<li>Validate that the incoming pointcloud is a densely packed <code>autoware::point_types::PointXYZCPE</code> cloud.</li>
+<li>Interpret <code>class_id</code> values as <code>PointCloudClassification</code>.</li>
+<li>Send object-compatible classifications through clustering and copy non-object or unknown classifications to <code>output_segments</code>.</li>
+<li>Drop points with <code>probability &lt; min_probability</code>.</li>
 <li>Split object-compatible points into buckets keyed by the Autoware object label.</li>
 <li>Run <code>VoxelGridBasedEuclideanCluster</code> independently for each label bucket, using the per-label parameter overrides from <code>label_cluster_params.*</code> where configured and the global defaults otherwise.</li>
 <li>Merge over-segmented clusters across labels that belong to the same confusable label group (<code>confusable_label_groups.*</code>).</li>
@@ -23420,14 +23425,13 @@ confusable_label_groups:
     max_merged_size_m: 25.0</code></p>
 <h2 id="default-configuration-notes">Default Configuration Notes<a class="headerlink" href="#default-configuration-notes" title="Permanent link">#</a></h2>
 <p>The default parameter file keeps shared clustering and shape-estimation parameters only.
-Object selection is derived from <code>SemanticLabel</code> compatibility.</p>
+Object selection is derived from <code>PointCloudClassification</code> compatibility.</p>
 <h2 id="assumptions-known-limits">Assumptions / Known Limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
-<li>The node assumes the incoming pointcloud already represents semantically segmented points.</li>
-<li><code>class_id</code> values are interpreted as <code>SemanticLabel</code> values.</li>
-<li>Non-object or unknown <code>SemanticLabel</code> values are copied to <code>output/pointcloud</code> with the original point fields preserved.</li>
-<li>When the input has no <code>class_id</code> field, all points are clustered together as <code>UNKNOWN</code>.</li>
-<li>When the input has no <code>probability</code> field, every point is treated as confidence <code>1.0</code>.</li>
+<li>The node assumes the incoming pointcloud already represents semantically segmented points and uses the <code>autoware::point_types::PointXYZCPE</code> layout.</li>
+<li><code>class_id</code> values are interpreted as <code>PointCloudClassification</code> values.</li>
+<li>Non-object or unknown <code>PointCloudClassification</code> values are copied to <code>output/pointcloud</code> with the original point fields preserved.</li>
+<li>Inputs whose layout differs from <code>autoware::point_types::PointXYZCPE</code> are rejected instead of being clustered with default values.</li>
 <li>Clustering is spatial only; there is no temporal association or tracking.</li>
 </ul>
 <h2 id="intended-usage">Intended Usage<a class="headerlink" href="#intended-usage" title="Permanent link">#</a></h2>
