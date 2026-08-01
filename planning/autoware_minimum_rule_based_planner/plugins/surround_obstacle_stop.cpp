@@ -37,12 +37,15 @@ using SurroundObstacleStopParams =
   autoware::minimum_rule_based_planner::plugin::MinimumRuleBasedPlannerParams::SurroundObstacleStop;
 
 ObstacleTypeParameters to_obstacle_type_parameters(
-  const double front_distance, const double side_distance, const double back_distance)
+  const double front_distance, const double side_distance, const double back_distance,
+  const bool enable_bbox_check = true, const bool enable_polygon_check = true)
 {
   ObstacleTypeParameters parameters;
   parameters.surround_check_front_distance = front_distance;
   parameters.surround_check_side_distance = side_distance;
   parameters.surround_check_back_distance = back_distance;
+  parameters.enable_bbox_check = enable_bbox_check;
+  parameters.enable_polygon_check = enable_polygon_check;
   return parameters;
 }
 
@@ -51,48 +54,57 @@ Parameters to_proximity_checker_parameters(const SurroundObstacleStopParams & pa
   Parameters parameters;
   parameters.pointcloud_enable_check = params.use_pointcloud;
 
-  const std::unordered_set<std::string> enabled_object_types(
-    params.object_types.begin(), params.object_types.end());
+  const std::unordered_set<std::string> bbox_enabled_object_types(
+    params.target_objects.bbox.begin(), params.target_objects.bbox.end());
+  const std::unordered_set<std::string> polygon_enabled_object_types(
+    params.target_objects.polygon.begin(), params.target_objects.polygon.end());
 
-  const auto set_object_enable = [&](const std::string & label) {
-    parameters.object_type_enable_check[label] = enabled_object_types.count(label) > 0;
+  auto is_bbox_enabled = [&](const std::string & label) {
+    return bbox_enabled_object_types.count(label) > 0;
   };
-  set_object_enable("unknown");
-  set_object_enable("car");
-  set_object_enable("truck");
-  set_object_enable("bus");
-  set_object_enable("trailer");
-  set_object_enable("motorcycle");
-  set_object_enable("bicycle");
-  set_object_enable("pedestrian");
-  set_object_enable("hazard");
-  set_object_enable("animal");
+  auto is_polygon_enabled = [&](const std::string & label) {
+    return polygon_enabled_object_types.count(label) > 0;
+  };
 
   const auto & front = params.front_distance_th;
   const auto & side = params.side_distance_th;
   const auto & back = params.back_distance_th;
+  auto get_object_distance_thresholds = [&](const std::string & label) {
+    if (label == "car") return std::make_tuple(front.car, side.car, back.car);
+    if (label == "truck") return std::make_tuple(front.truck, side.truck, back.truck);
+    if (label == "bus") return std::make_tuple(front.bus, side.bus, back.bus);
+    if (label == "trailer") return std::make_tuple(front.trailer, side.trailer, back.trailer);
+    if (label == "motorcycle")
+      return std::make_tuple(front.motorcycle, side.motorcycle, back.motorcycle);
+    if (label == "bicycle") return std::make_tuple(front.bicycle, side.bicycle, back.bicycle);
+    if (label == "pedestrian")
+      return std::make_tuple(front.pedestrian, side.pedestrian, back.pedestrian);
+    if (label == "hazard") return std::make_tuple(front.hazard, side.hazard, back.hazard);
+    if (label == "animal") return std::make_tuple(front.animal, side.animal, back.animal);
+    return std::make_tuple(front.unknown, side.unknown, back.unknown);
+  };
+
+  const auto set_object_params = [&](const std::string & label) {
+    const auto bbox_enabled = is_bbox_enabled(label);
+    const auto polygon_enabled = is_polygon_enabled(label);
+    const auto [front, side, back] = get_object_distance_thresholds(label);
+    parameters.object_type_enable_check[label] = bbox_enabled || polygon_enabled;
+    parameters.obstacle_types_map[label] =
+      to_obstacle_type_parameters(front, side, back, bbox_enabled, polygon_enabled);
+  };
+  set_object_params("unknown");
+  set_object_params("car");
+  set_object_params("truck");
+  set_object_params("bus");
+  set_object_params("trailer");
+  set_object_params("motorcycle");
+  set_object_params("bicycle");
+  set_object_params("pedestrian");
+  set_object_params("hazard");
+  set_object_params("animal");
 
   parameters.obstacle_types_map["pointcloud"] =
     to_obstacle_type_parameters(front.pointcloud, side.pointcloud, back.pointcloud);
-  parameters.obstacle_types_map["unknown"] =
-    to_obstacle_type_parameters(front.unknown, side.unknown, back.unknown);
-  parameters.obstacle_types_map["car"] = to_obstacle_type_parameters(front.car, side.car, back.car);
-  parameters.obstacle_types_map["truck"] =
-    to_obstacle_type_parameters(front.truck, side.truck, back.truck);
-  parameters.obstacle_types_map["bus"] = to_obstacle_type_parameters(front.bus, side.bus, back.bus);
-  parameters.obstacle_types_map["trailer"] =
-    to_obstacle_type_parameters(front.trailer, side.trailer, back.trailer);
-  parameters.obstacle_types_map["motorcycle"] =
-    to_obstacle_type_parameters(front.motorcycle, side.motorcycle, back.motorcycle);
-  parameters.obstacle_types_map["bicycle"] =
-    to_obstacle_type_parameters(front.bicycle, side.bicycle, back.bicycle);
-  parameters.obstacle_types_map["pedestrian"] =
-    to_obstacle_type_parameters(front.pedestrian, side.pedestrian, back.pedestrian);
-  parameters.obstacle_types_map["hazard"] =
-    to_obstacle_type_parameters(front.hazard, side.hazard, back.hazard);
-  parameters.obstacle_types_map["animal"] =
-    to_obstacle_type_parameters(front.animal, side.animal, back.animal);
-
   return parameters;
 }
 }  // namespace

@@ -230,7 +230,8 @@ protected:
     auto & p = params_.surround_obstacle_stop;
     p.use_objects = true;
     p.use_pointcloud = true;
-    p.object_types = {"car"};
+    p.target_objects.bbox = {"car"};
+    p.target_objects.polygon = {"car"};
     p.hysteresis_distance = 0.5;
     p.hysteresis_time = 0.0;
     p.ego_stopped_vel_th = 0.1;

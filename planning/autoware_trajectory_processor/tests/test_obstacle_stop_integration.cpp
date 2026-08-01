@@ -238,8 +238,8 @@ protected:
     p.obstacle_tracking.pcd_distance_th = 0.5;
     p.obstacle_tracking.grace_period = 0.5;
 
-    p.objects.object_types = {"car"};
-    p.objects.max_velocity_th = 1.0;
+    p.objects.target_objects.bbox = {"car"};
+    p.objects.target_objects.polygon = {"car"};
 
     p.pointcloud.height_buffer = 0.5;
     p.pointcloud.min_height = 0.2;
