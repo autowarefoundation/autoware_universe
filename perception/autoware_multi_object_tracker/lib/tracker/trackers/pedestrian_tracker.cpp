@@ -130,7 +130,7 @@ bool PedestrianTracker::measure(
 
   updateKinematics(object);
 
-  shape_model_.update(object, channel_info.trust_extension, motion_model_.getYawState());
+  shape_model_.update(object, channel_info.trust_extension, motion_model_.getYawState(), time);
 
   removeCache();
   return true;
@@ -154,7 +154,7 @@ bool PedestrianTracker::getTrackedObject(
     updateCache(object, time);
   }
 
-  // Export shape from extend manager (type selection: CYLINDER vs BOUNDING_BOX)
+  // Export shape from extend manager
   assembleShapeTo(object, to_publish);
 
   if (to_publish) {

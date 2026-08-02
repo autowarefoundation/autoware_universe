@@ -18,8 +18,9 @@
 #include "autoware/perception_online_evaluator/parameters.hpp"
 #include "autoware/perception_online_evaluator/perception_analytics_calculator.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
+
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 
 #include "autoware_perception_msgs/msg/object_classification.hpp"
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
@@ -46,7 +47,7 @@ using TFMessage = tf2_msgs::msg::TFMessage;
 /**
  * @brief Node for publishing perception analytics
  */
-class PerceptionAnalyticsPublisherNode : public rclcpp::Node
+class PerceptionAnalyticsPublisherNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit PerceptionAnalyticsPublisherNode(const rclcpp::NodeOptions & node_options);
@@ -56,7 +57,7 @@ public:
    * @brief callback on receiving a dynamic objects array
    * @param [in] objects_msg received dynamic object array message
    */
-  void onObjects(const PredictedObjects::ConstSharedPtr objects_msg);
+  void onObjects(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PredictedObjects) & objects_msg);
 
 private:
   // Label list
@@ -68,24 +69,24 @@ private:
   };
 
   // Subscribers and publishers
-  rclcpp::Subscription<PredictedObjects>::SharedPtr objects_sub_;
-  rclcpp::Subscription<Float64Stamped>::SharedPtr meas_to_tracked_latency_sub_;
-  rclcpp::Subscription<Float64Stamped>::SharedPtr prediction_latency_sub_;
-  rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr perception_analytics_pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(PredictedObjects) objects_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(Float64Stamped) meas_to_tracked_latency_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(Float64Stamped) prediction_latency_sub_;
+  AUTOWARE_PUBLISHER_PTR(tier4_metric_msgs::msg::MetricArray) perception_analytics_pub_;
 
   // Latency cache (by topic id)
   std::array<double, autoware::perception_diagnostics::LATENCY_TOPIC_NUM> latencies_;
 
   // TF
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
+  std::unique_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_;
+  std::shared_ptr<autoware::agnocast_wrapper::TransformListener> transform_listener_{nullptr};
 
   // Parameters
   std::shared_ptr<AnalyticsParameters> parameters_;
   void initParameter();
   rcl_interfaces::msg::SetParametersResult onParameter(
     const std::vector<rclcpp::Parameter> & parameters);
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   // Metrics Calculator
   PerceptionAnalyticsCalculator perception_analytics_calculator_;

@@ -436,4 +436,3 @@ void filterObjects(std::vector<PredictedObject> & objects, Func filter)
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__PATH_SAFETY_CHECKER__OBJECTS_FILTERING_HPP_  // NOLINT
-// clang-format on

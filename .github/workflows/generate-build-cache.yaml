@@ -72,6 +72,8 @@ jobs:
           rosdistro: ${{ env.rosdistro }}
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
           base-paths: dependency_ws
+          # Core dependencies are provided pre-built by the Docker image under /opt/autoware.
+          underlay-workspace: /opt/autoware
 
       - name: Save deps cache
         uses: actions/cache/save@v4
