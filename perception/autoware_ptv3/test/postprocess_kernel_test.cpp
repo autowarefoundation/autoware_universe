@@ -127,7 +127,10 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudDoesNotFilterConfiguredClass
 
   EXPECT_EQ(num_segmented_points, 4U);
 
-  const auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  std::sort(output_points.begin(), output_points.end(), [](const auto & lhs, const auto & rhs) {
+    return lhs.x < rhs.x;
+  });
 
   // Check that the output points have the expected xyz coordinates.
   for (std::size_t i = 0; i < num_points; ++i) {
@@ -193,21 +196,20 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndice
 
   EXPECT_EQ(num_segmented_points, 3U);
 
-  const auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  std::sort(output_points.begin(), output_points.end(), [](const auto & lhs, const auto & rhs) {
+    return lhs.x < rhs.x;
+  });
 
-  // Track label (features[1]) is filtered out.
+  // Truck label (features[1]) is filtered out.
   // Check that the output points have the expected xyz coordinates.
-  std::array<float, 3> x_values{};
-  std::array<std::uint8_t, 3> class_ids{};
+  const std::array<std::size_t, 3> feature_indices = {0, 2, 3};
   for (std::size_t i = 0; i < output_points.size(); ++i) {
-    x_values[i] = output_points[i].x;
-    class_ids[i] = output_points[i].class_id;
+    const auto feature_index = feature_indices[i];
+    EXPECT_FLOAT_EQ(output_points[i].x, features[feature_index * 4]);
+    EXPECT_FLOAT_EQ(output_points[i].y, features[feature_index * 4 + 1]);
+    EXPECT_FLOAT_EQ(output_points[i].z, features[feature_index * 4 + 2]);
   }
-
-  std::sort(x_values.begin(), x_values.end());
-  EXPECT_EQ(x_values[0], 1.0f);
-  EXPECT_EQ(x_values[1], 3.0f);
-  EXPECT_EQ(x_values[2], 4.0f);
 
   const auto car_label = static_cast<std::uint8_t>(PointCloudClassification::CAR);
   const auto flat_surface_label = static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
