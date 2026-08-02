@@ -170,8 +170,9 @@ std::optional<PullOutPath> ShiftPullOut::plan(
     shift_path.points = cropped_path.points;
     shift_path.header = planner_data->route_handler->getRouteHeader();
 
-    if (isPullOutPathCollided(
-          pull_out_path, planner_data, parameters_.shift_collision_check_distance_from_end)) {
+    if (
+      isPullOutPathCollided(
+        pull_out_path, planner_data, parameters_.shift_collision_check_distance_from_end)) {
       planner_debug_data.conditions_evaluation.emplace_back("collision");
       continue;
     }
@@ -219,10 +220,11 @@ bool ShiftPullOut::refineShiftedPathToStartPose(
       return false;
     }
 
-    if (is_within_tolerance(
-          lateral_offset,
-          autoware::motion_utils::calcLateralOffset(shifted_path.path.points, start_pose.position),
-          TOLERANCE)) {
+    if (
+      is_within_tolerance(
+        lateral_offset,
+        autoware::motion_utils::calcLateralOffset(shifted_path.path.points, start_pose.position),
+        TOLERANCE)) {
       return true;
     }
 

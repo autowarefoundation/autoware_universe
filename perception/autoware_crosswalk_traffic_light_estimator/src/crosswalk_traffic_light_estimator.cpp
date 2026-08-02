@@ -462,8 +462,9 @@ void CrosswalkTrafficLightEstimator::set_crosswalk_traffic_signal(
     };
 
     // 1. Map-based override (highest priority)
-    if (auto it = crosswalk_traffic_signal_overrides.find(id);
-        it != crosswalk_traffic_signal_overrides.end()) {
+    if (
+      auto it = crosswalk_traffic_signal_overrides.find(id);
+      it != crosswalk_traffic_signal_overrides.end()) {
       replace_out_signal_elements(base_traffic_signal_element);
       out_signal.elements[0].color = it->second;  // override color
       continue;
@@ -479,8 +480,8 @@ void CrosswalkTrafficLightEstimator::set_crosswalk_traffic_signal(
       }
 
       // Update flashing state and apply the most recent color
-      if (out_signal.elements
-            .empty()) {  // unnecessary check because msg has detection but for safety
+      if (out_signal.elements.empty()) {  // unnecessary check because msg has detection but for
+                                          // safety
         out_signal.elements.push_back(base_traffic_signal_element);
       }
       out_signal.elements[0].color =
@@ -553,8 +554,9 @@ lanelet::ConstLanelets CrosswalkTrafficLightEstimator::get_non_red_lanelets(
   lanelet::ConstLanelets non_red_lanelets{};
 
   for (const auto & lanelet : lanelets) {
-    if (is_lanelet_non_red(
-          lanelet, traffic_light_id_map, last_detect_color_, config_.use_last_detect_color)) {
+    if (
+      is_lanelet_non_red(
+        lanelet, traffic_light_id_map, last_detect_color_, config_.use_last_detect_color)) {
       non_red_lanelets.push_back(lanelet);
     }
   }

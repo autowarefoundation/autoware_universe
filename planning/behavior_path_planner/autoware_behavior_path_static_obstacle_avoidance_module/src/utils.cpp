@@ -343,20 +343,22 @@ bool isWithinFreespace(
  */
 bool isOnEgoLane(const ObjectData & object, const std::shared_ptr<RouteHandler> & route_handler)
 {
-  if (boost::geometry::within(
-        lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
-          .basicPoint(),
-        object.overhang_lanelet.polygon2d().basicPolygon())) {
+  if (
+    boost::geometry::within(
+      lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
+        .basicPoint(),
+      object.overhang_lanelet.polygon2d().basicPolygon())) {
     return true;
   }
 
   // push previous lanelet
   lanelet::ConstLanelets prev_lanelet;
   if (route_handler->getPreviousLaneletsWithinRoute(object.overhang_lanelet, &prev_lanelet)) {
-    if (boost::geometry::within(
-          lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
-            .basicPoint(),
-          prev_lanelet.front().polygon2d().basicPolygon())) {
+    if (
+      boost::geometry::within(
+        lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
+          .basicPoint(),
+        prev_lanelet.front().polygon2d().basicPolygon())) {
       return true;
     }
   }
@@ -364,18 +366,20 @@ bool isOnEgoLane(const ObjectData & object, const std::shared_ptr<RouteHandler> 
   // push next lanelet
   lanelet::ConstLanelet next_lanelet;
   if (route_handler->getNextLaneletWithinRoute(object.overhang_lanelet, &next_lanelet)) {
-    if (boost::geometry::within(
-          lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
-            .basicPoint(),
-          next_lanelet.polygon2d().basicPolygon())) {
+    if (
+      boost::geometry::within(
+        lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
+          .basicPoint(),
+        next_lanelet.polygon2d().basicPolygon())) {
       return true;
     }
   } else {
     for (const auto & lane : route_handler->getNextLanelets(object.overhang_lanelet)) {
-      if (boost::geometry::within(
-            lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
-              .basicPoint(),
-            lane.polygon2d().basicPolygon())) {
+      if (
+        boost::geometry::within(
+          lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
+            .basicPoint(),
+          lane.polygon2d().basicPolygon())) {
         return true;
       }
     }
@@ -475,9 +479,10 @@ double getShiftableRatio(
       most_left_lanelet.attribute(lanelet::AttributeName::Subtype);
     if (sub_type == "road_shoulder") {
       // assuming it's parked vehicle if its CoG is within road shoulder lanelet.
-      if (boost::geometry::within(
-            to2D(from_ros(object.getPosition())).basicPoint(),
-            most_left_lanelet.polygon2d().basicPolygon())) {
+      if (
+        boost::geometry::within(
+          to2D(from_ros(object.getPosition())).basicPoint(),
+          most_left_lanelet.polygon2d().basicPolygon())) {
         return true;
       }
     } else {
@@ -522,9 +527,10 @@ double getShiftableRatio(
       most_right_lanelet.attribute(lanelet::AttributeName::Subtype);
     if (sub_type == "road_shoulder") {
       // assuming it's parked vehicle if its CoG is within road shoulder lanelet.
-      if (boost::geometry::within(
-            to2D(from_ros(object.getPosition())).basicPoint(),
-            most_right_lanelet.polygon2d().basicPolygon())) {
+      if (
+        boost::geometry::within(
+          to2D(from_ros(object.getPosition())).basicPoint(),
+          most_right_lanelet.polygon2d().basicPolygon())) {
         return true;
       }
     } else {
@@ -1475,16 +1481,18 @@ std::vector<UUID> concatParentIds(const std::vector<UUID> & ids1, const std::vec
   std::vector<UUID> ret;
 
   for (const auto & id : ids1) {
-    if (std::any_of(
-          ret.begin(), ret.end(), [&id](const auto & exist_id) { return exist_id == id; })) {
+    if (std::any_of(ret.begin(), ret.end(), [&id](const auto & exist_id) {
+          return exist_id == id;
+        })) {
       continue;
     }
     ret.push_back(id);
   }
 
   for (const auto & id : ids2) {
-    if (std::any_of(
-          ret.begin(), ret.end(), [&id](const auto & exist_id) { return exist_id == id; })) {
+    if (std::any_of(ret.begin(), ret.end(), [&id](const auto & exist_id) {
+          return exist_id == id;
+        })) {
       continue;
     }
     ret.push_back(id);

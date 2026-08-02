@@ -775,9 +775,10 @@ bool PTv3TRT::infer(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
   if (seg_ok && should_run_seg3d) {
-    if (postProcess(
-          msg_ptr->header, should_publish_segmented_pointcloud,
-          should_publish_visualization_pointcloud, should_publish_filtered_pointcloud)) {
+    if (
+      postProcess(
+        msg_ptr->header, should_publish_segmented_pointcloud,
+        should_publish_visualization_pointcloud, should_publish_filtered_pointcloud)) {
       seg_post_ok = true;
     } else {
       RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Seg post-process failed.");

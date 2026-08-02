@@ -280,22 +280,24 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
   if (crossing_crosswalk) {
     const auto edge_points = getCrosswalkEdgePoints(crossing_crosswalk.get());
 
-    if (history_manager_.hasPotentialToReachWithHistory(
-          mutable_object, edge_points.front_center_point, edge_points.front_right_point,
-          edge_points.front_left_point, std::numeric_limits<double>::max(),
-          params_.min_crosswalk_user_velocity,
-          params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
+    if (
+      history_manager_.hasPotentialToReachWithHistory(
+        mutable_object, edge_points.front_center_point, edge_points.front_right_point,
+        edge_points.front_left_point, std::numeric_limits<double>::max(),
+        params_.min_crosswalk_user_velocity,
+        params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
       PredictedPath predicted_path =
         path_generator_->generatePathToTargetPoint(mutable_object, edge_points.front_center_point);
       predicted_path.confidence = 1.0;
       predicted_object.kinematics.predicted_paths.push_back(predicted_path);
     }
 
-    if (history_manager_.hasPotentialToReachWithHistory(
-          mutable_object, edge_points.back_center_point, edge_points.back_right_point,
-          edge_points.back_left_point, std::numeric_limits<double>::max(),
-          params_.min_crosswalk_user_velocity,
-          params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
+    if (
+      history_manager_.hasPotentialToReachWithHistory(
+        mutable_object, edge_points.back_center_point, edge_points.back_right_point,
+        edge_points.back_left_point, std::numeric_limits<double>::max(),
+        params_.min_crosswalk_user_velocity,
+        params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
       PredictedPath predicted_path =
         path_generator_->generatePathToTargetPoint(mutable_object, edge_points.back_center_point);
       predicted_path.confidence = 1.0;
@@ -310,22 +312,24 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       closest_crosswalk_opt &&
       within_minimum_distance(obj_pose.position, closest_crosswalk_opt.value())) {
       const auto edge_points = getCrosswalkEdgePoints(closest_crosswalk_opt.value());
-      if (history_manager_.hasPotentialToReachWithHistory(
-            mutable_object, edge_points.front_center_point, edge_points.front_right_point,
-            edge_points.front_left_point, params_.prediction_time_horizon * 2.0,
-            params_.min_crosswalk_user_velocity,
-            params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
+      if (
+        history_manager_.hasPotentialToReachWithHistory(
+          mutable_object, edge_points.front_center_point, edge_points.front_right_point,
+          edge_points.front_left_point, params_.prediction_time_horizon * 2.0,
+          params_.min_crosswalk_user_velocity,
+          params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
         PredictedPath predicted_path = path_generator_->generatePathToTargetPoint(
           mutable_object, edge_points.front_center_point);
         predicted_path.confidence = 1.0;
         predicted_object.kinematics.predicted_paths.push_back(predicted_path);
       }
 
-      if (history_manager_.hasPotentialToReachWithHistory(
-            mutable_object, edge_points.back_center_point, edge_points.back_right_point,
-            edge_points.back_left_point, params_.prediction_time_horizon * 2.0,
-            params_.min_crosswalk_user_velocity,
-            params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
+      if (
+        history_manager_.hasPotentialToReachWithHistory(
+          mutable_object, edge_points.back_center_point, edge_points.back_right_point,
+          edge_points.back_left_point, params_.prediction_time_horizon * 2.0,
+          params_.min_crosswalk_user_velocity,
+          params_.max_crosswalk_user_delta_yaw_threshold_for_lanelet, true)) {
         PredictedPath predicted_path =
           path_generator_->generatePathToTargetPoint(mutable_object, edge_points.back_center_point);
         predicted_path.confidence = 1.0;

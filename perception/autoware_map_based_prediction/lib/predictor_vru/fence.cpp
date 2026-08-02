@@ -44,8 +44,9 @@ void FenceModule::buildFromMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_
 {
   lanelet::LineStrings3d fences;
   for (const auto & linestring : lanelet_map_ptr->lineStringLayer) {
-    if (const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
-        type == "fence") {
+    if (
+      const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
+      type == "fence") {
       fences.emplace_back(std::const_pointer_cast<lanelet::LineStringData>(linestring.constData()));
     }
   }
@@ -106,8 +107,8 @@ PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_p
     lanelet::BasicLineString2d path_segment(
       lanelet::BasicPoints2d{predicted_path_ls[i], predicted_path_ls[i + 1]});
     for (const auto & fence : crossed_fences) {
-      if (boost::geometry::intersects(
-            path_segment, lanelet::utils::to2D(fence).basicLineString())) {
+      if (
+        boost::geometry::intersects(path_segment, lanelet::utils::to2D(fence).basicLineString())) {
         closest_cross_index = i;
       }
     }

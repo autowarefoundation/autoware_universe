@@ -96,7 +96,9 @@ GoalPlannerModule::GoalPlannerModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{
+    name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface},  // NOLINT
   parameters_{*parameters},
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
   vehicle_footprint_{vehicle_info_.createFootprint()},
@@ -315,8 +317,9 @@ void LaneParkingPlanner::onTimer()
       pull_over_path_opt
         ? std::make_optional<GoalCandidate>(pull_over_path_opt.value().modified_goal())
         : std::nullopt;
-    if (goal_planner_utils::is_on_modified_goal(
-          local_planner_data->self_odometry->pose.pose, modified_goal_opt, parameters_)) {
+    if (
+      goal_planner_utils::is_on_modified_goal(
+        local_planner_data->self_odometry->pose.pose, modified_goal_opt, parameters_)) {
       return false;
     }
     return goal_planner_utils::should_regenerate_path_candidates(
@@ -563,8 +566,9 @@ void FreespaceParkingPlanner::onTimer()
     pull_over_path_opt
       ? std::make_optional<GoalCandidate>(pull_over_path_opt.value().modified_goal())
       : std::nullopt;
-  if (goal_planner_utils::is_on_modified_goal(
-        local_planner_data->self_odometry->pose.pose, modified_goal_opt, parameters)) {
+  if (
+    goal_planner_utils::is_on_modified_goal(
+      local_planner_data->self_odometry->pose.pose, modified_goal_opt, parameters)) {
     return;
   }
 
@@ -1018,13 +1022,13 @@ bool GoalPlannerModule::canReturnToLaneParking(const PullOverContextData & conte
 
   const auto & path = lane_parking_path.full_path();
   const auto & curvatures = lane_parking_path.full_path_curvatures();
-  if (goal_planner_utils::checkObjectsCollision(
-        path, curvatures, context_data.static_target_objects, context_data.dynamic_target_objects,
-        planner_data_->parameters,
-        parameters_.object_recognition_collision_check_hard_margins.back(),
-        /*extract_static_objects=*/false, parameters_.maximum_deceleration,
-        parameters_.object_recognition_collision_check_max_extra_stopping_margin,
-        parameters_.collision_check_outer_margin_factor, debug_data_.ego_polygons_expanded)) {
+  if (
+    goal_planner_utils::checkObjectsCollision(
+      path, curvatures, context_data.static_target_objects, context_data.dynamic_target_objects,
+      planner_data_->parameters, parameters_.object_recognition_collision_check_hard_margins.back(),
+      /*extract_static_objects=*/false, parameters_.maximum_deceleration,
+      parameters_.object_recognition_collision_check_max_extra_stopping_margin,
+      parameters_.collision_check_outer_margin_factor, debug_data_.ego_polygons_expanded)) {
     return false;
   }
 
@@ -1351,13 +1355,13 @@ std::optional<PullOverPath> GoalPlannerModule::selectPullOverPath(
     const auto & path = pull_over_path_candidates[i];
     const PathWithLaneId & parking_path = path.parking_path();
     const auto & parking_path_curvatures = path.parking_path_curvatures();
-    if (goal_planner_utils::checkObjectsCollision(
-          parking_path, parking_path_curvatures, context_data.static_target_objects,
-          context_data.dynamic_target_objects, planner_data_->parameters, collision_check_margin,
-          true, parameters_.maximum_deceleration,
-          parameters_.object_recognition_collision_check_max_extra_stopping_margin,
-          parameters_.collision_check_outer_margin_factor, debug_data_.ego_polygons_expanded,
-          true)) {
+    if (
+      goal_planner_utils::checkObjectsCollision(
+        parking_path, parking_path_curvatures, context_data.static_target_objects,
+        context_data.dynamic_target_objects, planner_data_->parameters, collision_check_margin,
+        true, parameters_.maximum_deceleration,
+        parameters_.object_recognition_collision_check_max_extra_stopping_margin,
+        parameters_.collision_check_outer_margin_factor, debug_data_.ego_polygons_expanded, true)) {
       continue;
     }
     if (
@@ -2066,8 +2070,9 @@ bool FreespaceParkingPlanner::isStuck(
     req.get_pull_over_path()
       ? std::make_optional<GoalCandidate>(req.get_pull_over_path().value().modified_goal())
       : std::nullopt;
-  if (goal_planner_utils::is_on_modified_goal(
-        planner_data->self_odometry->pose.pose, modified_goal_opt, parameters)) {
+  if (
+    goal_planner_utils::is_on_modified_goal(
+      planner_data->self_odometry->pose.pose, modified_goal_opt, parameters)) {
     return false;
   }
 
@@ -2082,12 +2087,13 @@ bool FreespaceParkingPlanner::isStuck(
   const auto & path = req.get_pull_over_path().value().getCurrentPath();
   const auto curvatures = autoware::motion_utils::calcCurvature(path.points);
   std::vector<Polygon2d> ego_polygons_expanded;
-  if (goal_planner_utils::checkObjectsCollision(
-        path, curvatures, static_target_objects, dynamic_target_objects, planner_data->parameters,
-        parameters.object_recognition_collision_check_hard_margins.back(),
-        /*extract_static_objects=*/false, parameters.maximum_deceleration,
-        parameters.object_recognition_collision_check_max_extra_stopping_margin,
-        parameters.collision_check_outer_margin_factor, ego_polygons_expanded)) {
+  if (
+    goal_planner_utils::checkObjectsCollision(
+      path, curvatures, static_target_objects, dynamic_target_objects, planner_data->parameters,
+      parameters.object_recognition_collision_check_hard_margins.back(),
+      /*extract_static_objects=*/false, parameters.maximum_deceleration,
+      parameters.object_recognition_collision_check_max_extra_stopping_margin,
+      parameters.collision_check_outer_margin_factor, ego_polygons_expanded)) {
     return true;
   }
 
