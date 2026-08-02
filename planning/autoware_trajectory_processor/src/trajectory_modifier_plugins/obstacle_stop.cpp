@@ -217,8 +217,9 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
     input.current_acceleration->accel.accel.linear.x, stopping_params_.maximum_deceleration,
     stopping_params_.jerk_limit);
 
-  if (utils::stop_point_exists(
-        traj_points, target_stop_point_arc_length, params_.duplicate_check_threshold)) {
+  if (
+    utils::stop_point_exists(
+      traj_points, target_stop_point_arc_length, params_.duplicate_check_threshold)) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_clock(), 1000,
       "[TM ObstacleStop] Preceding (or duplicate) stop point exists, skip inserting stop point");

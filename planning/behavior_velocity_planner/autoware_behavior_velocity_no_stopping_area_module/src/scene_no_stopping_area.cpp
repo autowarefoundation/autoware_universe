@@ -92,8 +92,9 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
   setDistance(
     autoware::motion_utils::calcSignedArcLength(
       original_path.points, current_pose->pose.position, stop_pose.position));
-  if (planning_utils::isOverLine(
-        original_path, current_pose->pose, stop_pose, planner_param_.dead_line_margin)) {
+  if (
+    planning_utils::isOverLine(
+      original_path, current_pose->pose, stop_pose, planner_param_.dead_line_margin)) {
     // ego can't stop in front of no stopping area -> GO or OR
     state_machine_.setState(StateMachine::State::GO);
     setSafe(true);

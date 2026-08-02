@@ -160,4 +160,3 @@ std::vector<DrivableLanes> combineDrivableLanes(
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__STATIC_DRIVABLE_AREA_HPP_  // NOLINT
-// clang-format on
