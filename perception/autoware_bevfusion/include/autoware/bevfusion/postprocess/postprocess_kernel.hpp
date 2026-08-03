@@ -53,6 +53,8 @@ private:
   // BBoxes score is used as a key to sort BBoxes in descending order.
   CudaUniquePtr<float[]> bboxes_score_d_ptr_{nullptr};
   CudaUniquePtr<float[]> sorted_bboxes_score_d_ptr_{nullptr};
+  float highest_bbox_score_h_ =
+    0.f;  // To save the highest score from bboxes, used to check if any valid bboxes
 
   // Memory to save sorted Bboxes
   CudaUniquePtr<Box3D[]> bboxes_d_ptr_{nullptr};

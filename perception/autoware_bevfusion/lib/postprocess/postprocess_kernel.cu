@@ -187,6 +187,18 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
       sorted_bboxes_score_d_ptr_.get(), bboxes_d_ptr_.get(), sorted_bboxes_d_ptr_.get(),
       config_.num_proposals_, 0, sizeof(float) * 8, stream));
 
+  // Get the highest score from the sorted bboxes, which is the first element in the
+  // sorted_bboxes_score_d_ptr_
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    &highest_bbox_score_h_, sorted_bboxes_score_d_ptr_.get(), sizeof(float), cudaMemcpyDeviceToHost,
+    stream));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+  if (highest_bbox_score_h_ == 0.f) {
+    // No valid bboxes, return empty vector
+    det_boxes3d.resize(0);
+    return cudaGetLastError();
+  }
+
   // suppress by NMS
   const auto num_final_det_boxes3d = circle_nms_ptr_->circleNMS(sorted_bboxes_d_ptr_.get(), stream);
   det_boxes3d.resize(num_final_det_boxes3d);
