@@ -421,11 +421,12 @@ void MissionPlanner::on_set_preferred_primitive(
     auto & segment = current_route.segments.at(i);
     const auto & preferred_primitive = req->preferred_primitives.at(i);
 
-    if (std::none_of(
-          segment.primitives.begin(), segment.primitives.end(),
-          [&preferred_primitive](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
-            return p.id == preferred_primitive.id;
-          })) {
+    if (
+      std::none_of(
+        segment.primitives.begin(), segment.primitives.end(),
+        [&preferred_primitive](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
+          return p.id == preferred_primitive.id;
+        })) {
       res->status.success = false;
       throw service_utils::ServiceException(
         autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,

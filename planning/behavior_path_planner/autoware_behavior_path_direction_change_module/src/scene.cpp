@@ -138,7 +138,9 @@ DirectionChangeModule::DirectionChangeModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{
+    name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface},  // NOLINT
   parameters_{parameters},
   persistent_state_{persistent_state}
 {
@@ -506,9 +508,10 @@ bool DirectionChangeModule::shouldActivateModule() const
 
   const auto & ego_pose = planner_data_->self_odometry->pose.pose;
 
-  if (isEgoNearRouteGoal(
-        ego_pose, planner_data_->route_handler, parameters_->th_arrived_distance,
-        route_context_.suffix_lanelet_ids)) {
+  if (
+    isEgoNearRouteGoal(
+      ego_pose, planner_data_->route_handler, parameters_->th_arrived_distance,
+      route_context_.suffix_lanelet_ids)) {
     RCLCPP_DEBUG_EXPRESSION(
       getLogger(), parameters_->print_debug_info,
       "shouldActivateModule: ego at route goal, module INACTIVE");

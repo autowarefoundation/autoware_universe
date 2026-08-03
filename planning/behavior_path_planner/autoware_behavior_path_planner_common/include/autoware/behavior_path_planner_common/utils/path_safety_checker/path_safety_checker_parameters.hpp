@@ -254,4 +254,3 @@ using CollisionCheckDebugMap =
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__PATH_SAFETY_CHECKER__PATH_SAFETY_CHECKER_PARAMETERS_HPP_  // NOLINT
-// clang-format on
