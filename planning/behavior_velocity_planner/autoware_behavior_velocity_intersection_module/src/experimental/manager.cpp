@@ -341,8 +341,9 @@ void IntersectionModuleManager::launchNewModules(
     const auto associative_ids =
       planning_utils::getAssociativeIntersectionLanelets(ll, lanelet_map, routing_graph);
     bool has_traffic_light = false;
-    if (const auto tl_reg_elems = ll.regulatoryElementsAs<lanelet::TrafficLight>();
-        tl_reg_elems.size() != 0) {
+    if (
+      const auto tl_reg_elems = ll.regulatoryElementsAs<lanelet::TrafficLight>();
+      tl_reg_elems.size() != 0) {
       const auto tl_reg_elem = tl_reg_elems.front();
       const auto stopline_opt = tl_reg_elem->stopLine();
       if (!!stopline_opt) has_traffic_light = true;

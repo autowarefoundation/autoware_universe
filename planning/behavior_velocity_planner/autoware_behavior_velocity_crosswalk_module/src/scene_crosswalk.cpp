@@ -722,8 +722,9 @@ std::optional<double> CrosswalkModule::findEgoPassageDirectionAlongPath(
     for (unsigned i = 0; i < sparse_resample_path.points.size() - 1; ++i) {
       const auto & start = sparse_resample_path.points.at(i).point.pose.position;
       const auto & end = sparse_resample_path.points.at(i + 1).point.pose.position;
-      if (const auto intersect = autoware_utils::intersect(line_start, line_end, start, end);
-          intersect.has_value()) {
+      if (
+        const auto intersect = autoware_utils::intersect(line_start, line_end, start, end);
+        intersect.has_value()) {
         return intersect;
       }
     }
@@ -753,8 +754,9 @@ std::optional<double> CrosswalkModule::findObjectPassageDirectionAlongVehicleLan
     for (unsigned i = 0; i < path.path.size() - 1; ++i) {
       const auto & start = path.path.at(i).position;
       const auto & end = path.path.at(i + 1).position;
-      if (const auto intersect = autoware_utils::intersect(line_start, line_end, start, end);
-          intersect.has_value()) {
+      if (
+        const auto intersect = autoware_utils::intersect(line_start, line_end, start, end);
+        intersect.has_value()) {
         return std::make_optional(std::make_pair(i, intersect.value()));
       }
     }
@@ -998,8 +1000,9 @@ void CrosswalkModule::applySlowDownByOcclusion(
     detection_range);
   debug_data_.occlusion_detection_areas = detection_areas;
   debug_data_.crosswalk_origin = first_path_point_on_crosswalk;
-  if (is_crosswalk_occluded(
-        *planner_data_->occupancy_grid, detection_areas, objects_ptr->objects, planner_param_)) {
+  if (
+    is_crosswalk_occluded(
+      *planner_data_->occupancy_grid, detection_areas, objects_ptr->objects, planner_param_)) {
     if (!current_initial_occlusion_time_) {
       current_initial_occlusion_time_ = now;
     }

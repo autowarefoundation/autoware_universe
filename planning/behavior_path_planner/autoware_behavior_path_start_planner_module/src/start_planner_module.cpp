@@ -107,7 +107,9 @@ StartPlannerModule::StartPlannerModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{
+    name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface},  // NOLINT
   parameters_{parameters},
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
   is_freespace_planner_cb_running_{false}
@@ -1235,9 +1237,10 @@ void StartPlannerModule::planWithPriority(
 
     for (const auto & collision_check_margin : parameters_->collision_check_margins) {
       for (const auto & [index, planner] : order_priority) {
-        if (findPullOutPath(
-              start_pose_candidates[index], planner, refined_start_pose, goal_pose,
-              collision_check_margin, debug_data_vector)) {
+        if (
+          findPullOutPath(
+            start_pose_candidates[index], planner, refined_start_pose, goal_pose,
+            collision_check_margin, debug_data_vector)) {
           debug_data_.selected_start_pose_candidate_index = index;
           debug_data_.margin_for_start_pose_candidate = collision_check_margin;
           set_planner_evaluation_table(debug_data_vector);
@@ -1620,9 +1623,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
       back_path_from_start_pose.points, start_pose.position, -back_distance);
     if (!backed_pose) continue;
 
-    if (utils::checkCollisionBetweenFootprintAndObjects(
-          local_vehicle_footprint, *backed_pose, front_stop_objects_in_pull_out_lanes,
-          parameters_->collision_check_margin_from_front_object))
+    if (
+      utils::checkCollisionBetweenFootprintAndObjects(
+        local_vehicle_footprint, *backed_pose, front_stop_objects_in_pull_out_lanes,
+        parameters_->collision_check_margin_from_front_object))
       continue;
 
     const double backed_pose_arc_length =
@@ -1640,9 +1644,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
       continue;
     }
 
-    if (utils::checkCollisionBetweenFootprintAndObjects(
-          local_vehicle_footprint, *backed_pose, stop_objects_in_pull_out_lanes,
-          parameters_->collision_check_margins.back())) {
+    if (
+      utils::checkCollisionBetweenFootprintAndObjects(
+        local_vehicle_footprint, *backed_pose, stop_objects_in_pull_out_lanes,
+        parameters_->collision_check_margins.back())) {
       break;  // poses behind this has a collision, so break.
     }
 
