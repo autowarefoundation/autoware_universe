@@ -187,7 +187,7 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
       sorted_bboxes_score_d_ptr_.get(), bboxes_d_ptr_.get(), sorted_bboxes_d_ptr_.get(),
       config_.num_proposals_, 0, sizeof(float) * 8, stream));
 
-  // supress by NMS
+  // suppress by NMS
   const auto num_final_det_boxes3d = circle_nms_ptr_->circleNMS(sorted_bboxes_d_ptr_.get(), stream);
   det_boxes3d.resize(num_final_det_boxes3d);
 
