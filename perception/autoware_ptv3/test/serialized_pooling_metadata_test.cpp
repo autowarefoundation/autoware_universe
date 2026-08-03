@@ -206,6 +206,21 @@ PTv3Config make_test_config()
   return makeConfig(params);
 }
 
+PTv3Config make_detection_test_config()
+{
+  PTv3ConfigParams params;
+  params.use_seg3d_head = false;
+  params.use_det3d_head = true;
+  params.cloud_capacity = 8;
+  params.voxels_num = {1, 4, 8};
+  params.point_cloud_range = {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F};
+  params.voxel_size = {1.0F, 1.0F, 1.0F};
+  params.pooling_strides = {2, 2, 2, 2};
+  params.enc_channels = {8, 16, 32, 64, 128};
+  params.bbox_voxel_size = {8.0F, 8.0F, 4.0F};
+  return makeConfig(params);
+}
+
 template <typename T>
 void expect_equal(
   const std::vector<T> & actual, const std::vector<T> & expected, const std::string & name)
@@ -235,6 +250,52 @@ void expect_permutation(const std::vector<std::int64_t> & values, const std::str
 class SerializedPoolingMetadataTest : public PTv3CudaTest
 {
 };
+
+TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
+{
+  const auto config = make_detection_test_config();
+  constexpr std::size_t kNumOrders = 2;
+  const std::vector<std::int32_t> grid_coord{0, 0, 0, 15, 15, 0};
+  const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
+  const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
+
+  PreprocessCuda preprocess(config, stream_);
+  auto grid_coord_d = makeDeviceBuffer<std::int32_t>(grid_coord.size());
+  auto serialized_code_d = makeDeviceBuffer<std::int64_t>(serialized_code.size());
+  auto stage_counts_d = makeDeviceBuffer<std::int64_t>(config.pooling_strides_.size() + 1);
+  std::vector<DeviceStage> device_stages;
+  std::vector<SerializedPoolingDeviceStageView> stage_views;
+  for (std::size_t stage = 0; stage < config.pooling_strides_.size(); ++stage) {
+    device_stages.emplace_back(config.max_num_voxels_, kNumOrders);
+  }
+  for (auto & stage : device_stages) {
+    stage_views.push_back(
+      SerializedPoolingDeviceStageView{
+        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+        stage.serialized_inverse.get()});
+  }
+
+  copyToDevice(grid_coord_d.get(), grid_coord);
+  copyToDevice(serialized_code_d.get(), serialized_code);
+  preprocess.generateSerializedPoolingMetadata(
+    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
+  ASSERT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
+
+  const auto stage_counts = copyToHost(stage_counts_d.get(), config.pooling_strides_.size() + 1);
+  // TODO(mojomex): generalize to other detection feature depth settings.
+  const std::size_t point_grid_coord_3_stage = 2;
+  const auto point_grid_coord_3_count =
+    static_cast<std::size_t>(stage_counts[point_grid_coord_3_stage + 1]);
+  const auto point_grid_coord_3 = copyToHost(
+    device_stages[point_grid_coord_3_stage].grid_coord.get(), point_grid_coord_3_count * 3);
+  for (std::size_t i = 0; i < point_grid_coord_3_count; ++i) {
+    EXPECT_GE(point_grid_coord_3[i * 3 + 0], 0);
+    EXPECT_GE(point_grid_coord_3[i * 3 + 1], 0);
+    EXPECT_LT(point_grid_coord_3[i * 3 + 0], static_cast<std::int32_t>(config.det_grid_x_size_));
+    EXPECT_LT(point_grid_coord_3[i * 3 + 1], static_cast<std::int32_t>(config.det_grid_y_size_));
+  }
+}
 
 TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
 {
