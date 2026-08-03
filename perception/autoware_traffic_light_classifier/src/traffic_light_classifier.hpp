@@ -29,7 +29,7 @@
 
 namespace autoware::traffic_light
 {
-// ROS-free classification orchestration extracted from TrafficLightClassifierNodelet.
+// ROS-free classification orchestration extracted from TrafficLightClassifierNode.
 // Owns the classifier backend and the per-ROI filtering / exposure / UNKNOWN-handling
 // logic; the node remains a thin adapter that handles I/O (params, pub/sub, diagnostics).
 class TrafficLightClassifier
