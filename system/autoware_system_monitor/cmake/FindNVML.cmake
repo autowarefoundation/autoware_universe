@@ -24,7 +24,7 @@ if(NOT NVML_INCLUDE_DIRS)
 endif()
 
 if(NOT NVML_LIBRARIES)
-  # Fall back to the CUDA stub (SONAME is libnvidia-ml.so.1) when only the runtime driver is available.
+  # Fall back to the CUDA stub (libnvidia-ml.so.1) when only the runtime driver is available.
   set(NVML_STUB_PATHS "")
   if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     list(APPEND NVML_STUB_PATHS /usr/local/cuda/lib64/stubs)
