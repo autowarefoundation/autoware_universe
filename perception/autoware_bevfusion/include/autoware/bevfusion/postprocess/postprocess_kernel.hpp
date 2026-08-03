@@ -62,9 +62,17 @@ private:
 
   std::size_t sort_workspace_size_ = 0;
   CudaUniquePtr<std::uint8_t[]> sort_workspace_d_{nullptr};
+  std::size_t flagged_workspace_size_ = 0;
+  CudaUniquePtr<std::uint8_t[]> flagged_workspace_d_{nullptr};
 
   // For Circle NMS
   std::unique_ptr<CircleNMS> circle_nms_ptr_{nullptr};
+  CudaUniquePtr<std::size_t[]> num_selector_d_ptr_{nullptr};  // To save the number of selection
+  CudaUniquePtr<Box3D[]> filtered_bboxes_d_ptr_{
+    nullptr};  // To save bboxes after filtering by suppression masks.
+  CudaUniquePtr<std::uint8_t[]> final_keep_mask_d_{
+    nullptr};  // To save the final keep mask after NMS
+  std::size_t num_final_det_boxes3d = 0;
 };
 
 }  // namespace autoware::bevfusion

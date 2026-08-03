@@ -117,10 +117,11 @@ CircleNMS::CircleNMS(const BEVFusionConfig & config, cudaStream_t stream)
     final_keep_mask_d_.get(), 0, config_.num_proposals_ * col_blocks_ * sizeof(std::uint64_t),
     stream_));
 
-  final_keep_mask_h_.reserve(config_.num_proposals_ * col_blocks_);
+  final_keep_mask_h_.resize(config_.num_proposals_ * col_blocks_);
 }
 
-std::size_t CircleNMS::circleNMS(Box3D * descending_sorted_bboxes, cudaStream_t stream)
+std::vector<std::uint8_t> CircleNMS::circleNMS(
+  Box3D * descending_sorted_bboxes, cudaStream_t stream)
 {
   CHECK_CUDA_ERROR(circleNMS_launch(
     descending_sorted_bboxes, config_.num_proposals_, col_blocks_,
@@ -134,7 +135,7 @@ std::size_t CircleNMS::circleNMS(Box3D * descending_sorted_bboxes, cudaStream_t 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
   // generate keep_mask
   std::vector<std::uint64_t> remv_h(col_blocks_);
-  std::vector<bool> keep_mask_h(config_.num_proposals_);
+  std::vector<std::uint8_t> keep_mask_h(config_.num_proposals_);
   std::size_t num_to_keep = 0;
   for (std::size_t i = 0; i < config_.num_proposals_; i++) {
     auto nblock = i / THREADS_PER_BLOCK_NMS;
@@ -152,7 +153,7 @@ std::size_t CircleNMS::circleNMS(Box3D * descending_sorted_bboxes, cudaStream_t 
     }
   }
 
-  return num_to_keep;
+  return keep_mask_h;
 }
 
 }  // namespace autoware::bevfusion

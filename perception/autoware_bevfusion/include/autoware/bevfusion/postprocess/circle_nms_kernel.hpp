@@ -24,6 +24,7 @@
 #include <cuda_runtime_api.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace autoware::bevfusion
@@ -36,7 +37,9 @@ public:
   explicit CircleNMS(const BEVFusionConfig & config, cudaStream_t stream);
   // Non-maximum suppression (NMS) uses the distance on the xy plane instead of
   // intersection over union (IoU) to suppress overlapped objects.
-  std::size_t circleNMS(Box3D * descending_sorted_bboxes, cudaStream_t stream);
+  // Note: the mask uses std::uint8_t (not bool) because std::vector<bool> is bit-packed and
+  // cannot be copied to the device as a contiguous byte array.
+  std::vector<std::uint8_t> circleNMS(Box3D * descending_sorted_bboxes, cudaStream_t stream);
 
 private:
   BEVFusionConfig config_;
