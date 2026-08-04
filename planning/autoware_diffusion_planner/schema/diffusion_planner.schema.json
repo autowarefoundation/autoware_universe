@@ -20,10 +20,10 @@
               "enum": ["single_step", "multi_step"],
               "description": "Inference model type"
             },
-            "args_path": {
+            "base_model_directory": {
               "type": "string",
-              "default": "$(var data_path)/diffusion_planner/v5.0/args.json",
-              "description": "Path to model argument/configuration file"
+              "default": "$(var data_path)/diffusion_planner/v5.0",
+              "description": "Base directory containing ONNX models and diffusion_planner.param.json"
             },
             "backend": {
               "type": "string",
@@ -44,33 +44,12 @@
             },
             "single_step_model": {
               "type": "object",
-              "properties": {
-                "onnx_model_path": {
-                  "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner.onnx",
-                  "description": "Path to the single-step ONNX model file"
-                }
-              },
-              "required": ["onnx_model_path"]
+              "properties": {},
+              "additionalProperties": false
             },
             "multi_step_model": {
               "type": "object",
               "properties": {
-                "encoder_onnx_model_path": {
-                  "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_encoder.onnx",
-                  "description": "Path to the encoder ONNX model file"
-                },
-                "decoder_onnx_model_path": {
-                  "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_decoder.onnx",
-                  "description": "Path to the decoder ONNX model file"
-                },
-                "turn_indicator_onnx_model_path": {
-                  "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_turn_indicator.onnx",
-                  "description": "Path to the turn indicator ONNX model file"
-                },
                 "dpm_solver_steps": {
                   "type": "integer",
                   "default": 10,
@@ -78,17 +57,12 @@
                   "description": "Number of DPM-Solver denoising steps. The final denoise-to-zero step is added separately."
                 }
               },
-              "required": [
-                "encoder_onnx_model_path",
-                "decoder_onnx_model_path",
-                "turn_indicator_onnx_model_path",
-                "dpm_solver_steps"
-              ]
+              "required": ["dpm_solver_steps"]
             }
           },
           "required": [
             "type",
-            "args_path",
+            "base_model_directory",
             "backend",
             "precision",
             "use_cuda_graph",

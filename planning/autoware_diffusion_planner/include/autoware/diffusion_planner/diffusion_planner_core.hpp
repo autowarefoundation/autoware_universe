@@ -116,6 +116,7 @@ struct DiffusionPlannerParams
   std::string decoder_model_path;
   std::string turn_indicator_model_path;
   std::string args_path;
+  std::string base_model_directory;
   std::string plugins_path;
   std::string backend;
   std::string trt_precision;
@@ -177,6 +178,8 @@ public:
    * @param params New parameters to apply
    */
   void update_params(const DiffusionPlannerParams & params);
+
+  void resolve_model_paths();
 
   /**
    * @brief Prepare frame context for inference.
