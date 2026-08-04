@@ -146,8 +146,9 @@ __global__ void createVisualizationPointcloudKernel(
 __global__ void createSegmentationPointcloudKernel(
   const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
   const std::uint8_t * class_id_to_classification, const std::uint32_t * filter_class_indices,
-  std::size_t num_filter_classes, std::uint32_t * output_num_points,
-  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
+  std::size_t num_filter_classes, float filter_class_probability_threshold,
+  std::uint32_t * output_num_points, point_types::PointXYZCPE * output_points,
+  std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -164,15 +165,17 @@ __global__ void createSegmentationPointcloudKernel(
   // output buffer is raw device memory, hence the explicit assignment below.
   float entropy = CUDART_NAN_F;
   if (has_valid_label) {
+    const float * point_probs = &pred_probs[idx * num_classes];
     for (std::size_t i = 0; i < num_filter_classes; ++i) {
-      if (filter_class_indices[i] == static_cast<std::uint32_t>(label)) {
+      const auto class_idx = filter_class_indices[i];
+      if (point_probs[class_idx] >= filter_class_probability_threshold) {
         return;
       }
     }
 
     entropy = 0.0f;
     for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-      const auto probability = pred_probs[idx * num_classes + class_idx];
+      const auto probability = point_probs[class_idx];
       if (probability > 0.0f) {
         entropy -= probability * logf(probability);
       }
@@ -336,8 +339,8 @@ template <typename InputPointT, typename OutputPointT>
 __global__ void createFilteredPointcloudKernel(
   const InputPointT * input_points, const float * pred_probs,
   const std::uint32_t * filter_class_indices, std::size_t num_filter_classes,
-  std::size_t num_classes, std::uint32_t * output_num_points, OutputPointT * output_points,
-  std::size_t num_points)
+  float filter_class_probability_threshold, std::size_t num_classes,
+  std::uint32_t * output_num_points, OutputPointT * output_points, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -345,18 +348,10 @@ __global__ void createFilteredPointcloudKernel(
   }
 
   const float * point_probs = &pred_probs[num_classes * idx];
-  std::uint32_t label = 0U;
-  float max_probability = point_probs[0];
-  for (std::uint32_t class_idx = 1U; class_idx < num_classes; ++class_idx) {
-    if (point_probs[class_idx] > max_probability) {
-      max_probability = point_probs[class_idx];
-      label = class_idx;
-    }
-  }
-
   bool keep_point = true;
   for (std::size_t i = 0; i < num_filter_classes; ++i) {
-    if (filter_class_indices[i] == label) {
+    const auto class_idx = filter_class_indices[i];
+    if (point_probs[class_idx] >= filter_class_probability_threshold) {
       keep_point = false;
       break;
     }
@@ -374,14 +369,14 @@ template <typename InputPointT, typename OutputPointT>
 void createFilteredPointcloudTyped(
   cudaStream_t stream, std::uint32_t threads_per_block, const void * compact_input_points,
   const float * pred_probs, const std::uint32_t * filter_class_indices,
-  std::size_t num_filter_classes, std::size_t num_classes, std::uint32_t * output_num_points,
-  void * output_points, std::size_t num_points)
+  std::size_t num_filter_classes, float filter_class_probability_threshold, std::size_t num_classes,
+  std::uint32_t * output_num_points, void * output_points, std::size_t num_points)
 {
   const auto num_blocks = divup(num_points, threads_per_block);
   createFilteredPointcloudKernel<<<num_blocks, threads_per_block, 0, stream>>>(
     static_cast<const InputPointT *>(compact_input_points), pred_probs, filter_class_indices,
-    num_filter_classes, num_classes, output_num_points, static_cast<OutputPointT *>(output_points),
-    num_points);
+    num_filter_classes, filter_class_probability_threshold, num_classes, output_num_points,
+    static_cast<OutputPointT *>(output_points), num_points);
 }
 
 PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
@@ -440,7 +435,8 @@ std::size_t PostprocessCuda::createSegmentationPointcloud(
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
     class_id_to_classification_d_.get(), filter_class_indices_d_.get(), num_filter_classes,
-    filtered_mask_d_.get(), output_points, num_classes, num_points);
+    config_.filter_class_probability_threshold_, filtered_mask_d_.get(), output_points, num_classes,
+    num_points);
 
   std::uint32_t num_segmented_points = 0;
   cudaMemcpyAsync(
@@ -494,20 +490,23 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
         case CloudFormat::XYZIRCAEDT:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+            output_points, num_points);
           break;
         case CloudFormat::XYZIRC:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+            output_points, num_points);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+            output_points, num_points);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -518,14 +517,16 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
         case CloudFormat::XYZIRADRT:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+            output_points, num_points);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+            output_points, num_points);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -536,14 +537,16 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
         case CloudFormat::XYZIRC:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+            output_points, num_points);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+            output_points, num_points);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -555,8 +558,9 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
       }
       createFilteredPointcloudTyped<CloudPointTypeXYZI, CloudPointTypeXYZI>(
         stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-        filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-        filtered_mask_d_.get(), output_points, num_points);
+        filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
+        config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
+        output_points, num_points);
       break;
     default:
       throw std::runtime_error("Unsupported input point cloud format.");

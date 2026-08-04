@@ -49,6 +49,7 @@ PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
     255,  // drivable_flat
   };
   params.filter_classes = {"truck"};
+  params.filter_class_probability_threshold = 0.8F;
   params.filter_output_format = "xyzi";
   params.filter_apply_to_segmentation = filter_apply_to_segmentation;
   params.source_reconstruction = "none";
@@ -76,6 +77,7 @@ protected:
       255,  // drivable_flat
     };
     params.filter_classes = {"truck"};
+    params.filter_class_probability_threshold = 0.8F;
     params.filter_apply_to_segmentation = filter_apply_to_segmentation;
 
     return makeConfig(params);
@@ -229,18 +231,78 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndice
   EXPECT_TRUE(std::isnan(output_points[2].entropy));
 }
 
-TEST_F(PostprocessKernelTest, FilteredPointcloudFiltersOnlyArgmaxClass)
+TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersByClassProbabilityThresholdWhenEnabled)
 {
-  const auto config = makeTestConfig();
+  PTv3ConfigParams params;
+  params.segmentation_class_names = {"car", "truck", "drivable_flat"};
+  params.palette = {
+    255, 0,
+    0,  // car
+    0,   255,
+    0,  // truck
+    0,   0,
+    255,  // drivable_flat
+  };
+  params.filter_classes = {"truck"};
+  params.filter_class_probability_threshold = 0.25F;
+  params.filter_apply_to_segmentation = true;
+  const auto config = makeConfig(params);
+  PostprocessCuda postprocess(config, stream_);
+
+  const std::vector<float> features = {
+    1.0f, 10.0f, 100.0f, 0.0f,  // truck probability below threshold: kept
+    2.0f, 20.0f, 200.0f, 0.0f,  // truck probability above threshold: filtered
+    3.0f, 30.0f, 300.0f, 0.0f,  // car label with high truck probability: filtered
+  };
+  const std::vector<std::int64_t> labels = {0, 1, 0};
+  const std::vector<float> probs = {
+    0.7f, 0.2f, 0.1f, 0.2f, 0.6f, 0.2f, 0.4f, 0.3f, 0.3f,
+  };
+  const auto num_points = labels.size();
+
+  auto features_d = makeDeviceBuffer<float>(features.size());
+  auto labels_d = makeDeviceBuffer<std::int64_t>(labels.size());
+  auto probs_d = makeDeviceBuffer<float>(probs.size());
+  auto output_points_d = makeDeviceBuffer<PointXYZCPE>(num_points);
+
+  copyToDevice(features_d.get(), features);
+  copyToDevice(labels_d.get(), labels);
+  copyToDevice(probs_d.get(), probs);
+
+  const auto num_segmented_points = postprocess.createSegmentationPointcloud(
+    features_d.get(), labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
+    num_points);
+
+  EXPECT_EQ(num_segmented_points, 1U);
+
+  const auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  EXPECT_FLOAT_EQ(output_points[0].x, 1.0f);
+}
+
+TEST_F(PostprocessKernelTest, FilteredPointcloudFiltersByClassProbabilityThreshold)
+{
+  PTv3ConfigParams params;
+  params.segmentation_class_names = {"car", "truck", "drivable_flat"};
+  params.palette = {
+    255, 0,
+    0,  // car
+    0,   255,
+    0,  // truck
+    0,   0,
+    255,  // drivable_flat
+  };
+  params.filter_classes = {"truck"};
+  params.filter_class_probability_threshold = 0.25F;
+  const auto config = makeConfig(params);
   PostprocessCuda postprocess(config, stream_);
 
   constexpr std::size_t num_points = 3;
   constexpr std::size_t num_classes = 3;
 
   const std::vector<CloudPointTypeXYZI> input_points = {
-    {1.0f, 10.0f, 100.0f, 0.1f},  // car argmax: kept despite truck probability
-    {2.0f, 20.0f, 200.0f, 0.2f},  // truck argmax: filtered
-    {3.0f, 30.0f, 300.0f, 0.3f},  // drivable_flat argmax: kept despite truck probability
+    {1.0f, 10.0f, 100.0f, 0.1f},  // truck probability below threshold: kept
+    {2.0f, 20.0f, 200.0f, 0.2f},  // truck probability above threshold: filtered
+    {3.0f, 30.0f, 300.0f, 0.3f},  // drivable_flat argmax, truck above threshold: filtered
   };
   const std::vector<float> pred_probs = {
     0.7f, 0.2f, 0.1f, 0.2f, 0.6f, 0.2f, 0.1f, 0.3f, 0.6f,
@@ -257,17 +319,16 @@ TEST_F(PostprocessKernelTest, FilteredPointcloudFiltersOnlyArgmaxClass)
     input_points_d.get(), CloudFormat::XYZI, CloudFormat::XYZI, pred_probs_d.get(),
     output_points_d.get(), num_classes, num_points);
 
-  EXPECT_EQ(num_filtered_points, 2U);
+  EXPECT_EQ(num_filtered_points, 1U);
 
   const auto output_points = copyToHost(output_points_d.get(), num_filtered_points);
-  std::array<float, 2> x_values{};
+  std::array<float, 1> x_values{};
   for (std::size_t i = 0; i < output_points.size(); ++i) {
     x_values[i] = output_points[i].x;
   }
 
   std::sort(x_values.begin(), x_values.end());
   EXPECT_EQ(x_values[0], 1.0f);
-  EXPECT_EQ(x_values[1], 3.0f);
 }
 
 }  // namespace test
