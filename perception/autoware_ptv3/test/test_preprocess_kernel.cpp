@@ -225,12 +225,8 @@ TEST_F(PreprocessKernelTest, CroppedVoxelCoordsStayInsideGridBounds)
   params.point_cloud_range = {0.0F, 0.0F, 0.0F, 4.0F, 4.0F, 4.0F};
 
   const std::vector<CloudPointTypeXYZI> host_points{
-    {0.0F, 0.0F, 0.0F, 1.0F},
-    {3.999F, 3.999F, 3.999F, 2.0F},
-    {4.0F, 0.0F, 0.0F, 3.0F},
-    {0.0F, 4.0F, 0.0F, 4.0F},
-    {0.0F, 0.0F, 4.0F, 5.0F},
-    {-0.001F, 0.0F, 0.0F, 6.0F},
+    {0.0F, 0.0F, 0.0F, 1.0F}, {3.999F, 3.999F, 3.999F, 2.0F}, {4.0F, 0.0F, 0.0F, 3.0F},
+    {0.0F, 4.0F, 0.0F, 4.0F}, {0.0F, 0.0F, 4.0F, 5.0F},       {-0.001F, 0.0F, 0.0F, 6.0F},
   };
 
   const auto result = runGenerateFeatures(params, host_points, true);
