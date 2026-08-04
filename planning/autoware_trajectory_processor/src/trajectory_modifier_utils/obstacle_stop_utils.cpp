@@ -557,6 +557,12 @@ void ObjectFilter::filter_by_target_area(
   };
 
   auto get_object_polygon = [&](const auto & pose, const auto & shape) {
+    if (shape.type != Shape::POLYGON) {
+      auto s = shape;
+      s.dimensions.x += safety_buffer_;
+      s.dimensions.y += safety_buffer_;
+      return autoware_utils::to_polygon2d(pose, s);
+    }
     const auto polygon = autoware_utils::to_polygon2d(pose, shape);
     return autoware_utils::expand_polygon(polygon, safety_buffer_);
   };
