@@ -24,7 +24,6 @@
 #include <autoware/trajectory_follower_base/control_horizon.hpp>
 
 #include "autoware_control_msgs/msg/lateral.hpp"
-#include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
@@ -40,7 +39,6 @@ namespace autoware::motion::control::mpc_lateral_controller
 
 using autoware::motion::control::trajectory_follower::LateralHorizon;
 using autoware_control_msgs::msg::Lateral;
-using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::SteeringReport;
@@ -182,8 +180,7 @@ protected:
 /* cppcheck-suppress syntaxError */
 TEST_F(MPCTest, InitializeAndCalculate)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   EXPECT_FALSE(mpc->hasVehicleModel());
   EXPECT_FALSE(mpc->hasQPSolver());
 
@@ -200,24 +197,19 @@ TEST_F(MPCTest, InitializeAndCalculate)
   initializeMPC(*mpc);
 
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(mpc_result.result);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
 TEST_F(MPCTest, InitializeAndCalculateRightTurn)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   EXPECT_FALSE(mpc->hasVehicleModel());
   EXPECT_FALSE(mpc->hasQPSolver());
 
@@ -237,24 +229,19 @@ TEST_F(MPCTest, InitializeAndCalculateRightTurn)
   mpc->setReferenceTrajectory(dummy_right_turn_trajectory, trajectory_param, current_kinematics);
 
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_LT(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_LT(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_LT(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_LT(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(mpc_result.result);
+  EXPECT_LT(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+  EXPECT_LT(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+  EXPECT_LT(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+  EXPECT_LT(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
 TEST_F(MPCTest, OsqpCalculate)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   initializeMPC(*mpc);
   const auto current_kinematics = makeOdometry(dummy_straight_trajectory.points.front().pose, 0.0);
   mpc->setReferenceTrajectory(dummy_straight_trajectory, trajectory_param, current_kinematics);
@@ -264,30 +251,24 @@ TEST_F(MPCTest, OsqpCalculate)
   mpc->setVehicleModel(vehicle_model_ptr);
   ASSERT_TRUE(mpc->hasVehicleModel());
 
-  std::shared_ptr<QPSolverInterface> qpsolver_ptr =
-    std::make_shared<QPSolverOSQP>(logger, node.get_clock());
+  std::shared_ptr<QPSolverInterface> qpsolver_ptr = std::make_shared<QPSolverOSQP>();
   mpc->setQPSolver(qpsolver_ptr);
   ASSERT_TRUE(mpc->hasQPSolver());
 
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
-  EXPECT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  EXPECT_TRUE(mpc_result.result);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
 TEST_F(MPCTest, OsqpCalculateRightTurn)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   initializeMPC(*mpc);
   const auto current_kinematics =
     makeOdometry(dummy_right_turn_trajectory.points.front().pose, 0.0);
@@ -298,30 +279,24 @@ TEST_F(MPCTest, OsqpCalculateRightTurn)
   mpc->setVehicleModel(vehicle_model_ptr);
   ASSERT_TRUE(mpc->hasVehicleModel());
 
-  std::shared_ptr<QPSolverInterface> qpsolver_ptr =
-    std::make_shared<QPSolverOSQP>(logger, node.get_clock());
+  std::shared_ptr<QPSolverInterface> qpsolver_ptr = std::make_shared<QPSolverOSQP>();
   mpc->setQPSolver(qpsolver_ptr);
   ASSERT_TRUE(mpc->hasQPSolver());
 
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_LT(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_LT(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_LT(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_LT(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(mpc_result.result);
+  EXPECT_LT(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+  EXPECT_LT(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+  EXPECT_LT(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+  EXPECT_LT(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
 TEST_F(MPCTest, KinematicsNoDelayCalculate)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   initializeMPC(*mpc);
 
   std::shared_ptr<VehicleModelInterface> vehicle_model_ptr =
@@ -339,24 +314,19 @@ TEST_F(MPCTest, KinematicsNoDelayCalculate)
   const auto current_kinematics = makeOdometry(dummy_straight_trajectory.points.front().pose, 0.0);
   mpc->setReferenceTrajectory(dummy_straight_trajectory, trajectory_param, current_kinematics);
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(mpc_result.result);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
 TEST_F(MPCTest, KinematicsNoDelayCalculateRightTurn)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   initializeMPC(*mpc);
   const auto current_kinematics =
     makeOdometry(dummy_right_turn_trajectory.points.front().pose, 0.0);
@@ -375,24 +345,19 @@ TEST_F(MPCTest, KinematicsNoDelayCalculateRightTurn)
   mpc->initializeLowPassFilters(steering_lpf_cutoff_hz, error_deriv_lpf_cutoff_hz);
 
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_LT(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_LT(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_LT(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_LT(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(mpc_result.result);
+  EXPECT_LT(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+  EXPECT_LT(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+  EXPECT_LT(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+  EXPECT_LT(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
 TEST_F(MPCTest, DynamicCalculate)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   initializeMPC(*mpc);
 
   std::shared_ptr<VehicleModelInterface> vehicle_model_ptr =
@@ -405,24 +370,19 @@ TEST_F(MPCTest, DynamicCalculate)
   ASSERT_TRUE(mpc->hasQPSolver());
 
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(mpc_result.result);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+  EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
 TEST_F(MPCTest, MultiSolveWithBuffer)
 {
-  auto node = rclcpp::Node("mpc_test_node", rclcpp::NodeOptions{});
-  auto mpc = std::make_unique<MPC>(node);
+  auto mpc = std::make_unique<MPC>();
   std::shared_ptr<VehicleModelInterface> vehicle_model_ptr =
     std::make_shared<KinematicsBicycleModel>(wheelbase, steer_limit, steer_tau);
   mpc->setVehicleModel(vehicle_model_ptr);
@@ -434,43 +394,47 @@ TEST_F(MPCTest, MultiSolveWithBuffer)
 
   mpc->m_input_buffer = {0.0, 0.0, 0.0};
   // Calculate MPC
-  Lateral ctrl_cmd;
-  Trajectory pred_traj;
-  Float32MultiArrayStamped diag;
-  LateralHorizon ctrl_cmd_horizon;
   const auto odom = makeOdometry(pose_zero, default_velocity);
 
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
-  ASSERT_TRUE(
-    mpc->calculateMPC(neutral_steer, odom, ctrl_cmd, pred_traj, diag, ctrl_cmd_horizon).result);
-  EXPECT_EQ(ctrl_cmd.steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd.steering_tire_rotation_rate, 0.0f);
-  EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
-  EXPECT_EQ(ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
-  EXPECT_EQ(ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  {
+    const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+    ASSERT_TRUE(mpc_result.result);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+    EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  }
+  {
+    const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+    ASSERT_TRUE(mpc_result.result);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+    EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  }
+  {
+    const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+    ASSERT_TRUE(mpc_result.result);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+    EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  }
+  {
+    const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+    ASSERT_TRUE(mpc_result.result);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd.steering_tire_rotation_rate, 0.0f);
+    EXPECT_EQ(mpc->m_input_buffer.size(), size_t(3));
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.size(), param.prediction_horizon);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_angle, 0.0f);
+    EXPECT_EQ(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
+  }
 }
 }  // namespace autoware::motion::control::mpc_lateral_controller
