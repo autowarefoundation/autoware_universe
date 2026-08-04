@@ -25,6 +25,7 @@ from autoware_perception_msgs.msg import TrafficLightElement
 from autoware_perception_msgs.msg import TrafficLightGroup
 from autoware_perception_msgs.msg import TrafficLightGroupArray
 from autoware_vehicle_msgs.msg import ControlModeReport
+from autoware_vehicle_msgs.msg import GearCommand
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
 from autoware_vehicle_msgs.msg import HazardLightsReport
@@ -106,7 +107,15 @@ MPS_TO_KMH = 3.6
 # published status reports all describe the same simulation step.
 EgoState = namedtuple(
     "EgoState",
-    ["transform", "velocity", "angular_velocity", "steer_angle", "control", "light_state"],
+    [
+        "transform",
+        "velocity",
+        "angular_velocity",
+        "steer_angle",
+        "control",
+        "light_state",
+        "gear",
+    ],
 )
 
 # CARLA blueprint base_type, lower-cased -> Autoware label (anything unlisted falls back to CAR)
@@ -118,6 +127,12 @@ BASE_TYPE_TO_LABEL = {
     "motorcycle": ObjectClassification.MOTORCYCLE,
     "bicycle": ObjectClassification.BICYCLE,
 }
+
+# Gears that put the vehicle in reverse, and gears in which it must not pull
+# away. GearCommand and GearReport share the same constant numbering, so a
+# command value can be reported back unchanged.
+REVERSE_GEARS = (GearCommand.REVERSE, GearCommand.REVERSE_2)
+STANDSTILL_GEARS = (GearCommand.NONE, GearCommand.NEUTRAL, GearCommand.PARK)
 
 
 class carla_ros2_interface(object):
@@ -298,6 +313,9 @@ class carla_ros2_interface(object):
             self.hazard_lights_callback,
             1,
         )
+        self.sub_gear = self.ros2_node.create_subscription(
+            GearCommand, "/control/command/gear_cmd", self.gear_callback, 1
+        )
         self.current_control = carla.VehicleControl()
 
     def _load_sensor_configuration(self):
@@ -474,6 +492,9 @@ class carla_ros2_interface(object):
         self.ground_truth_tick_id = None
         self.ground_truth_static = {}
         self.current_control = carla.VehicleControl()
+        # Until a gear command arrives the bridge keeps reporting DRIVE, which
+        # is what it did unconditionally before gear commands were handled.
+        self.current_gear = GearCommand.DRIVE
         self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
         self.current_hazard_lights = HazardLightsCommand.DISABLE
 
@@ -1070,6 +1091,7 @@ class carla_ros2_interface(object):
             steer_norm = max(-1.0, min(1.0, steer_norm))
             out_cmd.steer = self.first_order_steering(steer_norm)
             out_cmd.brake = in_cmd.actuation.brake_cmd
+            self._apply_gear(out_cmd, self.current_gear)
             self.current_control = out_cmd
 
     def _physics_max_wheel_steer_angle_rad(self):
@@ -1180,6 +1202,29 @@ class carla_ros2_interface(object):
         curve_speed = abs(speed_mps) * self._steering_curve_speed_scale
         return float(numpy.interp(curve_speed, speeds, factors))
 
+    @staticmethod
+    def _apply_gear(control, gear):
+        """Apply the selected gear to a CARLA control command.
+
+        CARLA has no gear selector of its own for the throttle direction, so
+        reverse is a flag on the control command. In a gear the vehicle cannot
+        pull away in, the accelerator is ignored and the brake is held instead,
+        so the bridge never drives forward while reporting PARK or NEUTRAL.
+        """
+        control.reverse = gear in REVERSE_GEARS
+        if gear in STANDSTILL_GEARS:
+            control.throttle = 0.0
+            control.brake = 1.0
+
+    def gear_callback(self, in_cmd):
+        """Store gear command and apply it to the standing control (thread-safe)."""
+        with self._state_lock:
+            self.current_gear = in_cmd.command
+            # A gear command can arrive between two actuation commands, and the
+            # vehicle keeps being driven by the control built for the previous
+            # one until the next arrives.
+            self._apply_gear(self.current_control, self.current_gear)
+
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
         with self._state_lock:
@@ -1233,6 +1278,7 @@ class carla_ros2_interface(object):
                 ),
                 control=self.ego_actor.get_control(),
                 light_state=int(self.ego_actor.get_light_state()),
+                gear=self.current_gear,
             )
 
     @staticmethod
@@ -1329,7 +1375,7 @@ class carla_ros2_interface(object):
 
         out_gear_state = GearReport()
         out_gear_state.stamp = stamp
-        out_gear_state.report = GearReport.DRIVE
+        out_gear_state.report = ego.gear
 
         out_ctrl_mode = ControlModeReport()
         out_ctrl_mode.stamp = stamp
