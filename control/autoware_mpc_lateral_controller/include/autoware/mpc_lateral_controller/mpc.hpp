@@ -238,6 +238,8 @@ private:
   double m_yaw_error_prev = 0.0;       // Previous heading error for derivative calculation.
 
   bool m_is_forward_shift = true;  // Flag indicating if the shift is in the forward direction.
+  bool m_reference_trajectory_has_steering =
+    false;  // True when the complete received trajectory contains a nonzero steering state.
   std::optional<double> m_prev_nearest_time{};  // Stabilized nearest trajectory time.
 
   rclcpp::Publisher<Trajectory>::SharedPtr m_debug_frenet_predicted_trajectory_pub;
@@ -464,6 +466,9 @@ public:
 
   bool m_use_temporal_trajectory =
     false;  // Flag to use temporal trajectory mode (true: use timestamps, false: spatial)
+
+  bool m_use_trajectory_steering_for_feedforward =
+    false;  // Prefer temporal trajectory steering when the received field is populated.
 
   bool m_publish_debug_trajectories = false;  // Flag to publish predicted trajectory and
                                               // resampled reference trajectory for debug purpose

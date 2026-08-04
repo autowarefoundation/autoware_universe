@@ -162,6 +162,8 @@ MpcLateralController::MpcLateralController(
     throw std::invalid_argument(
       "Invalid trajectory_reference_mode. Expected \"spatial\" or \"temporal\".");
   }
+  m_mpc->m_use_trajectory_steering_for_feedforward =
+    dp_bool("use_trajectory_steering_for_feedforward");
 
   m_mpc->m_publish_debug_trajectories = dp_bool("publish_debug_trajectories");
 

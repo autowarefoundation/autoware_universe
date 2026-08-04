@@ -63,6 +63,37 @@ enough.
 The moving average filter for example is not suited and can yield worse results than without any
 filtering.
 
+### Trajectory steering feed-forward
+
+In temporal trajectory-reference mode, the controller can use the trajectory point's
+`front_wheel_angle_rad` as the steering feed-forward reference. This avoids reconstructing
+feed-forward steering from spatial derivatives of a time-sampled trajectory when the trajectory
+generator already provides a dynamically consistent steering state.
+
+Enable this behavior with:
+
+```yaml
+use_trajectory_steering_for_feedforward: true
+```
+
+The parameter enables an availability check for each complete received trajectory:
+
+- If at least one `front_wheel_angle_rad` has an absolute value greater than `1.0e-6 rad`, the
+  controller treats the steering field as populated. It temporally interpolates the field at the
+  MPC prediction timestamps and uses it to construct the feed-forward input.
+- If all steering values are effectively zero, the controller uses the smoothed geometric
+  curvature to calculate feed-forward steering.
+- The source is selected once for the complete received trajectory. It does not switch between
+  trajectory steering and geometric curvature at individual zero-steering points.
+
+This feature affects only temporal trajectory-reference mode. Spatial mode continues to use
+geometric curvature. Geometric curvature also remains in use for vehicle-model linearization,
+curvature-dependent weights, steering-rate limits, and diagnostics.
+
+The trajectory producer must ensure that `front_wheel_angle_rad` represents the front tire steering
+state at the corresponding `time_from_start`. Supplying default zeros on a curved trajectory causes
+the controller to fall back to geometric feed-forward.
+
 ## Assumptions / Known limits
 
 <!-- Required -->

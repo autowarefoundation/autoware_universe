@@ -21,6 +21,7 @@
 #include "autoware_utils/math/normalization.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -170,6 +171,7 @@ std::pair<bool, MPCTrajectory> resampleMPCTrajectoryByDistance(
   output.yaw = spline_arc_length(input_yaw);
   output.vx = lerp_arc_length(input.vx);  // must be linear
   output.k = spline_arc_length(input.k);
+  output.steer = lerp_arc_length(input.steer);
   output.smooth_k = spline_arc_length(input.smooth_k);
   output.relative_time = lerp_arc_length(input.relative_time);  // must be linear
 
@@ -200,6 +202,7 @@ bool linearInterpMPCTrajectory(
     out_traj.vx = lerp_arc_length(in_traj.vx);
     out_traj.k = lerp_arc_length(in_traj.k);
     out_traj.smooth_k = lerp_arc_length(in_traj.smooth_k);
+    out_traj.steer = lerp_arc_length(in_traj.steer);
     out_traj.relative_time = lerp_arc_length(in_traj.relative_time);
   } catch (const std::exception & e) {
     std::cerr << "linearInterpMPCTrajectory error!: " << e.what() << std::endl;
@@ -345,6 +348,7 @@ void calcTrajectoryCurvatureBySpatialResample(
   spatial_traj.vx.resize(n, 0.0);
   spatial_traj.k.resize(n, 0.0);
   spatial_traj.smooth_k.resize(n, 0.0);
+  spatial_traj.steer.resize(n, 0.0);
   spatial_traj.relative_time.resize(n, 0.0);
 
   // 5. Calculate curvature on the spatially uniform trajectory
@@ -444,13 +448,14 @@ MPCTrajectory convertToMPCTrajectory(const Trajectory & input, const bool use_te
     const double z = p.pose.position.z;
     const double yaw = tf2::getYaw(p.pose.orientation);
     const double vx = p.longitudinal_velocity_mps;
+    const double steer = p.front_wheel_angle_rad;
     const double k = 0.0;
 
     // Time handling: temporal (use timestamps) vs spatial (calculate from distance/velocity)
     const double t = use_temporal_trajectory
                        ? rclcpp::Duration(p.time_from_start).seconds()
                        : 0.0;  // Will be recalculated by calcMPCTrajectoryTime()
-    output.push_back(x, y, z, yaw, vx, k, k, t);
+    output.push_back(x, y, z, yaw, vx, k, k, steer, t);
   }
 
   if (!use_temporal_trajectory) {
@@ -475,6 +480,8 @@ Trajectory convertToAutowareTrajectory(const MPCTrajectory & input, const double
       rclcpp::Duration::from_seconds(input.relative_time.at(i) - input.relative_time.front());
     if (wheelbase != 0.0) {
       p.front_wheel_angle_rad = static_cast<float>(std::atan(input.smooth_k.at(i) * wheelbase));
+    } else if (std::isfinite(input.steer.at(i))) {
+      p.front_wheel_angle_rad = static_cast<float>(input.steer.at(i));
     }
     output.points.push_back(p);
     if (output.points.size() == output.points.max_size()) {
@@ -707,7 +714,8 @@ void extendTrajectoryInYawDirection(
     extended_pose = autoware_utils::calc_offset_pose(extended_pose, x_offset, 0.0, 0.0);
     traj.push_back(
       extended_pose.position.x, extended_pose.position.y, extended_pose.position.z, traj.yaw.back(),
-      extend_vel, traj.k.back(), traj.smooth_k.back(), traj.relative_time.back() + dt);
+      extend_vel, traj.k.back(), traj.smooth_k.back(), traj.steer.back(),
+      traj.relative_time.back() + dt);
   }
 }
 
