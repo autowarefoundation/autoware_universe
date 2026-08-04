@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/ptv3/postprocess/detection3d_postprocess.hpp"
+
 #include "ptv3_test_fixture.hpp"
 
 #include <gtest/gtest.h>
@@ -60,9 +61,9 @@ TEST_F(Detection3DPostprocessTest, DecodesFiltersAndSortsBoxes)
   const std::vector<float> heatmap{0.0F, 0.0F, 0.0F, 0.0F, 1.3862944F, 0.0F};
   const std::vector<float> center{1.0F, 0.5F, 0.0F, 1.0F, 0.5F, 0.0F};
   const std::vector<float> height{2.0F, 3.0F, 0.0F};
-  const std::vector<float> dim{
-    std::log(2.0F), std::log(3.0F), 0.0F, std::log(1.0F), std::log(2.0F), 0.0F,
-    std::log(2.0F), std::log(1.0F), 0.0F};
+  const std::vector<float> dim{std::log(2.0F), std::log(3.0F), 0.0F,
+                               std::log(1.0F), std::log(2.0F), 0.0F,
+                               std::log(2.0F), std::log(1.0F), 0.0F};
   const std::vector<float> rot{0.0F, 1.0F, 0.0F, 1.0F, 0.0F, 1.0F};
   const std::vector<float> vel{0.1F, 0.2F, 0.0F, 1.1F, 1.2F, 0.0F};
 
