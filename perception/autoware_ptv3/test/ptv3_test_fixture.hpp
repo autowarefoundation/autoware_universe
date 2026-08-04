@@ -72,9 +72,8 @@ inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
     params.serialization_orders, params.pooling_strides, params.enc_channels, params.palette,
     params.filter_classes, params.filter_output_format, params.filter_apply_to_segmentation,
     params.source_reconstruction, params.dec_depths, params.detection_class_names,
-    params.bbox_voxel_size,
-    params.distance_bin_upper_limits, params.detection_score_thresholds, params.yaw_norm_thresholds,
-    params.has_twist, params.num_proposals, params.post_center_range);
+    params.bbox_voxel_size, params.distance_bin_upper_limits, params.detection_score_thresholds,
+    params.yaw_norm_thresholds, params.has_twist, params.num_proposals, params.post_center_range);
 }
 
 // Base fixture for all autoware_ptv3 CUDA unit tests: owns a CUDA stream and the
