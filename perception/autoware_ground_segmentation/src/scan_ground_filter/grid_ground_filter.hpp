@@ -34,7 +34,6 @@
 namespace autoware::ground_segmentation
 {
 using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
-
 struct PointsCentroid
 {
   float radius_avg;
@@ -147,6 +146,10 @@ struct GridGroundFilterParameter
   int gnd_grid_buffer_size;
   float virtual_lidar_x;
   float virtual_lidar_y;
+  std::vector<double> azimuth_divider_radius_array;
+  std::vector<double> azimuth_divider_angle_array;
+  std::vector<RadialDividerAngleEntry> radial_divider_angle_map;
+  float front_azimuth_half_span_rad;  // front region (x > 0): apply map in azimuth +/- this (rad)
 };
 
 class GridGroundFilter
@@ -158,12 +161,38 @@ public:
     param_.global_slope_max_ratio = std::tan(param_.global_slope_max_angle_rad);
     param_.local_slope_max_ratio = std::tan(param_.local_slope_max_angle_rad);
     param_.radial_dividers_num = std::ceil(2.0 * M_PI / param_.radial_divider_angle_rad);
+    const auto & radius_array = param_.azimuth_divider_radius_array;
+    const auto & angle_array = param_.azimuth_divider_angle_array;
+
+    // Combine arrays into map entries
+    const size_t map_size = std::min(radius_array.size(), angle_array.size());
+    if (map_size == 0) {
+      throw std::runtime_error(
+        "azimuth_divider_radius_array and azimuth_divider_angle_array must be non-empty");
+    }
+    for (size_t i = 0; i < map_size; ++i) {
+      RadialDividerAngleEntry entry;
+      entry.radius = static_cast<float>(radius_array[i]);
+      entry.angle_rad = static_cast<float>(angle_array[i]);
+      param_.radial_divider_angle_map.push_back(entry);
+    }
+
+    // Sort by radius to ensure ascending order
+    std::sort(
+      param_.radial_divider_angle_map.begin(), param_.radial_divider_angle_map.end(),
+      [](const RadialDividerAngleEntry & a, const RadialDividerAngleEntry & b) {
+        return a.radius < b.radius;
+      });
 
     // initialize grid pointer
     grid_ptr_ = std::make_unique<Grid>(param_.virtual_lidar_x, param_.virtual_lidar_y);
     // TODO(badai-nguyen): Temporary add radial limit to 200.0m constant value.
     // need to be updated unify with cropbox range parameter
-    grid_ptr_->initialize(param_.grid_size_m, param_.radial_divider_angle_rad, 200.0f);
+    // When front_azimuth_half_span_rad > 0: apply radial_divider_angle_map only in front region
+    // (azimuth +/- front_azimuth_half_span, x > 0); rest of circle uses radial_divider_angle_rad.
+    grid_ptr_->initialize(
+      param_.grid_size_m, param_.radial_divider_angle_map, 200.0f, param_.radial_divider_angle_rad,
+      param_.front_azimuth_half_span_rad);
   }
   ~GridGroundFilter() = default;
 
@@ -197,9 +226,14 @@ private:
   // debug information
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
+  /*!
+   * Get radial divider angle based on radius
+   * @param[in] radius Radial distance in meters
+   * @return Radial divider angle in radians
+   */
+  // float getRadialDividerAngleRad(const float radius) const;
+
   bool recursiveSearch(const int check_idx, const int search_cnt, std::vector<int> & idx) const;
-  bool recursiveSearch(
-    const int check_idx, const int search_cnt, std::vector<int> & idx, size_t count) const;
   void fitLineFromGndGrid(const std::vector<int> & idx, float & a, float & b) const;
 
   void convert();
@@ -207,11 +241,14 @@ private:
   void initializeGround(pcl::PointIndices & out_no_ground_indices);
 
   void SegmentContinuousCell(
-    const Cell & cell, PointsCentroid & ground_bin, pcl::PointIndices & out_no_ground_indices);
+    const Cell & cell, const Cell & prev_cell, PointsCentroid & ground_bin,
+    pcl::PointIndices & out_no_ground_indices);
   void SegmentDiscontinuousCell(
-    const Cell & cell, PointsCentroid & ground_bin, pcl::PointIndices & out_no_ground_indices);
+    const Cell & cell, const Cell & prev_cell, PointsCentroid & ground_bin,
+    pcl::PointIndices & out_no_ground_indices);
   void SegmentBreakCell(
-    const Cell & cell, PointsCentroid & ground_bin, pcl::PointIndices & out_no_ground_indices);
+    const Cell & cell, const Cell & prev_cell, PointsCentroid & ground_bin,
+    pcl::PointIndices & out_no_ground_indices);
   void classify(pcl::PointIndices & out_no_ground_indices);
 };
 
