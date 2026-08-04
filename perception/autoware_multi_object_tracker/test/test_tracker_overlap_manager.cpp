@@ -191,6 +191,9 @@ mot_detail::TrackerSnapshot makeRankingSnapshot(
   snap.cov_det = cov_det;
   snap.measurement_count = measurement_count;
   snap.existence_probs = existence_probs;
+  for (const auto & prob : snap.existence_probs) {
+    snap.channel_support += prob.existence_probability;
+  }
   snap.uuid.fill(0);
   snap.uuid[0] = uuid_byte;
   return snap;

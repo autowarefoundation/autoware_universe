@@ -135,6 +135,9 @@ std::vector<TrackerSnapshot> buildSnapshots(
       tracker->getElapsedTimeFromFullMeasurement(time) > full_measure_stale_threshold;
     snap.uuid = tracker->getUUID().uuid;
     snap.existence_probs = tracker->getExistenceProbabilityVector();
+    for (const auto & prob : snap.existence_probs) {
+      snap.channel_support += prob.existence_probability;
+    }
     snapshots.push_back(std::move(snap));
   }
   return snapshots;

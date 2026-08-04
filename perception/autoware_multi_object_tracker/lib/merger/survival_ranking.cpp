@@ -33,18 +33,6 @@ constexpr float min_known_prob = 0.2f;
 constexpr double cov_det_relative_tol = 0.05;
 constexpr double cov_det_absolute_tol = 1e-9;
 
-// Existence support summed over the channels that observed the tracker; a channel absent from the
-// vector contributes nothing. Aggregating bounds each channel's weight to its own probability, so
-// no single channel carries the tier on its own.
-float channelSupport(const std::vector<types::ExistenceProbability> & probs)
-{
-  float support = 0.0f;
-  for (const auto & prob : probs) {
-    support += prob.existence_probability;
-  }
-  return support;
-}
-
 // Each tier returns +1 (a survives), -1 (b survives), or 0 (indistinguishable, defer to next tier).
 
 int compareByPriority(const TrackerSnapshot & a, const TrackerSnapshot & b)
@@ -70,10 +58,8 @@ int compareByKnownProbability(const TrackerSnapshot & a, const TrackerSnapshot &
 int compareByChannelSupport(const TrackerSnapshot & a, const TrackerSnapshot & b)
 {
   constexpr float support_buffer = 0.4f;
-  const float a_support = channelSupport(a.existence_probs);
-  const float b_support = channelSupport(b.existence_probs);
-  if (a_support > b_support + support_buffer) return 1;
-  if (b_support > a_support + support_buffer) return -1;
+  if (a.channel_support > b.channel_support + support_buffer) return 1;
+  if (b.channel_support > a.channel_support + support_buffer) return -1;
   return 0;  // comparable support → next tier
 }
 
