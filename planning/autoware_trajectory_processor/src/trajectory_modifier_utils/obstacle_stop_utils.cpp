@@ -360,15 +360,13 @@ ObjectState get_object_state_at_time(
 }
 
 double get_safe_distance(
-  const double ego_vel, const double object_vel, const double ego_decel, const double object_decel,
+  const double ego_vel, const double ego_decel, const double object_stopping_distance,
   const double reaction_time, const double safety_margin)
 {
   constexpr double eps = 1e-3;
   const auto ego_decel_mag = std::max(std::abs(ego_decel), eps);
-  const auto object_decel_mag = std::max(std::abs(object_decel), eps);
   const auto reaction_distance = ego_vel * reaction_time;
   const auto ego_stopping_distance = ego_vel * ego_vel / (2 * ego_decel_mag);
-  const auto object_stopping_distance = object_vel * object_vel / (2 * object_decel_mag);
   const auto safe_distance =
     reaction_distance + ego_stopping_distance - object_stopping_distance + safety_margin;
   return std::max(safe_distance, safety_margin);
@@ -390,26 +388,34 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   }
 
   const auto ego_front_offset = vehicle_info.max_longitudinal_offset_m;
+  constexpr double eps = 1e-3;
 
-  auto is_safe = [&](
-                   const auto & object, const double obj_arc_length, const double obj_lon_vel,
-                   const double ego_arc_length, const double ego_vel) -> std::pair<bool, bool> {
+  auto get_object_stopping_distance = [&](const auto & object, const double obj_lon_vel) {
+    if (obj_lon_vel < stopped_vel_th) return 0.0;
     const auto label =
       object.classification.empty()
         ? ObjectClassification::UNKNOWN
         : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
     const auto obj_type = classification_to_object_type.at(label);
-    if (!object_decel_map.count(obj_type)) return {false, false};
+    if (!object_decel_map.count(obj_type)) return 0.0;
     const auto obj_decel = object_decel_map.at(obj_type);
-    if (obj_lon_vel < stopped_vel_th) return {false, false};
+    const auto object_decel_mag = std::max(std::abs(obj_decel), eps);
+    const auto object_stopping_distance = obj_lon_vel * obj_lon_vel / (2 * object_decel_mag);
+    return object_stopping_distance;
+  };
+
+  auto is_safe = [&](
+                   const double obj_arc_length, const double obj_stopping_distance,
+                   const double ego_arc_length, const double ego_vel) -> std::pair<bool, bool> {
+    if (obj_stopping_distance <= eps) return {false, false};
     const auto safe_dist =
-      get_safe_distance(ego_vel, obj_lon_vel, ego_decel, obj_decel, reaction_time, safety_margin);
+      get_safe_distance(ego_vel, ego_decel, obj_stopping_distance, reaction_time, safety_margin);
     const auto ego_front_arc_length = ego_arc_length + ego_front_offset;
     const auto relative_arc_length = std::max(0.0, obj_arc_length - ego_front_arc_length);
     return {relative_arc_length - safe_dist > 1e-3, true};
   };
 
-  auto min_obj_arc_length = std::numeric_limits<double>::max();
+  auto min_collision_arc_length = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point nearest_collision_point;
   bool found_collision = false;
   bool is_dynamic_collision = false;
@@ -424,14 +430,17 @@ std::optional<CollisionPoint> get_nearest_object_collision(
       last_p = traj_p.pose.position;
       const auto target_ego_vel = traj_p.longitudinal_velocity_mps;
       const auto obj_state = get_object_state_at_time(trajectory_points, object, t);
+      const auto obj_stopping_distance = get_object_stopping_distance(object, obj_state.lon_vel);
       const auto [safe, dynamic] =
-        is_safe(object, obj_state.arc_length, obj_state.lon_vel, curr_arc_length, target_ego_vel);
+        is_safe(obj_state.arc_length, obj_stopping_distance, curr_arc_length, target_ego_vel);
       if (safe) continue;
       found_collision = true;
-      if (obj_state.arc_length < min_obj_arc_length) {
-        min_obj_arc_length = obj_state.arc_length;
+      auto collision_arc_length = obj_state.arc_length + obj_stopping_distance;
+      if (collision_arc_length < min_collision_arc_length) {
+        min_collision_arc_length = collision_arc_length;
         colliding_object = object;
-        nearest_collision_point = obj_state.nearest_point;
+        const auto collision_point = motion_utils::calcLongitudinalOffsetPose(trajectory_points, obj_state.nearest_point, obj_stopping_distance);
+        nearest_collision_point = collision_point.has_value() ? collision_point.value().position : obj_state.nearest_point;
         is_dynamic_collision = dynamic;
       }
       break;
@@ -439,7 +448,7 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   }
 
   if (!found_collision) return std::nullopt;
-  return CollisionPoint(nearest_collision_point, min_obj_arc_length, is_dynamic_collision);
+  return CollisionPoint(nearest_collision_point, min_collision_arc_length, is_dynamic_collision);
 }
 
 void PointCloudFilter::filter_pointcloud(
