@@ -135,6 +135,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   if(BUILD_TESTING)
+    ament_add_gtest(ptv3_config_test
+      test/ptv3_config_test.cpp
+    )
+    target_include_directories(ptv3_config_test PRIVATE include)
+
     ament_add_gtest(serialized_pooling_metadata_test
       test/serialized_pooling_metadata_test.cpp
     )
