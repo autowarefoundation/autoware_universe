@@ -16,6 +16,7 @@ import math
 import threading
 
 from autoware_vehicle_msgs.msg import ControlModeReport
+from autoware_vehicle_msgs.msg import GearCommand
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
 from autoware_vehicle_msgs.msg import HazardLightsReport
@@ -50,6 +51,12 @@ from .modules.carla_utils import carla_rotation_to_ros_quaternion
 from .modules.carla_utils import create_cloud
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
+
+# Gears that put the vehicle in reverse, and gears in which it must not pull
+# away. GearCommand and GearReport share the same constant numbering, so a
+# command value can be reported back unchanged.
+REVERSE_GEARS = (GearCommand.REVERSE, GearCommand.REVERSE_2)
+STANDSTILL_GEARS = (GearCommand.NONE, GearCommand.NEUTRAL, GearCommand.PARK)
 
 
 class carla_ros2_interface(object):
@@ -144,6 +151,9 @@ class carla_ros2_interface(object):
             "/control/command/hazard_lights_cmd",
             self.hazard_lights_callback,
             1,
+        )
+        self.sub_gear = self.ros2_node.create_subscription(
+            GearCommand, "/control/command/gear_cmd", self.gear_callback, 1
         )
         self.current_control = carla.VehicleControl()
 
@@ -295,6 +305,9 @@ class carla_ros2_interface(object):
         self.ego_actor = None
         self.physics_control = None
         self.current_control = carla.VehicleControl()
+        # Until a gear command arrives the bridge keeps reporting DRIVE, which
+        # is what it did unconditionally before gear commands were handled.
+        self.current_gear = GearCommand.DRIVE
         self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
         self.current_hazard_lights = HazardLightsCommand.DISABLE
 
@@ -692,7 +705,31 @@ class carla_ros2_interface(object):
             )
             out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
             out_cmd.brake = in_cmd.actuation.brake_cmd
+            self._apply_gear(out_cmd, self.current_gear)
             self.current_control = out_cmd
+
+    @staticmethod
+    def _apply_gear(control, gear):
+        """Apply the selected gear to a CARLA control command.
+
+        CARLA has no gear selector of its own for the throttle direction, so
+        reverse is a flag on the control command. In a gear the vehicle cannot
+        pull away in, the accelerator is ignored and the brake is held instead,
+        so the bridge never drives forward while reporting PARK or NEUTRAL.
+        """
+        control.reverse = gear in REVERSE_GEARS
+        if gear in STANDSTILL_GEARS:
+            control.throttle = 0.0
+            control.brake = 1.0
+
+    def gear_callback(self, in_cmd):
+        """Store gear command and apply it to the standing control (thread-safe)."""
+        with self._state_lock:
+            self.current_gear = in_cmd.command
+            # A gear command can arrive between two actuation commands, and the
+            # vehicle keeps being driven by the control built for the previous
+            # one until the next arrives.
+            self._apply_gear(self.current_control, self.current_gear)
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
@@ -754,6 +791,7 @@ class carla_ros2_interface(object):
             steer_angle = self.ego_actor.get_wheel_steer_angle(carla.VehicleWheelLocation.FL_Wheel)
             control = self.ego_actor.get_control()
             light_state = int(self.ego_actor.get_light_state())
+            gear = self.current_gear
 
         # convert velocity from cartesian to ego frame
         trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
@@ -779,7 +817,7 @@ class carla_ros2_interface(object):
         out_steering_state.steering_tire_angle = -math.radians(steer_angle)
 
         out_gear_state.stamp = out_vel_state.header.stamp
-        out_gear_state.report = GearReport.DRIVE
+        out_gear_state.report = gear
 
         out_ctrl_mode.stamp = out_vel_state.header.stamp
         out_ctrl_mode.mode = ControlModeReport.AUTONOMOUS
