@@ -439,8 +439,10 @@ std::optional<CollisionPoint> get_nearest_object_collision(
       if (collision_arc_length < min_collision_arc_length) {
         min_collision_arc_length = collision_arc_length;
         colliding_object = object;
-        const auto collision_point = motion_utils::calcLongitudinalOffsetPose(trajectory_points, obj_state.nearest_point, obj_stopping_distance);
-        nearest_collision_point = collision_point.has_value() ? collision_point.value().position : obj_state.nearest_point;
+        const auto collision_point = motion_utils::calcLongitudinalOffsetPose(
+          trajectory_points, obj_state.nearest_point, obj_stopping_distance);
+        nearest_collision_point =
+          collision_point.has_value() ? collision_point.value().position : obj_state.nearest_point;
         is_dynamic_collision = dynamic;
       }
       break;
