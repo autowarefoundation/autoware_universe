@@ -15,56 +15,31 @@
 #ifndef AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__VEHICLE_HPP_
 #define AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__VEHICLE_HPP_
 
+#include <autoware/component_interface_specs/vehicle.hpp>
 #include <rclcpp/qos.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/door_status_array.hpp>
 #include <autoware_adapi_v1_msgs/srv/get_door_layout.hpp>
 #include <autoware_adapi_v1_msgs/srv/set_door_command.hpp>
-#include <autoware_vehicle_msgs/msg/gear_report.hpp>
-#include <autoware_vehicle_msgs/msg/hazard_lights_report.hpp>
-#include <autoware_vehicle_msgs/msg/steering_report.hpp>
-#include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
 #include <tier4_vehicle_msgs/msg/battery_status.hpp>
 
 namespace autoware::component_interface_specs_universe::vehicle
 {
 
-struct SteeringStatus
-{
-  using Message = autoware_vehicle_msgs::msg::SteeringReport;
-  static constexpr char name[] = "/vehicle/status/steering_status";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
+// Re-export the core specs so universe consumers keep resolving the canonical
+// (single-version-authority) type; core is the sole definition and version authority.
+using autoware::component_interface_specs::vehicle::ControlModeStatus;
+using autoware::component_interface_specs::vehicle::GearStatus;
+using autoware::component_interface_specs::vehicle::HazardLightStatus;
+using autoware::component_interface_specs::vehicle::Specs;
+using autoware::component_interface_specs::vehicle::SteeringStatus;
+using autoware::component_interface_specs::vehicle::TurnIndicatorStatus;
+using autoware::component_interface_specs::vehicle::VelocityStatus;
+using autoware::component_interface_specs::vehicle::version;
 
-struct GearStatus
-{
-  using Message = autoware_vehicle_msgs::msg::GearReport;
-  static constexpr char name[] = "/vehicle/status/gear_status";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
-struct TurnIndicatorStatus
-{
-  using Message = autoware_vehicle_msgs::msg::TurnIndicatorsReport;
-  static constexpr char name[] = "/vehicle/status/turn_indicators_status";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
-struct HazardLightStatus
-{
-  using Message = autoware_vehicle_msgs::msg::HazardLightsReport;
-  static constexpr char name[] = "/vehicle/status/hazard_lights_status";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
+// tier4/adapi-only specs kept here: they are typed on tier4_* / door messages
+// and stay unversioned until vendor-specific specs get their own versioned
+// registry separate from core's OSS-facing Specs tuple; they are not part of it yet.
 struct EnergyStatus
 {
   using Message = tier4_vehicle_msgs::msg::BatteryStatus;

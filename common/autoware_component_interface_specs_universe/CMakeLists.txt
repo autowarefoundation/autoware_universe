@@ -13,6 +13,7 @@ if(BUILD_TESTING)
     test/test_system.cpp
     test/test_map.cpp
     test/test_perception.cpp
+    test/test_sensing.cpp
     test/test_vehicle.cpp
   )
 endif()
