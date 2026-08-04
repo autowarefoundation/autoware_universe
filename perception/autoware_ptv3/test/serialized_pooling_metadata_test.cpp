@@ -213,6 +213,25 @@ void expect_equal(
   EXPECT_EQ(actual, expected) << name;
 }
 
+void expect_all_in_range(
+  const std::vector<std::int64_t> & values, const std::int64_t upper_bound,
+  const std::string & name)
+{
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    EXPECT_GE(values[i], 0) << name << " at index " << i;
+    EXPECT_LT(values[i], upper_bound) << name << " at index " << i;
+  }
+}
+
+void expect_permutation(const std::vector<std::int64_t> & values, const std::string & name)
+{
+  std::vector<std::int64_t> sorted = values;
+  std::sort(sorted.begin(), sorted.end());
+  std::vector<std::int64_t> expected(values.size());
+  std::iota(expected.begin(), expected.end(), 0);
+  EXPECT_EQ(sorted, expected) << name;
+}
+
 class SerializedPoolingMetadataTest : public PTv3CudaTest
 {
 };
@@ -269,25 +288,40 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     const auto out_count = static_cast<std::size_t>(stage_counts[stage_index + 1]);
     const auto prefix = "stage " + std::to_string(stage_index) + " ";
 
-    expect_equal(copyToHost(actual.indices.get(), in_count), expected.indices, prefix + "indices");
-    expect_equal(
-      copyToHost(actual.indptr.get(), out_count + 1), expected.indptr, prefix + "indptr");
-    expect_equal(
-      copyToHost(actual.head_indices.get(), out_count), expected.head_indices,
-      prefix + "head_indices");
-    expect_equal(copyToHost(actual.cluster.get(), in_count), expected.cluster, prefix + "cluster");
+    const auto indices = copyToHost(actual.indices.get(), in_count);
+    const auto indptr = copyToHost(actual.indptr.get(), out_count + 1);
+    const auto head_indices = copyToHost(actual.head_indices.get(), out_count);
+    const auto cluster = copyToHost(actual.cluster.get(), in_count);
+    expect_all_in_range(indices, static_cast<std::int64_t>(in_count), prefix + "indices");
+    expect_all_in_range(head_indices, static_cast<std::int64_t>(in_count), prefix + "head_indices");
+    expect_all_in_range(cluster, static_cast<std::int64_t>(out_count), prefix + "cluster");
+    EXPECT_TRUE(std::is_sorted(indptr.begin(), indptr.end())) << prefix + "indptr";
+    expect_equal(indices, expected.indices, prefix + "indices");
+    expect_equal(indptr, expected.indptr, prefix + "indptr");
+    expect_equal(head_indices, expected.head_indices, prefix + "head_indices");
+    expect_equal(cluster, expected.cluster, prefix + "cluster");
     expect_equal(
       copyToHost(actual.grid_coord.get(), out_count * 3), expected.grid_coord,
       prefix + "grid_coord");
     expect_equal(
       copyToHost(actual.serialized_code.get(), out_count * kNumOrders), expected.serialized_code,
       prefix + "serialized_code");
-    expect_equal(
-      copyToHost(actual.serialized_order.get(), out_count * kNumOrders), expected.serialized_order,
-      prefix + "serialized_order");
-    expect_equal(
-      copyToHost(actual.serialized_inverse.get(), out_count * kNumOrders),
-      expected.serialized_inverse, prefix + "serialized_inverse");
+    const auto serialized_order = copyToHost(actual.serialized_order.get(), out_count * kNumOrders);
+    const auto serialized_inverse =
+      copyToHost(actual.serialized_inverse.get(), out_count * kNumOrders);
+    expect_equal(serialized_order, expected.serialized_order, prefix + "serialized_order");
+    expect_equal(serialized_inverse, expected.serialized_inverse, prefix + "serialized_inverse");
+    for (std::size_t order = 0; order < kNumOrders; ++order) {
+      const auto begin = static_cast<std::ptrdiff_t>(order * out_count);
+      const auto end = static_cast<std::ptrdiff_t>((order + 1) * out_count);
+      expect_permutation(
+        std::vector<std::int64_t>(serialized_order.begin() + begin, serialized_order.begin() + end),
+        prefix + "serialized_order " + std::to_string(order));
+      expect_permutation(
+        std::vector<std::int64_t>(
+          serialized_inverse.begin() + begin, serialized_inverse.begin() + end),
+        prefix + "serialized_inverse " + std::to_string(order));
+    }
   }
 }
 
