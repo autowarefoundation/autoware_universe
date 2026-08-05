@@ -19,7 +19,7 @@ The `autoware_trajectory_optimizer` package generates smooth and feasible trajec
 
 ## Architecture
 
-The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from `TrajectoryOptimizerPluginBase` and is loaded via the ROS 2 pluginlib system.
+The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from `TrajectoryProcessorPluginBase` and is loaded via the ROS 2 pluginlib system.
 
 ### Plugin Loading and Execution
 

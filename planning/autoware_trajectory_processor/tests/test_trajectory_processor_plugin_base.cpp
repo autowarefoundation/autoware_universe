@@ -14,12 +14,14 @@
 
 #include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
+#include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::trajectory_processor::plugin
 {
@@ -41,7 +43,7 @@ public:
 
   void update_params(const TrajectoryProcessorParams & params) override
   {
-    enabled_ = params.modifier.use_stop_point_fixer;
+    enabled_ = params.use_stop_point_fixer;
   }
 
   [[nodiscard]] rclcpp::Node * node() const { return get_node_ptr(); }
@@ -85,7 +87,7 @@ protected:
 TEST_F(TrajectoryProcessorPluginBaseTest, InitializesCommonState)
 {
   TrajectoryProcessorParams params;
-  params.modifier.use_stop_point_fixer = true;
+  params.use_stop_point_fixer = true;
   TestTrajectoryProcessorPlugin plugin;
 
   plugin.initialize(
@@ -123,7 +125,7 @@ TEST_F(TrajectoryProcessorPluginBaseTest, SupportsRepeatedClassesWithUniqueInsta
 TEST_F(TrajectoryProcessorPluginBaseTest, ProcessesCommonRuntimeData)
 {
   TrajectoryProcessorParams params;
-  params.modifier.use_stop_point_fixer = true;
+  params.use_stop_point_fixer = true;
   TestTrajectoryProcessorPlugin plugin;
   plugin.initialize("TestPlugin", node_.get(), time_keeper_, nullptr, params);
 
@@ -137,7 +139,7 @@ TEST_F(TrajectoryProcessorPluginBaseTest, ProcessesCommonRuntimeData)
   EXPECT_EQ(data.current_odometry, nullptr);
   EXPECT_EQ(data.predicted_objects, nullptr);
 
-  params.modifier.use_stop_point_fixer = false;
+  params.use_stop_point_fixer = false;
   plugin.update_params(params);
   EXPECT_EQ(plugin.process(trajectory_points, data), ProcessingResult::Unchanged);
 }
@@ -147,12 +149,38 @@ TEST(TrajectoryProcessorParamsTest, PreservesBothGeneratedParameterStructures)
   trajectory_modifier_params::Params modifier;
   modifier.use_obstacle_stop = false;
   TrajectoryProcessorParams from_modifier{modifier};
-  EXPECT_FALSE(from_modifier.modifier.use_obstacle_stop);
+  EXPECT_FALSE(from_modifier.modifier_params().use_obstacle_stop);
 
   trajectory_optimizer_node_params::Params optimizer;
   optimizer.use_qp_smoother = false;
   TrajectoryProcessorParams from_optimizer{optimizer};
-  EXPECT_FALSE(from_optimizer.optimizer.use_qp_smoother);
+  EXPECT_FALSE(from_optimizer.optimizer_params().use_qp_smoother);
+}
+
+TEST_F(TrajectoryProcessorPluginBaseTest, LoadsEveryOptimizerThroughCommonInterface)
+{
+  pluginlib::ClassLoader<TrajectoryProcessorPluginBase> loader(
+    "autoware_trajectory_processor",
+    "autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase");
+  const std::vector<std::string> optimizer_classes = {
+    "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+    "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
+    "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+    "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
+    "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
+    "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
+    "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
+    "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
+    "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"};
+
+  std::vector<std::shared_ptr<TrajectoryProcessorPluginBase>> plugins;
+  for (const auto & class_name : optimizer_classes) {
+    EXPECT_TRUE(loader.isClassAvailable(class_name));
+    plugins.push_back(loader.createSharedInstance(class_name));
+  }
+
+  const auto repeated = loader.createSharedInstance(optimizer_classes.front());
+  EXPECT_NE(plugins.front().get(), repeated.get());
 }
 
 }  // namespace

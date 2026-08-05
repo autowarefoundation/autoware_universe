@@ -36,6 +36,7 @@ generate_parameter_library(trajectory_optimizer_param
 )
 
 target_link_libraries(autoware_trajectory_optimizer_component
+  trajectory_modifier_param
   trajectory_optimizer_param
 )
 
@@ -90,6 +91,7 @@ target_link_libraries(
   autoware_trajectory_optimizer_plugins
   acados_interface_temporal
   tf2_geometry_msgs::tf2_geometry_msgs
+  trajectory_modifier_param
   trajectory_optimizer_param
 )
 

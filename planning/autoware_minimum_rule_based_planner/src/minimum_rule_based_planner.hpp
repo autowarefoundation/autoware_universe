@@ -15,7 +15,8 @@
 #ifndef MINIMUM_RULE_BASED_PLANNER_HPP_
 #define MINIMUM_RULE_BASED_PLANNER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_context.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_data.hpp"
 #include "path_planner.hpp"
 #include "velocity_smoother.hpp"
 
@@ -115,6 +116,7 @@ private:
 
   std::unique_ptr<OptimizerPluginLoader> plugin_loader_;
   std::shared_ptr<OptimizerPluginInterface> path_smoother_;
+  std::shared_ptr<autoware::trajectory_processor::TrajectoryProcessorContext> optimizer_context_;
   std::unique_ptr<VelocitySmoother> velocity_smoother_;
   std::map<std::string, rclcpp::Publisher<Trajectory>::SharedPtr>
     pub_debug_optimizer_module_trajectories_;

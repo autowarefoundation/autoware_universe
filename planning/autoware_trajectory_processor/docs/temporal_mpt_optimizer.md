@@ -96,7 +96,7 @@ Unit tests for this logic live in `tests/test_trajectory_temporal_mpt_optimizer_
 Two steps are required:
 
 1. Add the plugin class to `plugin_names` in `config/trajectory_optimizer.param.yaml` (position sets when it runs relative to other plugins).
-2. Set `use_temporal_mpt_optimizer: true` (runtime gate inside `optimize_trajectory()`).
+2. Set `use_temporal_mpt_optimizer: true` (runtime gate inside `process()`).
 
 To disable completely, remove the class from `plugin_names`. Setting only `use_temporal_mpt_optimizer: false` skips optimization but still loads and initializes acados if the plugin remains in the list.
 

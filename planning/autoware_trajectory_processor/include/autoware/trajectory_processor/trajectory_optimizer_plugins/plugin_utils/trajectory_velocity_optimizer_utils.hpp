@@ -18,7 +18,6 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_VELOCITY_OPTIMIZER_UTILS_HPP_
 
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>

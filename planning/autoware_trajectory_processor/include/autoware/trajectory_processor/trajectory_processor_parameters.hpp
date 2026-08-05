@@ -27,25 +27,35 @@ namespace autoware::trajectory_processor
 ///
 /// Keeping the generated structures intact preserves existing ROS names, validation, and defaults
 /// during the plugin API migration.
-struct TrajectoryProcessorParams
+struct TrajectoryProcessorParams : public trajectory_modifier_params::Params,
+                                   public trajectory_optimizer_node_params::Params
 {
   /// @brief Construct both parameter groups with their generated defaults.
   TrajectoryProcessorParams() = default;
 
   /// @brief Construct the superset from modifier parameters.
   explicit TrajectoryProcessorParams(trajectory_modifier_params::Params params)
-  : modifier{std::move(params)}
+  : trajectory_modifier_params::Params{std::move(params)}
   {
   }
 
   /// @brief Construct the superset from optimizer parameters.
   explicit TrajectoryProcessorParams(trajectory_optimizer_node_params::Params params)
-  : optimizer{std::move(params)}
+  : trajectory_optimizer_node_params::Params{std::move(params)}
   {
   }
 
-  trajectory_modifier_params::Params modifier;
-  trajectory_optimizer_node_params::Params optimizer;
+  /// @brief Return the modifier portion of the common parameter snapshot.
+  [[nodiscard]] trajectory_modifier_params::Params & modifier_params() { return *this; }
+  /// @brief Return the modifier portion of the common parameter snapshot.
+  [[nodiscard]] const trajectory_modifier_params::Params & modifier_params() const { return *this; }
+  /// @brief Return the optimizer portion of the common parameter snapshot.
+  [[nodiscard]] trajectory_optimizer_node_params::Params & optimizer_params() { return *this; }
+  /// @brief Return the optimizer portion of the common parameter snapshot.
+  [[nodiscard]] const trajectory_optimizer_node_params::Params & optimizer_params() const
+  {
+    return *this;
+  }
 };
 
 }  // namespace autoware::trajectory_processor

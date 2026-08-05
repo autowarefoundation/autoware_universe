@@ -14,6 +14,8 @@
 
 #include "minimum_rule_based_planner.hpp"
 
+#include "autoware/trajectory_processor/trajectory_processor_parameters.hpp"
+
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -33,14 +35,12 @@ namespace autoware::minimum_rule_based_planner
 
 namespace
 {
-trajectory_optimizer::TrajectoryOptimizerData make_optimizer_data(
+trajectory_processor::TrajectoryProcessorData make_optimizer_data(
   const MinimumRuleBasedPlannerNode::InputData & input_data)
 {
-  trajectory_optimizer::TrajectoryOptimizerData data;
-  data.current_odometry = *input_data.odometry_ptr;
-  if (input_data.acceleration_ptr) {
-    data.current_acceleration = *input_data.acceleration_ptr;
-  }
+  trajectory_processor::TrajectoryProcessorData data;
+  data.current_odometry = input_data.odometry_ptr;
+  data.current_acceleration = input_data.acceleration_ptr;
   return data;
 }
 
@@ -60,6 +60,8 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
 : rclcpp::Node("minimum_rule_based_planner_node", options),
   generator_uuid_(autoware_utils_uuid::generate_uuid()),
   vehicle_info_(vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()),
+  optimizer_context_(
+    std::make_shared<autoware::trajectory_processor::TrajectoryProcessorContext>(this)),
   modifier_plugin_loader_(
     "autoware_minimum_rule_based_planner",
     "autoware::minimum_rule_based_planner::plugin::PluginInterface"),
@@ -99,18 +101,20 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
 
 void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
 {
-  // Create plugin loader for autoware_trajectory_optimizer
+  // Create the common loader for optimizer plugins exported by autoware_trajectory_processor.
   plugin_loader_ = std::make_unique<OptimizerPluginLoader>(
-    "autoware_trajectory_optimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase");
+    "autoware_trajectory_processor",
+    "autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase");
 
   auto try_load_optimizer_plugin = [&](const std::string & plugin_path, const std::string & name)
     -> std::shared_ptr<OptimizerPluginInterface> {
-    trajectory_optimizer::TrajectoryOptimizerParams optimizer_params;
+    trajectory_optimizer_node_params::Params optimizer_params;
     optimizer_params.use_eb_smoother = true;
     try {
       auto plugin = plugin_loader_->createSharedInstance(plugin_path);
-      plugin->initialize(name, this, time_keeper_, optimizer_params);
+      plugin->initialize(
+        plugin_path, name, this, time_keeper_, optimizer_context_,
+        trajectory_processor::TrajectoryProcessorParams{optimizer_params});
       pub_debug_optimizer_module_trajectories_[plugin->get_name()] =
         this->create_publisher<Trajectory>(
           "~/debug/optimizer/" + plugin->get_name() + "/trajectory", 1);
@@ -351,7 +355,7 @@ Trajectory MinimumRuleBasedPlannerNode::smooth_trajectory(
   if (path_smoother_) {
     autoware_utils_debug::ScopedTimeTrack st_path_smoother(
       path_smoother_->get_name(), *time_keeper_);
-    path_smoother_->optimize_trajectory(trajectory_points, optimizer_data);
+    path_smoother_->process(trajectory_points, optimizer_data);
     if (params_.debug.enable_optimizer_trajectory) {
       publish_debug_trajectory(path_smoother_->get_name(), trajectory_points);
     }
