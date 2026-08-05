@@ -309,7 +309,7 @@ minimum_rule_based_planner:
         read_only: false
       pointcloud:
         type: string_array
-        default_value: [hazard, structure, vegetation]
+        default_value: [structure, vegetation]
         description: pointcloud types to consider for surround obstacle stop
         read_only: false
     base_distance_th:
