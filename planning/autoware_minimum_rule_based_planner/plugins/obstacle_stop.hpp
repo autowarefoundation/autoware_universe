@@ -99,7 +99,7 @@ private:
   ObjectDecelMap object_decel_map_;
 
   rclcpp::Publisher<MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_filtered_pointcloud_;
   rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
 
   void update_object_decel_map()

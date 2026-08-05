@@ -411,8 +411,6 @@ void ObstacleStop::publish_debug_string(bool is_safe) const
 {
   const auto filtered_pcd_size =
     debug_data_.filtered_points ? debug_data_.filtered_points->data.size() : 0;
-  const auto cluster_pcd_size =
-    debug_data_.cluster_points ? debug_data_.cluster_points->data.size() : 0;
   std::ostringstream ss;
   ss << std::fixed << std::setprecision(2) << std::boolalpha;
   ss << "OBSTACLE STOP MODIFIER: "
@@ -422,8 +420,7 @@ void ObstacleStop::publish_debug_string(bool is_safe) const
   ss << "\t\t"
      << "OBJECTS: " << debug_data_.filtered_objects.objects.size() << " --> "
      << debug_data_.target_polygons.size() << "\n";
-  ss << "\t\t"
-     << "POINTCLOUD: " << filtered_pcd_size << " --> " << cluster_pcd_size << " --> "
+  ss << "\t\t" << "POINTCLOUD: " << filtered_pcd_size << " --> "
      << debug_data_.target_pcd_points.size() << "\n";
   if (nearest_collision_point_) {
     ss << "\t\t"

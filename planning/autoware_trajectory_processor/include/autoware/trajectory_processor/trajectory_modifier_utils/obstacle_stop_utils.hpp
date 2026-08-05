@@ -173,7 +173,6 @@ struct TrajectoryShape
 
 struct DebugData
 {
-  PointCloud2::SharedPtr cluster_points;
   PointCloud2::SharedPtr filtered_points;
   PredictedObjects filtered_objects;
   MultiPolygon2d target_polygons;
