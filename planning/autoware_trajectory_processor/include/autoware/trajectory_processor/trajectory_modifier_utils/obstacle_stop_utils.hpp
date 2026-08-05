@@ -505,9 +505,9 @@ private:
 
   struct PersistentPoint : public PersistentObstacle
   {
-    geometry_msgs::msg::Point position;
-    explicit PersistentPoint(const geometry_msgs::msg::Point & position, const rclcpp::Time & now)
-    : PersistentObstacle(now), position(position)
+    PointXYZCPE point;
+    explicit PersistentPoint(const PointXYZCPE & point, const rclcpp::Time & now)
+    : PersistentObstacle(now), point(point)
     {
     }
   };

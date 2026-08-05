@@ -673,12 +673,13 @@ void ObstacleTracker::update_points(
   }
 
   auto get_closest_point_uuid =
-    [&](const geometry_msgs::msg::Point & point) -> std::optional<boost::uuids::uuid> {
+    [&](const PointXYZCPE & point) -> std::optional<boost::uuids::uuid> {
     std::optional<boost::uuids::uuid> closest_uuid = std::nullopt;
     if (persistent_point_map_.empty()) return std::nullopt;
     double min_distance = pcd_distance_th_ + std::numeric_limits<double>::epsilon();
     for (const auto & [uuid, existing_point] : persistent_point_map_) {
-      const auto distance = autoware_utils::calc_distance2d(point, existing_point.position);
+      const auto distance = std::hypot(
+        point.x - existing_point.point.x, point.y - existing_point.point.y);
       if (distance > min_distance) continue;
       min_distance = distance;
       closest_uuid = uuid;
@@ -687,26 +688,21 @@ void ObstacleTracker::update_points(
   };
 
   for (const auto & point : points->points) {
-    auto point_msg = autoware_utils::create_point(point.x, point.y, point.z);
-    const auto closest_uuid = get_closest_point_uuid(point_msg);
+    const auto closest_uuid = get_closest_point_uuid(point);
     if (!closest_uuid) {
-      persistent_point_map_.emplace(id_generator_(), PersistentPoint(point_msg, now));
+      persistent_point_map_.emplace(id_generator_(), PersistentPoint(point, now));
       continue;
     }
     auto & closest_point = persistent_point_map_.at(closest_uuid.value());
     closest_point.last_seen_time = now;
-    closest_point.position = point_msg;
+    closest_point.point = point;
     const auto duration = (now - closest_point.first_seen_time).seconds();
     closest_point.is_active = duration >= on_time_buffer_;
   }
 
   for (const auto & [uuid, entry] : persistent_point_map_) {
     if (entry.is_active) {
-      autoware::point_types::PointXYZCPE point;
-      point.x = entry.position.x;
-      point.y = entry.position.y;
-      point.z = entry.position.z;
-      persistent_points->points.push_back(point);
+      persistent_points->points.push_back(entry.point);
     }
   }
 }
