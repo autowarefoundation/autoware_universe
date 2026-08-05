@@ -28,6 +28,7 @@
   <depend>autoware_path_smoother</depend>
   <depend>autoware_planning_factor_interface</depend>
   <depend>autoware_planning_msgs</depend>
+  <depend>autoware_point_types</depend>
   <depend>autoware_qp_interface</depend>
   <depend>autoware_signal_processing</depend>
   <depend>autoware_traffic_light_compliance_checker</depend>

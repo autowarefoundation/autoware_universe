@@ -90,7 +90,6 @@ private:
   MarkerArray marker_array_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_filtered_pointcloud_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
   rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
 
   void check_obstacles(const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);

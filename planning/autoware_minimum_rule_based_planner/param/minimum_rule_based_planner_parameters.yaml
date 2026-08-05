@@ -189,6 +189,11 @@ minimum_rule_based_planner:
         validation:
           bounds<>: [0.0, 10.0]
     pointcloud:
+      target_types:
+        type: string_array
+        default_value: [hazard, structure, vegetation]
+        description: pointcloud types to consider for obstacle stop
+        read_only: false
       height_buffer:
         type: double
         default_value: 0.5
@@ -201,56 +206,6 @@ minimum_rule_based_planner:
         description: minimum height of pointcloud [m]
         validation:
           bounds<>: [0.0, 10.0]
-      voxel_grid_filter:
-        x:
-          type: double
-          default_value: 0.2
-          description: x size of voxel grid filter [m]
-          validation:
-            bounds<>: [0.0, 1.0]
-        y:
-          type: double
-          default_value: 0.2
-          description: y size of voxel grid filter [m]
-          validation:
-            bounds<>: [0.0, 1.0]
-        z:
-          type: double
-          default_value: 0.2
-          description: z size of voxel grid filter [m]
-          validation:
-            bounds<>: [0.0, 1.0]
-        min_size:
-          type: int
-          default_value: 3
-          description: minimum size of voxel grid filter
-          validation:
-            bounds<>: [1, 100]
-      clustering:
-        tolerance:
-          type: double
-          default_value: 0.5
-          description: tolerance for clustering [m]
-          validation:
-            bounds<>: [0.0, 1.0]
-        min_height:
-          type: double
-          default_value: 0.5
-          description: minimum height for clustering [m]
-          validation:
-            bounds<>: [0.0, 1.0]
-        min_size:
-          type: int
-          default_value: 10
-          description: minimum size for clustering
-          validation:
-            bounds<>: [1, 100]
-        max_size:
-          type: int
-          default_value: 10000
-          description: maximum size for clustering
-          validation:
-            bounds<>: [1, 10000]
     rss_params:
       enable:
         type: bool

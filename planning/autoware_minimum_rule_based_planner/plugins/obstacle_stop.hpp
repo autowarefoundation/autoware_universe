@@ -65,10 +65,7 @@ public:
 
     {
       const auto & p = params_.pointcloud;
-      pointcloud_filter_->set_params(
-        p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
-        p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
-        p.clustering.max_size);
+      pointcloud_filter_->set_params(p.target_types);
     }
 
     update_object_decel_map();
