@@ -236,6 +236,7 @@ protected:
     p.use_pointcloud = true;
     p.target_objects.bbox = {"car"};
     p.target_objects.polygon = {"car"};
+    p.target_objects.pointcloud = {"unknown"};
     p.hysteresis_distance = 0.5;
     p.hysteresis_time = 0.0;
     p.ego_stopped_vel_th = 0.1;
