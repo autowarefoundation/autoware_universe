@@ -14,13 +14,15 @@
 
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 
-#include "autoware/ptv3/experimental/semantic_label.hpp"
 #include "ptv3_test_fixture.hpp"
+
+#include <autoware/point_types/types.hpp>
 
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -29,16 +31,6 @@ namespace autoware::ptv3
 {
 namespace test
 {
-
-struct OutputSegmentationPointType
-{
-  float x;
-  float y;
-  float z;
-  std::uint8_t class_id;
-  float probability;
-  float entropy;
-} __attribute__((packed));
 
 PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
 {
@@ -65,143 +57,181 @@ PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
 
 class PostprocessKernelTest : public PTv3CudaTest
 {
+protected:
+  using PointXYZCPE = autoware::point_types::PointXYZCPE;
+  using PointCloudClassification = autoware::point_types::PointCloudClassification;
+
+  static constexpr std::size_t kNumClasses = 3;
+
+  PTv3Config makeTestConfig(const bool filter_apply_to_segmentation = false) const
+  {
+    PTv3ConfigParams params;
+    params.segmentation_class_names = {"car", "truck", "drivable_flat"};
+    params.palette = {
+      255, 0,
+      0,  // car
+      0,   255,
+      0,  // truck
+      0,   0,
+      255,  // drivable_flat
+    };
+    params.filter_classes = {"truck"};
+    params.filter_apply_to_segmentation = filter_apply_to_segmentation;
+
+    return makeConfig(params);
+  }
+
+  // Normalized Shannon entropy expected from the kernel for a two-class distribution.
+  static float expectedEntropy(const float p0, const float p1)
+  {
+    float entropy = 0.0F;
+    for (const auto probability : {p0, p1}) {
+      if (probability > 0.0F) {
+        entropy -= probability * std::log(probability);
+      }
+    }
+    return entropy / std::log(static_cast<float>(kNumClasses));
+  }
 };
 
 TEST_F(PostprocessKernelTest, SegmentationPointcloudDoesNotFilterConfiguredClassIndicesByDefault)
 {
-  const auto config = make_test_config();
+  const auto config = makeTestConfig();
   PostprocessCuda postprocess(config, stream_);
 
-  constexpr std::size_t num_points = 4;
-  constexpr std::size_t num_classes = 3;
-
   // XYZ + padding for float4 input layout used by kernel.
-  const std::vector<float> input_features = {
+  const std::vector<float> features = {
     1.0f, 10.0f, 100.0f, 0.0f,  // label 0: car
     2.0f, 20.0f, 200.0f, 0.0f,  // label 1: truck (filtered)
     3.0f, 30.0f, 300.0f, 0.0f,  // label 2: drivable_flat
     4.0f, 40.0f, 400.0f, 0.0f,  // invalid label
   };
-  const std::vector<std::int64_t> pred_labels = {0, 1, 2, -1};
-  const std::vector<float> pred_probs = {
+  const std::vector<std::int64_t> labels = {0, 1, 2, -1};
+  const std::vector<float> probs = {
     0.9f, 0.1f, 0.0f, 0.2f, 0.8f, 0.0f, 0.1f, 0.0f, 0.9f, 0.3f, 0.3f, 0.4f,
   };
+  const auto num_points = labels.size();
 
-  auto input_features_d = this->template makeDeviceBuffer<float>(num_points * 4);
-  auto pred_labels_d = this->template makeDeviceBuffer<std::int64_t>(num_points);
-  auto pred_probs_d = this->template makeDeviceBuffer<float>(num_points * num_classes);
-  auto output_points_d = this->template makeDeviceBuffer<OutputSegmentationPointType>(num_points);
+  auto features_d = makeDeviceBuffer<float>(features.size());
+  auto labels_d = makeDeviceBuffer<std::int64_t>(labels.size());
+  auto probs_d = makeDeviceBuffer<float>(probs.size());
+  auto output_points_d = makeDeviceBuffer<PointXYZCPE>(num_points);
 
-  copyToDevice(input_features_d.get(), input_features);
-  copyToDevice(pred_labels_d.get(), pred_labels);
-  copyToDevice(pred_probs_d.get(), pred_probs);
+  copyToDevice(features_d.get(), features);
+  copyToDevice(labels_d.get(), labels);
+  copyToDevice(probs_d.get(), probs);
 
   const auto num_segmented_points = postprocess.createSegmentationPointcloud(
-    input_features_d.get(), pred_labels_d.get(), pred_probs_d.get(),
-    reinterpret_cast<std::uint8_t *>(output_points_d.get()), num_classes, num_points);
+    features_d.get(), labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
+    num_points);
 
   EXPECT_EQ(num_segmented_points, 4U);
 
-  const auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  std::sort(output_points.begin(), output_points.end(), [](const auto & lhs, const auto & rhs) {
+    return lhs.x < rhs.x;
+  });
 
-  std::array<float, 4> x_values{};
-  std::array<std::uint8_t, 4> class_ids{};
-  for (std::size_t i = 0; i < output_points.size(); ++i) {
-    x_values[i] = output_points[i].x;
-    class_ids[i] = output_points[i].class_id;
+  // Check that the output points have the expected xyz coordinates.
+  for (std::size_t i = 0; i < num_points; ++i) {
+    EXPECT_FLOAT_EQ(output_points[i].x, features[i * 4]);
+    EXPECT_FLOAT_EQ(output_points[i].y, features[i * 4 + 1]);
+    EXPECT_FLOAT_EQ(output_points[i].z, features[i * 4 + 2]);
   }
 
-  std::sort(x_values.begin(), x_values.end());
-  EXPECT_EQ(x_values[0], 1.0f);
-  EXPECT_EQ(x_values[1], 2.0f);
-  EXPECT_EQ(x_values[2], 3.0f);
-  EXPECT_EQ(x_values[3], 4.0f);
+  // Check that the output points have the expected class IDs, probabilities and entropies.
+  const auto car_label = static_cast<std::uint8_t>(PointCloudClassification::CAR);
+  const auto truck_label = static_cast<std::uint8_t>(PointCloudClassification::TRUCK);
+  const auto flat_surface_label = static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
+  const auto invalid_label = static_cast<std::uint8_t>(PointCloudClassification::INVALID);
 
-  const auto car_label =
-    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::CAR);
-  const auto truck_label =
-    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::TRUCK);
-  const auto ground_label =
-    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::FLAT_SURFACE);
-
-  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), car_label), class_ids.end());
-  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), truck_label), class_ids.end());
-  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), ground_label), class_ids.end());
-  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), 255U), class_ids.end());
-
-  for (const auto & output_point : output_points) {
-    if (output_point.x == 4.0f) {
-      EXPECT_EQ(output_point.class_id, 255U);
-      EXPECT_EQ(output_point.probability, 0.0f);
-    }
-  }
+  // [0]: car
+  EXPECT_EQ(output_points[0].class_id, car_label);
+  EXPECT_FLOAT_EQ(output_points[0].probability, 0.9f);
+  EXPECT_FLOAT_EQ(output_points[0].entropy, expectedEntropy(0.9F, 0.1F));
+  // [1]: truck
+  EXPECT_EQ(output_points[1].class_id, truck_label);
+  EXPECT_FLOAT_EQ(output_points[1].probability, 0.8f);
+  EXPECT_FLOAT_EQ(output_points[1].entropy, expectedEntropy(0.8F, 0.2F));
+  // [2]: drivable_flat
+  EXPECT_EQ(output_points[2].class_id, flat_surface_label);
+  EXPECT_FLOAT_EQ(output_points[2].probability, 0.9f);
+  EXPECT_FLOAT_EQ(output_points[2].entropy, expectedEntropy(0.9F, 0.1F));
+  // [3]: invalid label -> probability=0.0, entropy=NaN
+  EXPECT_EQ(output_points[3].class_id, invalid_label);
+  EXPECT_FLOAT_EQ(output_points[3].probability, 0.0f);
+  EXPECT_TRUE(std::isnan(output_points[3].entropy));
 }
 
 TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndicesWhenEnabled)
 {
-  const auto config = make_test_config(true);
+  const auto config = makeTestConfig(true);
   PostprocessCuda postprocess(config, stream_);
 
-  constexpr std::size_t num_points = 4;
-  constexpr std::size_t num_classes = 3;
-
   // XYZ + padding for float4 input layout used by kernel.
-  const std::vector<float> input_features = {
+  const std::vector<float> features = {
     1.0f, 10.0f, 100.0f, 0.0f,  // label 0: car
     2.0f, 20.0f, 200.0f, 0.0f,  // label 1: truck (filtered)
     3.0f, 30.0f, 300.0f, 0.0f,  // label 2: drivable_flat
     4.0f, 40.0f, 400.0f, 0.0f,  // invalid label
   };
-  const std::vector<std::int64_t> pred_labels = {0, 1, 2, -1};
-  const std::vector<float> pred_probs = {
+  const std::vector<std::int64_t> labels = {0, 1, 2, -1};
+  const std::vector<float> probs = {
     0.9f, 0.1f, 0.0f, 0.2f, 0.8f, 0.0f, 0.1f, 0.0f, 0.9f, 0.3f, 0.3f, 0.4f,
   };
+  const auto num_points = labels.size();
 
-  auto input_features_d = this->template makeDeviceBuffer<float>(num_points * 4);
-  auto pred_labels_d = this->template makeDeviceBuffer<std::int64_t>(num_points);
-  auto pred_probs_d = this->template makeDeviceBuffer<float>(num_points * num_classes);
-  auto output_points_d = this->template makeDeviceBuffer<OutputSegmentationPointType>(num_points);
+  auto features_d = makeDeviceBuffer<float>(features.size());
+  auto labels_d = makeDeviceBuffer<std::int64_t>(labels.size());
+  auto probs_d = makeDeviceBuffer<float>(probs.size());
+  auto output_points_d = makeDeviceBuffer<PointXYZCPE>(num_points);
 
-  copyToDevice(input_features_d.get(), input_features);
-  copyToDevice(pred_labels_d.get(), pred_labels);
-  copyToDevice(pred_probs_d.get(), pred_probs);
+  copyToDevice(features_d.get(), features);
+  copyToDevice(labels_d.get(), labels);
+  copyToDevice(probs_d.get(), probs);
 
   const auto num_segmented_points = postprocess.createSegmentationPointcloud(
-    input_features_d.get(), pred_labels_d.get(), pred_probs_d.get(),
-    reinterpret_cast<std::uint8_t *>(output_points_d.get()), num_classes, num_points);
+    features_d.get(), labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
+    num_points);
 
   EXPECT_EQ(num_segmented_points, 3U);
 
-  const auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  std::sort(output_points.begin(), output_points.end(), [](const auto & lhs, const auto & rhs) {
+    return lhs.x < rhs.x;
+  });
 
-  std::array<float, 3> x_values{};
-  std::array<std::uint8_t, 3> class_ids{};
+  // Truck label (features[1]) is filtered out.
+  // Check that the output points have the expected xyz coordinates.
+  const std::array<std::size_t, 3> feature_indices = {0, 2, 3};
   for (std::size_t i = 0; i < output_points.size(); ++i) {
-    x_values[i] = output_points[i].x;
-    class_ids[i] = output_points[i].class_id;
+    const auto feature_index = feature_indices[i];
+    EXPECT_FLOAT_EQ(output_points[i].x, features[feature_index * 4]);
+    EXPECT_FLOAT_EQ(output_points[i].y, features[feature_index * 4 + 1]);
+    EXPECT_FLOAT_EQ(output_points[i].z, features[feature_index * 4 + 2]);
   }
 
-  std::sort(x_values.begin(), x_values.end());
-  EXPECT_EQ(x_values[0], 1.0f);
-  EXPECT_EQ(x_values[1], 3.0f);
-  EXPECT_EQ(x_values[2], 4.0f);
+  const auto car_label = static_cast<std::uint8_t>(PointCloudClassification::CAR);
+  const auto flat_surface_label = static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
+  const auto invalid_label = static_cast<std::uint8_t>(PointCloudClassification::INVALID);
 
-  const auto car_label =
-    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::CAR);
-  const auto truck_label =
-    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::TRUCK);
-  const auto ground_label =
-    static_cast<std::uint8_t>(autoware::ptv3::experimental::SemanticLabel::FLAT_SURFACE);
-
-  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), car_label), class_ids.end());
-  EXPECT_EQ(std::find(class_ids.begin(), class_ids.end(), truck_label), class_ids.end());
-  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), ground_label), class_ids.end());
-  EXPECT_NE(std::find(class_ids.begin(), class_ids.end(), 255U), class_ids.end());
+  // [0]: car
+  EXPECT_EQ(output_points[0].class_id, car_label);
+  EXPECT_FLOAT_EQ(output_points[0].probability, 0.9f);
+  EXPECT_FLOAT_EQ(output_points[0].entropy, expectedEntropy(0.9F, 0.1F));
+  // [1]: drivable_flat
+  EXPECT_EQ(output_points[1].class_id, flat_surface_label);
+  EXPECT_FLOAT_EQ(output_points[1].probability, 0.9f);
+  EXPECT_FLOAT_EQ(output_points[1].entropy, expectedEntropy(0.9F, 0.1F));
+  // [2]: invalid label -> probability=0.0, entropy=NaN
+  EXPECT_EQ(output_points[2].class_id, invalid_label);
+  EXPECT_FLOAT_EQ(output_points[2].probability, 0.0f);
+  EXPECT_TRUE(std::isnan(output_points[2].entropy));
 }
 
 TEST_F(PostprocessKernelTest, FilteredPointcloudFiltersOnlyArgmaxClass)
 {
-  const auto config = make_test_config();
+  const auto config = makeTestConfig();
   PostprocessCuda postprocess(config, stream_);
 
   constexpr std::size_t num_points = 3;

@@ -48,14 +48,6 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
-if(BUILD_TESTING)
-  find_package(ament_cmake_gtest REQUIRED)
-
-  ament_add_gtest(semantic_label_test test/semantic_label_test.cpp)
-  target_include_directories(semantic_label_test PRIVATE include)
-  ament_target_dependencies(semantic_label_test autoware_perception_msgs)
-endif()
-
 if(TRT_AVAIL AND CUDA_AVAIL)
   include_directories(
     include
@@ -93,6 +85,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   target_include_directories(${PROJECT_NAME}_cuda_lib
     SYSTEM PUBLIC
     ${autoware_cuda_utils_INCLUDE_DIRS}
+  )
+  ament_target_dependencies(${PROJECT_NAME}_cuda_lib
+    autoware_point_types
   )
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
@@ -140,6 +135,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   if(BUILD_TESTING)
+    ament_add_gtest(ptv3_config_test
+      test/ptv3_config_test.cpp
+    )
+    target_include_directories(ptv3_config_test PRIVATE include)
+
     ament_add_gtest(serialized_pooling_metadata_test
       test/serialized_pooling_metadata_test.cpp
     )
@@ -174,6 +174,8 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       include
       ${CUDA_INCLUDE_DIRS}
     )
+
+    ament_target_dependencies(postprocess_kernel_test autoware_point_types)
 
   endif()
 

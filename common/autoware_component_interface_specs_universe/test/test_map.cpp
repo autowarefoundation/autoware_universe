@@ -12,8 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/component_interface_specs/map.hpp"
 #include "autoware/component_interface_specs_universe/map.hpp"
 #include "gtest/gtest.h"
+
+#include <type_traits>
+
+// Proves the universe symbols are re-exports of the canonical core types, not
+// redefinitions: consumers see one definition, one version authority.
+TEST(map_universe, reexports_core)
+{
+  namespace core = autoware::component_interface_specs::map;
+  namespace universe = autoware::component_interface_specs_universe::map;
+  static_assert(std::is_same_v<universe::VectorMap, core::VectorMap>);
+  static_assert(
+    std::is_same_v<universe::GetDifferentialPointCloudMap, core::GetDifferentialPointCloudMap>);
+  SUCCEED();
+}
 
 TEST(map, interface)
 {
