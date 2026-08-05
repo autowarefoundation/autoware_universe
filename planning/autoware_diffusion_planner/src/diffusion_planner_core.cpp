@@ -216,11 +216,11 @@ void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
 void DiffusionPlannerCore::resolve_model_paths()
 {
   const std::filesystem::path base_dir(params_.base_model_directory);
-  params_.single_step_model_path = (base_dir / "diffusion_planner.onnx").string();
-  params_.encoder_model_path = (base_dir / "diffusion_planner_encoder.onnx").string();
-  params_.decoder_model_path = (base_dir / "diffusion_planner_decoder.onnx").string();
-  params_.turn_indicator_model_path = (base_dir / "diffusion_planner_turn_indicator.onnx").string();
-  params_.args_path = (base_dir / "diffusion_planner.param.json").string();
+  params_.single_step_model_path = (base_dir / params_.single_step_model_filename).string();
+  params_.encoder_model_path = (base_dir / params_.encoder_model_filename).string();
+  params_.decoder_model_path = (base_dir / params_.decoder_model_filename).string();
+  params_.turn_indicator_model_path = (base_dir / params_.turn_indicator_model_filename).string();
+  params_.args_path = (base_dir / params_.args_filename).string();
 }
 
 void DiffusionPlannerCore::set_start_guidance_enabled(const bool enabled)

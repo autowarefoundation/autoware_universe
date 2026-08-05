@@ -7,7 +7,13 @@
       precision: "fp32"
       use_cuda_graph: false
       base_model_directory: $(var data_path)/diffusion_planner/v5.0
+      args_filename: diffusion_planner.param.json
+      single_step_model:
+        onnx_model_filename: diffusion_planner.onnx
       multi_step_model:
+        encoder_onnx_model_filename: diffusion_planner_encoder.onnx
+        decoder_onnx_model_filename: diffusion_planner_decoder.onnx
+        turn_indicator_onnx_model_filename: diffusion_planner_turn_indicator.onnx
         dpm_solver_steps: 10
     guidance:
       start_guidance:

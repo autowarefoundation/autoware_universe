@@ -111,12 +111,17 @@ struct FrameContext
 struct DiffusionPlannerParams
 {
   std::string model_type;
+  std::string base_model_directory;
+  std::string args_filename;
+  std::string single_step_model_filename;
+  std::string encoder_model_filename;
+  std::string decoder_model_filename;
+  std::string turn_indicator_model_filename;
   std::string single_step_model_path;
   std::string encoder_model_path;
   std::string decoder_model_path;
   std::string turn_indicator_model_path;
   std::string args_path;
-  std::string base_model_directory;
   std::string plugins_path;
   std::string backend;
   std::string trt_precision;

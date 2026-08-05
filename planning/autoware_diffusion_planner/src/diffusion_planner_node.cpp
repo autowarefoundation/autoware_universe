@@ -168,6 +168,17 @@ void DiffusionPlanner::set_up_params()
   params_.model_type = this->declare_parameter<std::string>("model.type", "single_step");
   params_.base_model_directory =
     this->declare_parameter<std::string>("model.base_model_directory", "");
+  params_.args_filename =
+    this->declare_parameter<std::string>("model.args_filename", "diffusion_planner.param.json");
+  params_.single_step_model_filename = this->declare_parameter<std::string>(
+    "model.single_step_model.onnx_model_filename", "diffusion_planner.onnx");
+  params_.encoder_model_filename = this->declare_parameter<std::string>(
+    "model.multi_step_model.encoder_onnx_model_filename", "diffusion_planner_encoder.onnx");
+  params_.decoder_model_filename = this->declare_parameter<std::string>(
+    "model.multi_step_model.decoder_onnx_model_filename", "diffusion_planner_decoder.onnx");
+  params_.turn_indicator_model_filename = this->declare_parameter<std::string>(
+    "model.multi_step_model.turn_indicator_onnx_model_filename",
+    "diffusion_planner_turn_indicator.onnx");
   params_.dpm_solver_steps =
     this->declare_parameter<int>("model.multi_step_model.dpm_solver_steps", 10);
   params_.backend = this->declare_parameter<std::string>("model.backend", "tensorrt");
@@ -262,6 +273,11 @@ SetParametersResult DiffusionPlanner::on_parameter(
   {
     DiffusionPlannerParams temp_params = params_;
     const auto previous_base_model_directory = params_.base_model_directory;
+    const auto previous_args_filename = params_.args_filename;
+    const auto previous_single_step_model_filename = params_.single_step_model_filename;
+    const auto previous_encoder_model_filename = params_.encoder_model_filename;
+    const auto previous_decoder_model_filename = params_.decoder_model_filename;
+    const auto previous_turn_indicator_model_filename = params_.turn_indicator_model_filename;
     const auto previous_batch_size = params_.batch_size;
     const auto previous_dpm_solver_steps = params_.dpm_solver_steps;
     const auto previous_backend = params_.backend;
@@ -271,6 +287,19 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<std::string>(parameters, "model.type", temp_params.model_type);
     update_param<std::string>(
       parameters, "model.base_model_directory", temp_params.base_model_directory);
+    update_param<std::string>(parameters, "model.args_filename", temp_params.args_filename);
+    update_param<std::string>(
+      parameters, "model.single_step_model.onnx_model_filename",
+      temp_params.single_step_model_filename);
+    update_param<std::string>(
+      parameters, "model.multi_step_model.encoder_onnx_model_filename",
+      temp_params.encoder_model_filename);
+    update_param<std::string>(
+      parameters, "model.multi_step_model.decoder_onnx_model_filename",
+      temp_params.decoder_model_filename);
+    update_param<std::string>(
+      parameters, "model.multi_step_model.turn_indicator_onnx_model_filename",
+      temp_params.turn_indicator_model_filename);
     update_param<int>(
       parameters, "model.multi_step_model.dpm_solver_steps", temp_params.dpm_solver_steps);
     update_param<std::string>(parameters, "model.backend", temp_params.backend);
@@ -328,8 +357,13 @@ SetParametersResult DiffusionPlanner::on_parameter(
 #endif
       return result;
     }
-    const bool base_model_directory_changed =
-      temp_params.base_model_directory != previous_base_model_directory;
+    const bool model_paths_changed =
+      temp_params.base_model_directory != previous_base_model_directory ||
+      temp_params.args_filename != previous_args_filename ||
+      temp_params.single_step_model_filename != previous_single_step_model_filename ||
+      temp_params.encoder_model_filename != previous_encoder_model_filename ||
+      temp_params.decoder_model_filename != previous_decoder_model_filename ||
+      temp_params.turn_indicator_model_filename != previous_turn_indicator_model_filename;
     const bool batch_size_changed = temp_params.batch_size != previous_batch_size;
     const bool dpm_solver_steps_changed = temp_params.dpm_solver_steps != previous_dpm_solver_steps;
     const bool backend_changed = temp_params.backend != previous_backend;
@@ -341,8 +375,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
     core_->update_params(params_);
 
     if (
-      base_model_directory_changed || batch_size_changed || dpm_solver_steps_changed ||
-      backend_changed || trt_config_changed) {
+      model_paths_changed || batch_size_changed || dpm_solver_steps_changed || backend_changed ||
+      trt_config_changed) {
       try {
         load_model();
       } catch (const std::exception & e) {
