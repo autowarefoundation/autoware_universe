@@ -177,6 +177,15 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
     ament_target_dependencies(postprocess_kernel_test autoware_point_types)
 
+    ament_add_gtest(detection3d_postprocess_test
+      test/detection3d_postprocess_test.cpp
+    )
+
+    target_link_libraries(detection3d_postprocess_test
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+
   endif()
 
   ament_auto_package(
