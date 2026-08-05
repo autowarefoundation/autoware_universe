@@ -95,8 +95,6 @@ public:
   [[nodiscard]] const std::string & get_name() const { return instance_name_; }
   /// @brief Return the pluginlib class name.
   [[nodiscard]] const std::string & get_class_name() const { return class_name_; }
-  /// @brief Return the unique pipeline instance name.
-  [[nodiscard]] const std::string & get_instance_name() const { return instance_name_; }
   /// @brief Return the unqualified plugin class name.
   [[nodiscard]] const std::string & get_short_name() const { return short_name_; }
 

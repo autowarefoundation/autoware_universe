@@ -111,7 +111,7 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
       if (!modified_plugins_str.empty()) modified_plugins_str += ", ";
-      modified_plugins_str += modifier->get_instance_name();
+      modified_plugins_str += modifier->get_name();
     }
     trajectory_count++;
   }
