@@ -93,6 +93,27 @@ public:
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
     const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
 
+  /**
+   * @brief Input-level serialization order, laid out [num_orders, num_voxels] to match the
+   * encoder's `serialized_order` input.
+   *
+   * Valid after generateSerializedPoolingMetadata; the buffer itself is stable for this object's
+   * lifetime, so callers may bind it once. Non-const: it is handed straight to TensorRT's
+   * setTensorAddress, which takes void *.
+   */
+  [[nodiscard]] std::int64_t * inputLevelSerializedOrder() const
+  {
+    return input_level_order_d_.get();
+  }
+  /**
+   * @brief Inverse permutation of inputLevelSerializedOrder() per order, same layout, matching
+   * the encoder's `serialized_inverse` input; same validity and binding rules.
+   */
+  [[nodiscard]] std::int64_t * inputLevelSerializedInverse() const
+  {
+    return input_level_inverse_d_.get();
+  }
+
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
   [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }
 
@@ -126,8 +147,11 @@ private:
   /// laid out [num_orders, num_voxels]. Row 0 is the identity; the remaining rows are the only
   /// sorts left in the pooling-metadata path.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> input_level_order_d_{nullptr};
-  /// Keys for one of those sorts: each input voxel's code under the serialization order being
-  /// sorted.
+  /// Inverse permutation of each input_level_order_d_ row, same layout; published via
+  /// inputLevelSerializedInverse().
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> input_level_inverse_d_{nullptr};
+  /// Keys for one of the input-level order sorts: each input voxel's code under the serialization
+  /// order being sorted.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
   /// Sorted-keys output; CUB requires the buffer, nothing reads it afterwards.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};

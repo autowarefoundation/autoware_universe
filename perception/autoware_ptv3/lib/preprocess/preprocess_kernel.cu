@@ -103,6 +103,8 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
   input_level_order_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
+  input_level_inverse_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
   order_sort_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
   order_sort_sorted_keys_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
@@ -378,6 +380,24 @@ __global__ void fillIdentityKernel(std::int64_t * __restrict__ out, std::int64_t
 }
 
 /**
+ * @brief Inverts a permutation: writes `inverse_out[order_in[i]] = i` for every i.
+ *
+ * @param order_in Permutation of 0..count-1.
+ * @param inverse_out Output inverse permutation.
+ * @param count Number of elements.
+ */
+__global__ void scatterInverseKernel(
+  const std::int64_t * __restrict__ order_in, std::int64_t * __restrict__ inverse_out,
+  std::int64_t count)
+{
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= count) {
+    return;
+  }
+  inverse_out[order_in[idx]] = idx;
+}
+
+/**
  * @brief Stages the key/value pair for one of the input-level order sorts.
  *
  * @param serialized_code_in Input voxels' codes, laid out [num_orders, num_voxels]; only the
@@ -617,12 +637,15 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, clamped_num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-  // The input level is already sorted by order-0 code, so its order-0 row is simply 0..n-1. The
-  // remaining orders cannot be derived from it and need one real sort each - the only sorts in
-  // this function.
+  // The input level is already sorted by order-0 code, so its order-0 order and inverse rows are
+  // simply 0..n-1. The remaining orders cannot be derived from it and need one real sort each -
+  // the only sorts in this function.
   if (clamped_num_voxels > 0) {
     fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
       input_level_order_d_.get(), clamped_num_voxels);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
+    fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+      input_level_inverse_d_.get(), clamped_num_voxels);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
     for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
@@ -637,6 +660,11 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
           order_sort_sorted_keys_d_.get(), order_sort_indices_d_.get(),
           input_level_order_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels, 0,
           code_sort_end_bit_, stream_));
+
+      scatterInverseKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+        input_level_order_d_.get() + order_index * clamped_num_voxels,
+        input_level_inverse_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels);
+      CHECK_CUDA_ERROR(cudaPeekAtLastError());
     }
   }
 

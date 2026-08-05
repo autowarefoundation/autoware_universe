@@ -298,13 +298,18 @@ void PTv3TRT::createPointFields()
 
 void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 {
+  const std::int64_t num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
 
   // Inputs
   network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
   network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
-  network_io.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
+  // The encoder consumes the input level's serialization order directly; it used to take the raw
+  // codes and argsort them in-graph, duplicating work the preprocessing already does for the
+  // pooling metadata. serialized_code stays a host-side buffer for chaining the pooling stages.
+  for (const auto * name : {"serialized_order", "serialized_inverse"}) {
+    network_io.emplace_back(name, nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::DataType::kINT64);
+  }
 
   // Outputs: per-encoder-stage point features point_feat_i [N_i, enc_channels[i]],
   // finest to deepest.
@@ -324,9 +329,12 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
     "feat", nvinfer1::Dims{2, {config_.voxels_num_[0], 4}},
     nvinfer1::Dims{2, {config_.voxels_num_[1], 4}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 4}});
 
-  profile_dims.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
-    nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
+  for (const auto * name : {"serialized_order", "serialized_inverse"}) {
+    profile_dims.emplace_back(
+      name, nvinfer1::Dims{2, {num_orders, config_.voxels_num_[0]}},
+      nvinfer1::Dims{2, {num_orders, config_.voxels_num_[1]}},
+      nvinfer1::Dims{2, {num_orders, config_.voxels_num_[2]}});
+  }
 
   // Serialized pooling metadata inputs are precomputed on device each frame and fed to the
   // engine. Cluster tensors are computed too but consumed only by the head engines
@@ -348,7 +356,6 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   const std::int64_t min_voxels = config_.voxels_num_[0];
   const std::int64_t opt_voxels = config_.voxels_num_[1];
   const std::int64_t max_voxels = config_.voxels_num_[2];
-  const std::int64_t num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
 
   for (std::size_t stage = 0; stage < config_.pooling_strides_.size(); ++stage) {
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
@@ -391,7 +398,8 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
 
   encoder_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
   encoder_trt_ptr_->setTensorAddress("feat", feat_d_.get());
-  encoder_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+  encoder_trt_ptr_->setTensorAddress("serialized_order", pre_ptr_->inputLevelSerializedOrder());
+  encoder_trt_ptr_->setTensorAddress("serialized_inverse", pre_ptr_->inputLevelSerializedInverse());
   for (std::size_t stage = 0; stage < stage_feat_d_.size(); ++stage) {
     encoder_trt_ptr_->setTensorAddress(stageFeatureName(stage).c_str(), stage_feat_d_[stage].get());
   }
@@ -446,11 +454,13 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
     }
     const auto counts = stageProfileCounts(stage);
     if (stage == 0) {
-      network_io.emplace_back(
-        "serialized_code", nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::DataType::kINT64);
-      profile_dims.emplace_back(
-        "serialized_code", nvinfer1::Dims{2, {num_orders, counts[0]}},
-        nvinfer1::Dims{2, {num_orders, counts[1]}}, nvinfer1::Dims{2, {num_orders, counts[2]}});
+      for (const auto * name : {"serialized_order", "serialized_inverse"}) {
+        network_io.emplace_back(
+          name, nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::DataType::kINT64);
+        profile_dims.emplace_back(
+          name, nvinfer1::Dims{2, {num_orders, counts[0]}},
+          nvinfer1::Dims{2, {num_orders, counts[1]}}, nvinfer1::Dims{2, {num_orders, counts[2]}});
+      }
       network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
       profile_dims.emplace_back(
         "grid_coord", nvinfer1::Dims{2, {counts[0], 3}}, nvinfer1::Dims{2, {counts[1], 3}},
@@ -504,7 +514,10 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
       continue;
     }
     if (stage == 0) {
-      seg3d_head_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+      seg3d_head_trt_ptr_->setTensorAddress(
+        "serialized_order", pre_ptr_->inputLevelSerializedOrder());
+      seg3d_head_trt_ptr_->setTensorAddress(
+        "serialized_inverse", pre_ptr_->inputLevelSerializedInverse());
       seg3d_head_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
       continue;
     }
@@ -957,7 +970,10 @@ bool PTv3TRT::preProcess(
 
   encoder_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
   encoder_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
-  encoder_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+  const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
+  encoder_trt_ptr_->setInputShape("serialized_order", nvinfer1::Dims{2, {num_orders, num_voxels_}});
+  encoder_trt_ptr_->setInputShape(
+    "serialized_inverse", nvinfer1::Dims{2, {num_orders, num_voxels_}});
 
   if (!setSerializedPoolingInputShapes()) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Failed to set serialized pooling input shapes.");
@@ -999,7 +1015,9 @@ bool PTv3TRT::inferenceSeg3dHead()
     const auto stage_count_voxels = serialized_pooling_num_voxels_[stage];
     if (stage == 0) {
       success &= seg3d_head_trt_ptr_->setInputShape(
-        "serialized_code", nvinfer1::Dims{2, {num_orders, stage_count_voxels}});
+        "serialized_order", nvinfer1::Dims{2, {num_orders, stage_count_voxels}});
+      success &= seg3d_head_trt_ptr_->setInputShape(
+        "serialized_inverse", nvinfer1::Dims{2, {num_orders, stage_count_voxels}});
       success &= seg3d_head_trt_ptr_->setInputShape(
         "grid_coord", nvinfer1::Dims{2, {stage_count_voxels, 3}});
       continue;
