@@ -187,7 +187,7 @@ void TrajectoryModifier::load_plugin(const std::string & name, const std::size_t
 void TrajectoryModifier::unload_plugin(const std::string & name)
 {
   auto it = std::remove_if(plugins_.begin(), plugins_.end(), [&](const auto plugin) {
-    return plugin->get_instance_name() == name || plugin->get_class_name() == name;
+    return plugin->get_name() == name || plugin->get_class_name() == name;
   });
 
   if (it == plugins_.end()) {

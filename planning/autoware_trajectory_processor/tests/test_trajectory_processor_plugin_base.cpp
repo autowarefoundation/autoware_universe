@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/trajectory_processor/trajectory_processor_data.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_parameters.hpp"
 #include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <pluginlib/class_loader.hpp>
@@ -23,10 +25,11 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_processor::plugin
-{
-namespace
-{
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 
 class TestTrajectoryProcessorPlugin : public TrajectoryProcessorPluginBase
 {
@@ -186,6 +189,3 @@ TEST_F(TrajectoryProcessorPluginBaseTest, LoadsEveryPluginThroughCommonInterface
   const auto repeated = loader.createSharedInstance(plugin_classes.front());
   EXPECT_NE(plugins.front().get(), repeated.get());
 }
-
-}  // namespace
-}  // namespace autoware::trajectory_processor::plugin
