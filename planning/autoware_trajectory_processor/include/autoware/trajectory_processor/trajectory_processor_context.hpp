@@ -24,8 +24,10 @@
 namespace autoware::trajectory_processor
 {
 
+/// @brief Stable vehicle and transform services shared by trajectory processor plugins.
 struct TrajectoryProcessorContext
 {
+  /// @brief Construct shared services from the hosting ROS node.
   explicit TrajectoryProcessorContext(rclcpp::Node * node)
   : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
     tf_buffer{node->get_clock()},

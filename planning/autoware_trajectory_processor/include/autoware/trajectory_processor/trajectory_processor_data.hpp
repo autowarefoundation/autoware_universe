@@ -31,8 +31,10 @@
 namespace autoware::trajectory_processor
 {
 
-// Runtime inputs shared by all plugins processing one candidate trajectory. A fresh instance must
-// be created per candidate so mutable pipeline state is not shared between candidates.
+/// @brief Runtime inputs and mutable state shared while processing one candidate trajectory.
+///
+/// A fresh instance must be created per candidate so mutable pipeline state is not shared between
+/// candidates. Inputs that are not required by every plugin remain optional.
 struct TrajectoryProcessorData
 {
   nav_msgs::msg::Odometry::ConstSharedPtr current_odometry{nullptr};

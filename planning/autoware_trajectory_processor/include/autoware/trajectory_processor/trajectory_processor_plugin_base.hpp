@@ -38,12 +38,16 @@ using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
+/// @brief Outcome of processing one candidate trajectory.
 enum class ProcessingResult { Unchanged, Modified };
 
+/// @brief Common pluginlib interface for trajectory modifier and optimizer plugins.
 class TrajectoryProcessorPluginBase
 {
 public:
+  /// @brief Construct an uninitialized plugin instance.
   TrajectoryProcessorPluginBase() = default;
+  /// @brief Destroy the plugin through the common interface.
   virtual ~TrajectoryProcessorPluginBase() = default;
 
   TrajectoryProcessorPluginBase(const TrajectoryProcessorPluginBase &) = delete;
@@ -51,6 +55,7 @@ public:
   TrajectoryProcessorPluginBase(TrajectoryProcessorPluginBase &&) = delete;
   TrajectoryProcessorPluginBase & operator=(TrajectoryProcessorPluginBase &&) = delete;
 
+  /// @brief Initialize a plugin with distinct class and pipeline instance identities.
   void initialize(
     std::string class_name, std::string instance_name, rclcpp::Node * node_ptr,
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
@@ -69,6 +74,7 @@ public:
     on_initialize(params);
   }
 
+  /// @brief Initialize a plugin whose instance identity is its class name.
   void initialize(
     const std::string & class_name, rclcpp::Node * node_ptr,
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
@@ -78,18 +84,26 @@ public:
       class_name, class_name, node_ptr, std::move(time_keeper), std::move(context), params);
   }
 
+  /// @brief Process one candidate trajectory using data shared across its plugin pipeline.
   virtual ProcessingResult process(
     TrajectoryPoints & trajectory_points, TrajectoryProcessorData & data) = 0;
 
+  /// @brief Apply an updated snapshot of processor parameters.
   virtual void update_params(const TrajectoryProcessorParams & params) = 0;
 
+  /// @brief Return the unique pipeline instance name.
   [[nodiscard]] const std::string & get_name() const { return instance_name_; }
+  /// @brief Return the pluginlib class name.
   [[nodiscard]] const std::string & get_class_name() const { return class_name_; }
+  /// @brief Return the unique pipeline instance name.
   [[nodiscard]] const std::string & get_instance_name() const { return instance_name_; }
+  /// @brief Return the unqualified plugin class name.
   [[nodiscard]] const std::string & get_short_name() const { return short_name_; }
 
+  /// @brief Publish plugin-specific debug data when supported.
   virtual void publish_debug_data([[maybe_unused]] const std::string & ns) const {}
 
+  /// @brief Publish accumulated planning factors when supported.
   virtual void publish_planning_factor()
   {
     if (planning_factor_interface_) {
@@ -97,6 +111,7 @@ public:
     }
   }
 
+  /// @brief Return planning factors currently accumulated by the plugin.
   [[nodiscard]] std::vector<PlanningFactor> get_planning_factors() const
   {
     if (planning_factor_interface_) {
@@ -106,10 +121,14 @@ public:
   }
 
 protected:
+  /// @brief Perform derived-plugin initialization after common state is stored.
   virtual void on_initialize(const TrajectoryProcessorParams & params) = 0;
 
+  /// @brief Return the hosting ROS node.
   [[nodiscard]] rclcpp::Node * get_node_ptr() const { return node_ptr_; }
+  /// @brief Return the hosting node's clock.
   [[nodiscard]] rclcpp::Clock::SharedPtr get_clock() const { return node_ptr_->get_clock(); }
+  /// @brief Return the shared processing time keeper.
   [[nodiscard]] std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const
   {
     return time_keeper_;
@@ -122,6 +141,7 @@ protected:
   double trajectory_time_step_{0.1};
 
 private:
+  /// @brief Extract the final component of a namespace-qualified class name.
   static std::string get_unqualified_name(const std::string & name)
   {
     const auto separator = name.find_last_of(':');

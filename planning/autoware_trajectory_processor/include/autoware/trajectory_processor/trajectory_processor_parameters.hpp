@@ -23,17 +23,22 @@
 namespace autoware::trajectory_processor
 {
 
-// Compatibility-first parameter superset. Keeping the generated parameter structures intact
-// preserves their existing ROS names, validation, and defaults during the plugin API migration.
+/// @brief Compatibility parameter superset for modifier and optimizer plugins.
+///
+/// Keeping the generated structures intact preserves existing ROS names, validation, and defaults
+/// during the plugin API migration.
 struct TrajectoryProcessorParams
 {
+  /// @brief Construct both parameter groups with their generated defaults.
   TrajectoryProcessorParams() = default;
 
+  /// @brief Construct the superset from modifier parameters.
   explicit TrajectoryProcessorParams(trajectory_modifier_params::Params params)
   : modifier{std::move(params)}
   {
   }
 
+  /// @brief Construct the superset from optimizer parameters.
   explicit TrajectoryProcessorParams(trajectory_optimizer_node_params::Params params)
   : optimizer{std::move(params)}
   {

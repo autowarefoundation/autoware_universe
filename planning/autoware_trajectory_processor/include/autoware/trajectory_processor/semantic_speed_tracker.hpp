@@ -23,10 +23,11 @@
 namespace autoware::trajectory_processor
 {
 
-// Tracks detected stop approaches in a trajectory across a processor plugin pipeline.
+/// @brief Tracks detected stop approaches across a trajectory processor plugin pipeline.
 class SemanticSpeedTracker
 {
 public:
+  /// @brief Arc-length and index bounds of a detected slow-down range.
   struct SlowSpeedInfo
   {
     std::size_t start_index{0};
@@ -35,6 +36,7 @@ public:
     double end_s_m{0.0};
   };
 
+  /// @brief Remap tracked range indices to a trajectory with new arc-length samples.
   void remap_to_trajectory(const std::vector<double> & new_arc_lengths)
   {
     if (new_arc_lengths.empty() || slow_down_ranges_.empty()) {
@@ -64,17 +66,22 @@ public:
     }
   }
 
+  /// @brief Return all tracked slow-down ranges.
   [[nodiscard]] const std::vector<SlowSpeedInfo> & get_slow_down_ranges() const
   {
     return slow_down_ranges_;
   }
 
+  /// @brief Add a completed stop-approach range.
   void add_stop_approach(const SlowSpeedInfo & info) { slow_down_ranges_.push_back(info); }
 
+  /// @brief Remove all completed stop-approach ranges.
   void clear_stop_approaches() { slow_down_ranges_.clear(); }
 
+  /// @brief Stage a trajectory index as a possible stop point.
   void add_stop_candidate(const std::size_t idx) { stop_point_candidates_.push_back(idx); }
 
+  /// @brief Return all staged stop candidates and clear the staging area.
   std::vector<std::size_t> take_stop_point_candidates()
   {
     std::vector<std::size_t> result;
