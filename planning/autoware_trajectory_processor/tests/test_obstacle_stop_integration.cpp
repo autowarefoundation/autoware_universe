@@ -133,7 +133,7 @@ PredictedObjects::ConstSharedPtr make_blocking_car(double x, double y)
   return std::make_shared<const PredictedObjects>(predicted_objects);
 }
 
-// Build a dense pointcloud cluster the obstacle_stop pipeline will detect.
+// Build a dense blocking pointcloud the obstacle_stop pipeline will detect.
 sensor_msgs::msg::PointCloud2::ConstSharedPtr make_blocking_pointcloud_cluster(
   double center_x, double center_y, double height)
 {
