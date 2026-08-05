@@ -99,7 +99,7 @@ private:
   ObjectDecelMap object_decel_map_;
 
   AUTOWARE_PUBLISHER_PTR(MarkerArray) debug_viz_pub_;
-  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_clustered_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_filtered_pointcloud_;
   AUTOWARE_PUBLISHER_PTR(StringStamped) pub_debug_text_;
 
   void update_object_decel_map()
