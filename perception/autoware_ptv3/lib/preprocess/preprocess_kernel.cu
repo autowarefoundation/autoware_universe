@@ -104,6 +104,8 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
   level0_order_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
+  level0_inverse_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
   order_sort_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
   order_sort_sorted_keys_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
@@ -340,6 +342,16 @@ __global__ void fillIdentityKernel(std::int64_t * __restrict__ out, std::int64_t
   out[idx] = idx;
 }
 
+__global__ void scatterInverseKernel(
+  const std::int64_t * __restrict__ order, std::int64_t * __restrict__ inverse, std::int64_t count)
+{
+  const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (rank >= count) {
+    return;
+  }
+  inverse[order[rank]] = rank;
+}
+
 __global__ void prepareLevel0OrderSortKernel(
   const std::int64_t * __restrict__ serialized_code, std::int64_t * __restrict__ keys,
   std::int64_t * __restrict__ indices, std::int64_t num_voxels, std::int32_t order_index)
@@ -532,6 +544,9 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
     level0_order_d_.get(), clamped_num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+    level0_inverse_d_.get(), clamped_num_voxels);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
     prepareLevel0OrderSortKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
@@ -545,6 +560,11 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
         order_sort_sorted_keys_d_.get(), order_sort_indices_d_.get(),
         level0_order_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels, 0,
         code_sort_end_bit_, stream_));
+
+    scatterInverseKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+      level0_order_d_.get() + order_index * clamped_num_voxels,
+      level0_inverse_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
   }
 
   const std::int32_t * current_grid_coord = grid_coord;

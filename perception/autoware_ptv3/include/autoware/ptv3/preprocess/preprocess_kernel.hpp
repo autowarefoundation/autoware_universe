@@ -66,6 +66,14 @@ public:
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
     const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
 
+  // Level-0 serialization order and its inverse, laid out [num_orders, num_voxels] to match the
+  // encoder's `serialized_order` / `serialized_inverse` inputs. Valid after
+  // generateSerializedPoolingMetadata; the buffers themselves are stable for this object's
+  // lifetime, so callers may bind them once.
+  // Non-const: these are handed straight to TensorRT's setTensorAddress, which takes void *.
+  [[nodiscard]] std::int64_t * level0SerializedOrder() const { return level0_order_d_.get(); }
+  [[nodiscard]] std::int64_t * level0SerializedInverse() const { return level0_inverse_d_.get(); }
+
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
   [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }
 
@@ -100,6 +108,7 @@ private:
   // generateFeatures already sorted the voxels by their order-0 code; the remaining rows are the
   // only genuine sorts left in the pooling-metadata path.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> level0_order_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> level0_inverse_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_indices_d_{nullptr};

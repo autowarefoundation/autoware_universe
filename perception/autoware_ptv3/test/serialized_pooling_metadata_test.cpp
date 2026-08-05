@@ -475,6 +475,37 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
   ASSERT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
+  // The level-0 order and inverse are published for the encoder engine to consume directly. Row 0
+  // must be the identity (the caller guarantees voxels arrive in order-0 code order) and every
+  // other row must be a genuine argsort of that row's codes.
+  {
+    const auto count = static_cast<std::size_t>(num_voxels);
+    const auto level0_order = copyToHost(preprocess.level0SerializedOrder(), count * kNumOrders);
+    const auto level0_inverse =
+      copyToHost(preprocess.level0SerializedInverse(), count * kNumOrders);
+    for (std::size_t order = 0; order < kNumOrders; ++order) {
+      const std::vector<std::int64_t> codes(
+        serialized_code.begin() + static_cast<std::ptrdiff_t>(order * count),
+        serialized_code.begin() + static_cast<std::ptrdiff_t>((order + 1) * count));
+      const auto expected_order = stable_argsort(codes);
+      std::vector<std::int64_t> expected_inverse(count);
+      for (std::size_t rank = 0; rank < count; ++rank) {
+        expected_inverse[static_cast<std::size_t>(expected_order[rank])] =
+          static_cast<std::int64_t>(rank);
+      }
+      const auto suffix = " " + std::to_string(order);
+      const auto begin = static_cast<std::ptrdiff_t>(order * count);
+      const auto end = static_cast<std::ptrdiff_t>((order + 1) * count);
+      expect_equal(
+        std::vector<std::int64_t>(level0_order.begin() + begin, level0_order.begin() + end),
+        expected_order, "level0 serialized_order" + suffix);
+      expect_equal(
+        std::vector<std::int64_t>(level0_inverse.begin() + begin, level0_inverse.begin() + end),
+        expected_inverse, "level0 serialized_inverse" + suffix);
+    }
+    expect_orders_diverge(level0_order, count, kNumOrders, "level0 serialized_order");
+  }
+
   std::vector<CpuStage> references;
   references.push_back(
     make_stage_reference(grid_coord, serialized_code, kNumOrders, config.pooling_strides_[0]));
