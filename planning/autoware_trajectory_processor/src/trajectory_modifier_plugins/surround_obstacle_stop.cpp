@@ -203,14 +203,8 @@ obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_in
     transformed_pointcloud, min_x, max_x, min_y, max_y, -10.0, 10.0);
 
   // ProximityChecker expects PointXYZ; drop CPE fields after label/range filtering.
-  auto xyz_pointcloud = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-  xyz_pointcloud->points.reserve(transformed_pointcloud->points.size());
-  for (const auto & p : transformed_pointcloud->points) {
-    xyz_pointcloud->points.emplace_back(p.x, p.y, p.z);
-  }
-  xyz_pointcloud->width = static_cast<std::uint32_t>(xyz_pointcloud->points.size());
-  xyz_pointcloud->height = 1;
-  xyz_pointcloud->is_dense = transformed_pointcloud->is_dense;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr xyz_pointcloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::copyPointCloud(*transformed_pointcloud, *xyz_pointcloud);
 
   checker_inputs.pointcloud_in_base_link = xyz_pointcloud;
 
