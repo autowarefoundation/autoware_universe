@@ -84,6 +84,7 @@
       target_objects:
         bbox: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "animal", "unknown"]
         polygon: ["car", "truck", "bus", "trailer", "pedestrian", "hazard", "animal", "unknown"]
+        pointcloud: ["hazard", "structure", "vegetation"]
       front_distance_th:
         car: 0.5
         truck: 0.5

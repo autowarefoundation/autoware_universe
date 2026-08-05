@@ -378,6 +378,11 @@ trajectory_processor_params:
         default_value: [car, truck, bus, trailer, pedestrian, hazard, animal, unknown]
         description: Types of polygon shaped objects to consider for surround obstacle stop
         read_only: false
+      pointcloud:
+        type: string_array
+        default_value: [hazard, structure, vegetation]
+        description: Pointcloud types to consider for surround obstacle stop
+        read_only: false
     base_distance_th:
       &distance_th_template {
         type: double,

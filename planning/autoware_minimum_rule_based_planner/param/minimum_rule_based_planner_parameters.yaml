@@ -307,6 +307,11 @@ minimum_rule_based_planner:
         default_value: [car, truck, bus, trailer, pedestrian, hazard, animal, unknown]
         description: types of polygon shaped objects to consider for surround obstacle stop
         read_only: false
+      pointcloud:
+        type: string_array
+        default_value: [hazard, structure, vegetation]
+        description: pointcloud types to consider for surround obstacle stop
+        read_only: false
     base_distance_th:
       &distance_th_template {
         type: double,

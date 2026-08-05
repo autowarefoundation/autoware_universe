@@ -455,6 +455,14 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "pointcloud": {
+                  "type": "array",
+                  "description": "Pointcloud types to consider for surround obstacle stop",
+                  "default": ["hazard", "structure", "vegetation"],
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [],
