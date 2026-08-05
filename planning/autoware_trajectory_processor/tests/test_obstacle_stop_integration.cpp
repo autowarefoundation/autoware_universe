@@ -246,16 +246,9 @@ protected:
     p.objects.target_objects.bbox = {"car"};
     p.objects.target_objects.polygon = {"car"};
 
+    p.pointcloud.target_types = {"unknown"};
     p.pointcloud.height_buffer = 0.5;
     p.pointcloud.min_height = 0.2;
-    p.pointcloud.voxel_grid_filter.x = 0.2;
-    p.pointcloud.voxel_grid_filter.y = 0.2;
-    p.pointcloud.voxel_grid_filter.z = 0.2;
-    p.pointcloud.voxel_grid_filter.min_size = 3;
-    p.pointcloud.clustering.tolerance = 0.3;
-    p.pointcloud.clustering.min_height = 0.5;
-    p.pointcloud.clustering.min_size = 10;
-    p.pointcloud.clustering.max_size = 10000;
 
     p.rss_params.enable = true;
     p.rss_params.object_decel.car = 1.5;

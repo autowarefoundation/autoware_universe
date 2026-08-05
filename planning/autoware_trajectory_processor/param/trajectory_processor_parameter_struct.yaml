@@ -243,6 +243,11 @@ trajectory_processor_params:
           bounds<>: [0.0, 10.0]
         read_only: false
     pointcloud:
+      target_types:
+        type: string_array
+        default_value: [hazard, structure, vegetation]
+        description: Pointcloud types to consider for obstacle stop
+        read_only: false
       height_buffer:
         type: double
         default_value: 0.5
@@ -257,57 +262,6 @@ trajectory_processor_params:
         validation:
           bounds<>: [0.0, 10.0]
         read_only: false
-      voxel_grid_filter:
-        x:
-          type: double
-          default_value: 0.2
-          validation:
-            bounds<>: [0.0, 1.0]
-          read_only: false
-        y:
-          type: double
-          default_value: 0.2
-          validation:
-            bounds<>: [0.0, 1.0]
-          read_only: false
-        z:
-          type: double
-          default_value: 0.2
-          validation:
-            bounds<>: [0.0, 1.0]
-          read_only: false
-        min_size:
-          type: int
-          default_value: 3
-          validation:
-            bounds<>: [1, 100]
-          read_only: false
-      clustering:
-        tolerance:
-          type: double
-          default_value: 0.2
-          description: Distance threshold for clustering points [m]
-          validation:
-            bounds<>: [0.0, 1.0]
-          read_only: false
-        min_height:
-          type: double
-          default_value: 0.5
-          validation:
-            bounds<>: [0.0, 1.0]
-          read_only: false
-        min_size:
-          type: int
-          default_value: 10
-          validation:
-            bounds<>: [1, 10000]
-          read_only: false
-        max_size:
-          type: int
-          default_value: 10000
-          validation:
-            bounds<>: [1, 10000]
-          read_only: false
 
     rss_params:
       enable:

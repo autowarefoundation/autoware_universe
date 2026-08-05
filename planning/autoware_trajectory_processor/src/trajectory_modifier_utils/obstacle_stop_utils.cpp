@@ -471,49 +471,24 @@ void PointCloudFilter::filter_pointcloud(
 {
   if (pointcloud->empty()) return;
 
-  crop_box_.setMin(Eigen::Vector4f(min_x, min_y, min_z, 1.0));
-  crop_box_.setMax(Eigen::Vector4f(max_x, max_y, max_z, 1.0));
-  crop_box_.setInputCloud(pointcloud);
-  crop_box_.filter(*pointcloud);
+  auto is_within_range = [&](const auto & point) {
+    return point.x >= min_x && point.x <= max_x && point.y >= min_y && point.y <= max_y &&
+           point.z >= min_z && point.z <= max_z;
+  };
 
-  if (pointcloud->empty()) return;
+  auto is_target_type = [&](const auto & point) {
+    const auto classification = static_cast<PointCloudClassification>(point.class_id);
+    if (pcd_class_to_object_type.count(classification) == 0) return false;
+    return pcd_types_.count(pcd_class_to_object_type.at(classification)) != 0;
+  };
 
-  voxel_grid_.setInputCloud(pointcloud);
-  voxel_grid_.filter(*pointcloud);
-}
-
-void PointCloudFilter::cluster_pointcloud(
-  const PointCloud::Ptr & input, PointCloud::Ptr & output, const double min_height)
-{
-  if (input->empty()) return;
-
-  std::vector<pcl::PointIndices> cluster_indices;
-  tree_->setInputCloud(input);
-  ec_.setSearchMethod(tree_);
-  ec_.setInputCloud(input);
-  ec_.extract(cluster_indices);
-
-  PointCloud::Ptr cluster_buffer(new PointCloud);
-  PointCloud::Ptr hull_buffer(new PointCloud);
-
-  for (const auto & indices : cluster_indices) {
-    cluster_buffer->clear();
-    hull_buffer->clear();
-    bool cluster_above_height_threshold{false};
-    for (const auto & index : indices.indices) {
-      const auto & point = (*input)[index];
-
-      cluster_above_height_threshold |= point.z >= min_height;
-      cluster_buffer->push_back(point);
-    }
-    if (!cluster_above_height_threshold || cluster_buffer->empty()) continue;
-
-    convex_hull_.setInputCloud(cluster_buffer);
-    convex_hull_.reconstruct(*hull_buffer);
-    for (const auto & point : *hull_buffer) {
-      output->push_back(point);
-    }
-  }
+  // Axis-aligned crop via x/y/z only. pcl::CropBox cannot be used with PointXYZCPE because
+  // PCL transform helpers require a .data member that this point type does not provide.
+  pointcloud->erase(
+    std::remove_if(
+      pointcloud->begin(), pointcloud->end(),
+      [&](const auto & point) { return !is_within_range(point) || !is_target_type(point); }),
+    pointcloud->end());
 }
 
 void PointCloudFilter::filter_pointcloud_by_object(
@@ -727,7 +702,11 @@ void ObstacleTracker::update_points(
 
   for (const auto & [uuid, entry] : persistent_point_map_) {
     if (entry.is_active) {
-      persistent_points->points.emplace_back(entry.position.x, entry.position.y, entry.position.z);
+      autoware::point_types::PointXYZCPE point;
+      point.x = entry.position.x;
+      point.y = entry.position.y;
+      point.z = entry.position.z;
+      persistent_points->points.push_back(point);
     }
   }
 }

@@ -49,10 +49,7 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
 
   pointcloud_filter_ =
     std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
-      params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,
-      params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
-      params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
-      params_.pointcloud.clustering.max_size);
+      params_.pointcloud.target_types);
 
   object_filter_ = std::make_unique<trajectory_processor::utils::obstacle_stop::ObjectFilter>(
     params_.objects.target_objects.bbox, params_.objects.target_objects.polygon,
@@ -230,10 +227,6 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
       rel_max_point.y(), min_z, max_z);
   }
 
-  PointCloud::Ptr clustered_points(new PointCloud);
-  pointcloud_filter_->cluster_pointcloud(
-    filtered_pointcloud, clustered_points, params_.pointcloud.clustering.min_height);
-
   {
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
@@ -245,23 +238,21 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
     }
 
     Eigen::Affine3f isometry = tf2::transformToEigen(transform_stamped.transform).cast<float>();
-    autoware_utils::transform_pointcloud(*filtered_pointcloud, *filtered_pointcloud, isometry);
-  }
-
-  {
-    const auto cluster_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    pcl::toROSMsg(*clustered_points, *cluster_pointcloud);
-    cluster_pointcloud->header.stamp = pointcloud->header.stamp;
-    cluster_pointcloud->header.frame_id = "map";
-    debug_data_.cluster_points = cluster_pointcloud;
+    for (auto & p : filtered_pointcloud->points) {
+      const Eigen::Vector3f q = isometry * Eigen::Vector3f(p.x, p.y, p.z);
+      p.x = q.x();
+      p.y = q.y();
+      p.z = q.z();
+    }
   }
 
   if (data.predicted_objects_ptr && !data.predicted_objects_ptr->objects.empty()) {
-    pointcloud_filter_->filter_pointcloud_by_object(clustered_points, *data.predicted_objects_ptr);
+    pointcloud_filter_->filter_pointcloud_by_object(
+      filtered_pointcloud, *data.predicted_objects_ptr);
   }
 
   return get_nearest_pcd_collision(
-    traj_points, debug_data_.trajectory_shape, clustered_points, debug_data_.target_pcd_points);
+    traj_points, debug_data_.trajectory_shape, filtered_pointcloud, debug_data_.target_pcd_points);
 }
 
 void ObstacleStop::update_collision_points_buffer(
