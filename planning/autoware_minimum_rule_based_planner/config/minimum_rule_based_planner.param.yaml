@@ -58,7 +58,7 @@
         safety_buffer: 0.1       # safety buffer to expand object shape [m]
 
       pointcloud:
-        target_types: ["hazard", "structure", "vegetation"]
+        target_types: ["structure", "vegetation"]
         height_buffer: 0.5  # height buffer to add above ego height [m]
         min_height: 0.2  # minimum height of pointcloud [m]
 
