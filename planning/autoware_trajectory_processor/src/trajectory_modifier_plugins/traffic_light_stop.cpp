@@ -24,7 +24,7 @@
 namespace
 {
 autoware::traffic_light_compliance_checker::Parameters to_checker_params(
-  const autoware::trajectory_modifier::plugin::TrajectoryModifierParams & params)
+  const autoware::trajectory_processor::TrajectoryProcessorParams & params)
 {
   const auto tl_stop_p = params.traffic_light_stop;
   const auto stopping_params = params.stopping_constraints;
@@ -51,7 +51,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 namespace autoware::trajectory_modifier::plugin
 {
 
-void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryModifierParams & params)
+void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryProcessorParams & params)
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
@@ -69,7 +69,7 @@ void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryModifierPa
       to_checker_params(params), context_->vehicle_info);
 }
 
-void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryModifierParams & params)
+void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_traffic_light_stop;
   params_ = params.traffic_light_stop;
@@ -78,7 +78,8 @@ void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryModifierPa
 }
 
 bool TrafficLightStop::is_trajectory_modification_required(
-  [[maybe_unused]] const TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input)
+  [[maybe_unused]] const TrajectoryPoints & traj_points,
+  [[maybe_unused]] const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "TrafficLightStop::is_trajectory_modification_required", *get_time_keeper());
@@ -92,14 +93,14 @@ bool TrafficLightStop::is_trajectory_modification_required(
   return check_traffic_lights(traj_points, input);
 }
 
-bool TrafficLightStop::check_inputs(const InputData & input)
+bool TrafficLightStop::check_inputs(const TrajectoryProcessorData & input)
 {
   return input.current_odometry && input.current_acceleration && input.route &&
          input.traffic_light_signals && input.lanelet_map;
 }
 
 bool TrafficLightStop::check_traffic_lights(
-  const TrajectoryPoints & traj_points, const InputData & input)
+  const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "TrafficLightStop::check_traffic_lights", *get_time_keeper());
@@ -132,11 +133,10 @@ bool TrafficLightStop::check_traffic_lights(
   return true;
 }
 
-bool TrafficLightStop::modify_trajectory(
-  [[maybe_unused]] TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input)
+ProcessingResult TrafficLightStop::process(
+  [[maybe_unused]] TrajectoryPoints & traj_points, [[maybe_unused]] TrajectoryProcessorData & input)
 {
-  autoware_utils_debug::ScopedTimeTrack st(
-    "TrafficLightStop::modify_trajectory", *get_time_keeper());
+  autoware_utils_debug::ScopedTimeTrack st("TrafficLightStop::process", *get_time_keeper());
   debug_data_ = DebugData{};
 
   if (is_trajectory_modification_required(traj_points, input) && nearest_violation_) {
@@ -144,10 +144,11 @@ bool TrafficLightStop::modify_trajectory(
   }
 
   publish_debug_string();
-  return debug_data_.active;
+  return debug_data_.active ? ProcessingResult::Modified : ProcessingResult::Unchanged;
 }
 
-bool TrafficLightStop::set_stop_point(TrajectoryPoints & traj_points, const InputData & input)
+bool TrafficLightStop::set_stop_point(
+  TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("TrafficLightStop::set_stop_point", *get_time_keeper());
 
@@ -189,7 +190,9 @@ bool TrafficLightStop::set_stop_point(TrajectoryPoints & traj_points, const Inpu
   auto distance =
     motion_utils::calcSignedArcLength(traj_points, ego_pose.position, stop_pose.position);
   if (std::isnan(distance)) distance = 0.0;
-  planning_factor_interface_->add(distance, stop_pose, PlanningFactor::STOP, SafetyFactorArray{});
+  planning_factor_interface_->add(
+    distance, stop_pose, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    SafetyFactorArray{});
 
   debug_data_.stop_point_arc_length = target_stop_point_arc_length;
 
@@ -203,13 +206,19 @@ void TrafficLightStop::publish_debug_string() const
 {
   std::ostringstream ss;
   ss << std::fixed << std::setprecision(2) << std::boolalpha;
-  ss << "TRAFFIC LIGHT STOP MODIFIER: " << "\n";
-  ss << "\t\t" << "ACTIVE: " << debug_data_.active << "\n";
+  ss << "TRAFFIC LIGHT STOP MODIFIER: "
+     << "\n";
+  ss << "\t\t"
+     << "ACTIVE: " << debug_data_.active << "\n";
   if (debug_data_.active) {
-    ss << "\t\t" << "VIOLATIONS: " << debug_data_.violations_count << "\n";
-    ss << "\t\t" << "NEAREST VIOLATION: " << debug_data_.nearest_violation_arc_length << " m"
+    ss << "\t\t"
+       << "VIOLATIONS: " << debug_data_.violations_count << "\n";
+    ss << "\t\t"
+       << "NEAREST VIOLATION: " << debug_data_.nearest_violation_arc_length << " m"
        << "\n";
-    ss << "\t\t" << "STOP POINT: " << debug_data_.stop_point_arc_length << " m" << "\n";
+    ss << "\t\t"
+       << "STOP POINT: " << debug_data_.stop_point_arc_length << " m"
+       << "\n";
   }
   StringStamped string_stamp;
   string_stamp.stamp = get_clock()->now();
@@ -222,4 +231,4 @@ void TrafficLightStop::publish_debug_string() const
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::TrafficLightStop,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

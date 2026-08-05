@@ -15,25 +15,32 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__VELOCITY_MODIFIER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__VELOCITY_MODIFIER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 namespace autoware::trajectory_modifier::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
+using ModifierParams = trajectory_modifier_params::Params;
 
-class VelocityModifier : public TrajectoryModifierPluginBase
+class VelocityModifier : public TrajectoryProcessorPluginBase
 {
 public:
   VelocityModifier() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
+  ProcessingResult process(
+    TrajectoryPoints & traj_points, TrajectoryProcessorData & input) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input) override;
+    const TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryProcessorData & input);
 
-  void update_params(const TrajectoryModifierParams & params) override
+  void update_params(const TrajectoryProcessorParams & params) override
   {
     enabled_ = params.use_velocity_modifier;
     trajectory_time_step_ = params.trajectory_time_step;
@@ -41,10 +48,10 @@ public:
   };
 
 protected:
-  void on_initialize(const TrajectoryModifierParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
-  TrajectoryModifierParams::StoppingConstraints params_;
+  ModifierParams::StoppingConstraints params_;
 
   size_t update_velocities(
     TrajectoryPoints & trajectory, const double jerk, const double decel) const;

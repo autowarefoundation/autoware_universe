@@ -157,12 +157,12 @@ TEST(TrajectoryProcessorParamsTest, PreservesBothGeneratedParameterStructures)
   EXPECT_FALSE(from_optimizer.optimizer_params().use_qp_smoother);
 }
 
-TEST_F(TrajectoryProcessorPluginBaseTest, LoadsEveryOptimizerThroughCommonInterface)
+TEST_F(TrajectoryProcessorPluginBaseTest, LoadsEveryPluginThroughCommonInterface)
 {
   pluginlib::ClassLoader<TrajectoryProcessorPluginBase> loader(
     "autoware_trajectory_processor",
     "autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase");
-  const std::vector<std::string> optimizer_classes = {
+  const std::vector<std::string> plugin_classes = {
     "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
     "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
     "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
@@ -171,15 +171,20 @@ TEST_F(TrajectoryProcessorPluginBaseTest, LoadsEveryOptimizerThroughCommonInterf
     "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
     "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
     "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"};
+    "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer",
+    "autoware::trajectory_modifier::plugin::StopPointFixer",
+    "autoware::trajectory_modifier::plugin::ObstacleStop",
+    "autoware::trajectory_modifier::plugin::VelocityModifier",
+    "autoware::trajectory_modifier::plugin::SurroundObstacleStop",
+    "autoware::trajectory_modifier::plugin::TrafficLightStop"};
 
   std::vector<std::shared_ptr<TrajectoryProcessorPluginBase>> plugins;
-  for (const auto & class_name : optimizer_classes) {
+  for (const auto & class_name : plugin_classes) {
     EXPECT_TRUE(loader.isClassAvailable(class_name));
     plugins.push_back(loader.createSharedInstance(class_name));
   }
 
-  const auto repeated = loader.createSharedInstance(optimizer_classes.front());
+  const auto repeated = loader.createSharedInstance(plugin_classes.front());
   EXPECT_NE(plugins.front().get(), repeated.get());
 }
 
