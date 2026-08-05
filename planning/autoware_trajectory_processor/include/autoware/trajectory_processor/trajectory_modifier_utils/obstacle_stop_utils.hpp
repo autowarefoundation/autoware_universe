@@ -363,11 +363,11 @@ private:
   double safety_buffer_;
 };
 
-/// PCL-based downsampling, cropping, clustering, and object masking for obstacle point clouds.
+/// Range and semantic-label filtering plus object masking for obstacle point clouds.
 struct PointCloudFilter
 {
   /**
-   * @brief Configure voxel grid and euclidean clustering parameters used by subsequent filters.
+   * @brief Configure the set of point-cloud class labels kept by subsequent filters.
    */
   explicit PointCloudFilter(const std::vector<std::string> & target_types)
   {
@@ -378,7 +378,7 @@ struct PointCloudFilter
   };
 
   /**
-   * @brief Update voxel and clustering parameters at runtime.
+   * @brief Update the kept point-cloud class labels at runtime.
    */
   void set_params(const std::vector<std::string> & target_types)
   {
