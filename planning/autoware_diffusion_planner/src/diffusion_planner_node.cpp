@@ -166,15 +166,19 @@ void DiffusionPlanner::set_up_params()
 {
   // node params
   params_.model_type = this->declare_parameter<std::string>("model.type", "single_step");
-  params_.args_path = this->declare_parameter<std::string>("model.args_path", "");
-  params_.single_step_model_path =
-    this->declare_parameter<std::string>("model.single_step_model.onnx_model_path", "");
-  params_.encoder_model_path =
-    this->declare_parameter<std::string>("model.multi_step_model.encoder_onnx_model_path", "");
-  params_.decoder_model_path =
-    this->declare_parameter<std::string>("model.multi_step_model.decoder_onnx_model_path", "");
-  params_.turn_indicator_model_path = this->declare_parameter<std::string>(
-    "model.multi_step_model.turn_indicator_onnx_model_path", "");
+  params_.base_model_directory =
+    this->declare_parameter<std::string>("model.base_model_directory", "");
+  params_.args_filename =
+    this->declare_parameter<std::string>("model.args_filename", "diffusion_planner.param.json");
+  params_.single_step_model_filename = this->declare_parameter<std::string>(
+    "model.single_step_model.onnx_model_filename", "diffusion_planner.onnx");
+  params_.encoder_model_filename = this->declare_parameter<std::string>(
+    "model.multi_step_model.encoder_onnx_model_filename", "diffusion_planner_encoder.onnx");
+  params_.decoder_model_filename = this->declare_parameter<std::string>(
+    "model.multi_step_model.decoder_onnx_model_filename", "diffusion_planner_decoder.onnx");
+  params_.turn_indicator_model_filename = this->declare_parameter<std::string>(
+    "model.multi_step_model.turn_indicator_onnx_model_filename",
+    "diffusion_planner_turn_indicator.onnx");
   params_.dpm_solver_steps =
     this->declare_parameter<int>("model.multi_step_model.dpm_solver_steps", 10);
   params_.backend = this->declare_parameter<std::string>("model.backend", "tensorrt");
@@ -233,6 +237,7 @@ void DiffusionPlanner::load_model()
 {
   diagnostics_inference_->update_level_and_message(DiagnosticStatus::WARN, "Loading model");
   diagnostics_inference_->publish(get_clock()->now());
+  core_->resolve_model_paths();
   core_->load_model();
   diagnostics_inference_->update_level_and_message(DiagnosticStatus::OK, "Model loaded");
   diagnostics_inference_->publish(get_clock()->now());
@@ -267,12 +272,12 @@ SetParametersResult DiffusionPlanner::on_parameter(
   using autoware_utils::update_param;
   {
     DiffusionPlannerParams temp_params = params_;
-    const auto previous_args_path = params_.args_path;
-    const auto previous_model_type = params_.model_type;
-    const auto previous_single_step_model_path = params_.single_step_model_path;
-    const auto previous_encoder_model_path = params_.encoder_model_path;
-    const auto previous_decoder_model_path = params_.decoder_model_path;
-    const auto previous_turn_indicator_model_path = params_.turn_indicator_model_path;
+    const auto previous_base_model_directory = params_.base_model_directory;
+    const auto previous_args_filename = params_.args_filename;
+    const auto previous_single_step_model_filename = params_.single_step_model_filename;
+    const auto previous_encoder_model_filename = params_.encoder_model_filename;
+    const auto previous_decoder_model_filename = params_.decoder_model_filename;
+    const auto previous_turn_indicator_model_filename = params_.turn_indicator_model_filename;
     const auto previous_batch_size = params_.batch_size;
     const auto previous_dpm_solver_steps = params_.dpm_solver_steps;
     const auto previous_backend = params_.backend;
@@ -280,16 +285,21 @@ SetParametersResult DiffusionPlanner::on_parameter(
     const auto previous_use_cuda_graph = params_.use_cuda_graph;
     const auto previous_line_string_max_step_m = params_.line_string_max_step_m;
     update_param<std::string>(parameters, "model.type", temp_params.model_type);
-    update_param<std::string>(parameters, "model.args_path", temp_params.args_path);
     update_param<std::string>(
-      parameters, "model.single_step_model.onnx_model_path", temp_params.single_step_model_path);
+      parameters, "model.base_model_directory", temp_params.base_model_directory);
+    update_param<std::string>(parameters, "model.args_filename", temp_params.args_filename);
     update_param<std::string>(
-      parameters, "model.multi_step_model.encoder_onnx_model_path", temp_params.encoder_model_path);
+      parameters, "model.single_step_model.onnx_model_filename",
+      temp_params.single_step_model_filename);
     update_param<std::string>(
-      parameters, "model.multi_step_model.decoder_onnx_model_path", temp_params.decoder_model_path);
+      parameters, "model.multi_step_model.encoder_onnx_model_filename",
+      temp_params.encoder_model_filename);
     update_param<std::string>(
-      parameters, "model.multi_step_model.turn_indicator_onnx_model_path",
-      temp_params.turn_indicator_model_path);
+      parameters, "model.multi_step_model.decoder_onnx_model_filename",
+      temp_params.decoder_model_filename);
+    update_param<std::string>(
+      parameters, "model.multi_step_model.turn_indicator_onnx_model_filename",
+      temp_params.turn_indicator_model_filename);
     update_param<int>(
       parameters, "model.multi_step_model.dpm_solver_steps", temp_params.dpm_solver_steps);
     update_param<std::string>(parameters, "model.backend", temp_params.backend);
@@ -347,13 +357,13 @@ SetParametersResult DiffusionPlanner::on_parameter(
 #endif
       return result;
     }
-    const bool args_path_changed = temp_params.args_path != previous_args_path;
     const bool model_paths_changed =
-      temp_params.model_type != previous_model_type ||
-      temp_params.single_step_model_path != previous_single_step_model_path ||
-      temp_params.encoder_model_path != previous_encoder_model_path ||
-      temp_params.decoder_model_path != previous_decoder_model_path ||
-      temp_params.turn_indicator_model_path != previous_turn_indicator_model_path;
+      temp_params.base_model_directory != previous_base_model_directory ||
+      temp_params.args_filename != previous_args_filename ||
+      temp_params.single_step_model_filename != previous_single_step_model_filename ||
+      temp_params.encoder_model_filename != previous_encoder_model_filename ||
+      temp_params.decoder_model_filename != previous_decoder_model_filename ||
+      temp_params.turn_indicator_model_filename != previous_turn_indicator_model_filename;
     const bool batch_size_changed = temp_params.batch_size != previous_batch_size;
     const bool dpm_solver_steps_changed = temp_params.dpm_solver_steps != previous_dpm_solver_steps;
     const bool backend_changed = temp_params.backend != previous_backend;
@@ -365,8 +375,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
     core_->update_params(params_);
 
     if (
-      args_path_changed || model_paths_changed || batch_size_changed || dpm_solver_steps_changed ||
-      backend_changed || trt_config_changed) {
+      model_paths_changed || batch_size_changed || dpm_solver_steps_changed || backend_changed ||
+      trt_config_changed) {
       try {
         load_model();
       } catch (const std::exception & e) {

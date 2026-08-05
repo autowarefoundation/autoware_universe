@@ -20,10 +20,15 @@
               "enum": ["single_step", "multi_step"],
               "description": "Inference model type"
             },
-            "args_path": {
+            "base_model_directory": {
               "type": "string",
-              "default": "$(var data_path)/diffusion_planner/v5.0/args.json",
-              "description": "Path to model argument/configuration file"
+              "default": "$(var data_path)/diffusion_planner/v5.0",
+              "description": "Base directory containing ONNX models and args file"
+            },
+            "args_filename": {
+              "type": "string",
+              "default": "diffusion_planner.param.json",
+              "description": "Args/configuration JSON filename relative to base_model_directory"
             },
             "backend": {
               "type": "string",
@@ -45,31 +50,31 @@
             "single_step_model": {
               "type": "object",
               "properties": {
-                "onnx_model_path": {
+                "onnx_model_filename": {
                   "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner.onnx",
-                  "description": "Path to the single-step ONNX model file"
+                  "default": "diffusion_planner.onnx",
+                  "description": "Single-step ONNX model filename relative to base_model_directory"
                 }
               },
-              "required": ["onnx_model_path"]
+              "required": ["onnx_model_filename"]
             },
             "multi_step_model": {
               "type": "object",
               "properties": {
-                "encoder_onnx_model_path": {
+                "encoder_onnx_model_filename": {
                   "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_encoder.onnx",
-                  "description": "Path to the encoder ONNX model file"
+                  "default": "diffusion_planner_encoder.onnx",
+                  "description": "Encoder ONNX model filename relative to base_model_directory"
                 },
-                "decoder_onnx_model_path": {
+                "decoder_onnx_model_filename": {
                   "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_decoder.onnx",
-                  "description": "Path to the decoder ONNX model file"
+                  "default": "diffusion_planner_decoder.onnx",
+                  "description": "Decoder ONNX model filename relative to base_model_directory"
                 },
-                "turn_indicator_onnx_model_path": {
+                "turn_indicator_onnx_model_filename": {
                   "type": "string",
-                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_turn_indicator.onnx",
-                  "description": "Path to the turn indicator ONNX model file"
+                  "default": "diffusion_planner_turn_indicator.onnx",
+                  "description": "Turn indicator ONNX model filename relative to base_model_directory"
                 },
                 "dpm_solver_steps": {
                   "type": "integer",
@@ -79,16 +84,17 @@
                 }
               },
               "required": [
-                "encoder_onnx_model_path",
-                "decoder_onnx_model_path",
-                "turn_indicator_onnx_model_path",
+                "encoder_onnx_model_filename",
+                "decoder_onnx_model_filename",
+                "turn_indicator_onnx_model_filename",
                 "dpm_solver_steps"
               ]
             }
           },
           "required": [
             "type",
-            "args_path",
+            "base_model_directory",
+            "args_filename",
             "backend",
             "precision",
             "use_cuda_graph",
