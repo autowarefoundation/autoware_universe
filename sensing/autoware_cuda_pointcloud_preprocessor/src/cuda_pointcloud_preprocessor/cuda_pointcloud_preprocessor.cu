@@ -250,8 +250,6 @@ void CudaPointcloudPreprocessor::organizePointcloud()
       thrust::raw_pointer_cast(device_indexes_tensor_.data()),
       num_organized_points_ * sizeof(std::uint32_t), cudaMemcpyDeviceToDevice, stream_));
   } else {
-    // The status has to be checked here: cub leaves a failure pending on this host thread, where
-    // the next CUDA call (e.g. the fill below) would report it as its own error instead.
     CHECK_CUDA_ERROR(
       cub::DeviceSegmentedRadixSort::SortKeys(
         reinterpret_cast<void *>(

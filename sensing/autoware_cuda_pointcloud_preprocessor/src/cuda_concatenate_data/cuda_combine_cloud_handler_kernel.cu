@@ -47,9 +47,8 @@ void transform_launch(
   const PointTypeStruct * input_points, int num_points, TransformStruct transform,
   PointTypeStruct * output_points, cudaStream_t & stream)
 {
-  // An empty cloud would give a zero-sized grid, which the launch rejects with
-  // cudaErrorInvalidConfiguration. That error would then stay pending on this host thread and be
-  // reported by the next unrelated CUDA call made from it (see also the launch status check below).
+  // `num_points <= 0` would result in an invalid number of `blocks_per_grid`,
+  // causing a `cudaErrorInvalidConfiguration`. Exit early instead.
   if (num_points <= 0) {
     return;
   }
