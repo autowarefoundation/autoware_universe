@@ -20,6 +20,7 @@
 #include "autoware/trajectory_validator/detail/validator_context.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report_array.hpp>
@@ -73,7 +74,7 @@ public:
    * @param time_keeper Shared time keeper for processing time tracking.
    */
   TrajectoryValidatorWrapper(
-    rclcpp::Node & node,
+    autoware::agnocast_wrapper::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
     vehicle_info_utils::VehicleInfo vehicle_info,
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
@@ -150,7 +151,7 @@ private:
   void publish_processing_time_text(
     const std::unordered_map<std::string, double> & processing_time);
 
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
   std::string interface_name_{"trajectory_validator"};
   rclcpp::Logger logger_;
   validator::ParamListener validator_params_listener_;
@@ -163,10 +164,13 @@ private:
   std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
 
   // Publishers
-  std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_debug_;
+  std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    pub_debug_;
 
   // Internal state
-  std::unique_ptr<DiagnosticsInterface> diagnostics_interface_ptr_;
+  std::unique_ptr<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
+    diagnostics_interface_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 

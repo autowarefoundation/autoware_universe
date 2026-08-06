@@ -10,7 +10,10 @@
   <arg name="input_acceleration" default="~/input/acceleration"/>
   <arg name="input_traffic_signals" default="~/input/traffic_signals"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_trajectory_selector" exec="autoware_trajectory_selector_node" name="trajectory_selector_node" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var trajectory_validator_param_path)" allow_substs="true"/>
     <remap from="~/input/trajectories_generative" to="$(var input_generative_trajectories)"/>
     <remap from="~/input/trajectories_backup" to="$(var input_backup_trajectories)"/>
