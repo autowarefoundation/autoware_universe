@@ -97,9 +97,8 @@ std::vector<std::int64_t> make_serialized_code(
   return code;
 }
 
-// generateSerializedPoolingMetadata requires its input level to be stored in order-0 serialization
-// order, which is what generateFeatures produces. Tests that hand-build a level must therefore sort
-// it the same way before feeding it in.
+// generateSerializedPoolingMetadata requires its input sorted by order-0 serialized code (as
+// generateFeatures emits it), so hand-built levels must be sorted the same way.
 std::vector<std::int32_t> sort_grid_coord_by_order0(
   const std::vector<std::int32_t> & grid_coord, const std::int32_t depth)
 {
@@ -258,10 +257,8 @@ void expect_permutation(const std::vector<std::int64_t> & values, const std::str
   EXPECT_EQ(sorted, expected) << name;
 }
 
-// Guards a fixture's discriminating power: if two serialization orders rank a level identically,
-// then comparing that level's serialized_order against the reference cannot distinguish a correct
-// per-order derivation from one that returns the same order for every curve. Any fixture used to
-// check serialized_order/serialized_inverse must therefore make the orders disagree.
+// A fixture whose serialization orders rank a level identically cannot detect an implementation
+// that returns the same ranking for every order, so require the orders to disagree.
 void expect_orders_diverge(
   const std::vector<std::int64_t> & order, const std::size_t count, const std::size_t num_orders,
   const std::string & name)
@@ -332,9 +329,8 @@ TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
   }
 }
 
-// Randomized sweep against the same CPU reference. The metadata is now derived with prefix scans
-// that assume pooling preserves the serialization order, so this exercises the assumption across
-// many occupancy patterns rather than one hand-picked level.
+// Randomized sweep against the CPU reference: the scan-based derivation assumes pooling preserves
+// the serialization order, so exercise that across many occupancy patterns.
 TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
 {
   const auto config = make_test_config();
@@ -440,11 +436,8 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
 {
   const auto config = make_test_config();
   constexpr std::size_t kNumOrders = 2;
-  // This level is chosen so that "z" and "z-trans" rank the voxels *differently* at every level,
-  // and so that pooling genuinely merges voxels at every stage (10 -> 6 -> 4). Both properties
-  // matter: the previous fixture was almost entirely y=0, which left it nearly invariant under
-  // transposing x and y, so a implementation that returned order 0 for every serialization order
-  // still passed. expect_orders_diverge below enforces the first property rather than assuming it.
+  // Chosen so that "z" and "z-trans" rank the voxels differently at every level (enforced by
+  // expect_orders_diverge below) and pooling merges voxels at every stage (10 -> 6 -> 4).
   const auto grid_coord = sort_grid_coord_by_order0(
     {3, 0, 2, 3, 1, 3, 0, 5, 2, 4, 2, 0, 5, 2, 1, 5, 3, 0, 4, 3, 3, 5, 4, 1, 4, 4, 2, 5, 4, 2},
     config.serialization_depth_);

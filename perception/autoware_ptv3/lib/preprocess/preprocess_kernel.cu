@@ -66,11 +66,10 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   thrust::device_ptr<std::uint32_t> idx_ptr(code_indices_d_.get());
   thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
 
-  // Serialized codes interleave 3 grid coordinates of serialization_depth_ bits each, so their MSB
-  // sits at 3 * serialization_depth_ - 1. Pooling only right-shifts codes, which can never raise
-  // the MSB, so this bound holds for every stage. std::max guards a degenerate single-cell grid
-  // (serialization_depth_ == 0), since CUB requires end_bit > begin_bit. Workspace queries below
-  // deliberately use the full 64 bits: a wider key range can only need at least as much scratch.
+  // Serialized codes occupy 3 * serialization_depth_ bits, and pooling only right-shifts them, so
+  // this bound holds for every stage. std::max guards serialization_depth_ == 0 (CUB requires
+  // end_bit > begin_bit). Workspace queries below use the full 64 bits, which upper-bounds the
+  // scratch needed for any narrower range.
   code_sort_end_bit_ = std::max(1, 3 * config_.serialization_depth_);
 
   std::int64_t * int64_nullptr = nullptr;
@@ -252,10 +251,9 @@ __global__ void scatterInverseMapKernel(
   inverse_map[sorted_hash_indexes[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
 }
 
-// Interleaves the three grid coordinates into one serialized (Morton / Z-order) code, consuming
-// `depth` bits per axis. `transposed` swaps the roles of x and y, which is the "z-trans" order.
-// The bit layout matches autoware-ml's z_order_encode, so the codes index the same space-filling
-// curve the model was trained and exported against.
+// Interleaves the three grid coordinates into a serialized (Morton / Z-order) code, `depth` bits
+// per axis. `transposed` swaps x and y ("z-trans" order). The bit layout must match autoware-ml's
+// z_order_encode, which the model was trained against.
 __device__ inline std::int64_t serializeCoord(
   const std::int32_t x, const std::int32_t y, const std::int32_t z, const int depth,
   const bool transposed)
@@ -273,9 +271,8 @@ __device__ inline std::int64_t serializeCoord(
   return code;
 }
 
-// Maps a point to its grid coordinate. Kept as one helper so the voxelization key and the
-// serialization codes are guaranteed to describe the same grid: the two used to be computed with
-// different arithmetic, which let boundary points fall into different cells in each.
+// Single helper so the voxelization key and the serialization codes always place a point in the
+// same cell.
 __device__ inline int3 gridCoord(
   const float4 & point, const float voxel_size_x, const float voxel_size_y,
   const float voxel_size_z, const std::int32_t min_x, const std::int32_t min_y,
@@ -287,10 +284,8 @@ __device__ inline int3 gridCoord(
     static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z));
 }
 
-// Produces the voxelization key: the order-0 serialized code. Unlike the FNV / raster hashes this
-// replaced, the code is an injective function of the grid coordinate, so sorting by it cannot merge
-// two distinct voxels, and it additionally leaves the deduplicated voxels in order-0 serialization
-// order - which is what lets the rest of the pipeline avoid re-sorting.
+// Produces the voxelization key: the order-0 serialized code. It is unique per grid cell, so
+// sorting by it deduplicates voxels and leaves them in order-0 serialization order.
 __global__ void voxelizationCodeKernel(
   const float4 * __restrict__ points, std::int64_t * __restrict__ codes, int num_points,
   float voxel_size_x, float voxel_size_y, float voxel_size_z, std::int32_t min_x,
@@ -354,12 +349,9 @@ __global__ void prepareLevel0OrderSortKernel(
   indices[idx] = idx;
 }
 
-// Marks the first element of every parent run in the input level's own storage order.
-//
-// The input level is stored in ascending order-0 code, so `code >> 3 * pooling_depth` - which is
-// exactly the parent cell's order-0 code - is non-decreasing across the array and all children of a
-// parent are contiguous. Detecting a change against the previous element is therefore sufficient to
-// find the run starts, and no sort is required.
+// Marks the first child of every parent run. The input level is ascending in order-0 code, so the
+// parent code (code >> 3 * pooling_depth) is non-decreasing and each parent's children are already
+// contiguous; comparing against the previous element finds the run starts without sorting.
 __global__ void markPoolingRunsKernel(
   const std::int64_t * __restrict__ serialized_code_in,
   const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ run_flags,
@@ -413,8 +405,8 @@ __global__ void fillPoolingStageKernel(
     return;
   }
 
-  // The input level is already grouped by parent (see markPoolingRunsKernel), so the gather order
-  // that collects each parent's children into a contiguous run is the identity.
+  // The input is already grouped by parent (see markPoolingRunsKernel), so the gather order is the
+  // identity.
   indices_out[idx] = idx;
   const auto segment_index = run_ids[idx] - 1;
   cluster_out[idx] = segment_index;
@@ -434,22 +426,16 @@ __global__ void fillPoolingStageKernel(
       serialized_code_in[order_index * input_count + idx] >> (pooling_depth * 3);
   }
 
-  // Order 0 of the pooled level is the identity: segments are emitted in increasing input index,
-  // and the input was ascending in order-0 code, so the pooled order-0 codes come out ascending in
-  // segment index too. This is what keeps markPoolingRunsKernel's precondition true for the next
-  // stage, and it is why no sort is needed for order 0 at any level.
+  // Segments are emitted in ascending order-0 code, so the pooled level's order-0 ranking is the
+  // identity and markPoolingRunsKernel's precondition holds for the next stage.
   order_out[segment_index] = segment_index;
   inverse_out[segment_index] = segment_index;
 }
 
-// Marks where the pooled voxel changes while walking the input level in order-`order_index` rank
-// order.
-//
-// Every serialization order right-shifts to the same parent partition (the low 3 * pooling_depth
-// bits locate a child inside its parent, whichever axis permutation the order uses), so walking the
-// input level in order-o rank order also visits each parent's children contiguously. The parents
-// are therefore encountered in ascending pooled order-o code, and compacting the run heads yields
-// the pooled level's order-o ranking directly - again without sorting.
+// Marks where the parent voxel changes while walking the input level in order-`order_index` rank
+// order. Every serialization order visits each parent's children contiguously and the parents in
+// ascending pooled code, so compacting the run heads yields the pooled level's order-`order_index`
+// ranking without sorting.
 __global__ void markOrderRunsKernel(
   const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster,
   const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ run_flags,
@@ -525,26 +511,27 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, clamped_num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-  // Level 0 is already stored in ascending order-0 code (generateFeatures deduplicated the voxels
-  // by that very code), so its order-0 ranking is the identity. The remaining orders are unrelated
-  // axis permutations of the curve and cannot be derived from order 0, so they need one real sort
-  // each - the only sorts in this function, and the only ones that run at the finest granularity.
-  fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
-    level0_order_d_.get(), clamped_num_voxels);
-  CHECK_CUDA_ERROR(cudaPeekAtLastError());
-
-  for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
-    prepareLevel0OrderSortKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
-      serialized_code, order_sort_keys_d_.get(), order_sort_indices_d_.get(), clamped_num_voxels,
-      order_index);
+  // Level 0 is already stored in ascending order-0 code, so its order-0 ranking is the identity.
+  // The remaining orders cannot be derived from it and need one real sort each - the only sorts in
+  // this function.
+  if (clamped_num_voxels > 0) {
+    fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+      level0_order_d_.get(), clamped_num_voxels);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-    CHECK_CUDA_ERROR(
-      cub::DeviceRadixSort::SortPairs(
-        pooling_workspace_d_.get(), pooling_workspace_size_, order_sort_keys_d_.get(),
-        order_sort_sorted_keys_d_.get(), order_sort_indices_d_.get(),
-        level0_order_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels, 0,
-        code_sort_end_bit_, stream_));
+    for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
+      prepareLevel0OrderSortKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+        serialized_code, order_sort_keys_d_.get(), order_sort_indices_d_.get(), clamped_num_voxels,
+        order_index);
+      CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+      CHECK_CUDA_ERROR(
+        cub::DeviceRadixSort::SortPairs(
+          pooling_workspace_d_.get(), pooling_workspace_size_, order_sort_keys_d_.get(),
+          order_sort_sorted_keys_d_.get(), order_sort_indices_d_.get(),
+          level0_order_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels, 0,
+          code_sort_end_bit_, stream_));
+    }
   }
 
   const std::int32_t * current_grid_coord = grid_coord;
@@ -745,11 +732,8 @@ std::size_t PreprocessCuda::generateFeatures(
     config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y,
     coord_min_z, config_.serialization_depth_);
 
-  // Sorting by the order-0 serialized code does double duty: it groups duplicate voxels for the
-  // compaction below, and it leaves the surviving voxels in ascending order-0 code, i.e. already in
-  // serialization order for the first curve. generateSerializedPoolingMetadata relies on that
-  // ordering to derive every coarser level without sorting again, so this ordering is part of this
-  // function's contract, not an incidental side effect.
+  // This sort both groups duplicates for the compaction below and leaves the voxels in order-0
+  // serialization order, which generateSerializedPoolingMetadata requires.
   CHECK_CUDA_ERROR(
     cub::DeviceRadixSort::SortPairs(
       reinterpret_cast<void *>(generate_feature_workspace_d_.get()),

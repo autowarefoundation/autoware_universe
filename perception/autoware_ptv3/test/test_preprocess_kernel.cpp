@@ -253,9 +253,8 @@ TEST_F(PreprocessKernelTest, CroppedVoxelCoordsStayInsideGridBounds)
   }
 }
 
-// generateSerializedPoolingMetadata derives every coarser encoder level with prefix scans instead
-// of per-stage sorts, which is only valid because generateFeatures hands it voxels already ordered
-// by their order-0 serialized code. This pins that contract down at its source.
+// generateSerializedPoolingMetadata requires voxels ordered by their order-0 serialized code; this
+// pins that contract of generateFeatures down at its source.
 TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
 {
   PTv3ConfigParams params;
@@ -264,8 +263,8 @@ TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
   params.point_cloud_range = {0.0F, 0.0F, 0.0F, 8.0F, 8.0F, 8.0F};
   params.voxel_size = {1.0F, 1.0F, 1.0F};
 
-  // Deliberately scrambled relative to the serialization curve, and with one duplicated voxel, so
-  // that neither input order nor deduplication can accidentally satisfy the assertions below.
+  // Scrambled relative to the serialization curve, with one duplicated voxel, so that neither
+  // input order nor deduplication can accidentally satisfy the assertions below.
   const std::vector<CloudPointTypeXYZI> host_points{
     {7.5F, 7.5F, 7.5F, 1.0F}, {0.5F, 0.5F, 0.5F, 2.0F}, {3.5F, 1.5F, 0.5F, 3.0F},
     {0.5F, 6.5F, 2.5F, 4.0F}, {3.5F, 1.5F, 0.5F, 5.0F}, {6.5F, 0.5F, 4.5F, 6.0F},
@@ -283,8 +282,7 @@ TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
     EXPECT_LT(voxel_hashes[voxel_idx - 1], voxel_hashes[voxel_idx]) << "at voxel " << voxel_idx;
   }
 
-  // The codes must describe the grid coordinates that were actually emitted; otherwise the ordering
-  // above would be sorted with respect to a grid the encoder never sees.
+  // The codes must describe the grid coordinates that were actually emitted.
   for (std::size_t voxel_idx = 0; voxel_idx < result.num_voxels; ++voxel_idx) {
     const auto x = voxel_coords[voxel_idx * 3 + 0];
     const auto y = voxel_coords[voxel_idx * 3 + 1];

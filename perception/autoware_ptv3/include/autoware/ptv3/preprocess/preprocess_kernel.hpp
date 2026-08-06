@@ -56,12 +56,9 @@ public:
 
   // Builds the per-stage pooling metadata the encoder graph consumes.
   //
-  // PRECONDITION: `serialized_code` row 0 must be ascending, i.e. the voxels must be stored in
-  // order-0 serialization order. generateFeatures guarantees this. The whole hierarchy is then
-  // derived with prefix scans instead of sorts: right-shifting a serialized code yields its
-  // parent's code, which is monotone, so pooling preserves the ordering and every coarser level
-  // stays sorted by construction. Feeding an arbitrarily ordered level here silently produces wrong
-  // metadata.
+  // PRECONDITION: the voxels must be sorted by their order-0 serialized code, as generateFeatures
+  // emits them. The coarser levels are derived with prefix scans that rely on this ordering; an
+  // unsorted input silently produces wrong metadata.
   void generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
     const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
@@ -79,9 +76,8 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_mask_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_indices_d_{nullptr};
 
-  // Voxelization keys are order-0 serialized (Morton) codes, not hashes: they are an injective
-  // function of the grid coordinate, so sorting by them both deduplicates voxels and leaves the
-  // voxel array in order-0 serialization order (see generateFeatures).
+  // Voxelization keys: order-0 serialized (Morton) codes, unique per grid cell, so sorting by them
+  // both deduplicates voxels and puts them in order-0 serialization order.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> codes_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> sorted_codes_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> code_indices_d_{nullptr};
@@ -96,9 +92,8 @@ private:
   cudaEvent_t num_cropped_points_copy_event_;
   cudaEvent_t num_unique_points_copy_event_;
 
-  // Level-0 serialization order, laid out [num_orders, num_voxels]. Row 0 is the identity because
-  // generateFeatures already sorted the voxels by their order-0 code; the remaining rows are the
-  // only genuine sorts left in the pooling-metadata path.
+  // Level-0 serialization order, laid out [num_orders, num_voxels]. Row 0 is the identity; the
+  // remaining rows are the only sorts left in the pooling-metadata path.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> level0_order_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};
