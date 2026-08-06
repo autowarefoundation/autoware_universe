@@ -678,8 +678,7 @@ void ObstacleTracker::update_points(
     if (persistent_point_map_.empty()) return std::nullopt;
     double min_distance = pcd_distance_th_ + std::numeric_limits<double>::epsilon();
     for (const auto & [uuid, existing_point] : persistent_point_map_) {
-      const auto distance =
-        std::hypot(point.x - existing_point.point.x, point.y - existing_point.point.y);
+      const auto distance = autoware_utils::calc_distance2d(point, existing_point.point);
       if (distance > min_distance) continue;
       min_distance = distance;
       closest_uuid = uuid;
