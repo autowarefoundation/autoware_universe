@@ -23042,10 +23042,17 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
 <td>['single_step', 'multi_step']</td>
 </tr>
 <tr>
-<td>model.args_path</td>
+<td>model.base_model_directory</td>
 <td>string</td>
-<td>Path to model argument/configuration file</td>
-<td>$(var data_path)/diffusion_planner/v5.0/args.json</td>
+<td>Base directory containing ONNX models and args file</td>
+<td>$(var data_path)/diffusion_planner/v5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model.args_filename</td>
+<td>string</td>
+<td>Args/configuration JSON filename relative to base_model_directory</td>
+<td>diffusion_planner.param.json</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23070,31 +23077,31 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
 <td>N/A</td>
 </tr>
 <tr>
-<td>single_step_model.onnx_model_path</td>
+<td>single_step_model.onnx_model_filename</td>
 <td>string</td>
-<td>Path to the single-step ONNX model file</td>
-<td>$(var data_path)/diffusion_planner/v5.0/diffusion_planner.onnx</td>
+<td>Single-step ONNX model filename relative to base_model_directory</td>
+<td>diffusion_planner.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>multi_step_model.encoder_onnx_model_path</td>
+<td>multi_step_model.encoder_onnx_model_filename</td>
 <td>string</td>
-<td>Path to the encoder ONNX model file</td>
-<td>$(var data_path)/diffusion_planner/v5.0/diffusion_planner_encoder.onnx</td>
+<td>Encoder ONNX model filename relative to base_model_directory</td>
+<td>diffusion_planner_encoder.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>multi_step_model.decoder_onnx_model_path</td>
+<td>multi_step_model.decoder_onnx_model_filename</td>
 <td>string</td>
-<td>Path to the decoder ONNX model file</td>
-<td>$(var data_path)/diffusion_planner/v5.0/diffusion_planner_decoder.onnx</td>
+<td>Decoder ONNX model filename relative to base_model_directory</td>
+<td>diffusion_planner_decoder.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>multi_step_model.turn_indicator_onnx_model_path</td>
+<td>multi_step_model.turn_indicator_onnx_model_filename</td>
 <td>string</td>
-<td>Path to the turn indicator ONNX model file</td>
-<td>$(var data_path)/diffusion_planner/v5.0/diffusion_planner_turn_indicator.onnx</td>
+<td>Turn indicator ONNX model filename relative to base_model_directory</td>
+<td>diffusion_planner_turn_indicator.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>

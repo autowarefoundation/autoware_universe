@@ -22992,6 +22992,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#map-based-signal-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Map-based Signal Filter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Map-based Signal Filter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#input-topics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23162,6 +23190,38 @@
 </tr>
 </tbody>
 </table>
+<h2 id="map-based-signal-filter">Map-based Signal Filter<a class="headerlink" href="#map-based-signal-filter" title="Permanent link">#</a></h2>
+<p>The node includes an optional rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's <code>light_bulbs</code> linestring in the vector map.</p>
+<p>Setting <code>map_based_signal_filter.enable</code> to true activates the filter. When active, for each traffic light the node reads the map's <code>light_bulbs</code> points (their <code>color</code> and optional <code>arrow</code> attributes) and builds a per-traffic-light-id set of allowed (color, shape) pairs. Any incoming ML prediction whose (color, shape) is not in that set is dropped as soon as it arrives, so a map-invalid prediction cannot beat a valid one from another camera.</p>
+<p>If every element of a signal is filtered out, that signal becomes an UNKNOWN fail-safe. If the map has no <code>light_bulbs</code> for a given traffic light id, the filter is a no-op for that id — we cannot filter what the map does not describe.</p>
+<p>The vector map is always subscribed (the node needs it to map traffic-light-ids to regulatory-element-ids); the <code>enable</code> flag only controls whether the filter runs.</p>
+<blockquote>
+<p><strong>NOTE:</strong> The correctness of this filter depends <strong>entirely on the quality of the vector map</strong>. If a traffic light's <code>light_bulbs</code> in the map is incomplete or wrong (e.g. an arrow bulb is missing, or <code>color</code>/<code>arrow</code> attributes are stale), the filter will incorrectly reject valid ML predictions and the node will publish UNKNOWN for that light. Before enabling this option, verify that every relevant traffic light in your map has accurate <code>light_bulbs</code> points with correct <code>color</code> and <code>arrow</code> attributes.</p>
+</blockquote>
+<h3 id="example_1">Example<a class="headerlink" href="#example_1" title="Permanent link">#</a></h3>
+<p>Map for traffic light A declares bulbs: <code>{(red, circle), (yellow, circle), (green, circle)}</code> — no arrows.</p>
+<p>Inputs:</p>
+<ul>
+<li>Traffic light A: <code>{(RED, CIRCLE), (GREEN, LEFT_ARROW)}</code> from ML</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>map_based_signal_filter.enable</th>
+<th>output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Disabled</td>
+<td><code>(RED, CIRCLE)</code>, <code>(GREEN, LEFT_ARROW)</code>: raw ML prediction</td>
+</tr>
+<tr>
+<td>Enabled</td>
+<td><code>(RED, CIRCLE)</code>: arrow dropped because the map disallows it</td>
+</tr>
+</tbody>
+</table>
 <h2 id="input-topics">Input topics<a class="headerlink" href="#input-topics" title="Permanent link">#</a></h2>
 <p>For every camera, the following three topics are subscribed:</p>
 <table>
@@ -23252,6 +23312,13 @@
 <td>signal_consistency_check.publish_partial_matched_signal</td>
 <td>boolean</td>
 <td>Determines whether to publish common signals among traffic lights associated with a regulatory element. If set to true, partially matched signals will be published. If set to false, a single mismatch among the traffic lights will output a fail-safe signal.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>map_based_signal_filter.enable</td>
+<td>boolean</td>
+<td>Enables the rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's <code>light_bulbs</code> linestring in the lanelet2 map. Predictions whose (color, shape) is not encoded in the map are dropped from the element list. If every element is filtered out, the traffic light emits a fail-safe UNKNOWN signal.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
