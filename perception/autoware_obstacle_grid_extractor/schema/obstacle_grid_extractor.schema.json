@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for the Obstacle Grid Extractor",
+  "type": "object",
+  "definitions": {
+    "obstacle_grid_extractor": {
+      "type": "object",
+      "properties": {
+        "roi": {
+          "type": "object",
+          "properties": {
+            "length_x": {
+              "type": "number",
+              "default": 180.0,
+              "exclusiveMinimum": 0.0,
+              "description": "Longitudinal extent of the rectangular ROI [m]."
+            },
+            "length_y": {
+              "type": "number",
+              "default": 100.0,
+              "exclusiveMinimum": 0.0,
+              "description": "Lateral extent of the rectangular ROI [m]."
+            },
+            "offset_x": {
+              "type": "number",
+              "default": -10.0,
+              "description": "Grid-center +x offset from base_link [m]. With the default extents this covers x in [-100, +80], the union of the consumers' own configured ranges."
+            }
+          },
+          "required": ["length_x", "length_y", "offset_x"],
+          "additionalProperties": false
+        },
+        "resolution": {
+          "type": "number",
+          "default": 0.2,
+          "exclusiveMinimum": 0.0,
+          "description": "Uniform cell size [m]."
+        },
+        "crop": {
+          "type": "object",
+          "properties": {
+            "z_min": {
+              "type": "number",
+              "default": -2.5,
+              "description": "Lower bound of the union z-band [m]; points below are dropped. Matches ground_segmentation's margin_min_z so far returns on a vertical curve survive."
+            },
+            "z_max": {
+              "type": "number",
+              "default": 3.5,
+              "description": "Upper bound of the union z-band [m]; points above are dropped. Matches ground_segmentation's detection_range_z_max."
+            }
+          },
+          "required": ["z_min", "z_max"],
+          "additionalProperties": false
+        },
+        "overhead_split": {
+          "type": "number",
+          "default": 2.5,
+          "description": "Ceiling of the low_max_height layer [m]: low_max_height records the tallest return at or below this height, so consumers can reject cells whose only tall content is an overhead structure (gantry, branch). Must be at least every consumer's own z-band top (vehicle_height + margin)."
+        }
+      },
+      "required": ["roi", "resolution", "crop", "overhead_split"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/obstacle_grid_extractor"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

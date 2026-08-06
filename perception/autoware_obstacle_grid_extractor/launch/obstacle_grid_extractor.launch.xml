@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="input/pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="output/obstacle_grid" default="/sensing/obstacle_segmentation/obstacle_grid"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_obstacle_grid_extractor)/config/obstacle_grid_extractor.param.yaml"/>
+
+  <node pkg="autoware_obstacle_grid_extractor" exec="autoware_obstacle_grid_extractor_node" name="obstacle_grid_extractor" output="screen">
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/output/obstacle_grid" to="$(var output/obstacle_grid)"/>
+    <param from="$(var param_file)"/>
+  </node>
+</launch>

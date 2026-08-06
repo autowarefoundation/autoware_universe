@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    roi:
+      # Union of the consumers' own configured ranges: rear_collision_checker crops x to [-100, 30],
+      # intersection_collision_checker crops x to [-50, 50] and extends the crossing lanelet by 50 m
+      # (hence |y| <= 50), and AEB / obstacle_collision_checker are unbounded forward, so +80 m is
+      # taken from the RSS stopping distance at their configured t_response / a_ego_min.
+      length_x: 180.0  # x extent [m]: with offset_x below this covers x in [-100, +80]
+      length_y: 100.0  # y extent [m]: y in [-50, +50]
+      offset_x: -10.0  # grid-center +x offset from base_link [m]
+    resolution: 0.2   # cell size [m]; <= existing ~0.3 m lateral jitter, and the 0.283 m cell
+                      # diagonal is what the consumer-parity evaluation was validated against
+    crop:
+      z_min: -2.5     # union z-band lower bound [m]; matches ground_segmentation margin_min_z so
+                      # far returns on a vertical curve survive to the consumers
+      z_max: 3.5      # union z-band upper bound [m]; matches ground_segmentation
+                      # detection_range_z_max. Consumers re-apply their own z gate
+    overhead_split: 2.5  # low_max_height ceiling [m]; must be >= every consumer's own z-band top
+                         # (vehicle_height + margin) so in-band mass is never hidden from them
