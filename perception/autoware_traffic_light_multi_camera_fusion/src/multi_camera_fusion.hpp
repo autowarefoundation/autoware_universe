@@ -15,6 +15,7 @@
 #ifndef MULTI_CAMERA_FUSION_HPP_
 #define MULTI_CAMERA_FUSION_HPP_
 
+#include "map_based_signal_filter.hpp"
 #include "signal_validator.hpp"
 #include "traffic_light_multi_camera_fusion_process.hpp"
 #include "types.hpp"
@@ -30,6 +31,7 @@
 #include <lanelet2_core/Forward.h>
 
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -72,6 +74,7 @@ struct MultiCameraFusionConfig
   double prior_log_odds{0.0};
   bool use_signal_consistency_check{false};
   bool publish_partial_matched_signal{false};
+  bool use_map_based_signal_filter{false};
   lanelet::LaneletMapPtr lanelet_map_ptr{nullptr};
 };
 
@@ -137,6 +140,10 @@ private:
   Use multiset in case multiple cameras publish images at the exact same time.
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
+  /*
+  Non-null only when the map-based filter is enabled and a lanelet map is available.
+  */
+  std::unique_ptr<MapBasedSignalFilter> map_based_signal_filter_;
 };
 
 }  // namespace autoware::traffic_light
