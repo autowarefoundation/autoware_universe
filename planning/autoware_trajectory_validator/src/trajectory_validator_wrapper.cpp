@@ -70,6 +70,9 @@ TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
   });
   publishers();
 
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "trajectory_validator");
   validator_ptr_ = std::make_unique<TrajectoryValidator>(plugins_);
   diagnostics_interface_ptr_ = std::make_unique<DiagnosticsInterface>(node_ptr_, interface_name_);
 }
@@ -157,6 +160,7 @@ CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
   update_diagnostic(input_trajectories, report.num_feasible_trajectories);
 
   publish_validation_reports(report.validation_reports);
+  publish_planning_factor(report.planning_factors);
 
   // Wire up the debug publishers using the opaque report data
   publish_debug(report.evaluation_tables, report.processing_time_ms, context.odometry->pose.pose);
@@ -315,4 +319,38 @@ void TrajectoryValidatorWrapper::publish_processing_time_text(
   pub_debug_->publish<autoware_internal_debug_msgs::msg::StringStamped>(
     "processing_time_text", fmt::to_string(out));
 }
+
+void TrajectoryValidatorWrapper::add_planning_factors(
+  const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors)
+{
+  for (const auto & factor : planning_factors.factors) {
+    if (factor.control_points.empty()) {
+      continue;
+    }
+
+    const auto & control_point = factor.control_points.front();
+    if (factor.control_points.size() == 1) {
+      planning_factor_interface_->add(
+        control_point.distance, control_point.pose, factor.behavior, factor.safety_factors,
+        factor.is_driving_forward, control_point.velocity, control_point.shift_length,
+        factor.detail);
+      continue;
+    }
+
+    const auto & end_control_point = factor.control_points.back();
+    planning_factor_interface_->add(
+      control_point.distance, end_control_point.distance, control_point.pose,
+      end_control_point.pose, factor.behavior, factor.safety_factors, factor.is_driving_forward,
+      control_point.velocity, end_control_point.velocity, control_point.shift_length,
+      end_control_point.shift_length, factor.detail);
+  }
+}
+
+void TrajectoryValidatorWrapper::publish_planning_factor(
+  const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors)
+{
+  add_planning_factors(planning_factors);
+  planning_factor_interface_->publish();
+}
+
 }  // namespace autoware::trajectory_validator

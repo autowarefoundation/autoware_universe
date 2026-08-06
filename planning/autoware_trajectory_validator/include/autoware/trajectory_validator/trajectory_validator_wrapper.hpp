@@ -20,6 +20,7 @@
 #include "autoware/trajectory_validator/detail/validator_context.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report_array.hpp>
@@ -32,6 +33,7 @@
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
@@ -150,6 +152,11 @@ private:
   void publish_processing_time_text(
     const std::unordered_map<std::string, double> & processing_time);
 
+  void add_planning_factors(
+    const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors);
+  void publish_planning_factor(
+    const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors);
+
   rclcpp::Node * node_ptr_{nullptr};
   std::string interface_name_{"trajectory_validator"};
   rclcpp::Logger logger_;
@@ -164,6 +171,8 @@ private:
 
   // Publishers
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_debug_;
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
 
   // Internal state
   std::unique_ptr<DiagnosticsInterface> diagnostics_interface_ptr_;
