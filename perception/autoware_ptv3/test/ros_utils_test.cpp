@@ -52,5 +52,17 @@ TEST(RosUtilsTest, ConvertsBox3DToDetectedObject)
   EXPECT_NEAR(object.kinematics.twist_with_covariance.twist.linear.y, -1.0F, 1e-5F);
 }
 
+TEST(RosUtilsTest, ConvertsUnknownBoxLabelWithoutTwist)
+{
+  const Box3D box{99, 0.5F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F, 1.0F, 1.0F};
+  autoware_perception_msgs::msg::DetectedObject object;
+
+  box3d_to_detected_object(box, {"CAR"}, false, object);
+
+  ASSERT_EQ(object.classification.size(), 1U);
+  EXPECT_EQ(object.classification.front().label, ObjectClassification::UNKNOWN);
+  EXPECT_FALSE(object.kinematics.has_twist);
+}
+
 }  // namespace test
 }  // namespace autoware::ptv3
