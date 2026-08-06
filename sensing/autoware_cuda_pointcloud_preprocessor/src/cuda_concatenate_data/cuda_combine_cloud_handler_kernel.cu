@@ -14,6 +14,8 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+
 #include <cuda_runtime.h>
 
 namespace autoware::pointcloud_preprocessor
@@ -45,11 +47,19 @@ void transform_launch(
   const PointTypeStruct * input_points, int num_points, TransformStruct transform,
   PointTypeStruct * output_points, cudaStream_t & stream)
 {
+  // An empty cloud would give a zero-sized grid, which the launch rejects with
+  // cudaErrorInvalidConfiguration. That error would then stay pending on this host thread and be
+  // reported by the next unrelated CUDA call made from it (see also the launch status check below).
+  if (num_points <= 0) {
+    return;
+  }
+
   constexpr int threads_per_block = 256;
   const int block_per_grid = (num_points + threads_per_block - 1) / threads_per_block;
 
   transform_kernel<<<block_per_grid, threads_per_block, 0, stream>>>(
     input_points, num_points, transform, output_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 }  // namespace autoware::pointcloud_preprocessor
