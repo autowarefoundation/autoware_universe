@@ -25,7 +25,7 @@
     
     
       
-        <title>mrm_emergency_stop_operator - Autoware Universe Documentation</title>
+        <title>Macro Rendering Error - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#mrm_emergency_stop_operator" class="md-skip">
+        <a href="#macro-rendering-error" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              mrm_emergency_stop_operator
+              Macro Rendering Error
             
           </span>
         </div>
@@ -22820,97 +22820,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#purpose" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Purpose
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inner-workings-algorithms" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inner-workings / Algorithms
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inputs-outputs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inputs / Outputs
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Inputs / Outputs">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#input" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Input
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Output
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#assumptions-known-limits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Assumptions / Known limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -22929,97 +22838,22 @@
   
 
 
-<div><h1 id="mrm_emergency_stop_operator">mrm_emergency_stop_operator<a class="headerlink" href="#mrm_emergency_stop_operator" title="Permanent link">#</a></h1>
-<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>MRM emergency stop operator is a node that generates emergency stop commands according to the emergency stop MRM order.</p>
-<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
-<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
-<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/input/mrm/emergency_stop/operate</code></td>
-<td><code>tier4_system_msgs::srv::OperateMrm</code></td>
-<td>MRM execution order</td>
-</tr>
-<tr>
-<td><code>~/input/control/control_cmd</code></td>
-<td><code>autoware_control_msgs::msg::Control</code></td>
-<td>Control command output from the last node of the control component. Used for the initial value of the emergency stop command.</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/output/mrm/emergency_stop/status</code></td>
-<td><code>tier4_system_msgs::msg::MrmBehaviorStatus</code></td>
-<td>MRM execution status</td>
-</tr>
-<tr>
-<td><code>~/output/mrm/emergency_stop/control_cmd</code></td>
-<td><code>autoware_control_msgs::msg::Control</code></td>
-<td>Emergency stop command</td>
-</tr>
-</tbody>
-</table>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>update_rate</td>
-<td>integer</td>
-<td>Timer callback frequency [Hz]</td>
-<td>30</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>target_acceleration</td>
-<td>float</td>
-<td>Target acceleration for emergency stop [m/s^2]</td>
-<td>-2.5</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>target_jerk</td>
-<td>float</td>
-<td>Target jerk for emergency stop [m/s^3]</td>
-<td>-1.5</td>
-<td>N/A</td>
-</tr>
-</tbody>
-</table>
-<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
-<p>TBD.</p></div>
+<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
+<p><em>File</em>: <code>system/autoware_mrm_emergency_stop_operator/README.md</code></p>
+<p><em>FileNotFoundError</em>: [Errno 2] No such file or directory: 'system/mrm_emergency_stop_operator/schema/mrm_emergency_stop_operator.schema.json'</p>
+<p>```
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
+    return md_template.render(**page_variables)
+  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "<template>", line 28, in top-level template code
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 71, in json_to_markdown
+    with open(json_schema_file_path) as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'system/mrm_emergency_stop_operator/schema/mrm_emergency_stop_operator.schema.json'</template></p>
+<p>```</p></div>
 
 
 
@@ -23055,7 +22889,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_mrm_comfortable_stop_operator/" class="md-footer__link md-footer__link--prev" aria-label="Previous: mrm_comfortable_stop_operator">
+          <a href="../autoware_mrm_comfortable_stop_operator/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Macro Rendering Error">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23065,7 +22899,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                mrm_comfortable_stop_operator
+                Macro Rendering Error
               </div>
             </div>
           </a>
