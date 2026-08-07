@@ -19,6 +19,11 @@ ament_auto_add_library(autoware_rtc_interface SHARED
   src/rtc_interface.cpp
 )
 
+# Defines USE_AGNOCAST_ENABLED when ENABLE_AGNOCAST=1. Required: ament_target_dependencies() does
+# not propagate it, and the explicit instantiation for autoware::agnocast_wrapper::Node must be
+# built against the same wrapper variant as its users.
+autoware_agnocast_wrapper_setup(autoware_rtc_interface)
+
 # Test
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
