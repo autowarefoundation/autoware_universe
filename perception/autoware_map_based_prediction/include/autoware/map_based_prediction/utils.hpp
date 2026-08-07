@@ -89,6 +89,8 @@ PredictedObjectKinematics convertToPredictedKinematics(
 
 PredictedObject convertToPredictedObject(const TrackedObject & tracked_object);
 
+void expandShapeToFootprintAndRecenter(PredictedObject & object);
+
 double calculateLocalLikelihood(
   const lanelet::ConstLanelet & current_lanelet, const TrackedObject & object,
   const double sigma_lateral_offset, const double sigma_yaw_angle_deg);

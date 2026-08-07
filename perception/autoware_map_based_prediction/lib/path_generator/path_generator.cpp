@@ -21,8 +21,10 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -30,6 +32,24 @@
 namespace autoware::map_based_prediction
 {
 using autoware_utils::ScopedTimeTrack;
+
+void shiftPoseReference(geometry_msgs::msg::Pose & pose, const Eigen::Vector2d & local_offset)
+{
+  const double yaw = tf2::getYaw(pose.orientation);
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+  pose.position.x += local_offset.x() * cos_yaw - local_offset.y() * sin_yaw;
+  pose.position.y += local_offset.x() * sin_yaw + local_offset.y() * cos_yaw;
+}
+
+void shiftPathReference(PredictedPath & path, const Eigen::Vector2d & local_offset)
+{
+  if (local_offset.x() == 0.0 && local_offset.y() == 0.0) return;
+
+  for (auto & pose : path.path) {
+    shiftPoseReference(pose, local_offset);
+  }
+}
 
 PathGenerator::PathGenerator(const double sampling_time_interval)
 : sampling_time_interval_(sampling_time_interval)

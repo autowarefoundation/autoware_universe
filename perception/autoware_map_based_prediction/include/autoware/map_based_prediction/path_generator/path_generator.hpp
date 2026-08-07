@@ -56,6 +56,12 @@ struct PredictedPathWithArrivalIndex : PredictedPath
   size_t arrival_index{};
 };
 
+// shift a single pose by an offset expressed in its own (yaw-rotated) local frame
+void shiftPoseReference(geometry_msgs::msg::Pose & pose, const Eigen::Vector2d & local_offset);
+
+// shift the reference point of every pose in a predicted path
+void shiftPathReference(PredictedPath & path, const Eigen::Vector2d & local_offset);
+
 class PathGenerator
 {
 public:
