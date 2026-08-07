@@ -111,7 +111,7 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
       if (!modified_plugins_str.empty()) modified_plugins_str += ", ";
-      modified_plugins_str += modifier->get_name();
+      modified_plugins_str += modifier->get_short_name();
     }
     trajectory_count++;
   }
@@ -169,6 +169,14 @@ TrajectoryModifier::make_input_data()
 
 void TrajectoryModifier::load_plugin(const std::string & name, const std::size_t index)
 {
+  // Check if the plugin is already instantiated
+  auto it = std::find_if(
+    plugins_.begin(), plugins_.end(), [&](const auto & p) { return p->get_name() == name; });
+  if (it != plugins_.end()) {
+    RCLCPP_WARN(
+      this->get_logger(), "The plugin '%s' is already in the plugins list.", name.c_str());
+    return;
+  }
   if (plugin_loader_.isClassAvailable(name)) {
     const auto plugin = plugin_loader_.createSharedInstance(name);
     const auto instance_name = name + "#" + std::to_string(index);
