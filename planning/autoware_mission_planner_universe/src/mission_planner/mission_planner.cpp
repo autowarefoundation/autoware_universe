@@ -90,7 +90,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   goal_lanelet_transparency_ = declare_parameter<float>("goal_lanelet_transparency");
   planner_ = plugin_loader_.createSharedInstance(
     "autoware::mission_planner_universe::lanelet2::DefaultPlanner");
-  planner_->initialize(this);
+  planner_->initialize(PlannerPlugin::make_context(*this));
 
   const auto durable_qos = rclcpp::QoS(1).transient_local();
   sub_odometry_ = create_subscription<Odometry>(
@@ -207,6 +207,7 @@ void MissionPlanner::on_map(const LaneletMapBin::ConstSharedPtr msg)
   map_ptr_ = msg;
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_ptr_));
+  planner_->set_map(*map_ptr_);
 }
 
 Pose MissionPlanner::transform_pose(const Pose & pose, const Header & header)

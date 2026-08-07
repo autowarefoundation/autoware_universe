@@ -86,7 +86,7 @@ protected:
     // vehicle_width: 1.83, vehicle_length: 4.77
 
     node_ = std::make_shared<rclcpp::Node>("test_node", options);
-    planner_.initialize(node_.get());
+    planner_.initialize(autoware::mission_planner_universe::PlannerPlugin::make_context(*node_));
   }
 
   ~DefaultPlannerTest() override { rclcpp::shutdown(); }
