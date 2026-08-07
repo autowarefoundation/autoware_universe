@@ -86,17 +86,21 @@ struct TrtCommonConfig
    * @param[in] max_workspace_size maximum workspace size for TensorRT
    * @param[in] dla_core_id DLA core ID
    * @param[in] profile_per_layer flag for per-layer profiler using IProfiler
+   * @param[in] strongly_typed build a strongly typed network: every tensor precision is taken
+   *            from the model itself, and the precision setting does not apply.
    */
   explicit TrtCommonConfig(
     const std::string onnx_path, const std::string precision = "fp16",
     const std::string engine_path = "", const size_t max_workspace_size = (1ULL << 30U),
-    const int32_t dla_core_id = -1, const bool profile_per_layer = false)
+    const int32_t dla_core_id = -1, const bool profile_per_layer = false,
+    const bool strongly_typed = false)
   : onnx_path(onnx_path),
     precision(precision),
     engine_path(engine_path),
     max_workspace_size(max_workspace_size),
     dla_core_id(dla_core_id),
-    profile_per_layer(profile_per_layer)
+    profile_per_layer(profile_per_layer),
+    strongly_typed(strongly_typed)
   {
     validatePrecision();
 
@@ -143,6 +147,9 @@ struct TrtCommonConfig
 
   //!< @brief Flag for per-layer profiler using IProfiler.
   const bool profile_per_layer;
+
+  //!< @brief Build a strongly typed network (tensor precisions fixed by the model).
+  const bool strongly_typed;
 };
 
 /**
