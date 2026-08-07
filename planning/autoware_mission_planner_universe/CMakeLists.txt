@@ -8,9 +8,11 @@ ament_auto_add_library(${PROJECT_NAME}_goal_pose_visualizer_component SHARED
   src/goal_pose_visualizer/goal_pose_visualizer.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_goal_pose_visualizer_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_goal_pose_visualizer_component
   PLUGIN "autoware::mission_planner_universe::GoalPoseVisualizer"
   EXECUTABLE goal_pose_visualizer
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 ament_auto_add_library(${PROJECT_NAME}_component SHARED
@@ -25,9 +27,11 @@ rclcpp_components_register_node(${PROJECT_NAME}_component
   EXECUTABLE mission_planner
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::mission_planner_universe::RouteSelector"
   EXECUTABLE route_selector
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ament_auto_add_library(${PROJECT_NAME}_lanelet2_plugins SHARED

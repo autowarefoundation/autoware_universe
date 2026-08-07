@@ -1,8 +1,10 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="route_topic_name" default="/planning/mission_planning/route"/>
   <arg name="echo_back_goal_pose_topic_name" default="/planning/mission_planning/echo_back_goal_pose"/>
 
   <node pkg="autoware_mission_planner_universe" exec="goal_pose_visualizer" name="goal_pose_visualizer" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="input/route" to="$(var route_topic_name)"/>
     <remap from="output/goal_pose" to="$(var echo_back_goal_pose_topic_name)"/>
   </node>
