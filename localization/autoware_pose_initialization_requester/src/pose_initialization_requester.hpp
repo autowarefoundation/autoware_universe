@@ -15,29 +15,31 @@
 #ifndef POSE_INITIALIZATION_REQUESTER_HPP_
 #define POSE_INITIALIZATION_REQUESTER_HPP_
 
-#include <autoware/adapi_specs/localization.hpp>
+#include <autoware/component_interface_specs/localization.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-namespace autoware::automatic_pose_initializer
+namespace autoware::pose_initialization_requester
 {
 
-class AutomaticPoseInitializer : public rclcpp::Node
+class PoseInitializationRequester : public rclcpp::Node
 {
 public:
-  explicit AutomaticPoseInitializer(const rclcpp::NodeOptions & options);
+  explicit PoseInitializationRequester(const rclcpp::NodeOptions & options);
 
 private:
-  void on_timer();
-  using Initialize = autoware::adapi_specs::localization::Initialize;
-  using State = autoware::adapi_specs::localization::InitializationState;
+  using Initialize = autoware::component_interface_specs::localization::Initialize;
+  using State = autoware::component_interface_specs::localization::InitializationState;
   rclcpp::CallbackGroup::SharedPtr group_cli_;
   rclcpp::TimerBase::SharedPtr timer_;
+  autoware::component_interface_utils::NodeAdaptor<rclcpp::Node> adaptor_{this};
   autoware::component_interface_utils::Client<Initialize>::SharedPtr cli_initialize_;
   autoware::component_interface_utils::Subscription<State>::SharedPtr sub_state_;
+
+  void on_timer();
   State::Message state_;
 };
 
-}  // namespace autoware::automatic_pose_initializer
+}  // namespace autoware::pose_initialization_requester
 
 #endif  // POSE_INITIALIZATION_REQUESTER_HPP_
