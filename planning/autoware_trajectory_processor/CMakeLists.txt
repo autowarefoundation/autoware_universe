@@ -36,6 +36,7 @@ generate_parameter_library(trajectory_optimizer_param
 )
 
 target_link_libraries(autoware_trajectory_optimizer_component
+  trajectory_modifier_param
   trajectory_optimizer_param
 )
 
@@ -54,6 +55,7 @@ ament_auto_add_library(autoware_trajectory_modifier SHARED
 
 target_link_libraries(autoware_trajectory_modifier
   trajectory_modifier_param
+  trajectory_optimizer_param
   autoware_trajectory_modifier_utils
 )
 
@@ -90,6 +92,7 @@ target_link_libraries(
   autoware_trajectory_optimizer_plugins
   acados_interface_temporal
   tf2_geometry_msgs::tf2_geometry_msgs
+  trajectory_modifier_param
   trajectory_optimizer_param
 )
 
@@ -105,6 +108,7 @@ target_link_libraries(autoware_trajectory_modifier_plugins
   autoware_trajectory_modifier
   autoware_trajectory_modifier_utils
   trajectory_modifier_param
+  trajectory_optimizer_param
 )
 
 if(BUILD_TESTING)

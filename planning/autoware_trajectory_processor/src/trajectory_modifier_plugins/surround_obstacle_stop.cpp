@@ -46,8 +46,7 @@ ObstacleTypeParameters to_obstacle_type_parameters(
 }
 
 Parameters to_proximity_checker_parameters(
-  const autoware::trajectory_modifier::plugin::TrajectoryModifierParams::SurroundObstacleStop &
-    params)
+  const trajectory_modifier_params::Params::SurroundObstacleStop & params)
 {
   Parameters parameters;
   parameters.pointcloud_enable_check = params.use_pointcloud;
@@ -100,7 +99,7 @@ Parameters to_proximity_checker_parameters(
 namespace autoware::trajectory_modifier::plugin
 {
 
-void SurroundObstacleStop::on_initialize(const TrajectoryModifierParams & params)
+void SurroundObstacleStop::on_initialize(const TrajectoryProcessorParams & params)
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
@@ -118,7 +117,7 @@ void SurroundObstacleStop::on_initialize(const TrajectoryModifierParams & params
     to_proximity_checker_parameters(params_), context_->vehicle_info);
 }
 
-void SurroundObstacleStop::update_params(const TrajectoryModifierParams & params)
+void SurroundObstacleStop::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_surround_obstacle_stop;
   params_ = params.surround_obstacle_stop;
@@ -126,7 +125,7 @@ void SurroundObstacleStop::update_params(const TrajectoryModifierParams & params
   proximity_checker_->update_parameters(to_proximity_checker_parameters(params_));
 }
 
-bool SurroundObstacleStop::check_inputs(const InputData & input) const
+bool SurroundObstacleStop::check_inputs(const TrajectoryProcessorData & input) const
 {
   if (!input.current_odometry) {
     return false;
@@ -143,7 +142,7 @@ bool SurroundObstacleStop::check_inputs(const InputData & input) const
 }
 
 obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_inputs(
-  const InputData & input) const
+  const TrajectoryProcessorData & input) const
 {
   obstacle_proximity_checker::Inputs checker_inputs;
   checker_inputs.ego_pose = input.current_odometry->pose.pose;
@@ -184,7 +183,7 @@ std::optional<geometry_msgs::msg::TransformStamped> SurroundObstacleStop::get_tr
   return transform_stamped;
 }
 
-bool SurroundObstacleStop::is_obstacle_nearby(const InputData & input)
+bool SurroundObstacleStop::is_obstacle_nearby(const TrajectoryProcessorData & input)
 {
   const double contact_distance_threshold = is_stop_active_ ? params_.hysteresis_distance : 1e-3;
 
@@ -213,7 +212,7 @@ bool SurroundObstacleStop::is_obstacle_nearby(const InputData & input)
 }
 
 bool SurroundObstacleStop::is_trajectory_modification_required(
-  [[maybe_unused]] const TrajectoryPoints & traj_points, const InputData & input)
+  [[maybe_unused]] const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "SurroundObstacleStop::is_trajectory_modification_required", *get_time_keeper());
@@ -235,11 +234,10 @@ bool SurroundObstacleStop::is_trajectory_modification_required(
   return is_obstacle_nearby(input);
 }
 
-bool SurroundObstacleStop::modify_trajectory(
-  TrajectoryPoints & traj_points, const InputData & input)
+ProcessingResult SurroundObstacleStop::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & input)
 {
-  autoware_utils_debug::ScopedTimeTrack st(
-    "SurroundObstacleStop::modify_trajectory", *get_time_keeper());
+  autoware_utils_debug::ScopedTimeTrack st("SurroundObstacleStop::process", *get_time_keeper());
 
   const auto current_time = rclcpp::Time(input.current_odometry->header.stamp);
 
@@ -250,14 +248,14 @@ bool SurroundObstacleStop::modify_trajectory(
 
   if (!is_trajectory_modification_required(traj_points, input)) {
     publish_debug_string(false);
-    return false;
+    return ProcessingResult::Unchanged;
   }
 
   const auto & ego_pose = input.current_odometry->pose.pose;
   utils::replace_trajectory_with_stop_point(traj_points, ego_pose, trajectory_time_step_);
 
   planning_factor_interface_->add(
-    traj_points, ego_pose, ego_pose, PlanningFactor::STOP,
+    traj_points, ego_pose, ego_pose, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
     autoware_internal_planning_msgs::msg::SafetyFactorArray{});
 
   RCLCPP_WARN_THROTTLE(
@@ -265,7 +263,7 @@ bool SurroundObstacleStop::modify_trajectory(
     "[TM SurroundObstacleStop] Replaced trajectory with zero velocity due to nearby obstacle.");
 
   publish_debug_string(true);
-  return true;
+  return ProcessingResult::Modified;
 }
 
 void SurroundObstacleStop::publish_debug_string(const bool is_active) const
@@ -287,4 +285,4 @@ void SurroundObstacleStop::publish_debug_string(const bool is_active) const
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::SurroundObstacleStop,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

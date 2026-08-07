@@ -14,7 +14,6 @@
 
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
 
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_processor/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -33,7 +32,7 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryQPSmoother::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryQPSmoother::on_initialize(const TrajectoryProcessorParams & params)
 {
   auto node_ptr = get_node_ptr();
   enabled_ = params.use_qp_smoother;
@@ -56,19 +55,19 @@ void TrajectoryQPSmoother::on_initialize(const TrajectoryOptimizerParams & param
   }
 }
 
-void TrajectoryQPSmoother::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryQPSmoother::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_qp_smoother;
   qp_params_ = params.trajectory_qp_smoother;
 }
 
-void TrajectoryQPSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryQPSmoother::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
   if (!enabled_) {
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Minimum points needed: base requirement (5) or total constrained points + 1 free point
@@ -83,7 +82,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "QP Smoother: Trajectory too short (%zu points < %zu required), skipping optimization",
       traj_points.size(), min_points_for_optimization);
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Check minimum path length (skip optimization for very short paths)
@@ -95,7 +94,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "QP Smoother: Path too short (%.2f m < %.2f m), skipping optimization", path_length,
       min_path_length_m);
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Store original trajectory for orientation correction
@@ -108,7 +107,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 1000,
       "QP Smoother: Optimization FAILED, using original trajectory. Check previous error "
       "messages!");
-    return;
+    return ProcessingResult::Unchanged;
   }
   // Copy orientations from original trajectory
   if (qp_params_.preserve_input_trajectory_orientation) {
@@ -117,6 +116,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
   }
 
   traj_points = smoothed_trajectory;
+  return ProcessingResult::Modified;
 }
 
 bool TrajectoryQPSmoother::solve_qp_problem(
@@ -481,4 +481,4 @@ std::vector<double> TrajectoryQPSmoother::compute_velocity_based_weights(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
