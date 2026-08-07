@@ -107,7 +107,7 @@ private:
   std::unordered_map<std::size_t, AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg2D)> id_to_rois_map_;
   bool is_first_msg3d_{false};
   bool debug_mode_;
-  std::mutex fusion_mutex_;
+  mutable std::mutex fusion_mutex_;
   std::shared_ptr<FusionCollectorInfoBase> fusion_collector_info_;
   CollectorStatus status_;
 };
