@@ -87,9 +87,10 @@ private:
    *
    * This function handles memory size strings with suffixes to denote
    * the units (e.g., "k" for kibibytes, "m" for mebibytes, etc.).
-   * If the string has no suffix, it is interpreted as plain bytes.
+   * If the string has no suffix, it is interpreted as KiB (procps `top` task area format).
    *
-   * @param mem_res A string representing the memory resource with a unit suffix or just bytes.
+   * @param mem_res A string representing the memory resource with a unit suffix, or without suffix
+   * (KiB).
    * @return uint64_t The memory size in bytes.
    *
    * @exception std::runtime_error Thrown if the suffix is not recognized.
