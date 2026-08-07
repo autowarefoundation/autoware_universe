@@ -1,0 +1,21 @@
+<launch>
+  <arg name="is_main_ecu" default="true"/>
+  <arg name="input_diag_status" default="/diagnostics_graph/status/merge"/>
+  <arg name="input_diag_struct" default="/diagnostics_graph/struct/merge"/>
+  <arg name="input_mrm_state" default="/ecu/system/fail_safe/mrm_state"/>
+  <arg name="input_active_control_unit" default="/system/redundancy/active_control_unit"/>
+  <arg name="output_mrm_state" default="/system/fail_safe/mrm_state"/>
+  <arg name="output_diag_status" default="/diagnostics_graph/status"/>
+  <arg name="output_diag_struct" default="/diagnostics_graph/struct"/>
+
+  <node pkg="autoware_redundancy_adapi_switcher" exec="autoware_redundancy_adapi_switcher_node" name="redundancy_adapi_switcher" output="screen">
+    <param name="is_main_ecu" value="$(var is_main_ecu)"/>
+    <remap from="~/input/diag/status" to="$(var input_diag_status)"/>
+    <remap from="~/input/diag/struct" to="$(var input_diag_struct)"/>
+    <remap from="~/input/mrm_state" to="$(var input_mrm_state)"/>
+    <remap from="~/input/active_control_unit" to="$(var input_active_control_unit)"/>
+    <remap from="~/output/mrm_state" to="$(var output_mrm_state)"/>
+    <remap from="~/output/diag/status" to="$(var output_diag_status)"/>
+    <remap from="~/output/diag/struct" to="$(var output_diag_struct)"/>
+  </node>
+</launch>
