@@ -337,8 +337,9 @@ void CommandModeDeciderBase::update_current_mode()
     }
   }
   if (curr_mode) {
-    if (curr_mode_ != *curr_mode) {
-      curr_mode_ = *curr_mode;
+    const auto curr_mode_value = curr_mode.value_or(0);
+    if (curr_mode_ != curr_mode_value) {
+      curr_mode_ = curr_mode_value;
       RCLCPP_INFO_STREAM(get_logger(), "Curr mode changed: " << curr_mode_);
     }
   } else {
