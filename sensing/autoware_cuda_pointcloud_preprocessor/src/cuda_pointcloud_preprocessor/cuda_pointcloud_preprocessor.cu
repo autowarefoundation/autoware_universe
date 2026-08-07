@@ -250,13 +250,15 @@ void CudaPointcloudPreprocessor::organizePointcloud()
       thrust::raw_pointer_cast(device_indexes_tensor_.data()),
       num_organized_points_ * sizeof(std::uint32_t), cudaMemcpyDeviceToDevice, stream_));
   } else {
-    cub::DeviceSegmentedRadixSort::SortKeys(
-      reinterpret_cast<void *>(thrust::raw_pointer_cast(device_sort_workspace_.data())),  // NOLINT
-      sort_workspace_bytes_, thrust::raw_pointer_cast(device_indexes_tensor_.data()),
-      thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()), num_organized_points_,
-      num_rings_, thrust::raw_pointer_cast(device_segment_offsets_.data()),
-      thrust::raw_pointer_cast(device_segment_offsets_.data()) + 1, 0, sizeof(std::uint32_t) * 8,
-      stream_);
+    CHECK_CUDA_ERROR(
+      cub::DeviceSegmentedRadixSort::SortKeys(
+        reinterpret_cast<void *>(
+          thrust::raw_pointer_cast(device_sort_workspace_.data())),  // NOLINT
+        sort_workspace_bytes_, thrust::raw_pointer_cast(device_indexes_tensor_.data()),
+        thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()), num_organized_points_,
+        num_rings_, thrust::raw_pointer_cast(device_segment_offsets_.data()),
+        thrust::raw_pointer_cast(device_segment_offsets_.data()) + 1, 0, sizeof(std::uint32_t) * 8,
+        stream_));
   }
 
   // reuse device_indexes_tensor_ to store valid point location
