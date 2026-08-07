@@ -31,7 +31,6 @@
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>image_geometry</depend>
-  <depend>image_transport</depend>
   <depend>message_filters</depend>
   <depend>perception_utils</depend>
   <depend>rclcpp</depend>
