@@ -29,6 +29,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -53,6 +54,12 @@ private:
 
   // publish timer
   AUTOWARE_TIMER_PTR publish_timer_;
+
+  // callback groups: one per enabled input channel
+  std::vector<rclcpp::CallbackGroup::SharedPtr> cb_groups_measurement_;
+
+  // mutex protecting state_ and debugger_ across callback groups
+  std::mutex state_mutex_;
 
   // parameters and internal state
   MultiObjectTrackerParameters params_;
