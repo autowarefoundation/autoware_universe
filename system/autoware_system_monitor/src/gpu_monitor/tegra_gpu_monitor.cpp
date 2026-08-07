@@ -93,8 +93,9 @@ void GPUMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     return;
   }
 
-  int level = DiagStatus::OK;
+  int whole_level = DiagStatus::OK;
   std::string error_str;
+  int index = 0;
 
   for (const auto & itr : loads_) {
     // Read load file
@@ -111,19 +112,16 @@ void GPUMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     ifs.close();
     stat.addf(itr.label_, "%.1f%%", load / 10);
 
-    level = DiagStatus::OK;
     load /= 1000;
-    if (load >= gpu_usage_error_) {
-      level = std::max(level, static_cast<int>(DiagStatus::ERROR));
-    } else if (load >= gpu_usage_warn_) {
-      level = std::max(level, static_cast<int>(DiagStatus::WARN));
-    }
+    const int level = gpuUsageToLevel(static_cast<size_t>(index), load);
+    whole_level = std::max(whole_level, level);
+    ++index;
   }
 
   if (!error_str.empty()) {
     stat.summary(DiagStatus::ERROR, error_str);
   } else {
-    stat.summary(level, load_dict_.at(level));
+    stat.summary(whole_level, load_dict_.at(whole_level));
   }
 }
 
