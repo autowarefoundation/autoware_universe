@@ -20,16 +20,18 @@
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/manual_operator_heartbeat.hpp>
+#include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
+#include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_vehicle_msgs/msg/engage.hpp>
+#include <autoware_vehicle_msgs/msg/gear_command.hpp>
+#include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <tier4_control_msgs/msg/gate_mode.hpp>
-#include <tier4_external_api_msgs/msg/control_command_stamped.hpp>
-#include <tier4_external_api_msgs/msg/gear_shift_stamped.hpp>
-#include <tier4_external_api_msgs/msg/heartbeat.hpp>
-#include <tier4_external_api_msgs/msg/turn_signal_stamped.hpp>
 #include <tier4_external_api_msgs/srv/engage.hpp>
 #include <tier4_external_api_msgs/srv/set_emergency.hpp>
 
@@ -38,8 +40,8 @@
 
 namespace autoware::joy_controller
 {
-using GearShiftType = tier4_external_api_msgs::msg::GearShift::_data_type;
-using TurnSignalType = tier4_external_api_msgs::msg::TurnSignal::_data_type;
+using GearCommandType = autoware_vehicle_msgs::msg::GearCommand::_command_type;
+using TurnIndicatorsCommandType = autoware_vehicle_msgs::msg::TurnIndicatorsCommand::_command_type;
 using GateModeType = tier4_control_msgs::msg::GateMode::_data_type;
 
 class AutowareJoyControllerNode : public rclcpp::Node
@@ -82,18 +84,23 @@ private:
 
   // Publisher
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr pub_control_command_;
-  rclcpp::Publisher<tier4_external_api_msgs::msg::ControlCommandStamped>::SharedPtr
-    pub_external_control_command_;
-  rclcpp::Publisher<tier4_external_api_msgs::msg::GearShiftStamped>::SharedPtr pub_shift_;
-  rclcpp::Publisher<tier4_external_api_msgs::msg::TurnSignalStamped>::SharedPtr pub_turn_signal_;
-  rclcpp::Publisher<tier4_external_api_msgs::msg::Heartbeat>::SharedPtr pub_heartbeat_;
+  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::PedalsCommand>::SharedPtr pub_pedals_command_;
+  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::SteeringCommand>::SharedPtr pub_steering_command_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_gear_cmd_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr
+    pub_turn_indicators_cmd_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr pub_hazard_lights_;
+  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat>::SharedPtr
+    pub_operator_heartbeat_;
   rclcpp::Publisher<tier4_control_msgs::msg::GateMode>::SharedPtr pub_gate_mode_;
   rclcpp::Publisher<autoware_vehicle_msgs::msg::Engage>::SharedPtr pub_vehicle_engage_;
 
   void publishControlCommand();
-  void publishExternalControlCommand();
-  void publishShift();
-  void publishTurnSignal();
+  void publishPedalsCommand();
+  void publishSteeringCommand();
+  void publishGearCommand();
+  void publishTurnIndicatorsCommand();
+  void publishHazardLights(bool enable);
   void publishGateMode();
   void publishHeartbeat();
   void publishAutowareEngage();
@@ -106,8 +113,7 @@ private:
 
   // Previous State
   autoware_control_msgs::msg::Control prev_control_command_;
-  tier4_external_api_msgs::msg::ControlCommand prev_external_control_command_;
-  GearShiftType prev_shift_ = tier4_external_api_msgs::msg::GearShift::NONE;
+  GearCommandType prev_shift_ = autoware_vehicle_msgs::msg::GearCommand::NONE;
   GateModeType prev_gate_mode_ = tier4_control_msgs::msg::GateMode::AUTO;
 
   // Timer
