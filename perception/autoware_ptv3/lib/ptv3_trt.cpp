@@ -172,10 +172,11 @@ PTv3TRT::~PTv3TRT()
 
 void PTv3TRT::initPtr()
 {
-  grid_coord_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
+  grid_coord_d_ =
+    autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * kCoordDims);
   feat_d_ = autoware::cuda_utils::make_unique<float[]>(config_.max_num_voxels_ * 4);
-  serialized_code_d_ =
-    autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
+  serialized_code_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(
+    config_.max_num_voxels_ * kNumSerializationOrders);
 
   // Encoder outputs shared with all the heads: one feature buffer per stage.
   stage_feat_d_.clear();
@@ -251,7 +252,8 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
     stage.indptr = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels + 1);
     stage.head_indices = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
     stage.cluster = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
-    stage.grid_coord = autoware::cuda_utils::make_unique<std::int32_t[]>(max_num_voxels * 3);
+    stage.grid_coord =
+      autoware::cuda_utils::make_unique<std::int32_t[]>(max_num_voxels * kCoordDims);
     stage.serialized_code =
       autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
     stage.serialized_order =
@@ -301,10 +303,12 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
 
   // Inputs
-  network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+  network_io.emplace_back(
+    "grid_coord", nvinfer1::Dims{2, {-1, kCoordDims}}, nvinfer1::DataType::kINT32);
   network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
   network_io.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
+    "serialized_code", nvinfer1::Dims{2, {kNumSerializationOrders, -1}},
+    nvinfer1::DataType::kINT64);
 
   // Outputs: per-encoder-stage point features point_feat_i [N_i, enc_channels[i]],
   // finest to deepest.
@@ -317,16 +321,18 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
 
   profile_dims.emplace_back(
-    "grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
+    "grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], kCoordDims}},
+    nvinfer1::Dims{2, {config_.voxels_num_[1], kCoordDims}},
+    nvinfer1::Dims{2, {config_.voxels_num_[2], kCoordDims}});
 
   profile_dims.emplace_back(
     "feat", nvinfer1::Dims{2, {config_.voxels_num_[0], 4}},
     nvinfer1::Dims{2, {config_.voxels_num_[1], 4}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 4}});
 
   profile_dims.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
-    nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
+    "serialized_code", nvinfer1::Dims{2, {kNumSerializationOrders, config_.voxels_num_[0]}},
+    nvinfer1::Dims{2, {kNumSerializationOrders, config_.voxels_num_[1]}},
+    nvinfer1::Dims{2, {kNumSerializationOrders, config_.voxels_num_[2]}});
 
   // Serialized pooling metadata inputs are precomputed on device each frame and fed to the
   // engine. Cluster tensors are computed too but consumed only by the head engines
@@ -888,9 +894,11 @@ bool PTv3TRT::preProcess(
   }
 
   clear_async(feat_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 4, stream_);
-  clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
   clear_async(
-    serialized_code_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
+    grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * kCoordDims, stream_);
+  clear_async(
+    serialized_code_d_.get(),
+    static_cast<std::size_t>(config_.max_num_voxels_) * kNumSerializationOrders, stream_);
   clear_async(
     compact_points_d_.get(),
     static_cast<std::size_t>(config_.max_num_voxels_) * sizeof(CloudPointTypeXYZIRCAEDT), stream_);

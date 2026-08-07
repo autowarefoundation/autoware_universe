@@ -21,13 +21,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace autoware::ptv3
 {
+
+/// Number of components of a grid coordinate (x, y, z).
+constexpr std::int32_t kCoordDims = 3;
+/// Number of serialization orders the preprocessing path emits ("z" and "z-trans").
+constexpr std::int32_t kNumSerializationOrders = 2;
 
 enum class SourceReconstruction {
   NONE,
@@ -101,12 +105,9 @@ public:
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
     auto max_voxels_depth =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_num_voxels_))));
-    if (serialization_depth_ * 3 + max_voxels_depth >= 64) {
+    if (serialization_depth_ * kCoordDims + max_voxels_depth >= 64) {
       throw std::runtime_error("Serialization depth is too large");
     }
-
-    use_64bit_hash_ =
-      grid_x_size_ * grid_y_size_ * grid_z_size_ > std::numeric_limits<std::uint32_t>::max();
 
     serialization_orders_ = validate_serialization_orders(serialization_orders);
     pooling_strides_ = validate_pooling_strides(pooling_strides);
@@ -311,7 +312,7 @@ public:
       throw std::runtime_error("serialization_orders must not be empty.");
     }
     if (
-      serialization_orders.size() != 2 || serialization_orders[0] != "z" ||
+      serialization_orders.size() != kNumSerializationOrders || serialization_orders[0] != "z" ||
       serialization_orders[1] != "z-trans") {
       throw std::runtime_error(
         "The current PTv3 preprocessing path supports serialization_orders: ['z', 'z-trans'].");
@@ -379,7 +380,6 @@ public:
   bool use_det3d_head_;
 
   // Preprocess parameters
-  bool use_64bit_hash_{};
   std::int32_t serialization_depth_{};
 
   ///// NETWORK PARAMETERS /////
