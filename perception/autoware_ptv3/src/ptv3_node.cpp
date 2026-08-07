@@ -55,6 +55,10 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   const auto encoder_workspace_size = declare_workspace_size("encoder.workspace_size");
   const std::string encoder_engine_path =
     this->declare_parameter<std::string>("encoder.engine_path", descriptor);
+  // Declared by the ML package: build the engine strongly typed (tensor precisions taken from
+  // the model; trt_precision does not apply). Defaults to false for packages predating the flag.
+  const bool encoder_strongly_typed =
+    this->declare_parameter<bool>("encoder.strongly_typed", false);
   const auto voxels_num =
     this->declare_parameter<std::vector<std::int64_t>>("encoder.voxels_num", descriptor);
   const auto point_cloud_range = to_float_vector(
@@ -105,8 +109,11 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       this->declare_parameter<std::string>("segmentation3d.source_reconstruction", descriptor);
     dec_depths =
       this->declare_parameter<std::vector<std::int64_t>>("segmentation3d.dec_depths", descriptor);
+    const bool seg3d_head_strongly_typed =
+      this->declare_parameter<bool>("segmentation3d.strongly_typed", false);
     seg3d_head_trt_config.emplace(
-      seg3d_head_onnx_path, trt_precision, seg3d_head_engine_path, seg3d_head_workspace_size);
+      seg3d_head_onnx_path, trt_precision, seg3d_head_engine_path, seg3d_head_workspace_size, -1,
+      false, seg3d_head_strongly_typed);
   }
 
   // Detection head parameters
@@ -185,8 +192,11 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     post_center_range = to_float_vector(
       this->declare_parameter<std::vector<double>>("detection3d.post_center_range", descriptor));
 
+    const bool det3d_head_strongly_typed =
+      this->declare_parameter<bool>("detection3d.strongly_typed", false);
     det3d_head_trt_config.emplace(
-      det3d_head_onnx_path, trt_precision, det3d_head_engine_path, det3d_head_workspace_size);
+      det3d_head_onnx_path, trt_precision, det3d_head_engine_path, det3d_head_workspace_size, -1,
+      false, det3d_head_strongly_typed);
   }
 
   PTv3Config config(
@@ -198,7 +208,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     num_proposals, post_center_range);
 
   const auto encoder_trt_config = tensorrt_common::TrtCommonConfig(
-    encoder_onnx_path, trt_precision, encoder_engine_path, encoder_workspace_size);
+    encoder_onnx_path, trt_precision, encoder_engine_path, encoder_workspace_size, -1, false,
+    encoder_strongly_typed);
 
   model_ptr_ = std::make_unique<PTv3TRT>(
     encoder_trt_config, seg3d_head_trt_config, det3d_head_trt_config, config);
