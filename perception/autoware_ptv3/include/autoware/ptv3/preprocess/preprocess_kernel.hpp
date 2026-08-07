@@ -57,7 +57,7 @@ public:
    * @param num_points Number of points in `input_data`.
    * @param voxel_features Output feature vector (x, y, z, intensity) per voxel.
    * @param voxel_coords Output grid coordinates, laid out [num_voxels, 3].
-   * @param voxel_hashes Output serialized codes, laid out [num_orders, num_voxels].
+   * @param serialized_code Output serialized codes, laid out [num_orders, num_voxels].
    * @param compact_points Output representative input point per voxel, in `input_format` layout.
    * @param reconstruction_features Optional output feature vectors of every input point (FULL
    * reconstruction) or of the in-range ones (PARTIAL). Skipped if nullptr.
@@ -71,7 +71,7 @@ public:
    */
   std::size_t generateFeatures(
     const void * input_data, CloudFormat input_format, unsigned int num_points,
-    float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
+    float * voxel_features, std::int32_t * voxel_coords, std::int64_t * serialized_code,
     void * compact_points, float * reconstruction_features, void * cropped_source_points,
     std::int64_t * inverse_map, std::size_t * num_cropped_points);
 

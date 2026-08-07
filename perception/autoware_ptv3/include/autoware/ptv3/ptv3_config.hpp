@@ -28,6 +28,11 @@
 namespace autoware::ptv3
 {
 
+/// Number of components of a grid coordinate (x, y, z).
+constexpr std::int32_t kCoordDims = 3;
+/// Number of serialization orders the preprocessing path emits ("z" and "z-trans").
+constexpr std::int32_t kNumSerializationOrders = 2;
+
 enum class SourceReconstruction {
   NONE,
   PARTIAL,
@@ -100,7 +105,7 @@ public:
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
     auto max_voxels_depth =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_num_voxels_))));
-    if (serialization_depth_ * 3 + max_voxels_depth >= 64) {
+    if (serialization_depth_ * kCoordDims + max_voxels_depth >= 64) {
       throw std::runtime_error("Serialization depth is too large");
     }
 
@@ -307,7 +312,7 @@ public:
       throw std::runtime_error("serialization_orders must not be empty.");
     }
     if (
-      serialization_orders.size() != 2 || serialization_orders[0] != "z" ||
+      serialization_orders.size() != kNumSerializationOrders || serialization_orders[0] != "z" ||
       serialization_orders[1] != "z-trans") {
       throw std::runtime_error(
         "The current PTv3 preprocessing path supports serialization_orders: ['z', 'z-trans'].");

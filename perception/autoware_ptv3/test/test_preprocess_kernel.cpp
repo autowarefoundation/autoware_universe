@@ -51,7 +51,7 @@ protected:
   {
     CudaUniquePtr<float[]> reconstruction_features_d;
     CudaUniquePtr<std::int32_t[]> voxel_coords_d;
-    CudaUniquePtr<std::int64_t[]> voxel_hashes_d;
+    CudaUniquePtr<std::int64_t[]> serialized_code_d;
     CudaUniquePtr<CloudPointTypeXYZI[]> cropped_source_points_d;
     CudaUniquePtr<std::int64_t[]> inverse_map_d;
     std::size_t num_cropped_points{};
@@ -119,8 +119,9 @@ protected:
       makeDeviceBuffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
     auto reconstruction_features_d =
       makeDeviceBuffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
-    auto voxel_coords_d = makeDeviceBuffer<std::int32_t>(config.cloud_capacity_ * 3);
-    auto voxel_hashes_d = makeDeviceBuffer<std::int64_t>(config.cloud_capacity_ * 2);
+    auto voxel_coords_d = makeDeviceBuffer<std::int32_t>(config.cloud_capacity_ * kCoordDims);
+    auto serialized_code_d =
+      makeDeviceBuffer<std::int64_t>(config.cloud_capacity_ * kNumSerializationOrders);
     auto compact_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(config.cloud_capacity_);
     auto cropped_source_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(config.cloud_capacity_);
     auto inverse_map_d = makeDeviceBuffer<std::int64_t>(config.cloud_capacity_);
@@ -128,7 +129,7 @@ protected:
     std::size_t num_cropped_points = 0;
     const auto num_voxels = preprocess_->generateFeatures(
       input_points_d.get(), CloudFormat::XYZI, host_points.size(), voxel_features_d.get(),
-      voxel_coords_d.get(), voxel_hashes_d.get(), compact_points_d.get(),
+      voxel_coords_d.get(), serialized_code_d.get(), compact_points_d.get(),
       reconstruction_features_d.get(),
       with_source_outputs ? cropped_source_points_d.get() : nullptr,
       with_source_outputs ? inverse_map_d.get() : nullptr, &num_cropped_points);
@@ -138,7 +139,7 @@ protected:
     return GenerateFeaturesResult{
       std::move(reconstruction_features_d),
       std::move(voxel_coords_d),
-      std::move(voxel_hashes_d),
+      std::move(serialized_code_d),
       std::move(cropped_source_points_d),
       std::move(inverse_map_d),
       num_cropped_points,
@@ -210,11 +211,11 @@ TEST_F(PreprocessKernelTest, PartialReconstructionBuildsVoxelCoords)
   const auto result = runGenerateFeatures("partial", kPartialReconstructionPoints, true);
   EXPECT_EQ(result.num_voxels, 3U);
 
-  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * kCoordDims);
   for (std::size_t voxel_idx = 0; voxel_idx < result.num_voxels; ++voxel_idx) {
-    const auto x = voxel_coords[voxel_idx * 3 + 0];
-    const auto y = voxel_coords[voxel_idx * 3 + 1];
-    const auto z = voxel_coords[voxel_idx * 3 + 2];
+    const auto x = voxel_coords[voxel_idx * kCoordDims + 0];
+    const auto y = voxel_coords[voxel_idx * kCoordDims + 1];
+    const auto z = voxel_coords[voxel_idx * kCoordDims + 2];
     EXPECT_TRUE(
       (x == 0 && y == 0 && z == 0) || (x == 1 && y == 1 && z == 1) || (x == 2 && y == 2 && z == 2));
   }
@@ -239,11 +240,11 @@ TEST_F(PreprocessKernelTest, CroppedVoxelCoordsStayInsideGridBounds)
   EXPECT_EQ(crop_mask, (std::vector<std::uint32_t>{1, 1, 0, 0, 0, 0}));
 
   const auto & config = *config_;
-  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * kCoordDims);
   for (std::size_t voxel_idx = 0; voxel_idx < result.num_voxels; ++voxel_idx) {
-    const auto x = voxel_coords[voxel_idx * 3 + 0];
-    const auto y = voxel_coords[voxel_idx * 3 + 1];
-    const auto z = voxel_coords[voxel_idx * 3 + 2];
+    const auto x = voxel_coords[voxel_idx * kCoordDims + 0];
+    const auto y = voxel_coords[voxel_idx * kCoordDims + 1];
+    const auto z = voxel_coords[voxel_idx * kCoordDims + 2];
     EXPECT_GE(x, 0);
     EXPECT_GE(y, 0);
     EXPECT_GE(z, 0);
@@ -275,21 +276,23 @@ TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
   ASSERT_EQ(result.num_voxels, 5U);
 
   const auto depth = config_->serialization_depth_;
-  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
-  const auto voxel_hashes = copyToHost(result.voxel_hashes_d.get(), result.num_voxels * 2);
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * kCoordDims);
+  const auto serialized_code =
+    copyToHost(result.serialized_code_d.get(), result.num_voxels * kNumSerializationOrders);
 
   for (std::size_t voxel_idx = 1; voxel_idx < result.num_voxels; ++voxel_idx) {
-    EXPECT_LT(voxel_hashes[voxel_idx - 1], voxel_hashes[voxel_idx]) << "at voxel " << voxel_idx;
+    EXPECT_LT(serialized_code[voxel_idx - 1], serialized_code[voxel_idx])
+      << "at voxel " << voxel_idx;
   }
 
   // The codes must describe the grid coordinates that were actually emitted.
   for (std::size_t voxel_idx = 0; voxel_idx < result.num_voxels; ++voxel_idx) {
-    const auto x = voxel_coords[voxel_idx * 3 + 0];
-    const auto y = voxel_coords[voxel_idx * 3 + 1];
-    const auto z = voxel_coords[voxel_idx * 3 + 2];
-    EXPECT_EQ(voxel_hashes[voxel_idx], serialize_coord(x, y, z, depth, false))
+    const auto x = voxel_coords[voxel_idx * kCoordDims + 0];
+    const auto y = voxel_coords[voxel_idx * kCoordDims + 1];
+    const auto z = voxel_coords[voxel_idx * kCoordDims + 2];
+    EXPECT_EQ(serialized_code[voxel_idx], serialize_coord(x, y, z, depth, false))
       << "order 0 at voxel " << voxel_idx;
-    EXPECT_EQ(voxel_hashes[result.num_voxels + voxel_idx], serialize_coord(x, y, z, depth, true))
+    EXPECT_EQ(serialized_code[result.num_voxels + voxel_idx], serialize_coord(x, y, z, depth, true))
       << "order 1 at voxel " << voxel_idx;
   }
 }

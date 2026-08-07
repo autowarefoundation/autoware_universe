@@ -44,7 +44,7 @@ struct DeviceStage
     indptr(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity + 1)),
     head_indices(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity)),
     cluster(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity)),
-    grid_coord(autoware::cuda_utils::make_unique<std::int32_t[]>(capacity * 3)),
+    grid_coord(autoware::cuda_utils::make_unique<std::int32_t[]>(capacity * kCoordDims)),
     serialized_code(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity * num_orders)),
     serialized_order(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity * num_orders)),
     serialized_inverse(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity * num_orders))
@@ -85,12 +85,12 @@ std::int32_t pooling_depth(const std::int64_t stride)
 std::vector<std::int64_t> make_serialized_code(
   const std::vector<std::int32_t> & grid_coord, const std::int32_t depth)
 {
-  const auto count = grid_coord.size() / 3;
-  std::vector<std::int64_t> code(2 * count);
+  const auto count = grid_coord.size() / kCoordDims;
+  std::vector<std::int64_t> code(kNumSerializationOrders * count);
   for (std::size_t index = 0; index < count; ++index) {
-    const auto x = grid_coord[index * 3 + 0];
-    const auto y = grid_coord[index * 3 + 1];
-    const auto z = grid_coord[index * 3 + 2];
+    const auto x = grid_coord[index * kCoordDims + 0];
+    const auto y = grid_coord[index * kCoordDims + 1];
+    const auto z = grid_coord[index * kCoordDims + 2];
     code[index] = serialize_coord(x, y, z, depth, false);
     code[count + index] = serialize_coord(x, y, z, depth, true);
   }
@@ -102,13 +102,13 @@ std::vector<std::int64_t> make_serialized_code(
 std::vector<std::int32_t> sort_grid_coord_by_order0(
   const std::vector<std::int32_t> & grid_coord, const std::int32_t depth)
 {
-  const auto count = grid_coord.size() / 3;
+  const auto count = grid_coord.size() / kCoordDims;
   std::vector<std::size_t> order(count);
   std::iota(order.begin(), order.end(), 0);
   const auto code_of = [&grid_coord, depth](const std::size_t index) {
     return serialize_coord(
-      grid_coord[index * 3 + 0], grid_coord[index * 3 + 1], grid_coord[index * 3 + 2], depth,
-      false);
+      grid_coord[index * kCoordDims + 0], grid_coord[index * kCoordDims + 1],
+      grid_coord[index * kCoordDims + 2], depth, false);
   };
   std::stable_sort(order.begin(), order.end(), [&code_of](const auto lhs, const auto rhs) {
     return code_of(lhs) < code_of(rhs);
@@ -116,8 +116,8 @@ std::vector<std::int32_t> sort_grid_coord_by_order0(
 
   std::vector<std::int32_t> sorted(grid_coord.size());
   for (std::size_t rank = 0; rank < count; ++rank) {
-    for (std::size_t coord = 0; coord < 3; ++coord) {
-      sorted[rank * 3 + coord] = grid_coord[order[rank] * 3 + coord];
+    for (std::size_t coord = 0; coord < kCoordDims; ++coord) {
+      sorted[rank * kCoordDims + coord] = grid_coord[order[rank] * kCoordDims + coord];
     }
   }
   return sorted;
@@ -138,11 +138,11 @@ CpuStage make_stage_reference(
   const std::vector<std::int64_t> & serialized_code_in, const std::size_t num_orders,
   const std::int64_t stride)
 {
-  const auto input_count = grid_coord_in.size() / 3;
+  const auto input_count = grid_coord_in.size() / kCoordDims;
   const auto depth = pooling_depth(stride);
   std::vector<std::int64_t> pooled_keys(input_count);
   for (std::size_t index = 0; index < input_count; ++index) {
-    pooled_keys[index] = serialized_code_in[index] >> (depth * 3);
+    pooled_keys[index] = serialized_code_in[index] >> (depth * kCoordDims);
   }
 
   std::vector<std::int64_t> unique_keys = pooled_keys;
@@ -172,16 +172,17 @@ CpuStage make_stage_reference(
     stage.head_indices[segment] = stage.indices[static_cast<std::size_t>(stage.indptr[segment])];
   }
 
-  stage.grid_coord.resize(unique_keys.size() * 3);
+  stage.grid_coord.resize(unique_keys.size() * kCoordDims);
   stage.serialized_code.resize(num_orders * unique_keys.size());
   for (std::size_t segment = 0; segment < unique_keys.size(); ++segment) {
     const auto source = static_cast<std::size_t>(stage.head_indices[segment]);
-    for (std::size_t coord = 0; coord < 3; ++coord) {
-      stage.grid_coord[segment * 3 + coord] = grid_coord_in[source * 3 + coord] >> depth;
+    for (std::size_t coord = 0; coord < kCoordDims; ++coord) {
+      stage.grid_coord[segment * kCoordDims + coord] =
+        grid_coord_in[source * kCoordDims + coord] >> depth;
     }
     for (std::size_t order = 0; order < num_orders; ++order) {
       stage.serialized_code[order * unique_keys.size() + segment] =
-        serialized_code_in[order * input_count + source] >> (depth * 3);
+        serialized_code_in[order * input_count + source] >> (depth * kCoordDims);
     }
   }
 
@@ -285,11 +286,11 @@ class SerializedPoolingMetadataTest : public PTv3CudaTest
 TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
 {
   const auto config = make_detection_test_config();
-  constexpr std::size_t kNumOrders = 2;
+  constexpr std::size_t kNumOrders = kNumSerializationOrders;
   const auto grid_coord =
     sort_grid_coord_by_order0({0, 0, 0, 15, 15, 0}, config.serialization_depth_);
   const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
-  const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
+  const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / kCoordDims);
 
   PreprocessCuda preprocess(config, stream_);
   auto grid_coord_d = makeDeviceBuffer<std::int32_t>(grid_coord.size());
@@ -320,12 +321,15 @@ TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
   const auto point_grid_coord_3_count =
     static_cast<std::size_t>(stage_counts[point_grid_coord_3_stage + 1]);
   const auto point_grid_coord_3 = copyToHost(
-    device_stages[point_grid_coord_3_stage].grid_coord.get(), point_grid_coord_3_count * 3);
+    device_stages[point_grid_coord_3_stage].grid_coord.get(),
+    point_grid_coord_3_count * kCoordDims);
   for (std::size_t i = 0; i < point_grid_coord_3_count; ++i) {
-    EXPECT_GE(point_grid_coord_3[i * 3 + 0], 0);
-    EXPECT_GE(point_grid_coord_3[i * 3 + 1], 0);
-    EXPECT_LT(point_grid_coord_3[i * 3 + 0], static_cast<std::int32_t>(config.det_grid_x_size_));
-    EXPECT_LT(point_grid_coord_3[i * 3 + 1], static_cast<std::int32_t>(config.det_grid_y_size_));
+    EXPECT_GE(point_grid_coord_3[i * kCoordDims + 0], 0);
+    EXPECT_GE(point_grid_coord_3[i * kCoordDims + 1], 0);
+    EXPECT_LT(
+      point_grid_coord_3[i * kCoordDims + 0], static_cast<std::int32_t>(config.det_grid_x_size_));
+    EXPECT_LT(
+      point_grid_coord_3[i * kCoordDims + 1], static_cast<std::int32_t>(config.det_grid_y_size_));
   }
 }
 
@@ -334,11 +338,11 @@ TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
 TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
 {
   const auto config = make_test_config();
-  constexpr std::size_t kNumOrders = 2;
+  constexpr std::size_t kNumOrders = kNumSerializationOrders;
   const auto stage_count = config.pooling_strides_.size();
 
   PreprocessCuda preprocess(config, stream_);
-  auto grid_coord_d = makeDeviceBuffer<std::int32_t>(config.max_num_voxels_ * 3);
+  auto grid_coord_d = makeDeviceBuffer<std::int32_t>(config.max_num_voxels_ * kCoordDims);
   auto serialized_code_d = makeDeviceBuffer<std::int64_t>(config.max_num_voxels_ * kNumOrders);
   auto stage_counts_d = makeDeviceBuffer<std::int64_t>(stage_count + 1);
   std::vector<DeviceStage> device_stages;
@@ -370,14 +374,14 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
       unique_coords.insert({coord_dist(rng), coord_dist(rng), coord_dist(rng)});
     }
     std::vector<std::int32_t> grid_coord;
-    grid_coord.reserve(unique_coords.size() * 3);
+    grid_coord.reserve(unique_coords.size() * kCoordDims);
     for (const auto & coord : unique_coords) {
       grid_coord.insert(grid_coord.end(), coord.begin(), coord.end());
     }
     grid_coord = sort_grid_coord_by_order0(grid_coord, config.serialization_depth_);
 
     const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
-    const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
+    const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / kCoordDims);
 
     copyToDevice(grid_coord_d.get(), grid_coord);
     copyToDevice(serialized_code_d.get(), serialized_code);
@@ -417,7 +421,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
       expect_equal(
         copyToHost(actual.cluster.get(), in_count), expected.cluster, prefix + "cluster");
       expect_equal(
-        copyToHost(actual.grid_coord.get(), out_count * 3), expected.grid_coord,
+        copyToHost(actual.grid_coord.get(), out_count * kCoordDims), expected.grid_coord,
         prefix + "grid_coord");
       expect_equal(
         copyToHost(actual.serialized_code.get(), out_count * kNumOrders), expected.serialized_code,
@@ -435,14 +439,14 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
 TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
 {
   const auto config = make_test_config();
-  constexpr std::size_t kNumOrders = 2;
+  constexpr std::size_t kNumOrders = kNumSerializationOrders;
   // Chosen so that "z" and "z-trans" rank the voxels differently at every level (enforced by
   // expect_orders_diverge below) and pooling merges voxels at every stage (10 -> 6 -> 4).
   const auto grid_coord = sort_grid_coord_by_order0(
     {3, 0, 2, 3, 1, 3, 0, 5, 2, 4, 2, 0, 5, 2, 1, 5, 3, 0, 4, 3, 3, 5, 4, 1, 4, 4, 2, 5, 4, 2},
     config.serialization_depth_);
   const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
-  const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
+  const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / kCoordDims);
 
   PreprocessCuda preprocess(config, stream_);
   auto grid_coord_d = makeDeviceBuffer<std::int32_t>(grid_coord.size());
@@ -500,7 +504,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     expect_equal(head_indices, expected.head_indices, prefix + "head_indices");
     expect_equal(cluster, expected.cluster, prefix + "cluster");
     expect_equal(
-      copyToHost(actual.grid_coord.get(), out_count * 3), expected.grid_coord,
+      copyToHost(actual.grid_coord.get(), out_count * kCoordDims), expected.grid_coord,
       prefix + "grid_coord");
     expect_equal(
       copyToHost(actual.serialized_code.get(), out_count * kNumOrders), expected.serialized_code,

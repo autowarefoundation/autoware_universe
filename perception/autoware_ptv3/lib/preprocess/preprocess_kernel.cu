@@ -71,7 +71,7 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   // this bound holds for every stage. std::max guards serialization_depth_ == 0 (CUB requires
   // end_bit > begin_bit). Workspace queries below use the full 64 bits, which upper-bounds the
   // scratch needed for any narrower range.
-  code_sort_end_bit_ = std::max(1, 3 * config_.serialization_depth_);
+  code_sort_end_bit_ = std::max(1, kCoordDims * config_.serialization_depth_);
 
   std::int64_t * int64_nullptr = nullptr;
   std::uint32_t * uint32_nullptr = nullptr;
@@ -241,7 +241,7 @@ __global__ void extractIndicesKernel(
 
 template <typename mask_t>
 __global__ void scatterInverseMapKernel(
-  const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ sorted_hash_indexes,
+  const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ sorted_code_indices,
   std::int64_t * __restrict__ inverse_map, int num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -249,7 +249,7 @@ __global__ void scatterInverseMapKernel(
     return;
   }
 
-  inverse_map[sorted_hash_indexes[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
+  inverse_map[sorted_code_indices[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
 }
 
 /**
@@ -419,7 +419,7 @@ __global__ void markPoolingRunsKernel(
 
   assert(idx == 0 || serialized_code_in[idx - 1] < serialized_code_in[idx]);
 
-  const auto shift = pooling_depth * 3;
+  const auto shift = pooling_depth * kCoordDims;
   const auto key = serialized_code_in[idx] >> shift;
   run_flags[idx] = (idx == 0 || key != (serialized_code_in[idx - 1] >> shift)) ? 1 : 0;
 }
@@ -468,13 +468,13 @@ __global__ void fillPoolingStageKernel(
 
   indptr_out[segment_index] = idx;
   head_indices_out[segment_index] = idx;
-  for (std::int32_t coord_index = 0; coord_index < 3; ++coord_index) {
-    grid_coord_out[segment_index * 3 + coord_index] =
-      grid_coord_in[idx * 3 + coord_index] >> pooling_depth;
+  for (std::int32_t coord_index = 0; coord_index < kCoordDims; ++coord_index) {
+    grid_coord_out[segment_index * kCoordDims + coord_index] =
+      grid_coord_in[idx * kCoordDims + coord_index] >> pooling_depth;
   }
   for (std::int32_t order_index = 0; order_index < num_orders; ++order_index) {
     serialized_code_out[order_index * next_count + segment_index] =
-      serialized_code_in[order_index * input_count + idx] >> (pooling_depth * 3);
+      serialized_code_in[order_index * input_count + idx] >> (pooling_depth * kCoordDims);
   }
 
   // Segments are emitted in ascending order-0 code, so the pooled level's order-0 ranking is the
@@ -649,7 +649,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
 
 std::size_t PreprocessCuda::generateFeatures(
   const void * input_data, CloudFormat input_format, unsigned int num_points,
-  float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
+  float * voxel_features, std::int32_t * voxel_coords, std::int64_t * serialized_code,
   void * compact_points, float * reconstruction_features, void * cropped_source_points,
   std::int64_t * inverse_map, std::size_t * output_num_cropped_points)
 {
@@ -872,7 +872,7 @@ std::size_t PreprocessCuda::generateFeatures(
   const auto num_unique_points = static_cast<std::uint64_t>(*num_unique_points_);
 
   // The extract kernels above dropped any voxels beyond max_num_voxels, so only the first
-  // max_num_voxels entries of voxel_features/voxel_coords/voxel_hashes are valid. Cap the count fed
+  // max_num_voxels entries of voxel_features/voxel_coords/serialized_code are valid. Cap the count
   // to the grid-coord kernel to that same limit; writing more would overrun those buffers (which
   // are sized max_num_voxels) exactly as the unguarded extract did. The true count is still
   // returned so the caller logs the "over the limit" warning and clips consistently.
@@ -883,8 +883,9 @@ std::size_t PreprocessCuda::generateFeatures(
   computeGridCoordsAndSerializationKernel<<<
     num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<float4 *>(voxel_features), reinterpret_cast<int3 *>(voxel_coords),
-    voxel_hashes, static_cast<int>(num_voxels_capped), config_.voxel_x_size_, config_.voxel_y_size_,
-    config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z, config_.serialization_depth_);
+    serialized_code, static_cast<int>(num_voxels_capped), config_.voxel_x_size_,
+    config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z,
+    config_.serialization_depth_);
 
   return num_unique_points;
 }
