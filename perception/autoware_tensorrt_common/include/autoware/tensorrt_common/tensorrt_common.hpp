@@ -316,6 +316,13 @@ public:
    */
   void printProfiling() const;
 
+  /**
+   * @brief Whether the network was built strongly typed (see TrtCommonConfig::strongly_typed).
+   *
+   * @return Whether the network is strongly typed.
+   */
+  [[nodiscard]] bool isStronglyTyped() const;
+
 private:
   /**
    * @brief Initialize TensorRT common.
