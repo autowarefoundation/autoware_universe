@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!--
+  Manifest-driven launch for the yolox_tiny configuration.
+-->
+<launch>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
+
+  <arg name="input/image" default="/sensing/camera/camera0/image_rect_color"/>
+  <arg name="output/objects" default="/perception/object_recognition/detection/rois0"/>
+
+  <arg name="config_dir" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_tiny" description="directory containing parameters.manifest.yaml + config yamls"/>
+  <arg name="model_dir" default="$(var data_path)/tensorrt_yolox" description="directory containing ML artifacts (onnx / label / colormap)"/>
+
+  <arg name="use_decompress" default="true" description="use image decompress"/>
+  <arg name="build_only" default="false" description="exit after trt engine is built"/>
+
+  <arg name="decompressor_param_path" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node" if="$(var use_decompress)">
+    <remap from="~/input/compressed_image" to="$(var input/image)/compressed"/>
+    <remap from="~/output/raw_image" to="$(var input/image)"/>
+    <param from="$(var decompressor_param_path)"/>
+  </node>
+
+  <node pkg="autoware_tensorrt_yolox" exec="autoware_tensorrt_yolox_node_exe" name="tensorrt_yolox" output="screen">
+    <remap from="~/in/image" to="$(var input/image)"/>
+    <remap from="~/out/objects" to="$(var output/objects)"/>
+    <param name="config_dir" value="$(var config_dir)"/>
+    <param name="model_dir" value="$(var model_dir)"/>
+    <param name="build_only" value="$(var build_only)"/>
+  </node>
+</launch>

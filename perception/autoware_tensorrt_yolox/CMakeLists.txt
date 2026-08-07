@@ -151,6 +151,7 @@ rclcpp_components_register_node(yolox_single_image_inference_node
 ament_auto_add_library(${PROJECT_NAME}_node SHARED
   src/tensorrt_yolox_node.cpp
   src/tensorrt_yolox_detector.cpp
+  src/parameter_loader.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}_node
@@ -159,6 +160,7 @@ ament_target_dependencies(${PROJECT_NAME}_node
 
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
+  yaml-cpp
 )
 
 target_compile_definitions(${PROJECT_NAME}_node PRIVATE
@@ -175,6 +177,16 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
   ament_auto_add_gtest(test_label
     test/test_label.cpp
+  )
+
+  ament_auto_add_gtest(test_parameter_loader
+    test/test_parameter_loader.cpp
+  )
+  # parameter_loader.cpp lives inside ${PROJECT_NAME}_node so we link that lib
+  # rather than duplicating the source in the test binary. yaml-cpp travels
+  # transitively via that library.
+  target_link_libraries(test_parameter_loader
+    ${PROJECT_NAME}_node
   )
 
   # Characterization test that drives the node end-to-end through ROS topics. It needs an NVIDIA
