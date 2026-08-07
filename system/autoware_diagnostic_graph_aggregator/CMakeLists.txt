@@ -77,4 +77,4 @@ if(BUILD_TESTING)
   target_link_libraries(gtest_${PROJECT_NAME} ${PROJECT_NAME} yaml-cpp)
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE config example launch)
+autoware_ament_auto_package(INSTALL_TO_SHARE config example launch)
