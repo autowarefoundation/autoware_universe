@@ -17,6 +17,7 @@
 
 #include "autoware/diagnostic_graph_utils/subscription.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <string>
@@ -48,7 +49,7 @@ struct TableLine
   std::string links;  // node children
 };
 
-class DumpNode : public rclcpp::Node
+class DumpNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit DumpNode(const rclcpp::NodeOptions & options);
