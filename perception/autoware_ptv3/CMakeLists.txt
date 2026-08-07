@@ -196,14 +196,14 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   endif()
 
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
       config
   )
 
 else()
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
   )
