@@ -112,6 +112,9 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
+  if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    list(FILTER TEST_SOURCES EXCLUDE REGEX ".*_integration\\.cpp$")
+  endif()
   ament_add_ros_isolated_gtest(test_autoware_trajectory_optimizer
     ${TEST_SOURCES}
   )

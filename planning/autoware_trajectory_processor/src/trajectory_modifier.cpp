@@ -50,7 +50,9 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail", 1);
 
-  pub_processing_time_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+  pub_processing_time_ =
+    std::make_shared<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "~/debug");
 
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
@@ -66,7 +68,8 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(get_logger(), "TrajectoryModifier initialized");
 }
 
-void TrajectoryModifier::on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+void TrajectoryModifier::on_map(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -74,7 +77,8 @@ void TrajectoryModifier::on_map(const autoware_map_msgs::msg::LaneletMapBin::Con
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
-void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryModifier::on_traj(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -127,12 +131,12 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
 tl::expected<plugin::InputData, std::string> TrajectoryModifier::make_input_data()
 {
   plugin::InputData input;
-  input.current_odometry = sub_current_odometry_.take_data();
-  input.current_acceleration = sub_current_acceleration_.take_data();
-  input.predicted_objects = sub_objects_.take_data();
-  input.obstacle_pointcloud = sub_pointcloud_.take_data();
-  input.route = sub_route_.take_data();
-  input.traffic_light_signals = sub_traffic_lights_.take_data();
+  input.current_odometry = sub_current_odometry_->take_data();
+  input.current_acceleration = sub_current_acceleration_->take_data();
+  input.predicted_objects = sub_objects_->take_data();
+  input.obstacle_pointcloud = sub_pointcloud_->take_data();
+  input.route = sub_route_->take_data();
+  input.traffic_light_signals = sub_traffic_lights_->take_data();
   input.lanelet_map = lanelet_map_ptr_;
 
   if (!input.current_odometry) {

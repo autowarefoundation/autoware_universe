@@ -20,6 +20,7 @@
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -68,7 +69,7 @@ private:
     double stop_point_arc_length = 0.0;
   } debug_data_;
 
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_debug_text_;
 
   bool check_traffic_lights(const TrajectoryPoints & traj_points, const InputData & input);
 

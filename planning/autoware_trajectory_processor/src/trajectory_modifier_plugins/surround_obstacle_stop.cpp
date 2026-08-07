@@ -104,8 +104,7 @@ void SurroundObstacleStop::on_initialize(const TrajectoryModifierParams & params
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "modifier_surround_obstacle_stop");
+    std::make_unique<PlanningFactorInterface>(node_ptr, "modifier_surround_obstacle_stop");
 
   pub_debug_text_ =
     node_ptr->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
