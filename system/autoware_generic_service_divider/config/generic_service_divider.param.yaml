@@ -1,0 +1,99 @@
+/**:
+  ros__parameters:
+    plugins:
+      - generic_service_divider::ChangeOperationModeDivider
+      - generic_service_divider::ChangeAutowareControlDivider
+      - generic_service_divider::ResetDiagGraphDivider
+      - generic_service_divider::ResetRedundancySwitcherDivider
+
+    change_operation_mode:
+      input_service: /system/operation_mode/change_operation_mode
+      output_services:
+        names:
+          - /main/system/operation_mode/change_operation_mode
+          - /sub/system/operation_mode/change_operation_mode
+        primaries:
+          - true
+          - false
+        timeouts_ms:
+          - 200
+          - 500
+
+    change_autoware_control:
+      input_service: /system/operation_mode/change_autoware_control
+      output_services:
+        names:
+          - /main/system/operation_mode/change_autoware_control
+          - /sub/system/operation_mode/change_autoware_control
+        primaries:
+          - true
+          - false
+        timeouts_ms:
+          - 200
+          - 500
+
+    reset_diag_graph:
+      input_service: /diagnostics_graph/reset
+      output_services:
+        names:
+          - /main/diagnostics_graph/reset
+          - /sub/diagnostics_graph/reset
+        primaries:
+          - true
+          - false
+        timeouts_ms:
+          - 200
+          - 500
+
+    reset_redundancy_switcher:
+      input_service: /system/redundancy_switcher/reset
+      output_services:
+        names:
+          - /main/system/redundancy_switcher/reset
+          - /sub/system/redundancy_switcher/reset
+        primaries:
+          - true
+          - false
+        timeouts_ms:
+          - 200
+          - 500
+    set_aggregator_initializing:
+      input_service: /system/aggregator/set_initializing
+      output_services:
+        names:
+          - /main/system/aggregator/set_initializing
+          - /sub/system/aggregator/set_initializing
+        primaries:
+          - true
+          - false
+        timeouts_ms:
+          - 200
+          - 500
+    set_redundancy_switcher_interface_initializing:
+      input_service: /system/redundancy_switcher_interface/set_initializing
+      output_services:
+        names:
+          - /main/system/redundancy_switcher_interface/set_initializing
+          - /sub/system/redundancy_switcher_interface/set_initializing
+        primaries:
+          - true
+          - false
+        timeouts_ms:
+          - 200
+          - 500
+
+    trigger_node:
+      input_service: /localization/pose_twist_fusion_filter/trigger_node
+      output_services:
+        names:
+          - /main/localization/pose_twist_fusion_filter/trigger_node
+          - /sub/localization/pose_twist_fusion_filter/trigger_node
+          - /sub2/localization/pose_twist_fusion_filter/trigger_node
+        primaries:
+          - true
+          - false
+          - false
+        timeouts_ms:
+          - 500
+          - 500
+          - 500
