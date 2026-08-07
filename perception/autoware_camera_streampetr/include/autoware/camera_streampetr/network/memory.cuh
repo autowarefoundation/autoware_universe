@@ -51,6 +51,8 @@ struct Memory
     pre_len = pre_length;
     mem_stream = stream;
     cudaMallocAsync(&mem_buf, sizeof(float) * mem_len, mem_stream);
+    // zero-initialize memory
+    cudaMemsetAsync(mem_buf, 0, sizeof(float) * mem_len, mem_stream);
   }
 
   void StepReset();

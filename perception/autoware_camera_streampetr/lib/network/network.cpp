@@ -188,6 +188,9 @@ void StreamPetrNetwork::initializeMemoryAndProfiling()
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
   mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
+  // Clear pre_memory_* bindings.
+  wipe_memory();
+
   // events for measurement - pass profiler to Duration objects
   dur_backbone_ = std::make_unique<Duration>("backbone", profiler_);
   dur_ptshead_ = std::make_unique<Duration>("ptshead", profiler_);
@@ -213,13 +216,12 @@ void StreamPetrNetwork::configureNMSIfNeeded()
 
 void StreamPetrNetwork::wipe_memory()
 {
-  if (is_inference_initialized_) {
-    // Reset the memory buffers to zeros
-    pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
-    pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
-    pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
-    pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
-  }
+  // Reset the memory buffers to zeros.
+  pts_head_->bindings["pre_memory_timestamp"]->initialize_to_zeros(stream_);
+  pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
+  pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
+  pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
+  pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
 }
 
 void StreamPetrNetwork::inference_detector(
