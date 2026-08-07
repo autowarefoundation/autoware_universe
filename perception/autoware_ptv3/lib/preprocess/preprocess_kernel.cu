@@ -25,7 +25,6 @@
 #include <thrust/sequence.h>
 
 #include <algorithm>
-#include <limits>
 #include <stdexcept>
 
 namespace autoware::ptv3
@@ -56,37 +55,26 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
   auto policy = thrust::cuda::par.on(stream_);
 
-  if (config_.use_64bit_hash_) {
-    hashes64_d_ = autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.cloud_capacity_);
-    sorted_hashes64_d_ =
-      autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.cloud_capacity_);
-    hash_indexes64_d_ = autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.cloud_capacity_);
-    sorted_hash_indexes64_d_ =
-      autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.cloud_capacity_);
-    unique_mask64_d_ = autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.cloud_capacity_);
-    unique_indices64_d_ =
-      autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.cloud_capacity_);
+  codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
+  sorted_codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
+  code_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
+  sorted_code_indices_d_ =
+    autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
+  unique_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
+  unique_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
 
-    thrust::device_ptr<std::uint64_t> idx_ptr(hash_indexes64_d_.get());
+  thrust::device_ptr<std::uint32_t> idx_ptr(code_indices_d_.get());
+  thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
 
-    thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
-  } else {
-    hashes32_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-    sorted_hashes32_d_ =
-      autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-    hash_indexes32_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-    sorted_hash_indexes32_d_ =
-      autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-    unique_mask32_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-    unique_indices32_d_ =
-      autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
+  // Serialized codes interleave 3 grid coordinates of serialization_depth_ bits each, so their MSB
+  // sits at 3 * serialization_depth_ - 1. Pooling only right-shifts codes, which can never raise
+  // the MSB, so this bound holds for every stage. std::max guards a degenerate single-cell grid
+  // (serialization_depth_ == 0), since CUB requires end_bit > begin_bit. Workspace queries below
+  // deliberately use the full 64 bits: a wider key range can only need at least as much scratch.
+  code_sort_end_bit_ = std::max(1, 3 * config_.serialization_depth_);
 
-    thrust::device_ptr<std::uint32_t> idx_ptr(hash_indexes32_d_.get());
-
-    thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
-  }
-
-  std::uint64_t * uint64_nullptr = nullptr;
+  std::int64_t * int64_nullptr = nullptr;
+  std::uint32_t * uint32_nullptr = nullptr;
 
   std::size_t sort_pair_workspace_size = 0;
   std::size_t inclusive_sum_workspace_size = 0;
@@ -94,15 +82,15 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
   CHECK_CUDA_ERROR(
     cub::DeviceRadixSort::SortPairs(
-      nullptr, sort_pair_workspace_size, uint64_nullptr, uint64_nullptr, uint64_nullptr,
-      uint64_nullptr, config_.cloud_capacity_, 0, 64, nullptr));
+      nullptr, sort_pair_workspace_size, int64_nullptr, int64_nullptr, uint32_nullptr,
+      uint32_nullptr, config_.cloud_capacity_, 0, 64, nullptr));
   CHECK_CUDA_ERROR(
     cub::DeviceScan::InclusiveSum(
-      nullptr, inclusive_sum_workspace_size, uint64_nullptr, uint64_nullptr,
+      nullptr, inclusive_sum_workspace_size, uint32_nullptr, uint32_nullptr,
       config_.cloud_capacity_));
   CHECK_CUDA_ERROR(
     cub::DeviceAdjacentDifference::SubtractLeftCopy(
-      nullptr, adjacent_difference_workspace_size, uint64_nullptr, uint64_nullptr,
+      nullptr, adjacent_difference_workspace_size, int64_nullptr, uint32_nullptr,
       config_.cloud_capacity_, NotEqual{}));
 
   generate_feature_workspace_size_ = std::max(
@@ -111,24 +99,26 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
     autoware::cuda_utils::make_unique<std::uint8_t[]>(generate_feature_workspace_size_);
 
   num_cropped_points_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
-  num_unique_points32_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
-  num_unique_points64_ = autoware::cuda_utils::make_unique_host<std::uint64_t>();
+  num_unique_points_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
 
-  pooling_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
-  pooling_sorted_keys_d_ =
+  const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
+  level0_order_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
+  level0_inverse_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
+  order_sort_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  order_sort_sorted_keys_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
-  pooling_indices_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
-  pooling_sorted_indices_d_ =
+  order_sort_indices_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
-  pooling_run_flags_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
-  pooling_run_ids_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  run_flags_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  run_ids_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
 
   std::size_t pooling_sort_workspace_size = 0;
   std::size_t pooling_scan_workspace_size = 0;
-  std::int64_t * int64_nullptr = nullptr;
   cub::DeviceRadixSort::SortPairs(
     nullptr, pooling_sort_workspace_size, int64_nullptr, int64_nullptr, int64_nullptr,
-    int64_nullptr, config_.max_num_voxels_, 0, 63, nullptr);
+    int64_nullptr, config_.max_num_voxels_, 0, 64, nullptr);
   cub::DeviceScan::InclusiveSum(
     nullptr, pooling_scan_workspace_size, int64_nullptr, int64_nullptr, config_.max_num_voxels_,
     nullptr);
@@ -138,9 +128,7 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   CHECK_CUDA_ERROR(
     cudaEventCreateWithFlags(&num_cropped_points_copy_event_, cudaEventDisableTiming));
   CHECK_CUDA_ERROR(
-    cudaEventCreateWithFlags(&num_unique_points32_copy_event_, cudaEventDisableTiming));
-  CHECK_CUDA_ERROR(
-    cudaEventCreateWithFlags(&num_unique_points64_copy_event_, cudaEventDisableTiming));
+    cudaEventCreateWithFlags(&num_unique_points_copy_event_, cudaEventDisableTiming));
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
@@ -150,11 +138,8 @@ PreprocessCuda::~PreprocessCuda()
   if (num_cropped_points_copy_event_) {
     cudaEventDestroy(num_cropped_points_copy_event_);
   }
-  if (num_unique_points32_copy_event_) {
-    cudaEventDestroy(num_unique_points32_copy_event_);
-  }
-  if (num_unique_points64_copy_event_) {
-    cudaEventDestroy(num_unique_points64_copy_event_);
+  if (num_unique_points_copy_event_) {
+    cudaEventDestroy(num_unique_points_copy_event_);
   }
 }
 
@@ -269,57 +254,64 @@ __global__ void scatterInverseMapKernel(
   inverse_map[sorted_hash_indexes[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
 }
 
-__global__ void voxelizationHash64Kernel(
-  const float4 * __restrict__ points, std::uint64_t * __restrict__ hashes, int num_points,
-  float voxel_size_x, float voxel_size_y, float voxel_size_z, std::int32_t min_x,
-  std::int32_t min_y, std::int32_t min_z)
+// Interleaves the three grid coordinates into one serialized (Morton / Z-order) code, consuming
+// `depth` bits per axis. `transposed` swaps the roles of x and y, which is the "z-trans" order.
+// The bit layout matches autoware-ml's z_order_encode, so the codes index the same space-filling
+// curve the model was trained and exported against.
+__device__ inline std::int64_t serializeCoord(
+  const std::int32_t x, const std::int32_t y, const std::int32_t z, const int depth,
+  const bool transposed)
 {
-  // FNV64-1A
-  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
-    return;
+  const std::int32_t major = transposed ? y : x;
+  const std::int32_t minor = transposed ? x : y;
+
+  std::int64_t code = 0;
+  for (int i = 0; i < depth; ++i) {
+    const std::int64_t mask = 1 << i;
+    code |= ((major & mask) << (2 * i + 2));
+    code |= ((minor & mask) << (2 * i + 1));
+    code |= ((z & mask) << (2 * i + 0));
   }
-
-  const float4 & point = points[idx];
-  const auto x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x));
-  const auto y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y));
-  const auto z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z));
-
-  std::uint64_t hash = 14695981039346656037ULL;
-  hash *= 1099511628211ULL;
-  hash ^= static_cast<std::uint64_t>(x - min_x);
-  hash *= 1099511628211ULL;
-  hash ^= static_cast<std::uint64_t>(y - min_y);
-  hash *= 1099511628211ULL;
-  hash ^= static_cast<std::uint64_t>(z - min_z);
-
-  hashes[idx] = hash;
+  return code;
 }
 
-__global__ void voxelizationHash32Kernel(
-  const float4 * __restrict__ points, std::uint32_t * __restrict__ hashes, int num_points,
-  float voxel_size_x, float voxel_size_y, float voxel_size_z, float min_x, float min_y, float min_z,
-  std::uint32_t grid_x_size, std::uint32_t grid_xy_size)
+// Maps a point to its grid coordinate. Kept as one helper so the voxelization key and the
+// serialization codes are guaranteed to describe the same grid: the two used to be computed with
+// different arithmetic, which let boundary points fall into different cells in each.
+__device__ inline int3 gridCoord(
+  const float4 & point, const float voxel_size_x, const float voxel_size_y,
+  const float voxel_size_z, const std::int32_t min_x, const std::int32_t min_y,
+  const std::int32_t min_z)
+{
+  return make_int3(
+    static_cast<std::int32_t>(std::floor(point.x / voxel_size_x) - min_x),
+    static_cast<std::int32_t>(std::floor(point.y / voxel_size_y) - min_y),
+    static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z));
+}
+
+// Produces the voxelization key: the order-0 serialized code. Unlike the FNV / raster hashes this
+// replaced, the code is an injective function of the grid coordinate, so sorting by it cannot merge
+// two distinct voxels, and it additionally leaves the deduplicated voxels in order-0 serialization
+// order - which is what lets the rest of the pipeline avoid re-sorting.
+__global__ void voxelizationCodeKernel(
+  const float4 * __restrict__ points, std::int64_t * __restrict__ codes, int num_points,
+  float voxel_size_x, float voxel_size_y, float voxel_size_z, std::int32_t min_x,
+  std::int32_t min_y, std::int32_t min_z, int depth)
 {
   auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
 
-  const float4 & point = points[idx];
-  const std::uint32_t x =
-    static_cast<std::uint32_t>(std::max<float>((point.x - min_x) / voxel_size_x, 0.f));
-  const std::uint32_t y =
-    static_cast<std::uint32_t>(std::max<float>((point.y - min_y) / voxel_size_y, 0.f));
-  const std::uint32_t z =
-    static_cast<std::uint32_t>(std::max<float>((point.z - min_z) / voxel_size_z, 0.f));
-  hashes[idx] = z * grid_xy_size + y * grid_x_size + x;
+  const auto coord =
+    gridCoord(points[idx], voxel_size_x, voxel_size_y, voxel_size_z, min_x, min_y, min_z);
+  codes[idx] = serializeCoord(coord.x, coord.y, coord.z, depth, false);
 }
 
 __global__ void computeGridCoordsAndSerializationKernel(
-  const float4 * __restrict__ points, int3 * __restrict__ coords,
-  std::int64_t * __restrict__ hashes, int num_points, float voxel_size_x, float voxel_size_y,
-  float voxel_size_z, std::int32_t min_x, std::int32_t min_y, std::int32_t min_z, int depth)
+  const float4 * __restrict__ points, int3 * __restrict__ coords, std::int64_t * __restrict__ codes,
+  int num_points, float voxel_size_x, float voxel_size_y, float voxel_size_z, std::int32_t min_x,
+  std::int32_t min_y, std::int32_t min_z, int depth)
 {
   static_assert(sizeof(int3) == sizeof(std::int32_t) * 3, "int3 must be 12 bytes");
   auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -327,32 +319,13 @@ __global__ void computeGridCoordsAndSerializationKernel(
     return;
   }
 
-  const float4 & point = points[idx];
-  const auto x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x) - min_x);
-  const auto y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y) - min_y);
-  const auto z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z);
+  const auto coord =
+    gridCoord(points[idx], voxel_size_x, voxel_size_y, voxel_size_z, min_x, min_y, min_z);
+  coords[idx] = coord;
 
-  coords[idx] = make_int3(x, y, z);
-
-  std::int64_t key1 = 0;
-  std::int64_t key2 = 0;
-
-  for (int i = 0; i < depth; ++i) {
-    std::int64_t mask = 1 << i;
-    key1 |= ((x & mask) << (2 * i + 2));
-    key1 |= ((y & mask) << (2 * i + 1));
-    key1 |= ((z & mask) << (2 * i + 0));
-
-    key2 |= ((y & mask) << (2 * i + 2));
-    key2 |= ((x & mask) << (2 * i + 1));
-    key2 |= ((z & mask) << (2 * i + 0));
-  }
-
-  hashes[idx] = key1;
-  hashes[idx + num_points] = key2;
+  codes[idx] = serializeCoord(coord.x, coord.y, coord.z, depth, false);
+  codes[idx + num_points] = serializeCoord(coord.x, coord.y, coord.z, depth, true);
 }
-
-constexpr std::int64_t kInvalidPoolingKey = std::numeric_limits<std::int64_t>::max();
 
 __global__ void setInitialStageCountKernel(
   std::int64_t * __restrict__ stage_counts, std::int64_t num_voxels)
@@ -360,10 +333,49 @@ __global__ void setInitialStageCountKernel(
   *stage_counts = num_voxels;
 }
 
-__global__ void preparePoolingSortInputKernel(
-  const std::int64_t * __restrict__ serialized_code, const std::int64_t * __restrict__ stage_counts,
-  std::int64_t * __restrict__ keys, std::int64_t * __restrict__ indices, std::int32_t stage_index,
-  std::int32_t pooling_depth, std::int64_t capacity)
+__global__ void fillIdentityKernel(std::int64_t * __restrict__ out, std::int64_t count)
+{
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= count) {
+    return;
+  }
+  out[idx] = idx;
+}
+
+__global__ void scatterInverseKernel(
+  const std::int64_t * __restrict__ order, std::int64_t * __restrict__ inverse, std::int64_t count)
+{
+  const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (rank >= count) {
+    return;
+  }
+  inverse[order[rank]] = rank;
+}
+
+__global__ void prepareLevel0OrderSortKernel(
+  const std::int64_t * __restrict__ serialized_code, std::int64_t * __restrict__ keys,
+  std::int64_t * __restrict__ indices, std::int64_t num_voxels, std::int32_t order_index)
+{
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= num_voxels) {
+    return;
+  }
+
+  // serialized_code is laid out densely as [num_orders, num_voxels].
+  keys[idx] = serialized_code[order_index * num_voxels + idx];
+  indices[idx] = idx;
+}
+
+// Marks the first element of every parent run in the input level's own storage order.
+//
+// The input level is stored in ascending order-0 code, so `code >> 3 * pooling_depth` - which is
+// exactly the parent cell's order-0 code - is non-decreasing across the array and all children of a
+// parent are contiguous. Detecting a change against the previous element is therefore sufficient to
+// find the run starts, and no sort is required.
+__global__ void markPoolingRunsKernel(
+  const std::int64_t * __restrict__ serialized_code_in,
+  const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ run_flags,
+  std::int32_t stage_index, std::int32_t pooling_depth, std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= capacity) {
@@ -371,33 +383,26 @@ __global__ void preparePoolingSortInputKernel(
   }
 
   const auto input_count = stage_counts[stage_index];
-  keys[idx] = idx < input_count ? serialized_code[idx] >> (pooling_depth * 3) : kInvalidPoolingKey;
-  indices[idx] = idx;
-}
-
-__global__ void markPoolingRunsKernel(
-  const std::int64_t * __restrict__ sorted_keys, std::int64_t * __restrict__ run_flags,
-  std::int64_t capacity)
-{
-  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (idx >= capacity) {
+  if (idx >= input_count) {
+    run_flags[idx] = 0;
     return;
   }
 
-  const auto key = sorted_keys[idx];
-  run_flags[idx] = key != kInvalidPoolingKey && (idx == 0 || key != sorted_keys[idx - 1]) ? 1 : 0;
+  const auto shift = pooling_depth * 3;
+  const auto key = serialized_code_in[idx] >> shift;
+  run_flags[idx] = (idx == 0 || key != (serialized_code_in[idx - 1] >> shift)) ? 1 : 0;
 }
 
 __global__ void fillPoolingStageKernel(
   const std::int32_t * __restrict__ grid_coord_in,
-  const std::int64_t * __restrict__ serialized_code_in,
-  const std::int64_t * __restrict__ sorted_keys, const std::int64_t * __restrict__ sorted_indices,
-  const std::int64_t * __restrict__ run_flags, const std::int64_t * __restrict__ run_ids,
-  std::int64_t * __restrict__ indices_out, std::int64_t * __restrict__ indptr_out,
-  std::int64_t * __restrict__ head_indices_out, std::int64_t * __restrict__ cluster_out,
-  std::int32_t * __restrict__ grid_coord_out, std::int64_t * __restrict__ serialized_code_out,
-  std::int64_t * __restrict__ stage_counts, std::int32_t stage_index, std::int32_t pooling_depth,
-  std::int32_t num_orders, std::int64_t capacity)
+  const std::int64_t * __restrict__ serialized_code_in, const std::int64_t * __restrict__ run_flags,
+  const std::int64_t * __restrict__ run_ids, std::int64_t * __restrict__ indices_out,
+  std::int64_t * __restrict__ indptr_out, std::int64_t * __restrict__ head_indices_out,
+  std::int64_t * __restrict__ cluster_out, std::int32_t * __restrict__ grid_coord_out,
+  std::int64_t * __restrict__ serialized_code_out, std::int64_t * __restrict__ order_out,
+  std::int64_t * __restrict__ inverse_out, std::int64_t * __restrict__ stage_counts,
+  std::int32_t stage_index, std::int32_t pooling_depth, std::int32_t num_orders,
+  std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= capacity) {
@@ -416,64 +421,92 @@ __global__ void fillPoolingStageKernel(
     indptr_out[next_count] = input_count;
   }
 
-  if (sorted_keys[idx] == kInvalidPoolingKey) {
+  if (idx >= input_count) {
     return;
   }
 
-  const auto input_index = sorted_indices[idx];
+  // The input level is already grouped by parent (see markPoolingRunsKernel), so the gather order
+  // that collects each parent's children into a contiguous run is the identity.
+  indices_out[idx] = idx;
   const auto segment_index = run_ids[idx] - 1;
-  indices_out[idx] = input_index;
-  cluster_out[input_index] = segment_index;
+  cluster_out[idx] = segment_index;
 
   if (run_flags[idx] == 0) {
     return;
   }
 
   indptr_out[segment_index] = idx;
-  head_indices_out[segment_index] = input_index;
+  head_indices_out[segment_index] = idx;
   for (std::int32_t coord_index = 0; coord_index < 3; ++coord_index) {
     grid_coord_out[segment_index * 3 + coord_index] =
-      grid_coord_in[input_index * 3 + coord_index] >> pooling_depth;
+      grid_coord_in[idx * 3 + coord_index] >> pooling_depth;
   }
   for (std::int32_t order_index = 0; order_index < num_orders; ++order_index) {
     serialized_code_out[order_index * next_count + segment_index] =
-      serialized_code_in[order_index * input_count + input_index] >> (pooling_depth * 3);
+      serialized_code_in[order_index * input_count + idx] >> (pooling_depth * 3);
   }
+
+  // Order 0 of the pooled level is the identity: segments are emitted in increasing input index,
+  // and the input was ascending in order-0 code, so the pooled order-0 codes come out ascending in
+  // segment index too. This is what keeps markPoolingRunsKernel's precondition true for the next
+  // stage, and it is why no sort is needed for order 0 at any level.
+  order_out[segment_index] = segment_index;
+  inverse_out[segment_index] = segment_index;
 }
 
-__global__ void prepareOrderSortInputKernel(
-  const std::int64_t * __restrict__ serialized_code, const std::int64_t * __restrict__ stage_counts,
-  std::int64_t * __restrict__ keys, std::int64_t * __restrict__ indices, std::int32_t stage_index,
-  std::int32_t order_index, std::int64_t capacity)
+// Marks where the pooled voxel changes while walking the input level in order-`order_index` rank
+// order.
+//
+// Every serialization order right-shifts to the same parent partition (the low 3 * pooling_depth
+// bits locate a child inside its parent, whichever axis permutation the order uses), so walking the
+// input level in order-o rank order also visits each parent's children contiguously. The parents
+// are therefore encountered in ascending pooled order-o code, and compacting the run heads yields
+// the pooled level's order-o ranking directly - again without sorting.
+__global__ void markOrderRunsKernel(
+  const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster,
+  const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ run_flags,
+  std::int32_t stage_index, std::int32_t order_index, std::int64_t capacity)
 {
-  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (idx >= capacity) {
+  const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (rank >= capacity) {
     return;
   }
 
   const auto input_count = stage_counts[stage_index];
-  // serialized_code is stored densely as [num_orders, input_count] (see fillPoolingStageKernel).
-  keys[idx] =
-    idx < input_count ? serialized_code[order_index * input_count + idx] : kInvalidPoolingKey;
-  indices[idx] = idx;
+  if (rank >= input_count) {
+    run_flags[rank] = 0;
+    return;
+  }
+
+  // order_in is laid out densely as [num_orders, input_count].
+  const auto segment_index = cluster[order_in[order_index * input_count + rank]];
+  run_flags[rank] =
+    (rank == 0 || segment_index != cluster[order_in[order_index * input_count + rank - 1]]) ? 1 : 0;
 }
 
 __global__ void fillOrderAndInverseKernel(
-  const std::int64_t * __restrict__ sorted_keys, const std::int64_t * __restrict__ sorted_indices,
+  const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster,
+  const std::int64_t * __restrict__ run_flags, const std::int64_t * __restrict__ run_ids,
   const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ order_out,
   std::int64_t * __restrict__ inverse_out, std::int32_t stage_index, std::int32_t order_index,
   std::int64_t capacity)
 {
-  const auto count = stage_counts[stage_index];
   const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (rank >= capacity || rank >= count || sorted_keys[rank] == kInvalidPoolingKey) {
+  if (rank >= capacity) {
     return;
   }
 
-  // order/inverse are stored densely as [num_orders, count] to match the engine input layout.
-  const auto input_index = sorted_indices[rank];
-  order_out[order_index * count + rank] = input_index;
-  inverse_out[order_index * count + input_index] = rank;
+  const auto input_count = stage_counts[stage_index];
+  if (rank >= input_count || run_flags[rank] == 0) {
+    return;
+  }
+
+  // order/inverse are stored densely as [num_orders, out_count] to match the engine input layout.
+  const auto out_count = stage_counts[stage_index + 1];
+  const auto out_rank = run_ids[rank] - 1;
+  const auto segment_index = cluster[order_in[order_index * input_count + rank]];
+  order_out[order_index * out_count + out_rank] = segment_index;
+  inverse_out[order_index * out_count + segment_index] = out_rank;
 }
 
 std::int32_t poolingDepth(const std::int64_t stride)
@@ -496,75 +529,91 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   const auto capacity = config_.max_num_voxels_;
   const auto num_orders = static_cast<std::int32_t>(config_.serialization_orders_.size());
   const auto num_blocks = divup(static_cast<std::size_t>(capacity), config_.threads_per_block_);
+  const auto clamped_num_voxels = std::min(num_voxels, capacity);
+  const auto voxel_blocks = divup(
+    static_cast<std::size_t>(std::max<std::int64_t>(clamped_num_voxels, 1)),
+    config_.threads_per_block_);
 
-  // The sort keys are serialized (Morton/Z-order) codes interleaving 3 grid coordinates of
-  // serialization_depth_ bits each, so they occupy at most 3 * serialization_depth_ bits (the MSB
-  // sits at 3 * serialization_depth_ - 1). Pooling stages only right-shift the codes, which can
-  // never raise the MSB, so this is a valid upper bound for every stage. The INT64_MAX padding
-  // sentinel still sorts last because its low bits are all set, and the full key value is preserved
-  // by the radix sort, so exact-equality sentinel checks remain valid. std::max guards a degenerate
-  // single-voxel grid (serialization_depth_ == 0), since CUB requires end_bit > begin_bit.
-  const int pooling_end_bit = std::max(1, 3 * config_.serialization_depth_);
-
-  setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, num_voxels);
+  setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, clamped_num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+  // Level 0 is already stored in ascending order-0 code (generateFeatures deduplicated the voxels
+  // by that very code), so its order-0 ranking is the identity. The remaining orders are unrelated
+  // axis permutations of the curve and cannot be derived from order 0, so they need one real sort
+  // each - the only sorts in this function, and the only ones that run at the finest granularity.
+  fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+    level0_order_d_.get(), clamped_num_voxels);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+    level0_inverse_d_.get(), clamped_num_voxels);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+  for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
+    prepareLevel0OrderSortKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+      serialized_code, order_sort_keys_d_.get(), order_sort_indices_d_.get(), clamped_num_voxels,
+      order_index);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+    CHECK_CUDA_ERROR(
+      cub::DeviceRadixSort::SortPairs(
+        pooling_workspace_d_.get(), pooling_workspace_size_, order_sort_keys_d_.get(),
+        order_sort_sorted_keys_d_.get(), order_sort_indices_d_.get(),
+        level0_order_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels, 0,
+        code_sort_end_bit_, stream_));
+
+    scatterInverseKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+      level0_order_d_.get() + order_index * clamped_num_voxels,
+      level0_inverse_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  }
 
   const std::int32_t * current_grid_coord = grid_coord;
   const std::int64_t * current_serialized_code = serialized_code;
+  const std::int64_t * current_order = level0_order_d_.get();
 
   for (std::size_t stage_index = 0; stage_index < stages.size(); ++stage_index) {
     const auto & stage = stages[stage_index];
     const auto pooling_depth = poolingDepth(config_.pooling_strides_[stage_index]);
 
-    preparePoolingSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-      current_serialized_code, stage_counts, pooling_keys_d_.get(), pooling_indices_d_.get(),
+    markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      current_serialized_code, stage_counts, run_flags_d_.get(),
       static_cast<std::int32_t>(stage_index), pooling_depth, capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
     CHECK_CUDA_ERROR(
-      cub::DeviceRadixSort::SortPairs(
-        pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
-        pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-        capacity, 0, pooling_end_bit, stream_));
-
-    markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-      pooling_sorted_keys_d_.get(), pooling_run_flags_d_.get(), capacity);
-    CHECK_CUDA_ERROR(cudaPeekAtLastError());
-
-    CHECK_CUDA_ERROR(
       cub::DeviceScan::InclusiveSum(
-        pooling_workspace_d_.get(), pooling_workspace_size_, pooling_run_flags_d_.get(),
-        pooling_run_ids_d_.get(), capacity, stream_));
+        pooling_workspace_d_.get(), pooling_workspace_size_, run_flags_d_.get(), run_ids_d_.get(),
+        capacity, stream_));
 
     fillPoolingStageKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-      current_grid_coord, current_serialized_code, pooling_sorted_keys_d_.get(),
-      pooling_sorted_indices_d_.get(), pooling_run_flags_d_.get(), pooling_run_ids_d_.get(),
+      current_grid_coord, current_serialized_code, run_flags_d_.get(), run_ids_d_.get(),
       stage.indices, stage.indptr, stage.head_indices, stage.cluster, stage.grid_coord,
-      stage.serialized_code, stage_counts, static_cast<std::int32_t>(stage_index), pooling_depth,
-      num_orders, capacity);
+      stage.serialized_code, stage.serialized_order, stage.serialized_inverse, stage_counts,
+      static_cast<std::int32_t>(stage_index), pooling_depth, num_orders, capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-    for (std::int32_t order_index = 0; order_index < num_orders; ++order_index) {
-      prepareOrderSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        stage.serialized_code, stage_counts, pooling_keys_d_.get(), pooling_indices_d_.get(),
-        static_cast<std::int32_t>(stage_index + 1), order_index, capacity);
+    // Order 0 was already written as the identity by fillPoolingStageKernel above.
+    for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
+      markOrderRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+        current_order, stage.cluster, stage_counts, run_flags_d_.get(),
+        static_cast<std::int32_t>(stage_index), order_index, capacity);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
       CHECK_CUDA_ERROR(
-        cub::DeviceRadixSort::SortPairs(
-          pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
-          pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-          capacity, 0, pooling_end_bit, stream_));
+        cub::DeviceScan::InclusiveSum(
+          pooling_workspace_d_.get(), pooling_workspace_size_, run_flags_d_.get(), run_ids_d_.get(),
+          capacity, stream_));
 
       fillOrderAndInverseKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        pooling_sorted_keys_d_.get(), pooling_sorted_indices_d_.get(), stage_counts,
-        stage.serialized_order, stage.serialized_inverse,
-        static_cast<std::int32_t>(stage_index + 1), order_index, capacity);
+        current_order, stage.cluster, run_flags_d_.get(), run_ids_d_.get(), stage_counts,
+        stage.serialized_order, stage.serialized_inverse, static_cast<std::int32_t>(stage_index),
+        order_index, capacity);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
     }
 
     current_grid_coord = stage.grid_coord;
     current_serialized_code = stage.serialized_code;
+    current_order = stage.serialized_order;
   }
 }
 
@@ -711,174 +760,89 @@ std::size_t PreprocessCuda::generateFeatures(
 
   const auto num_cropped_blocks = divup(*num_cropped_points_, config_.threads_per_block_);
 
-  std::uint64_t num_unique_points;
+  voxelizationCodeKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    reinterpret_cast<float4 *>(cropped_points_d_.get()), codes_d_.get(), *num_cropped_points_,
+    config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y,
+    coord_min_z, config_.serialization_depth_);
 
-  if (config_.use_64bit_hash_) {
-    voxelizationHash64Kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-      reinterpret_cast<float4 *>(cropped_points_d_.get()), hashes64_d_.get(), *num_cropped_points_,
-      config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y,
-      coord_min_z);
+  // Sorting by the order-0 serialized code does double duty: it groups duplicate voxels for the
+  // compaction below, and it leaves the surviving voxels in ascending order-0 code, i.e. already in
+  // serialization order for the first curve. generateSerializedPoolingMetadata relies on that
+  // ordering to derive every coarser level without sorting again, so this ordering is part of this
+  // function's contract, not an incidental side effect.
+  CHECK_CUDA_ERROR(
+    cub::DeviceRadixSort::SortPairs(
+      reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
+      generate_feature_workspace_size_, codes_d_.get(), sorted_codes_d_.get(),
+      code_indices_d_.get(), sorted_code_indices_d_.get(), *num_cropped_points_, 0,
+      code_sort_end_bit_, stream_));
 
-    // Keys are FNV-1a hashes spread pseudo-randomly across the full 64-bit range, so there is no
-    // usable upper bound below 2^64; sort all 64 bits.
-    CHECK_CUDA_ERROR(
-      cub::DeviceRadixSort::SortPairs(
-        reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
-        generate_feature_workspace_size_, hashes64_d_.get(), sorted_hashes64_d_.get(),
-        hash_indexes64_d_.get(), sorted_hash_indexes64_d_.get(), *num_cropped_points_, 0, 64,
-        stream_));
+  CHECK_CUDA_ERROR(
+    cub::DeviceAdjacentDifference::SubtractLeftCopy(
+      generate_feature_workspace_d_.get(), generate_feature_workspace_size_, sorted_codes_d_.get(),
+      unique_mask_d_.get(), *num_cropped_points_, NotEqual{}, stream_));
 
-    CHECK_CUDA_ERROR(
-      cub::DeviceAdjacentDifference::SubtractLeftCopy(
-        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
-        sorted_hashes64_d_.get(), unique_mask64_d_.get(), *num_cropped_points_, NotEqual{},
-        stream_));
+  std::uint32_t one = 1;
+  cudaMemcpyAsync(
+    unique_mask_d_.get(), &one, sizeof(std::uint32_t), cudaMemcpyHostToDevice, stream_);
 
-    std::uint64_t one = 1;
-    cudaMemcpyAsync(
-      unique_mask64_d_.get(), &one, sizeof(std::uint64_t), cudaMemcpyHostToDevice, stream_);
+  CHECK_CUDA_ERROR(
+    cub::DeviceScan::InclusiveSum(
+      generate_feature_workspace_d_.get(), generate_feature_workspace_size_, unique_mask_d_.get(),
+      unique_indices_d_.get(), *num_cropped_points_, stream_));
 
-    CHECK_CUDA_ERROR(
-      cub::DeviceScan::InclusiveSum(
-        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
-        unique_mask64_d_.get(), unique_indices64_d_.get(), *num_cropped_points_, stream_));
+  *num_unique_points_ = 0;
+  cudaMemcpyAsync(
+    num_unique_points_.get(), unique_indices_d_.get() + *num_cropped_points_ - 1,
+    sizeof(std::uint32_t), cudaMemcpyDeviceToHost, stream_);
+  CHECK_CUDA_ERROR(
+    cudaEventRecord(num_unique_points_copy_event_, stream_));  // Lazy sync. use later
 
-    *num_unique_points64_ = 0;
-    cudaMemcpyAsync(
-      num_unique_points64_.get(), unique_indices64_d_.get() + *num_cropped_points_ - 1,
-      sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_);
-    CHECK_CUDA_ERROR(cudaEventRecord(num_unique_points64_copy_event_, stream_));
-
-    extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-      reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask64_d_.get(),
-      unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-      reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_,
-      static_cast<int>(config_.max_num_voxels_));
-    if (inverse_map != nullptr) {
-      scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(), inverse_map,
-        *num_cropped_points_);
-    }
-
-    switch (input_format) {
-      case CloudFormat::XYZIRCAEDT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
-          unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      case CloudFormat::XYZIRADRT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
-          unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      case CloudFormat::XYZIRC:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
-          unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      case CloudFormat::XYZI:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()),
-          unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      default:
-        throw std::runtime_error("Unsupported input point cloud format.");
-    }
-
-    CHECK_CUDA_ERROR(cudaEventSynchronize(num_unique_points64_copy_event_));
-    num_unique_points = *num_unique_points64_;
-
-  } else {
-    voxelizationHash32Kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-      reinterpret_cast<float4 *>(cropped_points_d_.get()), hashes32_d_.get(), *num_cropped_points_,
-      config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, config_.min_x_range_,
-      config_.min_y_range_, config_.min_z_range_, static_cast<std::uint32_t>(config_.grid_x_size_),
-      static_cast<std::uint32_t>(config_.grid_x_size_ * config_.grid_y_size_));
-
-    CHECK_CUDA_ERROR(
-      cub::DeviceRadixSort::SortPairs(
-        reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
-        generate_feature_workspace_size_, hashes32_d_.get(), sorted_hashes32_d_.get(),
-        hash_indexes32_d_.get(), sorted_hash_indexes32_d_.get(), *num_cropped_points_, 0, 32,
-        stream_));
-
-    CHECK_CUDA_ERROR(
-      cub::DeviceAdjacentDifference::SubtractLeftCopy(
-        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
-        sorted_hashes32_d_.get(), unique_mask32_d_.get(), *num_cropped_points_, NotEqual{},
-        stream_));
-
-    std::uint32_t one = 1;
-    cudaMemcpyAsync(
-      unique_mask32_d_.get(), &one, sizeof(std::uint32_t), cudaMemcpyHostToDevice, stream_);
-
-    CHECK_CUDA_ERROR(
-      cub::DeviceScan::InclusiveSum(
-        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
-        unique_mask32_d_.get(), unique_indices32_d_.get(), *num_cropped_points_, stream_));
-
-    *num_unique_points32_ = 0;
-    cudaMemcpyAsync(
-      num_unique_points32_.get(), unique_indices32_d_.get() + *num_cropped_points_ - 1,
-      sizeof(std::uint32_t), cudaMemcpyDeviceToHost, stream_);
-    CHECK_CUDA_ERROR(
-      cudaEventRecord(num_unique_points32_copy_event_, stream_));  // Lazy sync. use later
-
-    extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-      reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask32_d_.get(),
-      unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-      reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_,
-      static_cast<int>(config_.max_num_voxels_));
-    if (inverse_map != nullptr) {
-      scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(), inverse_map,
-        *num_cropped_points_);
-    }
-
-    switch (input_format) {
-      case CloudFormat::XYZIRCAEDT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
-          unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      case CloudFormat::XYZIRADRT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
-          unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      case CloudFormat::XYZIRC:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
-          unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      case CloudFormat::XYZI:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-          reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()),
-          unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_,
-          static_cast<int>(config_.max_num_voxels_));
-        break;
-      default:
-        throw std::runtime_error("Unsupported input point cloud format.");
-    }
-
-    CHECK_CUDA_ERROR(cudaEventSynchronize(num_unique_points32_copy_event_));
-    num_unique_points = static_cast<std::uint64_t>(*num_unique_points32_);
+  extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask_d_.get(),
+    unique_indices_d_.get(), sorted_code_indices_d_.get(),
+    reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_,
+    static_cast<int>(config_.max_num_voxels_));
+  if (inverse_map != nullptr) {
+    scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+      unique_indices_d_.get(), sorted_code_indices_d_.get(), inverse_map, *num_cropped_points_);
   }
+
+  switch (input_format) {
+    case CloudFormat::XYZIRCAEDT:
+      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
+        unique_mask_d_.get(), unique_indices_d_.get(), sorted_code_indices_d_.get(),
+        reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_,
+        static_cast<int>(config_.max_num_voxels_));
+      break;
+    case CloudFormat::XYZIRADRT:
+      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
+        unique_mask_d_.get(), unique_indices_d_.get(), sorted_code_indices_d_.get(),
+        reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_,
+        static_cast<int>(config_.max_num_voxels_));
+      break;
+    case CloudFormat::XYZIRC:
+      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
+        unique_mask_d_.get(), unique_indices_d_.get(), sorted_code_indices_d_.get(),
+        reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_,
+        static_cast<int>(config_.max_num_voxels_));
+      break;
+    case CloudFormat::XYZI:
+      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()), unique_mask_d_.get(),
+        unique_indices_d_.get(), sorted_code_indices_d_.get(),
+        reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_,
+        static_cast<int>(config_.max_num_voxels_));
+      break;
+    default:
+      throw std::runtime_error("Unsupported input point cloud format.");
+  }
+
+  CHECK_CUDA_ERROR(cudaEventSynchronize(num_unique_points_copy_event_));
+  const auto num_unique_points = static_cast<std::uint64_t>(*num_unique_points_);
 
   // The extract kernels above dropped any voxels beyond max_num_voxels, so only the first
   // max_num_voxels entries of voxel_features/voxel_coords/voxel_hashes are valid. Cap the count fed
