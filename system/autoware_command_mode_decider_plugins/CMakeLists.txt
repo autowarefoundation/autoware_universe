@@ -7,6 +7,7 @@ pluginlib_export_plugin_description_file(autoware_command_mode_decider plugins.x
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/command_mode_decider.cpp"
+  "src/redundancy_command_mode_decider.cpp"
 )
 
 if(BUILD_TESTING)

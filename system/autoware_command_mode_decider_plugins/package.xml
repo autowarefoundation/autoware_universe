@@ -10,9 +10,13 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_command_mode_decider</depend>
   <depend>autoware_command_mode_types</depend>
+  <depend>autoware_system_msgs</depend>
+  <depend>autoware_utils_rclcpp</depend>
   <depend>pluginlib</depend>
+  <depend>tier4_system_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
