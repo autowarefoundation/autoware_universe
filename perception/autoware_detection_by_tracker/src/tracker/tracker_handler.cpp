@@ -23,12 +23,12 @@ namespace autoware::detection_by_tracker
 {
 
 void TrackerHandler::onTrackedObjects(
-  const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr input_objects_msg)
+  const autoware_perception_msgs::msg::TrackedObjects & input_objects)
 {
   constexpr size_t max_buffer_size = 10;
 
   // Add tracked objects to buffer
-  objects_buffer_.push_front(*input_objects_msg);
+  objects_buffer_.push_front(input_objects);
 
   // Remove old data
   while (max_buffer_size < objects_buffer_.size()) {
