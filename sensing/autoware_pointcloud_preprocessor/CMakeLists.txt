@@ -69,6 +69,7 @@ ament_target_dependencies(faster_voxel_grid_downsample_filter
 add_library(concatenate_data SHARED
   src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/combine_cloud_handler.cpp
+  src/concatenate_data/concatenation_diagnostics.cpp
   src/concatenate_data/cloud_collector.cpp
   src/concatenate_data/collector_matcher.cpp
   src/concatenate_data/matching_policy.cpp
@@ -306,6 +307,50 @@ install(
 
 ament_export_targets(export_${PROJECT_NAME})
 
+find_package(autoware_utils_math REQUIRED)
+
+# ---- Concatenation core (ROS-runtime-free) ----
+# Same approach as the distortion corrector core: the combine + matching logic is built as a
+# standalone shared library that links only ROS message types and header-only math (no rclcpp, no
+# tf, no pcl_ros). It is parameterized by the point cloud *message* type (not the node-level traits),
+# so its headers never pull in the trait's rclcpp publisher/subscriber types. It is built separately
+# from the full `concatenate_data` so consumers of the core do not drag in the node / legacy-node
+# sources (and their utils::is_data_layout_* dependency). Dependencies are linked via
+# target_link_libraries with the exported message targets (not ament_target_dependencies, which
+# would over-declare the package closure and re-pull rclcpp).
+add_library(concatenate_core SHARED
+  src/concatenate_data/combine_cloud_handler.cpp
+  src/concatenate_data/combine_cloud_handler_base.cpp
+  src/concatenate_data/concatenation_diagnostics.cpp
+  src/concatenate_data/matching_policy.cpp
+)
+target_include_directories(concatenate_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only includes (point_cloud_msg_wrapper / autoware_point_types provide the cloud helpers;
+# tf2 is used for its LinearMath types only). Message includes propagate via the linked targets.
+target_include_directories(concatenate_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${point_cloud_msg_wrapper_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(concatenate_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${autoware_sensing_msgs_TARGETS}
+  ${builtin_interfaces_TARGETS}
+  ${diagnostic_msgs_TARGETS}
+)
+
+install(TARGETS concatenate_core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config
@@ -339,7 +384,10 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_matching_policy
     test/test_matching_policy.cpp
-    src/concatenate_data/matching_policy.cpp
+  )
+
+  ament_add_gtest(test_concatenation_diagnostics
+    test/test_concatenation_diagnostics.cpp
   )
   target_include_directories(test_matching_policy PRIVATE include)
 
@@ -380,6 +428,8 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
+  target_link_libraries(test_matching_policy concatenate_core)
+  target_link_libraries(test_concatenation_diagnostics concatenate_core)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)

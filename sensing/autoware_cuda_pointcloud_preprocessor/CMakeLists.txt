@@ -169,6 +169,38 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 )
 
 ################################################################################
+# Tests (registered here, after the library target exists)
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_cuda_combine_cloud_handler
+    test/cuda_concatenate_data/test_cuda_combine_cloud_handler.cpp)
+  ament_target_dependencies(test_cuda_combine_cloud_handler
+    autoware_pointcloud_preprocessor
+    autoware_point_types
+    autoware_sensing_msgs
+    autoware_utils
+    builtin_interfaces
+    cuda_blackboard
+    geometry_msgs
+    nav_msgs
+    rclcpp
+    sensor_msgs
+    tf2
+  )
+  # libconcatenate_data.so carries undefined references to utils::is_data_layout_compatible_*
+  # (defined in pointcloud_preprocessor_filter_base, which upstream expects to be co-linked).
+  # This test never uses Filter directly, so --as-needed would drop filter_base; force-keep it.
+  target_link_libraries(test_cuda_combine_cloud_handler
+    cuda_pointcloud_preprocessor_lib
+    -Wl,--no-as-needed
+    autoware_pointcloud_preprocessor::pointcloud_preprocessor_filter_base
+    -Wl,--as-needed
+    ${CUDA_LIBRARIES}
+  )
+  target_include_directories(test_cuda_combine_cloud_handler SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
+endif()
+
+################################################################################
 # Install
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}

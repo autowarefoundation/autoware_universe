@@ -17,6 +17,8 @@
 #include "collector_info.hpp"
 #include "combine_cloud_handler.hpp"
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -38,14 +40,15 @@ public:
   CloudCollector(
     std::shared_ptr<PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>> &&
       ros2_parent_node,
-    std::shared_ptr<CombineCloudHandler<MsgTraits>> & combine_cloud_handler, int num_of_clouds,
-    double timeout_sec, bool debug_mode);
+    std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>> &
+      combine_cloud_handler,
+    int num_of_clouds, double timeout_sec, bool debug_mode);
   bool topic_exists(const std::string & topic_name);
   void process_pointcloud(
     const std::string & topic_name, typename MsgTraits::PointCloudMessage::ConstSharedPtr cloud);
   void concatenate_callback();
 
-  ConcatenatedCloudResult<MsgTraits> concatenate_pointclouds(
+  ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage> concatenate_pointclouds(
     std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::ConstSharedPtr>
       topic_to_cloud_map);
 
@@ -62,7 +65,8 @@ public:
 private:
   std::shared_ptr<PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>>
     ros2_parent_node_;
-  std::shared_ptr<CombineCloudHandler<MsgTraits>> combine_cloud_handler_;
+  std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>>
+    combine_cloud_handler_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::ConstSharedPtr>
     topic_to_cloud_map_;
