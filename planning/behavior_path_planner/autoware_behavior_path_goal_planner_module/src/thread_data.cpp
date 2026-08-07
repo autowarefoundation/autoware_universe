@@ -61,10 +61,11 @@ void FreespaceParkingRequest::initializeOccupancyGridMap(
 {
   OccupancyGridMapParam occupancy_grid_map_param{};
   const double margin = parameters.occupancy_grid_collision_check_margin;
-  occupancy_grid_map_param.vehicle_shape.length =
+  occupancy_grid_map_param.vehicle_info.vehicle_length_m =
     planner_data.parameters.vehicle_length + 2 * margin;
-  occupancy_grid_map_param.vehicle_shape.width = planner_data.parameters.vehicle_width + 2 * margin;
-  occupancy_grid_map_param.vehicle_shape.base2back =
+  occupancy_grid_map_param.vehicle_info.vehicle_width_m =
+    planner_data.parameters.vehicle_width + 2 * margin;
+  occupancy_grid_map_param.vehicle_info.rear_overhang_m =
     planner_data.parameters.base_link2rear + margin;
   occupancy_grid_map_param.theta_size = parameters.theta_size;
   occupancy_grid_map_param.obstacle_threshold = parameters.obstacle_threshold;

@@ -40,9 +40,9 @@ protected:
 
     param_.theta_size = 8;
     param_.obstacle_threshold = 1;
-    param_.vehicle_shape.base2back = 0.0;
-    param_.vehicle_shape.length = 4.0;
-    param_.vehicle_shape.width = 2.0;
+    param_.vehicle_info.rear_overhang_m = 0.0;
+    param_.vehicle_info.vehicle_length_m = 4.0;
+    param_.vehicle_info.vehicle_width_m = 2.0;
     detector_.setParam(param_);
   }
 };
