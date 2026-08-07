@@ -214,8 +214,9 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 
   PointCloud::Ptr pointcloud_in_polygon(new PointCloud);
   for (const auto & point : *pointcloud) {
-    if (boost::geometry::within(
-          autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
+    if (
+      boost::geometry::within(
+        autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
       pointcloud_in_polygon->push_back(point);
     }
   }

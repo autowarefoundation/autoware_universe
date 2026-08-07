@@ -42,6 +42,9 @@ enum ShapePolicy : uint8_t {
 /// ROS infrastructure. It takes semantic point cloud data and produces detected objects
 /// through label-based clustering and shape estimation.
 ///
+/// The input is assumed to be an `autoware::point_types::PointXYZCPE` cloud, whose `class_id`
+/// values are `autoware::object_recognition_utils::PointCloudClassification` values.
+///
 /// The clustering process:
 /// 1. Filters and splits points by semantic label
 /// 2. Runs independent euclidean clustering per label
@@ -79,8 +82,10 @@ public:
   /// Note: Returned messages will have empty frame_id and timestamp.
   /// The caller (ROS node) must populate these fields from the input message.
   ///
-  /// @param input_msg Input point cloud with xyz, and optionally class_id / probability.
-  /// @return Output messages without frame_id or timestamp populated, or an error string.
+  /// @param input_msg Input point cloud, which must be a densely packed
+  ///        `autoware::point_types::PointXYZCPE` cloud (x, y, z, class_id, probability, entropy).
+  /// @return Output messages without frame_id or timestamp populated, or an error string when the
+  ///         input layout is not `autoware::point_types::PointXYZCPE`.
   [[nodiscard]] result_t process(const sensor_msgs::msg::PointCloud2 & input_msg);
 
 private:
