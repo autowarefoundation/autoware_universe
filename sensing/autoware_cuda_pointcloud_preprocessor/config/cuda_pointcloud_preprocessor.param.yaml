@@ -8,6 +8,11 @@
     processing_time_threshold_sec: 0.01
     timestamp_mismatch_fraction_threshold: 0.01
     enable_ring_outlier_filter: true
+    max_input_point_count: 691200  # Hesai OT128, dual return, high resolution mode
+    max_ring_count: 128
+    max_points_per_ring: 7200
+    max_twist_frequency_hz: 200.0
+    max_imu_frequency_hz: 200.0
 
     crop_box.min_x: [0.0]
     crop_box.min_y: [0.0]
