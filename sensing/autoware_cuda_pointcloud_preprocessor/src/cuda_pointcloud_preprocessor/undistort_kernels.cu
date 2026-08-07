@@ -165,7 +165,7 @@ void undistort3DLaunch(
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
-void setupTwist2DStructs(
+std::size_t setupTwist2DStructs(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
@@ -246,14 +246,25 @@ void setupTwist2DStructs(
     cum_y += d * sin(cum_theta);
   }
 
-  // Copy to device
-  device_twist_2d_structs.resize(host_twist_2d_structs.size());
+  // Copy to device. Grow the device buffer monotonically (never shrink), with 2x
+  // headroom: a thrust::device_vector::resize() that enlarges value-initializes
+  // the new region on the *default* stream and synchronizes -- a process-wide
+  // barrier -- right before we overwrite it. Only enlarging past the high-water
+  // mark keeps that off the steady-state path, and doubling makes regrowth
+  // geometrically rare (O(log) total grows). The copy itself runs on the node
+  // stream; size() is therefore a high-water mark, so callers use the returned
+  // count, not size().
+  const std::size_t num_twist_structs = host_twist_2d_structs.size();
+  if (device_twist_2d_structs.size() < num_twist_structs) {
+    device_twist_2d_structs.resize(num_twist_structs * 2);
+  }
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_twist_2d_structs.data()), host_twist_2d_structs.data(),
-    host_twist_2d_structs.size() * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream));
+    num_twist_structs * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream));
+  return num_twist_structs;
 }
 
-void setupTwist3DStructs(
+std::size_t setupTwist3DStructs(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
@@ -339,11 +350,21 @@ void setupTwist3DStructs(
     cum_transform = cum_transform * delta_transform;
   }
 
-  // Copy to device
-  device_twist_3d_structs.resize(host_twist_3d_structs.size());
+  // Copy to device. Grow monotonically (never shrink), with 2x headroom: an
+  // enlarging thrust::device_vector::resize() value-initializes the new region on
+  // the *default* stream and synchronizes -- a process-wide barrier -- right
+  // before we overwrite it. Only enlarging past the high-water mark keeps that
+  // off the steady-state path, and doubling makes regrowth geometrically rare.
+  // The copy itself runs on the node stream; size() is therefore a high-water
+  // mark, so callers use the returned count, not size().
+  const std::size_t num_twist_structs = host_twist_3d_structs.size();
+  if (device_twist_3d_structs.size() < num_twist_structs) {
+    device_twist_3d_structs.resize(num_twist_structs * 2);
+  }
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_twist_3d_structs.data()), host_twist_3d_structs.data(),
-    host_twist_3d_structs.size() * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream));
+    num_twist_structs * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream));
+  return num_twist_structs;
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
