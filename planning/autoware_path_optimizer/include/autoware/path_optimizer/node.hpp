@@ -85,6 +85,8 @@ protected:  // for the static_centerline_generator package
   // core algorithms
   std::shared_ptr<ReplanChecker> replan_checker_ptr_{nullptr};
   std::shared_ptr<MPTOptimizer> mpt_optimizer_ptr_{nullptr};
+  // Debug publisher injected into the (node-independent) MPT optimizer.
+  std::shared_ptr<autoware_utils_debug::DebugPublisher> mpt_debug_publisher_ptr_{nullptr};
 
   // parameters
   TrajectoryParam traj_param_{};

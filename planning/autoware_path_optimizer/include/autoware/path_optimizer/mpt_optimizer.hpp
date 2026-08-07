@@ -30,6 +30,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <autoware_utils_debug/debug_publisher.hpp>
 
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/multi_array_dimension.hpp>
@@ -174,14 +175,108 @@ struct ReferencePoint
   }
 };
 
-class MPTOptimizer
+// Node-independent parameter set for the MPT optimizer.
+// Declaration of the parameters lives in the node layer (see declare_mpt_param()),
+// so this struct itself does not depend on any node type.
+struct MPTParam
+{
+  MPTParam() = default;
+  void onParam(const std::vector<rclcpp::Parameter> & parameters);
+
+  // option
+  bool enable_warm_start;
+  bool enable_manual_warm_start;
+  bool enable_optimization_validation;
+  bool steer_limit_constraint;
+  int mpt_visualize_sampling_num;  // for debug
+
+  // common
+  double delta_arc_length;
+  int num_points;
+
+  bool use_acados;
+  // Toggle MPT-style acados road-bound circle constraints (lh/uh on h(x,p)).
+  // When false, we still widen lh/uh to effectively disable generated constraints.
+  bool use_acados_circle_constraints;
+
+  // kinematics
+  double optimization_center_offset;
+  double max_steer_rad;
+
+  // clearance
+  double hard_clearance_from_road;
+  double soft_clearance_from_road;
+  double soft_collision_free_weight;
+
+  // weight
+  double lat_error_weight;
+  double yaw_error_weight;
+  double yaw_error_rate_weight;
+
+  double terminal_lat_error_weight;
+  double terminal_yaw_error_weight;
+  double goal_lat_error_weight;
+  double goal_yaw_error_weight;
+
+  double steer_input_weight;
+  double steer_rate_weight;
+
+  // avoidance
+  double max_bound_fixing_time;
+  double max_longitudinal_margin_for_bound_violation;
+  double max_avoidance_cost;
+  double avoidance_cost_margin;
+  double avoidance_cost_band_length;
+  double avoidance_cost_decrease_rate;
+  double min_drivable_width;
+  double avoidance_lat_error_weight;
+  double avoidance_yaw_error_weight;
+  double avoidance_steer_input_weight;
+
+  // constraint type
+  bool soft_constraint;
+  bool hard_constraint;
+  bool l_inf_norm;
+
+  // vehicle circles
+  std::string vehicle_circles_method;
+  int vehicle_circles_uniform_circle_num;
+  double vehicle_circles_uniform_circle_radius_ratio;
+  int vehicle_circles_bicycle_model_num;
+  double vehicle_circles_bicycle_model_rear_radius_ratio;
+  double vehicle_circles_bicycle_model_front_radius_ratio;
+  int vehicle_circles_fitting_uniform_circle_num;
+
+  // validation
+  double max_validation_lat_error;
+  double max_validation_yaw_error;
+};
+
+// Node-layer factory: declares the "mpt.*" parameters on the given node and returns
+// a Node-independent MPTParam value. Templated on the node type so it works with both
+// rclcpp::Node and autoware::agnocast_wrapper::Node.
+template <typename NodeT>
+MPTParam declare_mpt_param(
+  NodeT * node, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
+
+// Node-independent MPT optimizer.
+//
+// As with the elastic band smoother, the only place a node type appears is the debug
+// publisher, injected as a autoware_utils_debug::BasicDebugPublisher<NodeT>. NodeT
+// defaults to rclcpp::Node so existing callers keep working unchanged (see the
+// MPTOptimizer alias below); the agnocast path instantiates it with
+// autoware::agnocast_wrapper::Node. Parameters and logger are passed by value.
+template <typename NodeT = rclcpp::Node>
+class BasicMPTOptimizer
 {
 public:
-  MPTOptimizer(
-    rclcpp::Node * node, const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
+  BasicMPTOptimizer(
+    const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-    const TrajectoryParam & traj_param, const std::shared_ptr<DebugData> debug_data_ptr,
-    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_);
+    const TrajectoryParam & traj_param, const MPTParam & mpt_param, rclcpp::Logger logger,
+    const std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<NodeT>> & debug_publisher,
+    const std::shared_ptr<DebugData> debug_data_ptr,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper);
 
   std::optional<std::vector<TrajectoryPoint>> optimizeTrajectory(const PlannerData & planner_data);
   std::optional<std::vector<TrajectoryPoint>> getPrevOptimizedTrajectoryPoints() const;
@@ -242,95 +337,10 @@ private:
     }
   };
 
-  struct MPTParam
-  {
-    explicit MPTParam(
-      rclcpp::Node * node, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
-    MPTParam() = default;
-    void onParam(const std::vector<rclcpp::Parameter> & parameters);
-
-    // option
-    bool enable_warm_start;
-    bool enable_manual_warm_start;
-    bool enable_optimization_validation;
-    bool steer_limit_constraint;
-    int mpt_visualize_sampling_num;  // for debug
-
-    // common
-    double delta_arc_length;
-    int num_points;
-
-    bool use_acados;
-    // Toggle MPT-style acados road-bound circle constraints (lh/uh on h(x,p)).
-    // When false, we still widen lh/uh to effectively disable generated constraints.
-    bool use_acados_circle_constraints;
-
-    // kinematics
-    double optimization_center_offset;
-    double max_steer_rad;
-
-    // clearance
-    double hard_clearance_from_road;
-    double soft_clearance_from_road;
-    double soft_collision_free_weight;
-
-    // weight
-    double lat_error_weight;
-    double yaw_error_weight;
-    double yaw_error_rate_weight;
-
-    double terminal_lat_error_weight;
-    double terminal_yaw_error_weight;
-    double goal_lat_error_weight;
-    double goal_yaw_error_weight;
-
-    double steer_input_weight;
-    double steer_rate_weight;
-
-    // avoidance
-    double max_bound_fixing_time;
-    double max_longitudinal_margin_for_bound_violation;
-    double max_avoidance_cost;
-    double avoidance_cost_margin;
-    double avoidance_cost_band_length;
-    double avoidance_cost_decrease_rate;
-    double min_drivable_width;
-    double avoidance_lat_error_weight;
-    double avoidance_yaw_error_weight;
-    double avoidance_steer_input_weight;
-
-    // constraint type
-    bool soft_constraint;
-    bool hard_constraint;
-    bool l_inf_norm;
-
-    // vehicle circles
-    std::string vehicle_circles_method;
-    int vehicle_circles_uniform_circle_num;
-    double vehicle_circles_uniform_circle_radius_ratio;
-    int vehicle_circles_bicycle_model_num;
-    double vehicle_circles_bicycle_model_rear_radius_ratio;
-    double vehicle_circles_bicycle_model_front_radius_ratio;
-    int vehicle_circles_fitting_uniform_circle_num;
-
-    // validation
-    double max_validation_lat_error;
-    double max_validation_yaw_error;
-  };
-
-  // publisher
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_fixed_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_ref_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_mpt_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_acados_mpt_traj_pub_;
-
-  // Add new publishers for spline coefficients and curvatures
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_steering_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr
-    debug_acados_optimised_steering_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_states_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_acados_optimised_states_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_ref_steering_pub_;
+  // debug publisher (injected by the node layer; may be nullptr to disable debug output).
+  // Replaces the previous set of individual rclcpp publishers; each debug topic is now
+  // addressed by name under the "~/debug" namespace.
+  std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<NodeT>> debug_publisher_;
 
   // argument
   bool enable_debug_info_;
@@ -465,5 +475,9 @@ private:
   size_t getNumberOfSlackVariables() const;
   std::optional<double> calcNormalizedAvoidanceCost(const ReferencePoint & ref_point) const;
 };
+
+// Backward-compatible alias: existing callers using a plain rclcpp::Node keep using
+// MPTOptimizer without any change.
+using MPTOptimizer = BasicMPTOptimizer<rclcpp::Node>;
 }  // namespace autoware::path_optimizer
 #endif  // AUTOWARE__PATH_OPTIMIZER__MPT_OPTIMIZER_HPP_

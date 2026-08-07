@@ -21,6 +21,7 @@
 #include "autoware/path_optimizer/utils/geometry_utils.hpp"
 #include "autoware/path_optimizer/utils/trajectory_utils.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <rclcpp/logging.hpp>
 #include <tf2/utils.hpp>
@@ -174,126 +175,150 @@ double calcLateralDistToBounds(
 }
 }  // namespace
 
-MPTOptimizer::MPTParam::MPTParam(
-  rclcpp::Node * node, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
+template <typename NodeT>
+MPTParam declare_mpt_param(
+  NodeT * node, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
 {
+  MPTParam p;
   {  // option
-    steer_limit_constraint = node->declare_parameter<bool>("mpt.option.steer_limit_constraint");
-    enable_warm_start = node->declare_parameter<bool>("mpt.option.enable_warm_start");
-    enable_manual_warm_start = node->declare_parameter<bool>("mpt.option.enable_manual_warm_start");
-    enable_optimization_validation =
-      node->declare_parameter<bool>("mpt.option.enable_optimization_validation");
-    mpt_visualize_sampling_num = node->declare_parameter<int>("mpt.option.visualize_sampling_num");
+    p.steer_limit_constraint =
+      node->template declare_parameter<bool>("mpt.option.steer_limit_constraint");
+    p.enable_warm_start = node->template declare_parameter<bool>("mpt.option.enable_warm_start");
+    p.enable_manual_warm_start =
+      node->template declare_parameter<bool>("mpt.option.enable_manual_warm_start");
+    p.enable_optimization_validation =
+      node->template declare_parameter<bool>("mpt.option.enable_optimization_validation");
+    p.mpt_visualize_sampling_num =
+      node->template declare_parameter<int>("mpt.option.visualize_sampling_num");
   }
 
   {  // common
-    num_points = node->declare_parameter<int>("mpt.common.num_points");
-    delta_arc_length = node->declare_parameter<double>("mpt.common.delta_arc_length");
+    p.num_points = node->template declare_parameter<int>("mpt.common.num_points");
+    p.delta_arc_length = node->template declare_parameter<double>("mpt.common.delta_arc_length");
   }
 
-  use_acados = node->declare_parameter<bool>("mpt.use_acados");
+  p.use_acados = node->template declare_parameter<bool>("mpt.use_acados");
   // Enable/disable the new MPT-style circle road-bound constraints in acados.
   // Default false so we can A/B test behavior safely.
-  use_acados_circle_constraints =
-    node->declare_parameter<bool>("mpt.use_acados_circle_constraints", false);
+  p.use_acados_circle_constraints =
+    node->template declare_parameter<bool>("mpt.use_acados_circle_constraints", false);
 
   // kinematics
-  max_steer_rad = vehicle_info.max_steer_angle_rad;
+  p.max_steer_rad = vehicle_info.max_steer_angle_rad;
 
   // NOTE: By default, optimization_center_offset will be vehicle_info.wheel_base * 0.8
   //       The 0.8 scale is adopted as it performed the best.
   constexpr double default_wheel_base_ratio = 0.8;
-  optimization_center_offset = node->declare_parameter<double>(
+  p.optimization_center_offset = node->template declare_parameter<double>(
     "mpt.kinematics.optimization_center_offset",
     vehicle_info.wheel_base_m * default_wheel_base_ratio);
 
   {  // clearance
-    hard_clearance_from_road =
-      node->declare_parameter<double>("mpt.clearance.hard_clearance_from_road");
-    soft_clearance_from_road =
-      node->declare_parameter<double>("mpt.clearance.soft_clearance_from_road");
+    p.hard_clearance_from_road =
+      node->template declare_parameter<double>("mpt.clearance.hard_clearance_from_road");
+    p.soft_clearance_from_road =
+      node->template declare_parameter<double>("mpt.clearance.soft_clearance_from_road");
   }
 
   {  // weight
-    soft_collision_free_weight =
-      node->declare_parameter<double>("mpt.weight.soft_collision_free_weight");
+    p.soft_collision_free_weight =
+      node->template declare_parameter<double>("mpt.weight.soft_collision_free_weight");
 
-    lat_error_weight = node->declare_parameter<double>("mpt.weight.lat_error_weight");
-    yaw_error_weight = node->declare_parameter<double>("mpt.weight.yaw_error_weight");
-    yaw_error_rate_weight = node->declare_parameter<double>("mpt.weight.yaw_error_rate_weight");
-    steer_input_weight = node->declare_parameter<double>("mpt.weight.steer_input_weight");
-    steer_rate_weight = node->declare_parameter<double>("mpt.weight.steer_rate_weight");
+    p.lat_error_weight = node->template declare_parameter<double>("mpt.weight.lat_error_weight");
+    p.yaw_error_weight = node->template declare_parameter<double>("mpt.weight.yaw_error_weight");
+    p.yaw_error_rate_weight =
+      node->template declare_parameter<double>("mpt.weight.yaw_error_rate_weight");
+    p.steer_input_weight =
+      node->template declare_parameter<double>("mpt.weight.steer_input_weight");
+    p.steer_rate_weight = node->template declare_parameter<double>("mpt.weight.steer_rate_weight");
 
-    terminal_lat_error_weight =
-      node->declare_parameter<double>("mpt.weight.terminal_lat_error_weight");
-    terminal_yaw_error_weight =
-      node->declare_parameter<double>("mpt.weight.terminal_yaw_error_weight");
-    goal_lat_error_weight = node->declare_parameter<double>("mpt.weight.goal_lat_error_weight");
-    goal_yaw_error_weight = node->declare_parameter<double>("mpt.weight.goal_yaw_error_weight");
+    p.terminal_lat_error_weight =
+      node->template declare_parameter<double>("mpt.weight.terminal_lat_error_weight");
+    p.terminal_yaw_error_weight =
+      node->template declare_parameter<double>("mpt.weight.terminal_yaw_error_weight");
+    p.goal_lat_error_weight =
+      node->template declare_parameter<double>("mpt.weight.goal_lat_error_weight");
+    p.goal_yaw_error_weight =
+      node->template declare_parameter<double>("mpt.weight.goal_yaw_error_weight");
   }
 
   {  // avoidance
-    max_longitudinal_margin_for_bound_violation =
-      node->declare_parameter<double>("mpt.avoidance.max_longitudinal_margin_for_bound_violation");
-    max_bound_fixing_time = node->declare_parameter<double>("mpt.avoidance.max_bound_fixing_time");
-    max_avoidance_cost = node->declare_parameter<double>("mpt.avoidance.max_avoidance_cost");
-    avoidance_cost_margin = node->declare_parameter<double>("mpt.avoidance.avoidance_cost_margin");
-    avoidance_cost_band_length =
-      node->declare_parameter<double>("mpt.avoidance.avoidance_cost_band_length");
-    avoidance_cost_decrease_rate =
-      node->declare_parameter<double>("mpt.avoidance.avoidance_cost_decrease_rate");
-    min_drivable_width = node->declare_parameter<double>("mpt.avoidance.min_drivable_width");
+    p.max_longitudinal_margin_for_bound_violation = node->template declare_parameter<double>(
+      "mpt.avoidance.max_longitudinal_margin_for_bound_violation");
+    p.max_bound_fixing_time =
+      node->template declare_parameter<double>("mpt.avoidance.max_bound_fixing_time");
+    p.max_avoidance_cost =
+      node->template declare_parameter<double>("mpt.avoidance.max_avoidance_cost");
+    p.avoidance_cost_margin =
+      node->template declare_parameter<double>("mpt.avoidance.avoidance_cost_margin");
+    p.avoidance_cost_band_length =
+      node->template declare_parameter<double>("mpt.avoidance.avoidance_cost_band_length");
+    p.avoidance_cost_decrease_rate =
+      node->template declare_parameter<double>("mpt.avoidance.avoidance_cost_decrease_rate");
+    p.min_drivable_width =
+      node->template declare_parameter<double>("mpt.avoidance.min_drivable_width");
 
-    avoidance_lat_error_weight =
-      node->declare_parameter<double>("mpt.avoidance.weight.lat_error_weight");
-    avoidance_yaw_error_weight =
-      node->declare_parameter<double>("mpt.avoidance.weight.yaw_error_weight");
-    avoidance_steer_input_weight =
-      node->declare_parameter<double>("mpt.avoidance.weight.steer_input_weight");
+    p.avoidance_lat_error_weight =
+      node->template declare_parameter<double>("mpt.avoidance.weight.lat_error_weight");
+    p.avoidance_yaw_error_weight =
+      node->template declare_parameter<double>("mpt.avoidance.weight.yaw_error_weight");
+    p.avoidance_steer_input_weight =
+      node->template declare_parameter<double>("mpt.avoidance.weight.steer_input_weight");
   }
 
   {  // collision free constraints
-    l_inf_norm = node->declare_parameter<bool>("mpt.collision_free_constraints.option.l_inf_norm");
-    soft_constraint =
-      node->declare_parameter<bool>("mpt.collision_free_constraints.option.soft_constraint");
-    hard_constraint =
-      node->declare_parameter<bool>("mpt.collision_free_constraints.option.hard_constraint");
+    p.l_inf_norm =
+      node->template declare_parameter<bool>("mpt.collision_free_constraints.option.l_inf_norm");
+    p.soft_constraint = node->template declare_parameter<bool>(
+      "mpt.collision_free_constraints.option.soft_constraint");
+    p.hard_constraint = node->template declare_parameter<bool>(
+      "mpt.collision_free_constraints.option.hard_constraint");
   }
 
   {  // vehicle_circles
     // NOTE: Vehicle shape for collision free constraints is considered as a set of circles
-    vehicle_circles_method =
-      node->declare_parameter<std::string>("mpt.collision_free_constraints.vehicle_circles.method");
+    p.vehicle_circles_method = node->template declare_parameter<std::string>(
+      "mpt.collision_free_constraints.vehicle_circles.method");
 
     // uniform circles
-    vehicle_circles_uniform_circle_num = node->declare_parameter<int>(
+    p.vehicle_circles_uniform_circle_num = node->template declare_parameter<int>(
       "mpt.collision_free_constraints.vehicle_circles.uniform_circle.num");
-    vehicle_circles_uniform_circle_radius_ratio = node->declare_parameter<double>(
+    p.vehicle_circles_uniform_circle_radius_ratio = node->template declare_parameter<double>(
       "mpt.collision_free_constraints.vehicle_circles.uniform_circle.radius_ratio");
 
     // bicycle model
-    vehicle_circles_bicycle_model_num = node->declare_parameter<int>(
+    p.vehicle_circles_bicycle_model_num = node->template declare_parameter<int>(
       "mpt.collision_free_constraints.vehicle_circles.bicycle_model.num_for_"
       "calculation");
-    vehicle_circles_bicycle_model_rear_radius_ratio = node->declare_parameter<double>(
+    p.vehicle_circles_bicycle_model_rear_radius_ratio = node->template declare_parameter<double>(
       "mpt.collision_free_constraints.vehicle_circles."
       "bicycle_model.rear_radius_ratio");
-    vehicle_circles_bicycle_model_front_radius_ratio = node->declare_parameter<double>(
+    p.vehicle_circles_bicycle_model_front_radius_ratio = node->template declare_parameter<double>(
       "mpt.collision_free_constraints.vehicle_circles."
       "bicycle_model.front_radius_ratio");
 
     // fitting uniform circles
-    vehicle_circles_fitting_uniform_circle_num = node->declare_parameter<int>(
+    p.vehicle_circles_fitting_uniform_circle_num = node->template declare_parameter<int>(
       "mpt.collision_free_constraints.vehicle_circles.fitting_uniform_circle.num");
   }
 
   {  // validation
-    max_validation_lat_error = node->declare_parameter<double>("mpt.validation.max_lat_error");
-    max_validation_yaw_error = node->declare_parameter<double>("mpt.validation.max_yaw_error");
+    p.max_validation_lat_error =
+      node->template declare_parameter<double>("mpt.validation.max_lat_error");
+    p.max_validation_yaw_error =
+      node->template declare_parameter<double>("mpt.validation.max_yaw_error");
   }
+  return p;
 }
 
-void MPTOptimizer::MPTParam::onParam(const std::vector<rclcpp::Parameter> & parameters)
+// Explicit instantiations for the supported node types. autoware::agnocast_wrapper::Node is a
+// distinct class from rclcpp::Node in both ENABLE_AGNOCAST=0/1 builds, so both are always needed.
+template MPTParam declare_mpt_param<rclcpp::Node>(
+  rclcpp::Node *, const autoware::vehicle_info_utils::VehicleInfo &);
+template MPTParam declare_mpt_param<autoware::agnocast_wrapper::Node>(
+  autoware::agnocast_wrapper::Node *, const autoware::vehicle_info_utils::VehicleInfo &);
+
+void MPTParam::onParam(const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils::update_param;
 
@@ -407,21 +432,24 @@ void MPTOptimizer::MPTParam::onParam(const std::vector<rclcpp::Parameter> & para
   }
 }
 
-MPTOptimizer::MPTOptimizer(
-  rclcpp::Node * node, const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
+template <typename NodeT>
+BasicMPTOptimizer<NodeT>::BasicMPTOptimizer(
+  const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-  const TrajectoryParam & traj_param, const std::shared_ptr<DebugData> debug_data_ptr,
+  const TrajectoryParam & traj_param, const MPTParam & mpt_param, rclcpp::Logger logger,
+  const std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<NodeT>> & debug_publisher,
+  const std::shared_ptr<DebugData> debug_data_ptr,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
-: enable_debug_info_(enable_debug_info),
+: debug_publisher_(debug_publisher),
+  enable_debug_info_(enable_debug_info),
   ego_nearest_param_(ego_nearest_param),
   vehicle_info_(vehicle_info),
   traj_param_(traj_param),
   debug_data_ptr_(debug_data_ptr),
   time_keeper_(time_keeper),
-  logger_(node->get_logger().get_child("mpt_optimizer"))
+  logger_(logger.get_child("mpt_optimizer")),
+  mpt_param_(mpt_param)
 {
-  // initialize mpt param
-  mpt_param_ = MPTParam(node, vehicle_info);
   updateVehicleCircles();
   debug_data_ptr_->mpt_visualize_sampling_num = mpt_param_.mpt_visualize_sampling_num;
 
@@ -431,26 +459,10 @@ MPTOptimizer::MPTOptimizer(
 
   // osqp solver
   osqp_solver_ptr_ = std::make_unique<autoware::osqp_interface::OSQPInterface>(osqp_epsilon_);
-
-  // publisher
-  debug_fixed_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_fixed_traj", 1);
-  debug_ref_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_ref_traj", 1);
-  debug_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_traj", 1);
-  debug_optimised_steering_pub_ =
-    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_steering", 1);
-
-  debug_acados_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/acados_mpt_traj", 1);
-  debug_acados_optimised_steering_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/acados_optimised_steering", 1);
-  debug_optimised_states_pub_ =
-    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_states", 1);
-  debug_acados_optimised_states_pub_ =
-    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/acados_optimised_states", 1);
-  debug_ref_steering_pub_ =
-    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/ref_steering", 1);
 }
 
-void MPTOptimizer::updateVehicleCircles()
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateVehicleCircles()
 {
   const auto & p = mpt_param_;
 
@@ -477,25 +489,30 @@ void MPTOptimizer::updateVehicleCircles()
   debug_data_ptr_->vehicle_circle_longitudinal_offsets = vehicle_circle_longitudinal_offsets_;
 }
 
-void MPTOptimizer::initialize(const bool enable_debug_info, const TrajectoryParam & traj_param)
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::initialize(
+  const bool enable_debug_info, const TrajectoryParam & traj_param)
 {
   enable_debug_info_ = enable_debug_info;
   traj_param_ = traj_param;
 }
 
-void MPTOptimizer::resetPreviousData()
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::resetPreviousData()
 {
   prev_ref_points_ptr_ = nullptr;
   prev_optimized_traj_points_ptr_ = nullptr;
 }
 
-void MPTOptimizer::onParam(const std::vector<rclcpp::Parameter> & parameters)
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::onParam(const std::vector<rclcpp::Parameter> & parameters)
 {
   mpt_param_.onParam(parameters);
   updateVehicleCircles();
   debug_data_ptr_->mpt_visualize_sampling_num = mpt_param_.mpt_visualize_sampling_num;
 }
-std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
+template <typename NodeT>
+std::optional<std::vector<TrajectoryPoint>> BasicMPTOptimizer<NodeT>::optimizeTrajectory(
   const PlannerData & planner_data)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -601,7 +618,9 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   return output_trajectory;
 }
 
-std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajectoryPoints() const
+template <typename NodeT>
+std::optional<std::vector<TrajectoryPoint>>
+BasicMPTOptimizer<NodeT>::getPrevOptimizedTrajectoryPoints() const
 {
   if (prev_optimized_traj_points_ptr_) {
     return *prev_optimized_traj_points_ptr_;
@@ -609,7 +628,9 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajec
   return std::nullopt;
 }
 
-void MPTOptimizer::publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::publishOptimizedSteering(
+  const Eigen::VectorXd & optimized_variables) const
 {
   std_msgs::msg::Float32MultiArray msg;
   msg.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
@@ -620,10 +641,14 @@ void MPTOptimizer::publishOptimizedSteering(const Eigen::VectorXd & optimized_va
     msg.data.push_back(static_cast<float>(optimized_variables(i)));
   }
 
-  debug_optimised_steering_pub_->publish(msg);
+  if (debug_publisher_) {
+    debug_publisher_->publish("optimised_steering", msg);
+  }
 }
 
-void MPTOptimizer::publishOptimizedStates(const Eigen::VectorXd & states, const size_t N) const
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::publishOptimizedStates(
+  const Eigen::VectorXd & states, const size_t N) const
 {
   std_msgs::msg::Float32MultiArray msg;
   // Format as flat array: [eY_0, ePsi_0, eY_1, ePsi_1, ..., eY_N-1, ePsi_N-1]
@@ -631,10 +656,13 @@ void MPTOptimizer::publishOptimizedStates(const Eigen::VectorXd & states, const 
     msg.data.push_back(static_cast<float>(states(2 * i)));      // eY
     msg.data.push_back(static_cast<float>(states(2 * i + 1)));  // ePsi
   }
-  debug_optimised_states_pub_->publish(msg);
+  if (debug_publisher_) {
+    debug_publisher_->publish("optimised_states", msg);
+  }
 }
 
-void MPTOptimizer::updateDebugDataAndPublishAcadosSteering(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateDebugDataAndPublishAcadosSteering(
   const AcadosSolution & acados_result, const std::vector<ReferencePoint> & ref_points,
   const std::vector<TrajectoryPoint> & acados_traj_points)
 {
@@ -654,19 +682,25 @@ void MPTOptimizer::updateDebugDataAndPublishAcadosSteering(
     acados_steering_msg.data.push_back(static_cast<float>(delta[0]));
   }
 
-  debug_acados_optimised_steering_pub_->publish(acados_steering_msg);
+  if (debug_publisher_) {
+    debug_publisher_->publish("acados_optimised_steering", acados_steering_msg);
+  }
 }
 
-void MPTOptimizer::publishAcadosTrajectory(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::publishAcadosTrajectory(
   const std::vector<TrajectoryPoint> & acados_traj_points,
   const std_msgs::msg::Header & header) const
 {
   // Publish acados trajectory to separate topic for comparison
   const auto acados_traj = autoware::motion_utils::convertToTrajectory(acados_traj_points, header);
-  debug_acados_mpt_traj_pub_->publish(acados_traj);
+  if (debug_publisher_) {
+    debug_publisher_->publish("acados_mpt_traj", acados_traj);
+  }
 }
 
-void MPTOptimizer::publishAcadosStates(const AcadosSolution & acados_result) const
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::publishAcadosStates(const AcadosSolution & acados_result) const
 {
   // Publish acados states
   const auto acados_states = acados_result.xtraj;
@@ -676,19 +710,25 @@ void MPTOptimizer::publishAcadosStates(const AcadosSolution & acados_result) con
     acados_states_msg.data.push_back(static_cast<float>(acados_states[i][0]));  // eY
     acados_states_msg.data.push_back(static_cast<float>(acados_states[i][1]));  // ePsi
   }
-  debug_acados_optimised_states_pub_->publish(acados_states_msg);
+  if (debug_publisher_) {
+    debug_publisher_->publish("acados_optimised_states", acados_states_msg);
+  }
 }
 
-void MPTOptimizer::publishReferenceTrajectory(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::publishReferenceTrajectory(
   const std::vector<ReferencePoint> & ref_points, const std_msgs::msg::Header & header) const
 {
   // Publish reference trajectory for comparison
   const auto ref_traj = autoware::motion_utils::convertToTrajectory(
     trajectory_utils::convertToTrajectoryPoints(ref_points), header);
-  debug_ref_traj_pub_->publish(ref_traj);
+  if (debug_publisher_) {
+    debug_publisher_->publish("mpt_ref_traj", ref_traj);
+  }
 }
 
-void MPTOptimizer::publishReferenceSteeringAngles(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::publishReferenceSteeringAngles(
   const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
 {
   // Publish reference trajectory steering angles (from curvature)
@@ -732,7 +772,9 @@ void MPTOptimizer::publishReferenceSteeringAngles(
       }
     }
   }
-  debug_ref_steering_pub_->publish(ref_steering_msg);
+  if (debug_publisher_) {
+    debug_publisher_->publish("ref_steering", ref_steering_msg);
+  }
 }
 
 geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, double dx, double dy)
@@ -756,7 +798,8 @@ geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, d
 
 // Build parameter vector and initial state x0 from the request. If a parameter-size mismatch
 // is detected, this will set skipSolve=true and populate the response with empty results.
-std::array<double, NP> MPTOptimizer::buildParameters(
+template <typename NodeT>
+std::array<double, NP> BasicMPTOptimizer<NodeT>::buildParameters(
   const std::vector<double> & knots, const std::vector<double> & curvatures) const
 {
   RCLCPP_DEBUG(logger_, "sizes: knots=%zu curvatures=%zu", knots.size(), curvatures.size());
@@ -808,7 +851,8 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   return parameters;
 }
 
-void MPTOptimizer::setParametersToSolver(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::setParametersToSolver(
   const std::array<double, NP> & parameters, const std::vector<ReferencePoint> & ref_points,
   const double s0)
 {
@@ -874,7 +918,9 @@ void MPTOptimizer::setParametersToSolver(
   }
 }
 
-std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionToTrajectory(
+template <typename NodeT>
+std::optional<std::vector<TrajectoryPoint>>
+BasicMPTOptimizer<NodeT>::convertAcadosSolutionToTrajectory(
   std::vector<ReferencePoint> & ref_points, const AcadosSolution & acados_solution) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -949,7 +995,8 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionT
   return traj_points;
 }
 
-AcadosSolution MPTOptimizer::runAcadosMPT(
+template <typename NodeT>
+AcadosSolution BasicMPTOptimizer<NodeT>::runAcadosMPT(
   const std::vector<ReferencePoint> & ref_points,
   autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
   const geometry_msgs::msg::Pose & ego_pose)
@@ -1005,8 +1052,9 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   return acados_solution;
 }
 
+template <typename NodeT>
 std::pair<std::vector<ReferencePoint>, autoware::interpolation::SplineInterpolationPoints2d>
-MPTOptimizer::calcReferencePoints(
+BasicMPTOptimizer<NodeT>::calcReferencePoints(
   const PlannerData & planner_data, const std::vector<TrajectoryPoint> & smoothed_points)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -1098,7 +1146,8 @@ MPTOptimizer::calcReferencePoints(
   return std::make_pair(ref_points, ref_points_spline);
 }
 
-void MPTOptimizer::updateOrientation(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateOrientation(
   std::vector<ReferencePoint> & ref_points,
   const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
 {
@@ -1108,7 +1157,8 @@ void MPTOptimizer::updateOrientation(
   }
 }
 
-void MPTOptimizer::updateCurvature(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateCurvature(
   std::vector<ReferencePoint> & ref_points,
   const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
 {
@@ -1118,7 +1168,8 @@ void MPTOptimizer::updateCurvature(
   }
 }
 
-void MPTOptimizer::updateFixedPoint(std::vector<ReferencePoint> & ref_points) const
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateFixedPoint(std::vector<ReferencePoint> & ref_points) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -1164,7 +1215,8 @@ void MPTOptimizer::updateFixedPoint(std::vector<ReferencePoint> & ref_points) co
   }
 }
 
-void MPTOptimizer::updateDeltaArcLength(std::vector<ReferencePoint> & ref_points) const
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateDeltaArcLength(std::vector<ReferencePoint> & ref_points) const
 {
   for (size_t i = 0; i < ref_points.size(); i++) {
     ref_points.at(i).delta_arc_length =
@@ -1174,7 +1226,8 @@ void MPTOptimizer::updateDeltaArcLength(std::vector<ReferencePoint> & ref_points
   }
 }
 
-void MPTOptimizer::updateExtraPoints(std::vector<ReferencePoint> & ref_points) const
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateExtraPoints(std::vector<ReferencePoint> & ref_points) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -1266,7 +1319,8 @@ void MPTOptimizer::updateExtraPoints(std::vector<ReferencePoint> & ref_points) c
   }
 }
 
-void MPTOptimizer::updateBounds(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateBounds(
   std::vector<ReferencePoint> & ref_points,
   const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound,
@@ -1323,7 +1377,9 @@ void MPTOptimizer::updateBounds(
   return;
 }
 
-void MPTOptimizer::keepMinimumBoundsWidth(std::vector<ReferencePoint> & ref_points) const
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::keepMinimumBoundsWidth(
+  std::vector<ReferencePoint> & ref_points) const
 {
   // calculate drivable area width considering the curvature
   std::vector<double> min_dynamic_drivable_width_vec;
@@ -1498,7 +1554,8 @@ void MPTOptimizer::keepMinimumBoundsWidth(std::vector<ReferencePoint> & ref_poin
   }
 }
 
-std::vector<ReferencePoint> MPTOptimizer::extendViolatedBounds(
+template <typename NodeT>
+std::vector<ReferencePoint> BasicMPTOptimizer<NodeT>::extendViolatedBounds(
   const std::vector<ReferencePoint> & ref_points) const
 {
   auto extended_ref_points = ref_points;
@@ -1545,7 +1602,8 @@ std::vector<ReferencePoint> MPTOptimizer::extendViolatedBounds(
   return extended_ref_points;
 }
 
-void MPTOptimizer::avoidSuddenSteering(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::avoidSuddenSteering(
   std::vector<ReferencePoint> & ref_points, const geometry_msgs::msg::Pose & ego_pose,
   const double ego_vel) const
 {
@@ -1573,7 +1631,8 @@ void MPTOptimizer::avoidSuddenSteering(
   }
 }
 
-void MPTOptimizer::updateVehicleBounds(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::updateVehicleBounds(
   std::vector<ReferencePoint> & ref_points,
   const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
 {
@@ -1635,7 +1694,8 @@ void MPTOptimizer::updateVehicleBounds(
 }
 
 // cost function: J = x' Q x + u' R u
-MPTOptimizer::ValueMatrix MPTOptimizer::calcValueMatrix(
+template <typename NodeT>
+typename BasicMPTOptimizer<NodeT>::ValueMatrix BasicMPTOptimizer<NodeT>::calcValueMatrix(
   const std::vector<ReferencePoint> & ref_points,
   const std::vector<TrajectoryPoint> & traj_points) const
 {
@@ -1701,7 +1761,8 @@ MPTOptimizer::ValueMatrix MPTOptimizer::calcValueMatrix(
   return ValueMatrix{Q_sparse_mat, R_sparse_mat};
 }
 
-MPTOptimizer::ObjectiveMatrix MPTOptimizer::calcObjectiveMatrix(
+template <typename NodeT>
+typename BasicMPTOptimizer<NodeT>::ObjectiveMatrix BasicMPTOptimizer<NodeT>::calcObjectiveMatrix(
   [[maybe_unused]] const StateEquationGenerator::Matrix & mpt_mat, const ValueMatrix & val_mat,
   const std::vector<ReferencePoint> & ref_points) const
 {
@@ -1772,7 +1833,8 @@ MPTOptimizer::ObjectiveMatrix MPTOptimizer::calcObjectiveMatrix(
 // Constraint: lb <= A u <= ub
 // decision variable
 // u := [initial state, steer angles, soft variables]
-MPTOptimizer::ConstraintMatrix MPTOptimizer::calcConstraintMatrix(
+template <typename NodeT>
+typename BasicMPTOptimizer<NodeT>::ConstraintMatrix BasicMPTOptimizer<NodeT>::calcConstraintMatrix(
   const StateEquationGenerator::Matrix & mpt_mat,
   const std::vector<ReferencePoint> & ref_points) const
 {
@@ -1953,7 +2015,8 @@ MPTOptimizer::ConstraintMatrix MPTOptimizer::calcConstraintMatrix(
   return ConstraintMatrix{A, lb, ub};
 }
 
-void MPTOptimizer::addSteerWeightR(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::addSteerWeightR(
   std::vector<Eigen::Triplet<double>> & R_triplet_vec,
   const std::vector<ReferencePoint> & ref_points) const
 {
@@ -1971,7 +2034,8 @@ void MPTOptimizer::addSteerWeightR(
   }
 }
 
-std::optional<Eigen::VectorXd> MPTOptimizer::calcOptimizedSteerAngles(
+template <typename NodeT>
+std::optional<Eigen::VectorXd> BasicMPTOptimizer<NodeT>::calcOptimizedSteerAngles(
   const std::vector<ReferencePoint> & ref_points, const ObjectiveMatrix & obj_mat,
   const ConstraintMatrix & const_mat)
 {
@@ -2066,7 +2130,8 @@ std::optional<Eigen::VectorXd> MPTOptimizer::calcOptimizedSteerAngles(
   return optimized_variables;
 }
 
-Eigen::VectorXd MPTOptimizer::calcInitialSolutionForManualWarmStart(
+template <typename NodeT>
+Eigen::VectorXd BasicMPTOptimizer<NodeT>::calcInitialSolutionForManualWarmStart(
   const std::vector<ReferencePoint> & ref_points,
   const std::vector<ReferencePoint> & prev_ref_points) const
 {
@@ -2107,8 +2172,11 @@ Eigen::VectorXd MPTOptimizer::calcInitialSolutionForManualWarmStart(
   return u0;
 }
 
-std::pair<MPTOptimizer::ObjectiveMatrix, MPTOptimizer::ConstraintMatrix>
-MPTOptimizer::updateMatrixForManualWarmStart(
+template <typename NodeT>
+std::pair<
+  typename BasicMPTOptimizer<NodeT>::ObjectiveMatrix,
+  typename BasicMPTOptimizer<NodeT>::ConstraintMatrix>
+BasicMPTOptimizer<NodeT>::updateMatrixForManualWarmStart(
   const ObjectiveMatrix & obj_mat, const ConstraintMatrix & const_mat,
   const std::optional<Eigen::VectorXd> & u0) const
 {
@@ -2138,7 +2206,8 @@ MPTOptimizer::updateMatrixForManualWarmStart(
   return {updated_obj_mat, updated_const_mat};
 }
 
-std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::calcMPTPoints(
+template <typename NodeT>
+std::optional<std::vector<TrajectoryPoint>> BasicMPTOptimizer<NodeT>::calcMPTPoints(
   std::vector<ReferencePoint> & ref_points, const Eigen::VectorXd & optimized_variables,
   [[maybe_unused]] const StateEquationGenerator::Matrix & mpt_mat) const
 {
@@ -2198,7 +2267,8 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::calcMPTPoints(
   return traj_points;
 }
 
-void MPTOptimizer::publishDebugTrajectories(
+template <typename NodeT>
+void BasicMPTOptimizer<NodeT>::publishDebugTrajectories(
   const std_msgs::msg::Header & header, const std::vector<ReferencePoint> & ref_points,
   const std::vector<TrajectoryPoint> & mpt_traj_points) const
 {
@@ -2207,19 +2277,26 @@ void MPTOptimizer::publishDebugTrajectories(
   // reference points
   const auto ref_traj = autoware::motion_utils::convertToTrajectory(
     trajectory_utils::convertToTrajectoryPoints(ref_points), header);
-  debug_ref_traj_pub_->publish(ref_traj);
+  if (debug_publisher_) {
+    debug_publisher_->publish("mpt_ref_traj", ref_traj);
+  }
 
   // fixed reference points
   const auto fixed_traj_points = extractFixedPoints(ref_points);
   const auto fixed_traj = autoware::motion_utils::convertToTrajectory(fixed_traj_points, header);
-  debug_fixed_traj_pub_->publish(fixed_traj);
+  if (debug_publisher_) {
+    debug_publisher_->publish("mpt_fixed_traj", fixed_traj);
+  }
 
   // mpt points
   const auto mpt_traj = autoware::motion_utils::convertToTrajectory(mpt_traj_points, header);
-  debug_mpt_traj_pub_->publish(mpt_traj);
+  if (debug_publisher_) {
+    debug_publisher_->publish("mpt_traj", mpt_traj);
+  }
 }
 
-std::vector<TrajectoryPoint> MPTOptimizer::extractFixedPoints(
+template <typename NodeT>
+std::vector<TrajectoryPoint> BasicMPTOptimizer<NodeT>::extractFixedPoints(
   const std::vector<ReferencePoint> & ref_points) const
 {
   std::vector<TrajectoryPoint> fixed_traj_points;
@@ -2235,24 +2312,28 @@ std::vector<TrajectoryPoint> MPTOptimizer::extractFixedPoints(
   return fixed_traj_points;
 }
 
-double MPTOptimizer::getTrajectoryLength() const
+template <typename NodeT>
+double BasicMPTOptimizer<NodeT>::getTrajectoryLength() const
 {
   const double forward_traj_length = mpt_param_.num_points * mpt_param_.delta_arc_length;
   const double backward_traj_length = traj_param_.output_backward_traj_length;
   return forward_traj_length + backward_traj_length;
 }
 
-double MPTOptimizer::getDeltaArcLength() const
+template <typename NodeT>
+double BasicMPTOptimizer<NodeT>::getDeltaArcLength() const
 {
   return mpt_param_.delta_arc_length;
 }
 
-int MPTOptimizer::getNumberOfPoints() const
+template <typename NodeT>
+int BasicMPTOptimizer<NodeT>::getNumberOfPoints() const
 {
   return mpt_param_.num_points;
 }
 
-size_t MPTOptimizer::getNumberOfSlackVariables() const
+template <typename NodeT>
+size_t BasicMPTOptimizer<NodeT>::getNumberOfSlackVariables() const
 {
   if (mpt_param_.soft_constraint) {
     if (mpt_param_.l_inf_norm) {
@@ -2263,7 +2344,8 @@ size_t MPTOptimizer::getNumberOfSlackVariables() const
   return 0;
 }
 
-std::optional<double> MPTOptimizer::calcNormalizedAvoidanceCost(
+template <typename NodeT>
+std::optional<double> BasicMPTOptimizer<NodeT>::calcNormalizedAvoidanceCost(
   const ReferencePoint & ref_point) const
 {
   const double negative_avoidance_cost = std::min(
@@ -2274,4 +2356,8 @@ std::optional<double> MPTOptimizer::calcNormalizedAvoidanceCost(
   }
   return std::clamp(-negative_avoidance_cost / mpt_param_.max_avoidance_cost, 0.0, 1.0);
 }
+
+// Explicit instantiations for the supported node types (see declare_mpt_param above).
+template class BasicMPTOptimizer<rclcpp::Node>;
+template class BasicMPTOptimizer<autoware::agnocast_wrapper::Node>;
 }  // namespace autoware::path_optimizer

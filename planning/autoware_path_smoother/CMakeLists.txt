@@ -15,6 +15,15 @@ target_include_directories(autoware_path_smoother
     ${EIGEN3_INCLUDE_DIR}
 )
 
+# The library instantiates the node-type templates for autoware::agnocast_wrapper::Node, so it
+# needs the agnocast headers when Agnocast is enabled and must agree with its consumers on
+# USE_AGNOCAST_ENABLED.
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  find_package(agnocastlib REQUIRED)
+  ament_target_dependencies(autoware_path_smoother agnocastlib)
+endif()
+autoware_agnocast_wrapper_setup(autoware_path_smoother)
+
 # register node
 rclcpp_components_register_node(autoware_path_smoother
   PLUGIN "autoware::path_smoother::ElasticBandSmoother"

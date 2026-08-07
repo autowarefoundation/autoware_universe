@@ -22,6 +22,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <tf2/utils.hpp>
 
 #include <algorithm>
@@ -87,44 +88,63 @@ std_msgs::msg::Header createHeader(const rclcpp::Time & now)
 
 namespace autoware::path_smoother
 {
-EBPathSmoother::EBParam::EBParam(rclcpp::Node * node)
+template <typename NodeT>
+EBParam declare_eb_param(NodeT * node)
 {
+  EBParam p;
+
   {  // option
-    enable_warm_start = node->declare_parameter<bool>("elastic_band.option.enable_warm_start");
-    enable_optimization_validation =
-      node->declare_parameter<bool>("elastic_band.option.enable_optimization_validation");
+    p.enable_warm_start =
+      node->template declare_parameter<bool>("elastic_band.option.enable_warm_start");
+    p.enable_optimization_validation =
+      node->template declare_parameter<bool>("elastic_band.option.enable_optimization_validation");
   }
 
   {  // common
-    delta_arc_length = node->declare_parameter<double>("elastic_band.common.delta_arc_length");
-    num_points = node->declare_parameter<int>("elastic_band.common.num_points");
+    p.delta_arc_length =
+      node->template declare_parameter<double>("elastic_band.common.delta_arc_length");
+    p.num_points = node->template declare_parameter<int>("elastic_band.common.num_points");
   }
 
   {  // clearance
-    num_joint_points = node->declare_parameter<int>("elastic_band.clearance.num_joint_points");
-    clearance_for_fix = node->declare_parameter<double>("elastic_band.clearance.clearance_for_fix");
-    clearance_for_joint =
-      node->declare_parameter<double>("elastic_band.clearance.clearance_for_joint");
-    clearance_for_smooth =
-      node->declare_parameter<double>("elastic_band.clearance.clearance_for_smooth");
+    p.num_joint_points =
+      node->template declare_parameter<int>("elastic_band.clearance.num_joint_points");
+    p.clearance_for_fix =
+      node->template declare_parameter<double>("elastic_band.clearance.clearance_for_fix");
+    p.clearance_for_joint =
+      node->template declare_parameter<double>("elastic_band.clearance.clearance_for_joint");
+    p.clearance_for_smooth =
+      node->template declare_parameter<double>("elastic_band.clearance.clearance_for_smooth");
   }
 
   {  // weight
-    smooth_weight = node->declare_parameter<double>("elastic_band.weight.smooth_weight");
-    lat_error_weight = node->declare_parameter<double>("elastic_band.weight.lat_error_weight");
+    p.smooth_weight = node->template declare_parameter<double>("elastic_band.weight.smooth_weight");
+    p.lat_error_weight =
+      node->template declare_parameter<double>("elastic_band.weight.lat_error_weight");
   }
 
   {  // qp
-    qp_param.max_iteration = node->declare_parameter<int>("elastic_band.qp.max_iteration");
-    qp_param.eps_abs = node->declare_parameter<double>("elastic_band.qp.eps_abs");
-    qp_param.eps_rel = node->declare_parameter<double>("elastic_band.qp.eps_rel");
+    p.qp_param.max_iteration =
+      node->template declare_parameter<int>("elastic_band.qp.max_iteration");
+    p.qp_param.eps_abs = node->template declare_parameter<double>("elastic_band.qp.eps_abs");
+    p.qp_param.eps_rel = node->template declare_parameter<double>("elastic_band.qp.eps_rel");
   }
 
   // validation
-  max_validation_error = node->declare_parameter<double>("elastic_band.validation.max_error");
+  p.max_validation_error =
+    node->template declare_parameter<double>("elastic_band.validation.max_error");
+
+  return p;
 }
 
-void EBPathSmoother::EBParam::onParam(const std::vector<rclcpp::Parameter> & parameters)
+// Explicit instantiations for the supported node types. autoware::agnocast_wrapper::Node is a
+// distinct class from rclcpp::Node in both ENABLE_AGNOCAST=0/1 builds, so both instantiations
+// are always required.
+template EBParam declare_eb_param<rclcpp::Node>(rclcpp::Node * node);
+template EBParam declare_eb_param<autoware::agnocast_wrapper::Node>(
+  autoware::agnocast_wrapper::Node * node);
+
+void EBParam::onParam(const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils::update_param;
 
@@ -161,41 +181,46 @@ void EBPathSmoother::EBParam::onParam(const std::vector<rclcpp::Parameter> & par
   }
 }
 
-EBPathSmoother::EBPathSmoother(
-  rclcpp::Node * node, const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
-  const CommonParam & common_param, const std::shared_ptr<TimeKeeper> time_keeper_ptr)
+template <typename NodeT>
+BasicEBPathSmoother<NodeT>::BasicEBPathSmoother(
+  const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
+  const CommonParam & common_param, const EBParam & eb_param, rclcpp::Logger logger,
+  const rclcpp::Clock & clock,
+  const std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<NodeT>> & debug_publisher,
+  const std::shared_ptr<TimeKeeper> time_keeper_ptr)
 : enable_debug_info_(enable_debug_info),
   ego_nearest_param_(ego_nearest_param),
   common_param_(common_param),
+  eb_param_(eb_param),
   time_keeper_ptr_(time_keeper_ptr),
-  logger_(node->get_logger().get_child("elastic_band_smoother")),
-  clock_(*node->get_clock())
+  logger_(logger.get_child("elastic_band_smoother")),
+  clock_(clock),
+  debug_publisher_(debug_publisher)
 {
-  // eb param
-  eb_param_ = EBParam(node);
-
-  // publisher
-  debug_eb_traj_pub_ = node->create_publisher<Trajectory>("~/debug/eb_traj", 1);
-  debug_eb_fixed_traj_pub_ = node->create_publisher<Trajectory>("~/debug/eb_fixed_traj", 1);
 }
 
-void EBPathSmoother::onParam(const std::vector<rclcpp::Parameter> & parameters)
+template <typename NodeT>
+void BasicEBPathSmoother<NodeT>::onParam(const std::vector<rclcpp::Parameter> & parameters)
 {
   eb_param_.onParam(parameters);
 }
 
-void EBPathSmoother::initialize(const bool enable_debug_info, const CommonParam & common_param)
+template <typename NodeT>
+void BasicEBPathSmoother<NodeT>::initialize(
+  const bool enable_debug_info, const CommonParam & common_param)
 {
   enable_debug_info_ = enable_debug_info;
   common_param_ = common_param;
 }
 
-void EBPathSmoother::resetPreviousData()
+template <typename NodeT>
+void BasicEBPathSmoother<NodeT>::resetPreviousData()
 {
   prev_eb_traj_points_ptr_ = nullptr;
 }
 
-std::vector<TrajectoryPoint> EBPathSmoother::smoothTrajectory(
+template <typename NodeT>
+std::vector<TrajectoryPoint> BasicEBPathSmoother<NodeT>::smoothTrajectory(
   const std::vector<TrajectoryPoint> & traj_points, const geometry_msgs::msg::Pose & ego_pose)
 {
   time_keeper_ptr_->tic(__func__);
@@ -263,15 +288,18 @@ std::vector<TrajectoryPoint> EBPathSmoother::smoothTrajectory(
   prev_eb_traj_points_ptr_ = std::make_shared<std::vector<TrajectoryPoint>>(*eb_traj_points);
 
   // 8. publish eb trajectory
-  const auto eb_traj =
-    autoware::motion_utils::convertToTrajectory(*eb_traj_points, createHeader(clock_.now()));
-  debug_eb_traj_pub_->publish(eb_traj);
+  if (debug_publisher_) {
+    const auto eb_traj =
+      autoware::motion_utils::convertToTrajectory(*eb_traj_points, createHeader(clock_.now()));
+    debug_publisher_->publish("eb_traj", eb_traj);
+  }
 
   time_keeper_ptr_->toc(__func__, "      ");
   return *eb_traj_points;
 }
 
-std::vector<TrajectoryPoint> EBPathSmoother::insertFixedPoint(
+template <typename NodeT>
+std::vector<TrajectoryPoint> BasicEBPathSmoother<NodeT>::insertFixedPoint(
   const std::vector<TrajectoryPoint> & traj_points) const
 {
   time_keeper_ptr_->tic(__func__);
@@ -290,7 +318,9 @@ std::vector<TrajectoryPoint> EBPathSmoother::insertFixedPoint(
   return traj_points_with_fixed_point;
 }
 
-std::tuple<std::vector<TrajectoryPoint>, size_t> EBPathSmoother::getPaddedTrajectoryPoints(
+template <typename NodeT>
+std::tuple<std::vector<TrajectoryPoint>, size_t>
+BasicEBPathSmoother<NodeT>::getPaddedTrajectoryPoints(
   const std::vector<TrajectoryPoint> & traj_points) const
 {
   time_keeper_ptr_->tic(__func__);
@@ -308,7 +338,8 @@ std::tuple<std::vector<TrajectoryPoint>, size_t> EBPathSmoother::getPaddedTrajec
   return {padded_traj_points, pad_start_idx};
 }
 
-void EBPathSmoother::updateConstraint(
+template <typename NodeT>
+void BasicEBPathSmoother<NodeT>::updateConstraint(
   const std::vector<TrajectoryPoint> & traj_points, const bool is_goal_contained,
   const int pad_start_idx)
 {
@@ -390,14 +421,17 @@ void EBPathSmoother::updateConstraint(
   }
 
   // publish fixed trajectory
-  const auto eb_fixed_traj = autoware::motion_utils::convertToTrajectory(
-    debug_fixed_traj_points, createHeader(clock_.now()));
-  debug_eb_fixed_traj_pub_->publish(eb_fixed_traj);
+  if (debug_publisher_) {
+    const auto eb_fixed_traj = autoware::motion_utils::convertToTrajectory(
+      debug_fixed_traj_points, createHeader(clock_.now()));
+    debug_publisher_->publish("eb_fixed_traj", eb_fixed_traj);
+  }
 
   time_keeper_ptr_->toc(__func__, "        ");
 }
 
-std::optional<std::vector<double>> EBPathSmoother::calcSmoothedTrajectory()
+template <typename NodeT>
+std::optional<std::vector<double>> BasicEBPathSmoother<NodeT>::calcSmoothedTrajectory()
 {
   time_keeper_ptr_->tic(__func__);
 
@@ -423,7 +457,9 @@ std::optional<std::vector<double>> EBPathSmoother::calcSmoothedTrajectory()
   return optimized_points;
 }
 
-std::optional<std::vector<TrajectoryPoint>> EBPathSmoother::convertOptimizedPointsToTrajectory(
+template <typename NodeT>
+std::optional<std::vector<TrajectoryPoint>>
+BasicEBPathSmoother<NodeT>::convertOptimizedPointsToTrajectory(
   const std::vector<double> & optimized_points, const std::vector<TrajectoryPoint> & traj_points,
   const int pad_start_idx) const
 {
@@ -453,4 +489,8 @@ std::optional<std::vector<TrajectoryPoint>> EBPathSmoother::convertOptimizedPoin
   time_keeper_ptr_->toc(__func__, "        ");
   return eb_traj_points;
 }
+
+// Explicit instantiations for the supported node types (see declare_eb_param above).
+template class BasicEBPathSmoother<rclcpp::Node>;
+template class BasicEBPathSmoother<autoware::agnocast_wrapper::Node>;
 }  // namespace autoware::path_smoother

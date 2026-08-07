@@ -346,7 +346,7 @@ void TrajectoryTemporalMPTOptimizer::log_acados_solve_debug(
   const size_t terminal_idx, const TrajectoryOptimizerData & data,
   const TrajectoryPoints & traj_points) const
 {
-  rclcpp::Node * const node = get_node_ptr();
+  autoware::agnocast_wrapper::Node * const node = get_node_ptr();
   const rclcpp::Logger logger = node->get_logger();
 
   if (acados_status != 0) {
@@ -392,7 +392,7 @@ void TrajectoryTemporalMPTOptimizer::ensure_debug_publishers()
   if (!mpt_params_.publish_debug_topics || debug_input_trajectory_pub_) {
     return;
   }
-  rclcpp::Node * const n = get_node_ptr();
+  autoware::agnocast_wrapper::Node * const n = get_node_ptr();
   // Best effort (typical for high-rate planning). Subscribers must use matching reliability
   // (default rclpy reliable will not receive these messages).
   const auto qos = rclcpp::QoS(10).best_effort();
@@ -423,7 +423,7 @@ void TrajectoryTemporalMPTOptimizer::publish_temporal_mpt_debug_io(
   const TrajectoryPoints trajectory_after =
     trajectory_from_solution_overlay(reference_before, solution, n_out);
 
-  rclcpp::Node * const node = get_node_ptr();
+  autoware::agnocast_wrapper::Node * const node = get_node_ptr();
   std_msgs::msg::Header header;
   header.stamp = node->now();
   header.frame_id = initial_odom.header.frame_id.empty() ? "map" : initial_odom.header.frame_id;

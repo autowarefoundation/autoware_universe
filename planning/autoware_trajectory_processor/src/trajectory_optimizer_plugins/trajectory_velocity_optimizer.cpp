@@ -67,7 +67,7 @@ void TrajectoryVelocityOptimizer::on_initialize(const TrajectoryOptimizerParams 
   cjs.min_jerk = params.limit.min_jerk;
 
   sub_planning_velocity_ =
-    std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<VelocityLimit>(
       node_ptr, "~/input/external_velocity_limit_mps", rclcpp::QoS{1});
 
   pub_velocity_limit_ = node_ptr->create_publisher<VelocityLimit>(

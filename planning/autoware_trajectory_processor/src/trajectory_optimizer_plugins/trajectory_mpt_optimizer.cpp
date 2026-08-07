@@ -41,7 +41,8 @@ void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & par
   RCLCPP_INFO(node_ptr->get_logger(), "MPT Optimizer plugin: Starting initialization...");
 
   try {
-    // Get vehicle info
+    // VehicleInfoUtils has a templated constructor, so it also accepts the agnocast wrapper
+    // node (which has no underlying rclcpp::Node in agnocast mode).
     vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: Vehicle info loaded");
 
@@ -79,10 +80,15 @@ void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & par
     mpt_time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_pub);
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: TimeKeeper created");
 
-    // Initialize MPT optimizer
-    mpt_optimizer_ptr_ = std::make_shared<MPTOptimizer>(
-      node_ptr, mpt_params_.enable_debug_info, ego_nearest_param_, vehicle_info_, traj_param_,
-      debug_data_ptr_, mpt_time_keeper_);
+    // Declare the MPT parameters in the node layer and inject them, together with a debug
+    // publisher/logger, into the node-independent optimizer.
+    const auto mpt_param = autoware::path_optimizer::declare_mpt_param(node_ptr, vehicle_info_);
+    mpt_debug_publisher_ptr_ =
+      std::make_shared<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        node_ptr, "~/debug");
+    mpt_optimizer_ptr_ = std::make_shared<MPTOptimizerT>(
+      mpt_params_.enable_debug_info, ego_nearest_param_, vehicle_info_, traj_param_, mpt_param,
+      node_ptr->get_logger(), mpt_debug_publisher_ptr_, debug_data_ptr_, mpt_time_keeper_);
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: MPTOptimizer created");
 
     // Create debug markers publisher

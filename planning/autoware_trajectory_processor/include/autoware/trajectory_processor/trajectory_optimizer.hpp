@@ -18,7 +18,8 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
-#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
 #include <pluginlib/class_loader.hpp>
@@ -43,13 +44,13 @@ using autoware_planning_msgs::msg::Trajectory;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
-class TrajectoryOptimizer : public rclcpp::Node
+class TrajectoryOptimizer : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit TrajectoryOptimizer(const rclcpp::NodeOptions & options);
 
 private:
-  void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
+  void on_traj(AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) msg);
   void publish_processing_time_ms(double processing_time_ms);
   void update_params();
   void initialize_optimizers();
@@ -61,24 +62,26 @@ private:
   std::vector<std::shared_ptr<plugin::TrajectoryOptimizerPluginBase>> plugins_;
 
   // interface subscriber
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) trajectories_sub_;
   // interface publisher
-  rclcpp::Publisher<Trajectory>::SharedPtr trajectory_pub_;
-  rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
+  AUTOWARE_PUBLISHER_PTR(Trajectory) trajectory_pub_;
+  AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) trajectories_pub_;
 
-  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
-    this, "~/input/odometry"};
-  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
-    sub_current_acceleration_{this, "~/input/acceleration"};
+  // Polling subscribers are created in the constructor through the wrapper so they route
+  // through Agnocast when enabled.
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_current_odometry_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    sub_current_acceleration_;
 
-  Odometry::ConstSharedPtr current_odometry_ptr_;  // current odometry
-  AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_ptr_;
+  // polling::PollingSubscriber::take_data() returns a plain std::shared_ptr in both
+  // ENABLE_AGNOCAST=0/1 builds.
+  std::shared_ptr<const Odometry> current_odometry_ptr_;  // current odometry
+  std::shared_ptr<const AccelWithCovarianceStamped> current_acceleration_ptr_;
   std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_pub_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    debug_processing_time_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils::ProcessingTimeDetail) debug_processing_time_detail_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped)
+  debug_processing_time_pub_;
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 
   std::unique_ptr<trajectory_optimizer_node_params::ParamListener> param_listener_;

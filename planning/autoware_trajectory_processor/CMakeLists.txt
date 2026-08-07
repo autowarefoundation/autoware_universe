@@ -15,10 +15,22 @@ ament_export_dependencies(acados)
 add_subdirectory(src/acados_mpt)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
+# When Agnocast is enabled, the component/plugin libraries include the agnocast wrapper
+# macro header (which pulls in <agnocast/agnocast.hpp>). The register_node macro only adds
+# agnocastlib to the generated executable, not to the component library itself, so we link
+# agnocastlib explicitly here to make its headers available.
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  find_package(agnocastlib REQUIRED)
+endif()
+
 ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
   src/trajectory_optimizer.cpp
   src/utils.cpp
 )
+
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  ament_target_dependencies(autoware_trajectory_optimizer_component agnocastlib)
+endif()
 
 autoware_agnocast_wrapper_register_node(autoware_trajectory_optimizer_component
   PLUGIN "autoware::trajectory_optimizer::TrajectoryOptimizer"
@@ -92,6 +104,15 @@ target_link_libraries(
   tf2_geometry_msgs::tf2_geometry_msgs
   trajectory_optimizer_param
 )
+
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  ament_target_dependencies(autoware_trajectory_optimizer_plugins agnocastlib)
+endif()
+
+# The plugin library is not passed to autoware_agnocast_wrapper_register_node (only the component
+# is), so USE_AGNOCAST_ENABLED has to be applied explicitly. Both libraries must agree on it
+# because they exchange autoware::agnocast_wrapper::Node across the pluginlib boundary.
+autoware_agnocast_wrapper_setup(autoware_trajectory_optimizer_plugins)
 
 ament_auto_add_library(autoware_trajectory_modifier_plugins SHARED
   src/trajectory_modifier_plugins/stop_point_fixer.cpp

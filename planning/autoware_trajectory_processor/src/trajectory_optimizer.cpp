@@ -56,6 +56,15 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
 
   initialize_optimizers();
 
+  // Polling subscribers. create_polling_subscriber() routes through Agnocast when Agnocast is
+  // enabled (including the AgnocastOnly case, where there is no underlying rclcpp::Node) and
+  // through rclcpp otherwise.
+  sub_current_odometry_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
+    this, "~/input/odometry", rclcpp::QoS{1});
+  sub_current_acceleration_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+      this, "~/input/acceleration", rclcpp::QoS{1});
+
   trajectories_sub_ = create_subscription<CandidateTrajectories>(
     "~/input/trajectories", 1,
     std::bind(&TrajectoryOptimizer::on_traj, this, std::placeholders::_1));
@@ -128,7 +137,8 @@ void TrajectoryOptimizer::publish_processing_time_ms(const double processing_tim
   debug_processing_time_pub_->publish(msg);
 }
 
-void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryOptimizer::on_traj(
+  [[maybe_unused]] AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) msg)
 {
   stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("processing_time");
@@ -139,8 +149,8 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     update_params();
   }
 
-  current_odometry_ptr_ = sub_current_odometry_.take_data();
-  current_acceleration_ptr_ = sub_current_acceleration_.take_data();
+  current_odometry_ptr_ = sub_current_odometry_->take_data();
+  current_acceleration_ptr_ = sub_current_acceleration_->take_data();
 
   if (!current_odometry_ptr_ || !current_acceleration_ptr_) {
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "No odometry or acceleration data");

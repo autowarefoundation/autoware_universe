@@ -20,6 +20,7 @@
 #include "autoware/path_smoother/type_alias.hpp"
 
 #include <Eigen/Core>
+#include <autoware_utils_debug/debug_publisher.hpp>
 
 #include <memory>
 #include <optional>
@@ -29,12 +30,72 @@
 
 namespace autoware::path_smoother
 {
-class EBPathSmoother
+// Node-independent parameter set for the elastic band smoother.
+// Declaration of the parameters lives in the node layer (see declare_eb_param()),
+// so this struct itself does not depend on any node type.
+struct EBParam
+{
+  // qp
+  struct QPParam
+  {
+    int max_iteration;
+    double eps_abs;
+    double eps_rel;
+  };
+
+  EBParam() = default;
+  void onParam(const std::vector<rclcpp::Parameter> & parameters);
+
+  // option
+  bool enable_warm_start;
+  bool enable_optimization_validation;
+
+  // common
+  double delta_arc_length;
+  int num_points;
+
+  // clearance
+  int num_joint_points;
+  double clearance_for_fix;
+  double clearance_for_joint;
+  double clearance_for_smooth;
+
+  // weight
+  double smooth_weight;
+  double lat_error_weight;
+
+  // qp
+  QPParam qp_param;
+
+  // validation
+  double max_validation_error;
+};
+
+// Node-layer factory: declares the "elastic_band.*" parameters on the given node
+// and returns a Node-independent EBParam value. Templated on the node type so it
+// works with both rclcpp::Node and autoware::agnocast_wrapper::Node.
+template <typename NodeT>
+EBParam declare_eb_param(NodeT * node);
+
+// Node-independent elastic band smoother.
+//
+// The smoothing logic itself does not depend on any node type; the only place a
+// node type appears is the debug publisher, which is injected as a
+// autoware_utils_debug::BasicDebugPublisher<NodeT>. NodeT defaults to rclcpp::Node
+// so existing callers keep working unchanged (see the EBPathSmoother alias below);
+// the agnocast path instantiates it with autoware::agnocast_wrapper::Node.
+//
+// Parameters, logger and clock are passed by value and are node-type-agnostic.
+template <typename NodeT = rclcpp::Node>
+class BasicEBPathSmoother
 {
 public:
-  EBPathSmoother(
-    rclcpp::Node * node, const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
-    const CommonParam & common_param, const std::shared_ptr<TimeKeeper> time_keeper_ptr);
+  BasicEBPathSmoother(
+    const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
+    const CommonParam & common_param, const EBParam & eb_param, rclcpp::Logger logger,
+    const rclcpp::Clock & clock,
+    const std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<NodeT>> & debug_publisher,
+    const std::shared_ptr<TimeKeeper> time_keeper_ptr);
 
   std::vector<TrajectoryPoint> smoothTrajectory(
     const std::vector<TrajectoryPoint> & traj_points, const geometry_msgs::msg::Pose & ego_pose);
@@ -44,45 +105,6 @@ public:
   void onParam(const std::vector<rclcpp::Parameter> & parameters);
 
 private:
-  struct EBParam
-  {
-    // qp
-    struct QPParam
-    {
-      int max_iteration;
-      double eps_abs;
-      double eps_rel;
-    };
-
-    EBParam() = default;
-    explicit EBParam(rclcpp::Node * node);
-    void onParam(const std::vector<rclcpp::Parameter> & parameters);
-
-    // option
-    bool enable_warm_start;
-    bool enable_optimization_validation;
-
-    // common
-    double delta_arc_length;
-    int num_points;
-
-    // clearance
-    int num_joint_points;
-    double clearance_for_fix;
-    double clearance_for_joint;
-    double clearance_for_smooth;
-
-    // weight
-    double smooth_weight;
-    double lat_error_weight;
-
-    // qp
-    QPParam qp_param;
-
-    // validation
-    double max_validation_error;
-  };
-
   struct Constraint2d
   {
     struct Constraint
@@ -105,9 +127,8 @@ private:
   rclcpp::Logger logger_;
   rclcpp::Clock clock_;
 
-  // publisher
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_eb_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_eb_fixed_traj_pub_;
+  // debug publisher (injected by the node layer; may be nullptr to disable debug output)
+  std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<NodeT>> debug_publisher_;
 
   std::unique_ptr<autoware::osqp_interface::OSQPInterface> osqp_solver_ptr_;
   std::shared_ptr<std::vector<TrajectoryPoint>> prev_eb_traj_points_ptr_{nullptr};
@@ -128,6 +149,10 @@ private:
     const std::vector<double> & optimized_points, const std::vector<TrajectoryPoint> & traj_points,
     const int pad_start_idx) const;
 };
+
+// Backward-compatible alias: existing callers using a plain rclcpp::Node keep using
+// EBPathSmoother without any change.
+using EBPathSmoother = BasicEBPathSmoother<rclcpp::Node>;
 }  // namespace autoware::path_smoother
 
 #endif  // AUTOWARE__PATH_SMOOTHER__ELASTIC_BAND_HPP_

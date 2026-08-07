@@ -18,6 +18,7 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_OPTIMIZER_PLUGIN_BASE_HPP_
 #include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -49,9 +50,13 @@ public:
   // Plugin parameter update callback
   virtual void update_params(const TrajectoryOptimizerParams & params) = 0;
 
-  // Initialize plugin with node context (for pluginlib-loaded plugins)
+  // Initialize plugin with node context (for pluginlib-loaded plugins).
+  // The node is an autoware::agnocast_wrapper::Node so that the optimizer components
+  // (path_smoother / path_optimizer) can be created against either rclcpp::Node or
+  // agnocast::Node. The wrapper Node exposes the same parameter/publisher API in both
+  // ENABLE_AGNOCAST=0/1 builds, so plugins do not need to know which one is used.
   virtual void initialize(
-    const std::string & name, rclcpp::Node * node_ptr,
+    const std::string & name, autoware::agnocast_wrapper::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper,
     const TrajectoryOptimizerParams & params)
   {
@@ -66,13 +71,13 @@ public:
 
 protected:
   virtual void on_initialize(const TrajectoryOptimizerParams & params) = 0;
-  rclcpp::Node * get_node_ptr() const { return node_ptr_; }
+  autoware::agnocast_wrapper::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
   bool enabled_{true};
 
 private:
   std::string name_{"unnamed_plugin"};
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 };
 }  // namespace autoware::trajectory_optimizer::plugin

@@ -17,6 +17,9 @@
 
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <!-- Needed only when built with ENABLE_AGNOCAST=1; the component/plugin libraries then
+       include <agnocast/agnocast.hpp> via the agnocast wrapper macros. -->
+  <depend condition="$ENABLE_AGNOCAST == 1">agnocastlib</depend>
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_internal_planning_msgs</depend>
