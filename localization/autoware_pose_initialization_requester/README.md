@@ -1,8 +1,6 @@
-# automatic_pose_initializer
+# autoware_pose_initialization_requester
 
-## automatic_pose_initializer
-
-This node calls localization initialize API when the localization initialization state is uninitialized.
+This node calls localization initialize interface when the localization initialization state is uninitialized.
 Since the API uses GNSS pose when no pose is specified, initialization using GNSS can be performed automatically.
 
 | Interface    | Local Name | Global Name                            | Description                                |

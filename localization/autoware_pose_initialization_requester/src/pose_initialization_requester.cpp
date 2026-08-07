@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "automatic_pose_initializer.hpp"
+#include "pose_initialization_requester.hpp"
 
 #include <memory>
 
