@@ -19,8 +19,10 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
 
+#include <thrust/copy.h>
 #include <thrust/count.h>
 #include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
 #include <thrust/host_vector.h>
 #include <thrust/sort.h>
 
@@ -136,6 +138,16 @@ PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t st
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     distance_bin_upper_limits_d_ptr_.get(), config_.distance_bin_upper_limits_.data(),
     config_.distance_bin_upper_limits_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
+
+  // Pre-size scratch to the worst case (num_proposals) so the per-frame path
+  // performs no device (re)allocation. NMS scratch is reserved in circleNMS().
+  // yaw_norm_thresholds_ is constant -> upload once.
+  const std::size_t max_boxes = static_cast<std::size_t>(config_.num_proposals_);
+  boxes3d_d_.reserve(max_boxes);
+  det_boxes3d_d_.reserve(max_boxes);
+  keep_mask_d_.reserve(max_boxes);
+  final_det_boxes3d_d_.reserve(max_boxes);
+  yaw_norm_thresholds_d_ = config_.yaw_norm_thresholds_;
 }
 
 // cspell: ignore divup
@@ -146,45 +158,50 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   dim3 threads = {config_.threads_per_block_};
   dim3 blocks = {divup(config_.num_proposals_, threads.x)};
 
-  auto boxes3d_d = thrust::device_vector<Box3D>(config_.num_proposals_);
-  auto yaw_norm_thresholds_d = thrust::device_vector<float>(
-    config_.yaw_norm_thresholds_.begin(), config_.yaw_norm_thresholds_.end());
+  // Run all thrust algorithms on the node stream with a pre-allocated workspace,
+  // so they neither sync the default stream nor cudaMalloc/cudaFree per call.
+  const auto policy = thrust::cuda::par(thrust_workspace_.allocator()).on(stream);
 
+  boxes3d_d_.resize(config_.num_proposals_);
   generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
     label_pred_output, bbox_pred_output, score_output, config_.voxel_x_size_, config_.voxel_y_size_,
     config_.min_x_range_, config_.min_y_range_, config_.num_proposals_, config_.out_size_factor_,
-    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()), config_.num_classes_,
+    thrust::raw_pointer_cast(yaw_norm_thresholds_d_.data()), config_.num_classes_,
     distance_bin_upper_limits_d_ptr_.get(), score_thresholds_d_ptr_.get(),
-    config_.distance_bin_upper_limits_.size(), thrust::raw_pointer_cast(boxes3d_d.data()));
+    config_.distance_bin_upper_limits_.size(), thrust::raw_pointer_cast(boxes3d_d_.data()));
 
   // suppress by score
   const auto num_det_boxes3d =
-    thrust::count_if(thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_keep());
+    thrust::count_if(policy, boxes3d_d_.begin(), boxes3d_d_.end(), is_score_keep());
 
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }
 
-  thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
+  det_boxes3d_d_.resize(num_det_boxes3d);
   // Remove any boxes with score == 0.0 after distance-based and class-based filtering
   thrust::copy_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(), is_score_keep());
+    policy, boxes3d_d_.begin(), boxes3d_d_.end(), det_boxes3d_d_.begin(), is_score_keep());
 
   // sort by score
-  thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());
+  thrust::sort(policy, det_boxes3d_d_.begin(), det_boxes3d_d_.end(), score_greater());
 
-  // supress by NMS
-  thrust::device_vector<bool> final_keep_mask_d(num_det_boxes3d);
+  // suppress by NMS (writes keep_mask_d_)
   const auto num_final_det_boxes3d =
-    circleNMS(det_boxes3d_d, config_.circle_nms_dist_threshold_, final_keep_mask_d, stream);
-  thrust::device_vector<Box3D> final_det_boxes3d_d(num_final_det_boxes3d);
+    circleNMS(num_det_boxes3d, config_.circle_nms_dist_threshold_, stream);
+  final_det_boxes3d_d_.resize(num_final_det_boxes3d);
   thrust::copy_if(
-    thrust::device, det_boxes3d_d.begin(), det_boxes3d_d.end(), final_keep_mask_d.begin(),
-    final_det_boxes3d_d.begin(), is_kept());
+    policy, det_boxes3d_d_.begin(), det_boxes3d_d_.end(), keep_mask_d_.begin(),
+    final_det_boxes3d_d_.begin(), is_kept());
 
-  // memcpy device to host
+  // Copy results to host on the node stream (stream-local sync, not a
+  // default-stream barrier). A thrust::copy with a CUDA policy would
+  // mis-dispatch this device->host copy as device->device.
   det_boxes3d.resize(num_final_det_boxes3d);
-  thrust::copy(final_det_boxes3d_d.begin(), final_det_boxes3d_d.end(), det_boxes3d.begin());
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    det_boxes3d.data(), thrust::raw_pointer_cast(final_det_boxes3d_d_.data()),
+    num_final_det_boxes3d * sizeof(Box3D), cudaMemcpyDeviceToHost, stream));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 
   return cudaGetLastError();
 }

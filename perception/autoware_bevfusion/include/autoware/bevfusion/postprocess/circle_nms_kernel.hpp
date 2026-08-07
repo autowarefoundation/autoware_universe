@@ -23,12 +23,10 @@
 
 namespace autoware::bevfusion
 {
-// Non-maximum suppression (NMS) uses the distance on the xy plane instead of
-// intersection over union (IoU) to suppress overlapped objects.
-std::size_t circleNMS(
-  thrust::device_vector<Box3D> & boxes3d, const float distance_threshold,
-  thrust::device_vector<bool> & keep_mask, cudaStream_t stream);
-
+// Distance-based non-maximum suppression (xy-plane distance instead of IoU) is
+// implemented as a private PostprocessCuda method (see postprocess_kernel.hpp),
+// reusing that class's pre-allocated scratch. The kernel launcher lives in
+// circle_nms_kernel.cu.
 }  // namespace autoware::bevfusion
 
 #endif  // AUTOWARE__BEVFUSION__POSTPROCESS__CIRCLE_NMS_KERNEL_HPP_
