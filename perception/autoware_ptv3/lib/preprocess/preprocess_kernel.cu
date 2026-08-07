@@ -258,7 +258,12 @@ __global__ void scatterInverseMapKernel(
  *
  * The bit layout must match autoware-ml's z_order_encode, which the model was trained against.
  *
+ * @param x Grid coordinate on the x axis.
+ * @param y Grid coordinate on the y axis.
+ * @param z Grid coordinate on the z axis.
+ * @param depth Number of bits consumed per axis.
  * @param transposed Swap x and y ("z-trans" order).
+ * @return The serialized code.
  */
 __device__ inline std::int64_t serializeCoord(
   const std::int32_t x, const std::int32_t y, const std::int32_t z, const int depth,
@@ -280,6 +285,15 @@ __device__ inline std::int64_t serializeCoord(
 /**
  * @brief Maps a point to its grid coordinate. Single helper so the voxelization key and the
  * serialization codes always place a point in the same cell.
+ *
+ * @param point Point position; only x, y and z are read.
+ * @param voxel_size_x Voxel edge length on the x axis.
+ * @param voxel_size_y Voxel edge length on the y axis.
+ * @param voxel_size_z Voxel edge length on the z axis.
+ * @param min_x Grid origin on the x axis, in cells.
+ * @param min_y Grid origin on the y axis, in cells.
+ * @param min_z Grid origin on the z axis, in cells.
+ * @return The grid coordinate.
  */
 __device__ inline int3 gridCoord(
   const float4 & point, const float voxel_size_x, const float voxel_size_y,
@@ -297,6 +311,17 @@ __device__ inline int3 gridCoord(
  *
  * The code is unique per grid cell, so sorting by it deduplicates voxels and leaves them in
  * order-0 serialization order.
+ *
+ * @param points Input points.
+ * @param codes Output code per point.
+ * @param num_points Number of points.
+ * @param voxel_size_x Voxel edge length on the x axis.
+ * @param voxel_size_y Voxel edge length on the y axis.
+ * @param voxel_size_z Voxel edge length on the z axis.
+ * @param min_x Grid origin on the x axis, in cells.
+ * @param min_y Grid origin on the y axis, in cells.
+ * @param min_z Grid origin on the z axis, in cells.
+ * @param depth Serialization depth: bits per axis in the code.
  */
 __global__ void voxelizationCodeKernel(
   const float4 * __restrict__ points, std::int64_t * __restrict__ codes, int num_points,
@@ -367,6 +392,14 @@ __global__ void prepareFinestLevelOrderSortKernel(
  * @pre The input level is ascending in order-0 code (asserted below), so the parent code
  * (code >> 3 * pooling_depth) is non-decreasing and each parent's children are already
  * contiguous; comparing against the previous element finds the run starts without sorting.
+ *
+ * @param serialized_code_in Input level's codes, laid out [num_orders, input_count]; only the
+ * order-0 row is read.
+ * @param stage_counts Per-level voxel counts; entry `stage_index` is the input level's count.
+ * @param run_flags Output flags: 1 at each parent run start, 0 elsewhere (including padding).
+ * @param stage_index Level the input arrays describe.
+ * @param pooling_depth Bits each grid coordinate is shifted right by, i.e. log2(pooling stride).
+ * @param capacity Padded length of the arrays (max_num_voxels).
  */
 __global__ void markPoolingRunsKernel(
   const std::int64_t * __restrict__ serialized_code_in,
@@ -457,6 +490,14 @@ __global__ void fillPoolingStageKernel(
  * Every serialization order visits each parent's children contiguously and the parents in
  * ascending pooled code, so compacting the run heads yields the pooled level's
  * order-`order_index` ranking without sorting.
+ *
+ * @param order_in Input level's serialization orders, laid out [num_orders, input_count].
+ * @param cluster Parent segment index of each input voxel (see fillPoolingStageKernel).
+ * @param stage_counts Per-level voxel counts; entry `stage_index` is the input level's count.
+ * @param run_flags Output flags: 1 where the parent changes, 0 elsewhere (including padding).
+ * @param stage_index Level the input arrays describe.
+ * @param order_index Serialization order being walked.
+ * @param capacity Padded length of the arrays (max_num_voxels).
  */
 __global__ void markOrderRunsKernel(
   const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster,

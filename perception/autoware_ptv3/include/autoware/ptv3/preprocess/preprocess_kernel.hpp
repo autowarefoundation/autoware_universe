@@ -51,6 +51,23 @@ public:
    *
    * The emitted voxels are sorted by their order-0 serialized code, which
    * generateSerializedPoolingMetadata requires.
+   *
+   * @param input_data Input cloud in `input_format` layout.
+   * @param input_format Point layout of `input_data`.
+   * @param num_points Number of points in `input_data`.
+   * @param voxel_features Output feature vector (x, y, z, intensity) per voxel.
+   * @param voxel_coords Output grid coordinates, laid out [num_voxels, 3].
+   * @param voxel_hashes Output serialized codes, laid out [num_orders, num_voxels].
+   * @param compact_points Output representative input point per voxel, in `input_format` layout.
+   * @param reconstruction_features Optional output feature vectors of every input point (FULL
+   * reconstruction) or of the in-range ones (PARTIAL). Skipped if nullptr.
+   * @param cropped_source_points Optional output of the in-range input points, in `input_format`
+   * layout. Skipped if nullptr.
+   * @param inverse_map Optional output mapping each in-range point to its voxel index. Skipped if
+   * nullptr.
+   * @param num_cropped_points Output number of in-range points.
+   * @return Number of unique voxels. May exceed max_num_voxels, in which case only the first
+   * max_num_voxels voxels were written to the outputs.
    */
   std::size_t generateFeatures(
     const void * input_data, CloudFormat input_format, unsigned int num_points,
@@ -61,7 +78,12 @@ public:
   /**
    * @brief Builds the per-stage pooling metadata the encoder graph consumes.
    *
+   * @param grid_coord Grid coordinates of the input voxels, laid out [num_voxels, 3].
    * @param serialized_code Codes of the input voxels, laid out [num_orders, num_voxels].
+   * @param num_voxels Number of input voxels; clamped to max_num_voxels internally.
+   * @param stages Output device buffers to fill, one per pooling stage.
+   * @param stage_counts Output voxel count per level, laid out [num_stages + 1]; entry 0 is the
+   * (clamped) input count.
    * @pre The input voxels are sorted by their order-0 serialized code (`serialized_code` row 0),
    * as generateFeatures emits them. The coarser levels are derived with prefix scans that rely on
    * this ordering; an unsorted input silently produces wrong metadata. Asserted on device in
