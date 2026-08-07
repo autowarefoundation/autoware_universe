@@ -30,6 +30,24 @@ void logWarning(char const * msg);
 cudaError_t reportCudaStatus(
   cudaError_t status, char const * msg, char const * file, std::int32_t line);
 
+/// \brief Whether \p stream is currently being captured into a CUDA graph.
+bool isStreamCapturing(cudaStream_t stream);
+
+/// \brief Zero every output of a plugin, for use when its real work cannot run.
+///
+/// The spconv-backed plugins compute their output extents on the host, which forces host
+/// synchronization and library handle creation that CUDA rejects while a stream is capturing.
+/// TensorRT captures the stream when it times tactics during engine build, so those plugins
+/// cannot execute there. Writing deterministic zeros lets the build proceed; the tactic timing it
+/// produces for these layers is meaningless, which is harmless because they expose a single
+/// tactic. Callers must only use this while \ref isStreamCapturing is true.
+cudaError_t zeroPluginOutputs(
+  nvinfer1::PluginTensorDesc const * output_desc, std::int32_t num_outputs, void * const * outputs,
+  cudaStream_t stream);
+
+/// \brief Log, at most once per plugin instance, that capture forced the zero-output path.
+void warnOnceStreamCaptureUnsupported(char const * plugin_name, bool & already_warned);
+
 #define PLUGIN_CUDA_CHECK(val) reportCudaStatus((val), #val, __FILE__, __LINE__)
 
 #define PLUGIN_ASSERT(val) reportAssertion((val), #val, __FILE__, __LINE__)
