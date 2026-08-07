@@ -1,0 +1,147 @@
+// Copyright 2026 The Autoware Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef ROS_INTERFACE_HPP_
+#define ROS_INTERFACE_HPP_
+
+#include "type/interface.hpp"
+
+#include <autoware_driving_mode_manager/msg/debug_mode_flags.hpp>
+#include <autoware_driving_mode_manager/msg/debug_mode_request.hpp>
+
+#include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
+#include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
+#include <autoware_system_msgs/srv/change_autoware_control.hpp>
+#include <autoware_system_msgs/srv/change_operation_mode.hpp>
+#include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
+#include <autoware_vehicle_msgs/srv/control_mode_command.hpp>
+#include <tier4_system_msgs/msg/command_filter_status.hpp>
+#include <tier4_system_msgs/msg/command_source_status.hpp>
+#include <tier4_system_msgs/msg/driving_mode_flag.hpp>
+#include <tier4_system_msgs/msg/driving_mode_info.hpp>
+#include <tier4_system_msgs/msg/driving_mode_mrm_state.hpp>
+#include <tier4_system_msgs/msg/driving_mode_request.hpp>
+#include <tier4_system_msgs/msg/trajectory_source_status.hpp>
+#include <tier4_system_msgs/srv/change_command_filter.hpp>
+#include <tier4_system_msgs/srv/change_command_source.hpp>
+#include <tier4_system_msgs/srv/change_mrm_request.hpp>
+#include <tier4_system_msgs/srv/change_trajectory_source.hpp>
+
+#include <string>
+
+namespace autoware::driving_mode_manager
+{
+
+class RosInterface : public Interface
+{
+public:
+  explicit RosInterface(rclcpp::Node * node);
+  void init(MainLogic * logic) override { logic_ = logic; }
+
+  bool get_enable_debug_topics() const override { return enable_debug_topics_; }
+
+  rclcpp::Time now() const override;
+  void change_trajectory_source(const TrajectorySource & source) override;
+  void change_command_source(const CommandSource & source) override;
+  void change_command_filter(const CommandFilter & filter) override;
+  void change_platform_mode(const PlatformMode & mode) override;
+  void publish_operation_mode(const OperationModeState & state) override;
+  void publish_mrm_state(const MrmState & state) override;
+  void publish_driving_mode_request(const ModeRequest & request) override;
+  void publish_driving_mode_sync(const AutowareModeSet & modes) override;
+  void publish_driving_mode_info(const ModeInfo & info) override;
+  void publish_debug_flags(const DebugFlags & flags) override;
+  void publish_debug_request(const RequestModes & request) override;
+
+  void log_info(const std::string & message) override;
+  void log_warn(const std::string & message) override;
+  void log_error(const std::string & message) override;
+  void log_debug(const std::string & message) override;
+
+private:
+  using TrajectorySourceSrv = tier4_system_msgs::srv::ChangeTrajectorySource;
+  using ChangeCommandSourceSrv = tier4_system_msgs::srv::ChangeCommandSource;
+  using ChangeCommandFilterSrv = tier4_system_msgs::srv::ChangeCommandFilter;
+  using ControlModeCommandSrv = autoware_vehicle_msgs::srv::ControlModeCommand;
+  using OperationModeStateMsg = autoware_adapi_v1_msgs::msg::OperationModeState;
+  using MrmStateMsg = autoware_adapi_v1_msgs::msg::MrmState;
+
+  using DrivingModeRequestMsg = tier4_system_msgs::msg::DrivingModeRequest;
+  using DrivingModeFlagMsg = tier4_system_msgs::msg::DrivingModeFlag;
+  using DrivingModeInfoMsg = tier4_system_msgs::msg::DrivingModeInfo;
+  using DrivingModeMrmStateMsg = tier4_system_msgs::msg::DrivingModeMrmState;
+  using TrajectorySourceMsg = tier4_system_msgs::msg::TrajectorySourceStatus;
+  using CommandSourceMsg = tier4_system_msgs::msg::CommandSourceStatus;
+  using CommandFilterMsg = tier4_system_msgs::msg::CommandFilterStatus;
+  using ControlModeReportMsg = autoware_vehicle_msgs::msg::ControlModeReport;
+  using ChangeOperationModeSrv = autoware_system_msgs::srv::ChangeOperationMode;
+  using ChangeAutowareControlSrv = autoware_system_msgs::srv::ChangeAutowareControl;
+  using ChangeMrmRequestSrv = tier4_system_msgs::srv::ChangeMrmRequest;
+
+  using DebugModeFlagsMsg = autoware_driving_mode_manager::msg::DebugModeFlags;
+  using DebugModeRequestMsg = autoware_driving_mode_manager::msg::DebugModeRequest;
+
+  MainLogic * logic_;
+  bool enable_debug_topics_;
+
+  rclcpp::Node * node_;
+  rclcpp::Client<TrajectorySourceSrv>::SharedPtr cli_trajectory_source_;
+  rclcpp::Client<ChangeCommandSourceSrv>::SharedPtr cli_command_source_;
+  rclcpp::Client<ChangeCommandFilterSrv>::SharedPtr cli_command_filter_;
+  rclcpp::Client<ControlModeCommandSrv>::SharedPtr cli_control_mode_command_;
+  rclcpp::Publisher<OperationModeStateMsg>::SharedPtr pub_operation_mode_state_;
+  rclcpp::Publisher<MrmStateMsg>::SharedPtr pub_mrm_state_;
+
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_available_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_active_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_stable_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_continuable_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_sync_;
+  rclcpp::Subscription<DrivingModeMrmStateMsg>::SharedPtr sub_driving_mode_mrm_state_;
+  rclcpp::Subscription<TrajectorySourceMsg>::SharedPtr sub_trajectory_source_;
+  rclcpp::Subscription<CommandSourceMsg>::SharedPtr sub_command_source_;
+  rclcpp::Subscription<CommandFilterMsg>::SharedPtr sub_command_filter_;
+  rclcpp::Subscription<ControlModeReportMsg>::SharedPtr sub_control_mode_report_;
+  rclcpp::Service<ChangeOperationModeSrv>::SharedPtr srv_operation_mode_;
+  rclcpp::Service<ChangeAutowareControlSrv>::SharedPtr srv_autoware_control_;
+  rclcpp::Service<ChangeMrmRequestSrv>::SharedPtr srv_mrm_request_;
+  rclcpp::Publisher<DrivingModeRequestMsg>::SharedPtr pub_driving_mode_request_;
+  rclcpp::Publisher<DrivingModeFlagMsg>::SharedPtr pub_driving_mode_sync_;
+  rclcpp::Publisher<DrivingModeInfoMsg>::SharedPtr pub_driving_mode_info_;
+  rclcpp::Publisher<DebugModeFlagsMsg>::SharedPtr pub_debug_mode_flag_;
+  rclcpp::Publisher<DebugModeRequestMsg>::SharedPtr pub_debug_mode_request_;
+
+  void on_driving_mode_available(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_active(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_stable(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_continuable(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_sync(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_mrm_state(const DrivingModeMrmStateMsg & msg);
+  void on_trajectory_source(const TrajectorySourceMsg & msg);
+  void on_command_source(const CommandSourceMsg & msg);
+  void on_command_filter(const CommandFilterMsg & msg);
+  void on_control_mode_report(const ControlModeReportMsg & msg);
+  void on_change_operation_mode(
+    ChangeOperationModeSrv::Request::SharedPtr req,
+    ChangeOperationModeSrv::Response::SharedPtr res);
+  void on_change_autoware_control(
+    ChangeAutowareControlSrv::Request::SharedPtr req,
+    ChangeAutowareControlSrv::Response::SharedPtr res);
+  void on_change_mrm_request(
+    ChangeMrmRequestSrv::Request::SharedPtr req, ChangeMrmRequestSrv::Response::SharedPtr res);
+};
+
+}  // namespace autoware::driving_mode_manager
+
+#endif  // ROS_INTERFACE_HPP_
