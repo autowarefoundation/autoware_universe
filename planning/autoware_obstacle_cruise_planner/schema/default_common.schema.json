@@ -1,0 +1,125 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_obstacle_cruise_planner parameters",
+  "type": "object",
+  "definitions": {
+    "default_common": {
+      "type": "object",
+      "properties": {
+        "max_vel": {
+          "type": "number",
+          "description": "Maximum velocity limit [m/s].",
+          "default": 11.1,
+          "minimum": 0.0
+        },
+        "normal": {
+          "type": "object",
+          "properties": {
+            "min_acc": {
+              "type": "number",
+              "description": "Minimum deceleration for normal driving [m/s²].",
+              "default": -1.0,
+              "minimum": -10.0,
+              "maximum": 0.0
+            },
+            "max_acc": {
+              "type": "number",
+              "description": "Maximum acceleration for normal driving [m/s²].",
+              "default": 1.0,
+              "minimum": 0.0,
+              "maximum": 10.0
+            },
+            "min_jerk": {
+              "type": "number",
+              "description": "Minimum jerk for normal driving [m/s³].",
+              "default": -1.0,
+              "minimum": -10.0,
+              "maximum": 0.0
+            },
+            "max_jerk": {
+              "type": "number",
+              "description": "Maximum jerk for normal driving [m/s³].",
+              "default": 1.0,
+              "minimum": 0.0,
+              "maximum": 10.0
+            }
+          },
+          "required": ["min_acc", "max_acc", "min_jerk", "max_jerk"],
+          "additionalProperties": false
+        },
+        "slow_down": {
+          "type": "object",
+          "properties": {
+            "min_acc": {
+              "type": "number",
+              "description": "Minimum deceleration for slowing down [m/s²].",
+              "default": -1.0,
+              "minimum": -10.0,
+              "maximum": 0.0
+            },
+            "min_jerk": {
+              "type": "number",
+              "description": "Minimum jerk for slowing down [m/s³].",
+              "default": -1.0,
+              "minimum": -10.0,
+              "maximum": 0.0
+            }
+          },
+          "required": ["min_acc", "min_jerk"],
+          "additionalProperties": false
+        },
+        "limit": {
+          "type": "object",
+          "properties": {
+            "min_acc": {
+              "type": "number",
+              "description": "Minimum deceleration limit [m/s²].",
+              "default": -2.5,
+              "minimum": -10.0,
+              "maximum": 0.0
+            },
+            "max_acc": {
+              "type": "number",
+              "description": "Maximum acceleration limit [m/s²].",
+              "default": 1.0,
+              "minimum": 0.0,
+              "maximum": 10.0
+            },
+            "min_jerk": {
+              "type": "number",
+              "description": "Minimum jerk limit [m/s³].",
+              "default": -1.5,
+              "minimum": -10.0,
+              "maximum": 0.0
+            },
+            "max_jerk": {
+              "type": "number",
+              "description": "Maximum jerk limit [m/s³].",
+              "default": 1.5,
+              "minimum": 0.0,
+              "maximum": 10.0
+            }
+          },
+          "required": ["min_acc", "max_acc", "min_jerk", "max_jerk"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["max_vel", "normal", "slow_down", "limit"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/default_common"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
