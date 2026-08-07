@@ -194,7 +194,6 @@ sensing/autoware_radar_scan_to_pointcloud2/** taekjin.lee@tier4.jp yoshi.ri@tier
 sensing/autoware_radar_static_pointcloud_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_radar_threshold_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_radar_tracks_noise_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
-sensing/livox/autoware_livox_tag_filter/** kenzo.lobos@tier4.jp ryohsuke.mitsudome@tier4.jp
 simulator/autoware_carla_interface/** bin.wang@tier4.jp masaya.kataoka@tier4.jp maxime.clement@tier4.jp mradityagio@gmail.com
 simulator/autoware_dummy_traffic_light_publisher/** junya.sasaki@tier4.jp takayuki.akamine@tier4.jp
 simulator/autoware_fault_injection/** junya.sasaki@tier4.jp keisuke.shima@tier4.jp
