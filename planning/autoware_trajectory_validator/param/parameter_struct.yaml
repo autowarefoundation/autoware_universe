@@ -126,6 +126,11 @@ validator:
       default_value: false
       description: when true, unknown lights are handled like red lights
       read_only: false
+    enable_arrow_aware_yellow_passing:
+      type: bool
+      default_value: true
+      description: Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow
+      read_only: false
     stop_overshoot_margin:
       type: double
       default_value: 0.5

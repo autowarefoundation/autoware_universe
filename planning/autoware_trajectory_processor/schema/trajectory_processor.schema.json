@@ -705,6 +705,11 @@
               "description": "Treat unknown light as red light",
               "default": true
             },
+            "enable_arrow_aware_yellow_passing": {
+              "type": "boolean",
+              "description": "Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow (protected turn phase)",
+              "default": true
+            },
             "overshoot_tolerance": {
               "type": "number",
               "description": "Overshoot tolerance [m]",

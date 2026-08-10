@@ -13,37 +13,11 @@
 // limitations under the License.
 
 #include "autoware/traffic_light_compliance_checker/traffic_light_status_tracker.hpp"
+#include "autoware/traffic_light_compliance_checker/utils.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
 #include <vector>
-
-namespace
-{
-bool is_equal(
-  const autoware_perception_msgs::msg::TrafficLightElement & a,
-  const autoware_perception_msgs::msg::TrafficLightElement & b)
-{
-  return a.color == b.color && a.shape == b.shape && a.status == b.status;
-}
-
-bool is_equal(
-  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & a,
-  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & b)
-{
-  if (a.size() != b.size()) {
-    return false;
-  }
-
-  for (size_t i = 0; i < a.size(); ++i) {
-    if (!is_equal(a[i], b[i])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-}  // namespace
 
 namespace autoware::traffic_light_compliance_checker
 {
@@ -58,6 +32,44 @@ void TrafficLightStatusTracker::update_parameters(const StatusTrackerParameters 
   params_ = parameters;
 }
 
+YellowState TrafficLightStatusTracker::get_yellow_transition_state(
+  const int64_t traffic_light_group_id) const
+{
+  const auto it = signal_history_.find(traffic_light_group_id);
+  if (it == signal_history_.end()) {
+    return YellowState::kNotYellow;
+  }
+  return it->second.yellow_transition_state;
+}
+
+void TrafficLightStatusTracker::update_yellow_transition_state(
+  SignalStateHistory & history,
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & previous_elements,
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & current_elements)
+{
+  const bool is_amber_now = has_amber_circle(current_elements);
+  if (!is_amber_now) {
+    history.yellow_transition_state = YellowState::kNotYellow;
+    return;
+  }
+
+  // Only classify the transition on the first frame of amber.
+  if (history.yellow_transition_state != YellowState::kNotYellow) {
+    return;
+  }
+
+  if (previous_elements.empty()) {
+    // Origin unknown; keep kNotYellow so arrow-aware pass does not apply.
+    return;
+  }
+
+  if (has_green_circle(previous_elements)) {
+    history.yellow_transition_state = YellowState::kFromGreen;
+  } else {
+    history.yellow_transition_state = YellowState::kFromNonGreen;
+  }
+}
+
 autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker::filter_signals(
   const autoware_perception_msgs::msg::TrafficLightGroupArray & signals,
   const rclcpp::Time & current_time, const bool is_ego_stopped)
@@ -67,15 +79,19 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
 
   for (const auto & signal : signals.traffic_light_groups) {
     const auto id = signal.traffic_light_group_id;
+    std::vector<autoware_perception_msgs::msg::TrafficLightElement> previous_elements;
     if (signal_history_.find(id) == signal_history_.end()) {
-      signal_history_[id] = {signal, current_time, current_time};
+      signal_history_[id] = {signal, current_time, current_time, YellowState::kNotYellow};
     } else {
-      if (!is_equal(signal_history_[id].msg.elements, signal.elements)) {
+      previous_elements = signal_history_[id].msg.elements;
+      if (!is_equal(previous_elements, signal.elements)) {
         signal_history_[id].first_seen_time = current_time;
         signal_history_[id].msg = signal;
       }
       signal_history_[id].last_seen_time = current_time;
     }
+    // Classify from raw elements before stability filtering clears amber.
+    update_yellow_transition_state(signal_history_[id], previous_elements, signal.elements);
 
     auto filtered_signal = signal;
     if (is_ego_stopped) {
@@ -83,14 +99,9 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
       continue;
     }
     const auto state_duration = (current_time - signal_history_[id].first_seen_time).seconds();
-    const bool is_red = autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
-      signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
-      autoware_perception_msgs::msg::TrafficLightElement::RED);
-    const bool is_amber = autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
-      signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
-      autoware_perception_msgs::msg::TrafficLightElement::AMBER);
-    const bool is_unknown = autoware::traffic_light_utils::hasTrafficLightColor(
-      signal.elements, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
+    const bool is_red = has_red_circle(signal.elements);
+    const bool is_amber = has_amber_circle(signal.elements);
+    const bool is_unknown = has_unknown(signal.elements);
 
     if (is_red && state_duration < params_.stable_duration_threshold_red) {
       filtered_signal.elements.clear();
@@ -110,10 +121,8 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
 void TrafficLightStatusTracker::cleanup_signal_history(const rclcpp::Time & current_time)
 {
   for (auto it = signal_history_.begin(); it != signal_history_.end();) {
-    const bool is_red = autoware::traffic_light_utils::hasTrafficLightColor(
-      it->second.msg.elements, autoware_perception_msgs::msg::TrafficLightElement::RED);
-    const bool is_amber = autoware::traffic_light_utils::hasTrafficLightColor(
-      it->second.msg.elements, autoware_perception_msgs::msg::TrafficLightElement::AMBER);
+    const bool is_red = has_red_circle(it->second.msg.elements);
+    const bool is_amber = has_amber_circle(it->second.msg.elements);
     const double stable_duration = is_red     ? params_.stable_duration_threshold_red
                                    : is_amber ? params_.stable_duration_threshold_amber
                                               : params_.stable_duration_threshold_unknown;

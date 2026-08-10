@@ -162,6 +162,11 @@
               "description": "When true, UNKNOWN lights are treated identically to red lights.",
               "default": false
             },
+            "enable_arrow_aware_yellow_passing": {
+              "type": "boolean",
+              "description": "Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow (protected turn phase).",
+              "default": true
+            },
             "stop_overshoot_margin": {
               "type": "number",
               "description": "Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].",

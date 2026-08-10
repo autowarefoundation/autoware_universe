@@ -35,6 +35,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.crossing_time_limit = tl_stop_p.crossing_time_limit;
   p.treat_amber_light_as_red_light = tl_stop_p.treat_amber_light_as_red;
   p.treat_unknown_light_as_red_light = tl_stop_p.treat_unknown_light_as_red;
+  p.enable_arrow_aware_yellow_passing = tl_stop_p.enable_arrow_aware_yellow_passing;
   p.stop_overshoot_margin = tl_stop_p.overshoot_tolerance;
   p.allow_if_cannot_stop_distance = tl_stop_p.allow_if_cannot_stop_distance;
   p.min_lookahead_distance = tl_stop_p.min_lookahead_distance;

@@ -57,6 +57,7 @@ protected:
     params_.traffic_light.crossing_time_limit = 2.75;
     params_.traffic_light.treat_amber_light_as_red_light = false;
     params_.traffic_light.treat_unknown_light_as_red_light = false;
+    params.traffic_light.enable_arrow_aware_yellow_passing = true;
     params_.traffic_light.stable_duration_threshold_red = 0.0;
     params_.traffic_light.stable_duration_threshold_amber = 0.0;
     params_.traffic_light.stable_duration_threshold_unknown = 0.0;

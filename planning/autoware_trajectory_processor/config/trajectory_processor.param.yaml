@@ -103,6 +103,7 @@
       stop_for_amber_light: false
       treat_amber_light_as_red: false
       treat_unknown_light_as_red: true
+      enable_arrow_aware_yellow_passing: true # allow Green->Amber on turn lanes with mapped static arrow
       overshoot_tolerance: 0.5 # [m]
       allow_if_cannot_stop_distance: 1.0 # [m]
       min_lookahead_distance: 20.0 # [m] minimum forward length to scan for stop lines even at low ego speed

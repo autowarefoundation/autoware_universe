@@ -87,6 +87,13 @@ To prevent sudden, harsh emergency braking maneuvers caused by raw perception no
 - **Segment-by-Segment Geometric Scan:** The checker evaluates trajectory segments sequentially against mapped stop lines using a localized `boost::geometry::intersection` check. The loop breaks immediately upon finding the first chronological intersection point, calculating the dynamic distance-to-stop-line and interpolating the exact crossing timestamp (for amber light) using `autoware::interpolation::lerp`.
 - **Red Light Evaluation:** Generates a violation if an intersection occurs, unless the trajectory makes the ego come to a complete stop within the specified `stop_overshoot_margin`.
 - **Amber Light Evaluation:** Computes the dynamic stopping distance based on current velocity, acceleration, applied deceleration, and system response latency. If the vehicle can stop safely before the line, or if it cannot clear the intersection within the `crossing_time_limit`, an amber violation is recorded to enforce a stop.
+- **Arrow-aware amber passing:** On protected turn lanes with a separate direction-arrow bulb in the map, the circle signal often goes `GREEN → AMBER → RED` before `GREEN *_ARROW` appears. While the circle is amber after a green circle, requiring a stop would be overly strict. When `enable_arrow_aware_yellow_passing` is true, the checker skips stop-line collection (no amber/red violation) if all of the following hold:
+  - ego route lane is a left or right turn lane (`turn_direction`)
+  - the traffic light has a static arrow in the map (`subtype` containing `arrow`, or light-bulb `arrow` attribute)
+  - the amber phase was reached from a green circle (`YellowState::kFromGreen`)
+  - the current signal still reports an amber circle
+
+  Transitions from red (or unknown) to amber still require a stop. A brief red circle before the green arrow is reported is also still treated as a stop (same scope as the behavior velocity traffic light module).
 
 ## Structs and Interface Definitions
 
@@ -132,5 +139,6 @@ The interfaces pass inputs and output results through the following standard dat
 | `ego_stopped_velocity_threshold`               | `double` | Velocity threshold beneath which the ego vehicle is considered completely stopped ($m/s$).                 |
 | `treat_amber_light_as_red_light`               | `bool`   | If true, disables amber passing logic and treats all amber states as strict red signals.                   |
 | `treat_unknown_light_as_red_light`             | `bool`   | If true, evaluates unclassified or blank signal states as strict red signals.                              |
+| `enable_arrow_aware_yellow_passing`            | `bool`   | If true, allow Green Circle → Amber pass on turn lanes with a mapped static arrow.                         |
 | `checked_trajectory_length.deceleration_limit` | `double` | Comfortable stop deceleration limit ($m/s^2$) for computing trajectory checking length.                    |
 | `checked_trajectory_length.jerk_limit`         | `double` | Comfortable stop jerk limit ($m/s^3$) for computing trajectory checking length.                            |
