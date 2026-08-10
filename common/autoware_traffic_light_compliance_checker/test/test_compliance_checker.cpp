@@ -29,6 +29,7 @@
 #include <lanelet2_core/LaneletMap.h>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <vector>
@@ -81,7 +82,7 @@ autoware::vehicle_info_utils::VehicleInfo make_vehicle_info()
 }
 
 std::shared_ptr<lanelet::LaneletMap> create_map(
-  const std::string & turn_direction, const bool with_static_arrow)
+  const std::string & turn_direction = "", const bool with_static_arrow = false)
 {
   lanelet::Point3d sl1(lanelet::utils::getId(), k_stop_line_x, -5.0, 0.0);
   lanelet::Point3d sl2(lanelet::utils::getId(), k_stop_line_x, 5.0, 0.0);
@@ -143,6 +144,28 @@ std::vector<TrajectoryPoint> create_crossing_trajectory(const double velocity)
   return trajectory;
 }
 
+std::vector<TrajectoryPoint> create_stopping_trajectory(const double stop_x, const double velocity)
+{
+  std::vector<TrajectoryPoint> trajectory;
+  constexpr double spacing = 1.0;
+  const auto duration_sec = stop_x / std::max(velocity, 1e-3);
+  auto append_point = [&](const double x, const bool is_stop) {
+    TrajectoryPoint point;
+    point.pose.position.x = x;
+    point.pose.position.y = 0.0;
+    point.pose.orientation.w = 1.0;
+    point.longitudinal_velocity_mps = is_stop ? 0.0f : static_cast<float>(velocity);
+    point.acceleration_mps2 = 0.0f;
+    point.time_from_start = rclcpp::Duration::from_seconds((x / stop_x) * duration_sec);
+    trajectory.push_back(point);
+  };
+  for (double x = 0.0; x < stop_x - 1e-6; x += spacing) {
+    append_point(x, false);
+  }
+  append_point(stop_x, true);
+  return trajectory;
+}
+
 TrafficLightElement make_element(uint8_t color, uint8_t shape = TrafficLightElement::CIRCLE)
 {
   TrafficLightElement element;
@@ -166,22 +189,22 @@ TrafficLightGroupArray make_signals(const TrafficLightElement & element)
 
 Inputs make_inputs(
   const std::shared_ptr<lanelet::LaneletMap> & map, const TrafficLightGroupArray & signals,
-  const rclcpp::Time & time)
+  const rclcpp::Time & time, const double velocity = 10.0)
 {
   const auto lanelet_id = map->laneletLayer.begin()->id();
   Inputs input;
-  input.trajectory = create_crossing_trajectory(10.0);
+  input.trajectory = create_crossing_trajectory(velocity);
   input.map = map;
   input.route = create_route(lanelet_id);
   input.signals = signals;
   input.current_time = time;
-  input.current_velocity = 10.0;
+  input.current_velocity = velocity;
   input.current_acceleration = 0.0;
   return input;
 }
 }  // namespace
 
-class ArrowAwareAmberTest : public ::testing::Test
+class ComplianceCheckerTest : public ::testing::Test
 {
 protected:
   void SetUp() override
@@ -192,11 +215,8 @@ protected:
 
   void feed_signal(const TrafficLightGroupArray & signals, const rclcpp::Time & time)
   {
-    // Drive tracker state using a non-crossing check path via check() itself.
     auto map = create_map("right", true);
     auto input = make_inputs(map, signals, time);
-    // Short trajectory that does not cross the stop line, only to update tracker state.
-    input.trajectory = create_crossing_trajectory(10.0);
     // Truncate before stop line so no violation is recorded while priming history.
     input.trajectory.erase(
       std::remove_if(
@@ -212,7 +232,180 @@ protected:
   std::unique_ptr<TrafficLightComplianceChecker> checker_;
 };
 
-TEST_F(ArrowAwareAmberTest, GreenToAmberOnTurnLaneWithArrowAllowsPass)
+// ---------------------------------------------------------------------------
+// General compliance cases
+// ---------------------------------------------------------------------------
+
+TEST_F(ComplianceCheckerTest, NullMapReturnsError)
+{
+  Inputs input;
+  input.map = nullptr;
+  input.current_time = rclcpp::Time(100, 0, RCL_ROS_TIME);
+  const auto result = checker_->check(input, true, true);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error(), "Lanelet map is not set");
+}
+
+TEST_F(ComplianceCheckerTest, EmptyTrajectoryHasNoViolations)
+{
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::RED)), rclcpp::Time(100, 0, RCL_ROS_TIME));
+  input.trajectory.clear();
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+TEST_F(ComplianceCheckerTest, NoViolationWithGreenCircle)
+{
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::GREEN)),
+    rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+TEST_F(ComplianceCheckerTest, ViolationWithRedCircle)
+{
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::RED)), rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  ASSERT_FALSE(result->violations.empty());
+  EXPECT_EQ(result->violations.front().type, ViolationType::RED_LIGHT);
+  EXPECT_EQ(result->violations.front().traffic_light_id, k_light_id);
+}
+
+TEST_F(ComplianceCheckerTest, NoViolationWithRedCircleAndStopBeforeLine)
+{
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::RED)), rclcpp::Time(100, 0, RCL_ROS_TIME));
+  input.trajectory = create_stopping_trajectory(k_stop_line_x - 2.0, 10.0);
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+TEST_F(ComplianceCheckerTest, NoViolationWithRedCircleAndStopAtLineWithinMargin)
+{
+  params_.stop_overshoot_margin = 1.0;
+  checker_ = std::make_unique<TrafficLightComplianceChecker>(params_, make_vehicle_info());
+
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::RED)), rclcpp::Time(100, 0, RCL_ROS_TIME));
+  input.trajectory = create_stopping_trajectory(k_stop_line_x + 0.5, 10.0);
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+TEST_F(ComplianceCheckerTest, ViolationWithAmberCircle)
+{
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::AMBER)),
+    rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  ASSERT_FALSE(result->violations.empty());
+  EXPECT_EQ(result->violations.front().type, ViolationType::AMBER_LIGHT);
+}
+
+TEST_F(ComplianceCheckerTest, NoViolationWithAmberCircle)
+{
+  params_.crossing_time_limit = 10.0;
+  params_.deceleration_limit = 0.1;  // cannot stop before the line
+  params_.jerk_limit = 0.1;
+  checker_ = std::make_unique<TrafficLightComplianceChecker>(params_, make_vehicle_info());
+
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::AMBER)),
+    rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+TEST_F(ComplianceCheckerTest, NoViolationWithAmberCircleAndStopBeforeLine)
+{
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::AMBER)),
+    rclcpp::Time(100, 0, RCL_ROS_TIME));
+  input.trajectory = create_stopping_trajectory(k_stop_line_x - 2.0, 10.0);
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+TEST_F(ComplianceCheckerTest, ViolationWithAmberTreatedAsRed)
+{
+  params_.treat_amber_light_as_red_light = true;
+  checker_ = std::make_unique<TrafficLightComplianceChecker>(params_, make_vehicle_info());
+
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::AMBER)),
+    rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  ASSERT_FALSE(result->violations.empty());
+  EXPECT_EQ(result->violations.front().type, ViolationType::RED_LIGHT);
+}
+
+TEST_F(ComplianceCheckerTest, NoViolationWithUnknown)
+{
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::UNKNOWN)),
+    rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+TEST_F(ComplianceCheckerTest, ViolationWithUnknownTreatedAsRed)
+{
+  params_.treat_unknown_light_as_red_light = true;
+  checker_ = std::make_unique<TrafficLightComplianceChecker>(params_, make_vehicle_info());
+
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::UNKNOWN)),
+    rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  ASSERT_FALSE(result->violations.empty());
+  EXPECT_EQ(result->violations.front().type, ViolationType::RED_LIGHT);
+}
+
+TEST_F(ComplianceCheckerTest, NoViolationWithAllowIfCannotStopNearLine)
+{
+  params_.allow_if_cannot_stop_distance = 40.0;
+  params_.checked_trajectory_length.deceleration_limit = 0.1;
+  params_.checked_trajectory_length.jerk_limit = 0.1;
+  checker_ = std::make_unique<TrafficLightComplianceChecker>(params_, make_vehicle_info());
+
+  auto map = create_map();
+  auto input = make_inputs(
+    map, make_signals(make_element(TrafficLightElement::RED)), rclcpp::Time(100, 0, RCL_ROS_TIME));
+  const auto result = checker_->check(input, true, true);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->violations.empty());
+}
+
+// ---------------------------------------------------------------------------
+// Arrow-aware amber passing cases
+// ---------------------------------------------------------------------------
+
+TEST_F(ComplianceCheckerTest, NoViolationWithArrowAwareGreenToAmber)
 {
   const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
   const rclcpp::Time t1(100, 200000000, RCL_ROS_TIME);
@@ -226,7 +419,7 @@ TEST_F(ArrowAwareAmberTest, GreenToAmberOnTurnLaneWithArrowAllowsPass)
   EXPECT_TRUE(result->violations.empty());
 }
 
-TEST_F(ArrowAwareAmberTest, RedToAmberStillViolates)
+TEST_F(ComplianceCheckerTest, ViolationWithArrowAwareRedToAmber)
 {
   const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
   const rclcpp::Time t1(100, 200000000, RCL_ROS_TIME);
@@ -241,7 +434,7 @@ TEST_F(ArrowAwareAmberTest, RedToAmberStillViolates)
   EXPECT_EQ(result->violations.front().type, ViolationType::AMBER_LIGHT);
 }
 
-TEST_F(ArrowAwareAmberTest, NonTurnLaneStillViolates)
+TEST_F(ComplianceCheckerTest, ViolationWithArrowAwareNonTurnLane)
 {
   const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
   const rclcpp::Time t1(100, 200000000, RCL_ROS_TIME);
@@ -257,7 +450,7 @@ TEST_F(ArrowAwareAmberTest, NonTurnLaneStillViolates)
   EXPECT_EQ(result->violations.front().type, ViolationType::AMBER_LIGHT);
 }
 
-TEST_F(ArrowAwareAmberTest, NoStaticArrowStillViolates)
+TEST_F(ComplianceCheckerTest, ViolationWithArrowAwareNoStaticArrow)
 {
   const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
   const rclcpp::Time t1(100, 200000000, RCL_ROS_TIME);
@@ -272,25 +465,7 @@ TEST_F(ArrowAwareAmberTest, NoStaticArrowStillViolates)
   EXPECT_EQ(result->violations.front().type, ViolationType::AMBER_LIGHT);
 }
 
-TEST_F(ArrowAwareAmberTest, FeatureDisabledStillViolates)
-{
-  params_.enable_arrow_aware_amber_passing = false;
-  checker_ = std::make_unique<TrafficLightComplianceChecker>(params_, make_vehicle_info());
-
-  const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
-  const rclcpp::Time t1(100, 200000000, RCL_ROS_TIME);
-
-  feed_signal(make_signals(make_element(TrafficLightElement::GREEN)), t0);
-
-  auto map = create_map("right", true);
-  auto input = make_inputs(map, make_signals(make_element(TrafficLightElement::AMBER)), t1);
-  const auto result = checker_->check(input, true, true);
-  ASSERT_TRUE(result.has_value());
-  ASSERT_FALSE(result->violations.empty());
-  EXPECT_EQ(result->violations.front().type, ViolationType::AMBER_LIGHT);
-}
-
-TEST_F(ArrowAwareAmberTest, GreenRightArrowAllowsPass)
+TEST_F(ComplianceCheckerTest, NoViolationWithGreenRightArrow)
 {
   const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
 
