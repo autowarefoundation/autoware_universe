@@ -23134,10 +23134,16 @@ sensor_mappings:
       topic_info: /sensing/camera/CAM_FRONT/camera_info
       frequency_hz: 11
       qos_profile: reliable
+      image_encoding: bgra8
     parameters:
       image_size_x: 1600
       image_size_y: 900
       fov: 70.0</code></p>
+<p><code>image_encoding</code> applies to cameras and accepts <code>bgra8</code> (default, what CARLA
+renders) or <code>mono8</code>. Publishing <code>mono8</code> converts once in the bridge and sends a
+quarter of the bytes, which is worth it when every consumer of that camera
+works on luminance alone, such as feature tracking or visual odometry. A
+1600x900 frame is 5,760,000 bytes as <code>bgra8</code> and 1,440,000 bytes as <code>mono8</code>.</p>
 <p>For CARLA sensor parameters, see <a href="https://carla.readthedocs.io/en/latest/ref_sensors/">CARLA Sensor Reference</a>.</p>
 <h5 id="light-weight-sensor-mapping">Light-Weight Sensor Mapping<a class="headerlink" href="#light-weight-sensor-mapping" title="Permanent link">#</a></h5>
 <p>For machines with limited GPU/CPU resources, an alternative <code>config/sensor_mapping_light_weight.yaml</code> is provided to reduce simulator load. Compared to the default mapping, it:</p>
