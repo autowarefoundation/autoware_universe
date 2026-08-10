@@ -14,7 +14,6 @@
 
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_processor/utils.hpp"
 
 #include <Eigen/Core>

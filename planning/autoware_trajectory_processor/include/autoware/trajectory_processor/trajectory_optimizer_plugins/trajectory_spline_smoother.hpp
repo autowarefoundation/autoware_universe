@@ -16,7 +16,7 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_SPLINE_SMOOTHER_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_SPLINE_SMOOTHER_HPP_
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -30,19 +30,23 @@
 
 namespace autoware::trajectory_optimizer::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
-class TrajectorySplineSmoother : public TrajectoryOptimizerPluginBase
+class TrajectorySplineSmoother : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectorySplineSmoother() = default;
   ~TrajectorySplineSmoother() = default;
-  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
-  void update_params(const TrajectoryOptimizerParams & params) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
 protected:
-  void on_initialize(const TrajectoryOptimizerParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   trajectory_optimizer_node_params::Params::TrajectorySplineSmoother spline_params_;

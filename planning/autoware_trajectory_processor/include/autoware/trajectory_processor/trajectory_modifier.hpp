@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_modifier_context.hpp"
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/input_data.hpp"
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_context.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_data.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
@@ -37,6 +37,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -62,9 +63,9 @@ public:
 private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
   void on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
-  void load_plugin(const std::string & name);
+  void load_plugin(const std::string & name, std::size_t index);
   void unload_plugin(const std::string & name);
-  tl::expected<plugin::InputData, std::string> make_input_data();
+  tl::expected<trajectory_processor::TrajectoryProcessorData, std::string> make_input_data();
   bool initialized_modifiers_{false};
 
   std::unique_ptr<trajectory_modifier_params::ParamListener> param_listener_;
@@ -97,10 +98,12 @@ private:
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_processing_time_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
-  pluginlib::ClassLoader<plugin::TrajectoryModifierPluginBase> plugin_loader_;
-  std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> plugins_;
+  pluginlib::ClassLoader<trajectory_processor::plugin::TrajectoryProcessorPluginBase>
+    plugin_loader_;
+  std::vector<std::shared_ptr<trajectory_processor::plugin::TrajectoryProcessorPluginBase>>
+    plugins_;
 
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  std::shared_ptr<trajectory_processor::TrajectoryProcessorContext> context_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };
 

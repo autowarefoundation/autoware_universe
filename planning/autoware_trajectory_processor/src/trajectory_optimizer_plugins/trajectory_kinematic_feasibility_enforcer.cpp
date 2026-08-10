@@ -33,26 +33,27 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryKinematicFeasibilityEnforcer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   // Check if plugin is enabled
-  if (!enabled_) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
 
   // Need at least 2 points
   if (traj_points.size() < 2) {
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Always use ego pose as anchor (current vehicle state)
-  const auto & ego_odometry = data.current_odometry;
+  const auto & ego_odometry = *data.current_odometry;
 
   // Apply kinematic feasibility constraints
   // This adjusts positions and headings while preserving segment distances
   // Velocities and time stamps remain unchanged to preserve dt structure for QP smoother
   enforce_ackermann_yaw_rate_constraints(traj_points, ego_odometry);
+  return ProcessingResult::Modified;
 }
 
 void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constraints(
@@ -171,7 +172,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   traj_points.back().pose.orientation = traj_points[traj_points.size() - 2].pose.orientation;
 }
 
-void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryProcessorParams & params)
 {
   auto node_ptr = get_node_ptr();
 
@@ -191,7 +192,7 @@ void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryOptim
     vehicle_info_.max_steer_angle_rad * 180.0 / M_PI);
 }
 
-void TrajectoryKinematicFeasibilityEnforcer::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryKinematicFeasibilityEnforcer::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_kinematic_feasibility_enforcer;
   feasibility_params_ = params.trajectory_kinematic_feasibility;
@@ -202,4 +203,4 @@ void TrajectoryKinematicFeasibilityEnforcer::update_params(const TrajectoryOptim
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

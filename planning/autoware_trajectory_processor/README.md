@@ -19,7 +19,7 @@ The `autoware_trajectory_optimizer` package generates smooth and feasible trajec
 
 ## Architecture
 
-The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from `TrajectoryOptimizerPluginBase` and is loaded via the ROS 2 pluginlib system.
+The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from `TrajectoryProcessorPluginBase` and is loaded via the ROS 2 pluginlib system.
 
 ### Plugin Loading and Execution
 
@@ -145,16 +145,17 @@ The `autoware_trajectory_modifier` package provides a plugin-based architecture 
 
 ### Architecture
 
-The trajectory modifier uses a plugin-based system where different modification algorithms can be implemented as plugins. Each plugin inherits from the `TrajectoryModifierPluginBase` class and implements the required interface.
+The trajectory modifier and optimizer share a plugin-based system where different processing algorithms can be implemented as plugins. Each plugin inherits from `TrajectoryProcessorPluginBase`.
 
 #### Plugin Interface
 
-All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implement:
+All modifier plugins must inherit from `TrajectoryProcessorPluginBase` and implement:
 
-- `modify_trajectory()` - Main method to modify trajectory points
+- `process()` - Process trajectory points and return `ProcessingResult::Modified` or `ProcessingResult::Unchanged`
 - `on_initialize()` - Initialize plugin members and parameters
 - `update_params()` - Handle parameter updates
-- `is_trajectory_modification_required()` - Determine if modification is needed
+
+`is_trajectory_modification_required()` may be retained as a plugin-local helper, but is not part of the common interface.
 
 #### Current Plugins
 
@@ -204,7 +205,7 @@ Parameters can be set via YAML configuration files in the `config/` directory.
 To add a new modifier plugin:
 
 1. Create header and source files in `trajectory_modifier_plugins/`
-2. Inherit from `TrajectoryModifierPluginBase`
+2. Inherit from `TrajectoryProcessorPluginBase`
 3. Implement the required virtual methods
-4. Register the plugin in the main node's `initialize_modifiers()` method
+4. Export the plugin with `TrajectoryProcessorPluginBase` and register it in `plugins.xml`
 5. Add plugin-specific parameters to the schema and config files

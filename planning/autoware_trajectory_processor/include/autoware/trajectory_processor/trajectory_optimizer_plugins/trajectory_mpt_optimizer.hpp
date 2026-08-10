@@ -18,8 +18,7 @@
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_trajectory_processor/trajectory_optimizer_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -33,6 +32,11 @@
 
 namespace autoware::trajectory_optimizer::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 
 using autoware::path_optimizer::DebugData;
 using autoware::path_optimizer::EgoNearestParam;
@@ -66,17 +70,17 @@ struct MPTParams
     5};  // Moving average window size for acceleration smoothing
 };
 
-class TrajectoryMPTOptimizer : public TrajectoryOptimizerPluginBase
+class TrajectoryMPTOptimizer : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectoryMPTOptimizer() = default;
 
-  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
 
-  void update_params(const TrajectoryOptimizerParams & params) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
 protected:
-  void on_initialize(const TrajectoryOptimizerParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   // Core MPT optimizer instance
@@ -97,7 +101,7 @@ private:
 
   PlannerData create_planner_data(
     const TrajectoryPoints & traj_points, const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
-    const TrajectoryOptimizerData & data) const;
+    const TrajectoryProcessorData & data) const;
 
   void publish_debug_markers(
     const trajectory_mpt_optimizer_utils::BoundsPair & bounds,

@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_context.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -31,6 +31,7 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -53,12 +54,17 @@ private:
   void publish_processing_time_ms(double processing_time_ms);
   void update_params();
   void initialize_optimizers();
-  void load_plugin(const std::string & plugin_name);
+  void load_plugin(const std::string & plugin_name, std::size_t pipeline_index);
   bool initialized_optimizers_{false};
 
   // Pluginlib loader and plugin storage
-  std::unique_ptr<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>> plugin_loader_;
-  std::vector<std::shared_ptr<plugin::TrajectoryOptimizerPluginBase>> plugins_;
+  std::unique_ptr<
+    pluginlib::ClassLoader<autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase>>
+    plugin_loader_;
+  std::vector<
+    std::shared_ptr<autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase>>
+    plugins_;
+  std::shared_ptr<autoware::trajectory_processor::TrajectoryProcessorContext> context_;
 
   // interface subscriber
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
@@ -82,7 +88,7 @@ private:
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 
   std::unique_ptr<trajectory_optimizer_node_params::ParamListener> param_listener_;
-  TrajectoryOptimizerParams params_;
+  trajectory_optimizer_node_params::Params params_;
 };
 
 }  // namespace autoware::trajectory_optimizer

@@ -18,7 +18,7 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_
 
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
@@ -35,6 +35,10 @@
 
 namespace autoware::trajectory_optimizer::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
@@ -58,17 +62,17 @@ struct TrajectoryVelocityOptimizerParams
   ContinuousJerkSmootherParams continuous_jerk_smoother_params;
 };
 
-class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
+class TrajectoryVelocityOptimizer : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectoryVelocityOptimizer() = default;
   ~TrajectoryVelocityOptimizer() = default;
 
-  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
-  void update_params(const TrajectoryOptimizerParams & params) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
 protected:
-  void on_initialize(const TrajectoryOptimizerParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   std::shared_ptr<ContinuousJerkSmoother> continuous_jerk_smoother_{nullptr};

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/velocity_modifier.hpp"
+#include "trajectory_processor_test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
@@ -34,10 +35,12 @@
 
 namespace
 {
-using autoware::trajectory_modifier::TrajectoryModifierContext;
-using autoware::trajectory_modifier::plugin::InputData;
-using autoware::trajectory_modifier::plugin::TrajectoryPoints;
 using autoware::trajectory_modifier::plugin::VelocityModifier;
+using autoware::trajectory_processor::TrajectoryProcessorContext;
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::test::process_plugin;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
 TrajectoryPoint create_trajectory_point(
@@ -109,11 +112,13 @@ protected:
 
     set_up_default_params();
 
-    // Create the context and the plugin once. Tests build per-frame InputData inline,
+    // Create the context and the plugin once. Tests build per-frame TrajectoryProcessorData inline,
     // and inject any required TF directly into context_->tf_buffer.
-    context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
+    context_ = std::make_shared<TrajectoryProcessorContext>(node_.get());
     plugin_ = std::make_unique<VelocityModifier>();
-    plugin_->initialize("test_velocity_modifier", node_.get(), time_keeper_, context_, params_);
+    plugin_->initialize(
+      "test_velocity_modifier", node_.get(), time_keeper_, context_,
+      TrajectoryProcessorParams{params_});
   }
 
   void TearDown() override
@@ -137,18 +142,18 @@ protected:
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<VelocityModifier> plugin_;
   trajectory_modifier_params::Params params_;
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  std::shared_ptr<TrajectoryProcessorContext> context_;
 };
 
 TEST_F(VelocityModifierIntegrationTest, TrajectoryNotModifiedWhenDisabled)
 {
   // Arrange
   params_.use_velocity_modifier = false;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
   TrajectoryPoints trajectory;
 
   // Act
-  const bool modified = plugin_->modify_trajectory(trajectory, InputData{});
+  const bool modified = process_plugin(*plugin_, trajectory, TrajectoryProcessorData{});
 
   // Assert
   EXPECT_FALSE(modified);
@@ -160,7 +165,7 @@ TEST_F(VelocityModifierIntegrationTest, TrajectoryNotModifiedForEmptyTrajectory)
   TrajectoryPoints trajectory;
 
   // Act
-  const bool modified = plugin_->modify_trajectory(trajectory, InputData{});
+  const bool modified = process_plugin(*plugin_, trajectory, TrajectoryProcessorData{});
 
   // Assert
   EXPECT_FALSE(modified);
@@ -172,7 +177,7 @@ TEST_F(VelocityModifierIntegrationTest, TrajectoryNotModifiedWhenNoStopPoint)
   auto trajectory = create_constant_velocity_trajectory(20.0, 10.0);
 
   // Act
-  const bool modified = plugin_->modify_trajectory(trajectory, InputData{});
+  const bool modified = process_plugin(*plugin_, trajectory, TrajectoryProcessorData{});
 
   // Assert
   EXPECT_FALSE(modified);
@@ -184,7 +189,7 @@ TEST_F(VelocityModifierIntegrationTest, TrajectoryNotModifiedForSmoothStoppingTr
   auto trajectory = create_constant_deceleration_trajectory(20.0, 10.0);
 
   // Act
-  const bool modified = plugin_->modify_trajectory(trajectory, InputData{});
+  const bool modified = process_plugin(*plugin_, trajectory, TrajectoryProcessorData{});
 
   // Assert
   EXPECT_FALSE(modified);
@@ -196,7 +201,7 @@ TEST_F(VelocityModifierIntegrationTest, TrajectoryModifiedForStepChangeZeroVeloc
   auto trajectory = create_step_change_zero_velocity_trajectory(20.0, 10.0, 15.0);
 
   // Act
-  const bool modified = plugin_->modify_trajectory(trajectory, InputData{});
+  const bool modified = process_plugin(*plugin_, trajectory, TrajectoryProcessorData{});
 
   // Assert
   EXPECT_TRUE(modified);

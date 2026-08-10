@@ -41,7 +41,7 @@ using utils::obstacle_stop::get_trajectory_shape;
 using utils::obstacle_stop::PointCloud;
 using utils::obstacle_stop::PointCloud2;
 
-void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
+void ObstacleStop::on_initialize(const TrajectoryProcessorParams & params)
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
@@ -103,7 +103,7 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
   }
 }
 
-void ObstacleStop::update_params(const TrajectoryModifierParams & params)
+void ObstacleStop::update_params(const TrajectoryProcessorParams & params)
 {
   params_ = params.obstacle_stop;
   stopping_params_ = params.stopping_constraints;
@@ -153,7 +153,7 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
 }
 
 bool ObstacleStop::is_trajectory_modification_required(
-  const TrajectoryPoints & traj_points, const InputData & input)
+  const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   debug_data_ = DebugData();
   safety_factors_ = SafetyFactorArray{};
@@ -187,26 +187,31 @@ bool ObstacleStop::is_trajectory_modification_required(
   return !is_safe;
 }
 
-bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points, const InputData & input)
+ProcessingResult ObstacleStop::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & input)
 {
-  autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::modify_trajectory", *get_time_keeper());
+  autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::process", *get_time_keeper());
 
-  if (!enabled_ || traj_points.size() < 2) return false;
+  if (!enabled_ || traj_points.size() < 2) return ProcessingResult::Unchanged;
 
   auto trajectory = traj_points;
   utils::obstacle_stop::trim_trajectory_and_remove_duplicates(trajectory);
-  if (trajectory.size() < 2) return false;
+  if (trajectory.size() < 2) return ProcessingResult::Unchanged;
 
-  if (!is_trajectory_modification_required(trajectory, input)) return false;
+  if (!is_trajectory_modification_required(trajectory, input)) {
+    return ProcessingResult::Unchanged;
+  }
 
-  if (!nearest_collision_point_) return false;
+  if (!nearest_collision_point_) return ProcessingResult::Unchanged;
 
   traj_points = std::move(trajectory);
 
-  return set_stop_point(traj_points, input);
+  return set_stop_point(traj_points, input) ? ProcessingResult::Modified
+                                            : ProcessingResult::Unchanged;
 }
 
-bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputData & input)
+bool ObstacleStop::set_stop_point(
+  TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::set_stop_point", *get_time_keeper());
 
@@ -239,7 +244,9 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
   auto distance =
     motion_utils::calcSignedArcLength(traj_points, ego_pose.position, stop_pose.position);
   if (std::isnan(distance)) distance = 0.0;
-  planning_factor_interface_->add(distance, stop_pose, PlanningFactor::STOP, safety_factors_);
+  planning_factor_interface_->add(
+    distance, stop_pose, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    safety_factors_);
 
   RCLCPP_WARN_THROTTLE(
     get_node_ptr()->get_logger(), *get_clock(), 1000,
@@ -247,7 +254,8 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
   return true;
 }
 
-void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points, const InputData & input)
+void ObstacleStop::check_obstacles(
+  const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_obstacles", *get_time_keeper());
   const auto collision_point_objects = check_predicted_objects(traj_points, input);
@@ -300,7 +308,7 @@ void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points, const I
 }
 
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
-  const TrajectoryPoints & traj_points, const InputData & input)
+  const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "ObstacleStop::check_predicted_objects", *get_time_keeper());
@@ -336,7 +344,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 }
 
 std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
-  const TrajectoryPoints & traj_points, const InputData & input)
+  const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_pointcloud", *get_time_keeper());
   if (!params_.use_pointcloud || !input.obstacle_pointcloud) return std::nullopt;
@@ -424,14 +432,19 @@ void ObstacleStop::publish_debug_string(bool is_safe) const
     debug_data_.cluster_points ? debug_data_.cluster_points->data.size() : 0;
   std::ostringstream ss;
   ss << std::fixed << std::setprecision(2) << std::boolalpha;
-  ss << "OBSTACLE STOP MODIFIER: " << "\n";
-  ss << "\t\t" << "SAFE: " << is_safe << "\n";
-  ss << "\t\t" << "OBJECTS: " << debug_data_.filtered_objects.objects.size() << " --> "
+  ss << "OBSTACLE STOP MODIFIER: "
+     << "\n";
+  ss << "\t\t"
+     << "SAFE: " << is_safe << "\n";
+  ss << "\t\t"
+     << "OBJECTS: " << debug_data_.filtered_objects.objects.size() << " --> "
      << debug_data_.target_polygons.size() << "\n";
-  ss << "\t\t" << "POINTCLOUD: " << filtered_pcd_size << " --> " << cluster_pcd_size << " --> "
+  ss << "\t\t"
+     << "POINTCLOUD: " << filtered_pcd_size << " --> " << cluster_pcd_size << " --> "
      << debug_data_.target_pcd_points.size() << "\n";
   if (nearest_collision_point_) {
-    ss << "\t\t" << "DISTANCE TO COLLISION: " << nearest_collision_point_->arc_length << " m"
+    ss << "\t\t"
+       << "DISTANCE TO COLLISION: " << nearest_collision_point_->arc_length << " m"
        << "\n";
     ss << "\t\t"
        << "OBSTACLE TYPE: " << (nearest_collision_point_->is_dynamic ? "DYNAMIC" : "STATIC")
@@ -520,4 +533,4 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::ObstacleStop,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
