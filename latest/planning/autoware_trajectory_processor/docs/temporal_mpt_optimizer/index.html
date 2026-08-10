@@ -23094,7 +23094,7 @@ plugin_names:
 <p>Two steps are required:</p>
 <ol>
 <li>Add the plugin class to <code>plugin_names</code> in <code>config/trajectory_optimizer.param.yaml</code> (position sets when it runs relative to other plugins).</li>
-<li>Set <code>use_temporal_mpt_optimizer: true</code> (runtime gate inside <code>optimize_trajectory()</code>).</li>
+<li>Set <code>use_temporal_mpt_optimizer: true</code> (runtime gate inside <code>process()</code>).</li>
 </ol>
 <p>To disable completely, remove the class from <code>plugin_names</code>. Setting only <code>use_temporal_mpt_optimizer: false</code> skips optimization but still loads and initializes acados if the plugin remains in the list.</p>
 <p>Plugin-specific parameters live in <code>config/plugins/trajectory_temporal_mpt_optimizer.param.yaml</code> (loaded from <code>launch/trajectory_optimizer.launch.xml</code>).</p>
