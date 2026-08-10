@@ -38,6 +38,10 @@ std::tuple<
   const rosidl_typesupport_introspection_cpp::ServiceMembers *>
 get_service_members(const std::string & type);
 
+/// Allocate a zero-initialized message of the type described by `members`.
+std::shared_ptr<void> allocate_message(
+  const rosidl_typesupport_introspection_cpp::MessageMembers * members);
+
 }  // namespace generic_service_divider
 
 #endif  // GENERIC_SERVICE_DIVIDER__SERVICE_TYPESUPPORT_HELPERS_HPP_

@@ -18,7 +18,6 @@
 #include "rcl/client.h"
 #include "rclcpp/exceptions.hpp"
 #include "rclcpp/node_interfaces/node_base_interface.hpp"
-#include "rosidl_runtime_cpp/message_initialization.hpp"
 #include "rosidl_typesupport_introspection_cpp/service_introspection.hpp"
 
 #include <memory>
@@ -54,13 +53,7 @@ GenericClient::GenericClient(
 
 std::shared_ptr<void> GenericClient::create_response()
 {
-  const auto * members = response_members_;
-  auto response = std::shared_ptr<void>(new uint8_t[members->size_of_], [members](void * ptr) {
-    members->fini_function(ptr);
-    delete[] static_cast<uint8_t *>(ptr);
-  });
-  response_members_->init_function(response.get(), rosidl_runtime_cpp::MessageInitialization::ZERO);
-  return response;
+  return allocate_message(response_members_);
 }
 
 std::shared_ptr<rmw_request_id_t> GenericClient::create_request_header()
@@ -91,13 +84,7 @@ void GenericClient::handle_response(
 
 GenericClient::SharedRequest GenericClient::create_request()
 {
-  const auto * members = request_members_;
-  auto request = std::shared_ptr<void>(new uint8_t[members->size_of_], [members](void * ptr) {
-    members->fini_function(ptr);
-    delete[] static_cast<uint8_t *>(ptr);
-  });
-  request_members_->init_function(request.get(), rosidl_runtime_cpp::MessageInitialization::ZERO);
-  return request;
+  return allocate_message(request_members_);
 }
 
 GenericClient::SharedFuture GenericClient::async_send_request(

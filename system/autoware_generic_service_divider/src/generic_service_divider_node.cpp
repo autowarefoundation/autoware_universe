@@ -15,6 +15,7 @@
 #include "generic_service_divider/service_divider_plugin_base.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rcpputils/join.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -22,7 +23,6 @@
 
 #include <chrono>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -75,6 +75,14 @@ public:
   }
 
 private:
+  struct ReadinessSummary
+  {
+    bool all_ready{true};
+    std::size_t total_ready{0};
+    std::size_t total_outputs{0};
+    std::vector<std::string> waiting_records;
+  };
+
   void check_service_startup_readiness(diagnostic_updater::DiagnosticStatusWrapper & stat)
   {
     if (plugins_.empty()) {
@@ -83,29 +91,39 @@ private:
       return;
     }
 
-    bool all_ready = true;
-    std::vector<std::string> waiting_records;
-    std::size_t total_ready = 0;
-    std::size_t total_outputs = 0;
+    const auto summary = collect_readiness_summary(stat);
+
+    stat.add("plugin_count", static_cast<int>(plugins_.size()));
+    stat.addf("output_services_ready", "%zu/%zu", summary.total_ready, summary.total_outputs);
+    stat.add(
+      "waiting_output_services", summary.waiting_records.empty()
+                                   ? std::string("none")
+                                   : rcpputils::join(summary.waiting_records, " | "));
+
+    if (summary.all_ready) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "All service checks completed");
+    } else {
+      stat.summary(
+        diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+        "Waiting for output services before input service advertisement");
+    }
+  }
+
+  /// Aggregate every plugin's startup status, adding the per-plugin entries to `stat`.
+  ReadinessSummary collect_readiness_summary(diagnostic_updater::DiagnosticStatusWrapper & stat)
+  {
+    ReadinessSummary summary;
 
     for (const auto & plugin : plugins_) {
       const auto info = plugin->get_startup_diagnostic_info();
-      total_ready += info.ready_output_service_count;
-      total_outputs += info.total_output_service_count;
-
-      if (!info.input_service_started) {
-        all_ready = false;
-      }
+      summary.total_ready += info.ready_output_service_count;
+      summary.total_outputs += info.total_output_service_count;
+      summary.all_ready = summary.all_ready && info.input_service_started;
 
       if (!info.waiting_output_services.empty()) {
-        std::ostringstream oss;
-        for (std::size_t i = 0; i < info.waiting_output_services.size(); ++i) {
-          if (i > 0) {
-            oss << ", ";
-          }
-          oss << info.waiting_output_services[i];
-        }
-        waiting_records.push_back(info.input_service_name + " -> [" + oss.str() + "]");
+        summary.waiting_records.push_back(
+          info.input_service_name + " -> [" + rcpputils::join(info.waiting_output_services, ", ") +
+          "]");
       }
 
       stat.add(
@@ -113,29 +131,7 @@ private:
         info.input_service_started ? "ready" : "waiting");
     }
 
-    stat.add("plugin_count", static_cast<int>(plugins_.size()));
-    stat.addf("output_services_ready", "%zu/%zu", total_ready, total_outputs);
-
-    if (!waiting_records.empty()) {
-      std::ostringstream waiting_oss;
-      for (std::size_t i = 0; i < waiting_records.size(); ++i) {
-        if (i > 0) {
-          waiting_oss << " | ";
-        }
-        waiting_oss << waiting_records[i];
-      }
-      stat.add("waiting_output_services", waiting_oss.str());
-    } else {
-      stat.add("waiting_output_services", "none");
-    }
-
-    if (all_ready) {
-      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "All service checks completed");
-    } else {
-      stat.summary(
-        diagnostic_msgs::msg::DiagnosticStatus::ERROR,
-        "Waiting for output services before input service advertisement");
-    }
+    return summary;
   }
 
   diagnostic_updater::Updater diag_updater_;

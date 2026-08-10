@@ -83,6 +83,14 @@ protected:
 private:
   void try_start_input_service();
 
+  /// Names of the output services whose servers are not available yet.
+  /// Caller must hold `service_start_mutex_`.
+  std::vector<std::string> collect_not_ready_output_services() const;
+
+  /// Create the input service and stop the retry timer.
+  /// Caller must hold `service_start_mutex_`.
+  void advertise_input_service();
+
   struct OutputClientEntry
   {
     std::shared_ptr<GenericClient> client;
@@ -102,11 +110,42 @@ private:
     std::vector<rclcpp::TimerBase::SharedPtr> timeout_timers;
   };
 
+  struct DivisionOutcome
+  {
+    bool all_success{true};
+    std::string primary_name;
+    std::shared_ptr<void> primary_response;
+  };
+
   void handle_request(
     std::shared_ptr<GenericService> service, std::shared_ptr<rmw_request_id_t> request_header,
     std::shared_ptr<void> request);
 
+  /// Register a new pending division and return the id used in logs.
+  int64_t register_pending_division(const std::shared_ptr<PendingDivision> & pending);
+
+  /// Send the request to a single output service and arm its timeout timer.
+  void forward_request(
+    OutputClientEntry & entry, const std::shared_ptr<PendingDivision> & pending, int64_t pending_id,
+    const std::shared_ptr<void> & request);
+
+  /// Mark an output service as completed. Returns false if it was already completed,
+  /// which means the caller lost the race against the timeout (or the response).
+  bool mark_output_completed(
+    const std::shared_ptr<PendingDivision> & pending, const std::string & name, bool timed_out,
+    std::shared_ptr<void> response);
+
   void try_finalize_response(std::shared_ptr<PendingDivision> pending);
+
+  /// Aggregate the collected responses. Caller must hold `pending->mutex`.
+  DivisionOutcome evaluate_outputs(const std::shared_ptr<PendingDivision> & pending) const;
+
+  /// Reply to the input service caller according to `outcome`.
+  /// Caller must hold `pending->mutex`.
+  void send_final_response(
+    const std::shared_ptr<PendingDivision> & pending, const DivisionOutcome & outcome);
+
+  void erase_pending_division(const std::shared_ptr<PendingDivision> & pending);
 
   std::shared_ptr<GenericService> input_service_;
   std::vector<OutputClientEntry> output_clients_;

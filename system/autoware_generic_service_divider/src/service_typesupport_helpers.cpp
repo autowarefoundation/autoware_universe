@@ -16,8 +16,10 @@
 
 #include "ament_index_cpp/get_package_prefix.hpp"
 #include "rcpputils/shared_library.hpp"
+#include "rosidl_runtime_cpp/message_initialization.hpp"
 #include "rosidl_typesupport_introspection_cpp/service_introspection.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -131,6 +133,17 @@ get_service_members(const std::string & type)
   }
 
   return std::make_tuple(library, members);
+}
+
+std::shared_ptr<void> allocate_message(
+  const rosidl_typesupport_introspection_cpp::MessageMembers * members)
+{
+  auto message = std::shared_ptr<void>(new uint8_t[members->size_of_], [members](void * ptr) {
+    members->fini_function(ptr);
+    delete[] static_cast<uint8_t *>(ptr);
+  });
+  members->init_function(message.get(), rosidl_runtime_cpp::MessageInitialization::ZERO);
+  return message;
 }
 
 }  // namespace generic_service_divider
