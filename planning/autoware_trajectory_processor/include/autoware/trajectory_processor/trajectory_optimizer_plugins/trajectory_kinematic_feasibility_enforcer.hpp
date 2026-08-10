@@ -17,7 +17,7 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_KINEMATIC_FEASIBILITY_ENFORCER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -32,6 +32,10 @@
 
 namespace autoware::trajectory_optimizer::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using nav_msgs::msg::Odometry;
@@ -51,18 +55,18 @@ using nav_msgs::msg::Odometry;
  *
  * Based on: "Ackermann + Yaw Rate Feasibility Filtering for Trajectory Points"
  */
-class TrajectoryKinematicFeasibilityEnforcer : public TrajectoryOptimizerPluginBase
+class TrajectoryKinematicFeasibilityEnforcer : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectoryKinematicFeasibilityEnforcer() = default;
   ~TrajectoryKinematicFeasibilityEnforcer() = default;
 
-  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
 
-  void update_params(const TrajectoryOptimizerParams & params) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
 protected:
-  void on_initialize(const TrajectoryOptimizerParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   trajectory_optimizer_node_params::Params::TrajectoryKinematicFeasibility feasibility_params_;

@@ -56,8 +56,10 @@ struct TrackerSnapshot
   bool fully_measured_stale{true};
   std::array<uint8_t, 16> uuid{};
   std::vector<types::ExistenceProbability> existence_probs;
+  float channel_support{0.0f};  // existence_probs summed over channels
   // Filled lazily for trackers that appear in a gated pair.
   std::optional<bool> confident;
+  std::optional<bool> publish_confident;
   std::optional<bool> object_valid;
   types::DynamicObject object;
 };

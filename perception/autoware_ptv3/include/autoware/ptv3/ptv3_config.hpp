@@ -216,6 +216,15 @@ public:
       if (bbox_grid_x_size == 0 || bbox_grid_y_size == 0) {
         throw std::runtime_error("bbox_voxel_size produces an empty detection grid.");
       }
+      if (
+        std::abs(
+          (static_cast<float>(bbox_grid_x_size) * bbox_voxel_x_size_) -
+          (max_x_range_ - min_x_range_)) > eps ||
+        std::abs(
+          (static_cast<float>(bbox_grid_y_size) * bbox_voxel_y_size_) -
+          (max_y_range_ - min_y_range_)) > eps) {
+        throw std::runtime_error("bbox_voxel_size must evenly cover the point cloud xy range.");
+      }
       det_grid_x_size_ = bbox_grid_x_size;
       det_grid_y_size_ = bbox_grid_y_size;
 

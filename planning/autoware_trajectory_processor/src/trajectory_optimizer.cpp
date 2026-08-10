@@ -39,9 +39,11 @@ namespace autoware::trajectory_optimizer
 TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
 : Node("trajectory_optimizer", options),
   plugin_loader_(
-    std::make_unique<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>>(
+    std::make_unique<pluginlib::ClassLoader<
+      autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase>>(
       "autoware_trajectory_processor",
-      "autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase"))
+      "autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase")),
+  context_{std::make_shared<autoware::trajectory_processor::TrajectoryProcessorContext>(this)}
 {
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
@@ -73,27 +75,23 @@ void TrajectoryOptimizer::initialize_optimizers()
   const auto plugin_names = params_.plugin_names;
 
   // Load each plugin in order
-  for (const auto & plugin_name : plugin_names) {
-    load_plugin(plugin_name);
+  for (std::size_t pipeline_index = 0; pipeline_index < plugin_names.size(); ++pipeline_index) {
+    load_plugin(plugin_names.at(pipeline_index), pipeline_index);
   }
   initialized_optimizers_ = true;
 }
 
-void TrajectoryOptimizer::load_plugin(const std::string & plugin_name)
+void TrajectoryOptimizer::load_plugin(
+  const std::string & plugin_name, const std::size_t pipeline_index)
 {
   try {
     auto plugin = plugin_loader_->createSharedInstance(plugin_name);
 
-    // Check if plugin is already loaded
-    for (const auto & p : plugins_) {
-      if (plugin->get_name() == p->get_name()) {
-        RCLCPP_WARN_STREAM(get_logger(), "Plugin '" << plugin_name << "' is already loaded.");
-        return;
-      }
-    }
-
     // Initialize plugin with node context
-    plugin->initialize(plugin_name, this, time_keeper_, params_);
+    const auto instance_name = plugin_name + "#" + std::to_string(pipeline_index);
+    plugin->initialize(
+      plugin_name, instance_name, this, time_keeper_, context_,
+      autoware::trajectory_processor::TrajectoryProcessorParams{params_});
 
     plugins_.push_back(plugin);
 
@@ -113,7 +111,7 @@ void TrajectoryOptimizer::update_params()
     params_ = param_listener_->get_params();
 
     for (auto & plugin : plugins_) {
-      plugin->update_params(params_);
+      plugin->update_params(autoware::trajectory_processor::TrajectoryProcessorParams{params_});
     }
   } catch (const std::exception & e) {
     RCLCPP_WARN(this->get_logger(), "Failed to update parameters: %s", e.what());
@@ -151,19 +149,19 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     // Create a fresh data instance per trajectory so semantic_speed_tracker is reset each time
-    TrajectoryOptimizerData data;
-    data.current_odometry = *current_odometry_ptr_;
-    data.current_acceleration = *current_acceleration_ptr_;
+    autoware::trajectory_processor::TrajectoryProcessorData data;
+    data.current_odometry = current_odometry_ptr_;
+    data.current_acceleration = current_acceleration_ptr_;
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
-      plugin->optimize_trajectory(trajectory.points, data);
+      plugin->process(trajectory.points, data);
     }
 
     // Downstream Autoware modules dont properly support trajectories with less than 3 points. So we
     // return a dummy stopped trajectory instead.
     if (trajectory.points.size() < 3) {
       trajectory.points =
-        utils::generate_three_point_stopped_trajectory(trajectory.points, data.current_odometry);
+        utils::generate_three_point_stopped_trajectory(trajectory.points, *data.current_odometry);
     }
   }
 
