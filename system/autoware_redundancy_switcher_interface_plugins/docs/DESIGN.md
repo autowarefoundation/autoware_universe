@@ -194,7 +194,6 @@ The adapter bridges the interface framework and `simple_switcher_node`.
 | `status/switcher_signals/{main,sub}_ecu` + cached annotation | `SetSwitcherSignalsEvent`                                     |
 | `status/switcher_annotation/{main,sub}_ecu`                  | cached in `latest_annotation_` (used on next signals message) |
 
-
 The adapter subscribes to the per-ECU topics determined by `is_main_ecu`.
 
 ### 6.2 Autoware Ready State

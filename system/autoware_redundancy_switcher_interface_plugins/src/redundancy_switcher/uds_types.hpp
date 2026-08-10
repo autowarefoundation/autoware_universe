@@ -30,7 +30,8 @@ struct ElectionRequest
   bool reset_request{false};
   uint16_t priority{0};
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ElectionRequest, autoware_ready, self_fault_request, reset_request, priority)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+  ElectionRequest, autoware_ready, self_fault_request, reset_request, priority)
 
 // Switcher → Interface
 //
