@@ -62,10 +62,11 @@ Parameters make_default_params()
   p.stop_overshoot_margin = 0.0;
   p.allow_if_cannot_stop_distance = 0.0;
   p.min_lookahead_distance = 100.0;
-  p.stable_duration_threshold_red = 0.0;
-  p.stable_duration_threshold_amber = 0.0;
-  p.stable_duration_threshold_unknown = 0.0;
-  p.amber_rejection_hysteresis_duration = 0.0;
+  p.status_tracker_parameters.stable_duration_threshold_red = 0.0;
+  p.status_tracker_parameters.stable_duration_threshold_amber = 0.0;
+  p.status_tracker_parameters.stable_duration_threshold_unknown = 0.0;
+  p.amber_rejection.hysteresis_duration = 0.0;
+  p.amber_rejection.reject_if_stop_detected = false;
   p.ego_stopped_velocity_threshold = 0.01;
   p.checked_trajectory_length.deceleration_limit = 999.0;
   p.checked_trajectory_length.jerk_limit = 999.0;
