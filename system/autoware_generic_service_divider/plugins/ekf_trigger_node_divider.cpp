@@ -77,5 +77,4 @@ private:
 }  // namespace generic_service_divider
 
 PLUGINLIB_EXPORT_CLASS(
-  generic_service_divider::EkfTriggerNodeDivider,
-  generic_service_divider::ServiceDividerPluginBase)
+  generic_service_divider::EkfTriggerNodeDivider, generic_service_divider::ServiceDividerPluginBase)
