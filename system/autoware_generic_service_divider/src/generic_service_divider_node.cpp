@@ -16,8 +16,9 @@
 #include "pluginlib/class_loader.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 
 #include <chrono>
 #include <memory>
@@ -47,8 +48,8 @@ public:
 
     if (plugin_names.empty()) {
       RCLCPP_WARN(get_logger(), "No plugins configured. Node will do nothing.");
-      diag_timer_ = create_wall_timer(
-        std::chrono::seconds(1), [this]() { diag_updater_.force_update(); });
+      diag_timer_ =
+        create_wall_timer(std::chrono::seconds(1), [this]() { diag_updater_.force_update(); });
       return;
     }
 

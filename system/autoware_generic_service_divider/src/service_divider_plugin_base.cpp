@@ -26,7 +26,8 @@
 namespace generic_service_divider
 {
 
-ServiceDividerPluginBase::StartupDiagnosticInfo ServiceDividerPluginBase::get_startup_diagnostic_info()
+ServiceDividerPluginBase::StartupDiagnosticInfo
+ServiceDividerPluginBase::get_startup_diagnostic_info()
 {
   std::lock_guard<std::mutex> lock(service_start_mutex_);
 
@@ -185,9 +186,8 @@ void ServiceDividerPluginBase::handle_request(
           pending->awaiting_count--;
         }
         RCLCPP_WARN(
-          node_->get_logger(),
-          "Service divider[%ld]: timeout waiting for response from '%s'", pending_id,
-          name.c_str());
+          node_->get_logger(), "Service divider[%ld]: timeout waiting for response from '%s'",
+          pending_id, name.c_str());
         try_finalize_response(pending);
       });
 
@@ -218,8 +218,8 @@ void ServiceDividerPluginBase::handle_request(
         });
     } catch (const std::exception & e) {
       RCLCPP_ERROR(
-        node_->get_logger(), "Service divider[%ld]: failed to send request to '%s': %s",
-        pending_id, name.c_str(), e.what());
+        node_->get_logger(), "Service divider[%ld]: failed to send request to '%s': %s", pending_id,
+        name.c_str(), e.what());
       {
         std::lock_guard<std::mutex> lock(pending->mutex);
         pending->completed[name] = true;
@@ -275,13 +275,15 @@ void ServiceDividerPluginBase::try_finalize_response(std::shared_ptr<PendingDivi
 
   if (all_success && primary_response) {
     RCLCPP_INFO(
-      node_->get_logger(), "Service divider: all outputs succeeded, returning primary response '%s'",
+      node_->get_logger(),
+      "Service divider: all outputs succeeded, returning primary response '%s'",
       primary_name.c_str());
     pending->service->send_response(*pending->request_header, primary_response);
   } else if (primary_response && !all_success) {
     RCLCPP_WARN(
       node_->get_logger(),
-      "Service divider: at least one output failed/timed out, returning error response (primary='%s')",
+      "Service divider: at least one output failed/timed out, returning error response "
+      "(primary='%s')",
       primary_name.c_str());
     auto error_resp = create_error_response("One or more output services failed or timed out");
     pending->service->send_response(*pending->request_header, error_resp);
