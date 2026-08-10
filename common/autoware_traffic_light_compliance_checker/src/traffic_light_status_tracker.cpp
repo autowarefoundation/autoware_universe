@@ -31,41 +31,41 @@ void TrafficLightStatusTracker::update_parameters(const StatusTrackerParameters 
   params_ = parameters;
 }
 
-YellowState TrafficLightStatusTracker::get_yellow_transition_state(
+AmberState TrafficLightStatusTracker::get_amber_transition_state(
   const int64_t traffic_light_group_id) const
 {
   const auto it = signal_history_.find(traffic_light_group_id);
   if (it == signal_history_.end()) {
-    return YellowState::kNotYellow;
+    return AmberState::kNotAmber;
   }
-  return it->second.yellow_transition_state;
+  return it->second.amber_transition_state;
 }
 
-void TrafficLightStatusTracker::update_yellow_transition_state(
+void TrafficLightStatusTracker::update_amber_transition_state(
   SignalStateHistory & history,
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & previous_elements,
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & current_elements)
 {
   const bool is_amber_now = has_amber_circle(current_elements);
   if (!is_amber_now) {
-    history.yellow_transition_state = YellowState::kNotYellow;
+    history.amber_transition_state = AmberState::kNotAmber;
     return;
   }
 
   // Only classify the transition on the first frame of amber.
-  if (history.yellow_transition_state != YellowState::kNotYellow) {
+  if (history.amber_transition_state != AmberState::kNotAmber) {
     return;
   }
 
   if (previous_elements.empty()) {
-    // Origin unknown; keep kNotYellow so arrow-aware pass does not apply.
+    // Origin unknown; keep kNotAmber so arrow-aware pass does not apply.
     return;
   }
 
   if (has_green_circle(previous_elements)) {
-    history.yellow_transition_state = YellowState::kFromGreen;
+    history.amber_transition_state = AmberState::kFromGreen;
   } else {
-    history.yellow_transition_state = YellowState::kFromNonGreen;
+    history.amber_transition_state = AmberState::kFromNonGreen;
   }
 }
 
@@ -81,7 +81,7 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
     auto history_it = signal_history_.find(id);
     if (history_it == signal_history_.end()) {
       SignalStateHistory signal_state{
-        signal, std::nullopt, current_time, current_time, YellowState::kNotYellow};
+        signal, std::nullopt, current_time, current_time, AmberState::kNotAmber};
       history_it = signal_history_.insert({id, signal_state}).first;
     } else {
       auto & history = history_it->second;
@@ -98,7 +98,7 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
       auto stable_changed = !history_it->second.stable_state ||
                             !is_equal(history_it->second.stable_state->elements, signal.elements);
       if (stable_changed && history_it->second.stable_state) {
-        update_yellow_transition_state(
+        update_amber_transition_state(
           history_it->second, history_it->second.stable_state->elements, signal.elements);
       }
       history_it->second.stable_state = signal;

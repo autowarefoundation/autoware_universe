@@ -24,9 +24,9 @@
 
 namespace
 {
+using autoware::traffic_light_compliance_checker::AmberState;
 using autoware::traffic_light_compliance_checker::StatusTrackerParameters;
 using autoware::traffic_light_compliance_checker::TrafficLightStatusTracker;
-using autoware::traffic_light_compliance_checker::YellowState;
 using autoware_perception_msgs::msg::TrafficLightElement;
 using autoware_perception_msgs::msg::TrafficLightGroup;
 using autoware_perception_msgs::msg::TrafficLightGroupArray;
@@ -77,10 +77,10 @@ TEST(TrafficLightStatusTrackerTest, GreenToAmberSetsFromGreen)
   constexpr int64_t id = 42;
 
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::GREEN)), t0);
-  EXPECT_EQ(tracker.get_yellow_transition_state(id), YellowState::kNotYellow);
+  EXPECT_EQ(tracker.get_amber_transition_state(id), AmberState::kNotAmber);
 
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::AMBER)), t1);
-  EXPECT_EQ(tracker.get_yellow_transition_state(id), YellowState::kFromGreen);
+  EXPECT_EQ(tracker.get_amber_transition_state(id), AmberState::kFromGreen);
 }
 
 TEST(TrafficLightStatusTrackerTest, RedToAmberSetsFromNonGreen)
@@ -92,17 +92,17 @@ TEST(TrafficLightStatusTrackerTest, RedToAmberSetsFromNonGreen)
 
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::RED)), t0);
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::AMBER)), t1);
-  EXPECT_EQ(tracker.get_yellow_transition_state(id), YellowState::kFromNonGreen);
+  EXPECT_EQ(tracker.get_amber_transition_state(id), AmberState::kFromNonGreen);
 }
 
-TEST(TrafficLightStatusTrackerTest, AmberWithoutHistoryStaysNotYellow)
+TEST(TrafficLightStatusTrackerTest, AmberWithoutHistoryStaysNotAmber)
 {
   TrafficLightStatusTracker tracker(make_params());
   const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
   constexpr int64_t id = 42;
 
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::AMBER)), t0);
-  EXPECT_EQ(tracker.get_yellow_transition_state(id), YellowState::kNotYellow);
+  EXPECT_EQ(tracker.get_amber_transition_state(id), AmberState::kNotAmber);
 }
 
 TEST(TrafficLightStatusTrackerTest, StateResetsWhenAmberEnds)
@@ -115,10 +115,10 @@ TEST(TrafficLightStatusTrackerTest, StateResetsWhenAmberEnds)
 
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::GREEN)), t0);
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::AMBER)), t1);
-  EXPECT_EQ(tracker.get_yellow_transition_state(id), YellowState::kFromGreen);
+  EXPECT_EQ(tracker.get_amber_transition_state(id), AmberState::kFromGreen);
 
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::RED)), t2);
-  EXPECT_EQ(tracker.get_yellow_transition_state(id), YellowState::kNotYellow);
+  EXPECT_EQ(tracker.get_amber_transition_state(id), AmberState::kNotAmber);
 }
 
 TEST(TrafficLightStatusTrackerTest, AmberStatePersistsAcrossFrames)
@@ -132,5 +132,5 @@ TEST(TrafficLightStatusTrackerTest, AmberStatePersistsAcrossFrames)
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::GREEN)), t0);
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::AMBER)), t1);
   update_tracker(tracker, make_signals(id, make_element(TrafficLightElement::AMBER)), t2);
-  EXPECT_EQ(tracker.get_yellow_transition_state(id), YellowState::kFromGreen);
+  EXPECT_EQ(tracker.get_amber_transition_state(id), AmberState::kFromGreen);
 }

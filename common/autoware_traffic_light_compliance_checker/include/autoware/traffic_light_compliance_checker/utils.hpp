@@ -56,7 +56,7 @@ namespace autoware::traffic_light_compliance_checker
   const lanelet::ConstLanelet & lanelet,
   const autoware_perception_msgs::msg::TrafficLightGroup & signal,
   const std::shared_ptr<const lanelet::autoware::AutowareTrafficLight> & reg_elem,
-  YellowState yellow_transition_state);
+  AmberState amber_transition_state);
 
 }  // namespace autoware::traffic_light_compliance_checker
 

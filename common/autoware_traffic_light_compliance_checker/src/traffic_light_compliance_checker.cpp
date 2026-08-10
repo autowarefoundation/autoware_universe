@@ -40,9 +40,9 @@
 
 namespace
 {
+using autoware::traffic_light_compliance_checker::AmberState;
 using autoware::traffic_light_compliance_checker::is_arrow_aware_amber_pass;
 using autoware::traffic_light_compliance_checker::StopLineInfo;
-using autoware::traffic_light_compliance_checker::YellowState;
 
 /// @brief get stop lines where ego need to stop, and their corresponding signals from the given
 /// traffic light groups
@@ -50,8 +50,8 @@ std::vector<std::pair<StopLineInfo, autoware_perception_msgs::msg::TrafficLightG
 collect_stop_lines(
   const lanelet::LaneletMap & lanelet_map, const autoware_planning_msgs::msg::LaneletRoute & route,
   const std::vector<autoware_perception_msgs::msg::TrafficLightGroup> & traffic_light_groups,
-  const bool enable_arrow_aware_yellow_passing,
-  const std::function<YellowState(int64_t)> & get_yellow_transition_state)
+  const bool enable_arrow_aware_amber_passing,
+  const std::function<AmberState(int64_t)> & get_amber_transition_state)
 {
   std::vector<std::pair<StopLineInfo, autoware_perception_msgs::msg::TrafficLightGroup>> stop_lines;
   std::unordered_map<lanelet::Id, lanelet::Id> route_lanelet_id_per_traffic_light_id;
@@ -78,10 +78,10 @@ collect_stop_lines(
       std::dynamic_pointer_cast<const lanelet::autoware::AutowareTrafficLight>(*traffic_light_it);
 
     if (
-      enable_arrow_aware_yellow_passing &&
+      enable_arrow_aware_amber_passing &&
       is_arrow_aware_amber_pass(
         lanelet, signal, aw_traffic_light,
-        get_yellow_transition_state(signal.traffic_light_group_id))) {
+        get_amber_transition_state(signal.traffic_light_group_id))) {
       continue;
     }
 
@@ -365,8 +365,8 @@ TrafficLightComplianceChecker::get_stop_lines(
   std::vector<StopLineInfo> amber_stop_lines;
   for (const auto & [stop_line_info, signal] : collect_stop_lines(
          lanelet_map, route, traffic_lights.traffic_light_groups,
-         params_.enable_arrow_aware_yellow_passing,
-         [this](const int64_t id) { return status_tracker_->get_yellow_transition_state(id); })) {
+         params_.enable_arrow_aware_amber_passing,
+         [this](const int64_t id) { return status_tracker_->get_amber_transition_state(id); })) {
     const bool is_red = autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
       signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
       autoware_perception_msgs::msg::TrafficLightElement::RED);

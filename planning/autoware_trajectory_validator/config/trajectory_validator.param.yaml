@@ -37,7 +37,7 @@
       crossing_time_limit: 2.75 # [s] trajectories crossing an amber light are rejected if they cannot cross before this time
       treat_amber_light_as_red_light: true # [-] when true, amber lights are handled like red lights
       treat_unknown_light_as_red_light: false # [-] when true, unknown lights are handled like red lights
-      enable_arrow_aware_yellow_passing: true # [-] allow Green->Amber on turn lanes with mapped static arrow
+      enable_arrow_aware_amber_passing: true # [-] allow Green->Amber on turn lanes with mapped static arrow
       stop_overshoot_margin: 0.5 # [m] maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible
       allow_if_cannot_stop_distance: 0.0 # [m] allow crossing a stop line within this distance if ego cannot stop before the line plus its margin
       min_lookahead_distance: 20.0 # [m] minimum forward length to scan for stop lines even at low ego speed

@@ -52,9 +52,9 @@ public:
   /**
    * @brief return how the current amber phase was reached for a traffic light group
    * @param traffic_light_group_id traffic light regulatory element / group id
-   * @return yellow transition state; kNotYellow if the id is unknown or not amber
+   * @return amber transition state; kNotAmber if the id is unknown or not amber
    */
-  [[nodiscard]] YellowState get_yellow_transition_state(int64_t traffic_light_group_id) const;
+  [[nodiscard]] AmberState get_amber_transition_state(int64_t traffic_light_group_id) const;
 
   [[nodiscard]] double get_duration(const int64_t traffic_light_id) const
   {
@@ -70,12 +70,12 @@ private:
     std::optional<autoware_perception_msgs::msg::TrafficLightGroup> stable_state;
     rclcpp::Time first_seen_time;
     rclcpp::Time last_seen_time;
-    YellowState yellow_transition_state{YellowState::kNotYellow};
+    AmberState amber_transition_state{AmberState::kNotAmber};
   };
 
   void cleanup_signal_history(const rclcpp::Time & current_time);
 
-  static void update_yellow_transition_state(
+  static void update_amber_transition_state(
     SignalStateHistory & history,
     const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & previous_elements,
     const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & current_elements);

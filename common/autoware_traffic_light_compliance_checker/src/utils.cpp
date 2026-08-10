@@ -110,12 +110,12 @@ bool is_arrow_aware_amber_pass(
   const lanelet::ConstLanelet & lanelet,
   const autoware_perception_msgs::msg::TrafficLightGroup & signal,
   const std::shared_ptr<const lanelet::autoware::AutowareTrafficLight> & reg_elem,
-  const YellowState yellow_transition_state)
+  const AmberState amber_transition_state)
 {
   if (!has_amber_circle(signal.elements)) {
     return false;
   }
-  if (yellow_transition_state != YellowState::kFromGreen) {
+  if (amber_transition_state != AmberState::kFromGreen) {
     return false;
   }
 

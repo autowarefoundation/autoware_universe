@@ -58,7 +58,7 @@ Parameters make_default_params()
   p.crossing_time_limit = 0.1;  // force amber pass kinematics to fail when stop is required
   p.treat_amber_light_as_red_light = false;
   p.treat_unknown_light_as_red_light = false;
-  p.enable_arrow_aware_yellow_passing = true;
+  p.enable_arrow_aware_amber_passing = true;
   p.stop_overshoot_margin = 0.0;
   p.allow_if_cannot_stop_distance = 0.0;
   p.min_lookahead_distance = 100.0;
@@ -273,7 +273,7 @@ TEST_F(ArrowAwareAmberTest, NoStaticArrowStillViolates)
 
 TEST_F(ArrowAwareAmberTest, FeatureDisabledStillViolates)
 {
-  params_.enable_arrow_aware_yellow_passing = false;
+  params_.enable_arrow_aware_amber_passing = false;
   checker_ = std::make_unique<TrafficLightComplianceChecker>(params_, make_vehicle_info());
 
   const rclcpp::Time t0(100, 0, RCL_ROS_TIME);
