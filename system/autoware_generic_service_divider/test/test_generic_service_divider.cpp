@@ -28,7 +28,7 @@
 #include <vector>
 
 using ChangeOperationMode = autoware_system_msgs::srv::ChangeOperationMode;
-using namespace std::chrono_literals;
+using std::chrono_literals::operator""s;
 
 class TestGenericServiceDivider : public ::testing::Test
 {
