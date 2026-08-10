@@ -23,6 +23,7 @@
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -42,7 +43,7 @@ public:
    * @param signals raw traffic light signals
    * @param current_time current time stamp
    * @param is_ego_stopped true if ego velocity is below the stopped threshold
-   * @return signals with unstable states cleared
+   * @return signals with stable states (or raw signals if ego is stopped)
    */
   [[nodiscard]] autoware_perception_msgs::msg::TrafficLightGroupArray filter_signals(
     const autoware_perception_msgs::msg::TrafficLightGroupArray & signals,
@@ -65,7 +66,8 @@ public:
 private:
   struct SignalStateHistory
   {
-    autoware_perception_msgs::msg::TrafficLightGroup msg;
+    autoware_perception_msgs::msg::TrafficLightGroup current_state;
+    std::optional<autoware_perception_msgs::msg::TrafficLightGroup> stable_state;
     rclcpp::Time first_seen_time;
     rclcpp::Time last_seen_time;
     YellowState yellow_transition_state{YellowState::kNotYellow};
@@ -77,6 +79,9 @@ private:
     SignalStateHistory & history,
     const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & previous_elements,
     const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & current_elements);
+
+  double required_stability_duration(
+    const autoware_perception_msgs::msg::TrafficLightGroup & signal) const;
 
   StatusTrackerParameters params_;
   std::unordered_map<int64_t, SignalStateHistory> signal_history_;

@@ -16,7 +16,6 @@
 #define AUTOWARE__TRAFFIC_LIGHT_COMPLIANCE_CHECKER__UTILS_HPP_
 
 #include "autoware/traffic_light_compliance_checker/structs.hpp"
-
 #include "autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp"
 
 #include <autoware_perception_msgs/msg/traffic_light_element.hpp>

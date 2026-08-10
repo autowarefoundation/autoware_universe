@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp"
-
 #include "autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp"
 #include "autoware_lanelet2_extension/utility/utilities.hpp"
 
@@ -296,8 +295,8 @@ TEST_F(ArrowAwareAmberTest, GreenRightArrowAllowsPass)
 
   auto map = create_map("right", true);
   auto input = make_inputs(
-    map,
-    make_signals(make_element(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)), t0);
+    map, make_signals(make_element(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)),
+    t0);
   const auto result = checker_->check(input, true, true);
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result->violations.empty());

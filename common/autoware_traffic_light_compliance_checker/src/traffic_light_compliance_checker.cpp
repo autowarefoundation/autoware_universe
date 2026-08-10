@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp"
-#include "autoware/traffic_light_compliance_checker/utils.hpp"
 
+#include "autoware/traffic_light_compliance_checker/utils.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
@@ -33,15 +33,16 @@
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace
 {
+using autoware::traffic_light_compliance_checker::is_arrow_aware_amber_pass;
 using autoware::traffic_light_compliance_checker::StopLineInfo;
 using autoware::traffic_light_compliance_checker::YellowState;
-using autoware::traffic_light_compliance_checker::is_arrow_aware_amber_pass;
 
 /// @brief get stop lines where ego need to stop, and their corresponding signals from the given
 /// traffic light groups
@@ -76,9 +77,11 @@ collect_stop_lines(
     const auto aw_traffic_light =
       std::dynamic_pointer_cast<const lanelet::autoware::AutowareTrafficLight>(*traffic_light_it);
 
-    if (enable_arrow_aware_yellow_passing && is_arrow_aware_amber_pass(
-          lanelet, signal, aw_traffic_light,
-          get_yellow_transition_state(signal.traffic_light_group_id))) {
+    if (
+      enable_arrow_aware_yellow_passing &&
+      is_arrow_aware_amber_pass(
+        lanelet, signal, aw_traffic_light,
+        get_yellow_transition_state(signal.traffic_light_group_id))) {
       continue;
     }
 

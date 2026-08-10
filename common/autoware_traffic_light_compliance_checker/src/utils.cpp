@@ -50,36 +50,31 @@ bool is_equal(
 }
 
 bool is_shape_and_color(
-  const std::vector<TrafficLightElement> & elements,
-  const TrafficLightElement::_shape_type & shape,
+  const std::vector<TrafficLightElement> & elements, const TrafficLightElement::_shape_type & shape,
   const TrafficLightElement::_color_type & color)
 {
   return autoware::traffic_light_utils::hasTrafficLightShapeAndColor(elements, shape, color);
 }
 
-bool has_amber_circle(
-  const std::vector<TrafficLightElement> & elements)
+bool has_amber_circle(const std::vector<TrafficLightElement> & elements)
 {
-  return is_shape_and_color(
-    elements, TrafficLightElement::CIRCLE, TrafficLightElement::AMBER);
+  return is_shape_and_color(elements, TrafficLightElement::CIRCLE, TrafficLightElement::AMBER);
 }
 
-bool has_green_circle(
-  const std::vector<TrafficLightElement> & elements)
+bool has_green_circle(const std::vector<TrafficLightElement> & elements)
 {
   return is_shape_and_color(elements, TrafficLightElement::CIRCLE, TrafficLightElement::GREEN);
 }
 
-bool has_red_circle(
-  const std::vector<TrafficLightElement> & elements)
+bool has_red_circle(const std::vector<TrafficLightElement> & elements)
 {
   return is_shape_and_color(elements, TrafficLightElement::CIRCLE, TrafficLightElement::RED);
 }
 
-bool has_unknown(
-  const std::vector<TrafficLightElement> & elements)
+bool has_unknown(const std::vector<TrafficLightElement> & elements)
 {
-  return autoware::traffic_light_utils::hasTrafficLightColor(elements, TrafficLightElement::UNKNOWN);
+  return autoware::traffic_light_utils::hasTrafficLightColor(
+    elements, TrafficLightElement::UNKNOWN);
 }
 
 bool has_static_arrow(
