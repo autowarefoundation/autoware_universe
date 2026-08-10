@@ -17,10 +17,68 @@
 #include <autoware_common_msgs/msg/response_status.hpp>
 #include <tier4_external_api_msgs/msg/response_status.hpp>
 
+#include <array>
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
+
+namespace
+{
+
+/// Log and report whether an output service server is available.
+template <typename ClientT>
+bool is_service_ready(const ClientT & client, const char * label, const rclcpp::Logger & logger)
+{
+  if (client->service_is_ready()) {
+    return true;
+  }
+  RCLCPP_INFO(logger, "Waiting for %s service", label);
+  return false;
+}
+
+/// Send a request and block until the response arrives or `timeout` elapses.
+/// `extract_result` maps a response to its success flag and message, which differ per service type.
+template <typename ServiceT, typename ExtractResult>
+bool call_service(
+  const typename rclcpp::Client<ServiceT>::SharedPtr & client,
+  const typename ServiceT::Request::SharedPtr & request, std::chrono::milliseconds timeout,
+  const char * label, const rclcpp::Logger & logger, ExtractResult extract_result,
+  std::string & message)
+{
+  auto future = client->async_send_request(request).future.share();
+
+  if (future.wait_for(timeout) != std::future_status::ready) {
+    message = std::string(label) + " service timeout";
+    RCLCPP_ERROR(logger, "%s", message.c_str());
+    return false;
+  }
+
+  const auto [success, response_message] = extract_result(*future.get());
+  if (!success) {
+    message = response_message.empty() ? std::string(label) + " service failed" : response_message;
+    RCLCPP_ERROR(logger, "%s", message.c_str());
+    return false;
+  }
+  return true;
+}
+
+/// Call a service whose response carries a `status` field, with an empty request.
+template <typename ServiceT>
+bool call_status_service(
+  const typename rclcpp::Client<ServiceT>::SharedPtr & client, std::chrono::milliseconds timeout,
+  const char * label, const rclcpp::Logger & logger, std::string & message)
+{
+  return call_service<ServiceT>(
+    client, std::make_shared<typename ServiceT::Request>(), timeout, label, logger,
+    [](const auto & response) {
+      return std::make_pair(response.status.success, response.status.message);
+    },
+    message);
+}
+
+}  // namespace
 
 namespace autoware::mrm_reset_manager
 {
@@ -109,66 +167,95 @@ void MrmResetManager::advance_init_state()
 {
   std::lock_guard<std::mutex> lock(state_mutex_);
 
-  switch (init_state_) {
+  if (init_state_ == InitState::DONE) {
+    return;
+  }
+
+  while (init_state_ != InitState::DONE) {
+    if (!run_init_step(init_state_)) {
+      return;  // Retried on the next tick.
+    }
+    init_state_ = next_init_state(init_state_);
+  }
+
+  finish_initialization();
+}
+
+bool MrmResetManager::run_init_step(InitState state)
+{
+  switch (state) {
     case InitState::WAIT_SERVICES_READY:
-      if (!cli_reset_diag_graph_->service_is_ready()) {
-        RCLCPP_INFO(get_logger(), "Waiting for reset_diag_graph service");
-        return;
-      }
-      if (!cli_set_aggregator_initializing_->service_is_ready()) {
-        RCLCPP_INFO(get_logger(), "Waiting for set_aggregator_initializing service");
-        return;
-      }
-      if (is_redundant_ && !cli_reset_redundancy_switcher_->service_is_ready()) {
-        RCLCPP_INFO(get_logger(), "Waiting for reset_redundancy_switcher service");
-        return;
-      }
-      if (
-        is_redundant_ && !cli_set_redundancy_switcher_interface_initializing_->service_is_ready()) {
-        RCLCPP_INFO(
-          get_logger(), "Waiting for set_redundancy_switcher_interface_initializing service");
-        return;
-      }
-      init_state_ = InitState::SET_AGGREGATOR_INIT;
-      [[fallthrough]];
+      return are_required_services_ready();
 
     case InitState::SET_AGGREGATOR_INIT:
-      if (!set_aggregator_initializing(true)) {
-        return;
-      }
-      init_state_ = InitState::RESET_SWITCHER;
-      [[fallthrough]];
+      return set_initializing_flag(
+        cli_set_aggregator_initializing_, "set_aggregator_initializing", true,
+        is_aggregator_initializing_);
 
     case InitState::RESET_SWITCHER:
-      if (!call_reset_redundancy_switcher()) {
-        return;
-      }
-      init_state_ = InitState::SET_SWITCHER_INTERFACE_INIT;
-      [[fallthrough]];
+      return call_reset_redundancy_switcher();
 
     case InitState::SET_SWITCHER_INTERFACE_INIT:
-      if (!set_redundancy_switcher_interface_initializing(true)) {
-        return;
-      }
-      init_state_ = InitState::DONE;
-      init_timer_->cancel();
-      reset_redundancy_switcher_timer_ =
-        rclcpp::create_timer(this, get_clock(), std::chrono::seconds(5), [this]() {
-          std::lock_guard<std::mutex> lock(state_mutex_);
-          if (!is_initializing()) {
-            return;
-          }
-          if (is_autoware_ready()) {
-            apply_ready_state();
-          } else if (!call_reset_redundancy_switcher()) {
-            RCLCPP_WARN(get_logger(), "Periodic reset_redundancy_switcher failed");
-          }
-        });
-      apply_ready_state();
-      break;
+      return set_initializing_flag(
+        cli_set_redundancy_switcher_interface_initializing_,
+        "set_redundancy_switcher_interface_initializing", true,
+        is_redundancy_switcher_interface_initializing_);
 
     case InitState::DONE:
       break;
+  }
+  return true;
+}
+
+MrmResetManager::InitState MrmResetManager::next_init_state(InitState state)
+{
+  static constexpr std::array<InitState, 5> sequence{
+    InitState::SET_AGGREGATOR_INIT, InitState::RESET_SWITCHER,
+    InitState::SET_SWITCHER_INTERFACE_INIT, InitState::DONE, InitState::DONE};
+  return sequence.at(static_cast<std::size_t>(state));
+}
+
+bool MrmResetManager::are_required_services_ready() const
+{
+  if (!is_service_ready(cli_reset_diag_graph_, "reset_diag_graph", get_logger())) {
+    return false;
+  }
+  if (!is_service_ready(
+        cli_set_aggregator_initializing_, "set_aggregator_initializing", get_logger())) {
+    return false;
+  }
+  if (!is_redundant_) {
+    return true;
+  }
+  if (!is_service_ready(
+        cli_reset_redundancy_switcher_, "reset_redundancy_switcher", get_logger())) {
+    return false;
+  }
+  return is_service_ready(
+    cli_set_redundancy_switcher_interface_initializing_,
+    "set_redundancy_switcher_interface_initializing", get_logger());
+}
+
+void MrmResetManager::finish_initialization()
+{
+  init_timer_->cancel();
+  reset_redundancy_switcher_timer_ = rclcpp::create_timer(
+    this, get_clock(), std::chrono::seconds(5), [this]() { on_periodic_reset_check(); });
+  apply_ready_state();
+}
+
+void MrmResetManager::on_periodic_reset_check()
+{
+  std::lock_guard<std::mutex> lock(state_mutex_);
+  if (!is_initializing()) {
+    return;
+  }
+  if (is_autoware_ready()) {
+    apply_ready_state();
+    return;
+  }
+  if (!call_reset_redundancy_switcher()) {
+    RCLCPP_WARN(get_logger(), "Periodic reset_redundancy_switcher failed");
   }
 }
 
@@ -183,53 +270,60 @@ void MrmResetManager::apply_ready_state()
   if (!is_initializing()) {
     return;
   }
-
-  const bool localized =
-    localization_initialization_state_ptr_->state == LocalizationState::INITIALIZED;
-  const bool route_set = route_state_ptr_->state == RouteState::SET;
-  const bool autoware_control = operation_mode_state_ptr_->is_autoware_control_enabled;
-
-  if (localized && route_set && autoware_control) {
-    if (!enable_autoware_ready_actions_) {
-      return;
-    }
-
-    if (!set_aggregator_initializing(false)) {
-      return;
-    }
-    if (!call_reset_redundancy_switcher()) {
-      return;
-    }
-    (void)set_redundancy_switcher_interface_initializing(false);
+  if (!is_ready_for_operation()) {
+    return;
   }
+  if (!enable_autoware_ready_actions_) {
+    return;
+  }
+
+  leave_initializing_phase();
 }
 
-bool MrmResetManager::set_aggregator_initializing(bool initializing)
+bool MrmResetManager::is_ready_for_operation() const
 {
-  auto req = std::make_shared<SetBool::Request>();
-  req->data = initializing;
-
-  std::string message;
-  if (!call_set_bool(
-        cli_set_aggregator_initializing_, req, "set_aggregator_initializing", message)) {
+  if (localization_initialization_state_ptr_->state != LocalizationState::INITIALIZED) {
     return false;
   }
-  is_aggregator_initializing_ = initializing;
-  return true;
+  if (route_state_ptr_->state != RouteState::SET) {
+    return false;
+  }
+  return operation_mode_state_ptr_->is_autoware_control_enabled;
 }
 
-bool MrmResetManager::set_redundancy_switcher_interface_initializing(bool initializing)
+void MrmResetManager::leave_initializing_phase()
 {
-  auto req = std::make_shared<SetBool::Request>();
-  req->data = initializing;
+  if (!set_initializing_flag(
+        cli_set_aggregator_initializing_, "set_aggregator_initializing", false,
+        is_aggregator_initializing_)) {
+    return;
+  }
+  if (!call_reset_redundancy_switcher()) {
+    return;
+  }
+  (void)set_initializing_flag(
+    cli_set_redundancy_switcher_interface_initializing_,
+    "set_redundancy_switcher_interface_initializing", false,
+    is_redundancy_switcher_interface_initializing_);
+}
+
+bool MrmResetManager::set_initializing_flag(
+  const rclcpp::Client<SetBool>::SharedPtr & client, const char * label, bool initializing,
+  bool & flag)
+{
+  auto request = std::make_shared<SetBool::Request>();
+  request->data = initializing;
 
   std::string message;
-  if (!call_set_bool(
-        cli_set_redundancy_switcher_interface_initializing_, req,
-        "set_redundancy_switcher_interface_initializing", message)) {
+  if (!call_service<SetBool>(
+        client, request, std::chrono::milliseconds(service_timeout_ms_), label, get_logger(),
+        [](const SetBool::Response & response) {
+          return std::make_pair(response.success, response.message);
+        },
+        message)) {
     return false;
   }
-  is_redundancy_switcher_interface_initializing_ = initializing;
+  flag = initializing;
   return true;
 }
 
@@ -238,25 +332,9 @@ bool MrmResetManager::call_reset_redundancy_switcher(std::string & message)
   if (!is_redundant_) {
     return true;
   }
-
-  auto req = std::make_shared<ResetRedundancySwitcher::Request>();
-  auto future = cli_reset_redundancy_switcher_->async_send_request(req).future.share();
-
-  if (
-    future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
-    message = "reset_redundancy_switcher service timeout";
-    RCLCPP_ERROR(get_logger(), "%s", message.c_str());
-    return false;
-  }
-
-  const auto res = future.get();
-  if (!res->status.success) {
-    message = res->status.message.empty() ? "reset_redundancy_switcher service failed"
-                                          : res->status.message;
-    RCLCPP_ERROR(get_logger(), "%s", message.c_str());
-    return false;
-  }
-  return true;
+  return call_status_service<ResetRedundancySwitcher>(
+    cli_reset_redundancy_switcher_, std::chrono::milliseconds(service_timeout_ms_),
+    "reset_redundancy_switcher", get_logger(), message);
 }
 
 bool MrmResetManager::call_reset_redundancy_switcher()
@@ -267,44 +345,9 @@ bool MrmResetManager::call_reset_redundancy_switcher()
 
 bool MrmResetManager::call_reset_diag_graph(std::string & message)
 {
-  auto req = std::make_shared<ResetDiagGraph::Request>();
-  auto future = cli_reset_diag_graph_->async_send_request(req).future.share();
-
-  if (
-    future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
-    message = "reset_diag_graph service timeout";
-    RCLCPP_ERROR(get_logger(), "%s", message.c_str());
-    return false;
-  }
-
-  const auto res = future.get();
-  if (!res->status.success) {
-    message = res->status.message.empty() ? "reset_diag_graph service failed" : res->status.message;
-    RCLCPP_ERROR(get_logger(), "%s", message.c_str());
-    return false;
-  }
-  return true;
-}
-
-bool MrmResetManager::call_set_bool(
-  const rclcpp::Client<SetBool>::SharedPtr & client, const SetBool::Request::SharedPtr & request,
-  const char * label, std::string & message)
-{
-  auto future = client->async_send_request(request).future.share();
-  if (
-    future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
-    message = std::string(label) + " service timeout";
-    RCLCPP_ERROR(get_logger(), "%s", message.c_str());
-    return false;
-  }
-
-  const auto res = future.get();
-  if (!res->success) {
-    message = res->message.empty() ? (std::string(label) + " service failed") : res->message;
-    RCLCPP_ERROR(get_logger(), "%s", message.c_str());
-    return false;
-  }
-  return true;
+  return call_status_service<ResetDiagGraph>(
+    cli_reset_diag_graph_, std::chrono::milliseconds(service_timeout_ms_), "reset_diag_graph",
+    get_logger(), message);
 }
 
 bool MrmResetManager::is_autoware_ready() const

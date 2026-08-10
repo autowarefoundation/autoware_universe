@@ -55,17 +55,31 @@ private:
 
   void on_reset_mrm(
     const ResetMrm::Request::SharedPtr request, ResetMrm::Response::SharedPtr response);
-  void advance_init_state();
-  void apply_ready_state();
 
-  bool set_aggregator_initializing(bool initializing);
-  bool set_redundancy_switcher_interface_initializing(bool initializing);
+  // Initialization sequence. Callers must hold `state_mutex_`.
+  void advance_init_state();
+  /// Run the action of a single init state. Returns true when the state is complete.
+  bool run_init_step(InitState state);
+  static InitState next_init_state(InitState state);
+  /// Check the output services the current configuration depends on, logging the first missing one.
+  bool are_required_services_ready() const;
+  /// Stop the init timer and start the periodic reset check.
+  void finish_initialization();
+  void on_periodic_reset_check();
+
+  // Ready-state transition. Callers must hold `state_mutex_`.
+  void apply_ready_state();
+  /// Whether localization, route and control are all in place. Requires `is_autoware_ready()`.
+  bool is_ready_for_operation() const;
+  void leave_initializing_phase();
+
+  /// Set an initializing flag through its service, and cache the value on success.
+  bool set_initializing_flag(
+    const rclcpp::Client<SetBool>::SharedPtr & client, const char * label, bool initializing,
+    bool & flag);
   bool call_reset_redundancy_switcher(std::string & message);
   bool call_reset_redundancy_switcher();
   bool call_reset_diag_graph(std::string & message);
-  bool call_set_bool(
-    const rclcpp::Client<SetBool>::SharedPtr & client, const SetBool::Request::SharedPtr & request,
-    const char * label, std::string & message);
 
   bool is_autoware_ready() const;
   bool is_initializing() const;
