@@ -77,14 +77,12 @@
       exec="relay"
       name="traffic_light_image_relay"
       args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
     <node
       pkg="topic_tools"
       exec="relay"
       name="traffic_light_camera_info_relay"
       args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <!-- Image transport nodes to create compressed versions for all cameras -->
@@ -93,7 +91,6 @@
       exec="republish"
       name="cam_front_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <node
@@ -136,7 +133,6 @@
       exec="republish"
       name="traffic_light_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <!-- Multi-camera combiner for RViz visualization -->
