@@ -134,6 +134,8 @@ protected:
 
     const auto processor_dir =
       ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
+    const auto core_planning_dir =
+      ament_index_cpp::get_package_share_directory("autoware_core_planning");
     const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
     processor_options.append_parameter_override(
       "trajectory_velocity_optimizer.smooth_velocities", true);
@@ -142,6 +144,10 @@ protected:
       {"--ros-args",
        "--params-file",
        processor_dir + "/config/trajectory_processor.param.yaml",
+       "--params-file",
+       core_planning_dir + "/config/common.param.yaml",
+       "--params-file",
+       processor_dir + "/config/trajectory_smoothing/elastic_band_smoother.param.yaml",
        "--params-file",
        processor_dir + "/config/plugins/trajectory_qp_smoother.param.yaml",
        "--params-file",
