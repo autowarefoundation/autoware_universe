@@ -152,12 +152,14 @@ lanelet::ConstLanelet get_leftside_lanelet(
   const auto leftmost_ex =
     autoware::experimental::lanelet2_utils::leftmost_lanelet(lanelet, routing_graph_ptr);
   const auto leftmost_road_lane = leftmost_ex ? leftmost_ex.value() : lanelet;
-  if (const auto left_shoulder = route_handler->getLeftShoulderLanelet(leftmost_road_lane);
-      left_shoulder) {
+  if (
+    const auto left_shoulder = route_handler->getLeftShoulderLanelet(leftmost_road_lane);
+    left_shoulder) {
     return left_shoulder.value();
   }
-  if (const auto left_bicycle_lane = route_handler->getLeftBicycleLanelet(leftmost_road_lane);
-      left_bicycle_lane) {
+  if (
+    const auto left_bicycle_lane = route_handler->getLeftBicycleLanelet(leftmost_road_lane);
+    left_bicycle_lane) {
     return left_bicycle_lane.value();
   }
   return leftmost_road_lane;
@@ -175,12 +177,14 @@ lanelet::ConstLanelet get_rightside_lanelet(
   const auto rightmost_ex =
     autoware::experimental::lanelet2_utils::rightmost_lanelet(lanelet, routing_graph_ptr);
   const auto rightmost_road_lane = rightmost_ex ? rightmost_ex.value() : lanelet;
-  if (const auto right_shoulder = route_handler->getRightShoulderLanelet(rightmost_road_lane);
-      right_shoulder) {
+  if (
+    const auto right_shoulder = route_handler->getRightShoulderLanelet(rightmost_road_lane);
+    right_shoulder) {
     return right_shoulder.value();
   }
-  if (const auto right_bicycle_lane = route_handler->getRightBicycleLanelet(rightmost_road_lane);
-      right_bicycle_lane) {
+  if (
+    const auto right_bicycle_lane = route_handler->getRightBicycleLanelet(rightmost_road_lane);
+    right_bicycle_lane) {
     return right_bicycle_lane.value();
   }
   return rightmost_road_lane;

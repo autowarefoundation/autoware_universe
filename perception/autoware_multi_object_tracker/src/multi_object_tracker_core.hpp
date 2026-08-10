@@ -47,14 +47,21 @@ struct MultiObjectTrackerParameters
   double publish_rate;
   std::string world_frame_id;
   std::string ego_frame_id;
-  bool enable_delay_compensation;
   bool enable_odometry_uncertainty;
   bool publish_processing_time_detail;
   bool publish_merged_objects;
 
+  // ego pose sourcing
+  EgoSource ego_source;
+  // publish-trigger side: false publishes on measurement, true publishes from the periodic timer
+  bool publish_on_timer;
+  // object-export side: which timestamp the published tracks are predicted to
+  DelayReference delay_compensation;
+
   std::vector<types::InputChannel> input_channels_config;
 
   // Induced parameters
+  TrackerConfigs tracker_configs;
   TrackerCreationConfig creation_config;
   TrackerAssociationConfig association_config;
   TrackerOverlapManagerConfig tracker_overlap_manager_config;

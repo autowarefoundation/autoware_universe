@@ -19,10 +19,18 @@ ament_auto_add_library(${PROJECT_NAME}_lib SHARED
   lib/euclidean_cluster.cpp
   lib/voxel_grid_based_euclidean_cluster.cpp
   lib/utils.cpp
+  lib/confusable_cluster_merger.cpp
+  lib/label_based_euclidean_cluster.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_lib
   ${PCL_LIBRARIES}
+)
+
+ament_target_dependencies(${PROJECT_NAME}_lib
+  autoware_object_recognition_utils
+  autoware_point_types
+  autoware_shape_estimation
 )
 
 target_include_directories(${PROJECT_NAME}_lib
@@ -79,7 +87,7 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME}_label_based_node_core)
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_label_based_node_core
   PLUGIN "autoware::euclidean_cluster::LabelBasedEuclideanClusterNode"
   EXECUTABLE label_based_euclidean_cluster_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
@@ -88,6 +96,31 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(test_voxel_grid_based_euclidean_cluster_fusion
     test/test_voxel_grid_based_euclidean_cluster.cpp
   )
+  ament_auto_add_gtest(test_label_based_euclidean_cluster
+    test/test_label_based_euclidean_cluster.cpp
+  )
+  target_link_libraries(test_label_based_euclidean_cluster
+    ${PROJECT_NAME}_lib
+  )
+  ament_target_dependencies(test_label_based_euclidean_cluster
+    autoware_object_recognition_utils
+    autoware_point_types
+  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_auto_add_gtest(test_label_based_euclidean_cluster_node
+      test/test_label_based_euclidean_cluster_node.cpp
+    )
+    target_include_directories(test_label_based_euclidean_cluster_node PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_label_based_euclidean_cluster_node
+      ${PROJECT_NAME}_label_based_node_core
+    )
+    ament_target_dependencies(test_label_based_euclidean_cluster_node
+      autoware_object_recognition_utils
+      autoware_point_types
+    )
+  endif()
 endif()
 
 autoware_ament_auto_package(INSTALL_TO_SHARE

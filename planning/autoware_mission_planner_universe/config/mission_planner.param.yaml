@@ -12,5 +12,6 @@
     minimum_reroute_length: 30.0
     consider_no_drivable_lanes: false # This flag is for considering no_drivable_lanes in planning or not.
     check_footprint_inside_lanes: true
+    allow_area: false # Set true to plan and validate routes through lanelet-area-lanelet (e.g. direction change)
     allow_reroute_in_autonomous_mode: true
     goal_lanelet_transparency: 0.05

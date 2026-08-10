@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="input_imu_raw" default="imu_raw"/>
   <arg name="input_odom" default="odom"/>
   <arg name="input_pose_ndt" default="pose_ndt"/>
@@ -11,6 +13,7 @@
   <arg name="gyro_scale_estimator_param_file" default="$(find-pkg-share autoware_imu_corrector)/config/gyro_scale_estimator.param.yaml"/>
 
   <node pkg="autoware_imu_corrector" exec="gyro_bias_estimator_node" output="both">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/imu_raw" to="$(var input_imu_raw)"/>
     <remap from="~/input/odom" to="$(var input_odom)"/>
     <remap from="~/input/pose_ndt" to="$(var input_pose_ndt)"/>

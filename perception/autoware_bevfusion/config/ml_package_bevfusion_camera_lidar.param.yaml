@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+    class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN", "TRAFFIC_CONE", "BARRIER"]
     voxels_num: [1, 128000, 256000] # [min, opt, max]
     point_cloud_range: [-122.4, -122.4, -3.0, 122.4, 122.4, 5.0] # [x_min, y_min, z_min, x_max, y_max, z_max]
     voxel_size: [0.17, 0.17, 0.2] # [x, y, z]

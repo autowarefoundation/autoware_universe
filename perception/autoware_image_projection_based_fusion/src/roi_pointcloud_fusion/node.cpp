@@ -153,8 +153,9 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
     }
 
     Eigen::Vector2d projected_point;
-    if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-          cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
+    if (
+      det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+        cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
       for (std::size_t i = 0; i < output_objs.size(); ++i) {
         auto & feature_obj = output_objs.at(i);
         const auto & check_roi = feature_obj.feature.roi;

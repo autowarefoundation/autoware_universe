@@ -2,6 +2,24 @@
 Changelog for package autoware_tracking_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(data_association_matrix.param.yaml): remove OVERRIDE marker from master file (`#12802 <https://github.com/autowarefoundation/autoware_universe/issues/12802>`_)
+  chore: remove OVERRIDE marker from master file
+* feat(autoware_tracking_object_merger): update parameter to add ANIMAL and HAZARD classes (`#12778 <https://github.com/autowarefoundation/autoware_universe/issues/12778>`_)
+  update parameter to add ANIMAL and HAZARD classes
+* feat(decorative_tracker_merger): apply `agnocast_wrapper::Node` to `decorative_tracker_merger` (`#12709 <https://github.com/autowarefoundation/autoware_universe/issues/12709>`_)
+  * apply agnocast_wrapper::Node
+  * fix
+  * style(pre-commit): autofix
+  * fix clang-format
+  * fix cpplint
+  * apply copilot fix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Masaki Baba, Taeseung Sohn, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

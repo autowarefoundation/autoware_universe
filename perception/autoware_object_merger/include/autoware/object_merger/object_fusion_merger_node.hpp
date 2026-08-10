@@ -56,6 +56,12 @@ private:
     DetectedObjects, DetectedObjects>;
   using Sync = autoware::agnocast_wrapper::message_filters::Synchronizer<SyncPolicy>;
 
+  struct FusionResult
+  {
+    DetectedObjects fused_objects;
+    DetectedObjects other_objects;
+  };
+
   /**
    * @brief Transform synchronized inputs, perform fusion, and publish both outputs.
    *
@@ -71,12 +77,10 @@ private:
    *
    * @param main_objects_msg Main detected objects transformed into the base frame.
    * @param sub_objects_msg Sub detected objects transformed into the base frame.
-   * @param fused_objects Output message populated with the main-based fused objects.
-   * @param other_objects Output message populated with the unmatched sub objects.
+   * @return Fusion result containing the main-based output and unmatched sub objects.
    */
-  void fuse_objects(
-    const DetectedObjects & main_objects_msg, const DetectedObjects & sub_objects_msg,
-    DetectedObjects & fused_objects, DetectedObjects & other_objects);
+  FusionResult fuse_objects(
+    const DetectedObjects & main_objects_msg, const DetectedObjects & sub_objects_msg);
 
   autoware::agnocast_wrapper::Buffer tf_buffer_;
   autoware::agnocast_wrapper::TransformListener tf_listener_;
