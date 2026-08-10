@@ -38,45 +38,71 @@ bool is_service_ready(const ClientT & client, const char * label, const rclcpp::
   return false;
 }
 
-/// Send a request and block until the response arrives or `timeout` elapses.
-/// `extract_result` maps a response to its success flag and message, which differ per service type.
-template <typename ServiceT, typename ExtractResult>
-bool call_service(
-  const typename rclcpp::Client<ServiceT>::SharedPtr & client,
-  const typename ServiceT::Request::SharedPtr & request, std::chrono::milliseconds timeout,
-  const char * label, const rclcpp::Logger & logger, ExtractResult extract_result,
-  std::string & message)
+/// Read the outcome of a response that carries a ResponseStatus.
+template <typename ResponseT>
+std::pair<bool, std::string> read_result(const ResponseT & response)
 {
-  auto future = client->async_send_request(request).future.share();
+  return std::make_pair(response.status.success, response.status.message);
+}
 
-  if (future.wait_for(timeout) != std::future_status::ready) {
-    message = std::string(label) + " service timeout";
-    RCLCPP_ERROR(logger, "%s", message.c_str());
+/// std_srvs/SetBool keeps the flag and the message at the top level instead.
+std::pair<bool, std::string> read_result(const std_srvs::srv::SetBool::Response & response)
+{
+  return std::make_pair(response.success, response.message);
+}
+
+/// Sends requests to the output services and blocks until the response or the timeout.
+/// Holds the logger and the timeout so that each call only needs its own arguments.
+class ServiceCaller
+{
+public:
+  ServiceCaller(const rclcpp::Logger & logger, std::chrono::milliseconds timeout)
+  : logger_(logger), timeout_(timeout)
+  {
+  }
+
+  /// Returns false on timeout or on a failure response, and fills `message` with the reason.
+  template <typename ServiceT>
+  bool call(
+    const typename rclcpp::Client<ServiceT>::SharedPtr & client,
+    const typename ServiceT::Request::SharedPtr & request, const char * label,
+    std::string & message) const
+  {
+    auto future = client->async_send_request(request).future.share();
+
+    if (future.wait_for(timeout_) != std::future_status::ready) {
+      return fail(std::string(label) + " service timeout", message);
+    }
+
+    const auto [success, response_message] = read_result(*future.get());
+    if (!success) {
+      return fail(
+        response_message.empty() ? std::string(label) + " service failed" : response_message,
+        message);
+    }
+    return true;
+  }
+
+  /// Same as above, with a default-constructed request.
+  template <typename ServiceT>
+  bool call(
+    const typename rclcpp::Client<ServiceT>::SharedPtr & client, const char * label,
+    std::string & message) const
+  {
+    return call<ServiceT>(client, std::make_shared<typename ServiceT::Request>(), label, message);
+  }
+
+private:
+  bool fail(const std::string & reason, std::string & message) const
+  {
+    message = reason;
+    RCLCPP_ERROR(logger_, "%s", message.c_str());
     return false;
   }
 
-  const auto [success, response_message] = extract_result(*future.get());
-  if (!success) {
-    message = response_message.empty() ? std::string(label) + " service failed" : response_message;
-    RCLCPP_ERROR(logger, "%s", message.c_str());
-    return false;
-  }
-  return true;
-}
-
-/// Call a service whose response carries a `status` field, with an empty request.
-template <typename ServiceT>
-bool call_status_service(
-  const typename rclcpp::Client<ServiceT>::SharedPtr & client, std::chrono::milliseconds timeout,
-  const char * label, const rclcpp::Logger & logger, std::string & message)
-{
-  return call_service<ServiceT>(
-    client, std::make_shared<typename ServiceT::Request>(), timeout, label, logger,
-    [](const auto & response) {
-      return std::make_pair(response.status.success, response.status.message);
-    },
-    message);
-}
+  rclcpp::Logger logger_;
+  std::chrono::milliseconds timeout_;
+};
 
 }  // namespace
 
@@ -314,13 +340,10 @@ bool MrmResetManager::set_initializing_flag(
   auto request = std::make_shared<SetBool::Request>();
   request->data = initializing;
 
+  const ServiceCaller caller{get_logger(), std::chrono::milliseconds(service_timeout_ms_)};
+
   std::string message;
-  if (!call_service<SetBool>(
-        client, request, std::chrono::milliseconds(service_timeout_ms_), label, get_logger(),
-        [](const SetBool::Response & response) {
-          return std::make_pair(response.success, response.message);
-        },
-        message)) {
+  if (!caller.call<SetBool>(client, request, label, message)) {
     return false;
   }
   flag = initializing;
@@ -332,9 +355,9 @@ bool MrmResetManager::call_reset_redundancy_switcher(std::string & message)
   if (!is_redundant_) {
     return true;
   }
-  return call_status_service<ResetRedundancySwitcher>(
-    cli_reset_redundancy_switcher_, std::chrono::milliseconds(service_timeout_ms_),
-    "reset_redundancy_switcher", get_logger(), message);
+  const ServiceCaller caller{get_logger(), std::chrono::milliseconds(service_timeout_ms_)};
+  return caller.call<ResetRedundancySwitcher>(
+    cli_reset_redundancy_switcher_, "reset_redundancy_switcher", message);
 }
 
 bool MrmResetManager::call_reset_redundancy_switcher()
@@ -345,9 +368,8 @@ bool MrmResetManager::call_reset_redundancy_switcher()
 
 bool MrmResetManager::call_reset_diag_graph(std::string & message)
 {
-  return call_status_service<ResetDiagGraph>(
-    cli_reset_diag_graph_, std::chrono::milliseconds(service_timeout_ms_), "reset_diag_graph",
-    get_logger(), message);
+  const ServiceCaller caller{get_logger(), std::chrono::milliseconds(service_timeout_ms_)};
+  return caller.call<ResetDiagGraph>(cli_reset_diag_graph_, "reset_diag_graph", message);
 }
 
 bool MrmResetManager::is_autoware_ready() const
