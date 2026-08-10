@@ -23145,6 +23145,31 @@ quarter of the bytes, which is worth it when every consumer of that camera
 works on luminance alone, such as feature tracking or visual odometry. A
 1600x900 frame is 5,760,000 bytes as <code>bgra8</code> and 1,440,000 bytes as <code>mono8</code>.</p>
 <p>For CARLA sensor parameters, see <a href="https://carla.readthedocs.io/en/latest/ref_sensors/">CARLA Sensor Reference</a>.</p>
+<h5 id="sensor-noise">Sensor Noise<a class="headerlink" href="#sensor-noise" title="Permanent link">#</a></h5>
+<p>The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
+is what reproducing a run wants. It also means anything consuming those sensors
+sees a measurement no hardware produces: a localisation or odometry stack scored
+against a perfect gyro reports an accuracy it will not reach on a vehicle.</p>
+<p>Set any of the CARLA noise attributes under the sensor's <code>parameters</code> to get a
+sensor that behaves like hardware:</p>
+<p><code>yaml
+sensor_mappings:
+  imu_link:
+    carla_type: sensor.other.imu
+    id: imu
+    ros_config:
+      frame_id: tamagawa/imu_link
+      topic: /sensing/imu/imu_data
+      frequency_hz: 50
+    parameters:
+      noise_gyro_stddev_x: 0.001
+      noise_gyro_stddev_y: 0.001
+      noise_gyro_stddev_z: 0.001
+      noise_gyro_bias_x: 0.0005
+      noise_accel_stddev_x: 0.01</code></p>
+<p>Recognised names are <code>noise_accel_stddev_{x,y,z}</code>, <code>noise_gyro_stddev_{x,y,z}</code>
+and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,lon}_stddev</code> and
+<code>noise_{alt,lat,lon}_bias</code> for the GNSS. Anything left out stays at zero.</p>
 <h5 id="light-weight-sensor-mapping">Light-Weight Sensor Mapping<a class="headerlink" href="#light-weight-sensor-mapping" title="Permanent link">#</a></h5>
 <p>For machines with limited GPU/CPU resources, an alternative <code>config/sensor_mapping_light_weight.yaml</code> is provided to reduce simulator load. Compared to the default mapping, it:</p>
 <ul>
