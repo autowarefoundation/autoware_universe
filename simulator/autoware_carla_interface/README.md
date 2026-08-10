@@ -221,6 +221,37 @@ works on luminance alone, such as feature tracking or visual odometry. A
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
 
+##### Sensor Noise
+
+The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
+is what reproducing a run wants. It also means anything consuming those sensors
+sees a measurement no hardware produces: a localisation or odometry stack scored
+against a perfect gyro reports an accuracy it will not reach on a vehicle.
+
+Set any of the CARLA noise attributes under the sensor's `parameters` to get a
+sensor that behaves like hardware:
+
+```yaml
+sensor_mappings:
+  imu_link:
+    carla_type: sensor.other.imu
+    id: imu
+    ros_config:
+      frame_id: tamagawa/imu_link
+      topic: /sensing/imu/imu_data
+      frequency_hz: 50
+    parameters:
+      noise_gyro_stddev_x: 0.001
+      noise_gyro_stddev_y: 0.001
+      noise_gyro_stddev_z: 0.001
+      noise_gyro_bias_x: 0.0005
+      noise_accel_stddev_x: 0.01
+```
+
+Recognised names are `noise_accel_stddev_{x,y,z}`, `noise_gyro_stddev_{x,y,z}`
+and `noise_gyro_bias_{x,y,z}` for the IMU, and `noise_{alt,lat,lon}_stddev` and
+`noise_{alt,lat,lon}_bias` for the GNSS. Anything left out stays at zero.
+
 ##### Light-Weight Sensor Mapping
 
 For machines with limited GPU/CPU resources, an alternative `config/sensor_mapping_light_weight.yaml` is provided to reduce simulator load. Compared to the default mapping, it:
