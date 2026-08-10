@@ -23,6 +23,10 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+# Image encodings a camera can be published as. CARLA renders BGRA, so that is
+# the default and needs no conversion.
+SUPPORTED_IMAGE_ENCODINGS = ("bgra8", "mono8")
+
 
 @dataclass
 class SensorConfig:
@@ -37,6 +41,10 @@ class SensorConfig:
     topic_info: Optional[str] = None
     frequency_hz: float = 20.0
     qos_profile: str = "reliable"
+    # What a camera's pixels are published as. A consumer that only wants
+    # luminance otherwise pays four times the bytes through serialisation and
+    # the transport for three channels it discards on arrival.
+    image_encoding: str = "bgra8"
     parameters: Dict[str, Any] = field(default_factory=dict)
     transform: Optional[Dict[str, float]] = None
     covariance: Optional[Dict[str, float]] = None
