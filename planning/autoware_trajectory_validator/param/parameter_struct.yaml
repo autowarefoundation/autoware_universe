@@ -38,6 +38,63 @@ validator:
       description: Maximum allowed steering rate (rad/s)
       read_only: false
 
+  crosswalk:
+    object_types:
+      type: string_array
+      default_value: [pedestrian, bicycle]
+      description: object types to consider as target object
+      read_only: false
+    lon_detection_margin:
+      type: double
+      default_value: 2.0
+      description: longitudinal extrusion length of sidewalk-side from crosswalk edge (m)
+      read_only: false
+    lat_detection_margin:
+      type: double
+      default_value: 1.0
+      description: lateral extrusion length of sidewalk-side from crosswalk edge (m)
+      read_only: false
+    object_clear_time_th:
+      type: double
+      default_value: 0.3
+      description: duration threshold to clear target object when no longer seen
+      read_only: false
+    distance_hysteresis_th:
+      type: double
+      default_value: 0.3
+      description: hysteresis threshold to consider the object as the same object
+      read_only: false
+    overshoot_tolerance:
+      type: double
+      default_value: 0.1
+      description: maximum overshoot distance allowed to consider the trajectory feasible (m)
+      read_only: false
+    nominal_deceleration:
+      type: double
+      default_value: 1.0
+      description: nominal deceleration to calculate the stop distance used as trajectory length limit (m/s^2)
+      read_only: false
+    nominal_jerk:
+      type: double
+      default_value: 1.0
+      description: nominal jerk to calculate the stop distance used as trajectory length limit (m/s^3)
+      read_only: false
+    stop_duration:
+      type: double
+      default_value: 3.0
+      description: minimum duration of the stop to consider the trajectory feasible (s)
+      read_only: false
+    arrived_distance_threshold:
+      type: double
+      default_value: 5.0
+      description: threshold to check if the ego vehicle has arrived at crosswalk stop line (m)
+      read_only: false
+    use_trajectory_time:
+      type: bool
+      default_value: false
+      description: whether to use the embedded trajectory time to evaluate the stop duration
+      read_only: false
+
   traffic_light:
     deceleration_limit:
       type: double
@@ -64,10 +121,47 @@ validator:
       default_value: true
       description: when true, amber lights are handled like red lights
       read_only: false
+    treat_unknown_light_as_red_light:
+      type: bool
+      default_value: false
+      description: when true, unknown lights are handled like red lights
+      read_only: false
     stop_overshoot_margin:
       type: double
       default_value: 0.5
       description: Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible (m)
+      read_only: false
+    allow_if_cannot_stop_distance:
+      type: double
+      default_value: 0.0
+      description: allow crossing a stop line within this distance if ego cannot stop before the line plus its margin (m)
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    stable_duration_threshold_red:
+      type: double
+      default_value: 0.0
+      description: Stability duration for RED signals (seconds)
+      read_only: false
+    stable_duration_threshold_amber:
+      type: double
+      default_value: 0.0
+      description: Stability duration for AMBER signals (seconds)
+      read_only: false
+    stable_duration_threshold_unknown:
+      type: double
+      default_value: 0.0
+      description: Minimum duration an UNKNOWN signal must be seen before it is considered active (seconds)
+      read_only: false
+    amber_rejection_hysteresis_duration:
+      type: double
+      default_value: 0.0
+      description: Hysteresis duration to persist an AMBER rejection (seconds)
+      read_only: false
+    ego_stopped_velocity_threshold:
+      type: double
+      default_value: 0.01
+      description: Velocity below which ego is considered fully stopped (m/s)
       read_only: false
     checked_trajectory_length:
       deceleration_limit:

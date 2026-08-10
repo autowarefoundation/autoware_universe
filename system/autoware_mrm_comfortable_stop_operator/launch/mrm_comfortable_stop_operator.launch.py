@@ -14,10 +14,12 @@
 
 import launch
 from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import ComposableNodeContainer
-from launch_ros.descriptions import ComposableNode
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 import yaml
 
@@ -27,9 +29,9 @@ def launch_setup(context, *args, **kwargs):
     with open(config_file_path, "r") as f:
         params = yaml.safe_load(f)["/**"]["ros__parameters"]
 
-    component = ComposableNode(
+    node = Node(
         package="autoware_mrm_comfortable_stop_operator",
-        plugin="autoware::mrm_comfortable_stop_operator::MrmComfortableStopOperator",
+        executable="autoware_mrm_comfortable_stop_operator_node",
         name="mrm_comfortable_stop_operator",
         parameters=[
             params,
@@ -39,24 +41,30 @@ def launch_setup(context, *args, **kwargs):
             ("~/output/mrm/comfortable_stop/status", "/system/mrm/comfortable_stop/status"),
             ("~/output/velocity_limit", "/planning/scenario_planning/max_velocity_candidates"),
             ("~/output/velocity_limit/clear", "/planning/scenario_planning/clear_velocity_limit"),
+            ("~/input/driving_mode_request", "/system/driving_mode/request"),
+            ("~/input/driving_mode_info", "/system/driving_mode/info"),
+            ("~/output/mrm_state", "/system/driving_mode/mrm_state"),
         ],
-    )
-
-    container = ComposableNodeContainer(
-        name="mrm_comfortable_stop_operator_container",
-        namespace="mrm_comfortable_stop_operator",
-        package="rclcpp_components",
-        executable="component_container",
-        composable_node_descriptions=[
-            component,
-        ],
+        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
         output="screen",
     )
 
-    return [container]
+    return [node]
 
 
 def generate_launch_description():
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        ),
+    )
+
     launch_arguments = [
         DeclareLaunchArgument(
             "config_file",
@@ -68,4 +76,6 @@ def generate_launch_description():
         )
     ]
 
-    return launch.LaunchDescription(launch_arguments + [OpaqueFunction(function=launch_setup)])
+    return launch.LaunchDescription(
+        launch_arguments + [agnocast_env, OpaqueFunction(function=launch_setup)]
+    )

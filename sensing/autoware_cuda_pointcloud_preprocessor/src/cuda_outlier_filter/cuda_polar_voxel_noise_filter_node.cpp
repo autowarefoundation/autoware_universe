@@ -132,7 +132,8 @@ CudaPolarVoxelNoiseFilterNode::CudaPolarVoxelNoiseFilterNode(
   pointcloud_sub_ =
     std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
-      std::bind(&CudaPolarVoxelNoiseFilterNode::pointcloud_callback, this, std::placeholders::_1));
+      std::bind(&CudaPolarVoxelNoiseFilterNode::pointcloud_callback, this, std::placeholders::_1),
+      cuda_polar_voxel_noise_filter_->stream());
 
   filtered_cloud_pub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(

@@ -15,6 +15,7 @@
 #ifndef MAIN_HPP_
 #define MAIN_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
@@ -47,7 +48,7 @@ enum class Module {
 
 // clang-format on
 
-class StateMonitor : public rclcpp::Node
+class StateMonitor : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit StateMonitor(const rclcpp::NodeOptions & options);
@@ -61,16 +62,16 @@ private:
   template <class T>
   using TypeModuleMap = std::unordered_map<StateType, std::unordered_map<Module, T>>;
 
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Subscription<DiagnosticArray>::SharedPtr sub_diag_;
-  TypeModuleMap<rclcpp::Publisher<ModeChangeAvailable>::SharedPtr> pubs_;
+  AUTOWARE_TIMER_PTR timer_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagnosticArray) sub_diag_;
+  TypeModuleMap<AUTOWARE_PUBLISHER_PTR(ModeChangeAvailable)> pubs_;
   TypeModuleMap<bool> states_;
   TypeModuleMap<std::vector<std::string>> topics_;
   std::unordered_map<std::string, DiagnosticLevel> levels_;
 
   void update_state(const StateType & type, const Module & module, bool state);
   void on_timer();
-  void on_diag(const DiagnosticArray::ConstSharedPtr msg);
+  void on_diag(const DiagnosticArray & msg);
 };
 
 }  // namespace autoware::component_state_monitor

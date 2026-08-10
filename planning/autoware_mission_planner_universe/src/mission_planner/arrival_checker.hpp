@@ -15,35 +15,58 @@
 #ifndef MISSION_PLANNER__ARRIVAL_CHECKER_HPP_
 #define MISSION_PLANNER__ARRIVAL_CHECKER_HPP_
 
-#include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 
 #include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
-#include <geometry_msgs/msg/pose.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+
+#include <deque>
+#include <optional>
 
 namespace autoware::mission_planner_universe
 {
+
+struct ArrivalCheckerThreshold
+{
+  // arrival_check_angle [rad] (stores the deg2rad-converted value)
+  double angle{0.0};
+  double lateral_distance{0.0};  // arrival_check_lateral_distance [m]
+  double longitudinal_undershoot_distance{
+    0.0};  // arrival_check_longitudinal_undershoot_distance [m]
+  double longitudinal_overshoot_distance{0.0};  // arrival_check_longitudinal_overshoot_distance [m]
+  double duration{0.0};                         // arrival_check_duration [s]
+};
 
 class ArrivalChecker
 {
 public:
   using PoseWithUuidStamped = autoware_planning_msgs::msg::PoseWithUuidStamped;
-  using PoseStamped = geometry_msgs::msg::PoseStamped;
-  explicit ArrivalChecker(rclcpp::Node * node);
-  void set_goal();
+  using TwistStamped = geometry_msgs::msg::TwistStamped;
+  using Odometry = nav_msgs::msg::Odometry;
+
+  explicit ArrivalChecker(const ArrivalCheckerThreshold & threshold);
+
+  void clear_goal();
   void set_goal(const PoseWithUuidStamped & goal);
-  bool is_arrived(const PoseStamped & pose) const;
+
+  // Keeps the latest odometry and accumulates its twist into the buffer (command).
+  // Equivalent to the odometry subscription + onOdom of the removed VehicleStopChecker.
+  // Call it every cycle regardless of the route state.
+  void update(const Odometry & odometry);
+
+  // Judges arrival from the latest odometry pose and the twist buffer (const query).
+  // Returns false while no odometry has been received. The reference time is the stamp of the
+  // latest odometry.
+  bool is_arrived() const;
 
 private:
-  double angle_;
-  double duration_;
-  double arrival_check_lateral_distance_;
-  double arrival_check_longitudinal_undershoot_distance_;
-  double arrival_check_longitudinal_overshoot_distance_;
+  ArrivalCheckerThreshold threshold_;
   std::optional<PoseWithUuidStamped> goal_with_uuid_;
-  rclcpp::Subscription<PoseWithUuidStamped>::SharedPtr sub_goal_;
-  autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;
+  std::optional<Odometry> odometry_;
+  std::deque<TwistStamped> twist_buffer_;
+
+  static constexpr double velocity_buffer_time_sec = 10.0;
 };
 
 }  // namespace autoware::mission_planner_universe

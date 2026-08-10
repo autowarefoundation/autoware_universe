@@ -1,0 +1,43 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: CPUMonitor.node
+
+package:
+  name: autoware_system_monitor
+  provider: autoware
+
+launch:
+  plugin: CPUMonitor
+  executable: cpu_monitor
+  node_output: screen
+
+# interfaces
+# diagnostics are advertised to /diagnostics via diagnostic_updater.
+subscribers: []
+
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+  - name: cpu_usage
+    message_type: tier4_external_api_msgs/msg/CpuUsage
+    remap_target: ~/cpu_usage
+  - name: cpu_temperature
+    message_type: tier4_external_api_msgs/msg/CpuTemperature
+    remap_target: ~/cpu_temperature
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/cpu_monitor.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: monitor
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: diagnostics

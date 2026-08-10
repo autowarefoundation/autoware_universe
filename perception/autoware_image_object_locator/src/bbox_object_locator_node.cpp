@@ -167,6 +167,8 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
   label_settings_.MOTORCYCLE = declare_parameter<bool>("detection_target_class.MOTORCYCLE");
   label_settings_.BICYCLE = declare_parameter<bool>("detection_target_class.BICYCLE");
   label_settings_.PEDESTRIAN = declare_parameter<bool>("detection_target_class.PEDESTRIAN");
+  label_settings_.ANIMAL = declare_parameter<bool>("detection_target_class.ANIMAL");
+  label_settings_.HAZARD = declare_parameter<bool>("detection_target_class.HAZARD");
 
   roi_confidence_th_ = declare_parameter<double>("roi_confidence_threshold");
 

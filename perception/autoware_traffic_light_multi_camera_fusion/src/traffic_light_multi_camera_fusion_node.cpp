@@ -19,7 +19,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -28,10 +27,6 @@ namespace autoware::traffic_light
 MultiCameraFusionNode::MultiCameraFusionNode(const rclcpp::NodeOptions & node_options)
 : Node("traffic_light_multi_camera_fusion", node_options)
 {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-
   std::vector<std::string> camera_namespaces =
     this->declare_parameter<std::vector<std::string>>("camera_namespaces");
   const bool is_approximate_sync = this->declare_parameter<bool>("approximate_sync");
@@ -43,6 +38,8 @@ MultiCameraFusionNode::MultiCameraFusionNode(const rclcpp::NodeOptions & node_op
     this->declare_parameter<bool>("signal_consistency_check.enable");
   fusion_config_.publish_partial_matched_signal =
     this->declare_parameter<bool>("signal_consistency_check.publish_partial_matched_signal");
+  fusion_config_.use_map_based_signal_filter =
+    this->declare_parameter<bool>("map_based_signal_filter.enable");
 
   fusion_ = MultiCameraFusion(fusion_config_);
 
@@ -61,42 +58,48 @@ MultiCameraFusionNode::MultiCameraFusionNode(const rclcpp::NodeOptions & node_op
         ExactSyncPolicy(10), *(cam_info_subs_.back()), *(roi_subs_.back()),
         *(signal_subs_.back())));
       exact_sync_subs_.back()->registerCallback(
-        std::bind(&MultiCameraFusionNode::traffic_signal_roi_callback, this, _1, _2, _3));
+        &MultiCameraFusionNode::traffic_signal_roi_callback, this);
     } else {
       approximate_sync_subs_.emplace_back(new ApproximateSync(
         ApproximateSyncPolicy(10), *(cam_info_subs_.back()), *(roi_subs_.back()),
         *(signal_subs_.back())));
       approximate_sync_subs_.back()->registerCallback(
-        std::bind(&MultiCameraFusionNode::traffic_signal_roi_callback, this, _1, _2, _3));
+        &MultiCameraFusionNode::traffic_signal_roi_callback, this);
     }
   }
 
   map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    [this](const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg) {
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & msg) {
       this->map_callback(msg);
     });
-  signal_pub_ =
-    AUTOWARE_CREATE_PUBLISHER2(NewSignalArrayType, "~/output/traffic_signals", rclcpp::QoS{1});
+  signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
 
   diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic light conflict status");
+    std::make_unique<autoware_utils::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
+      this, "traffic light conflict status");
 }
 
 void MultiCameraFusionNode::traffic_signal_roi_callback(
-  const CamInfoType::ConstSharedPtr cam_info_msg, const RoiArrayType::ConstSharedPtr roi_msg,
-  const SignalArrayType::ConstSharedPtr signal_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CamInfoType) & cam_info_msg,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(RoiArrayType) & roi_msg,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SignalArrayType) & signal_msg)
 {
   rclcpp::Time stamp(roi_msg->header.stamp);
 
-  auto msg_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(signal_pub_);
-  const MultiCameraFusionResult result =
-    fusion_.fuse(*cam_info_msg, *roi_msg, *signal_msg, *msg_out);
+  if (!fusion_config_.lanelet_map_ptr) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "Vector map has not arrived yet. No traffic light groups will be published until it is "
+      "received.");
+  }
+
+  const MultiCameraFusionResult result = fusion_.fuse(*cam_info_msg, *roi_msg, *signal_msg);
   for (const auto & unmapped_id : result.unmapped_traffic_light_ids) {
     RCLCPP_WARN_STREAM(
       get_logger(), "Found Traffic Light Id = " << unmapped_id << " which is not defined in Map");
   }
-  signal_pub_->publish(std::move(msg_out));
+  signal_pub_->publish(result.traffic_light_groups);
 
   if (result.conflicted_regulatory_element_status.size() > 0) {
     publish_diagnostics(result.conflicted_regulatory_element_status, stamp);
@@ -104,7 +107,7 @@ void MultiCameraFusionNode::traffic_signal_roi_callback(
 }
 
 void MultiCameraFusionNode::map_callback(
-  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & input_msg)
 {
   fusion_config_.lanelet_map_ptr = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_msg));

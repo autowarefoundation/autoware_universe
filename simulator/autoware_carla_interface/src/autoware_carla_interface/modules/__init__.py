@@ -20,11 +20,13 @@ from .ros_publisher_manager import ROSPublisherManager
 from .sensor_kit_loader import SensorKitLoader
 from .sensor_manager import SensorConfig
 from .sensor_manager import SensorRegistry
+from .sensor_publish_worker import SensorPublishWorker
 
 __all__ = [
     "SensorConfig",
     "SensorRegistry",
     "SensorKitLoader",
+    "SensorPublishWorker",
     "ROSPublisherManager",
     "CoordinateTransformer",
 ]
