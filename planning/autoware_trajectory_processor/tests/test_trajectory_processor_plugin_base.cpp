@@ -99,9 +99,6 @@ TEST_F(TrajectoryProcessorPluginBaseTest, InitializesCommonState)
 
   EXPECT_TRUE(plugin.initialized());
   EXPECT_EQ(plugin.node(), node_.get());
-  EXPECT_EQ(
-    plugin.get_class_name(),
-    "autoware::trajectory_processor::plugin::TestTrajectoryProcessorPlugin");
   EXPECT_EQ(plugin.get_name(), "processor_0");
   EXPECT_EQ(plugin.get_short_name(), "TestTrajectoryProcessorPlugin");
   EXPECT_TRUE(plugin.get_planning_factors().empty());
@@ -120,7 +117,7 @@ TEST_F(TrajectoryProcessorPluginBaseTest, SupportsRepeatedClassesWithUniqueInsta
   first.initialize(class_name, "processor_0", node_.get(), time_keeper_, nullptr, params);
   second.initialize(class_name, "processor_1", node_.get(), time_keeper_, nullptr, params);
 
-  EXPECT_EQ(first.get_class_name(), second.get_class_name());
+  EXPECT_EQ(first.get_short_name(), second.get_short_name());
   EXPECT_NE(first.get_name(), second.get_name());
 }
 
