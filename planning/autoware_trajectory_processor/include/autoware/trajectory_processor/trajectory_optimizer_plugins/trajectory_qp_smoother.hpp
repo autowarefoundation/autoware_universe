@@ -71,7 +71,7 @@ protected:
 
 private:
   // QP smoother specific parameters
-  trajectory_optimizer_node_params::Params::TrajectoryQpSmoother qp_params_;
+  trajectory_processor_params::Params::TrajectoryQpSmoother qp_params_;
 
   /**
    * @brief Solve the QP problem for trajectory smoothing

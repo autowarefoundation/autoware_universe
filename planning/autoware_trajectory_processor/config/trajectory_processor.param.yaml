@@ -1,11 +1,21 @@
 /**:
   ros__parameters:
+    # Complete plugin execution order: modifiers followed by optimizers.
     plugin_names:
       - "autoware::trajectory_modifier::plugin::StopPointFixer"
       - "autoware::trajectory_modifier::plugin::SurroundObstacleStop"
       - "autoware::trajectory_modifier::plugin::ObstacleStop"
       - "autoware::trajectory_modifier::plugin::TrafficLightStop"
       - "autoware::trajectory_modifier::plugin::VelocityModifier"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
+      - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
     use_stop_point_fixer: true
     use_obstacle_stop: true
     use_traffic_light_stop: true
@@ -143,3 +153,12 @@
       crossing_time_limit: 2.75 # [s]
       delay_response_time: 0.5 # [s]
       ego_stopped_vel_th: 0.01 # [m/s]
+    use_akima_spline_interpolation: true
+    use_eb_smoother: false
+    use_qp_smoother: true
+    use_trajectory_point_fixer: true
+    use_velocity_optimizer: true
+    use_trajectory_extender: false
+    use_kinematic_feasibility_enforcer: true
+    use_mpt_optimizer: false
+    use_temporal_mpt_optimizer: false

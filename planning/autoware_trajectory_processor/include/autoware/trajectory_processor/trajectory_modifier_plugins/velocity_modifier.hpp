@@ -27,7 +27,7 @@ using autoware::trajectory_processor::TrajectoryProcessorParams;
 using autoware::trajectory_processor::plugin::ProcessingResult;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
-using ModifierParams = trajectory_modifier_params::Params;
+using ModifierParams = trajectory_processor_params::Params;
 
 class VelocityModifier : public TrajectoryProcessorPluginBase
 {

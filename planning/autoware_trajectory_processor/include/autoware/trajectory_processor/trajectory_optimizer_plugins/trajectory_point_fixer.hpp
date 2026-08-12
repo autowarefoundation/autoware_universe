@@ -47,7 +47,7 @@ protected:
   void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
-  trajectory_optimizer_node_params::Params::TrajectoryPointFixer fixer_params_;
+  trajectory_processor_params::Params::TrajectoryPointFixer fixer_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

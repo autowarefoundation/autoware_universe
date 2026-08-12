@@ -49,7 +49,7 @@ protected:
 
 private:
   Trajectory past_ego_state_trajectory_;
-  trajectory_optimizer_node_params::Params::TrajectoryExtender extender_params_;
+  trajectory_processor_params::Params::TrajectoryExtender extender_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

@@ -46,7 +46,7 @@ ObstacleTypeParameters to_obstacle_type_parameters(
 }
 
 Parameters to_proximity_checker_parameters(
-  const trajectory_modifier_params::Params::SurroundObstacleStop & params)
+  const trajectory_processor_params::Params::SurroundObstacleStop & params)
 {
   Parameters parameters;
   parameters.pointcloud_enable_check = params.use_pointcloud;

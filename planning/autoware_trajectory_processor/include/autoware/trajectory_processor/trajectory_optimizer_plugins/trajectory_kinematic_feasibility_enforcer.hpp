@@ -69,7 +69,7 @@ protected:
   void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
-  trajectory_optimizer_node_params::Params::TrajectoryKinematicFeasibility feasibility_params_;
+  trajectory_processor_params::Params::TrajectoryKinematicFeasibility feasibility_params_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
   /**

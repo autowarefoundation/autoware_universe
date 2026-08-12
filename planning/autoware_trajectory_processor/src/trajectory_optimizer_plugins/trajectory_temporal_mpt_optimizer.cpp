@@ -96,7 +96,7 @@ std::string expand_user_path_string(const std::string & p)
 }  // namespace
 
 void TrajectoryTemporalMPTOptimizer::set_mpt_params(
-  const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params)
+  const trajectory_processor_params::Params::TrajectoryTemporalMptOptimizer & params)
 {
   mpt_params_.cg_distance_from_rear_axle_ratio = params.cg_distance_from_rear_axle_ratio;
   mpt_params_.min_points_for_optimization =
