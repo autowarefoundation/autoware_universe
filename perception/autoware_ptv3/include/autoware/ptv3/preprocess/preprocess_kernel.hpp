@@ -49,7 +49,8 @@ public:
   /**
    * @brief Crops, voxelizes and deduplicates the input cloud.
    *
-   * The emitted voxels are sorted by their order-0 serialized code.
+   * The emitted voxels are sorted by their order-0 serialized code, which
+   * generateSerializedPoolingMetadata requires.
    *
    * @param input_data Input cloud in `input_format` layout.
    * @param input_format Point layout of `input_data`.
@@ -79,10 +80,14 @@ public:
    *
    * @param grid_coord Grid coordinates of the input voxels, laid out [num_voxels, 3].
    * @param serialized_code Codes of the input voxels, laid out [num_orders, num_voxels].
-   * @param num_voxels Number of input voxels.
+   * @param num_voxels Number of input voxels; clamped to max_num_voxels internally.
    * @param stages Output device buffers to fill, one per pooling stage.
    * @param stage_counts Output voxel count per level, laid out [num_stages + 1]; entry 0 is the
-   * input count.
+   * (clamped) input count.
+   * @pre The input voxels are sorted by their order-0 serialized code (`serialized_code` row 0),
+   * as generateFeatures emits them. The coarser levels are derived with prefix scans that rely on
+   * this ordering; an unsorted input silently produces wrong metadata. Asserted on device in
+   * debug builds.
    */
   void generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
@@ -117,12 +122,15 @@ private:
   cudaEvent_t num_cropped_points_copy_event_;
   cudaEvent_t num_unique_points_copy_event_;
 
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_keys_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_sorted_keys_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_indices_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_sorted_indices_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_run_flags_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_run_ids_d_{nullptr};
+  // Serialization order of the finest level (the input voxels), laid out
+  // [num_orders, num_voxels]. Row 0 is the identity; the remaining rows are the only sorts left in
+  // the pooling-metadata path.
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> finest_level_order_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_indices_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_flags_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
   int code_sort_end_bit_{64};
