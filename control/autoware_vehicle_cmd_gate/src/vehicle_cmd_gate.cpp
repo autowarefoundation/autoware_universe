@@ -167,6 +167,7 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
     p.lat_jerk_lim_for_steer_rate =
       declare_parameter<double>("nominal.lat_jerk_lim_for_steer_rate");
     filter_.setParam(p);
+    filter_.setLogger(get_logger(), get_clock());
   }
 
   {
@@ -191,6 +192,7 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
     p.lat_jerk_lim_for_steer_rate =
       declare_parameter<double>("on_transition.lat_jerk_lim_for_steer_rate");
     filter_on_transition_.setParam(p);
+    filter_on_transition_.setLogger(get_logger(), get_clock());
   }
 
   // Set default value
@@ -342,14 +344,17 @@ bool VehicleCmdGate::isDataReady()
   // emergency state must be received before running
   if (use_emergency_handling_) {
     if (!emergency_state_heartbeat_received_time_) {
-      RCLCPP_WARN(get_logger(), "emergency_state_heartbeat_received_time_ is false");
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000, "emergency_state_heartbeat_received_time_ is false");
       return false;
     }
   }
 
   if (check_external_emergency_heartbeat_) {
     if (!external_emergency_stop_heartbeat_received_time_) {
-      RCLCPP_WARN(get_logger(), "external_emergency_stop_heartbeat_received_time_ is false");
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "external_emergency_stop_heartbeat_received_time_ is false");
       return false;
     }
   }

@@ -140,6 +140,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     const std::string ns = base_ns + "pull_over.";
     p.pull_over_minimum_request_length =
       node->declare_parameter<double>(ns + "minimum_request_length");
+    p.approximate_pull_over_distance =
+      node->declare_parameter<double>(ns + "approximate_pull_over_distance");
     p.pull_over_prepare_length = node->declare_parameter<double>(ns + "pull_over_prepare_length");
     p.pull_over_velocity = node->declare_parameter<double>(ns + "pull_over_velocity");
     p.pull_over_minimum_velocity =
@@ -147,6 +149,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     p.decide_path_distance = node->declare_parameter<double>(ns + "decide_path_distance");
     p.maximum_deceleration = node->declare_parameter<double>(ns + "maximum_deceleration");
     p.maximum_jerk = node->declare_parameter<double>(ns + "maximum_jerk");
+    p.low_velocity_threshold = node->declare_parameter<double>(ns + "low_velocity_threshold");
+    p.stopping_distance_buffer = node->declare_parameter<double>(ns + "stopping_distance_buffer");
     p.path_priority = node->declare_parameter<std::string>(ns + "path_priority");
     p.efficient_path_order =
       node->declare_parameter<std::vector<std::string>>(ns + "efficient_path_order");
@@ -274,6 +278,10 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
       node->declare_parameter<double>(ns + "pull_over_angle_threshold");
     p.bezier_parking.after_shift_straight_distance =
       node->declare_parameter<double>(ns + "after_shift_straight_distance");
+    p.bezier_parking.lateral_acceleration_threshold =
+      node->declare_parameter<double>(ns + "lateral_acceleration_threshold");
+    p.bezier_parking.lateral_acceleration_filtering_duration =
+      node->declare_parameter<double>(ns + "lateral_acceleration_filtering_duration");
   }
 
   // stop condition

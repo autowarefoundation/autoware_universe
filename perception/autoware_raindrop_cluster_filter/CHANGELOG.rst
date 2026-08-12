@@ -2,6 +2,58 @@
 Changelog for package autoware_raindrop_cluster_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(low_intensity_filter): bug fixing (`#12809 <https://github.com/autowarefoundation/autoware_universe/issues/12809>`_)
+  fix(low_intensity_filter): typo bug fixing
+* fix(detected_object_validation, raindrop_cluster_filter): adding 2 new object classes (`#12673 <https://github.com/autowarefoundation/autoware_universe/issues/12673>`_)
+  * fix(autoware_detected_object_validation): adding 2 new object classes
+  * fix other validation nodes
+  * fix(autoware_raindrop_cluster_filter): adapt to 2 new classes
+  * docs
+  * docs: raindrop filter
+  ---------
+* Contributors: badai nguyen, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(low_intensity_cluster_filter): use CallbackIsolatedAgnocastExecutor for low_intensity_cluster_filter (`#12358 <https://github.com/mitsudome-r/autoware_universe/issues/12358>`_)
+  apply cie to low_intensity_cluster_filter
+* feat(autoware_raindrop_cluster_filter): replace publisher/subscription with agnocast (`#12310 <https://github.com/mitsudome-r/autoware_universe/issues/12310>`_)
+  * feat: replace executor
+  * feat: replace publisher
+  * style(pre-commit): autofix
+  * fix
+  * style(pre-commit): autofix
+  * fix
+  * fix: add include
+  * apply agnocast to clusters subscription
+  * suppress cppcheck
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+  Co-authored-by: Koichi Imai <45482193+Koichi98@users.noreply.github.com>
+* chore(perception): remove unused lanelet2_extension header (`#12295 <https://github.com/mitsudome-r/autoware_universe/issues/12295>`_)
+  unused lanelet2_extension in perception component
+* Contributors: Koichi Imai, Sarun MUKDAPITAK, Taekjin LEE, Tetsuhiro Kawaguchi, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

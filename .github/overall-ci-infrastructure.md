@@ -17,37 +17,22 @@ They are free to use for public repositories, with a concurrency limit of 20 job
 
 **Note:** While the official documentation lists 14 GB of storage, the actual available storage is approximately 73 GB.
 
-### AWS CodeBuild runners
+### Self-hosted runners
 
-- [AWS CodeBuild Documentation](https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html)
+Registered with the labels `[self-hosted, Linux, X64]` and used by the heavier CUDA/merge jobs.
 
-These runners are employed for workflows that require more resources and are funded by the Autoware Foundation budget.
-
-**Relevant machine types:**
-
-| Instance Type   | Memory | vCPUs | Price per Minute |
-| --------------- | ------ | ----- | ---------------- |
-| arm1.large      | 16 GiB | 8     | $0.015           |
-| general1.medium | 7 GB   | 4     | $0.01            |
-| general1.large  | 15 GB  | 8     | $0.02            |
-| general1.xlarge | 72 GiB | 36    | $0.0798          |
-| gpu1.small      | 15 GB  | 4     | $0.05            |
-
-**Sources:**
-
-- [Compute images supported with the CodeBuild-hosted GitHub Actions runner](https://docs.aws.amazon.com/codebuild/latest/userguide/sample-github-action-runners-update-yaml.images.html)
-- [AWS CodeBuild pricing](https://aws.amazon.com/codebuild/pricing/)
+| Machine | CPU                                       | RAM   | Storage    |
+| ------- | ----------------------------------------- | ----- | ---------- |
+| SYS-3   | Intel Xeon-E 2288G (8 cores / 16 threads) | 32 GB | 855 GB SSD |
 
 ## Key workflows and their runners
 
-| Workflow                           | Trigger               | Runner         |
-| ---------------------------------- | --------------------- | -------------- |
-| build-and-test (cuda)              | merge to main         | general1.large |
-| build-and-test-daily               | daily on main         | github-std     |
-| build-and-test-daily-arm64         | daily on main         | arm1.large     |
-| build-and-test-differential        | PR update             | github-std     |
-| build-and-test-differential (cuda) | PR update             | general1.large |
-| build-and-test-differential-arm64  | PR update (arm label) | arm1.large     |
+| Workflow                                   | Trigger        | Runner                                        |
+| ------------------------------------------ | -------------- | --------------------------------------------- |
+| build-and-test                             | push to `main` | self-hosted                                   |
+| build-and-test-daily                       | daily / manual | self-hosted (amd64), ubuntu-22.04-arm (arm64) |
+| build-and-test-packages-above-differential | PR update      | self-hosted                                   |
+| build-test-tidy-pr                         | PR update      | github-std (non-cuda), self-hosted (cuda)     |
 
 ## Additional notes
 

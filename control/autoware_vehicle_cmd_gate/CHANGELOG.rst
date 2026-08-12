@@ -2,6 +2,52 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_vehicle_cmd_gate): apply to CIE (`#12654 <https://github.com/autowarefoundation/autoware_universe/issues/12654>`_)
+  * feat: apply to CIE
+  * chore: re-trigger CI
+  * chore: re-trigger CI
+  ---------
+* Contributors: Yutaro Kobayashi, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(control_command_filter, vehicle_cmd_gate): add logging capabilities for command limits (`#12250 <https://github.com/mitsudome-r/autoware_universe/issues/12250>`_)
+  * feat(control_command_filter): add logging capabilities for command limits
+  * feat(vehicle_cmd_filter): add logging for velocity, acceleration, jerk, and steering limits
+  * feat(command_filter): enhance logging by adding clock support for throttling
+* Contributors: Kyoichi Sugahara, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(vehicle_cmd_gate): fix funcArgNamesDifferent (`#11977 <https://github.com/autowarefoundation/autoware_universe/issues/11977>`_)
+  fix(vehicle_cmd_gate):
+* feat: control : fix contol packages compile error when using ros2 jazzy (`#11556 <https://github.com/autowarefoundation/autoware_universe/issues/11556>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe, 心刚
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(vehicle_cmd_gate): use throttle log (`#10424 <https://github.com/autowarefoundation/autoware_universe/issues/10424>`_)
+  * feat(vehicle_cmd_gate): use throttle log
+  * feat(vehicle_cmd_gate): use throttle log
+  ---------
+* fix(autoware_control_command_gate, autoware_vehicle_cmd_gate): remove unused function  (`#11207 <https://github.com/autowarefoundation/autoware_universe/issues/11207>`_)
+  * fix(autoware_control_command_gate): remove unused function
+  * remove unused function
+  ---------
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe, Takagi, Isamu
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_vehicle_cmd_gate): steer rate limit with lateral jerk constraint (`#11057 <https://github.com/autowarefoundation/autoware_universe/issues/11057>`_)

@@ -57,11 +57,11 @@ rear_collision_checker_node:
         min_cluster_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
         max_cluster_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
       velocity_estimation:
         observation_time:
           type: double

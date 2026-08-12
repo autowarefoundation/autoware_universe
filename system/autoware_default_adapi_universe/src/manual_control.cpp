@@ -16,14 +16,19 @@
 
 #include "utils/command_conversion.hpp"
 
+#include <memory>
 #include <string>
 
 namespace autoware::default_adapi
 {
 
 ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
-: Node("manual_control", options)
+: Node("manual_control", options),
+  diag_updater_(std::make_unique<diagnostic_updater::Updater>(this))
 {
+  // NOTE: Do not enable interfaces for velocity and acceleration mode in the constructor.
+  //       Enable the comment out process and enable interface when the service is called.
+
   using std::placeholders::_1;
   using std::placeholders::_2;
 
@@ -37,6 +42,16 @@ ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
     };
     ns_ = "/api/manual/" + mode_name;
     target_operation_mode_ = convert_operation_mode(mode_name);
+  }
+
+  // Initialize diagnostics to monitor the heartbeat.
+  {
+    autoware_utils_diagnostics::TimeoutDiag::Params params;
+    params.warn_duration_ = declare_parameter<double>("diag_timeout_warn_duration");
+    params.error_duration_ = declare_parameter<double>("diag_timeout_error_duration");
+    diag_heartbeat_ =
+      std::make_unique<autoware_utils_diagnostics::TimeoutDiag>(params, *get_clock(), "heartbeat");
+    diag_updater_->add(*diag_heartbeat_);
   }
 
   // Interfaces for internal.
@@ -115,8 +130,19 @@ void ManualControlNode::on_select_mode(
       res->status.success = true;
       break;
     case ManualControlMode::ACCELERATION:
+      disable_all_commands();
+      // TODO(isamu-takagi): Uncomment when supporting.
+      // enable_common_commands();
+      // enable_acceleration_commands();
+      update_mode_status(ManualControlMode::DISABLED);
+      res->status.success = false;
+      res->status.message = "The selected control mode is not supported.";
+      break;
     case ManualControlMode::VELOCITY:
       disable_all_commands();
+      // TODO(isamu-takagi): Uncomment when supporting.
+      // enable_common_commands();
+      // enable_velocity_commands();
       update_mode_status(ManualControlMode::DISABLED);
       res->status.success = false;
       res->status.message = "The selected control mode is not supported.";
@@ -150,14 +176,18 @@ void ManualControlNode::enable_pedals_commands()
     [this](const PedalsCommand & msg) { pub_pedals_->publish(msg); });
 }
 
+// TODO(isamu-takagi): This function is reserved for future support.
+/*
 void ManualControlNode::enable_acceleration_commands()
 {
-  // TODO(isamu-takagi): Currently not supported.
   sub_acceleration_ = create_subscription<AccelerationCommand>(
     ns_ + "/command/acceleration", rclcpp::QoS(1).best_effort(),
     [](const AccelerationCommand & msg) { (void)msg; });
 }
+*/
 
+// TODO(isamu-takagi): This function is reserved for future support.
+/*
 void ManualControlNode::enable_velocity_commands()
 {
   // TODO(isamu-takagi): Currently not supported.
@@ -165,6 +195,7 @@ void ManualControlNode::enable_velocity_commands()
     ns_ + "/command/velocity", rclcpp::QoS(1).best_effort(),
     [](const VelocityCommand & msg) { (void)msg; });
 }
+*/
 
 void ManualControlNode::enable_common_commands()
 {
@@ -172,7 +203,10 @@ void ManualControlNode::enable_common_commands()
 
   sub_heartbeat_ = create_subscription<OperatorHeartbeat>(
     ns_ + "/operator/heartbeat", rclcpp::QoS(1).best_effort(),
-    [this](const OperatorHeartbeat & msg) { pub_heartbeat_->publish(msg); });
+    [this](const OperatorHeartbeat & msg) {
+      pub_heartbeat_->publish(msg);
+      diag_heartbeat_->update();
+    });
   sub_steering_ = create_subscription<SteeringCommand>(
     ns_ + "/command/steering", rclcpp::QoS(1).best_effort(),
     [this](const SteeringCommand & msg) { pub_steering_->publish(msg); });

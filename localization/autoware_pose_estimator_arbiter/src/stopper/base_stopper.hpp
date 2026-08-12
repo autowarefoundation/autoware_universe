@@ -30,7 +30,7 @@ public:
   using SharedPtr = std::shared_ptr<BaseStopper>;
 
   explicit BaseStopper(rclcpp::Node * node, std::shared_ptr<const SharedData> shared_data)
-  : logger_(node->get_logger()), shared_data_(std::move(shared_data))
+  : node_(node), logger_(node->get_logger()), shared_data_(std::move(shared_data))
   {
   }
 
@@ -45,6 +45,7 @@ public:
   virtual void set_enable(bool enabled) = 0;
 
 protected:
+  rclcpp::Node * node_;
   rclcpp::Logger logger_;
   std::shared_ptr<const SharedData> shared_data_{nullptr};
 };

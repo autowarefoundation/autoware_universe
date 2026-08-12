@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include <autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
@@ -26,12 +28,14 @@ using autoware::motion_utils::calcSignedArcLength;
 double getDistanceToNextTrafficLight(
   const Pose & current_pose, const lanelet::ConstLanelets & lanelets)
 {
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
+  if (!current_lanelet_opt) {
     return std::numeric_limits<double>::infinity();
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
-  const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+  const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
   const auto to_object = lanelet::geometry::toArcCoordinates(
     lanelet::utils::to2D(current_lanelet.centerline()),
     lanelet::utils::to2D(lanelet_point).basicPoint());
@@ -52,7 +56,7 @@ double getDistanceToNextTrafficLight(
     }
   }
 
-  double distance = lanelet::utils::getLaneletLength3d(current_lanelet);
+  double distance = lanelet::geometry::length3d(current_lanelet);
 
   bool found_current_lane = false;
   for (const auto & llt : lanelets) {
@@ -77,7 +81,7 @@ double getDistanceToNextTrafficLight(
       return distance + to_stop_line.length - to_object.length;
     }
 
-    distance += lanelet::utils::getLaneletLength3d(llt);
+    distance += lanelet::geometry::length3d(llt);
   }
 
   return std::numeric_limits<double>::infinity();
@@ -145,8 +149,9 @@ bool isTrafficSignalStop(
         continue;
       }
 
-      if (autoware::traffic_light_utils::isTrafficSignalStop(
-            lanelet, traffic_signal_stamped.value().signal)) {
+      if (
+        autoware::traffic_light_utils::isTrafficSignalStop(
+          lanelet, traffic_signal_stamped.value().signal)) {
         return true;
       }
     }

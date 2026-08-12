@@ -146,6 +146,16 @@
           "description": "How much time without the vehicle moving must past to enable PID error integration. [s]",
           "default": "2.0"
         },
+        "ff_scale_min": {
+          "type": "number",
+          "description": "minimum clamp value for feedforward scaling",
+          "default": "0.5"
+        },
+        "ff_scale_max": {
+          "type": "number",
+          "description": "maximum clamp value for feedforward scaling",
+          "default": "2.0"
+        },
         "enable_brake_keeping_before_stop": {
           "type": "boolean",
           "description": "flag to keep a certain acceleration during DRIVE state before the ego stops. See [Brake keeping]",
@@ -220,11 +230,6 @@
           "type": "number",
           "description": "target acceleration in STOPPED state [m/s^2]",
           "default": "-3.4"
-        },
-        "stopped_jerk": {
-          "type": "number",
-          "description": "target jerk in STOPPED state [m/s^3]",
-          "default": "-5.0"
         },
         "emergency_vel": {
           "type": "number",
@@ -346,7 +351,6 @@
         "smooth_stop_strong_stop_dist",
         "stopped_vel",
         "stopped_acc",
-        "stopped_jerk",
         "emergency_vel",
         "emergency_acc",
         "emergency_jerk",

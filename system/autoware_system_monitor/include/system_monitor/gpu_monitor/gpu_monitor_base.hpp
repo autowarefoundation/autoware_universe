@@ -21,6 +21,7 @@
 #define SYSTEM_MONITOR__GPU_MONITOR__GPU_MONITOR_BASE_HPP_
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_external_api_msgs/msg/gpu_status.hpp>
 #include <tier4_external_api_msgs/msg/gpu_unit_status.hpp>
@@ -66,6 +67,8 @@ protected:
    * @brief Terminate the node, log final statements. An independent function is preferred to allow
    * an explicit way to operate actions that require a valid rclcpp context. By default this method
    * does nothing.
+   * @note Derived classes should override this method and call their own version from the
+   * destructor to clean up the resources.
    */
   virtual void shut_down();
 

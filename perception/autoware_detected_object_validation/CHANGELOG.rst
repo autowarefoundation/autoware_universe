@@ -2,6 +2,80 @@
 Changelog for package autoware_detected_object_validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(perception): fix test for `agnocast_wrapper::Node` (`#12861 <https://github.com/autowarefoundation/autoware_universe/issues/12861>`_)
+  * fix test for agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(lanelet_filter): apply `agnocast_wrapper::Node` (`#12663 <https://github.com/autowarefoundation/autoware_universe/issues/12663>`_)
+  * apply agnocast_wrapper::Node to detected_object_validation
+  * use AgnocastOnly
+  * delete unnecessary comment
+  * fix to use AgnocastOnlyCallbackIsolatedExecutor
+  * update to agnocast_wrapper tf
+  ---------
+* fix(detected_object_validation, raindrop_cluster_filter): adding 2 new object classes (`#12673 <https://github.com/autowarefoundation/autoware_universe/issues/12673>`_)
+  * fix(autoware_detected_object_validation): adding 2 new object classes
+  * fix other validation nodes
+  * fix(autoware_raindrop_cluster_filter): adapt to 2 new classes
+  * docs
+  * docs: raindrop filter
+  ---------
+* Contributors: Koichi Imai, badai nguyen, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(autoware_detected_object_validation): use CallbackIsolatedAgnocastExecutor for obstacle_pointcloud_based_validator (`#12371 <https://github.com/mitsudome-r/autoware_universe/issues/12371>`_)
+* feat(object_lanelet_filter): apply autoware_agnocast_wrapper for CIE (`#12329 <https://github.com/mitsudome-r/autoware_universe/issues/12329>`_)
+  * feat(autoware_detected_object_validation): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_detected_object_validation): apply CIE to TrackedObjectLaneletFilterNode
+  Apply CallbackIsolatedAgnocastExecutor to TrackedObjectLaneletFilterNode
+  using autoware_agnocast_wrapper_register_node macro.
+  * fix(autoware_detected_object_validation): fix alphabetical order in package.xml
+  * feat(autoware_detected_object_validation): apply autoware_agnocast_wrapper to ObstaclePointCloudBasedValidator
+  ---------
+* chore(perception): remove unused lanelet2_extension header (`#12295 <https://github.com/mitsudome-r/autoware_universe/issues/12295>`_)
+  unused lanelet2_extension in perception component
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* fix(autoware_detected_object_validation): suppress maybe-uninitialized warning on NVIDIA DRIVE AGX Thor (`#12228 <https://github.com/mitsudome-r/autoware_universe/issues/12228>`_)
+* Contributors: Ryuta Kambe, Sarun MUKDAPITAK, Taekjin LEE, Vishal Chauhan, atsushi yano, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in perception component  (`#11387 <https://github.com/autowarefoundation/autoware_universe/issues/11387>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore(perception): add maintainer (`#11458 <https://github.com/autowarefoundation/autoware_universe/issues/11458>`_)
+  add maintainer
+* Contributors: Masaki Baba, Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(autoware_detected_object_validation): templatize lanelet filter (`#10883 <https://github.com/autowarefoundation/autoware_universe/issues/10883>`_)

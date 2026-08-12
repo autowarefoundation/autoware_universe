@@ -2,6 +2,56 @@
 Changelog for package tier4_planning_factor_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: support VTL for reverse maneuvers (`#12609 <https://github.com/autowarefoundation/autoware_universe/issues/12609>`_)
+  * feat: support VTL for reverse maneuvers
+  * style(pre-commit): autofix
+  * feat: support rear bumper based VTL wall position for reverse maneuvers
+  * fix: build errors
+  * refactor: remove redundant code and refactor
+  * style(pre-commit): autofix
+  * refactor: remove redundant code in scene.cpp
+  * style(pre-commit): autofix
+  * fix: build errors
+  * style(pre-commit): autofix
+  * fix: cpplint errors
+  * feat: add reverse maneuver support for SLOWDOWN walls for rvizplugins
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: emmeyteja, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(tier4_planning_factor_rviz_plugin): use service call to retrieve vehicle info (`#11827 <https://github.com/autowarefoundation/autoware_universe/issues/11827>`_)
+  * refactor(tier4_planning_factor_rviz_plugin): use service call to retrieve vehicle info
+  * fix(planning_factor_rviz_plugin): change log level from INFO to WARN_ONCE while waiting for vehicle_info service
+  ---------
+* Contributors: Ryohsuke Mitsudome, Yukinari Hisaki
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(planning_factor_rviz_plugin): add wall visualization of UNKNOWN behavior (`#11344 <https://github.com/autowarefoundation/autoware_universe/issues/11344>`_)
+  add wall visualization of UNKNOWN behavior
+* feat(planning_factor_rviz_plugin): change some property (`#11218 <https://github.com/autowarefoundation/autoware_universe/issues/11218>`_)
+  * add show safety factors flag
+  * remove baselink2flont property
+  ---------
+* fix(tier4_planning_factor_rviz_plugin): remove unused function (`#11193 <https://github.com/autowarefoundation/autoware_universe/issues/11193>`_)
+* Contributors: Kotakku, Ryohsuke Mitsudome, Ryuta Kambe
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

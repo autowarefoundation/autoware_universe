@@ -15,6 +15,7 @@
 #include "autoware/behavior_path_lane_change_module/manager.hpp"
 
 #include "autoware/behavior_path_lane_change_module/interface.hpp"
+#include "autoware/interpolation/interpolation_utils.hpp"
 #include "autoware_utils/ros/parameter.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
@@ -137,14 +138,6 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
       *node, parameter("safety_check.lane_expansion.right_offset"));
 
     // collision check
-    p.safety.collision_check.enable_for_prepare_phase_in_general_lanes =
-      get_or_declare_parameter<bool>(
-        *node, parameter("collision_check.enable_for_prepare_phase.general_lanes"));
-    p.safety.collision_check.enable_for_prepare_phase_in_intersection =
-      get_or_declare_parameter<bool>(
-        *node, parameter("collision_check.enable_for_prepare_phase.intersection"));
-    p.safety.collision_check.enable_for_prepare_phase_in_turns = get_or_declare_parameter<bool>(
-      *node, parameter("collision_check.enable_for_prepare_phase.turns"));
     p.safety.collision_check.check_current_lane =
       get_or_declare_parameter<bool>(*node, parameter("collision_check.check_current_lanes"));
     p.safety.collision_check.check_other_lanes =
@@ -177,6 +170,7 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
       params.extended_polygon_policy = get_or_declare_parameter<std::string>(
         *node, parameter(prefix + ".extended_polygon_policy"));
     };
+    set_rss_params(p.safety.rss_params_for_prepare, "safety_check.prepare");
     set_rss_params(p.safety.rss_params, "safety_check.execution");
     set_rss_params(p.safety.rss_params_for_parked, "safety_check.parked");
     set_rss_params(p.safety.rss_params_for_abort, "safety_check.cancel");
@@ -211,6 +205,7 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
     get_or_declare_parameter<double>(*node, parameter("backward_length_from_intersection"));
   p.enable_stopped_vehicle_buffer =
     get_or_declare_parameter<bool>(*node, parameter("enable_stopped_vehicle_buffer"));
+  p.overhang_tolerance = get_or_declare_parameter<double>(*node, parameter("overhang_tolerance"));
 
   if (p.backward_length_buffer_for_end_of_lane < 1.0) {
     RCLCPP_WARN_STREAM(
@@ -262,6 +257,46 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
   const auto finish_judge_lateral_angle_deviation =
     get_or_declare_parameter<double>(*node, parameter("finish_judge_lateral_angle_deviation"));
   p.th_finish_judge_yaw_diff = autoware_utils::deg2rad(finish_judge_lateral_angle_deviation);
+
+  // path miss detection parameters
+  p.enable_path_miss_detection =
+    get_or_declare_parameter<bool>(*node, parameter("path_miss.enable_path_miss_detection"));
+  p.path_miss_threshold_longitudinal =
+    get_or_declare_parameter<double>(*node, parameter("path_miss.threshold_longitudinal"));
+
+  // path miss velocity scaling parameters
+  p.path_miss_velocity_points =
+    get_or_declare_parameter<std::vector<double>>(*node, parameter("path_miss.velocity_points"));
+  p.path_miss_lateral_thresholds =
+    get_or_declare_parameter<std::vector<double>>(*node, parameter("path_miss.lateral_thresholds"));
+
+  if (p.path_miss_velocity_points.empty()) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name), "Path miss velocity_points cannot be empty.");
+    exit(EXIT_FAILURE);
+  }
+
+  if (p.path_miss_lateral_thresholds.empty()) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name), "Path miss lateral_thresholds cannot be empty.");
+    exit(EXIT_FAILURE);
+  }
+
+  if (p.path_miss_velocity_points.size() != p.path_miss_lateral_thresholds.size()) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name),
+      "Path miss lateral thresholds parameters have mismatched sizes: velocity_points=%zu, "
+      "lateral_threshold=%zu",
+      p.path_miss_velocity_points.size(), p.path_miss_lateral_thresholds.size());
+    exit(EXIT_FAILURE);
+  }
+
+  if (!interpolation::isIncreasing(p.path_miss_velocity_points)) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name),
+      "Path miss velocity points must be in ascending order.");
+    exit(EXIT_FAILURE);
+  }
 
   // debug marker
   p.publish_debug_marker = get_or_declare_parameter<bool>(*node, parameter("publish_debug_marker"));
@@ -452,15 +487,6 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
   {
     const std::string ns = "lane_change.collision_check.";
     update_param<bool>(
-      parameters, ns + "enable_for_prepare_phase.general_lanes",
-      p->safety.collision_check.enable_for_prepare_phase_in_general_lanes);
-    update_param<bool>(
-      parameters, ns + "enable_for_prepare_phase.intersection",
-      p->safety.collision_check.enable_for_prepare_phase_in_intersection);
-    update_param<bool>(
-      parameters, ns + "enable_for_prepare_phase.turns",
-      p->safety.collision_check.enable_for_prepare_phase_in_turns);
-    update_param<bool>(
       parameters, ns + "check_current_lanes", p->safety.collision_check.check_current_lane);
     update_param<bool>(
       parameters, ns + "check_other_lanes", p->safety.collision_check.check_other_lanes);
@@ -548,6 +574,7 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
     }
   };
 
+  update_rss_params("lane_change.safety_check.prepare.", p->safety.rss_params_for_prepare);
   update_rss_params("lane_change.safety_check.execution.", p->safety.rss_params);
   update_rss_params("lane_change.safety_check.parked.", p->safety.rss_params_for_parked);
   update_rss_params("lane_change.safety_check.cancel.", p->safety.rss_params_for_abort);
@@ -610,6 +637,36 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
     update_param<double>(parameters, ns + "overhang_tolerance", p->cancel.overhang_tolerance);
     update_param<int>(
       parameters, ns + "unsafe_hysteresis_threshold", p->cancel.th_unsafe_hysteresis);
+  }
+
+  {
+    const std::string ns = "lane_change.path_miss.";
+
+    update_param<bool>(
+      parameters, ns + "enable_path_miss_detection", p->enable_path_miss_detection);
+    update_param<double>(
+      parameters, ns + "threshold_longitudinal", p->path_miss_threshold_longitudinal);
+
+    std::vector<double> velocity_points;
+    update_param<std::vector<double>>(parameters, ns + "velocity_points", velocity_points);
+    if (!velocity_points.empty()) {
+      p->path_miss_velocity_points = velocity_points;
+    } else {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 1000,
+        "Parameter 'velocity_points' is not updated because the given parameter array is empty.");
+    }
+
+    std::vector<double> lateral_thresholds;
+    update_param<std::vector<double>>(parameters, ns + "lateral_thresholds", lateral_thresholds);
+    if (!velocity_points.empty()) {
+      p->path_miss_lateral_thresholds = lateral_thresholds;
+    } else {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 1000,
+        "Parameter 'lateral_thresholds' is not updated because the given parameter array is "
+        "empty.");
+    }
   }
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {

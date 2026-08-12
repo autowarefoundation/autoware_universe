@@ -14,20 +14,26 @@
 
 #include "remaining_distance_time_calculator_node.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/timer.hpp>
 
 #include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 
-#include <chrono>
+#include <lanelet2_core/geometry/Lanelet.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <exception>
 #include <functional>
+#include <iterator>
 #include <memory>
+#include <numeric>
 #include <string>
-#include <utility>
 
 namespace autoware::remaining_distance_time_calculator
 {
@@ -65,6 +71,10 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
     "~/output/mission_remaining_distance_time",
     rclcpp::QoS(rclcpp::KeepLast(10)).durability_volatile().reliable());
 
+  debug_processing_time_detail_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
+    "~/debug/processing_time_detail_ms", 1);
+  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_);
+
   param_listener_ = std::make_shared<::remaining_distance_time_calculator::ParamListener>(
     this->get_node_parameters_interface());
   const auto param = param_listener_->get_params();
@@ -76,25 +86,130 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
 
 void RemainingDistanceTimeCalculatorNode::on_map(const HADMapBin::ConstSharedPtr & msg)
 {
-  route_handler_.setMap(*msg);
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(
-    *msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map_ptr_);
+
+  routing_graph_ptr_ =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
+
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
-  road_lanelets_ = lanelet::utils::query::roadLanelets(all_lanelets);
+  road_lanes_ = lanelet::utils::query::roadLanelets(all_lanelets);
   is_graph_ready_ = true;
+
+  if (has_received_route_) {
+    compute_route();
+  }
+}
+
+bool RemainingDistanceTimeCalculatorNode::build_lane_sequence_from_route(
+  lanelet::ConstLanelets * out_lanelets) const
+{
+  out_lanelets->clear();
+  if (!cached_route_msg_ || !lanelet_map_ptr_) {
+    return false;
+  }
+  out_lanelets->reserve(cached_route_msg_->segments.size());
+  for (const auto & seg : cached_route_msg_->segments) {
+    const auto & pref = seg.preferred_primitive;
+    if (pref.primitive_type != "lane") {
+      // Area segments connect lanelets in the mission graph but have no centerline length here.
+      continue;
+    }
+    try {
+      out_lanelets->push_back(lanelet_map_ptr_->laneletLayer.get(pref.id));
+    } catch (const std::exception & e) {
+      RCLCPP_WARN_STREAM(
+        this->get_logger(),
+        "Remaining distance: route lane id " << pref.id << " not in map: " << e.what());
+    }
+  }
+  return !out_lanelets->empty();
+}
+
+void RemainingDistanceTimeCalculatorNode::compute_route()
+{
+  if (!is_graph_ready_ || !lanelet_map_ptr_) {
+    return;
+  }
+
+  const auto goal_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(road_lanes_, goal_pose_);
+  if (!goal_lanelet_opt) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find goal lanelet.");
+    return;
+  }
+  goal_lanelet_ = goal_lanelet_opt.value();
+
+  // Lane–area–lane missions: lane-only RoutingGraph::getRoute() has no path through the Area,
+  // so it fails even though LaneletRoute is valid. Use lane sequence from the published route.
+  bool mission_route_has_area = false;
+  if (cached_route_msg_) {
+    for (const auto & seg : cached_route_msg_->segments) {
+      if (seg.preferred_primitive.primitive_type == "area") {
+        mission_route_has_area = true;
+        break;
+      }
+    }
+  }
+  lanelet::ConstLanelets route_lanelets;
+  if (mission_route_has_area && build_lane_sequence_from_route(&route_lanelets)) {
+    current_lanes_ = std::move(route_lanelets);
+    current_lanes_lengths_.clear();
+    current_lanes_lengths_.reserve(current_lanes_.size());
+    for (const auto & llt : current_lanes_) {
+      current_lanes_lengths_.push_back(lanelet::geometry::length2d(llt));
+    }
+    return;
+  }
+
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(road_lanes_, current_vehicle_pose_);
+  if (!current_lanelet_opt) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
+    return;
+  }
+  const auto & current_lanelet = current_lanelet_opt.value();
+
+  const lanelet::Optional<lanelet::routing::Route> optional_route =
+    routing_graph_ptr_->getRoute(current_lanelet, goal_lanelet_, 0);
+  if (!optional_route) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find proper route.");
+    return;
+  }
+
+  lanelet::routing::LaneletPath shortest_path;
+  shortest_path = optional_route->shortestPath();
+
+  current_lanes_.clear();
+  current_lanes_.reserve(shortest_path.size());
+  current_lanes_lengths_.clear();
+  current_lanes_lengths_.reserve(shortest_path.size());
+  for (const auto & llt : shortest_path) {
+    current_lanes_lengths_.push_back(lanelet::geometry::length2d(llt));
+    current_lanes_.push_back(llt);
+  }
+}
+
+void RemainingDistanceTimeCalculatorNode::on_route(const LaneletRoute::ConstSharedPtr & msg)
+{
+  goal_pose_ = msg->goal_pose;
+  cached_route_msg_ = msg;
+  has_received_route_ = true;
+  compute_route();
 }
 
 void RemainingDistanceTimeCalculatorNode::on_odometry(const Odometry::ConstSharedPtr & msg)
 {
   current_vehicle_pose_ = msg->pose.pose;
   current_vehicle_velocity_ = msg->twist.twist.linear;
-}
-
-void RemainingDistanceTimeCalculatorNode::on_route(const LaneletRoute::ConstSharedPtr & msg)
-{
-  goal_pose_ = msg->goal_pose;
-  has_received_route_ = true;
 }
 
 void RemainingDistanceTimeCalculatorNode::on_velocity_limit(
@@ -114,6 +229,7 @@ void RemainingDistanceTimeCalculatorNode::on_scenario(
 
 void RemainingDistanceTimeCalculatorNode::on_timer()
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   if (!has_received_scenario_) {
     return;
   }
@@ -132,62 +248,62 @@ void RemainingDistanceTimeCalculatorNode::on_timer()
 
 void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
 {
-  size_t index = 0;
-
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(
-        road_lanelets_, current_vehicle_pose_, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(current_lanes_, current_vehicle_pose_);
+  if (!current_lanelet_opt) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
 
     return;
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
-  lanelet::ConstLanelet goal_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(road_lanelets_, goal_pose_, &goal_lanelet)) {
+  if (
+    current_lanes_.empty() || current_lanes_lengths_.empty() ||
+    current_lanes_.size() != current_lanes_lengths_.size()) {
     RCLCPP_WARN_STREAM_THROTTLE(
-      this->get_logger(), *get_clock(), 3000, "Failed to find goal lanelet.");
-
+      this->get_logger(), *get_clock(), 3000, "Current lanes are empty or misconfigured.");
     return;
   }
 
-  const lanelet::Optional<lanelet::routing::Route> optional_route =
-    routing_graph_ptr_->getRoute(current_lanelet, goal_lanelet, 0);
-  if (!optional_route) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      this->get_logger(), *get_clock(), 3000, "Failed to find proper route.");
+  auto current_lane_itr = std::find_if(
+    current_lanes_.begin(), current_lanes_.end(),
+    [&current_lanelet](const lanelet::ConstLanelet & llt) {
+      return llt.id() == current_lanelet.id();
+    });
 
+  if (current_lane_itr == current_lanes_.end()) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet in current lanes.");
     return;
   }
 
-  lanelet::routing::LaneletPath remaining_shortest_path;
-  remaining_shortest_path = optional_route->shortestPath();
+  remaining_distance_ = std::invoke([&]() -> double {
+    // remaining distance in current lanelet (if it is not the goal lanelet)
+    lanelet::ArcCoordinates arc_coord = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+      lanelet::ConstLanelets{current_lanelet}, current_vehicle_pose_);
+    double this_lanelet_length = lanelet::geometry::length2d(current_lanelet);
+    double dist_in_current_lanelet =
+      (current_lanelet.id() != goal_lanelet_.id()) ? this_lanelet_length - arc_coord.length : 0.0;
 
-  remaining_distance_ = 0.0;
+    // distance from remaining lanelets between current lanelet and goal lanelet, if there are any
+    const auto index = std::distance(current_lanes_.begin(), current_lane_itr);
+    double middle_lanes_distance =
+      (static_cast<std::size_t>(index + 1) < current_lanes_lengths_.size() - 1)
+        ? std::accumulate(
+            current_lanes_lengths_.begin() + index + 1, current_lanes_lengths_.end() - 1, 0.0)
+        : 0.0;
 
-  for (auto & llt : remaining_shortest_path) {
-    if (remaining_shortest_path.size() == 1) {
-      auto arc_coord_cur = lanelet::utils::getArcCoordinates({llt}, current_vehicle_pose_);
-      auto arc_coord_goal = lanelet::utils::getArcCoordinates({llt}, goal_pose_);
-      remaining_distance_ += arc_coord_goal.length - arc_coord_cur.length;
-      break;
-    }
-
-    if (index == 0) {
-      lanelet::ArcCoordinates arc_coord =
-        lanelet::utils::getArcCoordinates({llt}, current_vehicle_pose_);
-      double this_lanelet_length = lanelet::utils::getLaneletLength2d(llt);
-
-      remaining_distance_ += this_lanelet_length - arc_coord.length;
-    } else if (index == (remaining_shortest_path.size() - 1)) {
-      lanelet::ArcCoordinates arc_coord = lanelet::utils::getArcCoordinates({llt}, goal_pose_);
-      remaining_distance_ += arc_coord.length;
-    } else {
-      remaining_distance_ += lanelet::utils::getLaneletLength2d(llt);
-    }
-
-    index++;
-  }
+    // remaining distance in goal lanelet
+    double dist_in_goal_lanelet =
+      (current_lanelet.id() != goal_lanelet_.id())
+        ? autoware::experimental::lanelet2_utils::get_arc_coordinates({goal_lanelet_}, goal_pose_)
+            .length
+        : autoware::experimental::lanelet2_utils::get_arc_coordinates({goal_lanelet_}, goal_pose_)
+              .length -
+            arc_coord.length;
+    return std::max(dist_in_current_lanelet + middle_lanes_distance + dist_in_goal_lanelet, 0.0);
+  });
 }
 
 void RemainingDistanceTimeCalculatorNode::calculate_remaining_time()

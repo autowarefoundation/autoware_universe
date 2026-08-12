@@ -13,16 +13,22 @@ ament_auto_add_library(gyro_bias_estimator SHARED
   src/gyro_bias_estimation_module.cpp
 )
 
-rclcpp_components_register_node(imu_corrector
-  PLUGIN "autoware::imu_corrector::ImuCorrector"
-  EXECUTABLE imu_corrector_node
-  EXECUTOR SingleThreadedExecutor
+target_include_directories(gyro_bias_estimator
+  PUBLIC include
 )
 
-rclcpp_components_register_node(gyro_bias_estimator
+autoware_agnocast_wrapper_register_node(imu_corrector
+  PLUGIN "autoware::imu_corrector::ImuCorrector"
+  EXECUTABLE imu_corrector_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(gyro_bias_estimator
   PLUGIN "autoware::imu_corrector::GyroBiasEstimator"
   EXECUTABLE gyro_bias_estimator_node
-  EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 function(add_testcase filepath)
@@ -37,6 +43,20 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
   add_testcase(test/test_gyro_bias_estimation_module.cpp)
+
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_ros_isolated_gtest(test_gyro_bias_scale_estimation_module
+      test/test_main.cpp
+      test/test_gyro_bias_scale_estimation_module.cpp
+    )
+    target_link_libraries(test_gyro_bias_scale_estimation_module gyro_bias_estimator)
+    ament_target_dependencies(test_gyro_bias_scale_estimation_module
+      ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS}
+    )
+    target_include_directories(test_gyro_bias_scale_estimation_module
+      PUBLIC include
+    )
+  endif()
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE

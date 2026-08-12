@@ -15,7 +15,7 @@
 #include "autoware/trajectory_follower_node/controller_node.hpp"
 
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
-#include "autoware/pid_longitudinal_controller/pid_longitudinal_controller.hpp"
+#include "autoware/pid_longitudinal_controller/pid_longitudinal_controller_node.hpp"
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -50,12 +51,21 @@ std::vector<T> resampleHorizonByZeroOrderHold(
 
 namespace autoware::motion::control::trajectory_follower_node
 {
-Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("controller", node_options)
+Controller::Controller(const rclcpp::NodeOptions & node_options)
+: Node("controller", node_options),
+  diag_updater_(std::make_shared<diagnostic_updater::Updater>(this))
 {
   using std::placeholders::_1;
 
   const double ctrl_period = declare_parameter<double>("ctrl_period");
+  const auto trajectory_reference_mode =
+    declare_parameter<std::string>("trajectory_reference_mode", "spatial");
+  if (trajectory_reference_mode != "spatial" && trajectory_reference_mode != "temporal") {
+    throw std::invalid_argument(
+      "Invalid trajectory_reference_mode. Expected \"spatial\" or \"temporal\".");
+  }
   timeout_thr_sec_ = declare_parameter<double>("timeout_thr_sec");
+  cyclic_message_timeout_thr_sec_ = declare_parameter<double>("cyclic_message_timeout_thr_sec");
   // NOTE: It is possible that using control_horizon could be expected to enhance performance,
   // but it is not a formal interface topic, only an experimental one.
   // So it is disabled by default.
@@ -63,6 +73,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
     declare_parameter<bool>("enable_control_cmd_horizon_pub", false);
 
   diag_updater_->setHardwareID("trajectory_follower_node");
+  diag_updater_->add("incoming_message_timeout", this, &Controller::check_cyclic_message_timeout);
 
   const auto lateral_controller_mode =
     getLateralControllerMode(declare_parameter<std::string>("lateral_controller_mode"));
@@ -86,7 +97,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
   switch (longitudinal_controller_mode) {
     case LongitudinalControllerMode::PID: {
       longitudinal_controller_ =
-        std::make_shared<pid_longitudinal_controller::PidLongitudinalController>(
+        std::make_shared<pid_longitudinal_controller::PidLongitudinalControllerNode>(
           *this, diag_updater_);
       break;
     }
@@ -102,6 +113,13 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
     create_publisher<Float64Stamped>("~/longitudinal/debug/processing_time_ms", 1);
   debug_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/debug_marker", rclcpp::QoS{1});
+
+  sub_steering_offset_update_ =
+    create_subscription<autoware_internal_debug_msgs::msg::Float32Stamped>(
+      "~/input/steering_offset_update", rclcpp::QoS{1}.transient_local(),
+      [this](const autoware_internal_debug_msgs::msg::Float32Stamped::ConstSharedPtr msg) {
+        lateral_controller_->set_steering_offset(static_cast<double>(msg->data));
+      });
 
   if (enable_control_cmd_horizon_pub_) {
     control_cmd_horizon_pub_ = create_publisher<autoware_control_msgs::msg::ControlHorizon>(
@@ -136,6 +154,26 @@ Controller::LongitudinalControllerMode Controller::getLongitudinalControllerMode
   if (controller_mode == "pid") return LongitudinalControllerMode::PID;
 
   return LongitudinalControllerMode::INVALID;
+}
+
+void Controller::check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const auto traj_timestamp = sub_ref_path_.last_taken_data_timestamp();
+
+  if (!traj_timestamp) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
+    stat.add("trajectory", "no message received");
+    return;
+  }
+
+  const auto elapsed = (this->now() - traj_timestamp.value()).seconds();
+  if (elapsed > cyclic_message_timeout_thr_sec_) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
+    stat.add("trajectory", "timeout (elapsed: " + std::to_string(elapsed) + " sec)");
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "OK");
+    stat.add("trajectory", "OK");
+  }
 }
 
 bool Controller::processData(rclcpp::Clock & clock)
@@ -240,6 +278,9 @@ void Controller::callbackTimerControl()
 
   // TODO(Horibe): Think specification. This comes from the old implementation.
   if (isTimeOut(lon_out, lat_out)) return;
+
+  // 4.5. update diagnostics
+  diag_updater_->force_update();
 
   // 5. publish control command
   out.lateral = lat_out.control_cmd;

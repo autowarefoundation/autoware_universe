@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -50,6 +51,7 @@ struct FileContext
 {
   std::string file;
   std::shared_ptr<std::unordered_set<std::string>> visited;
+  std::shared_ptr<std::unordered_map<std::string, std::string>> variables;
 };
 
 class Parser

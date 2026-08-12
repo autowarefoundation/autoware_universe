@@ -10,12 +10,15 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/manager.cpp
   src/scene.cpp
   src/utils.cpp
+  src/experimental/manager.cpp
+  src/experimental/scene.cpp
 )
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
   test/test_utils.cpp
   test/test_node_interface.cpp
+  test/test_traffic_light_module.cpp
   )
   target_link_libraries(test_${PROJECT_NAME}
     ${PROJECT_NAME}

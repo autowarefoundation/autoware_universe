@@ -2,6 +2,66 @@
 Changelog for package autoware_bytetrack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): re-enable bugprone-assignment-in-if-condition (`#12552 <https://github.com/autowarefoundation/autoware_universe/issues/12552>`_)
+  Add NOLINTNEXTLINE markers to the 45 sites flagged by
+  bugprone-assignment-in-if-condition and re-enable the check in
+  .clang-tidy-ci.
+  Both files are derived from upstream third-party code where the
+  assignment-in-if pattern is intentional:
+  - planning/autoware_freespace_planning_algorithms/src/reeds_shepp.cpp
+  is derived from OMPL's ReedsSheppStateSpace.cpp (BSD). Each path
+  family computes a candidate length L and compares it against L_min
+  in the same expression; rewriting all 39 sites would diverge from
+  the OMPL upstream and make future cross-checking harder.
+  - perception/autoware_bytetrack/lib/src/lapjv.cpp is the upstream
+  LAPJV port (MIT, Yifu Zhang). The 6 sites are all expansions of
+  the NEW(x, t, n) macro from lapjv.h, which uses the canonical
+  malloc-or-bail idiom 'if ((x = malloc(...)) == 0) return -1;'.
+  Refs: `#12450 <https://github.com/autowarefoundation/autoware_universe/issues/12450>`_
+* Contributors: Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(autoware_bytetrack): remove cudnn dependency (`#11889 <https://github.com/autowarefoundation/autoware_universe/issues/11889>`_)
+* fix: add missing ament_index_cpp dependency (`#11875 <https://github.com/autowarefoundation/autoware_universe/issues/11875>`_)
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(tier4_perception_launch): add yolox 2d detection launch with bytetrack (`#11104 <https://github.com/autowarefoundation/autoware_universe/issues/11104>`_)
+  * fix(tensorrt_yolox): add bytetrack option for launch
+  * style(pre-commit): autofix
+  * fix: update multi_yolox
+  * fix: bytetrack topics
+  * fix: disable when build only
+  * style(pre-commit): autofix
+  * revert all
+  * fix: add 2d detection launch
+  * style(pre-commit): autofix
+  * fix typo
+  * fix: string to int
+  * fix: adding bytetrack node name
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, badai nguyen
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: enhance bytracker classification management (`#10898 <https://github.com/autowarefoundation/autoware_universe/issues/10898>`_)

@@ -16,13 +16,9 @@
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <boost/geometry.hpp>
-// #include <boost/geometry/algorithms/detail/distance/interface.hpp>
 
 #include <lanelet2_core/Forward.h>
 

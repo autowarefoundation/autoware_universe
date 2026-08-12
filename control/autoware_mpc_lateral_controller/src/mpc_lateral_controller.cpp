@@ -21,13 +21,16 @@
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_bicycle_kinematics.hpp"
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_bicycle_kinematics_no_delay.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
-#include "tf2/utils.h"
 #include "tf2_ros/create_timer_ros.h"
 
+#include <tf2/utils.hpp>
+
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,9 +48,10 @@ MpcLateralController::MpcLateralController(
 
   diag_updater_ = diag_updater;
 
-  m_mpc = std::make_unique<MPC>(node);
+  m_mpc = std::make_unique<MPC>();
 
-  m_mpc->m_ctrl_period = node.get_parameter("ctrl_period").as_double();
+  const auto ctrl_period = node.get_parameter("ctrl_period").as_double();
+  m_mpc->m_ctrl_period = ctrl_period;
 
   auto & p_filt = m_trajectory_filtering_param;
   p_filt.enable_path_smoothing = dp_bool("enable_path_smoothing");
@@ -114,9 +118,16 @@ MpcLateralController::MpcLateralController(
   }
 
   /* steering offset compensation */
-  enable_auto_steering_offset_removal_ =
-    dp_bool("steering_offset.enable_auto_steering_offset_removal");
-  steering_offset_ = createSteerOffsetEstimator(wheelbase, node);
+  {
+    enable_auto_steering_offset_removal_ =
+      dp_bool("steering_offset.enable_auto_steering_offset_removal");
+    m_steer_offset_max_update_th_ = dp_double("steering_offset.max_update_th");
+    if (enable_auto_steering_offset_removal_) {
+      const auto cutoff_hz = dp_double("steering_offset.steer_offset_filter_cutoff_hz");
+      lpf_steer_offset_ =
+        std::make_shared<Butterworth2dFilter>(ctrl_period, cutoff_hz, m_steering_offset_);
+    }
+  }
 
   /* initialize low-pass filter */
   {
@@ -136,9 +147,32 @@ MpcLateralController::MpcLateralController(
 
   m_mpc->m_use_delayed_initial_state = dp_bool("use_delayed_initial_state");
 
+  // trajectory_reference_mode is declared at controller_node level
+  // If not available, declare it with default value for standalone usage
+  const auto trajectory_reference_mode =
+    node.has_parameter("trajectory_reference_mode")
+      ? node.get_parameter("trajectory_reference_mode").as_string()
+      : node.declare_parameter<std::string>("trajectory_reference_mode", "spatial");
+
+  if (trajectory_reference_mode == "temporal") {
+    m_mpc->m_use_temporal_trajectory = true;
+  } else if (trajectory_reference_mode == "spatial") {
+    m_mpc->m_use_temporal_trajectory = false;
+  } else {
+    throw std::invalid_argument(
+      "Invalid trajectory_reference_mode. Expected \"spatial\" or \"temporal\".");
+  }
+
   m_mpc->m_publish_debug_trajectories = dp_bool("publish_debug_trajectories");
 
   m_pub_predicted_traj = node.create_publisher<Trajectory>("~/output/predicted_trajectory", 1);
+  m_pub_predicted_traj_frenet =
+    node.create_publisher<Trajectory>("~/debug/predicted_trajectory_in_frenet_coordinate", 1);
+  m_pub_resampled_reference_traj =
+    node.create_publisher<Trajectory>("~/debug/resampled_reference_trajectory", 1);
+  m_pub_nearest_pose = node.create_publisher<PoseStamped>("~/debug/nearest_pose", 1);
+  m_pub_nearest_segment_traj = node.create_publisher<Trajectory>("~/debug/nearest_segment", 1);
+  m_pub_nearest_info = node.create_publisher<Float32MultiArrayStamped>("~/debug/nearest_info", 1);
   m_pub_debug_values =
     node.create_publisher<Float32MultiArrayStamped>("~/output/lateral_diagnostic", 1);
   m_pub_steer_offset = node.create_publisher<Float32Stamped>("~/output/estimated_steer_offset", 1);
@@ -210,25 +244,12 @@ std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface
   }
 
   if (qp_solver_type == "osqp") {
-    qpsolver_ptr = std::make_shared<QPSolverOSQP>(logger_, clock_);
+    qpsolver_ptr = std::make_shared<QPSolverOSQP>();
     return qpsolver_ptr;
   }
 
   RCLCPP_ERROR(logger_, "qp_solver_type is undefined");
   return qpsolver_ptr;
-}
-
-std::shared_ptr<SteeringOffsetEstimator> MpcLateralController::createSteerOffsetEstimator(
-  const double wheelbase, rclcpp::Node & node)
-{
-  const std::string ns = "steering_offset.";
-  const auto vel_thres = node.declare_parameter<double>(ns + "update_vel_threshold");
-  const auto steer_thres = node.declare_parameter<double>(ns + "update_steer_threshold");
-  const auto limit = node.declare_parameter<double>(ns + "steering_offset_limit");
-  const auto num = node.declare_parameter<int>(ns + "average_num");
-  steering_offset_ =
-    std::make_shared<SteeringOffsetEstimator>(wheelbase, num, vel_thres, steer_thres, limit);
-  return steering_offset_;
 }
 
 void MpcLateralController::setStatus(diagnostic_updater::DiagnosticStatusWrapper & stat)
@@ -249,18 +270,29 @@ void MpcLateralController::setupDiag()
 trajectory_follower::LateralOutput MpcLateralController::run(
   trajectory_follower::InputData const & input_data)
 {
+  // Timestamp of this control cycle, shared by every message this call publishes.
+  const builtin_interfaces::msg::Time stamp = clock_->now();
+
   // set input data
   setTrajectory(input_data.current_trajectory, input_data.current_odometry);
 
   m_current_kinematic_state = input_data.current_odometry;
   m_current_steering = input_data.current_steering;
-  if (enable_auto_steering_offset_removal_) {
-    m_current_steering.steering_tire_angle -= steering_offset_->getOffset();
-  }
 
-  Lateral ctrl_cmd;
-  Trajectory predicted_traj;
-  Float32MultiArrayStamped debug_values;
+  m_steering_offset_target_ = std::invoke([&]() {
+    if (!enable_auto_steering_offset_removal_) return 0.0;
+    if (abs(m_steering_offset_target_ - m_steering_offset_filtered_) > 1e-4)
+      return m_steering_offset_target_;
+    const double delta_offset = m_steering_offset_ - m_steering_offset_target_;
+    const double delta_offset_clamped =
+      std::clamp(delta_offset, -m_steer_offset_max_update_th_, m_steer_offset_max_update_th_);
+    return m_steering_offset_target_ + delta_offset_clamped;
+  });
+
+  m_steering_offset_filtered_ = enable_auto_steering_offset_removal_
+                                  ? lpf_steer_offset_->filter(m_steering_offset_target_)
+                                  : 0.0;
+  m_current_steering.steering_tire_angle += static_cast<float>(m_steering_offset_filtered_);
 
   const bool is_under_control = input_data.current_operation_mode.is_autoware_control_enabled &&
                                 input_data.current_operation_mode.mode ==
@@ -271,10 +303,9 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     m_is_ctrl_cmd_prev_initialized = true;
   }
 
-  trajectory_follower::LateralHorizon ctrl_cmd_horizon{};
-  const auto mpc_solved_status = m_mpc->calculateMPC(
-    m_current_steering, m_current_kinematic_state, ctrl_cmd, predicted_traj, debug_values,
-    ctrl_cmd_horizon);
+  auto mpc_solved_status =
+    m_mpc->calculateMPC(m_current_steering, m_current_kinematic_state, stamp);
+  Lateral ctrl_cmd = mpc_solved_status.ctrl_cmd;
 
   if (
     (m_mpc_solved_status.result == true && mpc_solved_status.result == false) ||
@@ -282,8 +313,6 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     RCLCPP_ERROR(logger_, "MPC failed due to %s", mpc_solved_status.reason.c_str());
   }
   m_mpc_solved_status = mpc_solved_status;  // for diagnostic updater
-
-  diag_updater_->force_update();
 
   // reset previous MPC result
   // Note: When a large deviation from the trajectory occurs, the optimization stops and
@@ -296,23 +325,19 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     setSteeringToHistory(ctrl_cmd);
   }
 
-  if (enable_auto_steering_offset_removal_) {
-    steering_offset_->updateOffset(
-      m_current_kinematic_state.twist.twist,
-      input_data.current_steering.steering_tire_angle);  // use unbiased steering
-    ctrl_cmd.steering_tire_angle += steering_offset_->getOffset();
-  }
+  ctrl_cmd.steering_tire_angle -= static_cast<float>(m_steering_offset_filtered_);
 
-  publishPredictedTraj(predicted_traj);
-  publishDebugValues(debug_values);
+  publishPredictedTraj(mpc_solved_status.predicted_trajectory);
+  publishDebugMessages(mpc_solved_status.debug_msgs);
+  publishDebugValues(mpc_solved_status.diagnostic);
 
   const auto createLateralOutput =
-    [this](
+    [this, &stamp](
       const auto & cmd, const bool is_mpc_solved,
       const auto & cmd_horizon) -> trajectory_follower::LateralOutput {
     trajectory_follower::LateralOutput output;
-    output.control_cmd = createCtrlCmdMsg(cmd);
-    output.control_cmd_horizon = createCtrlCmdHorizonMsg(cmd_horizon);
+    output.control_cmd = createCtrlCmdMsg(cmd, stamp);
+    output.control_cmd_horizon = createCtrlCmdHorizonMsg(cmd_horizon, stamp);
     // To be sure current steering of the vehicle is desired steering angle, we need to check
     // following conditions.
     // 1. At the last loop, mpc should be solved because command should be optimized output.
@@ -332,7 +357,7 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     }
     // Use previous command value as previous raw steer command
     m_mpc->m_raw_steer_cmd_prev = m_ctrl_cmd_prev.steering_tire_angle;
-    return createLateralOutput(m_ctrl_cmd_prev, false, ctrl_cmd_horizon);
+    return createLateralOutput(m_ctrl_cmd_prev, false, mpc_solved_status.ctrl_cmd_horizon);
   }
 
   if (!mpc_solved_status.result) {
@@ -341,7 +366,8 @@ trajectory_follower::LateralOutput MpcLateralController::run(
   }
 
   m_ctrl_cmd_prev = ctrl_cmd;
-  return createLateralOutput(ctrl_cmd, mpc_solved_status.result, ctrl_cmd_horizon);
+  return createLateralOutput(
+    ctrl_cmd, mpc_solved_status.result, mpc_solved_status.ctrl_cmd_horizon);
 }
 
 bool MpcLateralController::isSteerConverged(const Lateral & cmd) const
@@ -474,40 +500,51 @@ bool MpcLateralController::isStoppedState() const
   return std::fabs(target_vel) < m_stop_state_entry_target_speed;
 }
 
-Lateral MpcLateralController::createCtrlCmdMsg(const Lateral & ctrl_cmd)
+Lateral MpcLateralController::createCtrlCmdMsg(
+  const Lateral & ctrl_cmd, const builtin_interfaces::msg::Time & stamp)
 {
   auto out = ctrl_cmd;
-  out.stamp = clock_->now();
+  out.stamp = stamp;
   m_steer_cmd_prev = out.steering_tire_angle;
   return out;
 }
 
 LateralHorizon MpcLateralController::createCtrlCmdHorizonMsg(
-  const LateralHorizon & ctrl_cmd_horizon) const
+  const LateralHorizon & ctrl_cmd_horizon, const builtin_interfaces::msg::Time & stamp) const
 {
   auto out = ctrl_cmd_horizon;
-  const auto now = clock_->now();
   for (auto & cmd : out.controls) {
-    cmd.stamp = now;
+    cmd.stamp = stamp;
   }
   return out;
 }
 
 void MpcLateralController::publishPredictedTraj(Trajectory & predicted_traj) const
 {
-  predicted_traj.header.stamp = clock_->now();
-  predicted_traj.header.frame_id = m_current_trajectory.header.frame_id;
   m_pub_predicted_traj->publish(predicted_traj);
+}
+
+void MpcLateralController::publishDebugMessages(
+  std::optional<MpcDebugTopicMessage> & debug_msgs) const
+{
+  if (!debug_msgs) {
+    return;
+  }
+
+  m_pub_predicted_traj_frenet->publish(debug_msgs->predicted_trajectory_frenet);
+  m_pub_resampled_reference_traj->publish(debug_msgs->resampled_reference_trajectory);
+  m_pub_nearest_pose->publish(debug_msgs->nearest_pose);
+  m_pub_nearest_segment_traj->publish(debug_msgs->nearest_segment_trajectory);
+  m_pub_nearest_info->publish(debug_msgs->nearest_info);
 }
 
 void MpcLateralController::publishDebugValues(Float32MultiArrayStamped & debug_values) const
 {
-  debug_values.stamp = clock_->now();
   m_pub_debug_values->publish(debug_values);
 
   Float32Stamped offset;
   offset.stamp = clock_->now();
-  offset.data = steering_offset_->getOffset();
+  offset.data = static_cast<float>(m_steering_offset_filtered_);
   m_pub_steer_offset->publish(offset);
 }
 
@@ -684,6 +721,7 @@ bool MpcLateralController::isTrajectoryShapeChanged() const
 
 bool MpcLateralController::isValidTrajectory(const Trajectory & traj) const
 {
+  double prev_time_from_start = -std::numeric_limits<double>::infinity();
   for (const auto & p : traj.points) {
     if (
       !isfinite(p.pose.position.x) || !isfinite(p.pose.position.y) ||
@@ -693,6 +731,14 @@ bool MpcLateralController::isValidTrajectory(const Trajectory & traj) const
       !isfinite(p.heading_rate_rps) || !isfinite(p.front_wheel_angle_rad) ||
       !isfinite(p.rear_wheel_angle_rad)) {
       return false;
+    }
+
+    if (m_mpc->m_use_temporal_trajectory) {
+      const double t = rclcpp::Duration(p.time_from_start).seconds();
+      if (!std::isfinite(t) || t <= prev_time_from_start) {
+        return false;
+      }
+      prev_time_from_start = t;
     }
   }
   return true;

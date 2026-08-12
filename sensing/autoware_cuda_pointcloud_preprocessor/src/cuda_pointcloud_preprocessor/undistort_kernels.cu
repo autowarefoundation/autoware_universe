@@ -237,7 +237,8 @@ void setupTwist2DStructs(
     twist.last_stamp_nsec = last_stamp_nsec;
     host_twist_2d_structs.push_back(twist);
 
-    double dt_seconds = 1e-9 * (twist.stamp_nsec - last_stamp_nsec);
+    double dt_seconds =
+      1e-9 * (static_cast<double>(twist.stamp_nsec) - static_cast<double>(last_stamp_nsec));
     last_stamp_nsec = twist.stamp_nsec;
     cum_theta += v_theta * dt_seconds;
     float d = twist.v_x * dt_seconds;
@@ -330,7 +331,8 @@ void setupTwist3DStructs(
     twist.last_stamp_nsec = last_stamp_nsec;
     host_twist_3d_structs.push_back(twist);
 
-    double dt_seconds = 1e-9 * (twist.stamp_nsec - last_stamp_nsec);
+    double dt_seconds =
+      1e-9 * (static_cast<double>(twist.stamp_nsec) - static_cast<double>(last_stamp_nsec));
     last_stamp_nsec = twist.stamp_nsec;
 
     auto delta_transform = transformationMatrixFromVelocity(v, w, dt_seconds);

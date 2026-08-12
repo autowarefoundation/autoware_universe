@@ -2,6 +2,165 @@
 Changelog for package autoware_motion_velocity_boundary_departure_prevention_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* fix(boundary_departure): replaced duplicated function with motion_utils::calculate_stop_distance (`#12337 <https://github.com/mitsudome-r/autoware_universe/issues/12337>`_)
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* Contributors: Zulfaqar Azmi, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(boundary_departure): rename Abnormalities type (`#12071 <https://github.com/autowarefoundation/autoware_universe/issues/12071>`_)
+  * refactor(boundary_departure): rename Abnormalities type
+  * refactor: rename variable name
+  * refactor: replace order or member variable
+  ---------
+* refactor(boundary_departure): footprint generator and renaming abnormality type to footprint type (`#11992 <https://github.com/autowarefoundation/autoware_universe/issues/11992>`_)
+  * refactor(boundary_departure): abnormality generator
+  * refactor: rename generator to footprint generator
+  * rename folder
+  * renaming type to Footprint type
+  * refactor: precommit
+  * fix: remove unused variables
+  * refactor: rename abnormality_to_check variable
+  * refactor: rename (build failure)
+  * refactoring: variable name change
+  * Update common/autoware_boundary_departure_checker/src/footprint_generator/steering_footprint.cpp
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+  * Update common/autoware_boundary_departure_checker/src/footprint_generator/steering_footprint.cpp
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+  * chore: pre-commit
+  ---------
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+* refactor(boundary_departure): reduce number of defined structs and alias (`#11985 <https://github.com/autowarefoundation/autoware_universe/issues/11985>`_)
+  * refactor(boundary_departure): replace hardcoded abnormality to map
+  * refactor(boundary_departure): remove CriticalDeparturePoint struct
+  * Reduce using alias
+  * refactor(boundary_departure): setting up critical departure
+  * refactor(boundary_departure): remove unnecessary structs
+  * fix optional access
+  ---------
+* refactor(boundary_departure): move debug marker related functions (`#11952 <https://github.com/autowarefoundation/autoware_universe/issues/11952>`_)
+  * refactor(boundary_departure): move debug marker related functions
+  * Update common/autoware_boundary_departure_checker/src/debug.cpp
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  * Update common/autoware_boundary_departure_checker/include/autoware/deprecated/boundary_departure_checker/debug.hpp
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  ---------
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+* refactor(boundary_departure): move function from boundary_departure_prevention to uncrossable_boundary_departure_checker (`#11944 <https://github.com/autowarefoundation/autoware_universe/issues/11944>`_)
+  * refactor(boundary_departure): move function from bdp to bdc
+  * minor refactoring
+  * move clock, change to static
+  ---------
+* refactor(boundary_departure): reduce call to boundary_departure_checker_ptr and class renaming (`#11864 <https://github.com/autowarefoundation/autoware_universe/issues/11864>`_)
+  * refactor: move function so that only one call is needed to find abnormality data
+  * fix precommit
+  * removed unnecessary member variable
+  ---------
+* feat(motion_velocity_planner): publish debug trajectory for each module (`#11781 <https://github.com/autowarefoundation/autoware_universe/issues/11781>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, Zulfaqar Azmi
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor(boundary_departure_checker): replace autoware_utils (`#11733 <https://github.com/autowarefoundation/autoware_universe/issues/11733>`_)
+* feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)
+  * delete bdp time publish
+  * delete dynamic_obstacle_stop time publish
+  * delete obstacle_cruise time publish
+  * delete obstacle_slow_down time publish
+  * delete obstacle_velocity_limiter time publish
+  * delete out of lane time publish
+  * delete run out time publish
+  * add short module name function
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Yuki TAKAGI
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* docs(boundary_departure): update documentation (`#11229 <https://github.com/autowarefoundation/autoware_universe/issues/11229>`_)
+  * docs(boundary_departure): update documentation
+  * add additional explanation
+  * rearrange subsection
+  * explanation on reducing false positive
+  * fix equation not rendered
+  * Braking distance calculatation
+  * All explained
+  * fix equation not rendered correctly and image size too small
+  * fix table
+  * fix spell check
+  ---------
+* refactor(boundary_departure): move visualization marker functions to … (`#11331 <https://github.com/autowarefoundation/autoware_universe/issues/11331>`_)
+  refactor(boundary_departure): move visualization marker functions to a new function
+* docs(boundary_departure): update README for new steering abnormalities (`#11212 <https://github.com/autowarefoundation/autoware_universe/issues/11212>`_)
+* refactor(boundary_departure): make plan single-exit to eliminate repeated debug logs and redundant update_ptr\_ calls (`#11245 <https://github.com/autowarefoundation/autoware_universe/issues/11245>`_)
+  * refactor(boundary_departure): move plan to other function so that updater_ptr is called only once
+  * remove warn
+  * docstring
+  * rename function and remove unreacheable
+  ---------
+* refactor(boundary_departure): simplify diagnostic pointer call (`#11243 <https://github.com/autowarefoundation/autoware_universe/issues/11243>`_)
+  * refactor(boundary_departure): simplify diagnostic pointer call
+  * use default throttle duration
+  ---------
+* fix(autoware_motion_velocity_boundary_departure_prevention_module): remove unused function (`#11215 <https://github.com/autowarefoundation/autoware_universe/issues/11215>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(boundary_departure): explicitly delete diagnotics ptr after module's destruction (`#11217 <https://github.com/autowarefoundation/autoware_universe/issues/11217>`_)
+  fix(boundary_departure): explicitly delete diagnotics ptr after module destruction
+* chore(boundary_departure): add maintainer (`#11214 <https://github.com/autowarefoundation/autoware_universe/issues/11214>`_)
+* fix(boundary_departure_checker): update poses for the new trajectory (`#11198 <https://github.com/autowarefoundation/autoware_universe/issues/11198>`_)
+* feat(boundary_departure): support addition parameters for dynamic reconfiguration  (`#11180 <https://github.com/autowarefoundation/autoware_universe/issues/11180>`_)
+  * feat(boundary_departure): rqt reconfigure
+  * fix node dying
+  * fix precommit
+  ---------
+* fix(motion_velocity_planner): remove unused function (`#11177 <https://github.com/autowarefoundation/autoware_universe/issues/11177>`_)
+* fix(motion_velocity_planner): remove unused function (`#11178 <https://github.com/autowarefoundation/autoware_universe/issues/11178>`_)
+* fix(motion_velocity_planner): remove unused function (`#11175 <https://github.com/autowarefoundation/autoware_universe/issues/11175>`_)
+* fix(boundary_departure): critical departure not cleared (`#11173 <https://github.com/autowarefoundation/autoware_universe/issues/11173>`_)
+* fix(boundary_departure): fix chattering critical departure MRM (`#11171 <https://github.com/autowarefoundation/autoware_universe/issues/11171>`_)
+* perf(boundary_departure): more efficient arc length calculations for ego footprint points (`#11136 <https://github.com/autowarefoundation/autoware_universe/issues/11136>`_)
+  * directly calculate lon_dist_on_ref_traj from the fp's trajectory point
+  * remove unused vehicle longitudinal offset argument
+  * remove unused trajectory argument
+  * substract the longitudinal offset of the projected ego point
+  * rename lon_dist_on_ref_traj to lon_dist_on_pred_traj
+  * revise and optimize the dist_on_traj to be the ego_dist_on_ref_traj
+  * remove unused find_new_critical_departure_points function
+  * remove offsets by the ego vehicle longitudinal offset
+  * refactor to use motion_utils instead of trajectory::closest (perf)
+  * remove last trajectory::closest (perf)
+  * fix braking_dist calculation
+  ---------
+* feat(boundary_departure_checker): improve steering abnormality (`#11130 <https://github.com/autowarefoundation/autoware_universe/issues/11130>`_)
+* refactor(boundary_departure): check output exist and matches type for diagnostic level (`#11150 <https://github.com/autowarefoundation/autoware_universe/issues/11150>`_)
+  fix(boundary_departure): check output exist and matches type for diag level
+* fix(boundary_departure): gradual slow down with feasible profile (`#11131 <https://github.com/autowarefoundation/autoware_universe/issues/11131>`_)
+  * fix(boundary_departure): gradual slow down when comfort slow not possible
+  * fix calculation and add feasible velocity
+  * fix CI
+  ---------
+* feat(boundary_departure): on time buffer for critical departure (`#11126 <https://github.com/autowarefoundation/autoware_universe/issues/11126>`_)
+  * feat(boundary_departure): on time buffer for critical departure
+  * refactoring
+  * replace critical dpt time to double
+  * rename other variable for consistency
+  ---------
+* fix(boundary_departure): refactor merge_departure_intervals function to avoid crashes (`#11129 <https://github.com/autowarefoundation/autoware_universe/issues/11129>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, Ryuta Kambe, Zulfaqar Azmi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(boundary_departure): slow down computation (`#11085 <https://github.com/autowarefoundation/autoware_universe/issues/11085>`_)

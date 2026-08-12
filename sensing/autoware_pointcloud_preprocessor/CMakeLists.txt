@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_pointcloud_preprocessor)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 # Suppress CGAL warning
@@ -69,7 +70,8 @@ add_library(concatenate_data SHARED
   src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/combine_cloud_handler.cpp
   src/concatenate_data/cloud_collector.cpp
-  src/concatenate_data/collector_matching_strategy.cpp
+  src/concatenate_data/collector_matcher.cpp
+  src/concatenate_data/matching_policy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
 )
 
@@ -103,7 +105,9 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/outlier_filter/ring_outlier_filter_node.cpp
   src/outlier_filter/radius_search_2d_outlier_filter_node.cpp
   src/outlier_filter/voxel_grid_outlier_filter_node.cpp
+  src/outlier_filter/polar_voxel_outlier_filter_node.cpp
   src/outlier_filter/dual_return_outlier_filter_node.cpp
+  src/outlier_filter/polar_voxel_noise_filter_node.cpp
   src/passthrough_filter/passthrough_filter_node.cpp
   src/passthrough_filter/passthrough_filter_uint16_node.cpp
   src/passthrough_filter/passthrough_uint16.cpp
@@ -111,7 +115,12 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/vector_map_filter/lanelet2_map_filter_node.cpp
   src/distortion_corrector/distortion_corrector.cpp
   src/distortion_corrector/distortion_corrector_node.cpp
+  src/blockage_diag/blockage_detection.cpp
+  src/blockage_diag/blockage_diag.cpp
   src/blockage_diag/blockage_diag_node.cpp
+  src/blockage_diag/dust_detection.cpp
+  src/blockage_diag/multi_frame_detection_aggregator.cpp
+  src/blockage_diag/pointcloud2_to_depth_image.cpp
   src/polygon_remover/polygon_remover.cpp
   src/vector_map_filter/vector_map_inside_area_filter_node.cpp
   src/utility/geometry.cpp
@@ -181,6 +190,19 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::VoxelGridOutlierFilterComponent"
   EXECUTABLE voxel_grid_outlier_filter_node)
 
+# -- Polar Voxel Outlier Filter --
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
+  PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent"
+  EXECUTABLE polar_voxel_outlier_filter_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
+
+# -- Polar Voxel Noise Filter --
+rclcpp_components_register_node(pointcloud_preprocessor_filter
+  PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelNoiseFilterComponent"
+  EXECUTABLE polar_voxel_noise_filter_node)
+
 # -- Radius Search 2D Outlier Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::RadiusSearch2DOutlierFilterComponent"
@@ -218,9 +240,19 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE distortion_corrector_node)
 
 # ========== Blockage Diagnostics ===========
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+target_include_directories(pointcloud_preprocessor_filter PRIVATE
+  ${agnocastlib_INCLUDE_DIRS}
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
+ament_target_dependencies(pointcloud_preprocessor_filter
+  autoware_agnocast_wrapper
+)
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::BlockageDiagComponent"
-  EXECUTABLE blockage_diag_node)
+  EXECUTABLE blockage_diag_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 # ========== PolygonRemover ==========
 rclcpp_components_register_node(pointcloud_preprocessor_filter
@@ -305,11 +337,57 @@ if(BUILD_TESTING)
     test/test_concatenation_info.cpp
   )
 
+  ament_add_gtest(test_matching_policy
+    test/test_matching_policy.cpp
+    src/concatenate_data/matching_policy.cpp
+  )
+  target_include_directories(test_matching_policy PRIVATE include)
+
+  ament_add_gtest(test_polar_voxel_outlier_filter_node
+    test/test_polar_voxel_outlier_filter_node.cpp
+  )
+
+  ament_add_gtest(test_polar_voxel_noise_filter_node
+    test/test_polar_voxel_noise_filter_node.cpp
+  )
+
+  ament_add_gtest(test_blockage_diag
+    test/blockage_diag/test_blockage_diag.cpp
+  )
+
+  ament_add_gtest(test_blockage_diag_node
+    test/blockage_diag/test_blockage_diag_node.cpp
+  )
+
+  ament_add_gtest(test_pointcloud2_to_depth_image
+    test/blockage_diag/test_pointcloud2_to_depth_image.cpp
+  )
+
+  ament_add_gtest(test_blockage_detection
+    test/blockage_diag/test_blockage_detection.cpp
+  )
+
+  ament_add_gtest(test_dust_detection
+    test/blockage_diag/test_dust_detection.cpp
+  )
+
+  ament_add_gtest(test_multi_frame_detection_aggregator
+    test/blockage_diag/test_multi_frame_detection_aggregator.cpp
+  )
+
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
+  target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
+  target_link_libraries(test_blockage_diag_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)
+  target_link_libraries(test_blockage_detection pointcloud_preprocessor_filter)
+  target_link_libraries(test_dust_detection pointcloud_preprocessor_filter)
+  target_link_libraries(test_multi_frame_detection_aggregator pointcloud_preprocessor_filter)
 
   add_ros_test(
     test/test_concatenate_node_component.py

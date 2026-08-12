@@ -13,7 +13,6 @@
 # limitations under the License.
 
 
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import OpaqueFunction
@@ -21,9 +20,11 @@ from launch.actions import SetLaunchConfiguration
 from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
 from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.actions import LoadComposableNodes
 from launch_ros.descriptions import ComposableNode
+from launch_ros.substitutions import FindPackageShare
 import yaml
 
 # In this file, we use "ogm" as a meaning of occupancy grid map
@@ -275,14 +276,24 @@ def generate_launch_description():
             add_launch_arg("output", "occupancy_grid"),
             add_launch_arg(
                 "multi_lidar_fusion_config_file",
-                get_package_share_directory("autoware_probabilistic_occupancy_grid_map")
-                + "/config/multi_lidar_pointcloud_based_occupancy_grid_map.param.yaml",
+                PathJoinSubstitution(
+                    [
+                        FindPackageShare("autoware_probabilistic_occupancy_grid_map"),
+                        "config",
+                        "multi_lidar_pointcloud_based_occupancy_grid_map.param.yaml",
+                    ]
+                ),
             ),
             add_launch_arg("updater_type", "binary_bayes_filter"),
             add_launch_arg(
                 "updater_param_file",
-                get_package_share_directory("autoware_probabilistic_occupancy_grid_map")
-                + "/config/binary_bayes_filter_updater.param.yaml",
+                PathJoinSubstitution(
+                    [
+                        FindPackageShare("autoware_probabilistic_occupancy_grid_map"),
+                        "config",
+                        "binary_bayes_filter_updater.param.yaml",
+                    ]
+                ),
             ),
             set_container_executable,
             set_container_mt_executable,

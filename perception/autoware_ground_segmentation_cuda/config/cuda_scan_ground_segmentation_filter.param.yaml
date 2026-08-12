@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    global_slope_max_angle_deg: 10.0
+    local_slope_max_angle_deg: 25.0
+    non_ground_height_threshold: 0.20
+    grid_size_m: 0.5
+    detection_range_z_max: 3.2
+    use_recheck_ground_cluster: true
+    recheck_start_distance: 20.0
+    use_lowest_point: true
+    center_pcl_shift: 0.0
+    sector_angle_deg: 1.0
+    gnd_cell_buffer_size: 5
+    min_x: -100.0
+    max_x: 150.0
+    min_y: -70.0
+    max_y: 70.0
+    max_z: 2.5
+    min_z: -2.5

@@ -8,17 +8,12 @@
     - source: .github/pull_request_template_complex.md
       dest: .github/pull_request_template.md
     - source: .github/stale.yml
-    - source: .github/workflows/cancel-previous-workflows.yaml
-    - source: .github/workflows/clang-tidy-pr-comments.yaml
-    - source: .github/workflows/clang-tidy-pr-comments-manually.yaml
     - source: .github/workflows/comment-on-pr.yaml
     - source: .github/workflows/delete-closed-pr-docs.yaml
     - source: .github/workflows/deploy-docs.yaml
     - source: .github/workflows/github-release.yaml
     - source: .github/workflows/pre-commit.yaml
     - source: .github/workflows/pre-commit-optional.yaml
-    - source: .github/workflows/pre-commit-optional-autoupdate.yaml
-    - source: .github/workflows/pre-commit-autoupdate.yaml
     - source: .github/workflows/semantic-pull-request.yaml
     - source: .github/workflows/spell-check-differential.yaml
       pre-commands: |
@@ -26,8 +21,10 @@
     - source: .github/workflows/spell-check-daily.yaml
       pre-commands: |
         sd "        with:\n" "        with:\n          local-cspell-json: .cspell.json\n" {source}
+    - source: .github/workflows/sync-branches.yaml
     - source: .github/workflows/sync-files.yaml
     - source: .github/workflows/update-codeowners-from-packages.yaml
+    - source: .github/workflows/lint-autoware-system-design-format.yaml
     - source: docs/assets/js/mathjax.js
     - source: .clang-format
     - source: .markdown-link-check.json

@@ -2,6 +2,85 @@
 Changelog for package autoware_planning_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(direction_change_module): propagate `allow_area` to downstream modules for area-primitive route support (`#12815 <https://github.com/autowarefoundation/autoware_universe/issues/12815>`_)
+  * feat: ignore lane_departure in area primitive
+  * feat: add area primitive for isRouteValid() in mission_planner_universe
+  * feat: add allow_area for scenario_selector
+  * feat: add allow_area to planning_validator
+  * feat: add missing params in scenario module manager
+  * fix: set allow_area to false by default
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: emmeyteja, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(planning_validator_container): apply autoware_agnocast_wrapper for CIE (`#12335 <https://github.com/mitsudome-r/autoware_universe/issues/12335>`_)
+  * feat(autoware_planning_validator): apply autoware_agnocast_wrapper for CIE
+  * fix(autoware_planning_validator): use exec_depend for launch-only dependency
+  * fix(autoware_planning_validator): set LD_PRELOAD only when use_agnocast is true
+  * feat(autoware_planning_validator): use inline ENABLE_AGNOCAST switch instead of agnocast_env.launch.xml
+  Replace agnocast_env.launch.xml include with inline container switching
+  logic and remove LD_PRELOAD setting, consistent with other launch files.
+  * feat(autoware_planning_validator): use conditional agnocast_components dependency
+  Replace autoware_agnocast_wrapper exec_depend with conditional
+  agnocast_components dependency (ENABLE_AGNOCAST == 1).
+  ---------
+* feat(autoware_planning_validator): remove glog component (`#12225 <https://github.com/mitsudome-r/autoware_universe/issues/12225>`_)
+  feat: remove glog component
+* Contributors: Tetsuhiro Kawaguchi, atsushi yano, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): reset last_valid_trajectory when receiving new route   (`#11836 <https://github.com/autowarefoundation/autoware_universe/issues/11836>`_)
+  * fix(planning_validator): reset last_valid_trajectory when receiving new route
+  * skip check_traject_shift when ego stops
+  * fix unit test failure
+  * use ivehicle_stop_checker
+  ---------
+  Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): update QoS settings for operational mode state subscriber (`#11401 <https://github.com/autowarefoundation/autoware_universe/issues/11401>`_)
+* fix(intersection_collision_checker): use traffic light context for intersection collision detection (`#11238 <https://github.com/autowarefoundation/autoware_universe/issues/11238>`_)
+  * fix: subscribe traffic singals
+  * fix: add flag to check traffic signal
+  * fix: change traffic light check logic
+  * fix: use node clock
+  * fix: amber
+  * docs: validator
+  * docs: icc
+  * docs: icc
+  * docs: icc
+  * fix: typo
+  * docs: validator
+  * fix: add param
+  ---------
+* refactor(launch):  topic remapping for object recognition and point cloud input to planning/control module (`#11242 <https://github.com/autowarefoundation/autoware_universe/issues/11242>`_)
+  * feat(planning): introduce dynamic topic remapping for input objects and pointcloud
+  ---------
+* feat(planning_validator): add operational mode state handling and validation filtering (`#11216 <https://github.com/autowarefoundation/autoware_universe/issues/11216>`_)
+  * feat(planning_validator): add operational mode state handling and validation filtering
+  * refactor(planning_validator):  unused validation_filtering method and initialize validation status with existing function
+  * feat(planning_validator): add operational mode state handling and publisher for test
+  ---------
+* Contributors: Kyoichi Sugahara, Ryohsuke Mitsudome, Satoshi OTA
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)

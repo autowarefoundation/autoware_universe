@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    include_latent_fault_in_emergency: true
+    use_external_emergency_holding: false

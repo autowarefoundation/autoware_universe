@@ -104,6 +104,8 @@ struct Parameters
                                     // make us keep a stop decision
   double keep_stop_condition_distance;  // [m] distance along the ego trajectory where any collision
                                         // will make us keep a stop decision
+  double stop_reuse_margin;  // [m] the previous stop distance is reused if before the newly
+                             // calculated one but not further than this margin
 
   double slowdown_on_time_buffer;      // [s] successive collision detection time required to
                                        // start the slowdown decision
@@ -189,6 +191,7 @@ struct Parameters
       getOrDeclareParameter<double>(node, ns + ".stop.keep_condition.time");
     keep_stop_condition_distance =
       getOrDeclareParameter<double>(node, ns + ".stop.keep_condition.distance");
+    stop_reuse_margin = getOrDeclareParameter<double>(node, ns + ".stop.reuse_margin");
     slowdown_off_time_buffer =
       getOrDeclareParameter<double>(node, ns + ".slowdown.off_time_buffer");
     slowdown_on_time_buffer = getOrDeclareParameter<double>(node, ns + ".slowdown.on_time_buffer");
@@ -311,6 +314,7 @@ struct Parameters
     updateParam(params, ns + ".stop.distance_buffer", stop_distance_buffer);
     updateParam(params, ns + ".stop.keep_condition.time", keep_stop_condition_time);
     updateParam(params, ns + ".stop.keep_condition.distance", keep_stop_condition_distance);
+    updateParam(params, ns + ".stop.reuse_margin", stop_reuse_margin);
     updateParam(params, ns + ".ego.lateral_margin", ego_lateral_margin);
     updateParam(params, ns + ".ego.longitudinal_margin", ego_longitudinal_margin);
     updateParam(params, ns + ".collision.time_margin", collision_time_margin);

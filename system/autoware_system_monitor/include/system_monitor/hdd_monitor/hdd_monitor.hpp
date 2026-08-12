@@ -23,6 +23,7 @@
 #include "system_monitor/hdd_reader/hdd_reader.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_external_api_msgs/msg/hdd_device_status.hpp>
 #include <tier4_external_api_msgs/msg/hdd_partition_status.hpp>
@@ -351,7 +352,8 @@ protected:
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 
-  int hdd_reader_port_;                         //!< @brief port number to connect to hdd_reader
+  std::string
+    hdd_reader_socket_path_;  //!< @brief path of UNIX domain socket to connect to hdd_reader
   std::map<std::string, HddParam> hdd_params_;  //!< @brief list of error and warning levels
   std::map<std::string, bool>
     hdd_connected_flags_;  //!< @brief list of flag whether HDD is connected

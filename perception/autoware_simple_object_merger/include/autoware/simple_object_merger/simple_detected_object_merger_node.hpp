@@ -16,7 +16,6 @@
 #define AUTOWARE__SIMPLE_OBJECT_MERGER__SIMPLE_DETECTED_OBJECT_MERGER_NODE_HPP_
 
 #include "autoware/simple_object_merger/simple_object_merger_base.hpp"
-#include "autoware_utils/ros/transform_listener.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -33,8 +32,8 @@ public:
 
 private:
   void approximateMerger(
-    const DetectedObjects::ConstSharedPtr & object_msg0,
-    const DetectedObjects::ConstSharedPtr & object_msg1) override;
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & object_msg0,
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & object_msg1) override;
 
   void onTimer() override;
 };

@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,16 +17,11 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
 
 #include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/msg_covariance.hpp>
-
-#include <tf2/utils.h>
+#include <autoware_utils_geometry/msg/covariance.hpp>
 
 namespace autoware::multi_object_tracker
 {
-using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 StaticMotionModel::StaticMotionModel() : logger_(rclcpp::get_logger("StaticMotionModel"))
 {
@@ -153,7 +148,8 @@ bool StaticMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  // do not change z
+  pose.position.z = z_;
+  pose.orientation = orientation_;
 
   // set twist
   twist.linear.x = 0.0;

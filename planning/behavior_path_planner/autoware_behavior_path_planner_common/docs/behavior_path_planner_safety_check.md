@@ -1,22 +1,22 @@
 # Safety Check Utils
 
-Safety check function checks if the given path will collide with a given target object.
+The safety check function determines if a specific path will result in a collision with a target object.
 
 ## Purpose / Role
 
-In the behavior path planner, certain modules (e.g., lane change) need to perform collision checks to ensure the safe navigation of the ego vehicle. These utility functions assist the user in conducting safety checks with other road participants.
+In the Behavior Path Planner, modules such as Lane Change require collision checks to ensure safe navigation. The safety check utility functions assist the module in conducting safety checks with other road participants. This approach ensures collision avoidance by considering the ego vehicle’s braking distance, other vehicles’ braking distances, and minimum safety distances as part of the safety design.
 
 ### Assumptions
 
-The safety check module is based on the following assumptions:
+The safety check module operates based on the following assumptions:
 
-1. Users must provide the position, velocity, and shape of both the ego and target objects to the utility functions.
-2. The yaw angle of each point in the predicted path of both the ego and target objects should point to the next point in the path.
-3. The safety check module uses RSS distance to determine the safety of a potential collision with other objects.
+1. The module must receive the position, velocity, and shape for both the ego vehicle and the target objects.
+2. For every point in the predicted path of the ego and target objects, the yaw angle (direction) must point toward the next point in that path.
+3. The module uses the minimum safe braking distance to determine if a collision risk exists with other objects.
 
 ### Limitations
 
-Currently the yaw angle of each point of predicted paths of a target object does not point to the next point. Therefore, the safety check function might returns incorrect result for some edge case.
+Currently, the yaw angle of points in a target object's predicted path may not always point exactly to the next point. Therefore, the safety check function might return incorrect results in some specific edge cases.
 
 ### Inner working / Algorithm
 
@@ -26,38 +26,48 @@ The flow of the safety check algorithm is described in the following explanation
 
 Here we explain each step of the algorithm flow.
 
-#### 1. Get pose of the target object at a given time
+#### Step 1: Obtain the target object position (pose) at a given time
 
-For the first step, we obtain the pose of the target object at a given time. This can be done by interpolating the predicted path of the object.
+The module first determines the position of the target object at a specific time. This is calculated by interpolating the predicted path of the object.
 
-#### 2. Check overlap
+#### Step 2: Check for initial overlap
 
-With the interpolated pose obtained in the step.1, we check if the object and ego vehicle overlaps at a given time. If they are overlapped each other, the given path is unsafe.
+Using the interpolated position from Step 1, the module checks if the target object and ego vehicle occupy the same space at that time. If they overlap, the path is marked unsafe.
 
-#### 3. Get front object
+#### Step 3: Identify the leading vehicle
 
-After the overlap check, it starts to perform the safety check for the broader range. In this step, it judges if ego or target object is in front of the other vehicle. We use arc length of the front point of each object along the given path to judge which one is in front of the other. In the following example, target object (red rectangle) is running in front of the ego vehicle (black rectangle).
+If no initial overlap is found, the module determines which vehicle is in front of the other. The module compares the arc length (distance along the path) of the front point of each object.
+
+Example: When the target object (red rectangle) has a greater arc length than the ego vehicle (black rectangle), it is considered the leading vehicle.
 
 ![front_object](../images/path_safety_checker/front_object.drawio.svg)
 
-#### 4. Calculate RSS distance
+#### Step 4: Calculate the Minimum Safe Braking Distance
 
-After we find which vehicle is running ahead of the other vehicle, we start to compute the RSS distance. With the reaction time $t_{reaction}$ and safety time margin $t_{margin}$, RSS distance can be described as:
+Once the leading vehicle is identified, the module calculates the safe braking distance. Using the reaction time ($t_{reaction}$) and the safety time margin ($t_{margin}$), the distance ($d_{braking}$) is defined as:
 
 $$
-rss_{dist} = v_{rear} (t_{reaction} + t_{margin}) + \frac{v_{rear}^2}{2|a_{rear, decel}|} - \frac{v_{front}^2}{2|a_{front, decel|}}
+d_{braking} = v_{rear} (t_{reaction} + t_{margin}) + \frac{v_{rear}^2}{2|a_{rear, decel}|} - \frac{v_{front}^2}{2|a_{front, decel|}}
 $$
 
-where $V_{front}$, $v_{rear}$ are front and rear vehicle velocity respectively and $a_{rear, front}$, $a_{rear, decel}$ are front and rear vehicle deceleration. Note that RSS distance is normally used for objects traveling in the same direction, if the yaw difference between a given ego pose and object pose is more than a user-defined yaw difference threshold, the rss collision check will be skipped for that specific pair of poses.
+Where:
 
-#### 5. Create extended ego and target object polygons
+- $v_{front}$ and $v_{rear}$ are the velocities of the front and rear vehicles.
+- $a_{front, decel}$ and $a_{rear, decel}$ are the maximum decelerations of the front and rear vehicles.
 
-In this step, we compute extended ego and target object polygons. The extended polygons can be described as:
+!!! note
+
+    Note: This safety check is typically used for objects traveling in the same direction. If the difference in yaw angle (direction) between the ego vehicle and the object exceeds a user-defined threshold, the module skips the check for that pair of positions.
+
+#### Step 5: Create extended ego and target object polygons
+
+The module creates geometric shapes (polygons) to represent the safety zones. The module expands the rear object polygon based on the following:
+
+- Longitudinally: It extends the polygon forward by the calculated safe braking distance ($d_{braking}$).
+- Laterally: It extends the polygon sideways by a lateral margin.
 
 ![extended_polygons](../images/path_safety_checker/extended_polygons.drawio.svg)
 
-As the picture shows, we expand the rear object polygon. For the longitudinal side, we extend it with the RSS distance, and for the lateral side, we extend it by the lateral margin.
+#### Step 6: Final overlap check
 
-#### 6. Check overlap
-
-Similar to the previous step, we check the overlap of the extended rear object polygon and front object polygon. If they are overlapped each other, we regard it as the unsafe situation.
+The module checks if the extended rear polygon overlaps with the front object polygon. If an overlap is detected, the situation is determined to be unsafe.

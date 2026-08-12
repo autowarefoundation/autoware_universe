@@ -16,14 +16,18 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/simple_tracked_object_merger_node.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::simple_object_merger::SimpleDetectedObjectMergerNode"
   EXECUTABLE simple_object_merger_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::simple_object_merger::SimpleTrackedObjectMergerNode"
   EXECUTABLE simple_tracked_object_merger_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 # Tests
@@ -32,13 +36,15 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 
-  ament_auto_add_gtest(simple_object_merger_node_tests
-    test/test_node.cpp
-  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_auto_add_gtest(simple_object_merger_node_tests
+      test/test_node.cpp
+    )
+  endif()
 endif()
 
 # Package
-ament_auto_package(
+autoware_ament_auto_package(
   INSTALL_TO_SHARE
   config
   launch

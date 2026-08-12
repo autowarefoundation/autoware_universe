@@ -8,7 +8,7 @@ distance. In case of collision in brake distance, the package will send a diagno
 the system to send emergency and in the case of collisions in outside reference trajectory, it sends pause request to
 pause interface to make the vehicle stop.
 
-![general-structure.png](images%2Fgeneral-structure.png)
+![general-structure.png](images/general-structure.png)
 
 ## Algorithm
 
@@ -18,7 +18,7 @@ emergency or pause request).
 
 ### Inner Algorithm
 
-![FlowChart.png](images%2FFlowChart.png)
+![FlowChart.png](images/FlowChart.png)
 
 **cutTrajectory() ->** It cuts the predicted trajectory with input length. Length is calculated by multiplying the
 velocity
@@ -37,7 +37,7 @@ seconds ago.
 If the "enable_z_axis_obstacle_filtering" parameter is set to true, it filters the predicted objects in the Z-axis by
 using "z_axis_filtering_buffer". If the object does not intersect with the Z-axis, it is filtered out.
 
-![Z_axis_filtering.png](images%2FZ_axis_filtering.png)
+![Z_axis_filtering.png](images/Z_axis_filtering.png)
 
 **calculateProjectedVelAndAcc() ->** It calculates the projected velocity and acceleration of the predicted object on
 predicted trajectory's collision point's axes.

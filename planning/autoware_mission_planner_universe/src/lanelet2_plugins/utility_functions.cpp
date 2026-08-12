@@ -14,13 +14,17 @@
 
 #include "utility_functions.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <boost/geometry.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
+#include <lanelet2_core/geometry/Point.h>
+#include <lanelet2_core/primitives/Area.h>
 
 #include <limits>
 #include <vector>
@@ -119,27 +123,49 @@ bool is_in_parking_lot(
 double project_goal_to_map(
   const lanelet::ConstLanelet & lanelet_component, const lanelet::ConstPoint3d & goal_point)
 {
-  const lanelet::ConstLineString3d center_line =
-    lanelet::utils::generateFineCenterline(lanelet_component);
+  const auto center_line =
+    autoware::experimental::lanelet2_utils::get_fine_centerline(lanelet_component);
   lanelet::BasicPoint3d project = lanelet::geometry::project(center_line, goal_point.basicPoint());
   return project.z();
+}
+
+double project_goal_to_area(
+  const lanelet::ConstArea & area, const lanelet::ConstPoint3d & goal_point)
+{
+  double min_d2 = std::numeric_limits<double>::max();
+  double best_z = goal_point.z();
+  const auto g2 = lanelet::utils::to2D(goal_point);
+  for (const auto & ls : area.outerBound()) {
+    for (const auto & pt : ls) {
+      const double d2 = lanelet::geometry::distance2d(g2, lanelet::utils::to2D(pt));
+      if (d2 < min_d2) {
+        min_d2 = d2;
+        best_z = pt.z();
+      }
+    }
+  }
+  return best_z;
 }
 
 geometry_msgs::msg::Pose get_closest_centerline_pose(
   const lanelet::ConstLanelets & road_lanelets, const geometry_msgs::msg::Pose & point,
   autoware::vehicle_info_utils::VehicleInfo vehicle_info)
 {
-  lanelet::Lanelet closest_lanelet;
-  if (!lanelet::utils::query::getClosestLaneletWithConstrains(
-        road_lanelets, point, &closest_lanelet, 0.0)) {
+  auto opt = autoware::experimental::lanelet2_utils::get_closest_lanelet_within_constraint(
+    road_lanelets, point, 0.0);
+  if (!opt.has_value()) {
     // point is not on any lanelet.
     return point;
   }
+  lanelet::Lanelet closest_lanelet = autoware::experimental::lanelet2_utils::remove_const(*opt);
 
-  const auto refined_center_line = lanelet::utils::generateFineCenterline(closest_lanelet, 1.0);
-  closest_lanelet.setCenterline(refined_center_line);
+  const auto refined_center_line =
+    autoware::experimental::lanelet2_utils::get_fine_centerline(closest_lanelet, 1.0);
+  closest_lanelet.setCenterline(
+    autoware::experimental::lanelet2_utils::remove_const(refined_center_line));
 
-  const double lane_yaw = lanelet::utils::getLaneletAngle(closest_lanelet, point.position);
+  const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    closest_lanelet, autoware::experimental::lanelet2_utils::from_ros(point.position).basicPoint());
 
   const auto nearest_idx = autoware::motion_utils::findNearestIndex(
     convertCenterlineToPoints(closest_lanelet), point.position);

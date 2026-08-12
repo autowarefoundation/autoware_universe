@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2024 Tier IV, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -10,7 +12,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.sr/bin/env python
+# limitations under the License.
 
 import random
 import signal
@@ -26,6 +28,7 @@ from .modules.carla_wrapper import SensorWrapper
 
 
 class SensorLoop(object):
+
     def __init__(self):
         self.start_game_time = None
         self.start_system_time = None
@@ -53,6 +56,7 @@ class SensorLoop(object):
 
 
 class InitializeInterface(object):
+
     def __init__(self):
         self.interface = carla_ros2_interface()
         self.param_ = self.interface.get_param()
@@ -74,17 +78,8 @@ class InitializeInterface(object):
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
 
-    def load_world(self):
-        client = carla.Client(self.local_host, self.port)
-        client.set_timeout(self.timeout)
-        client.load_world(self.carla_map)
-        self.world = client.get_world()
-        settings = self.world.get_settings()
-        settings.fixed_delta_seconds = self.fixed_delta_seconds
-        settings.synchronous_mode = self.sync_mode
-        self.world.apply_settings(settings)
-        CarlaDataProvider.set_world(self.world)
-        CarlaDataProvider.set_client(client)
+    def _parse_spawn_point(self):
+        """Parse spawn point string and return transform with randomize flag."""
         spawn_point = carla.Transform()
         point_items = self.spawn_point.split(",")
         randomize = False
@@ -99,6 +94,72 @@ class InitializeInterface(object):
             spawn_point.rotation.yaw = float(point_items[5])
         else:
             randomize = True
+        return spawn_point, randomize
+
+    def _setup_traffic_manager(self, client):
+        """Configure traffic manager with NPC vehicles."""
+        traffic_manager = client.get_trafficmanager()  # cspell:ignore trafficmanager
+        traffic_manager.set_synchronous_mode(True)
+        traffic_manager.set_random_device_seed(0)
+        random.seed(0)
+        spawn_points_tm = self.world.get_map().get_spawn_points()
+        for i, spawn_point in enumerate(spawn_points_tm):
+            self.world.debug.draw_string(spawn_point.location, str(i), life_time=10)
+        models = [
+            "dodge",
+            "audi",
+            "model3",
+            "mini",
+            "mustang",
+            "lincoln",
+            "prius",
+            "nissan",
+            "crown",
+            "impala",
+        ]
+        blueprints = []
+        for vehicle in self.world.get_blueprint_library().filter("*vehicle*"):
+            if any(model in vehicle.id for model in models):
+                blueprints.append(vehicle)
+        max_vehicles = 30
+        max_vehicles = min([max_vehicles, len(spawn_points_tm)])
+        vehicles = []
+        for i, spawn_point in enumerate(random.sample(spawn_points_tm, max_vehicles)):
+            temp = self.world.try_spawn_actor(random.choice(blueprints), spawn_point)
+            if temp is not None:
+                vehicles.append(temp)
+
+        for vehicle in vehicles:
+            vehicle.set_autopilot(True)
+
+    def load_world(self):
+        client = carla.Client(self.local_host, self.port)
+        client.set_timeout(self.timeout)
+        client.load_world_if_different(self.carla_map)
+
+        # Wait for the world to be fully loaded
+        # This is critical for non-default maps that need time to load
+        time.sleep(2.0)
+
+        self.world = client.get_world()
+
+        # Verify world is ready by attempting to tick it
+        # This ensures the world is fully initialized before accessing settings
+        try:
+            self.world.tick()
+        except RuntimeError:
+            # If synchronous mode is not enabled yet, tick() may fail
+            # In this case, just wait a bit more
+            time.sleep(1.0)
+
+        settings = self.world.get_settings()
+        settings.fixed_delta_seconds = self.fixed_delta_seconds
+        settings.synchronous_mode = self.sync_mode
+        self.world.apply_settings(settings)
+        CarlaDataProvider.set_world(self.world)
+        CarlaDataProvider.set_client(client)
+
+        spawn_point, randomize = self._parse_spawn_point()
         self.ego_actor = CarlaDataProvider.request_new_actor(
             self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
         )
@@ -107,44 +168,9 @@ class InitializeInterface(object):
 
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
-        ##########################################################################################################################################################
-        # TRAFFIC MANAGER
-        ##########################################################################################################################################################
-        # cspell:ignore trafficmanager
-        if self.use_traffic_manager:
-            traffic_manager = client.get_trafficmanager()
-            traffic_manager.set_synchronous_mode(True)
-            traffic_manager.set_random_device_seed(0)
-            random.seed(0)
-            spawn_points_tm = self.world.get_map().get_spawn_points()
-            for i, spawn_point in enumerate(spawn_points_tm):
-                self.world.debug.draw_string(spawn_point.location, str(i), life_time=10)
-            models = [
-                "dodge",
-                "audi",
-                "model3",
-                "mini",
-                "mustang",
-                "lincoln",
-                "prius",
-                "nissan",
-                "crown",
-                "impala",
-            ]
-            blueprints = []
-            for vehicle in self.world.get_blueprint_library().filter("*vehicle*"):
-                if any(model in vehicle.id for model in models):
-                    blueprints.append(vehicle)
-            max_vehicles = 30
-            max_vehicles = min([max_vehicles, len(spawn_points_tm)])
-            vehicles = []
-            for i, spawn_point in enumerate(random.sample(spawn_points_tm, max_vehicles)):
-                temp = self.world.try_spawn_actor(random.choice(blueprints), spawn_point)
-                if temp is not None:
-                    vehicles.append(temp)
 
-            for vehicle in vehicles:
-                vehicle.set_autopilot(True)
+        if self.use_traffic_manager:
+            self._setup_traffic_manager(client)
 
     def run_bridge(self):
         self.bridge_loop = SensorLoop()
@@ -172,23 +198,75 @@ class InitializeInterface(object):
         self.bridge_loop._stop_loop()
 
     def _cleanup(self):
-        self.sensor_wrapper.cleanup()
-        CarlaDataProvider.cleanup()
-        if self.ego_actor:
-            self.ego_actor.destroy()
-            self.ego_actor = None
+        """
+        Clean up all CARLA resources in reverse initialization order.
 
-        if self.interface:
+        Ensures cleanup happens even if individual steps fail.
+
+        """
+        self._cleanup_sensors()
+        self._cleanup_ros_interface()
+        self._cleanup_ego_actor()
+        self._cleanup_carla_provider()
+
+    def _cleanup_sensors(self):
+        """Clean up sensor wrapper, continuing on error."""
+        if not self.sensor_wrapper:
+            return
+        try:
+            self.sensor_wrapper.cleanup()
+        except Exception as e:
+            print(f"Warning: Sensor cleanup failed: {e}")
+
+    def _cleanup_ros_interface(self):
+        """Clean up ROS interface, continuing on error."""
+        if not self.interface:
+            return
+        try:
             self.interface.shutdown()
             self.interface = None
+        except Exception as e:
+            print(f"Warning: ROS interface shutdown failed: {e}")
+
+    def _cleanup_ego_actor(self):
+        """Destroy ego vehicle, continuing on error."""
+        if not self.ego_actor:
+            return
+        try:
+            self.ego_actor.destroy()
+            self.ego_actor = None
+        except Exception as e:
+            print(f"Warning: Ego actor destruction failed: {e}")
+
+    def _cleanup_carla_provider(self):
+        """Clean up CARLA data provider, continuing on error."""
+        try:
+            CarlaDataProvider.cleanup()
+        except Exception as e:
+            print(f"Warning: CARLA data provider cleanup failed: {e}")
 
 
 def main():
+    """Run the CARLA-Autoware bridge with proper cleanup on all exit paths."""
     carla_bridge = InitializeInterface()
     carla_bridge.load_world()
+
+    # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, carla_bridge._stop_loop)
-    carla_bridge.run_bridge()
-    carla_bridge._cleanup()
+    signal.signal(signal.SIGTERM, carla_bridge._stop_loop)
+
+    try:
+        carla_bridge.run_bridge()
+    except KeyboardInterrupt:
+        print("\nReceived keyboard interrupt, shutting down...")
+    except Exception as e:
+        print(f"\nError during bridge operation: {e}")
+        raise
+    finally:
+        # Ensure cleanup always happens, even on exception or signal
+        print("Cleaning up CARLA resources...")
+        carla_bridge._cleanup()
+        print("Cleanup complete.")
 
 
 if __name__ == "__main__":

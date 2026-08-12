@@ -20,9 +20,9 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/time.hpp>
 
@@ -240,7 +240,23 @@ struct PlannerData
       node.declare_parameter<double>("turn_signal_shift_length_threshold");
     parameters.turn_signal_remaining_shift_length_threshold =
       node.declare_parameter<double>("turn_signal_remaining_shift_length_threshold");
+    parameters.turn_signal_remaining_distance_to_bound_threshold =
+      node.declare_parameter<double>("turn_signal_remaining_distance_to_bound_threshold");
     parameters.turn_signal_on_swerving = node.declare_parameter<bool>("turn_signal_on_swerving");
+    parameters.turn_signal_roundabout_on_entry =
+      node.declare_parameter<std::string>("turn_signal_roundabout_on_entry");
+    parameters.turn_signal_roundabout_on_exit =
+      node.declare_parameter<std::string>("turn_signal_roundabout_on_exit");
+    parameters.turn_signal_roundabout_entry_indicator_persistence =
+      node.declare_parameter<bool>("turn_signal_roundabout_entry_indicator_persistence");
+    parameters.turn_signal_roundabout_search_distance =
+      node.declare_parameter<double>("turn_signal_roundabout_search_distance");
+    parameters.turn_signal_roundabout_angle_threshold_deg =
+      node.declare_parameter<double>("turn_signal_roundabout_angle_threshold_deg");
+    parameters.turn_signal_roundabout_backward_depth =
+      node.declare_parameter<int>("turn_signal_roundabout_backward_depth");
+    parameters.turn_signal_path_backward_length =
+      node.declare_parameter<double>("turn_signal_path_backward_length");
 
     parameters.enable_akima_spline_first =
       node.declare_parameter<bool>("enable_akima_spline_first");
@@ -251,6 +267,8 @@ struct PlannerData
       node.declare_parameter<double>("ego_nearest_dist_threshold");
     parameters.ego_nearest_yaw_threshold =
       node.declare_parameter<double>("ego_nearest_yaw_threshold");
+
+    route_handler->setAllowArea(node.declare_parameter<bool>("allow_area"));
 
     drivable_area_expansion_parameters.init(node);
   }
@@ -279,10 +297,12 @@ struct PlannerData
     {
       const auto start_pose = path.points.at(shift_start_idx).point.pose;
       const auto start_shift_length =
-        lanelet::utils::getArcCoordinates(current_lanelets, start_pose).distance;
+        autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, start_pose)
+          .distance;
       const auto end_pose = path.points.at(shift_end_idx).point.pose;
       const auto end_shift_length =
-        lanelet::utils::getArcCoordinates(current_lanelets, end_pose).distance;
+        autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, end_pose)
+          .distance;
       shifted_path.shift_length.at(shift_start_idx) = start_shift_length;
       shifted_path.shift_length.at(shift_end_idx) = end_shift_length;
 
@@ -296,8 +316,8 @@ struct PlannerData
 
     return turn_signal_decider.getBehaviorTurnSignalInfo(
       shifted_path, shift_line, current_lanelets, route_handler, parameters, self_odometry,
-      current_shift_length, is_driving_forward, egos_lane_is_shifted, override_ego_stopped_check,
-      is_pull_out, is_lane_change, is_pull_over);
+      parameters.vehicle_info, current_shift_length, is_driving_forward, egos_lane_is_shifted,
+      override_ego_stopped_check, is_pull_out, is_lane_change, is_pull_over);
   }
 
   std::pair<TurnSignalInfo, bool> getBehaviorTurnSignalInfo(
@@ -308,8 +328,8 @@ struct PlannerData
   {
     return turn_signal_decider.getBehaviorTurnSignalInfo(
       path, shift_line, current_lanelets, route_handler, parameters, self_odometry,
-      current_shift_length, is_driving_forward, egos_lane_is_shifted, override_ego_stopped_check,
-      is_pull_out);
+      parameters.vehicle_info, current_shift_length, is_driving_forward, egos_lane_is_shifted,
+      override_ego_stopped_check, is_pull_out);
   }
 
   TurnIndicatorsCommand getTurnSignal(

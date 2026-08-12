@@ -45,6 +45,12 @@ struct GetIndicesPairsImplicitGemmParameters
   std::vector<std::int32_t> stride;
   std::int32_t subm;  // cSpell:ignore subm
   std::int32_t transpose;
+  // do_sort: 1 = run pair-mask argsort (default).
+  //          0 = skip argsort for faster inference. spconv documents this mainly for INT8
+  //          (https://github.com/traveller59/spconv/blob/master/docs/INT8_GUIDE.md#performance-guide);
+  //          our FP16 benchmarks also show a large sparse-encoder latency reduction with skipping
+  //          argsort.
+  std::int32_t do_sort{1};
 
   nvinfer1::Dims dilation_dims;
   nvinfer1::Dims ksize_dims;
@@ -124,6 +130,10 @@ private:
 
   // upper bound of number of output indices. needed to bound memory usage.
   static constexpr int out_indices_num_limit_{256000};
+
+  // Pre-allocated workspace size for thrust temporary buffer used by spconv sort operations.
+  // 8 MiB is generous enough for CUB radix sort of up to out_indices_num_limit_ elements.
+  static constexpr std::size_t kThrustTempBytes{8U * 1024U * 1024U};
 
   std::string layer_name_;
   GetIndicesPairsImplicitGemmParameters params_;

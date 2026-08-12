@@ -18,6 +18,7 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace util
@@ -154,11 +155,11 @@ std::unordered_set<lanelet::Id> create_signal_id_set(
 
   return signal_id_set;
 }
-
-// Returns the signal with the highest confidence elements, considering a external priority
+// Returns the signal with the highest confidence elements, considering source priority
 TrafficSignal get_highest_confidence_signal(
   const std::optional<TrafficSignal> & perception_signal,
-  const std::optional<TrafficSignal> & external_signal, const bool external_priority)
+  const std::optional<TrafficSignal> & external_signal,
+  const autoware::traffic_light::SourcePriority source_priority)
 {
   // Returns the existing signal if only one of them exists
   if (!perception_signal) {
@@ -168,35 +169,39 @@ TrafficSignal get_highest_confidence_signal(
     return *perception_signal;
   }
 
-  // Gives priority to the external signal if external_priority is true
-  if (external_priority) {
-    return *external_signal;
+  // Apply source priority
+  switch (source_priority) {
+    case autoware::traffic_light::SourcePriority::EXTERNAL:
+      return *external_signal;
+    case autoware::traffic_light::SourcePriority::PERCEPTION:
+      return *perception_signal;
+    case autoware::traffic_light::SourcePriority::CONFIDENCE:
+      // Compiles elements into a map by shape, to compare their confidences
+      using Key = Element::_shape_type;
+      std::map<Key, std::vector<Element>> shape_element_map;
+      for (const auto & element : perception_signal->elements) {
+        shape_element_map[element.shape].emplace_back(element);
+      }
+      for (const auto & element : external_signal->elements) {
+        shape_element_map[element.shape].emplace_back(element);
+      }
+
+      TrafficSignal highest_confidence_signal;
+
+      // Assumes that both signals have the same traffic_signal_id
+      highest_confidence_signal.traffic_light_group_id = perception_signal->traffic_light_group_id;
+
+      // For each shape, finds the element with the highest confidence and adds it to the signal
+      for (const auto & [shape, elements] : shape_element_map) {
+        const auto highest_confidence_element = std::max_element(
+          elements.begin(), elements.end(),
+          [](const Element & a, const Element & b) { return a.confidence < b.confidence; });
+        highest_confidence_signal.elements.emplace_back(*highest_confidence_element);
+      }
+
+      return highest_confidence_signal;
   }
-
-  // Compiles elements into a map by shape, to compare their confidences
-  using Key = Element::_shape_type;
-  std::map<Key, std::vector<Element>> shape_element_map;
-  for (const auto & element : perception_signal->elements) {
-    shape_element_map[element.shape].emplace_back(element);
-  }
-  for (const auto & element : external_signal->elements) {
-    shape_element_map[element.shape].emplace_back(element);
-  }
-
-  TrafficSignal highest_confidence_signal;
-
-  // Assumes that both signals have the same traffic_signal_id
-  highest_confidence_signal.traffic_light_group_id = perception_signal->traffic_light_group_id;
-
-  // For each shape, finds the element with the highest confidence and adds it to the signal
-  for (const auto & [shape, elements] : shape_element_map) {
-    const auto highest_confidence_element = std::max_element(
-      elements.begin(), elements.end(),
-      [](const Element & a, const Element & b) { return a.confidence < b.confidence; });
-    highest_confidence_signal.elements.emplace_back(*highest_confidence_element);
-  }
-
-  return highest_confidence_signal;
+  __builtin_unreachable();
 }
 
 // Determines the newer of two Time stamps
@@ -215,8 +220,8 @@ Time get_newer_stamp(const Time & stamp1, const Time & stamp2)
 namespace autoware::traffic_light
 {
 
-autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::validateSignals(
-  const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals)
+autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::validate_signals(
+  const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals) const
 {
   TrafficSignalArray validated_signals;
 
@@ -242,10 +247,9 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
 
     // We don't validate the pedestrian signals
     // TODO(TomohitoAndo): Validate pedestrian signals
-    if (isPedestrianSignal(signal_id)) {
+    if (is_pedestrian_traffic_light(signal_id)) {
       validated_signals.traffic_light_groups.emplace_back(
-        util::get_highest_confidence_signal(
-          perception_result, external_result, external_priority_));
+        util::get_highest_confidence_signal(perception_result, external_result, source_priority_));
 
       continue;
     }
@@ -277,23 +281,14 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
   return validated_signals;
 }
 
-void SignalMatchValidator::setPedestrianSignals(
-  const std::vector<TrafficLightConstPtr> & pedestrian_signals)
+void SignalMatchValidator::set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids)
 {
-  for (const auto & pedestrian_signal : pedestrian_signals) {
-    map_pedestrian_signal_regulatory_elements_set_.emplace(pedestrian_signal->id());
-  }
+  pedestrian_traffic_light_ids_ = std::move(ids);
 }
 
-void SignalMatchValidator::setExternalPriority(const bool external_priority)
+bool SignalMatchValidator::is_pedestrian_traffic_light(const lanelet::Id & signal_id) const
 {
-  external_priority_ = external_priority;
-}
-
-bool SignalMatchValidator::isPedestrianSignal(const lanelet::Id & signal_id)
-{
-  return map_pedestrian_signal_regulatory_elements_set_.find(signal_id) !=
-         map_pedestrian_signal_regulatory_elements_set_.end();
+  return pedestrian_traffic_light_ids_.find(signal_id) != pedestrian_traffic_light_ids_.end();
 }
 
 }  // namespace autoware::traffic_light

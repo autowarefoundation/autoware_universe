@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for FRNet ML package",
+  "type": "object",
+  "definitions": {
+    "ml_package_frnet": {
+      "type": "object",
+      "properties": {
+        "fov_up_deg": {
+          "type": "number",
+          "description": "LiDAR's upper elevation angle in degrees.",
+          "default": "15.0",
+          "minimum": -90.0,
+          "maximum": 90.0
+        },
+        "fov_down_deg": {
+          "type": "number",
+          "description": "LiDAR's lower elevation angle in degrees.",
+          "default": "-25.0",
+          "minimum": -90.0,
+          "maximum": 90.0
+        },
+        "frustum_width": {
+          "type": "integer",
+          "description": "Width of the FRNet frustum in pixels.",
+          "default": "1024",
+          "minimum": 1
+        },
+        "frustum_height": {
+          "type": "integer",
+          "description": "Height of the FRNet frustum in pixels.",
+          "default": "128",
+          "minimum": 1
+        },
+        "interpolation_width": {
+          "type": "integer",
+          "description": "Width of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
+          "default": "4096",
+          "minimum": 1
+        },
+        "interpolation_height": {
+          "type": "integer",
+          "description": "Height of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
+          "default": "128",
+          "minimum": 1
+        },
+        "class_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "An array of class names which will be predicted.",
+          "uniqueItems": true
+        },
+        "num_points": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "TensorRT optimization profile for number of points [min, opt, max].",
+          "default": [5000, 80000, 160000]
+        },
+        "num_unique_coors": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "TensorRT optimization profile for number of unique coordinates [min, opt, max].",
+          "default": [3000, 30000, 60000]
+        },
+        "palette": {
+          "type": "array",
+          "description": "A sequence of RGB values for each class name. The length of the array must be 3 times the number of class names.",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      },
+      "required": [
+        "fov_up_deg",
+        "fov_down_deg",
+        "frustum_width",
+        "frustum_height",
+        "interpolation_width",
+        "interpolation_height",
+        "class_names",
+        "num_points",
+        "num_unique_coors",
+        "palette"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/ml_package_frnet"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

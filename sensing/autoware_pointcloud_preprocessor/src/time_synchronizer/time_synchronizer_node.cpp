@@ -126,7 +126,7 @@ PointCloudDataSynchronizerComponent::PointCloudDataSynchronizerComponent(
 
     // First input_topics_.size () filters are valid
     for (size_t d = 0; d < input_topics_.size(); ++d) {
-      cloud_stdmap_.insert(std::make_pair(input_topics_[d], nullptr));
+      cloud_stdmap_.emplace(input_topics_[d], nullptr);
       cloud_stdmap_tmp_ = cloud_stdmap_;
 
       // CAN'T use auto type here.
@@ -165,7 +165,7 @@ PointCloudDataSynchronizerComponent::PointCloudDataSynchronizerComponent(
       std::string new_topic = replaceSyncTopicNamePostfix(topic, synchronized_pointcloud_postfix);
       auto publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         new_topic, rclcpp::SensorDataQoS().keep_last(maximum_queue_size_), pub_options);
-      transformed_raw_pc_publisher_map_.insert({topic, publisher});
+      transformed_raw_pc_publisher_map_.emplace(topic, publisher);
     }
   }
 
@@ -295,7 +295,7 @@ PointCloudDataSynchronizerComponent::synchronizeClouds()
       if (e.second->data.size() == 0) {
         continue;
       }
-      pc_stamps.push_back(rclcpp::Time(e.second->header.stamp));
+      pc_stamps.emplace_back(e.second->header.stamp);
     }
   }
   if (pc_stamps.empty()) {

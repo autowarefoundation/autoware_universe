@@ -388,7 +388,7 @@ std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData
 
   auto optimized_traj_points = [&]() {
     if (mpt_traj) {
-      return std::move(*mpt_traj);
+      return *mpt_traj;
     }
     if (elapsed_time_over_three_seconds) {
       return p.traj_points;

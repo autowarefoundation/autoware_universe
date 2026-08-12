@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gyro_bias_estimation_module.hpp"
+#include "autoware/imu_corrector/gyro_bias_estimation_module.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>

@@ -19,9 +19,9 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/predicted_path_utils.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 
 #include <std_msgs/msg/string.hpp>
@@ -115,7 +115,11 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
     if (road_and_blind_lanelets_opt) {
       const auto & [road_lanelets, blind_side_lanelets_before_turning] =
         road_and_blind_lanelets_opt.value();
-      road_lanelets_before_turning_merged_ = lanelet::utils::combineLaneletsShape(road_lanelets);
+      const auto road_lanelets_merged_opt =
+        autoware::experimental::lanelet2_utils::combine_lanelets_shape(road_lanelets);
+      if (road_lanelets_merged_opt.has_value()) {
+        road_lanelets_before_turning_merged_ = road_lanelets_merged_opt.value();
+      }
       blind_side_lanelets_before_turning_ = blind_side_lanelets_before_turning;
     }
   }
@@ -193,9 +197,8 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   const auto & ego_passage_time_interval = ego_passage_time_interval_opt.value();
   debug_data_.ego_passage_interval = ego_passage_time_interval;
 
-  const auto ego_footprint = autoware_utils::transform_vector(
-    planner_data_->vehicle_info_.createFootprint(),
-    autoware_utils::pose2transform(planner_data_->current_odometry->pose));
+  const auto ego_footprint =
+    planner_data_->vehicle_info_.createFootprint(0.0, planner_data_->current_odometry->pose);
   const auto ego_to_blind_side_lat_gap_opt = calc_ego_to_blind_spot_lanelet_lateral_gap(
     ego_footprint, blind_spot_lanelets_before_turning, turn_direction_);
 
@@ -259,7 +262,27 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   }
 
   if (is_safe_now) {
-    return Unsafe{default_stopline.value_or(critical_stopline)};
+    // 1st, try to stop at the traffic light stopline smoothly
+    if (
+      default_stopline.has_value() &&
+      can_smoothly_stop_at(
+        default_stopline.value(), planner_param_.brake.critical.deceleration,
+        planner_param_.brake.critical.jerk)) {
+      return Unsafe{default_stopline.value()};
+    }
+
+    // otherwise, try to stop at instant_stopline before critical_stopline. if it is impossible,
+    // ego would stop inside the conflict_area in vain
+    if (
+      instant_stopline <= critical_stopline &&
+      can_smoothly_stop_at(
+        instant_stopline, planner_param_.brake.critical.deceleration,
+        planner_param_.brake.critical.jerk)) {
+      return Unsafe{instant_stopline};
+    }
+
+    is_over_pass_judge_line_ = true;
+    return OverPassJudge{"the situation is unsafe, but too late to stop before conflicting_area"};
   }
 
   const auto & most_unsafe_object = unsafe_objects.front();
@@ -361,10 +384,11 @@ std::vector<UnsafeObject> BlindSpotModule::collect_unsafe_objects(
       compute_time_interval_for_passing_line(attention_object, first_line, entry_line, second_line);
     for (const auto & object_passage_interval : object_passage_intervals) {
       const auto & [object_entry, object_exit, predicted_path] = object_passage_interval;
-      if (const auto collision_time = get_unsafe_time_if_critical(
-            ego_passage_time_interval, {object_entry, object_exit}, planner_param_.ttc_start_margin,
-            planner_param_.ttc_end_margin);
-          collision_time) {
+      if (
+        const auto collision_time = get_unsafe_time_if_critical(
+          ego_passage_time_interval, {object_entry, object_exit}, planner_param_.ttc_start_margin,
+          planner_param_.ttc_end_margin);
+        collision_time) {
         unsafe_objects.emplace_back(
           attention_object, collision_time.value(), predicted_path,
           std::make_pair(object_entry, object_exit));

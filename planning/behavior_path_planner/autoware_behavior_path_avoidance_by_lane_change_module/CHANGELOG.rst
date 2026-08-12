@@ -2,6 +2,72 @@
 Changelog for package autoware_behavior_path_avoidance_by_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bpp packages (`#12085 <https://github.com/mitsudome-r/autoware_universe/issues/12085>`_)
+  * replace getArcCoordinates in bpp packages
+  * replace getArcCoordinates usage in bpp packages (2)
+  * replace getArcCoordinates in bpp package (3)
+  (autoware_behavior_path_goal_planner_module)
+  * replace getArcCoordinates in bpp package(4)
+  (autoware_behavior_path_start_planner_module)
+  * replace getLateralDistanceToClosestLanelet in bpp package
+  * replace getExpandedLanelet(s) in bpp package
+  * replace combineLaneletsShape in bpp packages
+  * fix wrong condition in bpp
+  * style(pre-commit): autofix
+  * remove directly dereference opt for combine_lanelet
+  * remove log if lanelet is empty
+  * bind reference to optional value for combine_lanelets_shape
+  * remove log and simply return outside else in get_dirty_expanded_lanelets opt
+  * remove .has_value in lane_change_module for consistency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(behavior_path_planner): fix funcArgNamesDifferent (`#11981 <https://github.com/autowarefoundation/autoware_universe/issues/11981>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(static_obstacle_avoidance): enhance overhang distance calculation with vehicle dimensions (`#11487 <https://github.com/autowarefoundation/autoware_universe/issues/11487>`_)
+  * Revert "fix(static_obstacle_avoidance): ensure sufficient avoidance margin on high-curvature paths for parked vehicle avoidance (`#10902 <https://github.com/autowarefoundation/autoware_universe/issues/10902>`_)"
+  * feat(static_obstacle_avoidance): enhance overhang distance calculation with vehicle dimensions
+  - Updated `calcEnvelopeOverhangDistance` to include vehicle front and rear overhang parameters for more accurate obstacle avoidance.
+  - Introduced new utility functions for calculating lateral distances and filling midpoints of polygon edges.
+  - Improved the logic for determining overhang points based on the updated vehicle dimensions.
+  This change aims to ensure better obstacle avoidance performance by considering the vehicle's physical characteristics.
+  * fix(test_utils): update overhang distance calculation in tests to include additional parameters
+  - Modified calls to `calcEnvelopeOverhangDistance` in multiple test cases to include new parameters for improved accuracy.
+  - Ensured consistency in testing behavior for obstacle avoidance scenarios.
+  This change aligns the test cases with the recent enhancements made to the overhang distance calculation logic.
+  * refactor(static_obstacle_avoidance): update utility function calls for lateral distance and midpoint calculations
+  * refactor(static_obstacle_avoidance): rename utility functions for consistency in naming conventions
+  * fix(test_utils): update expected output size and values in overhang distance tests
+  - Adjusted the expected output size from 5 to 8 in the `calcEnvelopeOverhangDistance` test cases.
+  - Updated the expected values to reflect changes in the overhang distance calculations for improved accuracy.
+  This change ensures that the tests align with the latest logic in the overhang distance calculations.
+  ---------
+* Contributors: Ryohsuke Mitsudome, Yukinari Hisaki
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

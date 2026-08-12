@@ -82,8 +82,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     node, ns + ".obstruction_prevention.enable_obstruction_prevention");
   cp.target_vehicle_velocity =
     get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.target_vehicle_velocity");
-  cp.max_target_vehicle_lateral_offset = get_or_declare_parameter<double>(
-    node, ns + ".obstruction_prevention.max_target_vehicle_lateral_offset");
+  cp.required_lateral_clearance = get_or_declare_parameter<double>(
+    node, ns + ".obstruction_prevention.required_lateral_clearance");
   cp.required_clearance =
     get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.required_clearance");
   cp.min_acc_for_target_vehicle =
@@ -128,6 +128,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     node, ns + ".pass_judge.timeout_set_for_no_intention_to_walk");
   cp.timeout_ego_stop_for_yield =
     get_or_declare_parameter<double>(node, ns + ".pass_judge.timeout_ego_stop_for_yield");
+  cp.min_vru_crossing_width =
+    get_or_declare_parameter<double>(node, ns + ".pass_judge.min_vru_crossing_width");
 
   // param for target area & object
   cp.crosswalk_attention_range =
@@ -219,9 +221,22 @@ void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)
         node_, road_lanelet_id, crosswalk_lanelet_id, reg_elem_id, lanelet_map_ptr, p, logger,
         clock_, time_keeper_, planning_factor_interface_));
     generate_uuid(crosswalk_lanelet_id);
+    const auto crosswalk_ll = lanelet_map_ptr->laneletLayer.get(crosswalk_lanelet_id);
+    std::optional<bool> override_rtc_auto_mode;
+    const auto key = "rtc_approval_required_v1";
+    if (crosswalk_ll.hasAttribute(key)) {
+      std::stringstream manual_modules(crosswalk_ll.attribute(key).value());
+      std::string manual_module;
+      // modules are listed in the attribute value, separated by a comma
+      while (std::getline(manual_modules, manual_module, ',')) {
+        if (manual_module == "crosswalk") {
+          override_rtc_auto_mode = false;
+        }
+      }
+    }
     updateRTCStatus(
       getUUID(crosswalk_lanelet_id), true, State::WAITING_FOR_EXECUTION,
-      std::numeric_limits<double>::lowest(), path.header.stamp);
+      std::numeric_limits<double>::lowest(), path.header.stamp, override_rtc_auto_mode);
   };
 
   const auto crosswalk_reg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(

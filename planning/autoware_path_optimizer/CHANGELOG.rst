@@ -2,6 +2,158 @@
 Changelog for package autoware_path_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_trajectory_optimiser): add temporal MPT tracking (`#12394 <https://github.com/autowarefoundation/autoware_universe/issues/12394>`_)
+  * autowar_trajectory_optimizer
+  * Apply suggestion from @go-sakayori
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  * Apply suggestion from @danielsanchezaran
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  * fixes
+  * fixes
+  * fixes
+  * style(pre-commit): autofix
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  ---------
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Arjun Jagdish Ram, Sarun MUKDAPITAK, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_path_optimizer): fixed an issue with cropping the ref_trajectory and its corresponding spline (`#12391 <https://github.com/mitsudome-r/autoware_universe/issues/12391>`_)
+  * fix
+  * changes for review
+  ---------
+* fix(autoware_path_optimizer): fixed an issue with early return and A/B switching to use acados or not (`#12385 <https://github.com/mitsudome-r/autoware_universe/issues/12385>`_)
+  fix
+* feat(autoware_path_optimizer): reintroducing acados MPT along with changes to linking to acados (`#12300 <https://github.com/mitsudome-r/autoware_universe/issues/12300>`_)
+  * Revert "feat(autoware_path_optimizer): reverts new path optimizer due to failing builds (`#12298 <https://github.com/mitsudome-r/autoware_universe/issues/12298>`_)"
+  This reverts commit 7302e8ce79eef35b51971bbbfff28c1b40cf529e.
+  * fix to CMakeLists to propagate acados links downstream
+  * added words to spell-check
+  * committing generated files
+  * added words to cspell
+  * fix
+  * style(pre-commit): autofix
+  * update to previous placeholder
+  * Change link to public
+  * update to cspell
+  * update to cspell
+  * Revert "committing generated files"
+  This reverts commit 6496b40e552af440e57c17695fd8464155c57200.
+  * Revert "update to previous placeholder"
+  This reverts commit 82615801655f6abe49182a5fc38a0db5ec0d87f1.
+  * final
+  * build to output tree
+  * copyright
+  * fix for copyright
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_path_optimizer): reverts new path optimizer due to failing builds (`#12298 <https://github.com/mitsudome-r/autoware_universe/issues/12298>`_)
+  Revert "feat(autoware_path_optimizer): new path optimizer (`#11479 <https://github.com/mitsudome-r/autoware_universe/issues/11479>`_)"
+  This reverts commit f775ea6f8e6434531057d5703ef03f391d354d54.
+* feat(autoware_path_optimizer): new path optimizer (`#11479 <https://github.com/mitsudome-r/autoware_universe/issues/11479>`_)
+  * acados MPT
+  * fix
+  * fix
+  * changed name of variable
+  * fix
+  * match build_depends*.repos to autoware*.repos structure
+  * fix
+  * fix
+  * fix
+  * Apply suggestions from code review
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * Update planning/autoware_path_optimizer/src/acados_mpc/CMakeLists.txt
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * target_link_directories
+  * just link acados public
+  * revert unrelated changes
+  * chore: update CODEOWNERS (`#12216 <https://github.com/mitsudome-r/autoware_universe/issues/12216>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  * fix
+  * fixes for ament
+  * changes for CI
+  * fix for clang
+  * spell-check
+  * changed stub
+  * removed guards
+  * fix for build CI
+  * changes for build-test-differential
+  * changes for build-test-differential
+  * fix
+  ---------
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: awf-autoware-bot[bot] <94889083+awf-autoware-bot[bot]@users.noreply.github.com>
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* Contributors: Arjun Jagdish Ram, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(path_optimizer): eliminate redundant move (`#11874 <https://github.com/autowarefoundation/autoware_universe/issues/11874>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* feat(autoware_vehicle_info_utils): refactor footprint generation (`#11696 <https://github.com/autowarefoundation/autoware_universe/issues/11696>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(path_optimiser): added logging for MPT (`#11771 <https://github.com/autowarefoundation/autoware_universe/issues/11771>`_)
+  * added logging
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* Contributors: Arjun Jagdish Ram, Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(path_optimizer): fix out_of_range die (`#11211 <https://github.com/autowarefoundation/autoware_universe/issues/11211>`_)
+* Contributors: Kosuke Takeuchi, Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)

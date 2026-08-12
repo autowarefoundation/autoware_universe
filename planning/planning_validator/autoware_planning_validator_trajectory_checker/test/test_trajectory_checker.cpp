@@ -81,11 +81,12 @@ public:
     context_->data->set_current_trajectory(std::make_shared<Trajectory>(trajectory));
   }
 
-  void set_ego_pose(const geometry_msgs::msg::Pose & pose)
+  void set_ego_pose(const geometry_msgs::msg::Pose & pose, const double ego_speed)
   {
     nav_msgs::msg::Odometry odom;
     odom.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
     odom.pose.pose = pose;
+    odom.twist.twist.linear.x = ego_speed;
     context_->data->current_kinematics = std::make_shared<nav_msgs::msg::Odometry>(odom);
   }
 
@@ -294,13 +295,13 @@ TEST_F(TestTrajectoryChecker, checkCalcMaxLateralJerkFunction)
  * Velocity (m/s):       1    1    1    1    1    2    3    3    3    3
  * Acceleration (m/ss):  1    1    1    1    1    2    3    3    3    3
  * Curvature (1/m):      0    0    0    0.05 0.1  0.1  0.05 0    0    0
- * Lateral Jerk (m/sss): 0    0    0    0.15 0.3  2.4  4.05 0    0    0
+ * Lateral Jerk (m/sss): 0    0    0    0.1  0.2  0.8  0.9  0    0    0
  */
 {
   {
     Trajectory custom_traj;
     custom_traj.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
-    const double expected_max_lateral_jerk = 4.05;
+    const double expected_max_lateral_jerk = 0.9;
 
     const size_t num_points = 10;
     const double point_spacing = 2.0;
@@ -387,7 +388,7 @@ TEST_F(TestTrajectoryChecker, checkTrajectoryShiftFunction)
 
   const auto ego_pose =
     autoware_utils::calc_offset_pose(base_traj.points.front().pose, 2.5, 0.0, 0.0, 0.0);
-  set_ego_pose(ego_pose);
+  set_ego_pose(ego_pose, 1.0);
 
   // valid case
   {

@@ -14,6 +14,7 @@
 
 #include "autoware/camera_streampetr/network/camera_data_store.hpp"
 
+#include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
 #include "autoware/camera_streampetr/network/preprocess.hpp"
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
@@ -41,6 +42,49 @@ algebra operations. */
 
 namespace autoware::camera_streampetr
 {
+
+// Helper struct for camera matrices (local to this file)
+struct CameraMatrices
+{
+  cv::Mat K;
+  cv::Mat D;
+  cv::Mat P;
+  int map_width;
+  int map_height;
+};
+
+// Static helper functions for undistortion map computation
+static CameraMatrices create_camera_matrices(
+  const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info)
+{
+  CameraMatrices matrices;
+
+  // Create camera matrix K from camera_info
+  matrices.K =
+    (cv::Mat_<double>(3, 3) << camera_info->k[0], camera_info->k[1], camera_info->k[2],
+     camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6], camera_info->k[7],
+     camera_info->k[8]);
+
+  // Create distortion coefficients matrix D from camera_info
+  const auto & d_vec = camera_info->d;
+  matrices.D = cv::Mat(1, static_cast<int>(d_vec.size()), CV_64F);
+  for (size_t i = 0; i < d_vec.size(); ++i) {
+    matrices.D.at<double>(0, static_cast<int>(i)) = d_vec[i];
+  }
+
+  // Create projection matrix P from camera_info (first 3x3 part)
+  matrices.P =
+    (cv::Mat_<double>(3, 3) << camera_info->p[0], camera_info->p[1], camera_info->p[2],
+     camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8], camera_info->p[9],
+     camera_info->p[10]);
+
+  // Use full resolution for both input and output (no downsampling)
+  matrices.map_width = camera_info->width;
+  matrices.map_height = camera_info->height;
+
+  return matrices;
+}
+
 static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 {
   Eigen::Matrix3f K;
@@ -61,14 +105,13 @@ static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 
 CameraDataStore::CameraDataStore(
   rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-  const int anchor_camera_id, const bool is_distorted_image, const double downsample_factor)
+  const int anchor_camera_id, const bool is_distorted_image, const EgoMaskParams & ego_mask_params)
 : rois_number_(rois_number),
   image_height_(image_height),
   image_width_(image_width),
   anchor_camera_id_(anchor_camera_id),
   preprocess_time_ms_(0.0f),
   is_distorted_image_(is_distorted_image),
-  downsample_factor_(downsample_factor),
   logger_(node->get_logger())
 {
   image_input_ = std::make_shared<Tensor>(
@@ -94,16 +137,27 @@ CameraDataStore::CameraDataStore(
     cudaStreamCreate(&streams_[i]);
   }
 
+  // Initialize undistortion map storage
+  undistort_map_x_gpu_.resize(rois_number, nullptr);
+  undistort_map_y_gpu_.resize(rois_number, nullptr);
+  undistortion_maps_computed_.resize(rois_number, false);
+
+  ego_mask_roi_configs_ = loadEgoMaskRoiConfigs(ego_mask_params, rois_number_);
+  ego_mask_gpu_.resize(rois_number_, nullptr);
+  ego_mask_width_.resize(rois_number_, 0);
+  ego_mask_height_.resize(rois_number_, 0);
+  ego_mask_built_.resize(rois_number_, false);
+
   is_frozen_ = false;
   active_updates_ = 0;
+}
 
-  // Validate downsample_factor when distorted image is used
-  if (is_distorted_image_) {
-    const bool invalid_downsample_factor = (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0);
-    if (invalid_downsample_factor) {
-      throw std::runtime_error(
-        "downsample_factor must be in range (0,1] when is_distorted_image is true");
-    }
+CameraDataStore::~CameraDataStore()
+{
+  // Tensor objects automatically handle GPU memory cleanup
+  // Clean up CUDA streams
+  for (auto & stream : streams_) {
+    cudaStreamDestroy(stream);
   }
 }
 
@@ -118,6 +172,10 @@ void CameraDataStore::update_camera_image(
 
   auto start_time = std::chrono::high_resolution_clock::now();
 
+  build_ego_mask_gpu(
+    camera_id, static_cast<int>(input_camera_image_msg->width),
+    static_cast<int>(input_camera_image_msg->height));
+
   // Calculate image processing parameters
   auto params = calculate_image_processing_params(camera_id, input_camera_image_msg);
 
@@ -127,6 +185,19 @@ void CameraDataStore::update_camera_image(
     image_input_tensor = process_distorted_image(camera_id, input_camera_image_msg, params);
   } else {
     image_input_tensor = process_regular_image(input_camera_image_msg, params, camera_id);
+  }
+
+  // Check if image processing failed
+  if (!image_input_tensor) {
+    RCLCPP_ERROR(logger_, "Failed to process image for camera %d", camera_id);
+    {
+      std::lock_guard<std::mutex> lock(freeze_mutex_);
+      --active_updates_;
+      if (is_frozen_ && active_updates_ == 0) {
+        freeze_cv_.notify_all();
+      }
+    }
+    return;
   }
 
   // Launch CUDA kernel for resizing and ROI extraction
@@ -189,53 +260,66 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
   const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
   ImageProcessingParams & params)
 {
-  auto camera_info = camera_info_list_[camera_id];
-
-  // Create camera matrix K from camera_info
-  cv::Mat K =
-    (cv::Mat_<double>(3, 3) << camera_info->k[0], camera_info->k[1], camera_info->k[2],
-     camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6], camera_info->k[7],
-     camera_info->k[8]);
-
-  // Create distortion coefficients matrix D from camera_info
-  const auto & d_vec = camera_info->d;
-  cv::Mat D(1, static_cast<int>(d_vec.size()), CV_64F);
-  for (size_t i = 0; i < d_vec.size(); ++i) {
-    D.at<double>(0, static_cast<int>(i)) = d_vec[i];
+  // Check if undistortion maps are available
+  if (
+    !undistortion_maps_computed_[camera_id] || !undistort_map_x_gpu_[camera_id] ||
+    !undistort_map_y_gpu_[camera_id]) {
+    RCLCPP_ERROR(logger_, "Undistortion maps not computed for camera %d", camera_id);
+    return nullptr;
   }
 
-  // Create projection matrix P from camera_info (first 3x3 part)
-  cv::Mat P =
-    (cv::Mat_<double>(3, 3) << camera_info->p[0], camera_info->p[1], camera_info->p[2],
-     camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8], camera_info->p[9],
-     camera_info->p[10]);
+  // Keep original image dimensions for both input and output
+  int original_height = static_cast<int>(input_camera_image_msg->height);
+  int original_width = static_cast<int>(input_camera_image_msg->width);
 
-  P.at<double>(0, 0) *= downsample_factor_;  // fx
-  P.at<double>(0, 2) *= downsample_factor_;  // cx
-  P.at<double>(1, 1) *= downsample_factor_;  // fy
-  P.at<double>(1, 2) *= downsample_factor_;  // cy
+  // Update params to reflect that we're working with original dimensions
+  params.original_height = original_height;
+  params.original_width = original_width;
 
-  cv::Mat input_image(
-    params.original_height, params.original_width, CV_8UC3,
-    const_cast<uint8_t *>(input_camera_image_msg->data.data()));
-
-  params.original_height = static_cast<int>(params.original_height * downsample_factor_);
-  params.original_width = static_cast<int>(params.original_width * downsample_factor_);
-
-  cv::Mat undistort_map_x, undistort_map_y;
-  cv::initUndistortRectifyMap(
-    K, D, cv::Mat(), P, cv::Size(params.original_width, params.original_height), CV_32FC1,
-    undistort_map_x, undistort_map_y);
-
-  cv::Mat undistorted_image;
-  cv::remap(input_image, undistorted_image, undistort_map_x, undistort_map_y, cv::INTER_LANCZOS4);
-
-  auto image_input_tensor = std::make_unique<Tensor>(
-    "camera_img", nvinfer1::Dims{3, {params.original_height, params.original_width, 3}},
+  // Allocate GPU memory for input image (full resolution)
+  auto input_tensor = std::make_unique<Tensor>(
+    "input_img", nvinfer1::Dims{3, {original_height, original_width, 3}},
     nvinfer1::DataType::kUINT8);
+
+  // Copy input image to GPU
   cudaMemcpyAsync(
-    image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(),
-    cudaMemcpyHostToDevice, streams_.at(camera_id));
+    input_tensor->ptr, input_camera_image_msg->data.data(), input_tensor->nbytes(),
+    cudaMemcpyHostToDevice, streams_[camera_id]);
+
+  // Allocate GPU memory for undistorted image (same size as input - full resolution)
+  auto image_input_tensor = std::make_unique<Tensor>(
+    "camera_img", nvinfer1::Dims{3, {original_height, original_width, 3}},
+    nvinfer1::DataType::kUINT8);
+
+  // Apply undistortion using CUDA kernel
+  // Both input and output are at full resolution
+  // The undistortion maps are scaled appropriately to handle this
+  auto err = remap_launch(
+    static_cast<std::uint8_t *>(input_tensor->ptr),
+    static_cast<std::uint8_t *>(image_input_tensor->ptr), original_height,
+    original_width,                   // Output dimensions (full resolution)
+    original_height, original_width,  // Input dimensions (full resolution)
+    static_cast<float *>(undistort_map_x_gpu_[camera_id]->ptr),
+    static_cast<float *>(undistort_map_y_gpu_[camera_id]->ptr), streams_[camera_id]);
+
+  if (err != cudaSuccess) {
+    RCLCPP_ERROR(logger_, "remap_launch failed with error: %s", cudaGetErrorString(err));
+    return nullptr;
+  }
+
+  if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
+    const auto & cfg = ego_mask_roi_configs_[camera_id].value();
+    auto err_mask = applyEgoMask_launch(
+      static_cast<std::uint8_t *>(image_input_tensor->ptr),
+      static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), original_height,
+      original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2], streams_[camera_id]);
+    if (err_mask != cudaSuccess) {
+      RCLCPP_ERROR(
+        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        cudaGetErrorString(err_mask));
+      return nullptr;
+    }
+  }
 
   return image_input_tensor;
 }
@@ -250,6 +334,21 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
   cudaMemcpyAsync(
     image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),
     cudaMemcpyHostToDevice, streams_.at(camera_id));
+
+  if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
+    const auto & cfg = ego_mask_roi_configs_[camera_id].value();
+    auto err_mask = applyEgoMask_launch(
+      static_cast<std::uint8_t *>(image_input_tensor->ptr),
+      static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), params.original_height,
+      params.original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2],
+      streams_.at(camera_id));
+    if (err_mask != cudaSuccess) {
+      RCLCPP_ERROR(
+        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        cudaGetErrorString(err_mask));
+      return nullptr;
+    }
+  }
 
   return image_input_tensor;
 }
@@ -271,6 +370,66 @@ void CameraDataStore::update_camera_info(
   const int camera_id, const CameraInfo::ConstSharedPtr & input_camera_info_msg)
 {
   camera_info_list_[camera_id] = input_camera_info_msg;
+
+  // Compute undistortion maps if we're using distorted images
+  if (is_distorted_image_ && input_camera_info_msg) {
+    compute_undistortion_maps(camera_id);
+  }
+
+  build_ego_mask_gpu(camera_id);
+}
+
+void CameraDataStore::build_ego_mask_gpu(const int camera_id)
+{
+  const auto & camera_info = camera_info_list_[camera_id];
+  if (!camera_info) {
+    return;
+  }
+
+  build_ego_mask_gpu(
+    camera_id, static_cast<int>(camera_info->width), static_cast<int>(camera_info->height));
+}
+
+void CameraDataStore::build_ego_mask_gpu(const int camera_id, const int width, const int height)
+{
+  if (!ego_mask_roi_configs_[camera_id]) {
+    return;
+  }
+  if (width <= 0 || height <= 0) {
+    return;
+  }
+
+  if (
+    ego_mask_built_[camera_id] && ego_mask_width_[camera_id] == width &&
+    ego_mask_height_[camera_id] == height) {
+    return;
+  }
+
+  const auto raster = buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
+  if (raster.size() == 0) {
+    RCLCPP_WARN(logger_, "Empty ego mask raster for camera %d", camera_id);
+    return;
+  }
+
+  copy_ego_mask_gpu(camera_id, raster, width, height);
+
+  RCLCPP_INFO(logger_, "Ego mask GPU buffer built for camera %d (%dx%d)", camera_id, width, height);
+}
+
+void CameraDataStore::copy_ego_mask_gpu(
+  const int camera_id, const std::vector<std::uint8_t> & raster, const int width, const int height)
+{
+  ego_mask_gpu_[camera_id] = std::make_shared<Tensor>(
+    "ego_mask", nvinfer1::Dims{2, {height, width}}, nvinfer1::DataType::kUINT8);
+
+  cudaMemcpyAsync(
+    ego_mask_gpu_[camera_id]->ptr, raster.data(), ego_mask_gpu_[camera_id]->nbytes(),
+    cudaMemcpyHostToDevice, streams_[camera_id]);
+  cudaStreamSynchronize(streams_[camera_id]);
+
+  ego_mask_width_[camera_id] = width;
+  ego_mask_height_[camera_id] = height;
+  ego_mask_built_[camera_id] = true;
 }
 
 bool CameraDataStore::check_if_all_camera_info_received() const
@@ -388,6 +547,10 @@ std::vector<float> CameraDataStore::get_image_shape() const
 
 std::shared_ptr<cuda::Tensor> CameraDataStore::get_image_input() const
 {
+  // Sync all streams to ensure processing is complete before returning
+  for (const auto & stream : streams_) {
+    cudaStreamSynchronize(stream);
+  }
   return image_input_;
 }
 
@@ -427,6 +590,60 @@ void CameraDataStore::unfreeze_updates()
   std::unique_lock<std::mutex> lock(freeze_mutex_);
   is_frozen_ = false;
   freeze_cv_.notify_all();  // Let blocked A()s continue
+}
+
+void CameraDataStore::compute_undistortion_maps(const int camera_id)
+{
+  if (undistortion_maps_computed_[camera_id]) {
+    return;  // Already computed
+  }
+
+  auto camera_info = camera_info_list_[camera_id];
+  if (!camera_info) {
+    RCLCPP_WARN(
+      logger_, "Cannot compute undistortion maps: camera_info not available for camera %d",
+      camera_id);
+    return;
+  }
+
+  // Create camera matrices from camera_info
+  auto matrices = create_camera_matrices(camera_info);
+
+  // Compute undistortion maps for full resolution
+  cv::Mat undistort_map_x, undistort_map_y;
+  cv::initUndistortRectifyMap(
+    matrices.K, matrices.D, cv::Mat(), matrices.P,
+    cv::Size(matrices.map_width, matrices.map_height), CV_32FC1, undistort_map_x, undistort_map_y);
+
+  // Create Tensor objects for the undistortion maps
+  undistort_map_x_gpu_[camera_id] = std::make_shared<Tensor>(
+    "undistort_map_x_" + std::to_string(camera_id),
+    nvinfer1::Dims{2, {matrices.map_height, matrices.map_width}}, nvinfer1::DataType::kFLOAT);
+
+  undistort_map_y_gpu_[camera_id] = std::make_shared<Tensor>(
+    "undistort_map_y_" + std::to_string(camera_id),
+    nvinfer1::Dims{2, {matrices.map_height, matrices.map_width}}, nvinfer1::DataType::kFLOAT);
+
+  // Copy maps to GPU using Tensor's built-in method
+  // Convert cv::Mat to std::vector<float> for loading
+  const int total_pixels = matrices.map_width * matrices.map_height;
+  std::vector<float> map_x_data(
+    reinterpret_cast<float *>(undistort_map_x.data),
+    reinterpret_cast<float *>(undistort_map_x.data) + total_pixels);
+  std::vector<float> map_y_data(
+    reinterpret_cast<float *>(undistort_map_y.data),
+    reinterpret_cast<float *>(undistort_map_y.data) + total_pixels);
+
+  undistort_map_x_gpu_[camera_id]->load_from_vector(map_x_data);
+  undistort_map_y_gpu_[camera_id]->load_from_vector(map_y_data);
+
+  // Synchronize to ensure maps are copied before marking as computed
+  cudaStreamSynchronize(streams_[camera_id]);
+
+  undistortion_maps_computed_[camera_id] = true;
+  RCLCPP_INFO(
+    logger_, "Undistortion maps computed and stored on GPU for camera %d (full resolution: %dx%d)",
+    camera_id, matrices.map_width, matrices.map_height);
 }
 
 }  // namespace autoware::camera_streampetr

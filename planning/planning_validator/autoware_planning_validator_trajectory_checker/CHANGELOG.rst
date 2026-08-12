@@ -2,6 +2,45 @@
 Changelog for package autoware_planning_validator_trajectory_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): reset last_valid_trajectory when receiving new route   (`#11836 <https://github.com/autowarefoundation/autoware_universe/issues/11836>`_)
+  * fix(planning_validator): reset last_valid_trajectory when receiving new route
+  * skip check_traject_shift when ego stops
+  * fix unit test failure
+  * use ivehicle_stop_checker
+  ---------
+  Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): update QoS settings for operational mode state subscriber (`#11401 <https://github.com/autowarefoundation/autoware_universe/issues/11401>`_)
+* fix: use the correct jerk computation formula (`#11306 <https://github.com/autowarefoundation/autoware_universe/issues/11306>`_)
+  * fix: use the correct jerk computation formula
+  * also fix test script
+  ---------
+* feat(planning_validator): add operational mode state handling and validation filtering (`#11216 <https://github.com/autowarefoundation/autoware_universe/issues/11216>`_)
+  * feat(planning_validator): add operational mode state handling and validation filtering
+  * refactor(planning_validator):  unused validation_filtering method and initialize validation status with existing function
+  * feat(planning_validator): add operational mode state handling and publisher for test
+  ---------
+* Contributors: Kyoichi Sugahara, Ryohsuke Mitsudome, Yuxuan Liu
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * refactor(planning_validator): refactor planning validator configuration and error handling (`#11081 <https://github.com/autowarefoundation/autoware_universe/issues/11081>`_)

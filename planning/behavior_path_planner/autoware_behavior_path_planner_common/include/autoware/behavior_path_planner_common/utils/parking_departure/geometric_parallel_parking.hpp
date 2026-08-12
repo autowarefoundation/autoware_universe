@@ -18,7 +18,7 @@
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/behavior_path_planner_common/parameters.hpp"
 
-#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
+#include <autoware/deprecated/boundary_departure_checker/boundary_departure_checker.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -151,4 +151,3 @@ private:
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__PARKING_DEPARTURE__GEOMETRIC_PARALLEL_PARKING_HPP_  // NOLINT
-// clang-format on

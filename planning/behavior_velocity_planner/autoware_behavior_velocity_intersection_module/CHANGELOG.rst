@@ -2,6 +2,102 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12142 <https://github.com/mitsudome-r/autoware_universe/issues/12142>`_)
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* style: update pre-commit (black 26.1.0, pre-commit-hooks-ros 0.10.2) (`#12195 <https://github.com/mitsudome-r/autoware_universe/issues/12195>`_)
+* refactor(planning): deprecate toLaneletPoint/toGeomPt in costmap_generator, miscs (`#12089 <https://github.com/mitsudome-r/autoware_universe/issues/12089>`_)
+  * refactor(planning): deprecate toLaneletPoint/toGeomPt in costmap_generator, miscs
+  * fix
+  ---------
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bvp packages (`#12084 <https://github.com/mitsudome-r/autoware_universe/issues/12084>`_)
+  * replace getArcCoordinates in bvp packages
+  * replace getCenterlineWithOffset in bvp package
+  * replace combineLaneletsShape in bvp packages
+  * remove log for empty concat_lanelets_opt then return
+  * bind reference to optional value
+  ---------
+* Contributors: Mamoru Sobue, Sarun MUKDAPITAK, Satoshi OTA, Taeseung Sohn, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(lanelet2_extension): deprecate some functions in query (2) (`#11998 <https://github.com/autowarefoundation/autoware_universe/issues/11998>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(behavior_velocity_intersection_module): update test dependencies (`#11937 <https://github.com/autowarefoundation/autoware_universe/issues/11937>`_)
+* fix(intersection): use collision stopline index instead of closest index (`#11806 <https://github.com/autowarefoundation/autoware_universe/issues/11806>`_)
+* fix(intersection_module, roundabout_module): add collision_start_margin_time to prediction path cut duration (`#11774 <https://github.com/autowarefoundation/autoware_universe/issues/11774>`_)
+  * fix(intersection_module, roundabout_module): adjust cutPredictPathWithinDuration to include collision start margin time
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Sho Iwasawa, Yukinari Hisaki
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* fix(intersection): correct stop line calculation by returning last point outside polygon (`#11796 <https://github.com/autowarefoundation/autoware_universe/issues/11796>`_)
+  Rename getFirstPointInsidePolygonByFootprint to getLastPointOutsidePolygonByFootprint
+  and fix logic to return the correct index for stop line positioning.
+* feat(autoware_lanelet2_utils): replace the usage of remove_const (`#11727 <https://github.com/autowarefoundation/autoware_universe/issues/11727>`_)
+  replace the usage of remove_const
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(intersection_module): add pass_judge_line_margin parameter (`#11680 <https://github.com/autowarefoundation/autoware_universe/issues/11680>`_)
+  * feat(intersection_module): add pass_judge_line_margin parameter
+  * fix(intersection_module): update pass_judge_line_margin to 0.0 in intersection.param.yaml
+  * feat(intersection_module): integrate pass_judge_line_margin into experimental
+  * change log level from WARN to ERROR for stuck vehicle detection
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Yukinari Hisaki
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* feat(intersection): use fixed threshold for checking stop duration (`#11552 <https://github.com/autowarefoundation/autoware_universe/issues/11552>`_)
+* chore(intersection): change logging severity for stopline overrun (`#11543 <https://github.com/autowarefoundation/autoware_universe/issues/11543>`_)
+* feat(intersection): consider braking distance for all stoplines and stabilize stopline position (`#11445 <https://github.com/autowarefoundation/autoware_universe/issues/11445>`_)
+* feat(autoware_lanelet2_extension): remove redundant autoware_lanelet2_extension depend from packages (`#11492 <https://github.com/autowarefoundation/autoware_universe/issues/11492>`_)
+* fix(intersection): fix a parameter assignment bug (`#11484 <https://github.com/autowarefoundation/autoware_universe/issues/11484>`_)
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in planning component (`#11374 <https://github.com/autowarefoundation/autoware_universe/issues/11374>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(intersection): remove second attention area handling (`#11438 <https://github.com/autowarefoundation/autoware_universe/issues/11438>`_)
+* feat(intersection): revert stop position calculation as before temporarily (`#11432 <https://github.com/autowarefoundation/autoware_universe/issues/11432>`_)
+* feat(intersection): ignore precited path overtaking ego (`#11361 <https://github.com/autowarefoundation/autoware_universe/issues/11361>`_)
+* feat(RTC, behavior_velocity_planner): set manual RTC via the lanelet map (`#11340 <https://github.com/autowarefoundation/autoware_universe/issues/11340>`_)
+  * first attempt at a solution to set the auto/manual mode for a module
+  * implementation for crosswalk and intersections modules
+  * update READMEs
+  * fix crosswalk -> intersection
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  ---------
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* fix(intersection): hold collision stop pose (`#11247 <https://github.com/autowarefoundation/autoware_universe/issues/11247>`_)
+  * hold collision stop pose
+  * fix spell miss
+  ---------
+* fix(intersection): move header files to include directory (`#11124 <https://github.com/autowarefoundation/autoware_universe/issues/11124>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Y.Hisaki <yhisaki31@gmail.com>
+* Contributors: Kotakku, Mamoru Sobue, Maxime CLEMENT, Mitsuhiro Sakamoto, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Sho Iwasawa, Tim Clephas, Yuki TAKAGI
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

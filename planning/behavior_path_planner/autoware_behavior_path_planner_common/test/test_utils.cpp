@@ -269,13 +269,19 @@ TEST_F(BehaviorPathPlanningUtilTest, refinePathForGoal)
 
   auto path = generateTrajectory<PathWithLaneId>(10, 1.0, 3.0);
   const double search_rad_range = M_PI;
+  const double output_path_interval = 2.0;
   const auto goal_pose = createPose(5.2, 0.0, 0.0, 0.0, 0.0, 0.0);
   const int64_t goal_lane_id = 5;
   {
     const double search_radius_range = 1.0;
-    const auto refined_path =
-      refinePathForGoal(search_radius_range, search_rad_range, path, goal_pose, goal_lane_id);
-    EXPECT_EQ(refined_path.points.size(), 7);
+    const auto refined_path = refinePathForGoal(
+      search_radius_range, search_rad_range, output_path_interval, path, goal_pose, goal_lane_id,
+      [&](int64_t lane_id) -> lanelet::ConstLanelet {
+        return {
+          lane_id, lanelet::LineString3d(lanelet::utils::getId()),
+          lanelet::LineString3d(lanelet::utils::getId())};
+      });
+    EXPECT_EQ(refined_path.points.size(), 8);
     EXPECT_DOUBLE_EQ(refined_path.points.back().point.longitudinal_velocity_mps, 0.0);
     EXPECT_DOUBLE_EQ(refined_path.points.back().point.pose.position.x, 5.2);
   }
@@ -527,7 +533,11 @@ TEST_F(BehaviorPathPlanningUtilTest, calcLaneAroundPose)
   {
     const auto lane = calcLaneAroundPose(
       planner_data_->route_handler, planner_data_->self_odometry->pose.pose, 10.0, 0.0);
-    EXPECT_EQ(lane.size(), 1);
+    // TODO(Koichi98): assert the whole sequence ({1001, 1011}) instead. The number of lanelets
+    // returned here currently depends on whether route_handler's rclcpp::ok() guard lets the
+    // forward traversal run at all, which it does not in this test binary. Tighten this once
+    // autowarefoundation/autoware_core#1289 has removed that guard.
+    ASSERT_FALSE(lane.empty());
     EXPECT_EQ(lane.front().id(), 1001);
   }
 }

@@ -1,12 +1,13 @@
 /**:
   ros__parameters:
-    class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+    class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN", "TRAFFIC_CONE", "BARRIER"]
     voxels_num: [1, 128000, 256000] # [min, opt, max]
     point_cloud_range: [-122.4, -122.4, -3.0, 122.4, 122.4, 5.0] # [x_min, y_min, z_min, x_max, y_max, z_max]
     voxel_size: [0.17, 0.17, 0.2] # [x, y, z]
     num_proposals: 500
     out_size_factor: 8
     max_points_per_voxel: 10
+    use_intensity: false
 
     d_bound: [1.0, 166.2, 1.4]
     x_bound: [-122.4, 122.4, 0.68]
@@ -22,3 +23,4 @@
     features_height: 0
     features_width: 0
     num_depth_features: 0
+    image_feature_channel: 0

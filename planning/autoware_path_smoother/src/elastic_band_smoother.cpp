@@ -298,14 +298,17 @@ void ElasticBandSmoother::applyInputVelocity(
     // trajectory_utils::findEgoSegmentIndex
     //       for the case where input_traj_points is much longer than output_traj_points, and the
     //       former has a stop point but the latter will not have.
-    const auto stop_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
+    auto stop_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
       output_traj_points, input_stop_pose, ego_nearest_param_.dist_threshold,
       ego_nearest_param_.yaw_threshold);
 
     // calculate and insert stop pose on output trajectory
     const bool is_stop_point_inside_trajectory = [&]() {
       if (!stop_seg_idx) {
-        return false;
+        // retry without distance/yaw constraints to avoid skipping a stop point as much as possible
+        stop_seg_idx =
+          autoware::motion_utils::findNearestSegmentIndex(output_traj_points, input_stop_pose);
+        if (!stop_seg_idx) return false;
       }
       if (*stop_seg_idx == output_traj_points.size() - 2) {
         const double signed_projected_length_to_segment =

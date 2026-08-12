@@ -2,6 +2,65 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_ground_segmentation/launch, autoware_probabilistic_occupancy_grid_map/launch): use launch substitution instead of get_package_share_directory (`#12392 <https://github.com/mitsudome-r/autoware_universe/issues/12392>`_)
+  * refactor: use launch substitution instead of get_package_share_directory
+  * use existing file for default
+  ---------
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Taekjin LEE, Taeseung Sohn, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor(ground_segmentation): remove grid_mode_switch_radius param (`#11773 <https://github.com/autowarefoundation/autoware_universe/issues/11773>`_)
+  * remove grid mode switch radius
+  * fix: spelling check
+  * chore: typo
+  * style(pre-commit): autofix
+  * fix c-style
+  * chore: remove unused variable
+  * remove unused origin_z
+  * remove virtual_lidar_z
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_ground_segmentation): add empty point cloud guards (`#11749 <https://github.com/autowarefoundation/autoware_universe/issues/11749>`_)
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add guard in ray_ground_filter
+  - Add guard in ransac_ground_filter
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo, badai nguyen
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_ground_segmentation): change point follow logic (`#294 <https://github.com/autowarefoundation/autoware_universe/issues/294>`_) (`#10879 <https://github.com/autowarefoundation/autoware_universe/issues/10879>`_)

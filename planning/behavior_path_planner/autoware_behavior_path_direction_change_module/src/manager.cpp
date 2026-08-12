@@ -1,0 +1,81 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/behavior_path_direction_change_module/manager.hpp"
+
+#include "autoware_utils/ros/update_param.hpp"
+
+#include <rclcpp/rclcpp.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace autoware::behavior_path_planner
+{
+
+void DirectionChangeModuleManager::init(rclcpp::Node * node)
+{
+  // init manager interface
+  initInterface(node, {});
+
+  DirectionChangeParameters p{};
+
+  const std::string ns = "direction_change.";
+
+  // Cusp detection parameters
+  p.cusp_detection_distance_threshold =
+    node->declare_parameter<double>(ns + "cusp_detection_distance_threshold");
+  p.cusp_detection_angle_threshold_deg =
+    node->declare_parameter<double>(ns + "cusp_detection_angle_threshold_deg");
+
+  // State transition parameters
+  p.cusp_detection_distance_start_approaching =
+    node->declare_parameter<double>(ns + "cusp_detection_distance_start_approaching");
+  p.stop_velocity_threshold = node->declare_parameter<double>(ns + "stop_velocity_threshold");
+  p.th_stopped_time = node->declare_parameter<double>(ns + "th_stopped_time");
+
+  // General parameters
+  p.print_debug_info = node->declare_parameter<bool>(ns + "print_debug_info");
+  p.th_arrived_distance = node->declare_parameter<double>(ns + "th_arrived_distance");
+
+  p.enable_goal_lateral_shift = node->declare_parameter<bool>(ns + "enable_goal_lateral_shift");
+  p.max_allowed_yaw_deg = node->declare_parameter<double>(ns + "max_allowed_yaw_deg");
+
+  parameters_ = std::make_shared<DirectionChangeParameters>(p);
+}
+
+void DirectionChangeModuleManager::updateModuleParams(
+  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+{
+  using autoware_utils::update_param;
+
+  [[maybe_unused]] auto p = parameters_;
+
+  [[maybe_unused]] const std::string ns = "direction_change.";
+  update_param<bool>(parameters, ns + "print_debug_info", p->print_debug_info);
+  update_param<bool>(parameters, ns + "enable_goal_lateral_shift", p->enable_goal_lateral_shift);
+  update_param<double>(parameters, ns + "max_allowed_yaw_deg", p->max_allowed_yaw_deg);
+
+  std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
+    if (!observer.expired()) observer.lock()->updateModuleParams(p);
+  });
+}
+
+}  // namespace autoware::behavior_path_planner
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::behavior_path_planner::DirectionChangeModuleManager,
+  autoware::behavior_path_planner::SceneModuleManagerInterface)

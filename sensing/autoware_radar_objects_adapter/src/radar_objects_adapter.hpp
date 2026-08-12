@@ -15,6 +15,7 @@
 #ifndef RADAR_OBJECTS_ADAPTER_HPP_
 #define RADAR_OBJECTS_ADAPTER_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -23,6 +24,7 @@
 #include <autoware_sensing_msgs/msg/radar_objects.hpp>
 
 #include <array>
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -65,8 +67,8 @@ private:
 
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarObjects>::SharedPtr radar_objects_sub_;
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarInfo>::SharedPtr radar_info_sub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr detections_pub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracks_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) detections_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) tracks_pub_;
 
   std::unordered_map<std::string, autoware_sensing_msgs::msg::RadarFieldInfo> field_info_map_;
 
@@ -91,6 +93,12 @@ private:
   bool orientation_std_available_;
   bool orientation_rate_available_;
   bool orientation_rate_std_available_;
+
+  // Maps for classification remapping
+  static const std::map<std::string, std::uint8_t> RADAR_LABEL_TO_UINT_MAP;
+  static const std::map<std::string, std::uint8_t> OBJECT_LABEL_TO_UINT_MAP;
+  std::map<std::uint8_t, std::uint8_t> classification_remap_;
+  std::map<std::string, std::string> classification_remap_str_;
 };
 }  // namespace autoware
 

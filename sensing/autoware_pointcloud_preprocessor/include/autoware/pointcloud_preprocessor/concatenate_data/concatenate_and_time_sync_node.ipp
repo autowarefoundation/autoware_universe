@@ -77,10 +77,10 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
   params_.matching_strategy = declare_parameter<std::string>("matching_strategy.type");
 
   if (params_.matching_strategy == "naive") {
-    collector_matching_strategy_ = std::make_unique<NaiveMatchingStrategy<MsgTraits>>(*this);
+    collector_matcher_ = std::make_unique<NaiveCollectorMatcher<MsgTraits>>(*this);
   } else if (params_.matching_strategy == "advanced") {
-    collector_matching_strategy_ =
-      std::make_unique<AdvancedMatchingStrategy<MsgTraits>>(*this, params_.input_topics);
+    collector_matcher_ =
+      std::make_unique<AdvancedCollectorMatcher<MsgTraits>>(*this, params_.input_topics);
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
   }
@@ -208,14 +208,14 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
 
   // For each callback, check whether there is an existing collector that matches this cloud
   std::optional<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collector{};
-  MatchingParams matching_params;
-  matching_params.topic_name = topic_name;
-  matching_params.cloud_arrival_time = cloud_arrival_time;
-  matching_params.cloud_timestamp = rclcpp::Time(input_ptr->header.stamp).seconds();
+  IncomingCloudInfo incoming_cloud_info;
+  incoming_cloud_info.topic_name = topic_name;
+  incoming_cloud_info.cloud_arrival_time = cloud_arrival_time;
+  incoming_cloud_info.cloud_timestamp = rclcpp::Time(input_ptr->header.stamp).seconds();
 
   if (!cloud_collectors_.empty()) {
     cloud_collector =
-      collector_matching_strategy_->match_cloud_to_collector(cloud_collectors_, matching_params);
+      collector_matcher_->match_cloud_to_collector(cloud_collectors_, incoming_cloud_info);
   }
 
   if (cloud_collector.has_value() && cloud_collector.value()) {
@@ -243,7 +243,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
     }
 
     if (selected_collector) {
-      collector_matching_strategy_->set_collector_info(selected_collector, matching_params);
+      collector_matcher_->set_collector_info(selected_collector, incoming_cloud_info);
     }
   }
 
@@ -340,9 +340,9 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
   const double now_sec = this->get_clock()->now().seconds();
 
   for (const auto & [topic, stamp] : concatenated_cloud_result.topic_to_original_stamp_map) {
-    const double latency = (now_sec - stamp) * 1000.0;  // ms
-    topic_to_pipeline_latency_map[topic] = latency;
-    max_pipeline_latency = std::max(max_pipeline_latency, latency);
+    const double latency_ms = (now_sec - stamp) * 1000.0;  // ms
+    topic_to_pipeline_latency_map[topic] = latency_ms;
+    max_pipeline_latency = std::max(max_pipeline_latency, latency_ms);
   }
 
   diagnostic_info.publish_pointcloud = publish_pointcloud;
@@ -484,7 +484,8 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::check_c
     }
     const auto latency_it = diagnostic_info.topic_to_pipeline_latency_map.find(topic);
     if (latency_it != diagnostic_info.topic_to_pipeline_latency_map.end()) {
-      diagnostics_interface_->add_key_value("Latency (s): " + topic, latency_it->second);
+      double latency_ms = latency_it->second;
+      diagnostics_interface_->add_key_value("Latency (ms): " + topic, latency_ms);
     }
   }
 

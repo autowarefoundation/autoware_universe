@@ -35,10 +35,9 @@ EnableAllRule::EnableAllRule(
 std::unordered_map<PoseEstimatorType, bool> EnableAllRule::update()
 {
   return {
-    {PoseEstimatorType::ndt, true},
-    {PoseEstimatorType::yabloc, true},
-    {PoseEstimatorType::eagleye, true},
-    {PoseEstimatorType::artag, true},
+    {PoseEstimatorType::ndt, true},          {PoseEstimatorType::yabloc, true},
+    {PoseEstimatorType::eagleye, true},      {PoseEstimatorType::artag, true},
+    {PoseEstimatorType::lidar_marker, true},
   };
 }
 

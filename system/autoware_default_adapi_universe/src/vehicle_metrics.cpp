@@ -22,6 +22,8 @@ namespace autoware::default_adapi
 VehicleMetricsNode::VehicleMetricsNode(const rclcpp::NodeOptions & options)
 : Node("vehicle_metrics", options)
 {
+  max_energy_level_ = declare_parameter<float>("max_energy_level");
+
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   adaptor.init_pub(pub_metrics_);
   adaptor.init_sub(
@@ -37,7 +39,7 @@ void VehicleMetricsNode::on_timer()
 
   VehicleMetrics::Message msg;
   msg.stamp = now();
-  msg.energy = energy_ ? energy_->energy_level : f_nan;
+  msg.energy = energy_ ? energy_->energy_level / max_energy_level_ : f_nan;
   pub_metrics_->publish(msg);
 }
 

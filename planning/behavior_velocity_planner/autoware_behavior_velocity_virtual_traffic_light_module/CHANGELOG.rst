@@ -2,6 +2,71 @@
 Changelog for package autoware_behavior_velocity_virtual_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: support VTL for reverse maneuvers (`#12609 <https://github.com/autowarefoundation/autoware_universe/issues/12609>`_)
+  * feat: support VTL for reverse maneuvers
+  * style(pre-commit): autofix
+  * feat: support rear bumper based VTL wall position for reverse maneuvers
+  * fix: build errors
+  * refactor: remove redundant code and refactor
+  * style(pre-commit): autofix
+  * refactor: remove redundant code in scene.cpp
+  * style(pre-commit): autofix
+  * fix: build errors
+  * style(pre-commit): autofix
+  * fix: cpplint errors
+  * feat: add reverse maneuver support for SLOWDOWN walls for rvizplugins
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: emmeyteja, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_trajectory): define set stopline in Trajectory class (`#12008 <https://github.com/mitsudome-r/autoware_universe/issues/12008>`_)
+  * replace usage with set_stopline function
+  * replace additiona usage with set_stopline function
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_virtual_traffic_light_module): use Trajectory instead of PathWithLaneId (`#11576 <https://github.com/autowarefoundation/autoware_universe/issues/11576>`_)
+  * use Trajectory instead of PathWithLaneId
+  * clarify null check
+  * include necessary header
+  * fix clang tidy
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+* Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* chore(autoware_behavior_velocity_virtual_traffic_light_module): modify maintainers of path_generator (`#11791 <https://github.com/autowarefoundation/autoware_universe/issues/11791>`_)
+  * chore: add new maintainers to package.xml of path_generator
+  * chore: remove mantainers
+  ---------
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* Contributors: Masahiro Kubota, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

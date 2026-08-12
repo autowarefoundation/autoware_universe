@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Lidar Centerpoint Node",
+  "$comment": "This schema is not considered in CI workflow due to a basename-prefix collision with sibling ml_package/common parameter files in this directory (see json-schema-check's glob matching in validate_json_schemas.py). See PR #12949 for details. Same pattern as centerpoint_common.schema.json's sibling, transfusion.schema.dummy.json.",
+  "type": "object",
+  "definitions": {
+    "centerpoint": {
+      "type": "object",
+      "properties": {
+        "encoder_onnx_path": {
+          "type": "string",
+          "description": "Path to VoxelFeatureEncoder ONNX file."
+        },
+        "encoder_engine_path": {
+          "type": "string",
+          "description": "Path to VoxelFeatureEncoder TensorRT Engine file."
+        },
+        "head_onnx_path": {
+          "type": "string",
+          "description": "Path to DetectionHead ONNX file."
+        },
+        "head_engine_path": {
+          "type": "string",
+          "description": "Path to DetectionHead TensorRT Engine file."
+        },
+        "trt_precision": {
+          "type": "string",
+          "description": "TensorRT inference precision.",
+          "default": "fp16",
+          "enum": ["fp32", "fp16"]
+        },
+        "cloud_capacity": {
+          "type": "integer",
+          "description": "Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).",
+          "default": 2000000,
+          "minimum": 1
+        },
+        "post_process_params": {
+          "type": "object",
+          "properties": {
+            "yaw_norm_thresholds": {
+              "type": "array",
+              "description": "An array of distance threshold values of norm of yaw [rad].",
+              "default": [0.3, 0.3, 0.3, 0.3, 0.0],
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "circle_nms_dist_threshold": {
+              "type": "number",
+              "description": "",
+              "default": 0.5,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "iou_nms_search_distance_2d": {
+              "type": "number",
+              "description": "A maximum distance value to search the nearest objects.",
+              "default": 10.0,
+              "minimum": 0.0
+            },
+            "iou_nms_threshold": {
+              "type": "number",
+              "description": "A threshold value of NMS using IoU score.",
+              "default": 0.1,
+              "minimum": 0.0,
+              "maximum": 1.0
+            }
+          }
+        },
+        "densification_params": {
+          "type": "object",
+          "description": "Parameters for pointcloud densification.",
+          "properties": {
+            "world_frame_id": {
+              "type": "string",
+              "description": "A name of frame id where world coordinates system is defined with respect to.",
+              "default": "map"
+            },
+            "num_past_frames": {
+              "type": "integer",
+              "description": "A number of past frames to be considered as same input frame.",
+              "default": 1,
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "required": ["post_process_params", "densification_params"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/centerpoint"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

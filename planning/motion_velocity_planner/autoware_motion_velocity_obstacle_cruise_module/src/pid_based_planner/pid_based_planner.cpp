@@ -356,9 +356,19 @@ std::vector<TrajectoryPoint> PIDBasedPlanner::plan_cruise_trajectory(
       // cruise obstacle
       debug_data_ptr->obstacles_to_cruise.push_back(cruise_obstacle_info->obstacle);
 
+      // update planning factor
+      autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
+      safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
+      safety_factor.object_id = cruise_obstacle_info->obstacle.uuid;
+      safety_factor.points = {cruise_obstacle_info->obstacle.pose.position};
+      safety_factor.is_safe = false;
+
+      autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factor_array;
+      safety_factor_array.factors = {safety_factor};
+      safety_factor_array.is_safe = false;
       planning_factor_interface->add(
         stop_traj_points, planner_data->current_odometry.pose.pose,
-        stop_traj_points.at(wall_idx).pose, PlanningFactor::NONE, SafetyFactorArray{});
+        stop_traj_points.at(wall_idx).pose, PlanningFactor::UNKNOWN, safety_factor_array);
     }
 
     // do cruise planning

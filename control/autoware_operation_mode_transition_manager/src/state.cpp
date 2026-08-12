@@ -174,10 +174,9 @@ bool AutonomousMode::isModeChangeCompleted(const InputData & input_data)
   return is_system_stable;
 }
 
-bool AutonomousMode::hasDangerAcceleration(const Odometry & kinematics, const Control & control_cmd)
+bool AutonomousMode::hasDangerAcceleration(
+  const Odometry & kinematics, const Control & control_cmd) const
 {
-  debug_info_.target_control_acceleration = control_cmd.longitudinal.acceleration;
-
   const bool is_stopping = std::abs(kinematics.twist.twist.linear.x) < 0.01;
   if (is_stopping) {
     return false;  // any acceleration is ok when stopped
@@ -258,7 +257,6 @@ bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
   }
   const auto closest_point = trajectory.points.at(*closest_idx);
   const auto target_planning_speed = closest_point.longitudinal_velocity_mps;
-  debug_info_.trajectory_available_ok = true;
 
   // No engagement is lateral control error is large
   const auto lateral_deviation = calc_distance2d(closest_point.pose, kinematics.pose.pose);
@@ -299,6 +297,8 @@ bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
   // set for debug info
   {
     debug_info_.is_all_ok = is_all_ok;
+    debug_info_.engage_allowed_for_stopped_vehicle = false;
+    debug_info_.trajectory_available_ok = true;
     debug_info_.lateral_deviation_ok = lateral_deviation_ok;
     debug_info_.yaw_deviation_ok = yaw_deviation_ok;
     debug_info_.speed_upper_deviation_ok = speed_upper_deviation_ok;
@@ -311,6 +311,11 @@ bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
     debug_info_.current_speed = current_speed;
     debug_info_.target_control_speed = target_control_speed;
     debug_info_.target_planning_speed = target_planning_speed;
+    debug_info_.target_control_acceleration = control_cmd.longitudinal.acceleration;
+
+    // Following values are set by the hasDangerLateralAcceleration function.
+    // lateral_acceleration
+    // lateral_acceleration_deviation
 
     debug_info_.lateral_deviation = lateral_deviation;
     debug_info_.yaw_deviation = yaw_deviation;

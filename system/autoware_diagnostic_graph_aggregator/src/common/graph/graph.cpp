@@ -35,16 +35,26 @@ Graph::Graph(const std::string & path) : Graph(path, "", nullptr)
 }
 
 Graph::Graph(const std::string & path, const std::string & id, std::shared_ptr<Logger> logger)
+: Graph(path, id, logger, nullptr)
+{
+}
+
+Graph::Graph(
+  const std::string & path, const std::string & id, std::shared_ptr<Logger> logger,
+  std::shared_ptr<VariablesMap> variables)
 {
   id_ = id;
 
-  auto graph = ConfigLoader::Load(path, logger);
+  auto graph = ConfigLoader::Load(path, logger, variables);
   alloc_nodes_ = std::move(graph.nodes);
   alloc_diags_ = std::move(graph.diags);
   alloc_ports_ = std::move(graph.ports);
   nodes_ = raws(alloc_nodes_);
   diags_ = raws(alloc_diags_);
 
+  for (const auto & node : nodes_) {
+    node_dict_[node->path()] = node;
+  }
   for (const auto & diag : diags_) {
     diag_dict_[diag->name()] = diag;
   }
@@ -123,6 +133,19 @@ DiagnosticArray Graph::create_unknown_msg(const rclcpp::Time & stamp) const
 void Graph::set_initializing(bool initializing)
 {
   for (const auto & node : nodes_) node->set_initializing(initializing);
+}
+
+std::string Graph::set_override(const std::string & path, std::optional<DiagnosticLevel> level)
+{
+  const auto iter = node_dict_.find(path);
+  if (iter == node_dict_.end()) {
+    return "path not found";
+  }
+  if (iter->second->set_override(level)) {
+    return "";
+  } else {
+    return "override not allowed for the target path";
+  }
 }
 
 void Graph::reset()

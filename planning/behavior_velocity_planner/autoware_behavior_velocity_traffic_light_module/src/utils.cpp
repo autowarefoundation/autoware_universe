@@ -15,7 +15,9 @@
 #include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
@@ -148,39 +150,65 @@ auto calcStopPointAndInsertIndex(
   return std::nullopt;
 }
 
+std::optional<double> calcStopPoint(
+  const Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound,
+  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset)
+{
+  for (size_t i = 0; i < lanelet_stop_lines.size() - 1; ++i) {
+    const auto stop_line = planning_utils::extendSegmentToBounds(
+      {lanelet_stop_lines[i].basicPoint2d(), lanelet_stop_lines[i + 1].basicPoint2d()}, left_bound,
+      right_bound);
+    const auto stop_point = autoware::experimental::trajectory::crossed(path, stop_line);
+    if (stop_point.empty()) {
+      continue;
+    }
+    return stop_point.front() - offset;
+  }
+  return std::nullopt;
+}
+
 bool isTrafficSignalRedStop(
   const lanelet::ConstLanelet & lanelet,
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements)
 {
-  using autoware::traffic_light_utils::hasTrafficLightCircleColor;
-  using autoware::traffic_light_utils::hasTrafficLightShape;
+  using autoware::traffic_light_utils::hasTrafficLightShapeAndColor;
 
-  if (!hasTrafficLightCircleColor(
-        elements, autoware_perception_msgs::msg::TrafficLightElement::RED)) {
+  if (!hasTrafficLightShapeAndColor(
+        elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+        autoware_perception_msgs::msg::TrafficLightElement::RED)) {
     return false;
   }
 
-  const std::string turn_direction = lanelet.attributeOr("turn_direction", "else");
-  if (turn_direction == "else") {
+  // If there is no turn_direction attribute (neither straight, left, nor right), it treats logic as
+  // "else" (stop for red).
+  if (!autoware::experimental::lanelet2_utils::is_intersection_lanelet(lanelet)) {
     return true;
   }
+
   if (
-    turn_direction == "right" &&
-    hasTrafficLightShape(
-      elements, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW)) {
+    autoware::experimental::lanelet2_utils::is_right_direction(lanelet) &&
+    hasTrafficLightShapeAndColor(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW,
+      autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
     return false;
   }
   if (
-    turn_direction == "left" &&
-    hasTrafficLightShape(
-      elements, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW)) {
+    autoware::experimental::lanelet2_utils::is_left_direction(lanelet) &&
+    hasTrafficLightShapeAndColor(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW,
+      autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
     return false;
   }
   if (
-    turn_direction == "straight" &&
-    hasTrafficLightShape(elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW)) {
+    autoware::experimental::lanelet2_utils::is_straight_direction(lanelet) &&
+    hasTrafficLightShapeAndColor(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW,
+      autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
     return false;
   }
+
   return true;
 }
+
 }  // namespace autoware::behavior_velocity_planner

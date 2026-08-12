@@ -18,7 +18,7 @@
 #include "autoware_command_mode_decider/plugin.hpp"
 #include "autoware_command_mode_decider/status.hpp"
 
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -69,6 +69,7 @@ private:
   void publish_operation_mode_state();
   void publish_mrm_state();
   void publish_decider_debug();
+  void publish_autoware_control_request(bool autoware_control);
 
   void on_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & status);
   void on_timer();
@@ -82,7 +83,7 @@ private:
     ChangeAutowareControl::Request::SharedPtr req, ChangeAutowareControl::Response::SharedPtr res);
 
   ResponseStatus check_mode_exists(uint16_t mode);
-  ResponseStatus check_mode_request(uint16_t mode);
+  ResponseStatus check_mode_request(const RequestModeStatus & request);
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<CommandModeRequest>::SharedPtr pub_command_mode_request_;

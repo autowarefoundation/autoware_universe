@@ -18,15 +18,11 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
-#include <string>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 #include <limits>
 #include <memory>
+#include <string>
 
 namespace autoware::surround_obstacle_checker
 {
@@ -43,10 +39,10 @@ Polygon2d createSelfPolygon(
 
   Polygon2d ego_polygon;
 
-  ego_polygon.outer().push_back(Point2d(front_m, width_left_m));
-  ego_polygon.outer().push_back(Point2d(front_m, width_right_m));
-  ego_polygon.outer().push_back(Point2d(rear_m, width_right_m));
-  ego_polygon.outer().push_back(Point2d(rear_m, width_left_m));
+  ego_polygon.outer().emplace_back(front_m, width_left_m);
+  ego_polygon.outer().emplace_back(front_m, width_right_m);
+  ego_polygon.outer().emplace_back(rear_m, width_right_m);
+  ego_polygon.outer().emplace_back(rear_m, width_left_m);
 
   bg::correct(ego_polygon);
 
@@ -67,9 +63,9 @@ SurroundObstacleCheckerDebugNode::SurroundObstacleCheckerDebugNode(
   const double & surround_check_back_distance, const double & surround_check_hysteresis_distance,
   const geometry_msgs::msg::Pose & self_pose, const rclcpp::Clock::SharedPtr clock,
   rclcpp::Node & node)
-: planning_factor_interface_{std::make_unique<
-    autoware::planning_factor_interface::PlanningFactorInterface>(
-    &node, "surround_obstacle_checker")},
+: planning_factor_interface_{
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "surround_obstacle_checker")},
   vehicle_info_(vehicle_info),
   object_label_(object_label),
   surround_check_front_distance_(surround_check_front_distance),

@@ -18,13 +18,11 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware/interpolation/spline_interpolation.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
-
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -216,7 +214,7 @@ PathWithLaneId convertWayPointsToPathWithLaneId(
     // put the lane that contain waypoints in lane_ids.
     bool is_in_lanes = false;
     for (const auto & lane : lanelets) {
-      if (lanelet::utils::isInLanelet(point.point.pose, lane)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(point.point.pose, lane)) {
         point.lane_ids.push_back(lane.id());
         is_in_lanes = true;
       }
@@ -466,8 +464,8 @@ BehaviorModuleOutput getReferencePath(
   const double backward_length = p.backward_path_length + extra_margin;
   const auto current_lanes_with_backward_margin =
     route_handler->getLaneletSequence(current_lane, backward_length, p.forward_path_length);
-  const auto no_shift_pose =
-    lanelet::utils::getClosestCenterPose(current_lane, current_pose.position);
+  const auto no_shift_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    current_lane, autoware::experimental::lanelet2_utils::from_ros(current_pose));
   reference_path = getCenterLinePath(
     *route_handler, current_lanes_with_backward_margin, no_shift_pose, backward_length,
     p.forward_path_length, p);
@@ -528,7 +526,8 @@ BehaviorModuleOutput createGoalAroundPath(const std::shared_ptr<const PlannerDat
   }
 
   constexpr double backward_length = 1.0;
-  const auto arc_coord = lanelet::utils::getArcCoordinates({goal_lane}, goal_pose);
+  const auto arc_coord =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates({goal_lane}, goal_pose);
   const double s_start = std::max(arc_coord.length - backward_length, 0.0);
   const double s_end = arc_coord.length;
 

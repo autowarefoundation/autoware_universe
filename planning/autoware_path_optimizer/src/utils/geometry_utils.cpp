@@ -16,9 +16,9 @@
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
-#include "tf2/utils.h"
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
+#include <tf2/utils.hpp>
 
 #include "autoware_planning_msgs/msg/path_point.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
@@ -125,14 +125,14 @@ Polygon2d createDrivablePolygon(
 
   // left bound
   for (const auto & p : left_bound) {
-    drivable_area_poly.outer().push_back(Point2d(p.x, p.y));
+    drivable_area_poly.outer().emplace_back(p.x, p.y);
   }
 
   // right bound
   auto reversed_right_bound = right_bound;
   std::reverse(reversed_right_bound.begin(), reversed_right_bound.end());
   for (const auto & p : reversed_right_bound) {
-    drivable_area_poly.outer().push_back(Point2d(p.x, p.y));
+    drivable_area_poly.outer().emplace_back(p.x, p.y);
   }
 
   drivable_area_poly.outer().push_back(drivable_area_poly.outer().front());
@@ -168,13 +168,15 @@ bool isOutsideDrivableAreaFromRectangleFootprint(
     autoware_utils::calc_offset_pose(pose, -base_to_rear, base_to_left, 0.0).position;
 
   if (use_footprint_polygon_for_outside_drivable_area_check) {
-    // calculate footprint polygon
-    LinearRing2d footprint_polygon;
-    footprint_polygon.push_back({top_left_pos.x, top_left_pos.y});
-    footprint_polygon.push_back({top_right_pos.x, top_right_pos.y});
-    footprint_polygon.push_back({bottom_right_pos.x, bottom_right_pos.y});
-    footprint_polygon.push_back({bottom_left_pos.x, bottom_left_pos.y});
-    bg::correct(footprint_polygon);
+    // calculate footprint polygon at pose position and orientation
+    LinearRing2d footprint_polygon = vehicle_info.createFootprint(0.0, pose);
+
+    // remove center point
+    auto center_left_index = footprint_polygon.begin() + 5;
+    auto center_right_index = footprint_polygon.begin() + 2;
+
+    footprint_polygon.erase(center_left_index);
+    footprint_polygon.erase(center_right_index);
 
     // calculate boundary line strings
     LineString2d left_bound_line;

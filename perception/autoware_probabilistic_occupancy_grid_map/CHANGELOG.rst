@@ -2,6 +2,57 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_ground_segmentation/launch, autoware_probabilistic_occupancy_grid_map/launch): use launch substitution instead of get_package_share_directory (`#12392 <https://github.com/mitsudome-r/autoware_universe/issues/12392>`_)
+  * refactor: use launch substitution instead of get_package_share_directory
+  * use existing file for default
+  ---------
+* refactor(autoware_universe): use autoware_ament_auto_package in perception utility packages (`#12281 <https://github.com/mitsudome-r/autoware_universe/issues/12281>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* feat(autoware_probabilistic_occupancy_grid_map): cuda 12.0 build compatibility (`#12187 <https://github.com/mitsudome-r/autoware_universe/issues/12187>`_)
+  * feat(autoware_probabilistic_occupancy_grid_map): CUDA 12.0+ build compatibility
+  * feat: restore Turing arch
+  ---------
+* fix(autoware_probabilistic_occupancy_grid_map): remove dead operation (`#12159 <https://github.com/mitsudome-r/autoware_universe/issues/12159>`_)
+  fix: remove dead operation
+* Contributors: Amadeusz Szymko, Taekjin LEE, Taeseung Sohn, Vishal Chauhan, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_probabilistic_occupancy_grid_map): update nvcc flags (`#12052 <https://github.com/autowarefoundation/autoware_universe/issues/12052>`_)
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(probabilistic_occupancy_grid_map): add missing `#include <cstdint>` (`#11919 <https://github.com/autowarefoundation/autoware_universe/issues/11919>`_)
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): prevent local_map leak in occupancy grid map updateOrigin (`#11765 <https://github.com/autowarefoundation/autoware_universe/issues/11765>`_)
+  * fix(occupancy_grid_map): avoid local_map leak in updateOrigin
+  * style(pre-commit): autofix
+  * Fix local map resize type and format copyMapRegion
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Hongliang Liu, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_probabilistic_occupancy_grid_map): skip frame when TF is unavailable to avoid crash (`#11281 <https://github.com/autowarefoundation/autoware_universe/issues/11281>`_)
+* Contributors: Ryohsuke Mitsudome, multimeters
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

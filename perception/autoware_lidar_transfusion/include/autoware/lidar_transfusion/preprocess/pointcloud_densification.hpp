@@ -17,13 +17,10 @@
 
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
+
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
 
 #include <list>
 #include <memory>

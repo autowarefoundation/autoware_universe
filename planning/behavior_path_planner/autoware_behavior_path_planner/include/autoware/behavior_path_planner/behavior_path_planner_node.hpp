@@ -23,6 +23,7 @@
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -140,23 +141,23 @@ private:
   std::mutex mutex_pd_;       // mutex for planner_data_
   std::mutex mutex_manager_;  // mutex for bt_manager_ or planner_manager_
 
+  // timeout monitoring
+  double cyclic_message_timeout_;  // seconds
+  bool enable_traffic_signal_timeout_;
+  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_message_timeout_;
+  enum class DataReadyStatus {
+    SUCCESS,
+    NOT_RECEIVED,
+    TIMEOUT,
+  };
+
   // setup
   void takeData();
-  bool isDataReady();
+  DataReadyStatus isDataReady(const rclcpp::Time & now);
 
-  // callback
-  void onOdometry(const Odometry::ConstSharedPtr msg);
-  void onAcceleration(const AccelWithCovarianceStamped::ConstSharedPtr msg);
-  void onPerception(const PredictedObjects::ConstSharedPtr msg);
-  void onOccupancyGrid(const OccupancyGrid::ConstSharedPtr msg);
-  void onCostMap(const OccupancyGrid::ConstSharedPtr msg);
+  // data processing called from takeData()
   void onTrafficSignals(const TrafficLightGroupArray::ConstSharedPtr msg);
-  void onMap(const LaneletMapBin::ConstSharedPtr map_msg);
-  void onRoute(const LaneletRoute::ConstSharedPtr route_msg);
-  void onOperationMode(const OperationModeState::ConstSharedPtr msg);
   void onLateralOffset(const LateralOffset::ConstSharedPtr msg);
-  void on_external_velocity_limiter(
-    const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
 
   SetParametersResult onSetParam(const std::vector<rclcpp::Parameter> & parameters);
 

@@ -24,12 +24,12 @@ namespace autoware::euclidean_cluster
 EuclideanClusterNode::EuclideanClusterNode(const rclcpp::NodeOptions & options)
 : Node("euclidean_cluster_node", options)
 {
-  const bool use_height = this->declare_parameter("use_height", false);
-  const int min_cluster_size = this->declare_parameter("min_cluster_size", 3);
-  const int max_cluster_size = this->declare_parameter("max_cluster_size", 200);
-  const float tolerance = this->declare_parameter("tolerance", 1.0);
-  cluster_ =
-    std::make_shared<EuclideanCluster>(use_height, min_cluster_size, max_cluster_size, tolerance);
+  const bool use_height = this->declare_parameter<bool>("use_height");
+  const int min_points_per_cluster = this->declare_parameter<int>("min_points_per_cluster");
+  const int max_cluster_size = this->declare_parameter<int>("max_cluster_size");
+  const float tolerance = this->declare_parameter<float>("tolerance_m");
+  cluster_ = std::make_shared<EuclideanCluster>(
+    use_height, min_points_per_cluster, max_cluster_size, tolerance);
 
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -49,6 +49,15 @@ void EuclideanClusterNode::onPointCloud(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check for empty point cloud
+  if (input_msg->data.empty() || input_msg->width == 0 || input_msg->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature output;
+    output.header = input_msg->header;
+    cluster_pub_->publish(output);
+    return;
+  }
 
   // convert ros to pcl
   pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pointcloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);

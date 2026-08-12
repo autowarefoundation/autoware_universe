@@ -15,6 +15,10 @@
 #include "autoware/bevfusion/postprocess/circle_nms_kernel.hpp"
 #include "autoware/bevfusion/postprocess/postprocess_kernel.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/cuda_utils/cuda_utils.hpp>
+
 #include <thrust/count.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -22,14 +26,10 @@
 
 namespace autoware::bevfusion
 {
-struct is_score_greater
+// Keep only the boxes with score > 0.0
+struct is_score_keep
 {
-  is_score_greater(float t) : t_(t) {}
-
-  __device__ bool operator()(const Box3D & b) const { return b.score > t_; }
-
-private:
-  float t_{0.0};
+  __device__ bool operator()(const Box3D & b) { return b.score > 0.0; }
 };
 
 struct is_kept
@@ -51,8 +51,9 @@ __global__ void generateBoxes3D_kernel(
   const std::int64_t * __restrict__ label_pred_output, const float * __restrict__ bbox_pred_output,
   const float * __restrict__ score_output, const float voxel_size_x, const float voxel_size_y,
   const float min_x_range, const float min_y_range, const int num_proposals,
-  const float out_size_factor, const float * __restrict__ yaw_norm_thresholds,
-  Box3D * __restrict__ det_boxes3d)
+  const float out_size_factor, const float * __restrict__ yaw_norm_thresholds, const int class_size,
+  const float * distance_bin_upper_limits, const float * score_thresholds,
+  const std::size_t num_distance_bin_upper_limits, Box3D * __restrict__ det_boxes3d)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= num_proposals) {
@@ -68,10 +69,48 @@ __global__ void generateBoxes3D_kernel(
   det_boxes3d[point_idx].score =
     yaw_norm >= yaw_norm_thresholds[label] ? score_output[point_idx] : 0.f;
 
-  det_boxes3d[point_idx].x =
+  // Stop processing if the score is 0
+  if (det_boxes3d[point_idx].score == 0.f) {
+    return;
+  }
+
+  const float x =
     bbox_pred_output[0 * num_proposals + point_idx] * out_size_factor * voxel_size_x + min_x_range;
-  det_boxes3d[point_idx].y =
+  const float y =
     bbox_pred_output[1 * num_proposals + point_idx] * out_size_factor * voxel_size_y + min_y_range;
+  const float radial_distance = x * x + y * y;
+
+  // Loop through distance_bin_upper_limits to decide the distance bucket index, and since
+  // upper_bounds is sorted in ascending order, the first one that is greater than the radial
+  // distance is the distance bucket index. Note that the distance_bin_upper_limits is already
+  // squared, so we don't need to square the radial distance.
+  int distance_bucket_index = -1;
+  for (int i = 0; i < num_distance_bin_upper_limits; i++) {
+    if (radial_distance < distance_bin_upper_limits[i]) {
+      distance_bucket_index = i;
+      break;
+    }
+  }
+
+  // If the radial distance is greater than the last distance_bin_upper_limit, which is out of bound
+  // and then we set the score to 0, and stop processing
+  if (distance_bucket_index == -1) {
+    det_boxes3d[point_idx].score = 0.f;
+    return;
+  }
+
+  // Index = distance_bucket_index * class_size + label since row = num of distance buckets and
+  // column = num of classes
+  const float class_score_threshold = score_thresholds[distance_bucket_index * class_size + label];
+  // If the score is less than the class score threshold, then we set the score to 0, and stop
+  // processing
+  if (det_boxes3d[point_idx].score < class_score_threshold) {
+    det_boxes3d[point_idx].score = 0.f;
+    return;
+  }
+
+  det_boxes3d[point_idx].x = x;
+  det_boxes3d[point_idx].y = y;
   det_boxes3d[point_idx].z = bbox_pred_output[2 * num_proposals + point_idx];
   det_boxes3d[point_idx].length = expf(bbox_pred_output[3 * num_proposals + point_idx]);
   det_boxes3d[point_idx].width = expf(bbox_pred_output[4 * num_proposals + point_idx]);
@@ -84,6 +123,19 @@ __global__ void generateBoxes3D_kernel(
 PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t stream)
 : config_(config), stream_(stream)
 {
+  // Allocate memory for score thresholds on device using cuda::make_unique
+  score_thresholds_d_ptr_ =
+    autoware::cuda_utils::make_unique<float[]>(config_.score_thresholds_.size());
+  distance_bin_upper_limits_d_ptr_ =
+    autoware::cuda_utils::make_unique<float[]>(config_.distance_bin_upper_limits_.size());
+
+  // Move from host to device
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    score_thresholds_d_ptr_.get(), config_.score_thresholds_.data(),
+    config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    distance_bin_upper_limits_d_ptr_.get(), config_.distance_bin_upper_limits_.data(),
+    config_.distance_bin_upper_limits_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
 }
 
 // cspell: ignore divup
@@ -101,21 +153,22 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
     label_pred_output, bbox_pred_output, score_output, config_.voxel_x_size_, config_.voxel_y_size_,
     config_.min_x_range_, config_.min_y_range_, config_.num_proposals_, config_.out_size_factor_,
-    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()),
-    thrust::raw_pointer_cast(boxes3d_d.data()));
+    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()), config_.num_classes_,
+    distance_bin_upper_limits_d_ptr_.get(), score_thresholds_d_ptr_.get(),
+    config_.distance_bin_upper_limits_.size(), thrust::raw_pointer_cast(boxes3d_d.data()));
 
   // suppress by score
-  const auto num_det_boxes3d = thrust::count_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_greater(config_.score_threshold_));
+  const auto num_det_boxes3d =
+    thrust::count_if(thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_keep());
 
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }
 
   thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
+  // Remove any boxes with score == 0.0 after distance-based and class-based filtering
   thrust::copy_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(),
-    is_score_greater(config_.score_threshold_));
+    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(), is_score_keep());
 
   // sort by score
   thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());

@@ -18,7 +18,8 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/trajectory/pose.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
+
+#include <autoware_utils_geometry/boost_geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
@@ -85,7 +86,7 @@ public:
    */
   [[nodiscard]] bool is_object_on_this_lane(
     const geometry_msgs::msg::Pose & obj_pose,
-    const autoware::universe_utils::Polygon2d & obj_polygon) const;
+    const autoware_utils_geometry::Polygon2d & obj_polygon) const;
 
   /**
    * @brief Check if predicted object is on this lane
@@ -168,4 +169,3 @@ get_bidirectional_lanelets_where_ego_is(
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__BIDIRECTIONAL_LANELETS_HPP_  // NOLINT
-// clang-format on

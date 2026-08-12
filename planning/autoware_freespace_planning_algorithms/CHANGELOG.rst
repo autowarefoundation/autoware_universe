@@ -2,6 +2,69 @@
 Changelog for package autoware_freespace_planning_algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): re-enable bugprone-assignment-in-if-condition (`#12552 <https://github.com/autowarefoundation/autoware_universe/issues/12552>`_)
+  Add NOLINTNEXTLINE markers to the 45 sites flagged by
+  bugprone-assignment-in-if-condition and re-enable the check in
+  .clang-tidy-ci.
+  Both files are derived from upstream third-party code where the
+  assignment-in-if pattern is intentional:
+  - planning/autoware_freespace_planning_algorithms/src/reeds_shepp.cpp
+  is derived from OMPL's ReedsSheppStateSpace.cpp (BSD). Each path
+  family computes a candidate length L and compares it against L_min
+  in the same expression; rewriting all 39 sites would diverge from
+  the OMPL upstream and make future cross-checking harder.
+  - perception/autoware_bytetrack/lib/src/lapjv.cpp is the upstream
+  LAPJV port (MIT, Yifu Zhang). The 6 sites are all expansions of
+  the NEW(x, t, n) macro from lapjv.h, which uses the canonical
+  malloc-or-bail idiom 'if ((x = malloc(...)) == 0) return -1;'.
+  Refs: `#12450 <https://github.com/autowarefoundation/autoware_universe/issues/12450>`_
+* Contributors: Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_freespace_planning_algorithms): check collision at intermediate arc points during A* expansion (`#12403 <https://github.com/mitsudome-r/autoware_universe/issues/12403>`_)
+  When adapt_expansion_distance is enabled, A* nodes can be far apart and
+  setPath interpolates waypoints between them. These interpolated waypoints
+  were never collision-checked during search, only during post-hoc
+  verification via hasObstacleOnTrajectory. On arm64, floating-point
+  differences caused interpolated poses to clip obstacles that were missed
+  on x86_64, resulting in flaky test failures.
+  This adds intermediate collision checks along the arc in expandNodes,
+  using the same spacing as setPath interpolation. This ensures every
+  waypoint in the output trajectory was validated during search,
+  eliminating architecture-dependent inconsistencies.
+* fix(astar_search): non-monotonic trajectories fix. Ensure that points between nodes are added in the correct order (`#11789 <https://github.com/mitsudome-r/autoware_universe/issues/11789>`_)
+* style: update pre-commit (black 26.1.0, pre-commit-hooks-ros 0.10.2) (`#12195 <https://github.com/mitsudome-r/autoware_universe/issues/12195>`_)
+* chore: organize maintainer (`#12157 <https://github.com/mitsudome-r/autoware_universe/issues/12157>`_)
+* Contributors: Mete Fatih Cırıt, Satoshi OTA, Taeseung Sohn, github-actions, ralwing
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(freespace_planning_algorithms): conform to new SerializedBagMessage (`#11882 <https://github.com/autowarefoundation/autoware_universe/issues/11882>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor(freespace_planning_algorithms): reduce autoware_utils deps (`#11731 <https://github.com/autowarefoundation/autoware_universe/issues/11731>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(freespace_planning_algorithms): update for A* python wrapper (`#8890 <https://github.com/autowarefoundation/autoware_universe/issues/8890>`_)
+* Contributors: Ryohsuke Mitsudome, TakumIto, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

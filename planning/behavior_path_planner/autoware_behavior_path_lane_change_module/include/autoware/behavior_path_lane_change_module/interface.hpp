@@ -25,12 +25,11 @@
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-
-#include <tf2/utils.h>
 
 #include <memory>
 #include <string>
@@ -139,7 +138,7 @@ protected:
 
   bool is_abort_approval_requested_{false};
 
-  lane_change::InterfaceDebug interface_debug_;
+  mutable lane_change::InterfaceDebug interface_debug_;
 };
 }  // namespace autoware::behavior_path_planner
 

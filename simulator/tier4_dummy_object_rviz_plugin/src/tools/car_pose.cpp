@@ -64,6 +64,9 @@ CarInitialPoseTool::CarInitialPoseTool()
   enable_interactive_property_ = new rviz_common::properties::BoolProperty(
     "Interactive", false, "Enable/Disable interactive action by manipulating mouse.",
     getPropertyContainer());
+  predicted_property_ = new rviz_common::properties::BoolProperty(
+    "Predicted", false, "Enable/Disable predicted object mode using trajectory predictions.",
+    getPropertyContainer());
   property_frame_ = new rviz_common::properties::TfFrameProperty(
     "Target Frame", rviz_common::properties::TfFrameProperty::FIXED_FRAME_STRING,
     "The TF frame where the point cloud is output.", getPropertyContainer(), nullptr, true);
@@ -112,9 +115,9 @@ void CarInitialPoseTool::onInitialize()
   updateTopic();
 }
 
-DummyObject CarInitialPoseTool::createObjectMsg() const
+SimulatedObject CarInitialPoseTool::createObjectMsg() const
 {
-  DummyObject object{};
+  SimulatedObject object{};
   std::string fixed_frame = context_->getFixedFrame().toStdString();
 
   // header
@@ -156,6 +159,9 @@ BusInitialPoseTool::BusInitialPoseTool()
 
   enable_interactive_property_ = new rviz_common::properties::BoolProperty(
     "Interactive", false, "Enable/Disable interactive action by manipulating mouse.",
+    getPropertyContainer());
+  predicted_property_ = new rviz_common::properties::BoolProperty(
+    "Predicted", false, "Enable/Disable predicted object mode using trajectory predictions.",
     getPropertyContainer());
   property_frame_ = new rviz_common::properties::TfFrameProperty(
     "Target Frame", rviz_common::properties::TfFrameProperty::FIXED_FRAME_STRING,
@@ -205,9 +211,9 @@ void BusInitialPoseTool::onInitialize()
   updateTopic();
 }
 
-DummyObject BusInitialPoseTool::createObjectMsg() const
+SimulatedObject BusInitialPoseTool::createObjectMsg() const
 {
-  DummyObject object{};
+  SimulatedObject object{};
   std::string fixed_frame = context_->getFixedFrame().toStdString();
 
   // header
@@ -249,6 +255,9 @@ BikeInitialPoseTool::BikeInitialPoseTool()
 
   enable_interactive_property_ = new rviz_common::properties::BoolProperty(
     "Interactive", false, "Enable/Disable interactive action by manipulating mouse.",
+    getPropertyContainer());
+  predicted_property_ = new rviz_common::properties::BoolProperty(
+    "Predicted", false, "Enable/Disable predicted object mode using trajectory predictions.",
     getPropertyContainer());
   property_frame_ = new rviz_common::properties::TfFrameProperty(
     "Target Frame", rviz_common::properties::TfFrameProperty::FIXED_FRAME_STRING,
@@ -302,9 +311,9 @@ void BikeInitialPoseTool::onInitialize()
   updateTopic();
 }
 
-DummyObject BikeInitialPoseTool::createObjectMsg() const
+SimulatedObject BikeInitialPoseTool::createObjectMsg() const
 {
-  DummyObject object{};
+  SimulatedObject object{};
   std::string fixed_frame = context_->getFixedFrame().toStdString();
 
   // header

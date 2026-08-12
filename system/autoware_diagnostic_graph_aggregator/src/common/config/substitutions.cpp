@@ -45,6 +45,12 @@ std::string resolve(const std::string & substitution, const FileContext & contex
   if (words.size() == 1 && words[0] == "dirname") {
     return std::filesystem::path(context.file).parent_path();
   }
+  if (words.size() == 2 && words[0] == "var") {
+    if (context.variables && context.variables->count(words[1])) {
+      return context.variables->at(words[1]);
+    }
+    throw UnknownVariable(words[1]);
+  }
   throw UnknownSubstitution(substitution);
 }
 

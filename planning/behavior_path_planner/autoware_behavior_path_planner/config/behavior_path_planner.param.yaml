@@ -2,6 +2,11 @@
   ros__parameters:
     traffic_light_signal_timeout: 1.0
 
+    # timeout monitoring
+    # The timeout means the time between source timestamp and current time.
+    cyclic_timeout: 0.90
+    enable_traffic_signal_timeout: false
+
     planning_hz: 10.0
     backward_path_length: 5.0
     forward_path_length: 300.0
@@ -14,13 +19,24 @@
     # parameters for turn signal decider
     turn_signal_intersection_search_distance: 30.0
     turn_signal_intersection_angle_threshold_deg: 15.0
+    turn_signal_roundabout_on_entry: "None" # "None", "Left", "Right"
+    turn_signal_roundabout_entry_indicator_persistence: false
+    turn_signal_roundabout_on_exit: "Left" # "None", "Left", "Right",
+    turn_signal_roundabout_search_distance: 30.0
+    turn_signal_roundabout_angle_threshold_deg: 15.0
+    turn_signal_roundabout_backward_depth: 50
     turn_signal_minimum_search_distance: 10.0
+    turn_signal_path_backward_length: 100.0
     turn_signal_search_time: 3.0
     turn_signal_shift_length_threshold: 0.3
     turn_signal_remaining_shift_length_threshold: 0.1
+    turn_signal_remaining_distance_to_bound_threshold: 1.3 # Distance from ego vehicle's front edge to the far-side boundary of the target merging lane. The turn signal will be turned off when the value is less than the threshold.
     turn_signal_on_swerving: true
 
     enable_akima_spline_first: false
     enable_cog_on_centerline: false
     input_path_interval: 2.0
     output_path_interval: 2.0
+
+    # Must match mission_planner allow_area when using lanelet-area-lanelet routes
+    allow_area: false

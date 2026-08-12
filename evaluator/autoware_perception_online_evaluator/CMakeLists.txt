@@ -22,12 +22,12 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE autoware_perception_online_evaluator_node
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN   "autoware::perception_diagnostics::PerceptionAnalyticsPublisherNode"
   EXECUTABLE autoware_perception_analytics_publisher_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
-
-target_link_libraries(${PROJECT_NAME} glog::glog)
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_perception_online_evaluator_node

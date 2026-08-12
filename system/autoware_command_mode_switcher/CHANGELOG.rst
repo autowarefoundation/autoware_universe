@@ -2,6 +2,49 @@
 Changelog for package autoware_command_mode_switcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: split control command source and filter service (`#12650 <https://github.com/autowarefoundation/autoware_universe/issues/12650>`_)
+  * feat: split control command source and filter service
+  * fix switcher remap
+  * fix emergency stop remap
+  * fix response status
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Takagi, Isamu, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_command_mode_switcher): adopt cie (`#12325 <https://github.com/mitsudome-r/autoware_universe/issues/12325>`_)
+  * feat: adopt cie
+  * fix
+  * fix: remove unnecessary lines
+  * fix: remove find_package
+  ---------
+* Contributors: Tetsuhiro Kawaguchi, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(command_mode_decider, switcher): use velocity only and steer only conditions (`#11811 <https://github.com/autowarefoundation/autoware_universe/issues/11811>`_)
+  * feat(command_mode_decider): fix to use velocity only and steer only
+  status
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Makoto Kurihara, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_command_mode_switcher_plugins): publish hazard lights c… (`#10952 <https://github.com/autowarefoundation/autoware_universe/issues/10952>`_)

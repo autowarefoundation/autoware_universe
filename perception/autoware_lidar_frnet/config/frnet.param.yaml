@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    onnx_path: "$(var model_path)/frnet_$(var sensor_model).onnx"
+    trt_precision: fp16
+    filter:
+      class_probability_threshold: 0.05
+      classes: ["drivable_surface"]
+      output_format: ""
+      ego_crop_box:
+        reference_frame: base_link
+        min_x: -1.53
+        min_y: -1.15
+        min_z: -0.1
+        max_x: 6.1
+        max_y: 1.15
+        max_z: 3.1

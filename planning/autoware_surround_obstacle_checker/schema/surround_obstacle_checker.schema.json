@@ -321,6 +321,146 @@
           ],
           "additionalProperties": false
         },
+        "animal": {
+          "type": "object",
+          "properties": {
+            "enable_check": {
+              "type": "boolean",
+              "description": "enable to check surrounding animal",
+              "default": "true"
+            },
+            "surround_check_front_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_side_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_back_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            }
+          },
+          "required": [
+            "enable_check",
+            "surround_check_front_distance",
+            "surround_check_side_distance",
+            "surround_check_back_distance"
+          ],
+          "additionalProperties": false
+        },
+        "hazard": {
+          "type": "object",
+          "properties": {
+            "enable_check": {
+              "type": "boolean",
+              "description": "enable to check surrounding hazard",
+              "default": "true"
+            },
+            "surround_check_front_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_side_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_back_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            }
+          },
+          "required": [
+            "enable_check",
+            "surround_check_front_distance",
+            "surround_check_side_distance",
+            "surround_check_back_distance"
+          ],
+          "additionalProperties": false
+        },
+        "over_drivable": {
+          "type": "object",
+          "properties": {
+            "enable_check": {
+              "type": "boolean",
+              "description": "enable to check surrounding over_drivable objects",
+              "default": "false"
+            },
+            "surround_check_front_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_side_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_back_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            }
+          },
+          "required": [
+            "enable_check",
+            "surround_check_front_distance",
+            "surround_check_side_distance",
+            "surround_check_back_distance"
+          ],
+          "additionalProperties": false
+        },
+        "under_drivable": {
+          "type": "object",
+          "properties": {
+            "enable_check": {
+              "type": "boolean",
+              "description": "enable to check surrounding under_drivable objects",
+              "default": "false"
+            },
+            "surround_check_front_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_side_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            },
+            "surround_check_back_distance": {
+              "type": "number",
+              "description": "If objects exist in this distance, transit to \"exist-surrounding-obstacle\" status. [m]",
+              "default": "0.5",
+              "minimum": 0.0
+            }
+          },
+          "required": [
+            "enable_check",
+            "surround_check_front_distance",
+            "surround_check_side_distance",
+            "surround_check_back_distance"
+          ],
+          "additionalProperties": false
+        },
         "surround_check_hysteresis_distance": {
           "type": "number",
           "description": "If no object exists in this hysteresis distance added to the above distance, transit to \"non-surrounding-obstacle\" status [m]",
@@ -357,7 +497,11 @@
             "trailer",
             "motorcycle",
             "bicycle",
-            "pedestrian"
+            "pedestrian",
+            "animal",
+            "hazard",
+            "over_drivable",
+            "under_drivable"
           ]
         }
       },
@@ -371,6 +515,10 @@
         "motorcycle",
         "bicycle",
         "pedestrian",
+        "animal",
+        "hazard",
+        "over_drivable",
+        "under_drivable",
         "surround_check_hysteresis_distance",
         "state_clear_time",
         "stop_state_ego_speed",

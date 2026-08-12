@@ -156,11 +156,11 @@ void RayGroundFilterComponent::setVehicleFootprint(
 {
   // create vehicle footprint polygon
   vehicle_footprint_.outer().clear();
-  vehicle_footprint_.outer().push_back(Point(min_x, min_y));  // left back
-  vehicle_footprint_.outer().push_back(Point(min_x, max_y));  // right back
-  vehicle_footprint_.outer().push_back(Point(max_x, max_y));  // right front
-  vehicle_footprint_.outer().push_back(Point(max_x, min_y));  // left front
-  vehicle_footprint_.outer().push_back(Point(min_x, min_y));  // left back
+  vehicle_footprint_.outer().emplace_back(min_x, min_y);  // left back
+  vehicle_footprint_.outer().emplace_back(min_x, max_y);  // right back
+  vehicle_footprint_.outer().emplace_back(max_x, max_y);  // right front
+  vehicle_footprint_.outer().emplace_back(max_x, min_y);  // left front
+  vehicle_footprint_.outer().emplace_back(min_x, min_y);  // left back
 }
 
 void RayGroundFilterComponent::ClassifyPointCloud(
@@ -336,6 +336,13 @@ void RayGroundFilterComponent::filter(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   std::scoped_lock lock(mutex_);
+
+  // check for empty point cloud
+  if (input->data.empty() || input->width == 0 || input->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    output = *input;
+    return;
+  }
 
   pcl::PointCloud<PointType_>::Ptr current_sensor_cloud_ptr(new pcl::PointCloud<PointType_>);
   pcl::fromROSMsg(*input, *current_sensor_cloud_ptr);

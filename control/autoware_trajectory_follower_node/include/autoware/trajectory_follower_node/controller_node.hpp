@@ -24,7 +24,6 @@
 #include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2/utils.h"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
@@ -32,6 +31,7 @@
 #include <Eigen/Geometry>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <tf2/utils.hpp>
 
 #include "autoware_control_msgs/msg/control.hpp"
 #include "autoware_control_msgs/msg/control_horizon.hpp"
@@ -44,9 +44,11 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <autoware_control_msgs/msg/detail/control_horizon__struct.hpp>
+#include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -78,12 +80,12 @@ public:
 private:
   rclcpp::TimerBase::SharedPtr timer_control_;
   double timeout_thr_sec_;
+  double cyclic_message_timeout_thr_sec_;
   bool enable_control_cmd_horizon_pub_{false};
   boost::optional<LongitudinalOutput> longitudinal_output_{boost::none};
 
-  std::shared_ptr<diagnostic_updater::Updater> diag_updater_ =
-    std::make_shared<diagnostic_updater::Updater>(
-      this);  // Diagnostic updater for publishing diagnostic data.
+  std::shared_ptr<diagnostic_updater::Updater>
+    diag_updater_;  // Diagnostic updater for publishing diagnostic data.
 
   std::shared_ptr<trajectory_follower::LongitudinalControllerBase> longitudinal_controller_;
   std::shared_ptr<trajectory_follower::LateralControllerBase> lateral_controller_;
@@ -103,6 +105,9 @@ private:
 
   autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operation_mode_{
     this, "~/input/current_operation_mode", rclcpp::QoS{1}.transient_local()};
+
+  rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr
+    sub_steering_offset_update_;
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;
@@ -134,6 +139,7 @@ private:
   void callbackTimerControl();
   bool processData(rclcpp::Clock & clock);
   bool isTimeOut(const LongitudinalOutput & lon_out, const LateralOutput & lat_out);
+  void check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat);
   LateralControllerMode getLateralControllerMode(const std::string & algorithm_name) const;
   LongitudinalControllerMode getLongitudinalControllerMode(
     const std::string & algorithm_name) const;

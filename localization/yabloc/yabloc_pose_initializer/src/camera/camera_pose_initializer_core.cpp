@@ -14,9 +14,9 @@
 
 #include "yabloc_pose_initializer/camera/camera_pose_initializer.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -132,10 +132,14 @@ std::optional<double> CameraPoseInitializer::estimate_pose(
   query_pose.position.y = position.y();
   query_pose.position.z = position.z();
 
-  lanelet::ConstLanelets current_lanelets;
   std::optional<double> lane_angle_rad = std::nullopt;
-  if (lanelet::utils::query::getCurrentLanelets(const_lanelets_, query_pose, &current_lanelets)) {
-    lane_angle_rad = lanelet::utils::getLaneletAngle(current_lanelets.front(), query_pose.position);
+  if (
+    const auto current_lanelet_opt =
+      autoware::experimental::lanelet2_utils::get_closest_lanelet(const_lanelets_, query_pose);
+    current_lanelet_opt) {
+    lane_angle_rad = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      current_lanelet_opt.value(),
+      autoware::experimental::lanelet2_utils::from_ros(query_pose.position).basicPoint());
   }
 
   cv::Mat projected_image = projector_module_->project_image(segmented_image);
@@ -175,8 +179,8 @@ std::optional<double> CameraPoseInitializer::estimate_pose(
 
 void CameraPoseInitializer::on_map(const LaneletMapBin & msg)
 {
-  lanelet::LaneletMapPtr lanelet_map(new lanelet::LaneletMap);
-  lanelet::utils::conversion::fromBinMsg(msg, lanelet_map);
+  lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(msg));
   lane_image_ = std::make_unique<LaneImage>(lanelet_map);
 
   const_lanelets_.clear();

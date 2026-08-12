@@ -3,6 +3,8 @@ project(autoware_diffusion_planner)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
+find_package(Boost REQUIRED)
+find_package(onnxruntime QUIET)
 
 # Options
 option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
@@ -43,70 +45,108 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
-# Find CUDNN library (optional, often used with TRT)
-option(CUDNN_AVAIL "CUDNN available" OFF)
-find_library(CUDNN_LIBRARY
-  NAMES libcudnn.so
-  PATHS $ENV{LD_LIBRARY_PATH} ${CUDA_TOOLKIT_ROOT_DIR}/lib64
-  DOC "CUDNN library."
-)
-if(CUDNN_LIBRARY)
-  if(CUDA_VERBOSE)
-    message(STATUS "CUDNN is available!")
-    message(STATUS "CUDNN_LIBRARY: ${CUDNN_LIBRARY}")
+if(TRT_AVAIL AND CUDA_AVAIL)
+  if(NOT onnxruntime_FOUND)
+    find_path(ONNXRUNTIME_INCLUDE_DIR onnxruntime_cxx_api.h
+      HINTS /usr/local/include /usr/local/include/onnxruntime
+    )
+    find_library(ONNXRUNTIME_LIBRARY onnxruntime
+      HINTS /usr/local/lib /usr/local/lib64
+    )
+    if(ONNXRUNTIME_INCLUDE_DIR AND ONNXRUNTIME_LIBRARY)
+      set(onnxruntime_FOUND TRUE)
+    endif()
   endif()
-  set(CUDNN_AVAIL ON)
-else()
-  message(WARNING "CUDNN is NOT Available")
-  set(CUDNN_AVAIL OFF)
-endif()
 
-if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
+  if(onnxruntime_FOUND)
+    message(STATUS "ONNX Runtime is available; enabling ONNX Runtime inference support")
+  else()
+    message(WARNING "ONNX Runtime is NOT Available; ONNX Runtime inference support will be disabled")
+  endif()
+
   # Add compile option to suppress deprecation warnings (optional)
   add_compile_options(-Wno-deprecated-declarations)
 
   # Suppress narrowing conversion warnings from TensorRT headers
   add_compile_options(-Wno-narrowing)
 
-  # Add your component library
-  ament_auto_add_library(autoware_diffusion_planner_component SHARED
+  set(DIFFUSION_PLANNER_SOURCES
+    src/diffusion_planner_core.cpp
     src/diffusion_planner_node.cpp
     src/conversion/lanelet.cpp
     src/conversion/agent.cpp
-    src/conversion/ego.cpp
     src/postprocessing/postprocessing_utils.cpp
     src/preprocessing/lane_segments.cpp
     src/preprocessing/preprocessing_utils.cpp
     src/preprocessing/traffic_signals.cpp
     src/utils/utils.cpp
     src/utils/marker_utils.cpp
+    src/utils/planning_factor_utils.cpp
+    src/postprocessing/turn_indicator_manager.cpp
+    src/inference/solver/dpm_solver.cpp
+    src/inference/guidance/guidance.cpp
+    src/inference/guidance/centerline_guidance.cpp
+    src/inference/guidance/start_guidance.cpp
+    src/inference/guidance/stop_guidance.cpp
+    src/inference/guidance/utils.cpp
+    src/inference/multi_step_inference.cpp
+    src/inference/single_step_inference.cpp
+    src/inference/utils.cpp
+  )
+  if(onnxruntime_FOUND)
+    list(APPEND DIFFUSION_PLANNER_SOURCES
+      src/inference/onnxruntime_inference.cpp
+    )
+  endif()
+
+  # Add your component library
+  ament_auto_add_library(autoware_diffusion_planner_component SHARED
+    ${DIFFUSION_PLANNER_SOURCES}
   )
 
   target_include_directories(autoware_diffusion_planner_component PUBLIC
     ${CUDA_INCLUDE_DIRS}
     ${autoware_cuda_utils_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
   )
+  if(onnxruntime_FOUND)
+    target_include_directories(autoware_diffusion_planner_component PUBLIC
+      ${ONNXRUNTIME_INCLUDE_DIR}
+    )
+    target_compile_definitions(autoware_diffusion_planner_component PUBLIC
+      AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+    )
+  endif()
   target_link_libraries(autoware_diffusion_planner_component
     ${NVINFER}
     ${NVONNXPARSER}
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
-    ${CUDNN_LIBRARY}
   )
 
-  rclcpp_components_register_node(autoware_diffusion_planner_component
+  if(onnxruntime_FOUND)
+    if(TARGET onnxruntime::onnxruntime)
+      target_link_libraries(autoware_diffusion_planner_component onnxruntime::onnxruntime)
+    elseif(TARGET onnxruntime)
+      target_link_libraries(autoware_diffusion_planner_component onnxruntime)
+    else()
+      target_link_libraries(autoware_diffusion_planner_component ${ONNXRUNTIME_LIBRARY})
+    endif()
+  endif()
+
+  autoware_agnocast_wrapper_register_node(autoware_diffusion_planner_component
     PLUGIN "autoware::diffusion_planner::DiffusionPlanner"
     EXECUTABLE autoware_diffusion_planner_node
+    ROS2_EXECUTOR SingleThreadedExecutor
+    AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   )
 
   if(BUILD_TESTING)
     ament_add_ros_isolated_gtest(test_diffusion_planner
       test/agent_test.cpp
       test/lanelet_test.cpp
-      test/ego_test.cpp
       test/lane_segments_test.cpp
       test/pre_processing_utils_test.cpp
-      test/fixed_queue_test.cpp
       test/postprocessing_utils_test.cpp
       test/utils_test.cpp
       test/marker_utils_test.cpp
@@ -115,10 +155,15 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       test/preprocessing_utils_edge_case_test.cpp
       test/agent_edge_case_test.cpp
       test/lanelet_edge_case_test.cpp
-      test/diffusion_planner_integration_test.cpp)
+      test/diffusion_planner_integration_test.cpp
+      test/rtc_prefix_test.cpp
+      test/planning_factor_utils_test.cpp)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
     ament_target_dependencies(test_diffusion_planner
+      autoware_lanelet2_extension
+      autoware_map_msgs
+      autoware_perception_msgs
       autoware_test_utils
     )
   endif()

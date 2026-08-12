@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "../src/multi_object_tracker_node.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 #include "test_bench.hpp"
+#include "test_bench_association.hpp"
 #include "test_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -56,32 +56,58 @@ double measureTimeMs(Func && func)
   return std::chrono::duration<double, std::milli>(end - start).count();
 }
 
-FunctionTimings runIterations(
-  int num_iterations, const TrackingScenarioConfig & config, bool print_frame_stats = false,
+FunctionTimings runIterationsAssociation(
+  int num_iterations, const ScenarioParams & config, bool print_frame_stats = false,
   bool write_bag = false)
 {
   RosbagWriterHelper writer(write_bag);
 
-  auto processor_config = createProcessorConfig();
-  const auto associator_config = createAssociatorConfig();
+  const auto tracker_configs = createTrackerConfigs();
+  const auto creation_config = createTrackerCreationConfig();
+  const auto association_config = createTrackerAssociationConfig();
+  const auto overlap_config = createTrackerOverlapManagerConfig();
   const auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
-    processor_config, associator_config, input_channels_config);
-  TrackingTestBench simulator(config);
+    tracker_configs, creation_config, association_config, overlap_config, input_channels_config,
+    rclcpp::get_logger("test_multi_object_tracker"),
+    std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME));
+  // TestBenchAssociation by default.
+  // Or use TestBenchAssociationLemniscate for more complex association scenarios
+  TestBenchAssociation simulator(config);
+  simulator.initializeObjects();
   // Performance tracking for individual functions
   FunctionTimings timings;
-
   rclcpp::Clock clock;
   rclcpp::Time current_time = rclcpp::Time(clock.now(), RCL_ROS_TIME);
-  std::unordered_map<int, int> direct_assignment;
-  std::unordered_map<int, int> reverse_assignment;
+  autoware::multi_object_tracker::types::AssociationResult association_result;
   if (print_frame_stats) {
     printFrameStatsHeader();
   }
+  tf2_msgs::msg::TFMessage static_tf_msg;
+  if (write_bag) {
+    std::vector<geometry_msgs::msg::TransformStamped> static_transforms;
+
+    // Publish a default map frame transform (identity transform)
+    geometry_msgs::msg::TransformStamped map_transform;
+    map_transform.header.stamp = current_time;
+    map_transform.header.frame_id = "map";
+    map_transform.child_frame_id = "base_link";
+    map_transform.transform.translation.x = 0.0;
+    map_transform.transform.translation.y = 0.0;
+    map_transform.transform.translation.z = 0.0;
+    map_transform.transform.rotation.x = 0.0;
+    map_transform.transform.rotation.y = 0.0;
+    map_transform.transform.rotation.z = 0.0;
+    map_transform.transform.rotation.w = 1.0;
+    static_transforms.push_back(map_transform);
+    // Create TF message for /tf_static topic
+    ;
+    static_tf_msg.transforms = static_transforms;
+  }
+
   for (int i = 0; i < num_iterations; ++i) {
-    direct_assignment.clear();
-    reverse_assignment.clear();
+    association_result = autoware::multi_object_tracker::types::AssociationResult();
     // Advance simulation time (10Hz)
     current_time += 100ms;
     auto detections = simulator.generateDetections(current_time);
@@ -91,16 +117,91 @@ FunctionTimings runIterations(
 
     // Individual function timing
     timings.predict.times.push_back(
-      measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
-    timings.associate.times.push_back(measureTimeMs(
-      [&]() { processor->associate(detections, direct_assignment, reverse_assignment); }));
-    timings.update.times.push_back(
-      measureTimeMs([&]() { processor->update(detections, direct_assignment); }));
+      measureTimeMs([&]() { processor->predictTrackers(current_time); }));
+    timings.associate.times.push_back(
+      measureTimeMs([&]() { association_result = processor->associate(detections); }));
+    timings.update.times.push_back(measureTimeMs([&]() {
+      processor->update(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
+    timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
+    timings.spawn.times.push_back(measureTimeMs([&]() {
+      processor->spawn(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
+
+    const auto total_end = Clock::now();
+    auto total_duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count() /
+      1000.0;
+    timings.total.times.push_back(total_duration);
+
+    autoware_perception_msgs::msg::TrackedObjects latest_tracked_objects;
+    processor->getTrackedObjects(current_time, latest_tracked_objects);
+
+    latest_tracked_objects.header.frame_id = "map";
+    writer.write(static_tf_msg, "/tf", current_time);
+    writer.write(
+      toDetectedObjectsMsg(detections), "/perception/object_recognition/detection/objects",
+      current_time);
+    writer.write(
+      latest_tracked_objects, "/perception/object_recognition/tracking/objects", current_time);
+  }
+  return timings;
+}
+
+FunctionTimings runIterations(
+  int num_iterations, const ScenarioParams & config, bool print_frame_stats = false,
+  bool write_bag = false)
+{
+  RosbagWriterHelper writer(write_bag);
+
+  const auto tracker_configs = createTrackerConfigs();
+  const auto creation_config = createTrackerCreationConfig();
+  const auto association_config = createTrackerAssociationConfig();
+  const auto overlap_config = createTrackerOverlapManagerConfig();
+  const auto input_channels_config = createInputChannelsConfig();
+
+  auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
+    tracker_configs, creation_config, association_config, overlap_config, input_channels_config,
+    rclcpp::get_logger("test_multi_object_tracker"),
+    std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME));
+  TestBench simulator(config);
+  simulator.initializeObjects();
+  // Performance tracking for individual functions
+  FunctionTimings timings;
+
+  rclcpp::Clock clock;
+  rclcpp::Time current_time = rclcpp::Time(clock.now(), RCL_ROS_TIME);
+  autoware::multi_object_tracker::types::AssociationResult association_result;
+  if (print_frame_stats) {
+    printFrameStatsHeader();
+  }
+  for (int i = 0; i < num_iterations; ++i) {
+    association_result = autoware::multi_object_tracker::types::AssociationResult();
+    // Advance simulation time (10Hz)
+    current_time += 100ms;
+    auto detections = simulator.generateDetections(current_time);
+    detections = autoware::multi_object_tracker::uncertainty::modelUncertainty(detections);
+
+    const auto total_start = Clock::now();
+
+    // Individual function timing
+    timings.predict.times.push_back(
+      measureTimeMs([&]() { processor->predictTrackers(current_time); }));
+    timings.associate.times.push_back(
+      measureTimeMs([&]() { association_result = processor->associate(detections); }));
+    timings.update.times.push_back(measureTimeMs([&]() {
+      processor->update(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     int num_trackers0 = processor->getListTracker().size();
     timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
     int num_trackers1 = processor->getListTracker().size();
-    timings.spawn.times.push_back(
-      measureTimeMs([&]() { processor->spawn(detections, reverse_assignment); }));
+    timings.spawn.times.push_back(measureTimeMs([&]() {
+      processor->spawn(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     int num_trackers2 = processor->getListTracker().size();
 
     int num_pruned = num_trackers0 - num_trackers1;
@@ -131,9 +232,26 @@ FunctionTimings runIterations(
   return timings;
 }
 
+void runAssociationTest()
+{
+  ScenarioParams params;
+  params.num_lanes = 0;
+  params.pedestrian_clusters = 0;
+  params.cars_per_lane = 0;
+  params.unknown_objects = 0;
+  params.dropout_rate = 0.0f;                        // No dropout
+  params.unknown_params.shape_change_prob = 0.0f;    // No shape change
+  params.unknown_params.max_evolution_noise = 0.0f;  // No evolution noise
+
+  FunctionTimings timings = runIterationsAssociation(500, params, true, true);
+  std::cout << "Total time for all iterations: "
+            << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0) << " ms"
+            << std::endl;
+}
+
 void runPerformanceTest()
 {
-  const TrackingScenarioConfig params;
+  const ScenarioParams params;
   FunctionTimings timings = runIterations(50, params, true, false);
   std::cout << "Total time for all iterations: "
             << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0) << " ms"
@@ -148,7 +266,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   // === Setup ===
   rclcpp::init(0, nullptr);
   const auto node = std::make_shared<rclcpp::Node>("multi_object_tracker_test_node");
-  const auto tf_buffer = std::make_shared<tf2_ros::Buffer>(node->get_clock());
+  const auto tf_buffer = std::make_shared<autoware::agnocast_wrapper::Buffer>(node->get_clock());
   const auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, node);
   RosbagWriterHelper writer(write_bag);
   RosbagReaderHelper reader(rosbag_path);
@@ -156,14 +274,18 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   const std::string world_frame_id = "map";      // Assuming map is the world frame ID
   const std::string ego_frame_id = "base_link";  // Assuming base_link is the ego vehicle frame ID
   const auto odometry = std::make_shared<autoware::multi_object_tracker::Odometry>(
-    *node, world_frame_id, ego_frame_id, true);
+    node->get_logger(), node->get_clock(), tf_buffer, world_frame_id, ego_frame_id, true);
 
-  auto processor_config = createProcessorConfig();
-  const auto associator_config = createAssociatorConfig();
-  auto input_channels_config = createInputChannelsConfig();
+  const auto tracker_configs = createTrackerConfigs();
+  const auto creation_config = createTrackerCreationConfig();
+  const auto association_config = createTrackerAssociationConfig();
+  const auto overlap_config = createTrackerOverlapManagerConfig();
+  const auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
-    processor_config, associator_config, input_channels_config);
+    tracker_configs, creation_config, association_config, overlap_config, input_channels_config,
+    rclcpp::get_logger("test_multi_object_tracker"),
+    std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME));
 
   // Create serialization objects
   rclcpp::Serialization<autoware_perception_msgs::msg::DetectedObjects> detection_serialization;
@@ -210,14 +332,14 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
         pose_cov = tf2::transformCovariance(pose_cov, tf_target2objects);
       }
       // Process through tracker
-      processor->predict(msg->header.stamp, std::nullopt);
+      processor->predictTrackers(msg->header.stamp);
 
-      std::unordered_map<int, int> direct_assignment;
-      std::unordered_map<int, int> reverse_assignment;
-      processor->associate(dynamic_objects, direct_assignment, reverse_assignment);
-      processor->update(dynamic_objects, direct_assignment);
+      const auto association_result = processor->associate(dynamic_objects);
+      const autoware::multi_object_tracker::types::AssociatedObjects associated_objects{
+        dynamic_objects, association_result};
+      processor->update(associated_objects);
       processor->prune(msg->header.stamp);
-      processor->spawn(dynamic_objects, reverse_assignment);
+      processor->spawn(associated_objects);
 
       // Get and output results
       rclcpp::Time current_time(msg->header.stamp);
@@ -256,7 +378,7 @@ struct ProfileConfig
   int step;
   int iterations_per_count;
   float simulation_duration;
-  std::function<void(TrackingScenarioConfig &, int)> config_updater;
+  std::function<void(ScenarioParams &, int)> config_updater;
 };
 
 // Common profiling function template
@@ -282,7 +404,7 @@ void profilePerformance(const ProfileConfig & config)
   // Main profiling loop
   for (int target_count = config.min_count; target_count <= config.max_count;
        target_count += config.step) {
-    TrackingScenarioConfig params;
+    ScenarioParams params;
     config.config_updater(params, target_count);
 
     FunctionTimings total_timings;
@@ -313,7 +435,7 @@ void profilePerformanceVsCarCount()
       5,     // step
       5,     // iterations_per_count
       5.0f,  // simulation_duration
-      [](TrackingScenarioConfig & params, int target_count) {
+      [](ScenarioParams & params, int target_count) {
         params.pedestrian_clusters = 0;  // No pedestrians in this profile
         params.pedestrians_per_cluster = 0;
         params.num_lanes = std::max(1, target_count / 20);
@@ -333,7 +455,7 @@ void profilePerformanceVsPedestrianCount()
       5,     // step
       5,     // iterations_per_count
       5.0f,  // simulation_duration
-      [](TrackingScenarioConfig & params, int target_count) {
+      [](ScenarioParams & params, int target_count) {
         params.num_lanes = 0;  // No cars in this profile
         params.cars_per_lane = 0;
         params.pedestrian_clusters = std::max(1, target_count / 5);
@@ -353,7 +475,7 @@ void profilePerformanceVsUnknownObjectCount()
       5,     // step
       5,     // iterations_per_count
       5.0f,  // simulation_duration
-      [](TrackingScenarioConfig & params, int target_count) {
+      [](ScenarioParams & params, int target_count) {
         params.num_lanes = 0;  // No cars in this profile
         params.cars_per_lane = 0;
         params.pedestrian_clusters = 0;  // No pedestrians in this profile
@@ -369,23 +491,31 @@ public:
   ~MultiObjectTrackerTest() override = default;
 };
 
-// TEST_F(MultiObjectTrackerTest, PerformanceVsCarCount)
-// {
-//   // This test runs performance analysis with varying car counts
-//   profilePerformanceVsCarCount();
-// }
+TEST_F(MultiObjectTrackerTest, DISABLED_PerformanceVsCarCount)
+{
+  // This test runs performance analysis with varying car counts
+  profilePerformanceVsCarCount();
+}
 
-// TEST_F(MultiObjectTrackerTest, PerformanceVsPedestrianCount)
-// {
-//   // This test runs performance analysis with varying pedestrian counts
-//   profilePerformanceVsPedestrianCount();
-// }
+TEST_F(MultiObjectTrackerTest, DISABLED_PerformanceVsPedestrianCount)
+{
+  // This test runs performance analysis with varying pedestrian counts
+  profilePerformanceVsPedestrianCount();
+}
 
-// TEST_F(MultiObjectTrackerTest, PerformanceVsUnknownObjectCount)
-// {
-//   // This test runs performance analysis with varying unknown object counts
-//   profilePerformanceVsUnknownObjectCount();
-// }
+TEST_F(MultiObjectTrackerTest, DISABLED_PerformanceVsUnknownObjectCount)
+{
+  // This test runs performance analysis with varying unknown object counts
+  profilePerformanceVsUnknownObjectCount();
+}
+
+TEST_F(MultiObjectTrackerTest, DISABLED_AssociationTest)  // NOLINT
+{
+  // This test checks the merging of unknown objects with existing cars
+  // By default, this test enables recording into a rosbag; it is intended for local verification
+  // only.
+  runAssociationTest();
+}
 
 TEST_F(MultiObjectTrackerTest, SimulatedDataPerformanceTest)
 {

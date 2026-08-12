@@ -195,7 +195,7 @@ void CropBoxFilterComponent::faster_filter(
   output.fields = input->fields;
   output.is_bigendian = input->is_bigendian;
   output.point_step = input->point_step;
-  output.is_dense = input->is_dense;
+  output.is_dense = true;  // We filtered out the NaN values, the point cloud is now dense.
   output.width = static_cast<uint32_t>(output.data.size() / output.height / output.point_step);
   output.row_step = static_cast<uint32_t>(output.data.size() / output.height);
 

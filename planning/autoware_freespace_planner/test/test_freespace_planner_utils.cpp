@@ -158,7 +158,7 @@ TEST(FreespacePlannerUtilsTest, testIsNearTarget)
   auto current_pose = target_pose;
   current_pose.position.x -= 1.0;
   current_pose.position.y += 1.0;
-  current_pose.orientation = autoware_utils::create_quaternion_from_yaw(M_PI_2 + eps);
+  current_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(M_PI_2 + eps);
 
   const double th_distance_m = 0.5;
 
@@ -173,7 +173,7 @@ TEST(FreespacePlannerUtilsTest, testIsNearTarget)
   EXPECT_FALSE(
     autoware::freespace_planner::utils::is_near_target(target_pose, current_pose, th_distance_m));
 
-  current_pose.orientation = autoware_utils::create_quaternion_from_yaw(M_PI_4);
+  current_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(M_PI_4);
   EXPECT_TRUE(
     autoware::freespace_planner::utils::is_near_target(target_pose, current_pose, th_distance_m));
 }

@@ -96,10 +96,10 @@ cv::Mat LaneImage::get_image(const Pose & pose)
   for (auto lanelet : map_->laneletLayer) {
     polygon_t polygon;
     for (auto right : lanelet.rightBound2d()) {
-      polygon.outer().push_back(point_t(right.x() - xyz.x, right.y() - xyz.y));
+      polygon.outer().emplace_back(right.x() - xyz.x, right.y() - xyz.y);
     }
     for (const auto & left : boost::adaptors::reverse(lanelet.leftBound2d())) {
-      polygon.outer().push_back(point_t(left.x() - xyz.x, left.y() - xyz.y));
+      polygon.outer().emplace_back(left.x() - xyz.x, left.y() - xyz.y);
     }
 
     if (!bg::disjoint(box, polygon)) {

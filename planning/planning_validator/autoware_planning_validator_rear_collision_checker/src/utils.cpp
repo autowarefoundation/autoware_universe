@@ -14,11 +14,10 @@
 
 #include "utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -38,7 +37,7 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
-#include <angles/angles/angles.h>
+#include <angles/angles.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
@@ -244,7 +243,12 @@ auto check_shift_behavior(
   const auto & vehicle_width = context->vehicle_info.vehicle_width_m;
   const auto & max_longitudinal_offset = context->vehicle_info.max_longitudinal_offset_m;
 
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
+  const auto combine_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
+  if (!combine_lanelet_opt.has_value()) {
+    return std::make_pair(Behavior::NONE, 0.0);
+  }
+  const auto & combine_lanelet = combine_lanelet_opt.value();
   const auto nearest_idx =
     autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(points, ego_pose);
   {
@@ -360,7 +364,8 @@ auto check_turn_behavior(
   const auto & route_handler = context->data->route_handler;
   const auto & vehicle_info = context->vehicle_info;
 
-  const auto ego_coordinate_on_arc = lanelet::utils::getArcCoordinates(lanelets, ego_pose);
+  const auto ego_coordinate_on_arc =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, ego_pose);
 
   const auto distance_to_stop_point =
     autoware::motion_utils::calcDistanceToForwardStopPoint(points, ego_pose);
@@ -441,7 +446,7 @@ auto check_turn_behavior(
       total_length - ego_coordinate_on_arc.length - vehicle_info.max_longitudinal_offset_m;
     const std::string turn_direction = lane.attributeOr("turn_direction", "none");
 
-    total_length += lanelet::utils::getLaneletLength2d(lane);
+    total_length += lanelet::geometry::length2d(lane);
 
     const auto is_reachable = distance < reachable_point.value().second || is_unsafe_holding;
 
@@ -503,23 +508,36 @@ auto check_turn_behavior(
 
 void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & detection_areas)
 {
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
+  const auto combine_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
+  if (!combine_lanelet_opt.has_value()) {
+    return;
+  }
+  const auto & combine_lanelet = combine_lanelet_opt.value();
+
+  const autoware_utils_geometry::Polygon2d combine_lanelet_boost = [&]() {
+    autoware_utils_geometry::Polygon2d poly;
+    boost::geometry::convert(combine_lanelet.polygon2d().basicPolygon(), poly);
+    return poly;
+  }();
 
   for (auto & [original, _] : detection_areas) {
     if (original.empty()) {
       continue;
     }
 
-    lanelet::BasicPolygons2d polygons2d;
-    boost::geometry::difference(
-      lanelet::utils::to2D(original), combine_lanelet.polygon2d().basicPolygon(), polygons2d);
+    autoware_utils_geometry::Polygon2d orig_polygon_boost;
+    boost::geometry::convert(lanelet::utils::to2D(original), orig_polygon_boost);
+
+    autoware_utils_geometry::MultiPolygon2d polygons2d;
+    boost::geometry::difference(orig_polygon_boost, combine_lanelet_boost, polygons2d);
 
     if (polygons2d.empty()) {
       continue;
     }
 
     lanelet::BasicPolygon3d polygon3d;
-    for (const auto & p : polygons2d.front()) {
+    for (const auto & p : polygons2d.front().outer()) {
       polygon3d.push_back(lanelet::BasicPoint3d(p.x(), p.y(), original.front().z()));
     }
 
@@ -602,12 +620,22 @@ auto get_previous_polygons_with_lane_recursively(
   }
 
   if (route_handler->getPreviousLanelets(target_lanes.front()).empty()) {
-    const auto total_length = lanelet::utils::getLaneletLength2d(target_lanes);
-    const auto expand_lanelets =
-      lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
-    const auto polygon = lanelet::utils::getPolygonFromArcLength(
+    const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
+    const auto expand_lanelets_opt =
+      autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+        target_lanes, left_offset, -1.0 * right_offset);
+    if (!expand_lanelets_opt.has_value()) {
+      return ret;
+    }
+    const auto & expand_lanelets = expand_lanelets_opt.value();
+    const auto polygon_opt = autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
       expand_lanelets, total_length - s2, total_length - s1);
+    if (!polygon_opt.has_value()) {
+      return ret;
+    }
+    const auto & polygon = polygon_opt.value();
     ret.emplace_back(polygon.basicPolygon(), target_lanes);
+
     return ret;
   }
 
@@ -616,12 +644,22 @@ auto get_previous_polygons_with_lane_recursively(
       const auto overlap_current_lanes = std::any_of(
         current_lanes.begin(), current_lanes.end(),
         [&prev_lane](const auto & lane) { return lane.id() == prev_lane.id(); });
-      const auto total_length = lanelet::utils::getLaneletLength2d(target_lanes);
+      const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
       if (overlap_current_lanes) {
-        const auto expand_lanelets =
-          lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
-        const auto polygon = lanelet::utils::getPolygonFromArcLength(
-          expand_lanelets, total_length - s2, total_length - s1);
+        const auto expand_lanelets_opt =
+          autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+            target_lanes, left_offset, -1.0 * right_offset);
+        if (!expand_lanelets_opt.has_value()) {
+          continue;
+        }
+        const auto & expand_lanelets = expand_lanelets_opt.value();
+        const auto polygon_opt =
+          autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+            expand_lanelets, total_length - s2, total_length - s1);
+        if (!polygon_opt.has_value()) {
+          continue;
+        }
+        const auto & polygon = polygon_opt.value();
         ret.emplace_back(polygon.basicPolygon(), target_lanes);
 
         continue;
@@ -632,13 +670,24 @@ auto get_previous_polygons_with_lane_recursively(
     pushed_lanes.insert(pushed_lanes.begin(), prev_lane);
 
     {
-      const auto total_length = lanelet::utils::getLaneletLength2d(pushed_lanes);
+      const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(pushed_lanes));
       if (total_length > s2) {
-        const auto expand_lanelets =
-          lanelet::utils::getExpandedLanelets(pushed_lanes, left_offset, -1.0 * right_offset);
-        const auto polygon = lanelet::utils::getPolygonFromArcLength(
-          expand_lanelets, total_length - s2, total_length - s1);
+        const auto expand_lanelets_opt =
+          autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+            pushed_lanes, left_offset, -1.0 * right_offset);
+        if (!expand_lanelets_opt.has_value()) {
+          continue;
+        }
+        const auto & expand_lanelets = expand_lanelets_opt.value();
+        const auto polygon_opt =
+          autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+            expand_lanelets, total_length - s2, total_length - s1);
+        if (!polygon_opt.has_value()) {
+          continue;
+        }
+        const auto & polygon = polygon_opt.value();
         ret.emplace_back(polygon.basicPolygon(), pushed_lanes);
+
       } else {
         const auto polygons = get_previous_polygons_with_lane_recursively(
           current_lanes, pushed_lanes, s1, s2, route_handler, left_offset, right_offset);
@@ -662,8 +711,8 @@ auto get_obstacle_points(const lanelet::BasicPolygons3d & polygons, const PointC
       if (squared_dist > circle.second) {
         continue;
       }
-      if (boost::geometry::within(
-            autoware_utils::Point2d{p.x, p.y}, lanelet::utils::to2D(polygon))) {
+      if (
+        boost::geometry::within(autoware_utils::Point2d{p.x, p.y}, lanelet::utils::to2D(polygon))) {
         ret.push_back(p);
       }
     }
@@ -675,10 +724,15 @@ auto generate_detection_polygon(
   const lanelet::ConstLanelets & lanelets, const geometry_msgs::msg::Pose & ego_pose,
   const double forward_distance, const double backward_distance) -> lanelet::BasicPolygon3d
 {
-  const auto ego_coordinate_on_arc = lanelet::utils::getArcCoordinates(lanelets, ego_pose).length;
-  const auto polygon = lanelet::utils::getPolygonFromArcLength(
+  const auto ego_coordinate_on_arc =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, ego_pose).length;
+  const auto polygon_opt = autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
     lanelets, ego_coordinate_on_arc - backward_distance, ego_coordinate_on_arc + forward_distance);
-  return polygon.basicPolygon();
+  if (polygon_opt.has_value()) {
+    return polygon_opt.value().basicPolygon();
+  }
+  // return blank polygon (no detection_polygon)
+  return lanelet::BasicPolygon3d();
 }
 
 auto generate_half_lanelet(
@@ -689,14 +743,17 @@ auto generate_half_lanelet(
   lanelet::Points3d lefts, rights;
 
   const double offset = !is_right ? ignore_width_from_centerline : -ignore_width_from_centerline;
-  const auto offset_centerline = lanelet::utils::getCenterlineWithOffset(lanelet, offset);
+  const auto offset_centerline =
+    autoware::experimental::lanelet2_utils::get_centerline_with_offset(lanelet, offset);
 
   const auto original_left_bound =
-    !is_right ? lanelet::utils::getLeftBoundWithOffset(lanelet, expand_width_from_bound)
+    !is_right ? autoware::experimental::lanelet2_utils::get_left_bound_with_offset(
+                  lanelet, expand_width_from_bound)
               : offset_centerline;
   const auto original_right_bound =
     !is_right ? offset_centerline
-              : lanelet::utils::getRightBoundWithOffset(lanelet, expand_width_from_bound);
+              : autoware::experimental::lanelet2_utils::get_right_bound_with_offset(
+                  lanelet, expand_width_from_bound);
 
   for (const auto & pt : original_left_bound) {
     lefts.emplace_back(pt);

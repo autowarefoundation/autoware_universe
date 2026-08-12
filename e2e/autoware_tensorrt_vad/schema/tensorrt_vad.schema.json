@@ -1,0 +1,483 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for TensorRT VAD Node",
+  "type": "object",
+  "definitions": {
+    "tensorrt_vad_node": {
+      "type": "object",
+      "properties": {
+        "node_params": {
+          "type": "object",
+          "properties": {
+            "num_cameras": {
+              "type": "integer",
+              "default": 6,
+              "minimum": 1,
+              "description": "Number of cameras for multi-view perception"
+            },
+            "use_raw": {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              },
+              "default": [false, false, false, false, false, false],
+              "description": "Image format for each camera: false = compressed (default), true = raw. Array length must match num_cameras. [FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT]"
+            }
+          },
+          "required": ["num_cameras", "use_raw"]
+        },
+        "interface_params": {
+          "type": "object",
+          "properties": {
+            "input_image_width": {
+              "type": "integer",
+              "default": 1600,
+              "minimum": 1,
+              "description": "Original input image width from camera before resizing"
+            },
+            "input_image_height": {
+              "type": "integer",
+              "default": 900,
+              "minimum": 1,
+              "description": "Original input image height from camera before resizing"
+            },
+            "target_image_width": {
+              "type": "integer",
+              "default": 640,
+              "minimum": 1,
+              "description": "Target image width for model input (after resizing)"
+            },
+            "target_image_height": {
+              "type": "integer",
+              "default": 384,
+              "minimum": 1,
+              "description": "Target image height for model input (after resizing)"
+            },
+            "detection_range": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 6,
+              "maxItems": 6,
+              "default": [-30.0, -16.0, -0.355, 30.0, 16.0, 4.645],
+              "description": "Detection range [x_min, y_min, z_min, x_max, y_max, z_max] in base_link frame (meters)"
+            },
+            "trajectory_timestep": {
+              "type": "number",
+              "default": 0.5,
+              "exclusiveMinimum": 0,
+              "description": "Time interval between trajectory points (seconds)"
+            },
+            "map_colors": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "minItems": 18,
+              "maxItems": 18,
+              "default": [
+                1.0, 0.5, 0.0, 0.3922, 0.5843, 0.9294, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0,
+                0.7, 0.0, 0.0
+              ],
+              "description": "Map element colors in RGB format (0-1 scale), 3 values per class: [Broken, Solid, SolidSolid, Center, TrafficLight, StopSign]"
+            }
+          },
+          "required": [
+            "input_image_width",
+            "input_image_height",
+            "target_image_width",
+            "target_image_height",
+            "detection_range",
+            "trajectory_timestep",
+            "map_colors"
+          ]
+        },
+        "model_params": {
+          "type": "object",
+          "properties": {
+            "plugins_path": {
+              "type": "string",
+              "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
+              "description": "Path to libautoware_tensorrt_plugins.so file for custom TensorRT operations"
+            },
+            "default_command": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Default navigation command: 0=LEFT, 1=RIGHT, 2=STRAIGHT, 3=LANE_FOLLOW, 4=CHANGE_LANE_LEFT, 5=CHANGE_LANE_RIGHT"
+            },
+            "map_class_names": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["Broken", "Solid", "SolidSolid", "Center", "TrafficLight", "StopSign"],
+              "description": "Map element class names for lane detection and traffic infrastructure"
+            },
+            "map_confidence_thresholds": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "default": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+              "description": "Detection confidence thresholds for map classes (0-1 scale). Must match length of map_class_names"
+            },
+            "object_class_names": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "car",
+                "van",
+                "truck",
+                "bicycle",
+                "traffic_sign",
+                "traffic_cone",
+                "traffic_light",
+                "pedestrian",
+                "others"
+              ],
+              "description": "Object class names for detection and tracking"
+            },
+            "object_confidence_thresholds": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "default": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.3],
+              "description": "Detection confidence thresholds for object classes (0-1 scale). Must match length of object_class_names"
+            },
+            "image_normalization_param_mean": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "default": [123.675, 116.28, 103.53],
+              "description": "Image normalization mean values for RGB channels (ImageNet normalization)"
+            },
+            "image_normalization_param_std": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "default": [58.395, 57.12, 57.375],
+              "description": "Image normalization standard deviation values for RGB channels (ImageNet normalization)"
+            },
+            "network_io_params": {
+              "type": "object",
+              "properties": {
+                "bev_h": {
+                  "type": "integer",
+                  "default": 106,
+                  "minimum": 1,
+                  "description": "Bird's eye view grid height"
+                },
+                "bev_w": {
+                  "type": "integer",
+                  "default": 200,
+                  "minimum": 1,
+                  "description": "Bird's eye view grid width"
+                },
+                "bev_feature_dim": {
+                  "type": "integer",
+                  "default": 256,
+                  "minimum": 1,
+                  "description": "Bird's eye view feature dimension"
+                },
+                "downsample_factor": {
+                  "type": "integer",
+                  "default": 32,
+                  "minimum": 1,
+                  "description": "Image downsample factor in the backbone network"
+                },
+                "num_decoder_layers": {
+                  "type": "integer",
+                  "default": 3,
+                  "minimum": 1,
+                  "description": "Number of transformer decoder layers"
+                },
+                "prediction_num_queries": {
+                  "type": "integer",
+                  "default": 300,
+                  "minimum": 1,
+                  "description": "Number of object detection queries"
+                },
+                "prediction_num_classes": {
+                  "type": "integer",
+                  "default": 9,
+                  "minimum": 1,
+                  "description": "Number of object prediction classes"
+                },
+                "prediction_bbox_pred_dim": {
+                  "type": "integer",
+                  "default": 10,
+                  "minimum": 1,
+                  "description": "Bounding box prediction dimension: [cx, cy, w, l, cz, h, sin, cos, vx, vy]"
+                },
+                "prediction_trajectory_modes": {
+                  "type": "integer",
+                  "default": 6,
+                  "minimum": 1,
+                  "description": "Number of trajectory prediction modes for detected objects"
+                },
+                "prediction_timesteps": {
+                  "type": "integer",
+                  "default": 6,
+                  "minimum": 1,
+                  "description": "Number of timesteps for object trajectory prediction"
+                },
+                "planning_ego_commands": {
+                  "type": "integer",
+                  "default": 6,
+                  "minimum": 1,
+                  "description": "Number of ego planning commands"
+                },
+                "planning_timesteps": {
+                  "type": "integer",
+                  "default": 6,
+                  "minimum": 1,
+                  "description": "Number of timesteps for ego planning trajectory"
+                },
+                "map_num_queries": {
+                  "type": "integer",
+                  "default": 100,
+                  "minimum": 1,
+                  "description": "Number of map element detection queries"
+                },
+                "map_num_class": {
+                  "type": "integer",
+                  "default": 6,
+                  "minimum": 1,
+                  "description": "Number of map element classes"
+                },
+                "map_points_per_polylines": {
+                  "type": "integer",
+                  "default": 20,
+                  "minimum": 1,
+                  "description": "Number of points per map polyline"
+                },
+                "can_bus_dim": {
+                  "type": "integer",
+                  "default": 18,
+                  "minimum": 1,
+                  "description": "CAN bus data dimension (vehicle state)"
+                }
+              },
+              "required": [
+                "bev_h",
+                "bev_w",
+                "bev_feature_dim",
+                "downsample_factor",
+                "num_decoder_layers",
+                "prediction_num_queries",
+                "prediction_num_classes",
+                "prediction_bbox_pred_dim",
+                "prediction_trajectory_modes",
+                "prediction_timesteps",
+                "planning_ego_commands",
+                "planning_timesteps",
+                "map_num_queries",
+                "map_num_class",
+                "map_points_per_polylines",
+                "can_bus_dim"
+              ]
+            },
+            "nets": {
+              "type": "object",
+              "properties": {
+                "backbone": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "default": "backbone",
+                      "description": "Backbone network name"
+                    },
+                    "onnx_path": {
+                      "type": "string",
+                      "description": "Path to backbone ONNX model file"
+                    },
+                    "engine_path": {
+                      "type": "string",
+                      "description": "Path to backbone TensorRT engine file"
+                    },
+                    "precision": {
+                      "type": "string",
+                      "enum": ["fp32", "fp16", "int8"],
+                      "default": "fp16",
+                      "description": "TensorRT precision mode"
+                    }
+                  },
+                  "required": ["name", "onnx_path", "engine_path", "precision"]
+                },
+                "head": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "default": "head",
+                      "description": "Head network name (with previous state)"
+                    },
+                    "onnx_path": {
+                      "type": "string",
+                      "description": "Path to head ONNX model file"
+                    },
+                    "engine_path": {
+                      "type": "string",
+                      "description": "Path to head TensorRT engine file"
+                    },
+                    "precision": {
+                      "type": "string",
+                      "enum": ["fp32", "fp16", "int8"],
+                      "default": "fp32",
+                      "description": "TensorRT precision mode"
+                    },
+                    "inputs": {
+                      "type": "object",
+                      "properties": {
+                        "input_feature": {
+                          "type": "string",
+                          "default": "mlvl_feats.0",
+                          "description": "Input feature layer name"
+                        },
+                        "net": {
+                          "type": "string",
+                          "default": "backbone",
+                          "description": "Source network name"
+                        },
+                        "name": {
+                          "type": "string",
+                          "default": "out.0",
+                          "description": "Output tensor name from source network"
+                        }
+                      },
+                      "required": ["input_feature", "net", "name"]
+                    }
+                  },
+                  "required": ["name", "onnx_path", "engine_path", "precision", "inputs"]
+                },
+                "head_no_prev": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "default": "head_no_prev",
+                      "description": "Head network name (without previous state)"
+                    },
+                    "onnx_path": {
+                      "type": "string",
+                      "description": "Path to head_no_prev ONNX model file"
+                    },
+                    "engine_path": {
+                      "type": "string",
+                      "description": "Path to head_no_prev TensorRT engine file"
+                    },
+                    "precision": {
+                      "type": "string",
+                      "enum": ["fp32", "fp16", "int8"],
+                      "default": "fp32",
+                      "description": "TensorRT precision mode"
+                    },
+                    "inputs": {
+                      "type": "object",
+                      "properties": {
+                        "input_feature": {
+                          "type": "string",
+                          "default": "mlvl_feats.0",
+                          "description": "Input feature layer name"
+                        },
+                        "net": {
+                          "type": "string",
+                          "default": "backbone",
+                          "description": "Source network name"
+                        },
+                        "name": {
+                          "type": "string",
+                          "default": "out.0",
+                          "description": "Output tensor name from source network"
+                        }
+                      },
+                      "required": ["input_feature", "net", "name"]
+                    }
+                  },
+                  "required": ["name", "onnx_path", "engine_path", "precision", "inputs"]
+                }
+              },
+              "required": ["backbone", "head", "head_no_prev"]
+            }
+          },
+          "required": [
+            "plugins_path",
+            "default_command",
+            "map_class_names",
+            "map_confidence_thresholds",
+            "object_class_names",
+            "object_confidence_thresholds",
+            "image_normalization_param_mean",
+            "image_normalization_param_std",
+            "network_io_params",
+            "nets"
+          ]
+        },
+        "sync_params": {
+          "type": "object",
+          "properties": {
+            "front_camera_id": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0,
+              "description": "Index of the front camera (anchor camera for synchronization)"
+            },
+            "sync_tolerance_ms": {
+              "type": "number",
+              "default": 500.0,
+              "exclusiveMinimum": 0,
+              "description": "Synchronization tolerance in milliseconds for multi-camera frame alignment"
+            }
+          },
+          "required": ["front_camera_id", "sync_tolerance_ms"]
+        },
+        "class_mapping": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Class name mapping for object remapping"
+        }
+      },
+      "required": [
+        "node_params",
+        "interface_params",
+        "model_params",
+        "sync_params",
+        "class_mapping"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/tensorrt_vad_node"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

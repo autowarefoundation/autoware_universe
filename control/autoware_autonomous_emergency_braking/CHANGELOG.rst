@@ -2,6 +2,66 @@
 Changelog for package autoware_autonomous_emergency_braking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(aeb, collision_detector): skip empty point clouds to silence PCL warning spam (`#12670 <https://github.com/autowarefoundation/autoware_universe/issues/12670>`_)
+* fix(aeb, shape_estimation): guard pcl::fromROSMsg against empty point clouds (`#12569 <https://github.com/autowarefoundation/autoware_universe/issues/12569>`_)
+* Contributors: Mert Yavuz, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* refactor: use boost version instead of ros version (`#11884 <https://github.com/autowarefoundation/autoware_universe/issues/11884>`_)
+* feat: control : fix contol packages compile error when using ros2 jazzy (`#11556 <https://github.com/autowarefoundation/autoware_universe/issues/11556>`_)
+* docs(aeb): revise general terminology (`#11835 <https://github.com/autowarefoundation/autoware_universe/issues/11835>`_)
+  * docs(aeb): revise general terminology
+  * revise terminology from image
+  * revise variable name
+  ---------
+* Contributors: Felix F Xu, Ryohsuke Mitsudome, Zulfaqar Azmi, 心刚
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix: resolve clock type mismatch in tf2 lookups with simulation time (`#11523 <https://github.com/autowarefoundation/autoware_universe/issues/11523>`_)
+  * fix: resolve clock type mismatch in tf2 transform lookups
+  Replace rclcpp::Time(0) with tf2::TimePointZero in lookupTransform calls
+  to fix clock type conflicts when using simulation time.
+  The issue:
+  - rclcpp::Time(0) creates a time with SYSTEM_TIME clock type
+  - When nodes run with use_sim_time:=true, transforms use ROS_TIME clock
+  - This causes clock type mismatch errors in tf2 lookups
+  - Error: "Lookup would require extrapolation into the past"
+  The fix:
+  - tf2::TimePointZero is clock-type agnostic
+  - Correctly represents "get latest available transform"
+  - Also replaced rclcpp::Duration::from_seconds() with tf2::durationFromSec()
+  This bug affects transform lookups in critical safety and planning
+  components, causing runtime errors when simulation time is enabled.
+  Affected packages:
+  - autoware_autonomous_emergency_braking
+  - autoware_planning_evaluator
+  - autoware_freespace_planner
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, ralwing
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)

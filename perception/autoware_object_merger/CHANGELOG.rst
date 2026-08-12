@@ -2,6 +2,99 @@
 Changelog for package autoware_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(object_merger): fix to improve readability beside copy (`#12782 <https://github.com/autowarefoundation/autoware_universe/issues/12782>`_)
+  fix to improve readability
+* fix(autoware_object_merger): disable test when agnocast enabled (`#12773 <https://github.com/autowarefoundation/autoware_universe/issues/12773>`_)
+  disable test when agnocast enabled
+* feat(object_merger): apply `agnocast_wrapper::Node` to object_merger (`#12704 <https://github.com/autowarefoundation/autoware_universe/issues/12704>`_)
+  * apply agnocast
+  * style(pre-commit): autofix
+  * apply to fusion_merger
+  * style(pre-commit): autofix
+  * delete unnecessary comments
+  * delete unnecessary
+  * fix for non-copy
+  * delete unnecessary blank space
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_object_merger): add parameter for new added classes ANIMAL and HAZARD (`#12736 <https://github.com/autowarefoundation/autoware_universe/issues/12736>`_)
+  * fix(autoware_object_merger): add parameter for new added classes ANIMAL and HAZARD
+  * fix: update overloap judge
+  ---------
+* feat(perception): add new cluster and merger (`#12682 <https://github.com/autowarefoundation/autoware_universe/issues/12682>`_)
+  * feat: add label-based clustering algorithm
+  * feat: update cluster
+  * feat: update cluster
+  * feat(object_merger): add a new merger (`#2906 <https://github.com/autowarefoundation/autoware_universe/issues/2906>`_)
+  * fix: missign mapped_label
+  * chore: move shape policy to launch
+  * fix: label_based_EU node name
+  * fix: using voxel_based EC
+  * feat: add support of keeping dimensions option
+  * feat: replace convex hull by union
+  * style(pre-commit): autofix
+  * refactor: shape fitting
+  * refactor: min/max computation
+  * refactor: define UnionGeometry
+  * refactor: separate grouping sub objects and building fused objects into two functions
+  * refactor: seprate functions
+  * feat: add support of hazard
+  * docs: add document for LabelBasedEuclideanCluster
+  * chore: fix spell check
+  * chore: fix launcher
+  * chore: modify pushable_pullable to pedestrian
+  * chore: add schema file for label_based_euclidean_cluster
+  * chore: add schema file for object_fusion_merger
+  ---------
+  Co-authored-by: badai-nguyen <dai.nguyen@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Kotaro Uetake, badai nguyen, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(object_association_merger): apply autoware_agnocast_wrapper for CIE (`#12328 <https://github.com/mitsudome-r/autoware_universe/issues/12328>`_)
+  feat(autoware_object_merger): apply autoware_agnocast_wrapper for CIE
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Taekjin LEE, Vishal Chauhan, atsushi yano, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(planning, perception): replace wall_timer with generic timer (`#11005 <https://github.com/autowarefoundation/autoware_universe/issues/11005>`_)
+  * feat(planning, perception): replace wall_timer with generic timer
+  * use rclcpp::create_timer
+  * remove period_ns
+  ---------
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(autoware_object_merger): add merger priority_mode (`#11042 <https://github.com/autowarefoundation/autoware_universe/issues/11042>`_)

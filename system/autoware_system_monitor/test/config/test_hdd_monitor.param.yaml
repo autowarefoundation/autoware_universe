@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    hdd_reader_port: 7635
+    hdd_reader_socket_path: "/tmp/hdd_reader.sock"
     disks:
     - name: /dev/sda
       temp_warn: 55.0

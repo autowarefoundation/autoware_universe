@@ -16,10 +16,20 @@
               "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
               "uniqueItems": true
             },
+            "has_twist": {
+              "type": "boolean",
+              "description": "Indicates whether the model outputs twist value.",
+              "default": false
+            },
             "point_feature_size": {
               "type": "integer",
               "description": "A number of channels of point feature layer.",
               "default": 4
+            },
+            "has_variance": {
+              "type": "boolean",
+              "description": "Indicates whether the model outputs variance value.",
+              "default": false
             },
             "max_voxel_size": {
               "type": "integer",
@@ -36,7 +46,7 @@
               "description": "An array of voxel grid sizes for PointPainting, this must have same length with `paint_class_names`.",
               "default": [0.32, 0.32, 10.0]
             },
-            "down_sample_factor": {
+            "downsample_factor": {
               "type": "integer",
               "description": "A scale factor of downsampling points",
               "default": 1,
@@ -46,6 +56,48 @@
               "type": "integer",
               "description": "A size of encoder input feature channels.",
               "default": 9
+            },
+            "detection_score_thresholds": {
+              "type": "object",
+              "description": "A dictionary of minimum confidence scores for each class and a distance bin upper limits.",
+              "properties": {
+                "distance_bin_upper_limits": {
+                  "type": "array",
+                  "description": "An array of upper bounds of each distance bin.",
+                  "default": [50.0, 90.0, 121.0, 200.0]
+                },
+                "min_confidence_scores": {
+                  "type": "object",
+                  "description": "A dictionary of minimum confidence scores for each class.",
+                  "properties": {
+                    "CAR": {
+                      "type": "array",
+                      "description": "A minimum confidence score for CAR in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "TRUCK": {
+                      "type": "array",
+                      "description": "A minimum confidence score for TRUCK in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BUS": {
+                      "type": "array",
+                      "description": "A minimum confidence score for BUS in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BICYCLE": {
+                      "type": "array",
+                      "description": "A minimum confidence score for BICYCLE in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "PEDESTRIAN": {
+                      "type": "array",
+                      "description": "A minimum confidence score for PEDESTRIAN in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    }
+                  }
+                }
+              }
             }
           }
         }

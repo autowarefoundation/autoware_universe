@@ -102,7 +102,7 @@ std::vector<uint16_t> CommandModeDecider::decide(
   }
 
   // TODO(Takagi, Isamu): Use the available MRM according to the state transitions.
-  // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/features/fail-safe/#behavior
+  // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/interfaces/ad-api/features/fail-safe/#behavior
 
   namespace modes = autoware::command_mode_types::modes;
 

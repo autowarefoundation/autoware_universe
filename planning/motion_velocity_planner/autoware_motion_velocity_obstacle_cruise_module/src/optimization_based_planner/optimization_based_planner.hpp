@@ -21,8 +21,6 @@
 #include "s_boundary.hpp"
 #include "velocity_optimizer.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
@@ -138,4 +136,3 @@ private:
 }  // namespace autoware::motion_velocity_planner
 // clang-format off
 #endif  // OPTIMIZATION_BASED_PLANNER__OPTIMIZATION_BASED_PLANNER_HPP_  // NOLINT
-// clang-format on

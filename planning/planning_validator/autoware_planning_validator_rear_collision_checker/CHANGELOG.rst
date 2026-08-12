@@ -2,6 +2,63 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix: bound int 32 range for rqt_reconfigure older than 1.1.4 (`#12349 <https://github.com/mitsudome-r/autoware_universe/issues/12349>`_)
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - planning component (`#12083 <https://github.com/mitsudome-r/autoware_universe/issues/12083>`_)
+  * replace getArcCoordinates in planning component
+  * replace getCenterlineWithOffset in planning component
+  * replace getRight/LeftBoundWithOffset in planning component
+  * replace getExpandedLanelet(s) in planning component
+  * replace combineLaneletsShape in planning component
+  * remove log for empty combine_lanelet_opt
+  * bind reference to optional value
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, Yuxuan Liu, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator_rear_collision_checker): use autoware_utils_geometry type (`#11940 <https://github.com/autowarefoundation/autoware_universe/issues/11940>`_)
+* docs(rear_collision_checker): revise sentence from README. (`#11837 <https://github.com/autowarefoundation/autoware_universe/issues/11837>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Zulfaqar Azmi
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(rear_collision_checker): correct deviation judgment logic from current driving lane (`#11286 <https://github.com/autowarefoundation/autoware_universe/issues/11286>`_)
+  fix: correct deviation judgment logic from current driving lane
+* fix(rear_collision_checker): collision detection not triggered when no stop point before conflict area (`#11179 <https://github.com/autowarefoundation/autoware_universe/issues/11179>`_)
+  * fix: collision detection not triggered when no stop point before conflict area
+  * fix: incorrect distance calculation accuracy
+  * chore: add doxygen
+  ---------
+* feat(rear_collision_checker): add parameter to make collision detection behavior configurable (`#11151 <https://github.com/autowarefoundation/autoware_universe/issues/11151>`_)
+  * feat: add parameter to control diag output when stopping before conflict area is impossible
+  * feat: add lane-end yaw threshold for blind spot collision detection
+  * fix: base on review comment
+  * docs: README
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Satoshi OTA
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(rear_collision_checker): support selecting safety metric from TTC or RSS (`#11072 <https://github.com/autowarefoundation/autoware_universe/issues/11072>`_)

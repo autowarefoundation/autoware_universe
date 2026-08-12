@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_pointcloud_preprocessor</name>
-  <version>0.47.0</version>
+  <version>0.52.0</version>
   <description>The ROS 2 autoware_pointcloud_preprocessor package</description>
   <maintainer email="abrahammonrroy@yahoo.com">amc-nu</maintainer>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
@@ -27,8 +27,10 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_pcl_extensions</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_sensing_msgs</depend>
@@ -37,6 +39,7 @@
   <depend>cgal</depend>
   <depend>cv_bridge</depend>
   <depend>diagnostic_updater</depend>
+  <depend>eigen</depend>
   <depend>image_transport</depend>
   <depend>libopencv-dev</depend>
   <depend>libpcl-all-dev</depend>

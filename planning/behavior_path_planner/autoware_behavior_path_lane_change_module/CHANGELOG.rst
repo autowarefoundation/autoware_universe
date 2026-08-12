@@ -2,6 +2,151 @@
 Changelog for package autoware_behavior_path_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(lane_change): recreate lane change path if deviation is high (`#12280 <https://github.com/mitsudome-r/autoware_universe/issues/12280>`_)
+  * feat(lane_change): recreate lane change path if deviation is high
+  * fix: clang-tidy
+  * fix: update all params
+  * feat: empty check
+  * feat: use directly lateral thresholds instead of scaling them
+  ---------
+* fix(planning): a typo in behavior_path_planner config yaml file (`#12251 <https://github.com/mitsudome-r/autoware_universe/issues/12251>`_)
+  Fix a typo in config yaml file that causes unit test failure on ARM64 environment.
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* refactor(planning): replace toGeomMsg/toLaneletPoint to autoware_lanelet2_utils in lane_change/goal_planner (`#12080 <https://github.com/mitsudome-r/autoware_universe/issues/12080>`_)
+  refactor(behavior_path_planner): deprecate toLaneletPoint/toGeomPt in lane_change/goal_planner
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bpp packages (`#12085 <https://github.com/mitsudome-r/autoware_universe/issues/12085>`_)
+  * replace getArcCoordinates in bpp packages
+  * replace getArcCoordinates usage in bpp packages (2)
+  * replace getArcCoordinates in bpp package (3)
+  (autoware_behavior_path_goal_planner_module)
+  * replace getArcCoordinates in bpp package(4)
+  (autoware_behavior_path_start_planner_module)
+  * replace getLateralDistanceToClosestLanelet in bpp package
+  * replace getExpandedLanelet(s) in bpp package
+  * replace combineLaneletsShape in bpp packages
+  * fix wrong condition in bpp
+  * style(pre-commit): autofix
+  * remove directly dereference opt for combine_lanelet
+  * remove log if lanelet is empty
+  * bind reference to optional value for combine_lanelets_shape
+  * remove log and simply return outside else in get_dirty_expanded_lanelets opt
+  * remove .has_value in lane_change_module for consistency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* refactor(planning): replace toGeomMsg/toLaneletPoint to autoware_lanelet2_utils in bpp_common (`#12091 <https://github.com/mitsudome-r/autoware_universe/issues/12091>`_)
+  * refactor(behavior_path_planner): deprecate toLaneletPoint/toGeomPt in bpp_common package
+  * fix
+  ---------
+* chore: organize maintainer (`#12123 <https://github.com/mitsudome-r/autoware_universe/issues/12123>`_)
+* Contributors: Mamoru Sobue, Mehmet Emin BAŞOĞLU, Sarun MUKDAPITAK, Satoshi OTA, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(lane_change): fix incorrect activation of lane change module (`#12039 <https://github.com/autowarefoundation/autoware_universe/issues/12039>`_)
+  * refactor code to get lc target lane, ignore lanes behind ego
+  * check if current lanes has front lane before extending
+  * Apply suggestion from @zulfaqar-azmi-t4
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * use adjacentLeft/Right to get target lane for intersection lanes
+  ---------
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+* fix(lane_change): revise intersection to no lane change line check (`#12060 <https://github.com/autowarefoundation/autoware_universe/issues/12060>`_)
+  * fix(lane_change): revise intersection to no lane change line check
+  * fix: address PR comments
+  * fix: if interval is in between, we also check
+  ---------
+* fix(lane_change): validate linestring tag for all path candidates (`#11941 <https://github.com/autowarefoundation/autoware_universe/issues/11941>`_)
+  * fix(lane_change): validate linestring tag for all path candidates
+  * fix: use distance based (there's gdb)
+  * fix: use distance-based evaluation
+  * fix: remove gdb
+  * fix: remove unnecessary code
+  * fix: use half length
+  * docs: docstring
+  * fix: spell check
+  ---------
+* refactor(lane_change, static_obstacle_avoidance): replace getClosesetLanelet, fix undefined behavior for default-initialized Lanelet (`#12010 <https://github.com/autowarefoundation/autoware_universe/issues/12010>`_)
+* feat: manual lane change handeling (`#11273 <https://github.com/autowarefoundation/autoware_universe/issues/11273>`_)
+  manual lane change
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+* fix(lane_change): print debug info for lanes (`#11964 <https://github.com/autowarefoundation/autoware_universe/issues/11964>`_)
+  * fix(lane_change): print debug info for lanes
+  * fix failed test
+  ---------
+* docs(lane_change): revise collision check explanation (`#11845 <https://github.com/autowarefoundation/autoware_universe/issues/11845>`_)
+* fix(lane_change): removed preferred lanes from current lanes (`#11772 <https://github.com/autowarefoundation/autoware_universe/issues/11772>`_)
+  * fix(lane_change): removed preferred lanes from current lanes
+  * search for preferred after alternative
+  * fix precommit
+  * rename function
+  * fix test failure
+  ---------
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome, Yuxuan Liu, Zulfaqar Azmi, mkquda
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(lane_change): prevent path distortion by resetting lane change module when ego is not in either current or target lanes (`#11599 <https://github.com/autowarefoundation/autoware_universe/issues/11599>`_)
+  fix(lane_change): negating path distortion when ego is not in target lanes
+* fix(lane_change): turn signal when valid path is not available (`#11545 <https://github.com/autowarefoundation/autoware_universe/issues/11545>`_)
+  * fix(lane_change): turn signal when valid path is not available
+  * minor refactoring
+* feat(start_planner): supprt rtc force approval to bypass safety check  (`#11482 <https://github.com/autowarefoundation/autoware_universe/issues/11482>`_)
+  feat(start_planner): rtc force approval
+* fix(lane_change): include stopping object beside ego as target (`#11342 <https://github.com/autowarefoundation/autoware_universe/issues/11342>`_)
+  * fix(lane_change): include stopping object beside ego as target
+  * ahead car is completely ahead of ego
+  * compare ego min vertex against object's max vertex
+  * check all paths
+  * include header
+  * check all path and fix trailing object uses deceleration sampling
+  * updating readme
+  ---------
+* fix(lane_change): fix predicted path exceeding end point after approval (`#11360 <https://github.com/autowarefoundation/autoware_universe/issues/11360>`_)
+* feat(bpp, lane_change): enable prepare phase check even when ego is preparing (`#11307 <https://github.com/autowarefoundation/autoware_universe/issues/11307>`_)
+  * feat(bpp, lane_change): enable prepare phase check even when ego is preparing
+  * fix cpp check error
+  ---------
+* feat(lane_change_module): set none planning_factor behavior (`#11328 <https://github.com/autowarefoundation/autoware_universe/issues/11328>`_)
+* fix(bpp_common, lane_change): generate extended objects directly with highest confidence path. (`#11304 <https://github.com/autowarefoundation/autoware_universe/issues/11304>`_)
+  * fix(bpp_common, lane_change): generate extended objects directly with highest confidence path.
+  * handles multiple paths has equal highest confidence
+  ---------
+* docs(lane_change): correct sentence (`#11233 <https://github.com/autowarefoundation/autoware_universe/issues/11233>`_)
+  * docs(lane_change): correct sentence
+  * Update planning/behavior_path_planner/autoware_behavior_path_lane_change_module/README.md
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_lane_change_module/README.md
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_lane_change_module/README.md
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Shumpei Wakabayashi, Tim Clephas, Yuki TAKAGI, Zulfaqar Azmi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(lane_change): properly handle force activation when there is no valid LC path (`#11059 <https://github.com/autowarefoundation/autoware_universe/issues/11059>`_)

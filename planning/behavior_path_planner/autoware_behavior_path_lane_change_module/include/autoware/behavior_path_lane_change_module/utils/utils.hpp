@@ -40,6 +40,7 @@
 
 namespace autoware::behavior_path_planner::utils::lane_change
 {
+using autoware::behavior_path_planner::lane_change::PhaseInfo;
 using autoware::behavior_path_planner::utils::path_safety_checker::ExtendedPredictedObject;
 using autoware::behavior_path_planner::utils::path_safety_checker::
   PoseWithVelocityAndPolygonStamped;
@@ -54,8 +55,10 @@ using autoware_perception_msgs::msg::PredictedPath;
 using autoware_utils::LineString2d;
 using autoware_utils::Polygon2d;
 using behavior_path_planner::lane_change::CommonDataPtr;
+using behavior_path_planner::lane_change::EgoObjectProximity;
 using behavior_path_planner::lane_change::LanesPolygon;
 using behavior_path_planner::lane_change::LCParamPtr;
+using behavior_path_planner::lane_change::MinMaxValue;
 using behavior_path_planner::lane_change::ModuleType;
 using behavior_path_planner::lane_change::PathSafetyStatus;
 using behavior_path_planner::lane_change::TargetLaneLeadingObjects;
@@ -116,9 +119,16 @@ CandidateOutput assignToCandidate(
 std::optional<lanelet::ConstLanelet> get_lane_change_target_lane(
   const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelets & current_lanes);
 
+std::optional<lanelet::ConstLanelet> get_target_lane(
+  const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelets & current_lanes,
+  const bool is_mandatory_lc = false);
+
 std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
   const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path,
   const double lane_changing_acceleration);
+
+std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
+  const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path);
 
 bool isParkedObject(
   const PathWithLaneId & path, const RouteHandler & route_handler,
@@ -252,7 +262,10 @@ bool is_same_lane_with_prev_iteration(
   const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelets & current_lanes,
   const lanelet::ConstLanelets & target_lanes);
 
-bool is_ahead_of_ego(
+MinMaxValue calc_polygon_dist_range_from_terminal_end(
+  const PathWithLaneId & path, const autoware_utils_geometry::Polygon2d & polygon);
+
+EgoObjectProximity calc_ego_object_proximity(
   const CommonDataPtr & common_data_ptr, const PathWithLaneId & path,
   const ExtendedPredictedObject & object);
 
@@ -380,7 +393,7 @@ bool has_overtaking_turn_lane_object(
  */
 bool filter_target_lane_objects(
   const CommonDataPtr & common_data_ptr, const ExtendedPredictedObject & object,
-  const double dist_ego_to_current_lanes_center, const bool ahead_of_ego,
+  const double dist_ego_to_current_lanes_center, const EgoObjectProximity & ego_object_proximity,
   const bool before_terminal, TargetLaneLeadingObjects & leading_objects,
   ExtendedPredictedObjects & trailing_objects);
 
@@ -434,7 +447,7 @@ bool object_path_overlaps_lanes(
  */
 std::vector<std::vector<PoseWithVelocityStamped>> convert_to_predicted_paths(
   const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path,
-  const size_t deceleration_sampling_num);
+  const size_t deceleration_sampling_num, const bool is_approved = false);
 
 /**
  * @brief Validates whether a given pose is a valid starting point for a lane change.
@@ -468,5 +481,65 @@ bool is_valid_start_point(const lane_change::CommonDataPtr & common_data_ptr, co
 std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
   const CommonDataPtr & common_data_ptr, const lane_change::TrajectoryGroup & frenet_candidate,
   [[maybe_unused]] const size_t deceleration_sampling_num);
+
+bool is_moving_object(
+  const CommonDataPtr & common_data_ptr, const ExtendedPredictedObject & object);
+
+/**
+ * @brief Check whether a given lanelet exists in a specified collection of lanelets.
+ *
+ * @param lanelet_collections  Lanelets that define the lookup range.
+ * @param lanelet          Lanelet to check for membership in the target set.
+ * @return true            The lanelet is an element of target_lanelets.
+ *
+ * @note Comparison is performed by lanelet ID, not by geometric or semantic equality.
+ */
+bool is_lanelet_in_lanelet_collections(
+  const lanelet::ConstLanelets & lanelet_collections, const lanelet::ConstLanelet & lanelet);
+
+/**
+ * @brief Trim the lanelet sequence by removing preferred lanes that appear after the first
+ *        alternative lane.
+ *
+ * @param base_lanes       Lanelet sequence to be modified in-place.
+ * @param preferred_lanes  Set of lanelets used to classify which entries are considered preferred.
+ */
+void trim_preferred_after_alternative(
+  lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & preferred_lanes);
+
+/**
+ * @brief Extract line strings that prohibit lane changes from target lanes.
+ *
+ * @param target_lanes  Lanelet sequence to extract boundaries from.
+ * @param direction     Direction (LEFT or RIGHT) indicating which boundary to check.
+ * @return Vector of line strings where lane changes are prohibited.
+ */
+std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
+  const lanelet::ConstLanelets & target_lanes, const Direction direction);
+
+/**
+ * @brief Convert no-lane-change line strings to distance intervals along the centerline path.
+ *
+ * @param no_lane_change_lines  Line strings marking no-lane-change zones.
+ * @param centerline_path       Reference path for distance calculations.
+ * @param ego_pose              Current ego vehicle pose used as distance reference point.
+ * @return Vector of distance intervals [start, end] representing no-lane-change zones.
+ */
+std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
+  const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
+  const PathWithLaneId & centerline_path, const Pose & ego_pose);
+
+/**
+ * @brief Check if a distance point intersects with any no-lane-change interval.
+ *
+ * @param interval_dist_no_lane_change_lines  Distance intervals where lane changes are prohibited.
+ * @param expected_intersecting_dist          Distance point to check for intersection.
+ * @param buffer                              Additional buffer distance added to both ends of each
+ * interval.
+ * @return True if the distance point falls within at least one buffered interval, false otherwise.
+ */
+bool is_intersecting_no_lane_change_lines(
+  const CommonDataPtr & common_data_ptr, const PhaseInfo lc_length,
+  const std::vector<PathPointWithLaneId> & lane_changing_path);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_

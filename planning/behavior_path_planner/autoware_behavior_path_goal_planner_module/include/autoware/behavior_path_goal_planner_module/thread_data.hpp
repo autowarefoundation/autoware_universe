@@ -79,6 +79,7 @@ struct LaneParkingResponse
   std::optional<Pose> closest_start_pose;
   std::optional<std::vector<size_t>> sorted_bezier_indices_opt;
   LaneChangeContext::State lane_change_state{LaneChangeContext::NotLaneChanging{}};
+  std::optional<BehaviorModuleOutput> original_upstream_module_output;
 };
 
 class FreespaceParkingRequest
@@ -94,6 +95,8 @@ public:
   {
     initializeOccupancyGridMap(planner_data, parameters_);
   };
+
+  FreespaceParkingRequest(const FreespaceParkingRequest & other);
 
   const ModuleStatus & getCurrentStatus() const { return current_status_; }
   void update(

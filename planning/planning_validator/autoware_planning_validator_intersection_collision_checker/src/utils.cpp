@@ -14,10 +14,11 @@
 
 #include "autoware/planning_validator_intersection_collision_checker/utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
@@ -26,6 +27,8 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
+
+#include <lanelet2_core/geometry/Lanelet.h>
 
 #include <algorithm>
 #include <cmath>
@@ -151,7 +154,9 @@ lanelet::ConstLanelets extend_lanelet(
   const geometry_msgs::msg::Pose & ref_point, const double distance_th)
 {
   lanelet::ConstLanelets extended_lanelets{ll};
-  auto current_arc_length = lanelet::utils::getArcCoordinates(extended_lanelets, ref_point).length;
+  auto current_arc_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(extended_lanelets, ref_point)
+      .length;
   if (current_arc_length >= distance_th) return extended_lanelets;
 
   lanelet::ConstLanelets prev_lanelets = {ll};
@@ -159,7 +164,7 @@ lanelet::ConstLanelets extend_lanelet(
     prev_lanelets = route_handler.getPreviousLanelets(prev_lanelets.front());
     if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
     extended_lanelets.push_back(prev_lanelets.front());
-    current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
+    current_arc_length += lanelet::geometry::length2d(prev_lanelets.front());
   }
   std::reverse(extended_lanelets.begin(), extended_lanelets.end());
   return extended_lanelets;
@@ -192,8 +197,10 @@ void set_right_turn_target_lanelets(
       const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
       if (!traffic_light_elements.has_value()) continue;
 
-      if (autoware::traffic_light_utils::hasTrafficLightShape(
-            traffic_light_elements.value(), TrafficLightElement::RIGHT_ARROW)) {
+      if (
+        autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+          traffic_light_elements.value(), TrafficLightElement::RIGHT_ARROW,
+          TrafficLightElement::GREEN)) {
         return true;
       }
     }
@@ -219,7 +226,12 @@ void set_right_turn_target_lanelets(
       return extend_lanelet(route_handler, ll, overlap_point, p.detection_range);
     };
 
-  const auto combined_turn_lls = lanelet::utils::combineLaneletsShape(lanelets.turn_lanelets);
+  const auto combined_turn_lls_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets.turn_lanelets);
+  if (!combined_turn_lls_opt.has_value()) {
+    return;
+  }
+  const auto & combined_turn_lls = combined_turn_lls_opt.value();
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
   const auto candidates = lanelet_map_ptr->laneletLayer.search(
     boost::geometry::return_envelope<lanelet::BoundingBox2d>(
@@ -234,8 +246,8 @@ void set_right_turn_target_lanelets(
     const auto overlap_index = get_overlap_index(ll, ego_traj.front_traj, trajectory_ls);
     if (!overlap_index || overlap_index->first < ego_traj.front_index) continue;
     const auto mid_idx = (overlap_index->first + overlap_index->second) / 2;
-    const auto overlap_point =
-      lanelet::utils::getClosestCenterPose(ll, ego_traj.front_traj[mid_idx].pose.position);
+    const auto overlap_point = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+      ll, autoware::experimental::lanelet2_utils::from_ros(ego_traj.front_traj[mid_idx].pose));
     std::pair<double, double> overlap_time;
     overlap_time.first =
       rclcpp::Duration(ego_traj.front_traj[overlap_index->first].time_from_start).seconds();
@@ -285,13 +297,17 @@ void set_left_turn_target_lanelets(
       const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
       if (!traffic_light_elements.has_value()) continue;
 
-      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
-            traffic_light_elements.value(), TrafficLightElement::GREEN)) {
+      if (
+        autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+          traffic_light_elements.value(), TrafficLightElement::CIRCLE,
+          TrafficLightElement::GREEN)) {
         return true;
       }
 
-      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
-            traffic_light_elements.value(), TrafficLightElement::AMBER)) {
+      if (
+        autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+          traffic_light_elements.value(), TrafficLightElement::CIRCLE,
+          TrafficLightElement::AMBER)) {
         return true;
       }
     }
@@ -316,8 +332,9 @@ void set_left_turn_target_lanelets(
     if (id == turn_lanelet_id || ignore_turning(ll)) continue;
     const auto overlap_index = get_overlap_index(ll, ego_traj.front_traj, trajectory_ls);
     if (!overlap_index || overlap_index->first < ego_traj.front_index) continue;
-    const auto overlap_point = lanelet::utils::getClosestCenterPose(
-      ll, ego_traj.front_traj[overlap_index->first].pose.position);
+    const auto overlap_point = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+      ll, autoware::experimental::lanelet2_utils::from_ros(
+            ego_traj.front_traj[overlap_index->first].pose));
     std::pair<double, double> overlap_time;
     overlap_time.first =
       rclcpp::Duration(ego_traj.front_traj[overlap_index->first].time_from_start).seconds();
@@ -420,12 +437,16 @@ MarkerArray get_lanelets_marker_array(const DebugData & debug_data)
   {  // target lanelets
     lanelet::BasicPolygons2d ll_polygons;
     for (const auto & target_ll : debug_data.target_lanelets) {
-      const auto combine_ll = lanelet::utils::combineLaneletsShape(target_ll.lanelets);
-      marker_array.markers.push_back(create_polygon_marker(
-        combine_ll.polygon3d().basicPolygon(), "ICC_target_lanelets", target_ll.id, blue));
-      marker_array.markers.push_back(create_point_marker(
-        target_ll.overlap_point.position, "ICC_target_lanelets_op", target_ll.id, blue));
-      add_text_marker(target_ll, "ICC_target_lanelets_text");
+      const auto combine_ll_opt =
+        autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_ll.lanelets);
+      if (combine_ll_opt.has_value()) {
+        const auto & combine_ll = combine_ll_opt.value();
+        marker_array.markers.push_back(create_polygon_marker(
+          combine_ll.polygon3d().basicPolygon(), "ICC_target_lanelets", target_ll.id, blue));
+        marker_array.markers.push_back(create_point_marker(
+          target_ll.overlap_point.position, "ICC_target_lanelets_op", target_ll.id, blue));
+        add_text_marker(target_ll, "ICC_target_lanelets_text");
+      }
     }
   }
 

@@ -24,9 +24,9 @@
 #include "autoware_lanelet2_extension/regulatory_elements/no_parking_area.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/no_stopping_area.hpp"
 #include "autoware_lanelet2_extension/utility/query.hpp"
-#include "autoware_lanelet2_extension/utility/utilities.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 
 #include <boost/geometry/algorithms/union.hpp>
@@ -321,7 +321,12 @@ GoalCandidates GoalSearcher::search(
   const auto departure_check_lane = goal_planner_utils::createDepartureCheckLanelet(
     pull_over_lanes_, *route_handler, left_side_parking_);
 
-  const auto pull_over_lanelet = lanelet::utils::combineLaneletsShape(pull_over_lanes_);
+  const auto pull_over_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(pull_over_lanes_);
+  if (!pull_over_lanelet_opt.has_value()) {
+    return goal_candidates;
+  }
+  const auto & pull_over_lanelet = pull_over_lanelet_opt.value();
   const auto boundary =
     left_side_parking_ ? pull_over_lanelet.leftBound() : pull_over_lanelet.rightBound();
 
@@ -374,14 +379,16 @@ GoalCandidates GoalSearcher::search(
         continue;
       }
 
-      if (goal_planner_utils::isIntersectingAreas(
-            transformed_vehicle_footprint, no_parking_area_polygons_)) {
+      if (
+        goal_planner_utils::isIntersectingAreas(
+          transformed_vehicle_footprint, no_parking_area_polygons_)) {
         // break here to exclude goals located laterally in no_parking_areas
         break;
       }
 
-      if (goal_planner_utils::isIntersectingAreas(
-            transformed_vehicle_footprint, no_stopping_area_polygons_)) {
+      if (
+        goal_planner_utils::isIntersectingAreas(
+          transformed_vehicle_footprint, no_stopping_area_polygons_)) {
         // break here to exclude goals located laterally in no_stopping_areas
         break;
       }
@@ -421,8 +428,8 @@ void GoalSearcher::countObjectsToAvoid(
 
   // calculate search start/end pose in pull over lanes
   const auto search_start_end_poses = std::invoke([&]() -> std::pair<Pose, Pose> {
-    const auto goal_arc_coords =
-      lanelet::utils::getArcCoordinates(pull_over_lanes_, reference_goal_pose);
+    const auto goal_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+      pull_over_lanes_, reference_goal_pose);
     const double s_start = std::max(0.0, goal_arc_coords.length - backward_length);
     const double s_end = goal_arc_coords.length + forward_length;
     const auto center_line_path = utils::resamplePathWithSpline(
@@ -440,8 +447,11 @@ void GoalSearcher::countObjectsToAvoid(
     /*forward_only_in_route*/ false);
   const auto current_center_line_path = std::invoke([&]() -> PathWithLaneId {
     const double s_start =
-      lanelet::utils::getArcCoordinates(current_lanes, search_start_pose).length;
-    const double s_end = lanelet::utils::getArcCoordinates(current_lanes, search_end_pose).length;
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, search_start_pose)
+        .length;
+    const double s_end =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, search_end_pose)
+        .length;
     return utils::resamplePathWithSpline(
       route_handler->getCenterLinePath(current_lanes, s_start, s_end), 1.0);
   });
@@ -462,10 +472,14 @@ void GoalSearcher::countObjectsToAvoid(
         continue;
       }
       const Pose & object_pose = object.kinematics.initial_pose_with_covariance.pose;
-      const double s_object = lanelet::utils::getArcCoordinates(current_lanes, object_pose).length;
+      const double s_object =
+        autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, object_pose)
+          .length;
       for (auto & goal_candidate : goal_candidates) {
         const Pose & goal_pose = goal_candidate.goal_pose;
-        const double s_goal = lanelet::utils::getArcCoordinates(current_lanes, goal_pose).length;
+        const double s_goal =
+          autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, goal_pose)
+            .length;
         if (s_object < s_goal) {
           goal_candidate.num_objects_to_avoid++;
         }
@@ -521,8 +535,9 @@ void GoalSearcher::update(
     const auto target_objects = goal_planner_utils::filterObjectsByLateralDistance(
       goal_pose, planner_data->parameters.vehicle_width, objects,
       parameters_.object_recognition_collision_check_hard_margins.back(), filter_inside);
-    if (checkCollisionWithLongitudinalDistance(
-          goal_pose, target_objects, occupancy_grid_map, planner_data)) {
+    if (
+      checkCollisionWithLongitudinalDistance(
+        goal_pose, target_objects, occupancy_grid_map, planner_data)) {
       goal_candidate.is_safe = false;
       continue;
     }
@@ -543,8 +558,9 @@ bool GoalSearcher::isSafeGoalWithMarginScaleFactor(
   const double margin =
     parameters_.object_recognition_collision_check_hard_margins.back() * margin_scale_factor;
 
-  if (utils::checkCollisionBetweenFootprintAndObjects(
-        vehicle_footprint_, goal_pose, objects, margin)) {
+  if (
+    utils::checkCollisionBetweenFootprintAndObjects(
+      vehicle_footprint_, goal_pose, objects, margin)) {
     return false;
   }
 
@@ -552,8 +568,9 @@ bool GoalSearcher::isSafeGoalWithMarginScaleFactor(
   constexpr bool filter_inside = true;
   const auto target_objects = goal_planner_utils::filterObjectsByLateralDistance(
     goal_pose, planner_data->parameters.vehicle_width, objects, margin, filter_inside);
-  if (checkCollisionWithLongitudinalDistance(
-        goal_pose, target_objects, occupancy_grid_map, planner_data)) {
+  if (
+    checkCollisionWithLongitudinalDistance(
+      goal_pose, target_objects, occupancy_grid_map, planner_data)) {
     return false;
   }
 
@@ -574,9 +591,10 @@ bool GoalSearcher::checkCollision(
     }
   }
 
-  if (utils::checkCollisionBetweenFootprintAndObjects(
-        vehicle_footprint_, pose, objects,
-        parameters_.object_recognition_collision_check_hard_margins.back())) {
+  if (
+    utils::checkCollisionBetweenFootprintAndObjects(
+      vehicle_footprint_, pose, objects,
+      parameters_.object_recognition_collision_check_hard_margins.back())) {
     return true;
   }
   return false;
@@ -689,7 +707,9 @@ std::optional<GoalCandidate> GoalSearcher::getClosestGoalCandidateAlongLanes(
 
   // Define a lambda function to compute the arc length for a given goal candidate.
   auto getGoalArcLength = [&current_lanes](const auto & candidate) {
-    return lanelet::utils::getArcCoordinates(current_lanes, candidate.goal_pose).length;
+    return autoware::experimental::lanelet2_utils::get_arc_coordinates(
+             current_lanes, candidate.goal_pose)
+      .length;
   };
 
   // Find the closest goal candidate by comparing the arc lengths of each candidate.

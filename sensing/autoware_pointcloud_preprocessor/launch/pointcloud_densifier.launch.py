@@ -12,20 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from ament_index_python.packages import get_package_share_directory
 import launch
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
+from launch_ros.parameter_descriptions import ParameterFile
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
     """Launch the pointcloud densifier node."""
-    pkg_prefix = get_package_share_directory("autoware_pointcloud_preprocessor")
-    config_file = os.path.join(pkg_prefix, "config/pointcloud_densifier.param.yaml")
+    config_file = PathJoinSubstitution(
+        [
+            FindPackageShare("autoware_pointcloud_preprocessor"),
+            "config",
+            "pointcloud_densifier.param.yaml",
+        ]
+    )
 
     input_topic = DeclareLaunchArgument(
         "input_topic",
@@ -48,7 +53,7 @@ def generate_launch_description():
             ("input", LaunchConfiguration("input_topic")),
             ("output", LaunchConfiguration("output_topic")),
         ],
-        parameters=[config_file],
+        parameters=[ParameterFile(config_file)],
     )
 
     # Create container

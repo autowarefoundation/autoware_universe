@@ -344,7 +344,7 @@ private:
       throw std::runtime_error("Topic '" + topic + "' not found in ConcatenatedPointCloudInfo");
     }
 
-    if (target_info->idx_begin != 0 || target_info->length != 0) {
+    if (target_info->status != autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_TIMEOUT) {
       throw std::runtime_error(
         "ConcatenatedPointCloudInfo already has source info for topic '" + topic + "'");
     }

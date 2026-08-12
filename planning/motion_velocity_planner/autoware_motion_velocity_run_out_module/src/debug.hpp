@@ -154,7 +154,7 @@ inline MarkerArray make_debug_collisions_markers(const std::vector<Object> & obj
     for (const auto & col : o.collisions) {
       ss << std::setw(10) << o.uuid.substr(0, 5) + "|";
       if (col.type == collision) ss << std::setw(10) << "C|";
-      if (col.type == ignored_collision) ss << std::setw(10) << "IC|";
+      if (col.type == ignored_collision) ss << std::setw(10) << "I|";
       if (col.type == pass_first_no_collision) ss << std::setw(10) << "P-|";
       if (col.type == no_collision) ss << std::setw(10) << "-|";
       ss << std::setw(20) << col.ego_time_interval << "|";
@@ -208,7 +208,7 @@ inline MarkerArray make_debug_decisions_markers(const ObjectDecisionsTracker & d
       case collision:
         return "C|";
       case ignored_collision:
-        return "IC|";
+        return "I|";
       case pass_first_no_collision:
         return "P|";
       case no_collision:
@@ -258,7 +258,7 @@ inline motion_utils::VirtualWalls create_virtual_walls(
 {
   motion_utils::VirtualWalls virtual_walls;
   motion_utils::VirtualWall wall;
-  wall.text = "run_out (mvp)";
+  wall.text = "run_out";
   wall.longitudinal_offset = front_offset;
   wall.style = motion_utils::VirtualWallType::stop;
   for (const auto & stop_point : result.stop_points) {

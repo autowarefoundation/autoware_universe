@@ -2,6 +2,31 @@
 Changelog for package autoware_behavior_path_bidirectional_traffic_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(planning): replace autoware_universe_utils with specific autoware_utils sub-packagesr (`#12443 <https://github.com/mitsudome-r/autoware_universe/issues/12443>`_)
+* Contributors: Vishal Chauhan, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(bidirectional_traffic): suppress warning (`#11221 <https://github.com/autowarefoundation/autoware_universe/issues/11221>`_)
+* fix(autoware_behavior_path_bidirectional_traffic_module): remove unused function (`#11185 <https://github.com/autowarefoundation/autoware_universe/issues/11185>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe, Yukinari Hisaki
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

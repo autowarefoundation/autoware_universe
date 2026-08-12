@@ -23,6 +23,7 @@
 #include <tier4_planning_msgs/msg/path_change_module_id.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -115,9 +116,24 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     const double turn_signal_intersection_angle_threshold_deg =
       planner_data_->parameters.turn_signal_intersection_angle_threshold_deg;
     const double turn_signal_search_time = planner_data_->parameters.turn_signal_search_time;
+    const std::string turn_signal_roundabout_on_entry =
+      planner_data_->parameters.turn_signal_roundabout_on_entry;
+    const std::string turn_signal_roundabout_on_exit =
+      planner_data_->parameters.turn_signal_roundabout_on_exit;
+    const bool turn_signal_roundabout_entry_indicator_persistence =
+      planner_data_->parameters.turn_signal_roundabout_entry_indicator_persistence;
+    const double turn_signal_roundabout_search_distance =
+      planner_data_->parameters.turn_signal_roundabout_search_distance;
+    const double turn_signal_roundabout_angle_threshold_deg =
+      planner_data_->parameters.turn_signal_roundabout_angle_threshold_deg;
+    const int turn_signal_roundabout_backward_depth =
+      planner_data_->parameters.turn_signal_roundabout_backward_depth;
     planner_data_->turn_signal_decider.setParameters(
       planner_data_->parameters.base_link2front, turn_signal_intersection_search_distance,
-      turn_signal_search_time, turn_signal_intersection_angle_threshold_deg);
+      turn_signal_search_time, turn_signal_intersection_angle_threshold_deg,
+      turn_signal_roundabout_on_entry, turn_signal_roundabout_on_exit,
+      turn_signal_roundabout_entry_indicator_persistence, turn_signal_roundabout_search_distance,
+      turn_signal_roundabout_angle_threshold_deg, turn_signal_roundabout_backward_depth);
   }
 
   // Start timer
@@ -126,6 +142,14 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     const auto period_ns = rclcpp::Rate(planning_hz).period();
     timer_ = rclcpp::create_timer(
       this, get_clock(), period_ns, std::bind(&BehaviorPathPlannerNode::run, this));
+  }
+  // Timeout handling
+  {
+    cyclic_message_timeout_ = declare_parameter<double>("cyclic_timeout");
+    enable_traffic_signal_timeout_ = declare_parameter<bool>("enable_traffic_signal_timeout");
+    diagnostics_message_timeout_ =
+      std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
+        this, "incoming_message_timeout");
   }
 
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
@@ -250,51 +274,75 @@ void BehaviorPathPlannerNode::takeData()
   }
 }
 
-// wait until mandatory data is ready
-bool BehaviorPathPlannerNode::isDataReady()
+// check if mandatory data is ready and check if cyclic data is not timed out.
+BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
+  const rclcpp::Time & now)
 {
-  const auto missing = [this](const auto & name) {
-    RCLCPP_INFO_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for %s", name);
-    return false;
-  };
+  diagnostics_message_timeout_->clear();
+  DataReadyStatus status = DataReadyStatus::SUCCESS;
 
-  if (!current_scenario_) {
-    return missing("scenario_topic");
+  // 1: Check if mandatory data has been received at least once.
+  {
+    const auto update_reception_diagnostics = [&](const auto & ptr, const std::string & name) {
+      if (!ptr) {
+        RCLCPP_INFO_SKIPFIRST_THROTTLE(
+          get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
+        diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
+        status = DataReadyStatus::NOT_RECEIVED;
+        return;
+      }
+      diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
+    };
+
+    update_reception_diagnostics(route_ptr_, "route");
+    update_reception_diagnostics(map_ptr_, "vector_map");
+    update_reception_diagnostics(current_scenario_, "scenario");
+    update_reception_diagnostics(planner_data_->self_acceleration, "acceleration");
+    update_reception_diagnostics(planner_data_->operation_mode, "operation_mode");
   }
 
+  // Step 2: Check if cyclic data is not timed out instead of `topic_state_monitor`.
   {
-    if (!route_ptr_) {
-      return missing("route");
+    const auto update_timeout_diagnostics =
+      [&](const std::optional<rclcpp::Time> & ts, double timeout, const std::string & name) {
+        if (!ts.has_value()) {
+          RCLCPP_INFO_SKIPFIRST_THROTTLE(
+            get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
+          diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
+          status = DataReadyStatus::NOT_RECEIVED;
+          return;
+        }
+        if ((now - ts.value()).seconds() > timeout) {
+          diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
+          if (status == DataReadyStatus::SUCCESS) {
+            status = DataReadyStatus::TIMEOUT;
+          }
+          return;
+        }
+        diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
+      };
+
+    update_timeout_diagnostics(
+      perception_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_,
+      "perception_objects");
+    update_timeout_diagnostics(
+      velocity_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_, "odometry");
+    update_timeout_diagnostics(
+      occupancy_grid_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_,
+      "occupancy_grid_map");
+    if (enable_traffic_signal_timeout_) {
+      update_timeout_diagnostics(
+        traffic_signals_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_,
+        "traffic_signal");
     }
   }
 
-  {
-    if (!map_ptr_) {
-      return missing("map");
-    }
+  if (status != DataReadyStatus::SUCCESS) {
+    diagnostics_message_timeout_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, "message timeout detected");
   }
 
-  if (!planner_data_->dynamic_object) {
-    return missing("dynamic_object");
-  }
-
-  if (!planner_data_->self_odometry) {
-    return missing("self_odometry");
-  }
-
-  if (!planner_data_->self_acceleration) {
-    return missing("self_acceleration");
-  }
-
-  if (!planner_data_->operation_mode) {
-    return missing("operation_mode");
-  }
-
-  if (!planner_data_->occupancy_grid) {
-    return missing("occupancy_grid");
-  }
-
-  return true;
+  return status;
 }
 
 void BehaviorPathPlannerNode::run()
@@ -303,7 +351,17 @@ void BehaviorPathPlannerNode::run()
 
   takeData();
 
-  if (!isDataReady()) {
+  const auto data_ready_status = isDataReady(stamp);
+  // `DataReadyStatus::TIMEOUT` is not handled intentionally as the reason in "NOTE" below
+  if (data_ready_status == DataReadyStatus::NOT_RECEIVED) {
+    /*
+     * NOTE:
+     * To preserve the existing logic of the run() callback,
+     * the run() callback will return early when mandatory data not received.
+     * There is controversy about the behavior when data is timed out. It will be discussed in the
+     * future.
+     */
+    diagnostics_message_timeout_->publish(stamp);
     return;
   }
 
@@ -311,6 +369,7 @@ void BehaviorPathPlannerNode::run()
 
   // behavior_path_planner runs only in LANE DRIVING scenario.
   if (current_scenario_->current_scenario != Scenario::LANEDRIVING) {
+    diagnostics_message_timeout_->publish(stamp);
     return;
   }
 
@@ -436,6 +495,9 @@ void BehaviorPathPlannerNode::run()
   planner_manager_->publishVirtualWall();
   lk_manager.unlock();  // release planner_manager_
 
+  // publish diagnostics for timeout checking.
+  diagnostics_message_timeout_->publish(stamp);
+
   RCLCPP_DEBUG(get_logger(), "----- behavior path planner end -----\n\n");
 }
 
@@ -560,6 +622,34 @@ void BehaviorPathPlannerNode::publish_turn_signal_debug_data(const TurnSignalDeb
       required_section_color);
     auto required_end_marker = autoware_utils::create_default_marker(
       "map", current_time, "behavior_turn_signal_required_end", 0L, Marker::CUBE, scale,
+      required_section_color);
+    required_start_marker.pose = turn_signal_info.required_start_point;
+    required_end_marker.pose = turn_signal_info.required_end_point;
+
+    marker_array.markers.push_back(desired_start_marker);
+    marker_array.markers.push_back(desired_end_marker);
+    marker_array.markers.push_back(required_start_marker);
+    marker_array.markers.push_back(required_end_marker);
+  }
+
+  // roundabout turn signal info
+  {
+    const auto & turn_signal_info = debug_data.roundabout_turn_signal_info;
+
+    auto desired_start_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_desired_start", 0L, Marker::SPHERE, scale,
+      desired_section_color);
+    auto desired_end_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_desired_end", 0L, Marker::SPHERE, scale,
+      desired_section_color);
+    desired_start_marker.pose = turn_signal_info.desired_start_point;
+    desired_end_marker.pose = turn_signal_info.desired_end_point;
+
+    auto required_start_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_required_start", 0L, Marker::SPHERE, scale,
+      required_section_color);
+    auto required_end_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_required_end", 0L, Marker::SPHERE, scale,
       required_section_color);
     required_start_marker.pose = turn_signal_info.required_start_point;
     required_end_marker.pose = turn_signal_info.required_end_point;
@@ -784,9 +874,15 @@ SetParametersResult BehaviorPathPlannerNode::onSetParam(
     update_param(
       parameters, DrivableAreaExpansionParameters::AVOID_DYN_OBJECTS_PARAM,
       planner_data_->drivable_area_expansion_parameters.object_exclusion.exclude_dynamic);
-    update_param(
-      parameters, DrivableAreaExpansionParameters::AVOID_LINESTRING_TYPES_PARAM,
-      planner_data_->drivable_area_expansion_parameters.avoid_linestring_types);
+    std::vector<std::string> strings;
+    if (
+      update_param(
+        parameters, DrivableAreaExpansionParameters::AVOID_LINESTRING_TYPES_PARAM, strings)) {
+      planner_data_->drivable_area_expansion_parameters.avoid_linestring_types.clear();
+      for (const auto & s : strings) {
+        planner_data_->drivable_area_expansion_parameters.avoid_linestring_types.emplace_back(s);
+      }
+    }
     update_param(
       parameters, DrivableAreaExpansionParameters::AVOID_LINESTRING_DIST_PARAM,
       planner_data_->drivable_area_expansion_parameters.avoid_linestring_dist);

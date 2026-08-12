@@ -20,7 +20,6 @@
 
 #include <lanelet2_core/LaneletMap.h>
 
-#include <string>
 #include <vector>
 
 namespace autoware::behavior_path_planner::drivable_area_expansion
@@ -38,7 +37,9 @@ SegmentRtree extract_uncrossable_segments(
 /// @param[in] ls linestring to check
 /// @param[in] types type strings to check
 /// @return true if the linestring has one of the given types
-bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types);
+bool has_types(
+  const lanelet::ConstLineString3d & ls,
+  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types);
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__MAP_UTILS_HPP_

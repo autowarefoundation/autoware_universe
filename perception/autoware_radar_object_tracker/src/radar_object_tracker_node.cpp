@@ -25,7 +25,6 @@
 
 #include <boost/optional.hpp>
 
-#include <glog/logging.h>
 #include <tf2_ros/create_timer_interface.h>
 #include <tf2_ros/create_timer_ros.h>
 
@@ -46,12 +45,6 @@ RadarObjectTrackerNode::RadarObjectTrackerNode(const rclcpp::NodeOptions & node_
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_)
 {
-  // glog for debug
-  if (!google::IsGoogleLoggingInitialized()) {
-    google::InitGoogleLogging("radar_object_tracker");
-    google::InstallFailureSignalHandler();
-  }
-
   // Create publishers and subscribers
   detected_object_sub_ = create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
     "input", rclcpp::QoS{1},
@@ -145,9 +138,17 @@ RadarObjectTrackerNode::RadarObjectTrackerNode(const rclcpp::NodeOptions & node_
 void RadarObjectTrackerNode::onMap(const LaneletMapBin::ConstSharedPtr msg)
 {
   RCLCPP_INFO(get_logger(), "[Radar Object Tracker]: Start loading lanelet");
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(
-    *msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map_ptr_);
+
+  routing_graph_ptr_ =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
+
   RCLCPP_INFO(get_logger(), "[Radar Object Tracker]: Map is loaded");
   map_is_loaded_ = true;
 }

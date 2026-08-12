@@ -22,7 +22,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tier4_perception_msgs/msg/detected_object_with_feature.hpp>
 
 #include <boost/optional.hpp>
@@ -36,15 +38,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace autoware::image_projection_based_fusion
 {
@@ -311,6 +304,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
   std::unordered_map<std::size_t, double> id_to_stamp_map,
   std::shared_ptr<FusionCollectorInfoBase> collector_info)
 {
+  std::unique_lock<std::mutex> diagnostic_lock(diagnostic_mutex_);
+
   ExportObj output_msg;
   postprocess(*(output_det3d_msg), output_msg);
 
@@ -336,7 +331,6 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
   // Move collected diagnostics info
   diagnostic_collector_info_ = std::move(collector_info);
   diagnostic_id_to_stamp_map_ = std::move(id_to_stamp_map);
-  diagnostic_updater_.force_update();
 
   // Add processing time for debugging
   if (debug_publisher_) {
@@ -367,6 +361,9 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
         timestamp_interval_ms - id_to_offset_map_[rois_id] * 1000);
     }
   }
+
+  diagnostic_lock.unlock();
+  diagnostic_updater_.force_update();
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
@@ -655,9 +652,13 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::show_diagnostic_message(
   std::unordered_map<std::size_t, double> id_to_stamp_map,
   std::shared_ptr<FusionCollectorInfoBase> collector_info)
 {
+  std::unique_lock<std::mutex> diagnostic_lock(diagnostic_mutex_);
+
   msg3d_fused_ = false;
   diagnostic_collector_info_ = std::move(collector_info);
   diagnostic_id_to_stamp_map_ = std::move(id_to_stamp_map);
+
+  diagnostic_lock.unlock();
   diagnostic_updater_.force_update();
 }
 
@@ -665,6 +666,8 @@ template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::check_fusion_status(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
+  std::lock_guard<std::mutex> diagnostic_lock(diagnostic_mutex_);
+
   if (publish_output_msg_ || drop_previous_but_late_output_msg_ || !msg3d_fused_) {
     stat.add("msg3d/is_fused", msg3d_fused_);
 

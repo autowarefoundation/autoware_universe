@@ -2,6 +2,79 @@
 Changelog for package autoware_behavior_path_side_shift_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(behavior_path_side_shift): add drivable area check to prevent lane departure (`#12504 <https://github.com/autowarefoundation/autoware_universe/issues/12504>`_)
+  * feat(behavior_path_side_shift): add drivable area check for lane departure in side shift module
+  - Add DrivableAreaCheckMode enum with DISABLED, CURRENT_LANE, ADJACENT_LANES options
+  - Implement calcOffsetLimitsFromLanelets() to compute safe lateral offset limits
+  - Clamp requested lateral offset to prevent exceeding lane boundaries
+  - Add configurable parameters for check mode and minimum margin
+  * fix(behavior_path_side_shift): fix mode2 lateral offset limit check
+  * fix(behavior_path_side_shift): prevent out-of-bounds at lane reduction intersections
+  When `drivable_area_check_mode` is set to `ADJACENT_LANES` (mode 2), the vehicle could previously go out of lane boundaries at intersections where the number of lanes decreases.
+  This commit fixes the issue by introducing the following changes:
+  1. In `SideShiftModule::updateData()`, continuously check and clamp `requested_lateral_offset\_` and `inserted_lateral_offset\_` using `calcMaxLateralOffset()`. If the drivable boundary narrows, it triggers a `lateral_offset_change_request\_` to force path recalculation.
+  2. In `SideShiftModule::plan()`, remove the state lock that prevented `replaceShiftLine()` from executing during the `SHIFTING` state. This allows the newly clamped safe offset to immediately update the path, even if the vehicle is currently executing a lateral shift.
+  * refactor(behavior_path_side_shift): simplify lateral offset clamping using std::clamp
+  Update calcMaxLateralOffset to use C++17 std::clamp instead of a ternary operator with std::min and std::max.
+  * feat(behavior_path_side_shift): add comment for drivable_area_check_mode
+  * fix(behavior_path_side_shift): restore shift status check to prevent chattering
+  * refactor(behavior_path_side_shift): inline parameter reference for vehicle width
+  * fix(behavior_path_planner): add missing <utility> include for std::pair
+  Fixes a cpplint 'build/include_what_you_use' error in scene.cpp.
+  * fix(behavior_path_side_shift): preserve requested offset when road widens
+  Keep the original lateral offset request even when it is clamped by the current drivable area. Recompute the constrained offset every cycle and request a shift-line update when the available lane width changes, so the path can move farther toward the requested offset after the road widens.
+  * style(behavior_path_side_shift): apply clang-format
+  ---------
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* Contributors: Uta Kawakami, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_behavior_path_side_shift): stabilize side shift path (`#12473 <https://github.com/mitsudome-r/autoware_universe/issues/12473>`_)
+  * stabilize side shift path
+  * change comment
+  ---------
+* fix: revert "fix(behavior_path_side_shift): preserve shifted path shap to prevent chattering (`#12278 <https://github.com/mitsudome-r/autoware_universe/issues/12278>`_)" (`#12377 <https://github.com/mitsudome-r/autoware_universe/issues/12377>`_)
+  Revert "fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering (`#12278 <https://github.com/mitsudome-r/autoware_universe/issues/12278>`_)"
+  This reverts commit 1b4472c60fed4f83b1a1a9de1705af0465bec2b5.
+* fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering (`#12278 <https://github.com/mitsudome-r/autoware_universe/issues/12278>`_)
+  * fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering
+  The side shift path was regenerated every planning cycle via path_shifter\_.generate(), which depends on the reference path resampled from the upstream module output. When upstream output fluctuated (e.g., due to object detection chattering), the shifted path shape changed every cycle even without a new shift request.
+  This commit adds keepPrevPathShape() to retain the previously generated shifted path shape when no new shift line is inserted via replaceShiftLine(). The method trims already-traversed points behind the ego position and appends new forward points from the freshly generated path to extend coverage.
+  * Revert "fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering"
+  This reverts commit 5f6bf02b963e3357a7bc72fe880c5fc6a86ea7e3.
+  * fix(behavior_path_side_shift_module): prevent path chattering by conditional path generation
+  * refactor(behavior_path_side_shift): move replaceShiftLine before path generation
+  Moved  closer to  for better readability, based on PR review. Added a flag check to preserve the original condition.
+  ---------
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12120 <https://github.com/mitsudome-r/autoware_universe/issues/12120>`_)
+  * chore: organize maintainer
+  * fix: ci error
+  ---------
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, Taiki Yamada, Uta Kawakami, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

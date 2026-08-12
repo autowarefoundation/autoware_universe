@@ -2,6 +2,371 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): fix unchecked optional access in pointcloud preprocessor (`#12645 <https://github.com/autowarefoundation/autoware_universe/issues/12645>`_)
+* feat: polar voxel noise filter (`#12496 <https://github.com/autowarefoundation/autoware_universe/issues/12496>`_)
+  * feat: polar voxel noise filter
+  * chore: added missing destructor and mutex
+  * chore: adressing comments about depercated functions
+  * chore: adressing comments about unused items and readme
+  * chore: adressing comments about pointcloud format and prefix
+  * style(pre-commit): autofix
+  * chore: adressing new parameter in bounds checking and suffix renamed variables
+  * style(pre-commit): autofix
+  * chore: adding unit test for the polar voxel filter
+  * style(pre-commit): autofix
+  * chore: added test on cmakelist all points primary return default
+  * style(pre-commit): autofix
+  * chore: handling case when pointcloud without return type information
+  * chore: pointcloud msg format validation only once to avoid redundancy
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+* fix(clang-tidy): re-enable clang-diagnostic-deprecated-builtins (`#12571 <https://github.com/autowarefoundation/autoware_universe/issues/12571>`_)
+  * fix(clang-tidy): re-enable clang-diagnostic-deprecated-builtins
+  * fix(clang-tidy): remove deprecated builtin workaround
+  ---------
+* fix(autoware_pointcloud_preprocessor): adjust type cast (`#12510 <https://github.com/autowarefoundation/autoware_universe/issues/12510>`_)
+  * fix(autoware_pointcloud_preprocessor): adjust type cast
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Amadeusz Szymko, SergioReyesSan, Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_pointcloud_preprocessor/launch): use launch substitution instead of get_package_share_directory (`#12395 <https://github.com/mitsudome-r/autoware_universe/issues/12395>`_)
+  refactor: use launch substitution instead of get_package_share_directory
+* feat(blockage_diag): apply agnocast subscription to `blockage_diag` (`#12393 <https://github.com/mitsudome-r/autoware_universe/issues/12393>`_)
+  * apply agnocast subscription to blockage_diag
+  * style(pre-commit): autofix
+  * apply agnocast to polar_voxel_outlier_filter
+  * style(pre-commit): autofix
+  * suppress unknownMacro warning for AGNOCAST macro
+  * fixed cpplint,cppcheck and removed unnecessary comments
+  * delete deprecated comments and restore target_include_directories
+  * suppress cppcheck
+  * suppress cppcheck
+  * suppress cppcheck
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* perf(pointcloud_preprocessor): use emplace/emplace_back to avoid temporary object creation (`#12227 <https://github.com/mitsudome-r/autoware_universe/issues/12227>`_)
+* refactor(autoware_pointcloud_preprocessor): fix debug messages about setting parameters (`#12066 <https://github.com/mitsudome-r/autoware_universe/issues/12066>`_)
+  * refactor(autoware_pointcloud_preprocessor): fix debug messages about setting parameters
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(pointcloud_preprocessor): cancel STALE immediately (`#12198 <https://github.com/mitsudome-r/autoware_universe/issues/12198>`_)
+  Typically, the STALE state in diagnostics represents that the
+  diagnostics have not been updated. In accordance with this, this modification
+  moves the hysteresis state from STALE once a non-stale state is observed.
+* chore(autoware_pointcloud_preprocessor): add `GLOBAL_SECONDS` increment for test so that future pre-commit works (`#12074 <https://github.com/mitsudome-r/autoware_universe/issues/12074>`_)
+  add GLOBAL_SECONDS increment
+* docs(sensing): fix mkdocs macro rendering and links in sensing pages (`#12111 <https://github.com/mitsudome-r/autoware_universe/issues/12111>`_)
+  docs(sensing): fix mkdocs macro paths, links, and schema fields
+* Contributors: Koichi Imai, Manato Hirabayashi, Max Schmeller, Maxim Smolskiy, Taeseung Sohn, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* test(blockage_diag): add unit tests to classes for blockage and dust detection (`#12029 <https://github.com/autowarefoundation/autoware_universe/issues/12029>`_)
+  * test(blockage_diag): add unit tests for blockage detection functionality
+  * test(blockage_diag): add unit tests for dust detection functionality
+  * test(blockage_diag): add unit tests for multi-frame detection aggregator
+  * test(blockage_diag): reduce integration tests and simplify pointcloud creation
+  * test(blockage_diag): optimize parameters and remove unnecessary threading in integration tests
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* refactor(blockage_diag_node): separate dust detection and multi frame aggregator from blockage diag (`#12024 <https://github.com/autowarefoundation/autoware_universe/issues/12024>`_)
+  * refactor(blockage_diag): separate dust detection logic into its own files
+  * refactor(blockage_diag): separate multi-frame detection aggregator into its own files
+  * refactor(blockage_diag_node): remove unused includes to clean up code
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(blockage_diag_node): extract blockage detection logic from blockage diag node (`#12012 <https://github.com/autowarefoundation/autoware_universe/issues/12012>`_)
+  * refactor(blockage_diag): separate dust detection diagnostic logic into evaluate_dust_detection function
+  * refactor(blockage_diag): extract update_diagnostics_status function for cleaner code
+  * refactor(blockage_diag): separate dust detection logic into DustDetector class
+  * refactor(blockage_diag): unified segment_into_ground_and_sky function
+  * style(pre-commit): autofix
+  * refactor(blockage_diag): add missing include directives for string and utility for cpp-lint check
+  * refactor(blockage_diag): extract dust detection logic into BlockageDetector class
+  * refactor(blockage_diag): remove unused member variables
+  * refactor(blockage_diag): reorder class definitions for better readability
+  * refactor(blockage_diag): remove unused functions definitions from header
+  * refactor(blockage_diag): simplify no return mask creation by removing quantization step
+  * refactor(blockage_diag): update diagnostics to return structured results for blockage and dust detection
+  * refactor(blockage_diag): update dust debug info method to use DustDetectionResult
+  * refactor(blockage_diag): update publish_blockage_debug_info to include blockage detection result
+  * refactor(blockage_diag): update debug info methods to use structured parameters
+  * refactor(blockage_diag): extract blockage detection logic into separate files
+  * refactor(blockage_diag): unify mask functions
+  * refactor(blockage_diag): apply clang
+  * refactor(blockage_diag): restore quantize_8u function to reduce diff in PR
+  * refactor(blockage_diag): reorder implementation to reduce diff
+  * fix(blockage_diag): restore lidar_depth_map publish
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(polar_voxel_outlier_filter): delete force_update() (`#12006 <https://github.com/autowarefoundation/autoware_universe/issues/12006>`_)
+* refactor(blockage_diag_node): extract dust detection logic from blockage diag node (`#11997 <https://github.com/autowarefoundation/autoware_universe/issues/11997>`_)
+  * refactor(blockage_diag): separate dust detection diagnostic logic into evaluate_dust_detection function
+  * refactor(blockage_diag): extract update_diagnostics_status function for cleaner code
+  * refactor(blockage_diag): separate dust detection logic into DustDetector class
+  * refactor(blockage_diag): unified segment_into_ground_and_sky function
+  * style(pre-commit): autofix
+  * refactor(blockage_diag): add missing include directives for string and utility for cpp-lint check
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag_node): extract multi frame visualization function and add unit tests (`#11976 <https://github.com/autowarefoundation/autoware_universe/issues/11976>`_)
+  * refactor(blockage_diag): implement MultiFrameDetectionVisualizer for multi-frame mask accumulation
+  * refactor(blockage_diag): update compute_blockage_diagnostics to return single frame blockage mask to align with dust detection
+  * test(blockage_diag_node): add tests for MultiFrameDetectionVisualizer
+  * refactor(blockage_diag): add comments for buffering_frame
+  * style(pre-commit): autofix
+  * refactor(blockage_diag): rename visualizer to aggregator
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag_node): group config and results of blockage and dust detection (`#11965 <https://github.com/autowarefoundation/autoware_universe/issues/11965>`_)
+  * refactor(dust_detection): group config and parameters for dust detection
+  * refactor(blockage_diag_node): group blockage detection parameters and results
+  * refactor(blockage_diag_node): simplify comments for blockage and dust detection parameters
+  * refactor(blockage_diag_node): move blockage frame count and mask buffer to result struct
+  * refactor(blockage_diag_node): rename and restructure blockage result types for clarity
+  * refactor(blockage_diag_node): replace blockage range vector with start and end degrees for clarity
+  * refactor(blockage_diag_node): consolidate ground and sky blockage info updates into a single method
+  * refactor(blockage_diag_node): replace buffering frame parameters with local variables for clarity
+  * refactor(blockage_diag_node): introduce BlockageDetectionVisualizeData struct for multi-frame blockage visualization
+  * refactor(blockage_diag_node): introduce DustDetectionVisualizeData struct
+  * refactor(blockage_diag_node): unify visualization data structures for blockage and dust detection
+  * refactor(blockage_diag_node): organize dust mask image publishing
+  * style(blockage_diag_node): apply formatter
+  * style(pre-commit): autofix
+  * chore: trigger ci
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag_node): extract logic for conversion from pointcloud2 to depth image (`#11947 <https://github.com/autowarefoundation/autoware_universe/issues/11947>`_)
+  * refactor(blockage_diag): get image dimensions from source image
+  * refactor(blockage_diag): extract functions for conversion from pointcloud2 to depth image
+  * refactor(blockage_diag): simplify parameter handling in BlockageDiagComponent
+  * refactor(blockage_diag): rename angle range parameters to clarify
+  * refactor(blockage_diag): update PointCloud2ToDepthImage to use structured configuration
+  * refactor(blockage_diag): add unit tests for PointCloud2ToDepthImage conversion
+  * refactor(blockage_diag): refactor unit tests for conversion from pointcloud2 to depth image
+  * refactor(blockage_diag): apply formatter
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage diag_node): decouple blockage and dust detection (`#11907 <https://github.com/autowarefoundation/autoware_universe/issues/11907>`_)
+  * refactor(blockage_diag): decouple dust diagnostics and debug info publishing
+  * refactor(blockage_diag): decouple blockage and dust diagnostics
+  * refactor(blockage_diag): rename detect_blockage to update_diagnostics for clarity
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag): extract PointCloud2 validation logic for blockage diag (`#11866 <https://github.com/autowarefoundation/autoware_universe/issues/11866>`_)
+  * refactor(blockage_diag): extract validation logic and add tests for PointCloud2 fields
+  * refactor(blockage_diag): replace validate_pointcloud_fields function
+  * refactor(blockage_diag): update validation function description
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* fix(point_cloud_preprocessor): use uint64_t to avoid size_t variance (`#11861 <https://github.com/autowarefoundation/autoware_universe/issues/11861>`_)
+* fix(autoware_pointcloud_preprocessor): recalculate row_step and width after concatenation (`#11855 <https://github.com/autowarefoundation/autoware_universe/issues/11855>`_)
+* fix(autoware_pointcloud_preprocessor): inherit is_dense for concatenated pointcloud (`#11857 <https://github.com/autowarefoundation/autoware_universe/issues/11857>`_)
+* fix(crop_box_filter): make `output.is_dense=true` (`#11856 <https://github.com/autowarefoundation/autoware_universe/issues/11856>`_)
+* feat: localization related packages support jazzy (`#11419 <https://github.com/autowarefoundation/autoware_universe/issues/11419>`_)
+* feat(pointcloud_preprocessor): improve cloud validation (`#11853 <https://github.com/autowarefoundation/autoware_universe/issues/11853>`_)
+* feat(pointcloud_preprocessor): validate indices (`#11852 <https://github.com/autowarefoundation/autoware_universe/issues/11852>`_)
+* feat(pointcloud_preprocessor): simplify is_valid (`#11851 <https://github.com/autowarefoundation/autoware_universe/issues/11851>`_)
+* feat(blockage_diag_node): remove parameter callback and unused header file (`#11834 <https://github.com/autowarefoundation/autoware_universe/issues/11834>`_)
+  * feat(blockage_diag_node): remove parameter callback from BlockageDiagComponent
+  * refactor(blockage_diag_node): remove unused filter include
+  * refactor(blockage_diag_node): remove unused include for point types
+  * refactor(blockage_diag_node): remove unused includes for highgui and diagnostic_array
+  * feat(blockage_diag_node): disable parameter services in BlockageDiagComponent
+  * refactor(blockage_diag_node): streamline diag updater and debug publisher setup in BlockageDiagComponent
+  * refactor(blockage_diag_node): remove mutex from BlockageDiagComponent
+  * chore: trigger ci
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Hiroki OTA, Mete Fatih Cırıt, Ryohsuke Mitsudome, Takahisa Ishikawa, 心刚
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* feat(blockage_diag_node): use PointCloud2 message directly in BlockageDiag node (`#11792 <https://github.com/autowarefoundation/autoware_universe/issues/11792>`_)
+  * feat(blockage_diag_node): refactor depth image processing to use sensor_msgs::msg::PointCloud2
+  * style(pre-commit): autofix
+  * feat(blockage_diag_node): add validation for required fields in PointCloud2 messages
+  * feat(blockage_diag_node): refactor validation tests and remove unused helper function
+  * feat(blockage_diag_node): improve error handling for missing PointCloud2 fields
+  * refactor(blockage_diag_node): enhance PointCloud2 test helpers for improved field validation
+  * style(pre-commit): autofix
+  * refactor(blockage_diag_node): reduce cyclomatic complication of validation
+  * refactor(blockage_diag_node): inline PointCloud2 creation in validation tests
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(blockage_diag_node): delete pointcloud publisher from blockage diag node (`#11779 <https://github.com/autowarefoundation/autoware_universe/issues/11779>`_)
+  * feat(blockage_diag_node): remove pointcloud publisher from blockage diag node
+  * doc(blockage_diag): remove outdated note from documentation
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* test: add integration test to blockage diag node (`#11777 <https://github.com/autowarefoundation/autoware_universe/issues/11777>`_)
+  * test(blockage_diag_node): add test file for blockage_diag_node
+  * test(blockage_diag_node): add integration tests for blockage_diag_node functionality
+  * test(blockage_diag_node): add diagnostics subscription and stale status test
+  * test(blockage_diag_node): simplify blockage_diag status check in DiagnosticsStaleTest
+  * test(blockage_diag_node): remove redundant basic and multiple pointcloud integration tests
+  * test(blockage_diag_node): add diagnostics WARN test for empty input scenario
+  * test(blockage_diag_node): add Diagnostics OK test for dense pointcloud scenario
+  * test(blockage_diag_node): add Diagnostics ERROR test for significant blockage scenario
+  * test(blockage_diag_node): enhance diagnostic tests with new pointcloud creation methods
+  * test(blockage_diag_node): update parameters for blockage diagnostics and remove unused output handling
+  * test(blockage_diag_node): create zero length pointcloud for diagnostics WARN test
+  * test(blockage_diag_node): refactor pointcloud creation methods to remove timestamp parameter
+  * test(blockage_diag_node): remove unused frame_id and is_dense parameters from pointcloud creation methods
+  * test(blockage_diag_node): refactor pointcloud creation methods to use sensor_msgs instead of pcl
+  * test(blockage_diag_node): refactor pointcloud creation methods to remove unused parameters and rename dense pointcloud method
+  * style(pre-commit): autofix
+  * test(blockage_diag_node): refactor pointcloud creation methods to use coverage ratio
+  * style(test_blockage_diag_node): include string header for improved functionality
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix: prevent possible dangling pointer from .str().c_str() pattern (`#11609 <https://github.com/autowarefoundation/autoware_universe/issues/11609>`_)
+  * Fix dangling pointer caused by the .str().c_str() pattern.
+  std::stringstream::str() returns a temporary std::string,
+  and taking its c_str() leads to a dangling pointer when the temporary is destroyed.
+  This patch replaces such usage with a const reference of std::string variable to ensure pointer validity.
+  * Revert the changes made to the functions. They should only be applied to the macros.
+  ---------
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(autoware_pointcloud_preprocessor): empty cloud is valid for cloud info (`#11632 <https://github.com/autowarefoundation/autoware_universe/issues/11632>`_)
+  * feat(autoware_pointcloud_preprocessor): empty cloud is valid for cloud info
+  * fix(autoware_pointcloud_preprocessor): confirmation for already added cloud in sequence
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+* fix(pointcloud_preprocessor): correct latency unit in concatenate pointcloud (`#11710 <https://github.com/autowarefoundation/autoware_universe/issues/11710>`_)
+  fix(pointcloud_preprocessor): correct latency unit in concatenate function
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Takahisa Ishikawa, Takatoshi Kondo
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat: limit area for visibility estimation (`#11549 <https://github.com/autowarefoundation/autoware_universe/issues/11549>`_)
+  * feat: introduce new thresholds to limit area used for visibility estimation
+  * feat: introduce HysteresisStateMachine to visibility diag
+  * docs: update document and schema
+  * style(pre-commit): autofix
+  * fix: correct typos
+  * fix: add newly introduced parameters to the test as well
+  * docs: replace parameters table by including json
+  * fix(polar_voxel_outlier_filter): use full range (no filter) for `vivisibility_estimation\_(min|max)_(azimuth|elevation)_rad` as default
+  * feat(polar_voxel_outlier): support min\_(azimuth|elevation)_rad > max\_(azimuth|elevation)_rad case
+  * refactor(polar_voxel_outlier): re-group some parameters
+  * refactor(polar_voxel_outlier): move hysteresis_state_machine.hpp under include/autoware/pointcloud_preprocessor/diagnostics
+  * refactor(polar_voxel_outlier): rename variables
+  * style(pre-commit): autofix
+  * fix(polar_voxel_outlier): correct typo
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_pointcloud_preprocessor): polar voxel filter (`#10996 <https://github.com/autowarefoundation/autoware_universe/issues/10996>`_)
+  * feat(pointcloud_preprocessor): add basic polar voxel filter
+  * feat(pointcloud_preprocessor): add initial dual return logic
+  * feat(pointcloud_preprocessor): refactor and add return type options, documetation
+  * feat(pointcloud_preprocessor): add visibility to polar voxel filter
+  * feat(pointcloud_preprocessor): update documentation
+  * feat(pointcloud_preprocessor): merge readme and documentation files for polar voxel filter
+  * chore(pointcloud_preprocessor): pass pre-commit
+  * refector(polar_voxel_filter): simplify return type classification
+  * refector(polar_voxel_filter): add suffix to parameters with units, update default values
+  * refector(polar_voxel_filter): explicity speficy index integer type
+  * refector(polar_voxel_filter): re-work to be O(n) using hashed unordered map, and reduce allocation overhead with multi-stage pass of a single large vector
+  * refector(polar_voxel_filter): use custom types for cartesian and polar coordinates
+  * refector(polar_voxel_filter): snake case for functions
+  * refector(polar_voxel_filter): std::optional for visibility and filter ratio
+  * Update sensing/autoware_pointcloud_preprocessor/src/outlier_filter/polar_voxel_outlier_filter_node.cpp
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+  * refector(polar_voxel_filter): remove log spam and unneccesary comments
+  * refector(polar_voxel_filter): rename valid points mask and unnecessary variable
+  * refector(polar_voxel_filter): style and pre-commit fixes
+  * refactor(pointcloud_preprocessor): address code complexity, duplication
+  * feat(pointcloud_preprocessor): make noise pointcloud publishing optional
+  * refactor(pointcloud_preprocessor): simplify by enforcing use of XYZIRC or XYZIRCAEDT
+  * refactor(pointcloud_preprocessor): limit range in visibilty calculation
+  * chore(autoware_pointcloud_preprocessor): code complexity and clang-tidy
+  * feat(polar_voxel_outlier_filter): add visibility estimation parameters, update documentation to match
+  * feat(polar_voxel_outlier_filter): add option to not publish a filtered pointcloud (only estimate visibility), update documentation to match
+  * refactor(polar_voxel_outlier_filter): reduce cyclic complexity, code smells
+  * refactor(polar_voxel_outlier_filter): complex conditionals, code smells
+  * refactor(polar_voxel_outlier_filter): repeated code refactoring
+  * refactor(polar_voxel_outlier_filter): some more complex conditionals
+  * feat(polar_voxel_outlier_filter): add unit tests
+  * refactor(polar_voxel_outlier_filter): code duplication in tests
+  * refactor(polar_voxel_outlier_filter): more code duplication in tests
+  * chore(autoware_pointcloud_preprocessor): re-add tests to CMakeLists after rebase
+  * chore(autoware_pointcloud_preprocessor): prettier for documentation file
+  * refactor(polar_voxel_filter): remove raw pointers
+  * feat(polar_voxel_outlier_filter): add intensity parameter for secondary returns
+  * refactor(polar_voxel_outlier_filter): rename parameter, validation complexity
+  * refactor(polar_voxel_outlier_filter): reduce cyclic complexity in parameter callback validation
+  * chore(polar_voxel_filter): unity parameter map for parameter callback
+  * refactor(polar_voxel_filter): address review feedback - some naming, default parameters, and pointcloud pointer changes
+  * chore(polar_voxel_outlier_filter): remove default params in node construction
+  * fix(polar_voxel_outlier_filter): ensure consistent voxel sizes across a full 2pi range, and enforce in schema
+  * chore(polar_voxel_outlier_filter): tidy unused headers, mutables, clearer function and variable names
+  * chore(polar_voxel_outlier_filter): tidy uneccesary helper functions, duplicate code, parameter defaults
+  * refactor(polar_voxel_outlier_filter): simplify use of iterators
+  * refactor(polar_voxel_outlier_filter): noise pointcloud setup simplification
+  * test(polar_voxel_outlier_filter): re-do unit test to only test the filter interface
+  * test(polar_voxel_outlier_filter): test individual filtered points and visibility
+  * chore(polar_voxel_outlier_filter): pass prettier pre-commit
+  ---------
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+* fix(fusion node): subscribe from concatenation info (`#11258 <https://github.com/autowarefoundation/autoware_universe/issues/11258>`_)
+  * chore: rename concatenate info to manager for clearity
+  * feat: add reference min max in the concatenated info
+  * chore: replace reading from diagnositc to concatenate info
+  * fix: qos settting
+  * chore: update for cuda pointcloud preprocessor
+  * chore: move info to matching strategy
+  * chore: clean code
+  * feat: move concat info in launcher
+  * chore: fix readme
+  * feat: sub to concat info in launcher
+  * chore: add concat info in irregular launch
+  ---------
+* feat: add pre-commit-lite workflow (`#11240 <https://github.com/autowarefoundation/autoware_universe/issues/11240>`_)
+* Contributors: David Wong, Manato Hirabayashi, Mete Fatih Cırıt, Ryohsuke Mitsudome, Tim Clephas, Yi-Hsiang Fang (Vivid)
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * refactor(pointcloud_preprocessor): extract downsample logic from pickup_based_voxel_downsample_filter (`#11098 <https://github.com/autowarefoundation/autoware_universe/issues/11098>`_)

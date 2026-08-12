@@ -19,6 +19,27 @@
 namespace autoware::behavior_path_planner
 {
 
+FreespaceParkingRequest::FreespaceParkingRequest(const FreespaceParkingRequest & other)
+: parameters_(other.parameters_),
+  vehicle_footprint_(other.vehicle_footprint_),
+  goal_candidates_(other.goal_candidates_),
+  planner_data_(
+    other.planner_data_ ? std::make_shared<PlannerData>(*other.planner_data_) : nullptr),
+  current_status_(other.current_status_),
+  occupancy_grid_map_(
+    other.occupancy_grid_map_
+      ? std::make_shared<OccupancyGridBasedCollisionDetector>(*other.occupancy_grid_map_)
+      : nullptr),
+  pull_over_path_(other.pull_over_path_),
+  last_path_update_time_(other.last_path_update_time_),
+  is_stopped_(other.is_stopped_)
+{
+  if (planner_data_ && other.planner_data_ && other.planner_data_->route_handler) {
+    planner_data_->route_handler =
+      std::make_shared<RouteHandler>(*other.planner_data_->route_handler);
+  }
+}
+
 void LaneParkingRequest::update(
   const PlannerData & planner_data, const ModuleStatus & current_status,
   const BehaviorModuleOutput & upstream_module_output,

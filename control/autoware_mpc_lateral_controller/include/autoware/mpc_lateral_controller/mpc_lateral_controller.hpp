@@ -15,10 +15,10 @@
 #ifndef AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_HPP_
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_HPP_
 
+#include "autoware/mpc_lateral_controller/lowpass_filter.hpp"
 #include "autoware/mpc_lateral_controller/mpc.hpp"
 #include "autoware/mpc_lateral_controller/mpc_trajectory.hpp"
 #include "autoware/mpc_lateral_controller/mpc_utils.hpp"
-#include "autoware/mpc_lateral_controller/steering_offset/steering_offset.hpp"
 #include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -49,6 +49,7 @@ using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 using autoware_internal_debug_msgs::msg::Float32Stamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_vehicle_msgs::msg::SteeringReport;
+using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 using trajectory_follower::LateralHorizon;
 
@@ -60,13 +61,25 @@ public:
     rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater);
   virtual ~MpcLateralController();
 
+  void set_steering_offset(double offset) override { m_steering_offset_ = offset; }
+
 private:
   rclcpp::Clock::SharedPtr clock_;
   rclcpp::Logger logger_;
 
   rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj;
+  rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj_frenet;
+  rclcpp::Publisher<Trajectory>::SharedPtr m_pub_resampled_reference_traj;
+  rclcpp::Publisher<PoseStamped>::SharedPtr m_pub_nearest_pose;
+  rclcpp::Publisher<Trajectory>::SharedPtr m_pub_nearest_segment_traj;
+  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_pub_nearest_info;
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_pub_debug_values;
   rclcpp::Publisher<Float32Stamped>::SharedPtr m_pub_steer_offset;
+
+  std::shared_ptr<Butterworth2dFilter> lpf_steer_offset_;
+  double m_steering_offset_{0.0};
+  double m_steering_offset_target_{0.0};
+  double m_steering_offset_filtered_{0.0};
 
   std::shared_ptr<diagnostic_updater::Updater>
     diag_updater_{};  // Diagnostic updater for publishing diagnostic data.
@@ -96,7 +109,7 @@ private:
   bool m_keep_steer_control_until_converged;
 
   // MPC solver checker.
-  ResultWithReason m_mpc_solved_status{true};
+  MpcResult m_mpc_solved_status{true};
 
   // trajectory buffer for detecting new trajectory
   std::deque<Trajectory> m_trajectory_buffer;
@@ -146,8 +159,8 @@ private:
   // Flag indicating whether auto steering offset removal is enabled.
   bool enable_auto_steering_offset_removal_;
 
-  // Steering offset estimator for offset compensation.
-  std::shared_ptr<SteeringOffsetEstimator> steering_offset_;
+  // Threshold for maximum change in steering offset to prevent large updates.
+  double m_steer_offset_max_update_th_;
 
   /**
    * @brief Initialize the timer
@@ -172,15 +185,6 @@ private:
    * @return Pointer to the created QP solver interface.
    */
   std::shared_ptr<QPSolverInterface> createQPSolverInterface(rclcpp::Node & node);
-
-  /**
-   * @brief Create the steering offset estimator for offset compensation.
-   * @param wheelbase Vehicle's wheelbase.
-   * @param node Reference to the node.
-   * @return Pointer to the created steering offset estimator.
-   */
-  std::shared_ptr<SteeringOffsetEstimator> createSteerOffsetEstimator(
-    const double wheelbase, rclcpp::Node & node);
 
   /**
    * @brief Check if all necessary data is received and ready to run the control.
@@ -212,23 +216,32 @@ private:
   /**
    * @brief Create the control command.
    * @param ctrl_cmd Control command to be created.
+   * @param stamp Timestamp of this control cycle.
    * @return Created control command.
    */
-  Lateral createCtrlCmdMsg(const Lateral & ctrl_cmd);
+  Lateral createCtrlCmdMsg(const Lateral & ctrl_cmd, const builtin_interfaces::msg::Time & stamp);
 
   /**
    * @brief Create the control command horizon message.
    * @param ctrl_cmd_horizon Control command horizon to be created.
+   * @param stamp Timestamp of this control cycle.
    * @return Created control command horizon.
    */
   [[nodiscard]] LateralHorizon createCtrlCmdHorizonMsg(
-    const LateralHorizon & ctrl_cmd_horizon) const;
+    const LateralHorizon & ctrl_cmd_horizon, const builtin_interfaces::msg::Time & stamp) const;
 
   /**
    * @brief Publish the predicted future trajectory.
    * @param predicted_traj Predicted future trajectory to be published.
    */
   void publishPredictedTraj(Trajectory & predicted_traj) const;
+
+  /**
+   * @brief Publish the MPC debug topic messages (predicted trajectory in Frenet coordinate,
+   * resampled reference trajectory, nearest pose, nearest segment trajectory, nearest info).
+   * @param debug_msgs MPC debug topic messages to be published.
+   */
+  void publishDebugMessages(std::optional<MpcDebugTopicMessage> & debug_msgs) const;
 
   /**
    * @brief Publish diagnostic message.
