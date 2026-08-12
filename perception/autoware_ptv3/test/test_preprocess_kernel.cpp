@@ -295,6 +295,37 @@ TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
   }
 }
 
+// A range boundary that is not voxel-aligned makes the grid mapping emit one more coordinate than
+// max_range - min_range suggests: [0.5, 16.5) with unit voxels emits 0..16. The serialization
+// depth must cover that extra coordinate; with a 4-bit depth serializeCoord would drop bit 4 and
+// the two corner voxels below would deduplicate into one.
+TEST_F(PreprocessKernelTest, UnalignedRangeBoundaryKeepsCornerVoxelsDistinct)
+{
+  PTv3ConfigParams params;
+  params.cloud_capacity = 64;
+  params.voxels_num = {1, 32, 64};
+  params.point_cloud_range = {0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 16.5F};
+  params.voxel_size = {1.0F, 1.0F, 1.0F};
+
+  const std::vector<CloudPointTypeXYZI> host_points{
+    {0.6F, 0.6F, 0.6F, 1.0F},     // grid coord (0, 0, 0)
+    {16.4F, 16.4F, 16.4F, 2.0F},  // grid coord (16, 16, 16): needs a fifth coordinate bit
+  };
+
+  const auto result = runGenerateFeatures(params, host_points, true);
+  ASSERT_EQ(result.num_cropped_points, 2U);
+  ASSERT_EQ(result.num_voxels, 2U);
+
+  const auto depth = config_->serialization_depth_;
+  EXPECT_EQ(depth, 5);
+
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  const auto serialized_code = copyToHost(result.serialized_code_d.get(), result.num_voxels * 2);
+  EXPECT_EQ(voxel_coords, (std::vector<std::int32_t>{0, 0, 0, 16, 16, 16}));
+  EXPECT_EQ(serialized_code[0], serialize_coord(0, 0, 0, depth, false));
+  EXPECT_EQ(serialized_code[1], serialize_coord(16, 16, 16, depth, false));
+}
+
 TEST_F(PreprocessKernelTest, FullReconstructionKeepsAllInputFeaturesBeforeCrop)
 {
   const std::vector<CloudPointTypeXYZI> host_points{

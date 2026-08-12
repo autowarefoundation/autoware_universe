@@ -95,9 +95,26 @@ public:
     grid_x_size_ = grid_cells(min_x_range_, max_x_range_, voxel_x_size_);
     grid_y_size_ = grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
     grid_z_size_ = grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
-    auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
+
+    // The serialization depth must cover every coordinate the device-side grid mapping
+    // (floor(p / size) - floor(min_range / size), see gridCoord) can emit. That is one more than
+    // the rounded cell count above when a range boundary is not voxel-aligned: [0.5, 16.5) with
+    // unit voxels emits 0..16. Sizing the depth from the rounded count would then drop the extra
+    // coordinate's top Morton bit and silently merge its voxels with coordinate 0's. The largest
+    // coordinate is attained at the largest float below max_range, since the crop accepts
+    // min_range <= p < max_range and float division is monotonic.
+    const auto effective_grid_cells =
+      [](const float min_range, const float max_range, const float size) {
+        const float min_coord = std::floor(min_range / size);
+        const float max_coord = std::floor(std::nextafter(max_range, min_range) / size);
+        return static_cast<std::int64_t>(max_coord - min_coord) + 1;
+      };
+    const auto max_effective_cells = std::max(
+      {effective_grid_cells(min_x_range_, max_x_range_, voxel_x_size_),
+       effective_grid_cells(min_y_range_, max_y_range_, voxel_y_size_),
+       effective_grid_cells(min_z_range_, max_z_range_, voxel_z_size_)});
     serialization_depth_ =
-      static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
+      static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_effective_cells))));
     auto max_voxels_depth =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_num_voxels_))));
     if (serialization_depth_ * 3 + max_voxels_depth >= 64) {

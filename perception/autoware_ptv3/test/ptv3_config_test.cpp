@@ -73,5 +73,18 @@ TEST(PTv3ConfigTest, RejectsInvalidDetectionThresholdTables)
     std::runtime_error);
 }
 
+// A range boundary that is not voxel-aligned makes the floor-based grid mapping emit one more
+// coordinate than the rounded cell count suggests ([0.5, 16.5) with unit voxels emits 0..16), and
+// the serialization depth must cover it; a 4-bit depth would drop the extra coordinate's top
+// Morton bit and merge its voxels with coordinate 0's.
+TEST(PTv3ConfigTest, SerializationDepthCoversUnalignedRangeBoundary)
+{
+  const auto aligned = makeDetectionConfig();
+  EXPECT_EQ(aligned.serialization_depth_, 4);
+
+  const auto unaligned = makeDetectionConfig({0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 4.5F});
+  EXPECT_EQ(unaligned.serialization_depth_, 5);
+}
+
 }  // namespace test
 }  // namespace autoware::ptv3
