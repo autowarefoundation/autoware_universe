@@ -35,8 +35,8 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
     std::make_unique<trajectory_modifier_params::ParamListener>(get_node_parameters_interface())},
   plugin_loader_(
     "autoware_trajectory_processor",
-    "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
-  context_{std::make_shared<TrajectoryModifierContext>(this)}
+    "autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase"),
+  context_{std::make_shared<trajectory_processor::TrajectoryProcessorContext>(this)}
 {
   sub_map_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
@@ -58,9 +58,10 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   params_ = param_listener_->get_params();
 
   // initialize plugins
-  for (const auto & name : params_.plugin_names) {
+  for (std::size_t index = 0; index < params_.plugin_names.size(); ++index) {
+    const auto & name = params_.plugin_names.at(index);
     if (name.empty()) continue;
-    load_plugin(name);
+    load_plugin(name, index);
   }
 
   RCLCPP_INFO(get_logger(), "TrajectoryModifier initialized");
@@ -90,8 +91,6 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     RCLCPP_ERROR(get_logger(), "%s", input.error().c_str());
     return;
   }
-  const auto & input_data = input.value();
-
   CandidateTrajectories output_trajectories = *msg;
 
   if (param_listener_->is_old(params_)) {
@@ -101,8 +100,13 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   auto trajectory_count = 0;
   std::string modified_plugins_str;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
+    auto input_data = input.value();
     for (auto & modifier : plugins_) {
-      if (!modifier->modify_trajectory(trajectory.points, input_data)) continue;
+      if (
+        modifier->process(trajectory.points, input_data) !=
+        trajectory_processor::plugin::ProcessingResult::Modified) {
+        continue;
+      }
       modifier->publish_planning_factor();
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
@@ -124,9 +128,10 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     "processing_time_ms", processing_time_ms);
 }
 
-tl::expected<plugin::InputData, std::string> TrajectoryModifier::make_input_data()
+tl::expected<trajectory_processor::TrajectoryProcessorData, std::string>
+TrajectoryModifier::make_input_data()
 {
-  plugin::InputData input;
+  trajectory_processor::TrajectoryProcessorData input;
   input.current_odometry = sub_current_odometry_.take_data();
   input.current_acceleration = sub_current_acceleration_.take_data();
   input.predicted_objects = sub_objects_.take_data();
@@ -162,7 +167,7 @@ tl::expected<plugin::InputData, std::string> TrajectoryModifier::make_input_data
   return input;
 }
 
-void TrajectoryModifier::load_plugin(const std::string & name)
+void TrajectoryModifier::load_plugin(const std::string & name, const std::size_t index)
 {
   // Check if the plugin is already instantiated
   auto it = std::find_if(
@@ -172,10 +177,12 @@ void TrajectoryModifier::load_plugin(const std::string & name)
       this->get_logger(), "The plugin '%s' is already in the plugins list.", name.c_str());
     return;
   }
-
   if (plugin_loader_.isClassAvailable(name)) {
     const auto plugin = plugin_loader_.createSharedInstance(name);
-    plugin->initialize(name, this, time_keeper_, context_, params_);
+    const auto instance_name = name + "#" + std::to_string(index);
+    plugin->initialize(
+      name, instance_name, this, time_keeper_, context_,
+      trajectory_processor::TrajectoryProcessorParams{params_});
     // register
     plugins_.push_back(plugin);
     RCLCPP_INFO(this->get_logger(), "The modifier plugin '%s' has been loaded", name.c_str());
@@ -207,7 +214,7 @@ void TrajectoryModifier::update_params()
     params_ = param_listener_->get_params();
 
     for (auto & plugin : plugins_) {
-      plugin->update_params(params_);
+      plugin->update_params(trajectory_processor::TrajectoryProcessorParams{params_});
     }
   } catch (const std::exception & e) {
     RCLCPP_WARN(this->get_logger(), "Failed to update parameters: %s", e.what());

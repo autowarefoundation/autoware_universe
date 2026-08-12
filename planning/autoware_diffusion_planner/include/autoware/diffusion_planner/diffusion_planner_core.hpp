@@ -111,6 +111,12 @@ struct FrameContext
 struct DiffusionPlannerParams
 {
   std::string model_type;
+  std::string base_model_directory;
+  std::string args_filename;
+  std::string single_step_model_filename;
+  std::string encoder_model_filename;
+  std::string decoder_model_filename;
+  std::string turn_indicator_model_filename;
   std::string single_step_model_path;
   std::string encoder_model_path;
   std::string decoder_model_path;
@@ -177,6 +183,8 @@ public:
    * @param params New parameters to apply
    */
   void update_params(const DiffusionPlannerParams & params);
+
+  void resolve_model_paths();
 
   /**
    * @brief Prepare frame context for inference.
