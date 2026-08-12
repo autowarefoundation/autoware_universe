@@ -25,6 +25,7 @@ from autoware_vehicle_msgs.msg import TurnIndicatorsReport
 from autoware_vehicle_msgs.msg import VelocityReport
 from builtin_interfaces.msg import Time
 import carla
+import cv2
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -591,14 +592,25 @@ class carla_ros2_interface(object):
 
         # Publish image
         if has_image_subs:
-            image_array = numpy.ndarray(
-                shape=(carla_camera_data.height, carla_camera_data.width, 4),
-                dtype=numpy.uint8,
-                buffer=carla_camera_data.raw_data,
-            )
-            img_msg = self.cv_bridge.cv2_to_imgmsg(image_array, encoding="bgra8")
+            img_msg = self._build_image_msg(carla_camera_data, config.image_encoding)
             img_msg.header = header
             img_pub.publish(img_msg)
+
+    def _build_image_msg(self, carla_camera_data, encoding):
+        """Convert a CARLA camera frame into a ROS image message.
+
+        CARLA renders BGRA. Converting to mono8 here rather than in the
+        consumer keeps three of every four bytes off the wire, and a consumer
+        that wants luminance was going to do this conversion anyway.
+        """
+        image_array = numpy.ndarray(
+            shape=(carla_camera_data.height, carla_camera_data.width, 4),
+            dtype=numpy.uint8,
+            buffer=carla_camera_data.raw_data,
+        )
+        if encoding == "mono8":
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_BGRA2GRAY)
+        return self.cv_bridge.cv2_to_imgmsg(image_array, encoding=encoding)
 
     def imu(self, carla_imu_measurement):
         """Transform and publish IMU measurement to ROS."""

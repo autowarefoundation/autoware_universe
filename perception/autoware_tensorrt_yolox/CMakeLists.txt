@@ -207,7 +207,7 @@ if(BUILD_TESTING)
   endif()
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )

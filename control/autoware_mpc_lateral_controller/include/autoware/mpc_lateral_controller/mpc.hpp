@@ -23,6 +23,8 @@
 #include "autoware/trajectory_follower_base/control_horizon.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <tl_expected/expected.hpp>
+
 #include "autoware_control_msgs/msg/lateral.hpp"
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
@@ -160,6 +162,16 @@ struct MPCData
   // Pose (position and orientation) of the nearest point in the trajectory.
   Pose nearest_pose{};
 
+  // Indices bounding the ego-nearest trajectory segment, used for debugging.
+  size_t nearest_segment_prev_idx{};
+  size_t nearest_segment_next_idx{};
+
+  // Ego-nearest trajectory segment, used for debugging.
+  Trajectory nearest_segment_trajectory{};
+
+  // Ego-nearest tracking info, used for debugging.
+  Float32MultiArrayStamped nearest_info{};
+
   // Temporal tracking debug values.
   double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
   double temporal_observed_time{std::numeric_limits<double>::quiet_NaN()};
@@ -203,10 +215,24 @@ struct MPCMatrix
   MPCMatrix() = default;
 };
 
-struct ResultWithReason
+struct MpcDebugTopicMessage
+{
+  Trajectory predicted_trajectory_frenet{};
+  Trajectory resampled_reference_trajectory{};
+  PoseStamped nearest_pose{};
+  Trajectory nearest_segment_trajectory{};
+  Float32MultiArrayStamped nearest_info{};
+};
+
+struct MpcResult
 {
   bool result{false};
   std::string reason{""};
+  Lateral ctrl_cmd{};
+  LateralHorizon ctrl_cmd_horizon{};
+  Trajectory predicted_trajectory{};
+  Float32MultiArrayStamped diagnostic{};
+  std::optional<MpcDebugTopicMessage> debug_msgs{};
 };
 
 /**
@@ -238,21 +264,17 @@ private:
   double m_yaw_error_prev = 0.0;       // Previous heading error for derivative calculation.
 
   bool m_is_forward_shift = true;  // Flag indicating if the shift is in the forward direction.
-  std::optional<double> m_prev_nearest_time{};  // Stabilized nearest trajectory time.
+  std::optional<double> m_prev_nearest_time{};    // Stabilized nearest trajectory time.
+  std::string m_reference_trajectory_frame_id{};  // Used to fill the header of output messages
 
-  rclcpp::Publisher<Trajectory>::SharedPtr m_debug_frenet_predicted_trajectory_pub;
-  rclcpp::Publisher<Trajectory>::SharedPtr m_debug_resampled_reference_trajectory_pub;
-  rclcpp::Publisher<PoseStamped>::SharedPtr m_debug_nearest_pose_pub;
-  rclcpp::Publisher<Trajectory>::SharedPtr m_debug_nearest_segment_pub;
-  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_debug_nearest_info_pub;
   /**
    * @brief Get variables for MPC calculation.
    * @param trajectory The reference trajectory.
    * @param current_steer The current steering report.
    * @param current_kinematics The current vehicle kinematics.
-   * @return A pair of a boolean flag indicating success and the MPC data.
+   * @return The MPC data on success, or the failure reason on error.
    */
-  std::pair<ResultWithReason, MPCData> getData(
+  tl::expected<MPCData, std::string> getData(
     const MPCTrajectory & trajectory, const SteeringReport & current_steer,
     const Odometry & current_kinematics);
 
@@ -268,9 +290,9 @@ private:
    * @param traj The reference trajectory to follow.
    * @param start_time The time where x0_orig is defined.
    * @param x0_orig The original initial state vector.
-   * @return A pair of a boolean flag indicating success and the updated state at delayed_time.
+   * @return The updated state at delayed_time on success, or the failure reason on error.
    */
-  std::pair<bool, VectorXd> updateStateForDelayCompensation(
+  tl::expected<VectorXd, std::string> updateStateForDelayCompensation(
     const MPCTrajectory & traj, const double & start_time, const VectorXd & x0_orig);
 
   /**
@@ -290,9 +312,9 @@ private:
    * @param prediction_dt The prediction time step.
    * @param [in] trajectory mpc reference trajectory
    * @param [in] current_velocity current ego velocity
-   * @return A pair of a boolean flag indicating success and the optimized input vector.
+   * @return The optimized input vector on success, or the failure reason on error.
    */
-  std::pair<ResultWithReason, VectorXd> executeOptimization(
+  tl::expected<VectorXd, std::string> executeOptimization(
     const MPCMatrix & mpc_matrix, const VectorXd & x0, const double prediction_dt,
     const MPCTrajectory & trajectory, const double current_velocity);
 
@@ -301,9 +323,9 @@ private:
    * @param start_time The start time for resampling.
    * @param prediction_dt The prediction time step.
    * @param input The input trajectory.
-   * @return A pair of a boolean flag indicating success and the resampled trajectory.
+   * @return The resampled trajectory on success, or the failure reason on error.
    */
-  std::pair<ResultWithReason, MPCTrajectory> resampleMPCTrajectoryByTime(
+  tl::expected<MPCTrajectory, std::string> resampleMPCTrajectoryByTime(
     const double start_time, const double prediction_dt, const MPCTrajectory & input) const;
 
   /**
@@ -408,13 +430,18 @@ private:
     const Odometry & current_kinematics) const;
 
   /**
-   * @brief Publish nearest-point debug information for RViz and log analysis.
+   * @brief Build the ego-nearest tracking info debug message.
    * @param traj The current reference trajectory.
    * @param self_pose The current ego pose.
    * @param mpc_data The nearest-point related MPC data.
+   * @param nearest_idx Index of the nearest point in the trajectory.
+   * @param prev_idx Index of the previous point of the ego-nearest segment.
+   * @param next_idx Index of the next point of the ego-nearest segment.
+   * @return The built debug message.
    */
-  void publishNearestDebug(
-    const MPCTrajectory & traj, const Pose & self_pose, const MPCData & mpc_data) const;
+  Float32MultiArrayStamped buildNearestInfoMessage(
+    const MPCTrajectory & traj, const Pose & self_pose, const MPCData & mpc_data,
+    const size_t nearest_idx, const size_t prev_idx, const size_t next_idx) const;
 
   /**
    * @brief calculate steering rate limit along with the target trajectory
@@ -468,22 +495,18 @@ public:
   bool m_publish_debug_trajectories = false;  // Flag to publish predicted trajectory and
                                               // resampled reference trajectory for debug purpose
 
-  //!< Constructor.
-  explicit MPC(rclcpp::Node & node);
-
   /**
    * @brief Calculate control command using the MPC algorithm.
    * @param current_steer Current steering report.
    * @param current_kinematics Current vehicle kinematics.
-   * @param ctrl_cmd Computed lateral control command.
-   * @param predicted_trajectory Predicted trajectory based on MPC result.
-   * @param diagnostic Diagnostic data for debugging purposes.
-   * @return True if the MPC calculation is successful, false otherwise.
+   * @param stamp Timestamp of this control cycle, applied to every message in the result.
+   * @return The MPC result, including success/failure status, the computed control command, the
+   * predicted trajectory, the control command horizon, and the diagnostic data for debugging
+   * purposes.
    */
-  ResultWithReason calculateMPC(
-    const SteeringReport & current_steer, const Odometry & current_kinematics, Lateral & ctrl_cmd,
-    Trajectory & predicted_trajectory, Float32MultiArrayStamped & diagnostic,
-    LateralHorizon & ctrl_cmd_horizon);
+  MpcResult calculateMPC(
+    const SteeringReport & current_steer, const Odometry & current_kinematics,
+    const builtin_interfaces::msg::Time & stamp);
 
   /**
    * @brief Set the reference trajectory to be followed.

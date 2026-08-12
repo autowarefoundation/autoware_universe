@@ -35,7 +35,7 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryMPTOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
   auto node_ptr = get_node_ptr();
   RCLCPP_INFO(node_ptr->get_logger(), "MPT Optimizer plugin: Starting initialization...");
@@ -97,7 +97,7 @@ void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & par
   }
 }
 
-void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryMPTOptimizer::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_mpt_optimizer;
   mpt_params_ = params.trajectory_mpt_optimizer;
@@ -141,14 +141,14 @@ void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & par
   }
 }
 
-void TrajectoryMPTOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryMPTOptimizer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
   // Skip if MPT optimizer is disabled
-  if (!enabled_) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
 
   // Minimum points required for optimization
@@ -158,7 +158,7 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "MPT: Trajectory too short (%zu < %zu points), skipping", traj_points.size(),
       min_points_for_optimization);
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Reset previous data if configured (for diffusion planner's new trajectories each cycle)
@@ -191,14 +191,14 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
     RCLCPP_DEBUG_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "MPT: Optimization failed, keeping original trajectory");
-    return;
+    return ProcessingResult::Unchanged;
   }
   // Validate optimized trajectory
   if (optimized_traj->empty()) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "MPT: Returned empty trajectory, keeping original");
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Apply optimized trajectory
@@ -211,17 +211,18 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
   RCLCPP_DEBUG_THROTTLE(
     get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
     "MPT: Optimized %zu->%zu points, recalculated dynamics", original_size, traj_points.size());
+  return ProcessingResult::Modified;
 }
 
 PlannerData TrajectoryMPTOptimizer::create_planner_data(
   const TrajectoryPoints & traj_points, const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
-  const TrajectoryOptimizerData & data) const
+  const TrajectoryProcessorData & data) const
 {
   PlannerData planner_data;
 
   // Create header from odometry frame
   planner_data.header.stamp = get_node_ptr()->now();
-  planner_data.header.frame_id = data.current_odometry.header.frame_id;
+  planner_data.header.frame_id = data.current_odometry->header.frame_id;
 
   // Set trajectory points
   planner_data.traj_points = traj_points;
@@ -231,8 +232,8 @@ PlannerData TrajectoryMPTOptimizer::create_planner_data(
   planner_data.right_bound = bounds.right_bound;
 
   // Set ego state
-  planner_data.ego_pose = data.current_odometry.pose.pose;
-  planner_data.ego_vel = data.current_odometry.twist.twist.linear.x;
+  planner_data.ego_pose = data.current_odometry->pose.pose;
+  planner_data.ego_vel = data.current_odometry->twist.twist.linear.x;
 
   return planner_data;
 }
@@ -308,4 +309,4 @@ void TrajectoryMPTOptimizer::publish_debug_markers(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
