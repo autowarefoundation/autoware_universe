@@ -206,13 +206,51 @@ sensor_mappings:
       topic_info: /sensing/camera/CAM_FRONT/camera_info
       frequency_hz: 11
       qos_profile: reliable
+      image_encoding: bgra8
     parameters:
       image_size_x: 1600
       image_size_y: 900
       fov: 70.0
 ```
 
+`image_encoding` applies to cameras and accepts `bgra8` (default, what CARLA
+renders) or `mono8`. Publishing `mono8` converts once in the bridge and sends a
+quarter of the bytes, which is worth it when every consumer of that camera
+works on luminance alone, such as feature tracking or visual odometry. A
+1600x900 frame is 5,760,000 bytes as `bgra8` and 1,440,000 bytes as `mono8`.
+
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
+
+##### Sensor Noise
+
+The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
+is what reproducing a run wants. It also means anything consuming those sensors
+sees a measurement no hardware produces: a localisation or odometry stack scored
+against a perfect gyro reports an accuracy it will not reach on a vehicle.
+
+Set any of the CARLA noise attributes under the sensor's `parameters` to get a
+sensor that behaves like hardware:
+
+```yaml
+sensor_mappings:
+  imu_link:
+    carla_type: sensor.other.imu
+    id: imu
+    ros_config:
+      frame_id: tamagawa/imu_link
+      topic: /sensing/imu/imu_data
+      frequency_hz: 50
+    parameters:
+      noise_gyro_stddev_x: 0.001
+      noise_gyro_stddev_y: 0.001
+      noise_gyro_stddev_z: 0.001
+      noise_gyro_bias_x: 0.0005
+      noise_accel_stddev_x: 0.01
+```
+
+Recognised names are `noise_accel_stddev_{x,y,z}`, `noise_gyro_stddev_{x,y,z}`
+and `noise_gyro_bias_{x,y,z}` for the IMU, and `noise_{alt,lat,lon}_stddev` and
+`noise_{alt,lat,lon}_bias` for the GNSS. Anything left out stays at zero.
 
 ##### Light-Weight Sensor Mapping
 

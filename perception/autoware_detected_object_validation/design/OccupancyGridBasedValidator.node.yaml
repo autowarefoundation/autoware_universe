@@ -1,0 +1,45 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: OccupancyGridBasedValidator.node
+
+package:
+  name: autoware_detected_object_validation
+  provider: autoware
+
+launch:
+  plugin: autoware::detected_object_validation::occupancy_grid_map::OccupancyGridBasedValidator
+  executable: occupancy_grid_based_validator_node
+  node_output: screen
+
+# interfaces
+# detected_objects + occupancy_grid_map are message_filters-synced; debug marker omitted.
+subscribers:
+  - name: detected_objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/input/detected_objects
+  - name: occupancy_grid_map
+    message_type: nav_msgs/msg/OccupancyGrid
+    remap_target: ~/input/occupancy_grid_map
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/objects
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/occupancy_grid_based_validator.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: validate
+    trigger_conditions:
+      - and:
+          - on_input: detected_objects
+          - on_input: occupancy_grid_map
+    outcomes:
+      - to_output: objects

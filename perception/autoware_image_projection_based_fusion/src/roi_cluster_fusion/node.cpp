@@ -53,6 +53,8 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   iou_threshold_.PEDESTRIAN = declare_parameter<double>("iou_threshold.PEDESTRIAN");
   iou_threshold_.TRUCK = declare_parameter<double>("iou_threshold.TRUCK");
   iou_threshold_.UNKNOWN = declare_parameter<double>("iou_threshold.UNKNOWN");
+  iou_threshold_.ANIMAL = declare_parameter<double>("iou_threshold.ANIMAL");
+  iou_threshold_.HAZARD = declare_parameter<double>("iou_threshold.HAZARD");
 
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
@@ -172,8 +174,9 @@ void RoiClusterFusionNode::fuse_on_single_image(
       }
 
       Eigen::Vector2d projected_point;
-      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-            cv::Point3d(*iter_x, *iter_y, *iter_z), projected_point)) {
+      if (
+        det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+          cv::Point3d(*iter_x, *iter_y, *iter_z), projected_point)) {
         const int px = static_cast<int>(projected_point.x());
         const int py = static_cast<int>(projected_point.y());
 

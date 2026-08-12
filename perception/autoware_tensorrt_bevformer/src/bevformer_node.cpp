@@ -368,8 +368,9 @@ void TRTBEVFormerNode::calculateStaticLidar2EgoTransform()
   rclcpp::Time lidar_time = this->now();
 
   try {
-    if (tf_buffer_->canTransform(
-          "base_link", "LIDAR_TOP", lidar_time, rclcpp::Duration::from_seconds(1.0))) {
+    if (
+      tf_buffer_->canTransform(
+        "base_link", "LIDAR_TOP", lidar_time, rclcpp::Duration::from_seconds(1.0))) {
       auto tf_lidar2ego = tf_buffer_->lookupTransform("base_link", "LIDAR_TOP", lidar_time);
       getTransform(tf_lidar2ego, lidar2ego_rot_static_, lidar2ego_trans_static_);
       lidar2ego_transforms_ready_ = true;
@@ -415,8 +416,9 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
     Eigen::Translation3d ego2global_trans_cam = Eigen::Translation3d::Identity();
     bool got_camera_transform = false;
     try {
-      if (tf_buffer_->canTransform(
-            "world", "base_link", camera_timestamp, rclcpp::Duration::from_seconds(0.1))) {
+      if (
+        tf_buffer_->canTransform(
+          "world", "base_link", camera_timestamp, rclcpp::Duration::from_seconds(0.1))) {
         auto tf_ego2global_cam = tf_buffer_->lookupTransform(
           "world", "base_link", camera_timestamp, rclcpp::Duration::from_seconds(0.1));
 
@@ -530,8 +532,9 @@ void TRTBEVFormerNode::callback(
   Eigen::Translation3d ego2global_trans;
 
   try {
-    if (tf_buffer_->canTransform(
-          "world", "base_link", ref_time, rclcpp::Duration::from_seconds(0.5))) {
+    if (
+      tf_buffer_->canTransform(
+        "world", "base_link", ref_time, rclcpp::Duration::from_seconds(0.5))) {
       auto tf_ego2global = tf_buffer_->lookupTransform("world", "base_link", ref_time);
       getTransform(tf_ego2global, ego2global_rot, ego2global_trans);
       RCLCPP_DEBUG(this->get_logger(), "Got ego2global transform for CAN bus processing");

@@ -39,7 +39,7 @@ using Classification = autoware_perception_msgs::msg::ObjectClassification;
 RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
 {
-  const std::array<std::pair<std::string, uint8_t>, 8> fusion_class_names = {
+  const std::array<std::pair<std::string, uint8_t>, 10> fusion_class_names = {
     {{"UNKNOWN", Classification::UNKNOWN},
      {"CAR", Classification::CAR},
      {"TRUCK", Classification::TRUCK},
@@ -47,7 +47,9 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
      {"TRAILER", Classification::TRAILER},
      {"MOTORCYCLE", Classification::MOTORCYCLE},
      {"BICYCLE", Classification::BICYCLE},
-     {"PEDESTRIAN", Classification::PEDESTRIAN}}};
+     {"PEDESTRIAN", Classification::PEDESTRIAN},
+     {"ANIMAL", Classification::ANIMAL},
+     {"HAZARD", Classification::HAZARD}}};
   for (const auto & [class_name, label] : fusion_class_names) {
     fusion_enabled_classes_[label] =
       declare_parameter<bool>("fusion_enabled_classes." + class_name);
@@ -151,8 +153,9 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
     }
 
     Eigen::Vector2d projected_point;
-    if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-          cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
+    if (
+      det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+        cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
       for (std::size_t i = 0; i < output_objs.size(); ++i) {
         auto & feature_obj = output_objs.at(i);
         const auto & check_roi = feature_obj.feature.roi;

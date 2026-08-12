@@ -9,9 +9,12 @@
   <arg name="input/steering_status" default="/vehicle/status/steering_status"/>
   <arg name="input/objects" default="/perception/object_recognition/objects"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <!-- control evaluator -->
   <group>
     <node name="control_evaluator" exec="control_evaluator" pkg="autoware_control_evaluator">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
       <param from="$(find-pkg-share autoware_control_evaluator)/config/control_evaluator.param.yaml"/>
       <param name="output_metrics" value="$(var output_metrics)"/>
       <remap from="~/input/odometry" to="$(var input/odometry)"/>

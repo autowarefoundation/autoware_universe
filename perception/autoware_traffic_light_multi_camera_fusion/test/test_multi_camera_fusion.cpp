@@ -33,6 +33,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -65,7 +66,30 @@ constexpr uint32_t ROI_Y_OFFSET = 100;
 constexpr uint32_t ROI_WIDTH = 100;
 constexpr uint32_t ROI_HEIGHT = 100;
 
-lanelet::LaneletMapPtr make_lanelet_map_with_two_traffic_lights()
+// Bulb point with "color" and (optionally) "arrow" attributes. Distinct ids/positions are
+// required so lanelet2 invariants remain satisfied.
+lanelet::Point3d make_bulb_point(
+  lanelet::Id id, const std::string & color, const std::string & arrow = "")
+{
+  lanelet::Point3d point(id, 0.0, 0.0, 3.5);
+  point.attributes()["color"] = color;
+  if (!arrow.empty()) {
+    point.attributes()["arrow"] = arrow;
+  }
+  return point;
+}
+
+lanelet::LineString3d make_light_bulbs_linestring(
+  lanelet::Id linestring_id, lanelet::Id traffic_light_id,
+  const std::vector<lanelet::Point3d> & bulbs)
+{
+  lanelet::LineString3d ls(linestring_id, bulbs);
+  ls.attributes()["traffic_light_id"] = std::to_string(traffic_light_id);
+  return ls;
+}
+
+lanelet::LaneletMapPtr make_lanelet_map_with_two_traffic_lights(
+  const lanelet::LineStrings3d & light_bulbs = {})
 {
   lanelet::Point3d road_left_start(1, 0.0, 2.0, 0.0);
   lanelet::Point3d road_left_end(2, 30.0, 2.0, 0.0);
@@ -92,12 +116,26 @@ lanelet::LaneletMapPtr make_lanelet_map_with_two_traffic_lights()
   right_traffic_light.attributes()["height"] = "1.0";
 
   auto traffic_light_regulatory_element = lanelet::autoware::AutowareTrafficLight::make(
-    REGULATORY_ELEMENT_ID, lanelet::AttributeMap(), {left_traffic_light, right_traffic_light});
+    REGULATORY_ELEMENT_ID, lanelet::AttributeMap(), {left_traffic_light, right_traffic_light}, {},
+    light_bulbs);
   road_lanelet.addRegulatoryElement(traffic_light_regulatory_element);
 
   auto lanelet_map = std::make_shared<lanelet::LaneletMap>();
   lanelet_map->add(road_lanelet);
   return lanelet_map;
+}
+
+// A lanelet map where both left and right traffic lights only declare red/yellow/green circles
+// on their light_bulbs — no arrows. Predicting an arrow against this map should be filtered.
+lanelet::LaneletMapPtr make_lanelet_map_with_circle_only_bulbs()
+{
+  auto left_light_bulbs = make_light_bulbs_linestring(
+    200, LEFT_TRAFFIC_LIGHT_ID,
+    {make_bulb_point(20, "red"), make_bulb_point(21, "yellow"), make_bulb_point(22, "green")});
+  auto right_light_bulbs = make_light_bulbs_linestring(
+    201, RIGHT_TRAFFIC_LIGHT_ID,
+    {make_bulb_point(23, "red"), make_bulb_point(24, "yellow"), make_bulb_point(25, "green")});
+  return make_lanelet_map_with_two_traffic_lights({left_light_bulbs, right_light_bulbs});
 }
 
 MultiCameraFusionConfig make_default_config()
@@ -142,7 +180,7 @@ TrafficLightRoiArray make_roi_array(
   return roi_array;
 }
 
-// ROI placed against the top-left image boundary so cal_visible_score returns 0.
+// ROI placed against the top-left image boundary so is_fully_visible returns false.
 TrafficLightRoiArray make_truncated_roi_array(
   const rclcpp::Time & stamp, const std::string & frame_id, lanelet::Id traffic_light_id)
 {
@@ -174,7 +212,7 @@ TrafficLight make_signal(lanelet::Id traffic_light_id, uint8_t color, float conf
   return signal;
 }
 
-// Matches utils::is_unknown: a single element whose color and shape are both UNKNOWN.
+// Matches utils::is_signal_unknown: a single element whose color and shape are both UNKNOWN.
 TrafficLight make_unknown_signal(lanelet::Id traffic_light_id)
 {
   T4Element element;
@@ -453,9 +491,9 @@ TEST(MultiCameraFusionFuse, TruncatedRoiHasLowerPriorityThanCenteredRoi)
 {
   // Arrange
   // Two cameras observe the same traffic_light_id. camera0 reports a truncated ROI
-  // (visible_score=0) with the higher confidence; camera1 reports a centered ROI
-  // (visible_score=1) with the lower confidence. compare_record's visibility check ranks above the
-  // confidence check, so camera1's record is selected and the fused output is RED.
+  // (truncated) with the higher confidence; camera1 reports a centered ROI
+  // (fully visible) with the lower confidence. has_higher_or_equal_priority's visibility check
+  // ranks above the confidence check, so camera1's record is selected and the fused output is RED.
   MultiCameraFusion fusion(make_default_config());
   const rclcpp::Time stamp(100, 0);
   const auto truncated_camera_info = make_camera_info(stamp, "camera0");
@@ -478,8 +516,8 @@ TEST(MultiCameraFusionFuse, UnknownSignalLosesToValidSignalForSameTrafficLightId
 {
   // Arrange
   // Two cameras observe the same traffic_light_id. camera0 reports an UNKNOWN signal;
-  // camera1 reports GREEN. compare_record's unknown check drops the unknown record, so the
-  // fused output reflects camera1.
+  // camera1 reports GREEN. has_higher_or_equal_priority's unknown check drops the unknown record,
+  // so the fused output reflects camera1.
   MultiCameraFusion fusion(make_default_config());
   const auto unknown_input =
     make_fusion_input("camera0", make_unknown_signal(LEFT_TRAFFIC_LIGHT_ID));
@@ -499,8 +537,9 @@ TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
 {
   // Arrange
   // The same camera publishes two observations of the same traffic_light_id within the lifespan.
-  // compare_record's first priority (same frame_id with timestamps differing by >= 1 ms) prefers
-  // the newer record regardless of confidence, so the later RED supersedes the earlier GREEN.
+  // has_higher_or_equal_priority's first priority (same frame_id with timestamps differing by >= 1
+  // ms) prefers the newer record regardless of confidence, so the later RED supersedes the earlier
+  // GREEN.
   MultiCameraFusion fusion(make_default_config());
   const std::string frame_id = "camera0";
   const auto earlier_input = make_fusion_input(
@@ -518,12 +557,12 @@ TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
   expect_single_fused_color(result, TrafficLightElement::RED);
 }
 
-TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenVisibleScoreTiesForSameTrafficLightId)
+TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenBothFullyVisibleForSameTrafficLightId)
 {
   // Arrange
-  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score=1 each).
-  // compare_record falls through to its last priority — the confidence comparison — and selects
-  // the higher-confidence RED over the lower-confidence GREEN.
+  // Two cameras observe the same traffic_light_id with centered ROIs (fully visible each).
+  // has_higher_or_equal_priority falls through to its last priority — the confidence
+  // comparison — and selects the higher-confidence RED over the lower-confidence GREEN.
   MultiCameraFusion fusion(make_default_config());
   const auto low_confidence_input =
     make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.5f));
@@ -572,13 +611,14 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
 TEST(MultiCameraFusionFuse, MinElementConfidenceDeterminesWinnerForMultiElementSignals)
 {
   // Arrange
-  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score tied at 1).
+  // Two cameras observe the same traffic_light_id with centered ROIs (both fully visible).
   // Each signal has CIRCLE + LEFT_ARROW with differing per-element confidences:
   //   camera0: {CIRCLE 0.8, LEFT_ARROW 0.8}  -> min = 0.8
   //   camera1: {CIRCLE 0.9, LEFT_ARROW 0.3}  -> min = 0.3
-  // compare_record falls through to the confidence check, which uses utils::get_min_confidence.
-  // With min-aggregation, camera0 wins (0.8 > 0.3); with max-aggregation, camera1 would win
-  // (0.9 > 0.8). The output's preserved per-element confidences distinguish the two cases.
+  // has_higher_or_equal_priority falls through to the confidence check, which uses
+  // utils::get_min_confidence. With min-aggregation, camera0 wins (0.8 > 0.3); with
+  // max-aggregation, camera1 would win (0.9 > 0.8). The output's preserved per-element confidences
+  // distinguish the two cases.
   MultiCameraFusion fusion(make_default_config());
   const auto input0 = make_fusion_input(
     "camera0", make_signal_with_left_arrow(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.8f, 0.8f));
@@ -593,6 +633,168 @@ TEST(MultiCameraFusionFuse, MinElementConfidenceDeterminesWinnerForMultiElementS
   // camera0 wins -> output preserves camera0's per-element confidences (0.8 each).
   expect_element_confidence(result, 0, 0.8f);
   expect_element_confidence(result, 1, 0.8f);
+}
+
+TEST(MultiCameraFusionFuse, MapBasedFilterDropsArrowNotDeclaredOnCircleOnlyMap)
+{
+  // Arrange
+  // The lanelet map only declares red/yellow/green CIRCLE bulbs. The ML predicts a signal with
+  // both a valid (RED, CIRCLE) and an invalid (GREEN, LEFT_ARROW). With the map-based filter
+  // enabled, the arrow element is dropped and only the circle is published.
+  auto config = make_default_config();
+  config.use_map_based_signal_filter = true;
+  config.lanelet_map_ptr = make_lanelet_map_with_circle_only_bulbs();
+  MultiCameraFusion fusion(config);
+
+  const auto input = make_fusion_input(
+    "camera0", make_signal_with_left_arrow(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f, 0.9f));
+
+  // Act
+  const auto result = fusion.fuse(input.camera_info, input.roi_array, input.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+  EXPECT_EQ(group.elements.front().shape, TrafficLightElement::CIRCLE);
+  EXPECT_EQ(group.elements.front().confidence, 0.9f);
+}
+
+TEST(MultiCameraFusionFuse, MapBasedFilterEmitsUnknownWhenEverythingIsFilteredOut)
+{
+  // Arrange
+  // ML predicts only a (GREEN, LEFT_ARROW) which the map disallows. Every element gets filtered,
+  // so the record is replaced with a fail-safe UNKNOWN and the published group is UNKNOWN.
+  auto config = make_default_config();
+  config.use_map_based_signal_filter = true;
+  config.lanelet_map_ptr = make_lanelet_map_with_circle_only_bulbs();
+  MultiCameraFusion fusion(config);
+
+  T4Element arrow_only;
+  arrow_only.color = T4Element::GREEN;
+  arrow_only.shape = T4Element::LEFT_ARROW;
+  arrow_only.status = T4Element::SOLID_ON;
+  arrow_only.confidence = 0.9f;
+  TrafficLight arrow_only_signal;
+  arrow_only_signal.traffic_light_id = LEFT_TRAFFIC_LIGHT_ID;
+  arrow_only_signal.elements.push_back(arrow_only);
+
+  const auto input = make_fusion_input("camera0", arrow_only_signal);
+
+  // Act
+  const auto result = fusion.fuse(input.camera_info, input.roi_array, input.signal_array);
+
+  // Assert
+  expect_single_fused_color_and_shape(
+    result, TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN);
+}
+
+TEST(MultiCameraFusionFuse, MapBasedFilterProtectsValidPredictionFromInvalidHigherConfidence)
+{
+  // Arrange
+  // Two traffic lights bound to the same regulatory element.
+  //   LEFT  -> (RED,   CIRCLE)     @ 0.9   -- valid on a circle-only map
+  //   RIGHT -> (GREEN, LEFT_ARROW) @ 0.95  -- invalid on the map
+  //
+  // With filter-at-input, the RIGHT record has every element filtered and is replaced with an
+  // UNKNOWN failsafe. Bayesian log-odds then favor LEFT's valid RED over UNKNOWN, and the group
+  // is published as RED CIRCLE.
+  //
+  // Without the filter (or with filter-at-output), the invalid (GREEN, LEFT_ARROW) would win the
+  // log-odds race by having higher confidence, and the group would be published as UNKNOWN after
+  // the output-level filter erased its elements. This test locks in the input-side filtering.
+  auto config = make_default_config();
+  config.use_map_based_signal_filter = true;
+  config.lanelet_map_ptr = make_lanelet_map_with_circle_only_bulbs();
+  MultiCameraFusion fusion(config);
+
+  const auto input0 =
+    make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
+  T4Element arrow_element;
+  arrow_element.color = T4Element::GREEN;
+  arrow_element.shape = T4Element::LEFT_ARROW;
+  arrow_element.status = T4Element::SOLID_ON;
+  arrow_element.confidence = 0.95f;
+  TrafficLight invalid_signal;
+  invalid_signal.traffic_light_id = RIGHT_TRAFFIC_LIGHT_ID;
+  invalid_signal.elements.push_back(arrow_element);
+  const auto input1 = make_fusion_input("camera1", invalid_signal);
+
+  // Act
+  fusion.fuse(input0.camera_info, input0.roi_array, input0.signal_array);
+  const auto result = fusion.fuse(input1.camera_info, input1.roi_array, input1.signal_array);
+
+  // Assert
+  expect_single_fused_color_and_shape(
+    result, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
+}
+
+TEST(
+  MultiCameraFusionFuse, MapBasedFilterProtectsValidInputFromSameCameraInvalidHigherConfidenceInput)
+{
+  // Arrange
+  // Single camera observe the SAME traffic light id. First input reports a map-valid (RED, CIRCLE)
+  // at conf 0.7. Second input reports a map-invalid (GREEN, LEFT_ARROW) at conf 0.9.
+  //
+  // With the filter at fuse() entry, Second input signal empties out and is replaced with a
+  // (UNKNOWN, UNKNOWN) failsafe before the per-camera best-view selection runs. The priority
+  // ranker's "recognized > unknown" rule then picks valid RED CIRCLE of first input.
+  //
+  // Without input-side filtering, second input would win the per-camera contest on confidence
+  // (both signals are recognized), its invalid element would then be erased by the filter,
+  // and valid observation would be lost entirely.
+  auto config = make_default_config();
+  config.use_map_based_signal_filter = true;
+  config.lanelet_map_ptr = make_lanelet_map_with_circle_only_bulbs();
+  MultiCameraFusion fusion(config);
+
+  const auto valid_camera_0_input =
+    make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.7f));
+
+  T4Element arrow_element;
+  arrow_element.color = T4Element::GREEN;
+  arrow_element.shape = T4Element::LEFT_ARROW;
+  arrow_element.status = T4Element::SOLID_ON;
+  arrow_element.confidence = 0.9f;
+  TrafficLight invalid_signal;
+  invalid_signal.traffic_light_id = LEFT_TRAFFIC_LIGHT_ID;  // same id
+  invalid_signal.elements.push_back(arrow_element);
+  const auto invalid_camera_0_input = make_fusion_input("camera0", invalid_signal);
+
+  // Act
+  fusion.fuse(
+    valid_camera_0_input.camera_info, valid_camera_0_input.roi_array,
+    valid_camera_0_input.signal_array);
+  const auto result = fusion.fuse(
+    invalid_camera_0_input.camera_info, invalid_camera_0_input.roi_array,
+    invalid_camera_0_input.signal_array);
+
+  // Assert
+  expect_single_fused_color_and_shape(
+    result, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
+}
+
+TEST(MultiCameraFusionFuse, MapBasedFilterIsInactiveWhenLightBulbsMissingForId)
+{
+  // Arrange
+  // Filter is enabled but the map has no `light_bulbs` for any traffic light id. The filter
+  // must be a no-op — publishing must match the unfiltered baseline.
+  auto config = make_default_config();
+  config.use_map_based_signal_filter = true;
+  // default map has no light_bulbs
+  MultiCameraFusion fusion(config);
+
+  const auto input = make_fusion_input(
+    "camera0", make_signal_with_left_arrow(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f, 0.9f));
+
+  // Act
+  const auto result = fusion.fuse(input.camera_info, input.roi_array, input.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  EXPECT_EQ(group.elements.size(), 2u);
 }
 
 TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFailsafe)

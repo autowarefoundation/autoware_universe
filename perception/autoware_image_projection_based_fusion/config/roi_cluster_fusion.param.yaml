@@ -16,6 +16,8 @@
       MOTORCYCLE : 0.65
       BICYCLE : 0.65
       PEDESTRIAN : 0.2
+      ANIMAL : 0.1
+      HAZARD : 0.1
     remove_unknown: true
 
     # Pedestrian size validation parameters

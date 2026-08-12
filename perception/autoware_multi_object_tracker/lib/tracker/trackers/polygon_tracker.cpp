@@ -1,0 +1,288 @@
+// Copyright 2020 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#define EIGEN_MPL2_ONLY
+
+#include "autoware/multi_object_tracker/tracker/trackers/polygon_tracker.hpp"
+
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <tf2/utils.hpp>
+
+#include <algorithm>
+#include <cmath>
+
+namespace autoware::multi_object_tracker
+{
+
+PolygonTracker::PolygonTracker(
+  const rclcpp::Time & time, const types::DynamicObject & object,
+  const PolygonTrackerConfig & config)
+: Tracker(time, object),
+  logger_(rclcpp::get_logger("PolygonTracker")),
+  enable_velocity_estimation_(config.enable_velocity_estimation),
+  enable_motion_output_(config.enable_motion_output)
+{
+  tracker_type_ = TrackerType::POLYGON;
+  shape_model_.init(object);
+
+  if (enable_velocity_estimation_) {
+    // Set motion model parameters
+    {
+      constexpr double q_stddev_x = 1.5;         // [m/s]
+      constexpr double q_stddev_y = 1.5;         // [m/s]
+      constexpr double q_stddev_vx = 9.8 * 0.5;  // [m/(s*s)]
+      constexpr double q_stddev_vy = 9.8 * 0.5;  // [m/(s*s)]
+      motion_model_.setMotionParams(q_stddev_x, q_stddev_y, q_stddev_vx, q_stddev_vy);
+    }
+
+    // Set motion limits
+    motion_model_.setMotionLimits(
+      autoware_utils_math::kmph2mps(60), /* [m/s] maximum velocity, x */
+      autoware_utils_math::kmph2mps(60)  /* [m/s] maximum velocity, y */
+    );
+
+    // Set initial state
+    {
+      using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+      const double x = object.pose.position.x;
+      const double y = object.pose.position.y;
+      auto pose_cov = object.pose_covariance;
+      auto twist_cov = object.twist_covariance;
+      const double yaw = tf2::getYaw(object.pose.orientation);
+
+      double vx = 0.0;
+      double vy = 0.0;
+      if (object.kinematics.has_twist) {
+        const double & vel_x = object.twist.linear.x;
+        const double & vel_y = object.twist.linear.y;
+        vx = std::cos(yaw) * vel_x - std::sin(yaw) * vel_y;
+        vy = std::sin(yaw) * vel_x + std::cos(yaw) * vel_y;
+      }
+
+      if (!object.kinematics.has_position_covariance) {
+        constexpr double p0_stddev_x = 1.0;  // [m]
+        constexpr double p0_stddev_y = 1.0;  // [m]
+
+        const double p0_cov_x = std::pow(p0_stddev_x, 2.0);
+        const double p0_cov_y = std::pow(p0_stddev_y, 2.0);
+
+        const double cos_yaw = std::cos(yaw);
+        const double sin_yaw = std::sin(yaw);
+        const double sin_2yaw = std::sin(2.0 * yaw);
+        pose_cov[XYZRPY_COV_IDX::X_X] = p0_cov_x * cos_yaw * cos_yaw + p0_cov_y * sin_yaw * sin_yaw;
+        pose_cov[XYZRPY_COV_IDX::X_Y] = 0.5 * (p0_cov_x - p0_cov_y) * sin_2yaw;
+        pose_cov[XYZRPY_COV_IDX::Y_Y] = p0_cov_x * sin_yaw * sin_yaw + p0_cov_y * cos_yaw * cos_yaw;
+        pose_cov[XYZRPY_COV_IDX::Y_X] = pose_cov[XYZRPY_COV_IDX::X_Y];
+      }
+
+      if (!object.kinematics.has_twist_covariance) {
+        constexpr double p0_stddev_vx = autoware_utils_math::kmph2mps(10);  // [m/s]
+        constexpr double p0_stddev_vy = autoware_utils_math::kmph2mps(10);  // [m/s]
+        const double p0_cov_vx = std::pow(p0_stddev_vx, 2.0);
+        const double p0_cov_vy = std::pow(p0_stddev_vy, 2.0);
+        twist_cov[XYZRPY_COV_IDX::X_X] = p0_cov_vx;
+        twist_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
+        twist_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
+        twist_cov[XYZRPY_COV_IDX::Y_Y] = p0_cov_vy;
+      }
+
+      // rotate twist covariance matrix, since it is in the vehicle coordinate system
+      Eigen::MatrixXd twist_cov_rotate(2, 2);
+      twist_cov_rotate(0, 0) = twist_cov[XYZRPY_COV_IDX::X_X];
+      twist_cov_rotate(0, 1) = twist_cov[XYZRPY_COV_IDX::X_Y];
+      twist_cov_rotate(1, 0) = twist_cov[XYZRPY_COV_IDX::Y_X];
+      twist_cov_rotate(1, 1) = twist_cov[XYZRPY_COV_IDX::Y_Y];
+      Eigen::MatrixXd R_yaw = Eigen::Rotation2Dd(-yaw).toRotationMatrix();
+      Eigen::MatrixXd twist_cov_rotated = R_yaw * twist_cov_rotate * R_yaw.transpose();
+      twist_cov[XYZRPY_COV_IDX::X_X] = twist_cov_rotated(0, 0);
+      twist_cov[XYZRPY_COV_IDX::X_Y] = twist_cov_rotated(0, 1);
+      twist_cov[XYZRPY_COV_IDX::Y_X] = twist_cov_rotated(1, 0);
+      twist_cov[XYZRPY_COV_IDX::Y_Y] = twist_cov_rotated(1, 1);
+
+      // initialize motion model
+      motion_model_.initialize(time, x, y, pose_cov, vx, vy, twist_cov);
+    }
+  } else {
+    // Set motion model parameters
+    constexpr double q_stddev_x = 5.0;  // [m/s]
+    constexpr double q_stddev_y = q_stddev_x;
+    static_motion_model_.setMotionParams(q_stddev_x, q_stddev_y);
+
+    // Set initial state
+    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    auto pose_cov = object.pose_covariance;
+    if (!object.kinematics.has_position_covariance) {
+      constexpr double p0_stddev_x = 1.5;  // [m]
+      constexpr double p0_stddev_y = 1.5;  // [m]
+
+      const double p0_cov_x = p0_stddev_x * p0_stddev_x;
+      const double p0_cov_y = p0_stddev_y * p0_stddev_y;
+
+      pose_cov[XYZRPY_COV_IDX::X_X] = p0_cov_x;
+      pose_cov[XYZRPY_COV_IDX::Y_Y] = p0_cov_y;
+      pose_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
+      pose_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
+    }
+    static_motion_model_.initialize(time, object.pose.position.x, object.pose.position.y, pose_cov);
+  }
+  // Seed z/orientation into both models (only the active model is used, but both are safe to set).
+  motion_model_.setZ(object.pose.position.z);
+  motion_model_.setOrientation(object.pose.orientation);
+  static_motion_model_.setZ(object.pose.position.z);
+  static_motion_model_.setOrientation(object.pose.orientation);
+}
+
+bool PolygonTracker::predict(const rclcpp::Time & time)
+{
+  if (enable_velocity_estimation_) {
+    return motion_model_.predictState(time);
+  } else {
+    return static_motion_model_.predictState(time);
+  }
+}
+
+bool PolygonTracker::updateKinematics(const types::DynamicObject & object)
+{
+  bool is_updated = true;
+  constexpr double z_gain = 0.1;
+
+  if (enable_velocity_estimation_) {
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
+    is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
+    motion_model_.limitStates();
+    motion_model_.updateZ(object.pose.position.z, z_gain);
+  } else {
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
+    is_updated = static_motion_model_.updateStatePose(x, y, object.pose_covariance);
+    static_motion_model_.updateZ(object.pose.position.z, z_gain);
+  }
+  return is_updated;
+}
+
+bool PolygonTracker::measure(
+  const types::DynamicObject & object, const rclcpp::Time & time,
+  const types::InputChannel & /*channel_info*/)
+{
+  shape_model_.update(object);
+  // x/y come from the motion model on demand; orientation/z are stored in both motion models.
+  // last_pose_ keeps the raw measurement pose used as the publish-time pose.
+  // z is updated via the low-pass filter in updateKinematics(); do not hard-set here.
+  motion_model_.setOrientation(object.pose.orientation);
+  static_motion_model_.setOrientation(object.pose.orientation);
+  last_pose_ = object.pose;
+
+  if (enable_velocity_estimation_) {
+    // check time gap
+    const double dt = motion_model_.getDeltaTime(time);
+    if (0.01 /*10msec*/ < dt) {
+      RCLCPP_WARN(
+        logger_,
+        "PolygonTracker::measure There is a large gap between predicted time and measurement time. "
+        "(%f)",
+        dt);
+    }
+  }
+
+  updateKinematics(object);
+
+  removeCache();
+  return true;
+}
+
+bool PolygonTracker::getMotionState(
+  const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+  geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
+{
+  if (enable_velocity_estimation_) {
+    return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
+  }
+  return static_motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
+}
+
+bool PolygonTracker::getTrackedObject(
+  const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
+{
+  auto time_object = time;
+
+  if (to_publish) {
+    // if it is for publish, limit the time to the last updated time
+    const auto last_measurement_time = getLatestMeasurementTime();
+    time_object = time.seconds() > last_measurement_time.seconds() ? last_measurement_time : time;
+  }
+  // else, allow extrapolation
+
+  if (!populateKinematicObject(time_object, time, object)) {
+    RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
+    return false;
+  }
+
+  assembleShapeTo(object, to_publish);
+
+  if (to_publish) {
+    object.pose = last_pose_;
+    // Gate motion output on the track's current classification (object.classification was
+    // populated above by populateKinematicObject). Absent/false label => suppress velocity.
+    const auto label = classes::getHighestProbLabel(object.classification);
+    const auto it = enable_motion_output_.find(label);
+    const bool motion_output_enabled = it != enable_motion_output_.end() && it->second;
+    if (!motion_output_enabled) {
+      object.twist.linear.x = 0.0;
+      object.twist.linear.y = 0.0;
+    } else {
+      suppressUncertainVelocity(object);
+    }
+  }
+
+  return true;
+}
+
+void PolygonTracker::suppressUncertainVelocity(types::DynamicObject & object) const
+{
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & twist = object.twist;
+  constexpr double vel_cov_buffer = 0.3;
+
+  const double vx = twist.linear.x;
+  const double vy = twist.linear.y;
+  const double speed = std::hypot(vx, vy);  // absolute velocity (rotation-invariant)
+  if (speed <= 0.0) {
+    return;
+  }
+
+  // Velocity uncertainty (std-dev) projected onto the velocity direction. Reduces to the
+  // longitudinal std-dev used by VehicleTracker when the lateral component is zero.
+  const double sxx = object.twist_covariance[XYZRPY_COV_IDX::X_X];
+  const double syy = object.twist_covariance[XYZRPY_COV_IDX::Y_Y];
+  const double sxy = object.twist_covariance[XYZRPY_COV_IDX::X_Y];
+  const double dir_var = (vx * vx * sxx + 2.0 * vx * vy * sxy + vy * vy * syy) / (speed * speed);
+  const double dir_stddev = std::sqrt(std::max(0.0, dir_var));
+
+  const double vel_limit = dir_stddev - vel_cov_buffer;
+  if (vel_limit <= 0.0) {
+    return;  // uncertainty within the buffer -> velocity is trustworthy, export as is
+  }
+
+  // Continuous gain in [0, 1]: 0 when speed <= vel_limit (too uncertain -> zero), ramps linearly,
+  // and reaches 1 when speed >= 2 * vel_limit (large enough -> export as is). Applying the same
+  // gain to both components rescales the magnitude while preserving the velocity direction.
+  const double gain = std::clamp((speed - vel_limit) / vel_limit, 0.0, 1.0);
+  twist.linear.x = vx * gain;
+  twist.linear.y = vy * gain;
+}
+
+}  // namespace autoware::multi_object_tracker

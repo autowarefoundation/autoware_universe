@@ -2,6 +2,18 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): fix unchecked optional access in imu corrector (`#12597 <https://github.com/autowarefoundation/autoware_universe/issues/12597>`_)
+* fix: imu scale estimation covariance limit for stability (`#12562 <https://github.com/autowarefoundation/autoware_universe/issues/12562>`_)
+  * fix: imu scale estimation covariance limit for stability
+  * chore: change covaraince limit
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+* chore(autoware_imu_corrector): add maintainers to package.xml (`#12580 <https://github.com/autowarefoundation/autoware_universe/issues/12580>`_)
+* Contributors: SergioReyesSan, Vishal Chauhan, Yoshi Ri, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

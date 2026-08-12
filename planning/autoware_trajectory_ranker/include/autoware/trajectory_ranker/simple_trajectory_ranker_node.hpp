@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_RANKER__SIMPLE_TRAJECTORY_RANKER_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_RANKER__SIMPLE_TRAJECTORY_RANKER_NODE_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -28,21 +29,23 @@
 namespace autoware::trajectory_ranker
 {
 
-class SimpleTrajectoryRanker : public rclcpp::Node
+class SimpleTrajectoryRanker : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit SimpleTrajectoryRanker(const rclcpp::NodeOptions & options);
 
 private:
   void trajectories_callback(
-    const autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+      autoware_internal_planning_msgs::msg::CandidateTrajectories) &
+    msg);
 
-  rclcpp::Subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>::SharedPtr
-    sub_trajectories_;
-  rclcpp::Publisher<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories>::SharedPtr
-    pub_trajectories_;
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_internal_planning_msgs::msg::CandidateTrajectories)
+  sub_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories)
+  pub_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
+  debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
   std::vector<std::string> ranked_generator_name_prefixes_;
 };
