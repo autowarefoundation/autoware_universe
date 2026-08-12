@@ -730,6 +730,8 @@ class carla_ros2_interface(object):
         so the bridge never drives forward while reporting PARK or NEUTRAL.
         """
         control.reverse = gear in REVERSE_GEARS
+        if control.reverse:
+            control.gear = -1
         if gear in STANDSTILL_GEARS:
             control.throttle = 0.0
             control.brake = 1.0
