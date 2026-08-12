@@ -254,8 +254,8 @@ TEST_F(PreprocessKernelTest, CroppedVoxelCoordsStayInsideGridBounds)
   }
 }
 
-// generateFeatures sorts the emitted voxels by their order-0 serialized code; this pins that
-// postcondition down at its source.
+// generateSerializedPoolingMetadata requires voxels ordered by their order-0 serialized code; this
+// pins that contract of generateFeatures down at its source.
 TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
 {
   PTv3ConfigParams params;
