@@ -26,20 +26,21 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryEBSmootherOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryEBSmootherOptimizer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
-  if (!enabled_) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
   utils::smooth_trajectory_with_elastic_band(
-    traj_points, data.current_odometry, eb_path_smoother_ptr_);
+    traj_points, *data.current_odometry, eb_path_smoother_ptr_);
 
   autoware::motion_utils::calculate_time_from_start(
-    traj_points, data.current_odometry.pose.pose.position);
+    traj_points, data.current_odometry->pose.pose.position);
+  return ProcessingResult::Modified;
 }
 
-void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
   auto node_ptr = get_node_ptr();
   enabled_ = params.use_eb_smoother;
@@ -52,7 +53,7 @@ void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryOptimizerParam
   eb_path_smoother_ptr_->resetPreviousData();
 }
 
-void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_eb_smoother;
   // TODO(Maxime): support parameter updates of internal objects
@@ -63,4 +64,4 @@ void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryOptimizerParam
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
