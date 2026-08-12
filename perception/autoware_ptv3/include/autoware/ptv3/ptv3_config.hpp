@@ -21,7 +21,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -104,9 +103,6 @@ public:
     if (serialization_depth_ * 3 + max_voxels_depth >= 64) {
       throw std::runtime_error("Serialization depth is too large");
     }
-
-    use_64bit_hash_ =
-      grid_x_size_ * grid_y_size_ * grid_z_size_ > std::numeric_limits<std::uint32_t>::max();
 
     serialization_orders_ = validate_serialization_orders(serialization_orders);
     pooling_strides_ = validate_pooling_strides(pooling_strides);
@@ -379,7 +375,6 @@ public:
   bool use_det3d_head_;
 
   // Preprocess parameters
-  bool use_64bit_hash_{};
   std::int32_t serialization_depth_{};
 
   ///// NETWORK PARAMETERS /////
