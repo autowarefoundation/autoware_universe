@@ -516,10 +516,6 @@ bool TrtCommon::initialize()
       nvinfer1::ILogger::Severity::kINFO,
       "Building a strongly typed network; tensor precisions are taken from the model itself");
   }
-#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH < 100000
-  network_flags |=
-    1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
-#endif
   network_ = TrtUniquePtr<nvinfer1::INetworkDefinition>(builder_->createNetworkV2(network_flags));
 
   if (!network_) {
