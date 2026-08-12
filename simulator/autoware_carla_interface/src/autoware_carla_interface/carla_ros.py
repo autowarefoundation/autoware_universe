@@ -1206,12 +1206,23 @@ class carla_ros2_interface(object):
     def _apply_gear(control, gear):
         """Apply the selected gear to a CARLA control command.
 
-        CARLA has no gear selector of its own for the throttle direction, so
-        reverse is a flag on the control command. In a gear the vehicle cannot
-        pull away in, the accelerator is ignored and the brake is held instead,
-        so the bridge never drives forward while reporting PARK or NEUTRAL.
+        CARLA has no gear selector of its own for the throttle direction: it
+        carries a reverse flag and a gear number, and the control built here
+        shifts manually, where the gear number is what decides the direction.
+        CARLA's own manual_control example keeps the two in step, setting
+        `gear = 1 if reverse else -1` and reading the flag back as
+        `reverse = gear < 0`, so both are set here rather than the flag alone.
+        Setting them together also matters for the standing control, which
+        keeps driving the vehicle until the next actuation command replaces it:
+        leaving a stale reverse gear on it would back the vehicle up for a
+        cycle after the shift out of REVERSE.
+
+        In a gear the vehicle cannot pull away in, the accelerator is ignored
+        and the brake is held instead, so the bridge never drives forward while
+        reporting PARK or NEUTRAL.
         """
         control.reverse = gear in REVERSE_GEARS
+        control.gear = -1 if control.reverse else 1
         if gear in STANDSTILL_GEARS:
             control.throttle = 0.0
             control.brake = 1.0
