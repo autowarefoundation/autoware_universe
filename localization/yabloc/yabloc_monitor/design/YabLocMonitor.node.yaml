@@ -1,0 +1,29 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: YabLocMonitor.node
+package:
+  name: yabloc_monitor
+  provider: autoware
+launch:
+  plugin: YabLocMonitor
+  executable: yabloc_monitor_node
+# interfaces
+subscribers:
+  - name: yabloc_pose
+    message_type: geometry_msgs/msg/PoseStamped
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+# parameters
+param_files:
+  - name: yabloc_monitor_param
+    default: config/yabloc_monitor.param.yaml
+param_values: []
+# processes
+processes:
+  - name: monitor_yabloc_availability
+    trigger_conditions:
+      - on_input: yabloc_pose
+    outcomes:
+      - to_output: diagnostics

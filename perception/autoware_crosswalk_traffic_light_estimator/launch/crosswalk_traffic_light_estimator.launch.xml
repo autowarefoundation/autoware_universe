@@ -11,12 +11,14 @@
   limitations under the License.
 -->
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="input/vector_map" default="/map/vector_map"/>
   <arg name="input/traffic_signals" default="judged/traffic_signals"/>
   <arg name="output/traffic_signals" default="traffic_signals"/>
   <arg name="param_path" default="$(find-pkg-share autoware_crosswalk_traffic_light_estimator)/config/crosswalk_traffic_light_estimator.param.yaml"/>
 
   <node pkg="autoware_crosswalk_traffic_light_estimator" exec="crosswalk_traffic_light_estimator_node" name="crosswalk_traffic_light_estimator" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
     <remap from="~/input/classified/traffic_signals" to="$(var input/traffic_signals)"/>
     <remap from="~/output/traffic_signals" to="$(var output/traffic_signals)"/>

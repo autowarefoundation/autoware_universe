@@ -35,7 +35,16 @@ cudaError_t reportCudaStatus(
 #define PLUGIN_ASSERT(val) reportAssertion((val), #val, __FILE__, __LINE__)
 void reportAssertion(bool success, char const * msg, char const * file, std::int32_t line);
 
+#define PLUGIN_ASSERT_MSG(val, detail) reportAssertionMsg((val), #val, (detail), __FILE__, __LINE__)
+void reportAssertionMsg(
+  bool success, char const * msg, char const * detail, char const * file, std::int32_t line);
+
 #define PLUGIN_VALIDATE(val) reportValidation((val), #val, __FILE__, __LINE__)
 void reportValidation(bool success, char const * msg, char const * file, std::int32_t line);
+
+#define PLUGIN_VALIDATE_MSG(val, detail) \
+  reportValidationMsg((val), #val, (detail), __FILE__, __LINE__)
+void reportValidationMsg(
+  bool success, char const * msg, char const * detail, char const * file, std::int32_t line);
 
 #endif  // AUTOWARE__TENSORRT_PLUGINS__PLUGIN_UTILS_HPP_

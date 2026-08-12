@@ -24,6 +24,10 @@ on:
         required: false
         default: ""
         type: string
+      upload-coverage:
+        default: false
+        required: false
+        type: boolean
     secrets:
       codecov-token:
         required: true
@@ -104,6 +108,29 @@ jobs:
         run: cp build_depends_stable.repos build_depends.repos
         shell: bash
 
+      - name: Remove released Debian packages of the source-built dependencies
+        if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
+        run: |
+          ros_distro="${ROS_DISTRO:-${{ inputs.rosdistro }}}"
+          # colcon-build imports these into dependency_ws and builds them from source.
+          # Importing here as well makes the package list known before the build starts;
+          # the import inside the action then finds the repositories already in place.
+          mkdir -p dependency_ws
+          vcs import --recursive dependency_ws < build_depends.repos
+          for pkg_xml in $(find . -name package.xml); do
+            pkg_name=$(xmllint --xpath 'string(//package/name)' "$pkg_xml")
+            # The released Debian package installs the same headers under
+            # /opt/ros/$ROS_DISTRO/include, which is searched before the workspace include
+            # directory when packages above it are compiled. Leaving it in place lets a
+            # stale released header shadow the one just built from source.
+            deb_name="ros-${ros_distro}-${pkg_name//_/-}"
+            if dpkg-query -W -f='${Status}' "$deb_name" 2>/dev/null | grep -q '^install ok installed$'; then
+              echo "Removing $deb_name"
+              sudo dpkg --remove --force-depends "$deb_name"
+            fi
+          done
+        shell: bash
+
       - name: Build
         if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
@@ -113,6 +140,8 @@ jobs:
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
           build-pre-command: ${{ inputs.build-pre-command }}
+          # Core dependencies are provided pre-built by the Docker image under /opt/autoware.
+          underlay-workspace: /opt/autoware
       - name: Show ccache stats after build
         run: du -sh ${CCACHE_DIR} && ccache -s
         shell: bash
@@ -125,15 +154,17 @@ jobs:
           rosdistro: ${{ inputs.rosdistro }}
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
+          # Core dependencies are provided pre-built by the Docker image under /opt/autoware.
+          underlay-workspace: /opt/autoware
 
       - name: Upload coverage to CodeCov
-        if: ${{ steps.test.outputs.coverage-report-files != '' && contains(inputs.container, '-cuda') && inputs.rosdistro == 'jazzy' }}
+        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.upload-coverage }}
+        # Intentionally flagless: flagging this partial upload would suppress the full-suite carryforward.
         uses: codecov/codecov-action@v6
         with:
           files: ${{ steps.test.outputs.coverage-report-files }}
           fail_ci_if_error: false
           verbose: true
-          flags: full-suite
           token: ${{ secrets.codecov-token }}
           disable_search: true
           # Disable gcov and xcode plugins, keeping only pycoverage.

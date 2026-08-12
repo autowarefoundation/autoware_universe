@@ -2,6 +2,43 @@
 Changelog for package autoware_traffic_light_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* test(autoware_traffic_light_classifier): add ColorClassifier unit tests (`#12890 <https://github.com/autowarefoundation/autoware_universe/issues/12890>`_)
+  Add unit tests for ColorClassifier covering HSV-band classification,
+  out-of-band -> UNKNOWN, confidence bounds, threshold-driven classification,
+  size mismatch, and the empty-batch no-op. Written in Arrange-Act-Assert.
+  The classifier currently takes an rclcpp::Node *, so the tests host a node
+  and prime the HSV thresholds via set_parameter(); a later commit removes
+  that ROS coupling and only the construction/priming (Arrange) changes.
+  Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+* test(autoware_traffic_light_classifier): remove superseded node characterization tests (`#12889 <https://github.com/autowarefoundation/autoware_universe/issues/12889>`_)
+  The node-level characterization tests (test_traffic_light_classifier_characteristics)
+  were added as a transitional safety net while the classification logic was being
+  separated from the ROS node. That separation is complete and the behavior is now
+  covered by the core unit tests and the node integration tests, so the
+  characterization tests are redundant and are removed.
+  Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+* test(autoware_traffic_light_classifier): add core unit and node integration tests (`#12882 <https://github.com/autowarefoundation/autoware_universe/issues/12882>`_)
+  Add test coverage for the traffic light classifier at two layers:
+  * `test_traffic_light_classifier.cpp`: ROS-free unit tests driving `TrafficLightClassifier::classify()` directly with a `FakeClassifier` backend — pinning per-ROI orchestration (type filtering, zero-sized→UNKNOWN append, output ordering, crop geometry, exposure overwrite, backend-failure early return).
+  * `test_traffic_light_classifier_integration.cpp`: node-level tests for the topic-driven pub/sub path and diagnostics.
+  Both are registered in `CMakeLists.txt` (ROS-free gtest for the core, ros-isolated gtest for the node). The integration test includes cv_bridge/OpenCV directly rather than via transitive node-header includes.
+* refactor(autoware_traffic_light_classifier): extract classification logic from ROS node (`#12851 <https://github.com/autowarefoundation/autoware_universe/issues/12851>`_)
+  Move the per-ROI orchestration (type filtering, exposure detection, crop and
+  classify, UNKNOWN handling) out of TrafficLightClassifierNodelet::imageRoiCallback
+  into a ROS-free TrafficLightClassifier class. The node becomes a thin adapter that
+  handles I/O (params, pub/sub, cv_bridge, diagnostics) and delegates classification.
+  Behavior is preserved; the existing characterization test pins it as the safety net.
+* test(autoware_traffic_light_classifier): add characterization test for decoupling the node and the logic (`#12840 <https://github.com/autowarefoundation/autoware_universe/issues/12840>`_)
+  Introduces a node-level characterization test suite for `TrafficLightClassifierNodelet::imageRoiCallback` to serve as a safety net ahead of the node/logic decoupling refactor.
+  **Key Changes:**
+  * **Behavior Pinned:** Covers ROI filtering, zero-size handling, exposure overwrites, ID propagation, and diagnostics.
+  * **Hardware & CI Robustness:** Uses a CPU-only HSV backend (no CUDA/TensorRT required) and runs via `ament_add_ros_isolated_gtest` for stable execution in CI.
+  * **Improved Design:** Replaces PNG fixtures with declarative synthetic images and explicitly documents uncharacterized scopes.
+* Contributors: Takayuki AKAMINE, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -15,22 +15,17 @@
 #ifndef AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__PERCEPTION_HPP_
 #define AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__PERCEPTION_HPP_
 
-#include <rclcpp/qos.hpp>
+#include <autoware/component_interface_specs/perception.hpp>
 
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-
+// Re-export the core specs so universe consumers keep resolving the canonical
+// (single-version-authority) type; core is the sole definition and version authority.
 namespace autoware::component_interface_specs_universe::perception
 {
-
-struct ObjectRecognition
-{
-  using Message = autoware_perception_msgs::msg::PredictedObjects;
-  static constexpr char name[] = "/perception/object_recognition/objects";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
+using autoware::component_interface_specs::perception::ObjectRecognition;
+using autoware::component_interface_specs::perception::Specs;
+using autoware::component_interface_specs::perception::TrackedObjects;
+using autoware::component_interface_specs::perception::TrafficSignals;
+using autoware::component_interface_specs::perception::version;
 }  // namespace autoware::component_interface_specs_universe::perception
 
 #endif  // AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__PERCEPTION_HPP_

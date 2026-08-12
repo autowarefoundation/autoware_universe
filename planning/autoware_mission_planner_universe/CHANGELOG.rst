@@ -2,6 +2,48 @@
 Changelog for package autoware_mission_planner_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(direction_change_module): propagate `allow_area` to downstream modules for area-primitive route support (`#12815 <https://github.com/autowarefoundation/autoware_universe/issues/12815>`_)
+  * feat: ignore lane_departure in area primitive
+  * feat: add area primitive for isRouteValid() in mission_planner_universe
+  * feat: add allow_area for scenario_selector
+  * feat: add allow_area to planning_validator
+  * feat: add missing params in scenario module manager
+  * fix: set allow_area to false by default
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat: add reverse goal support for reverse oriented goal poses (`#12668 <https://github.com/autowarefoundation/autoware_universe/issues/12668>`_)
+  * feat: add hasDirectionAreaTag() method to map tag checks
+  * feat: add the direction_change map tag checks, forward maneuver goal pose is given priority
+  ---------
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* feat: add area support for route planning and fix DCO signoff (`#12572 <https://github.com/autowarefoundation/autoware_universe/issues/12572>`_)
+  * feat: add support for area for route planning
+  * feat(mission_planner): publish lane+area route segments and goal height
+  * fix(manual_lane_change_handler): guard lane-only APIs when route has areas
+  * feat(mission_planner): visualize route area segments as LINE_STRIP in RViz
+  * fix (remaining_distance_calculator): derive lane list from route msg when areas present in the route
+  * fix(mission_planner): drop redundant goal_height init in refine_goal_height
+  Removes cppcheck redundantInitialization warning; goal_height is always
+  set in the area vs lane branches before use.
+  * style(pre-commit): autofix
+  * fix: resolve merge conflicts
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Ryohsuke Mitsudome <ryohsuke.mitsudome@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Sarun MUKDAPITAK, emmeyteja, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

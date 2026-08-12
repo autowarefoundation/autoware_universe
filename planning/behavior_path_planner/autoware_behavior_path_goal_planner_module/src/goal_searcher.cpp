@@ -379,14 +379,16 @@ GoalCandidates GoalSearcher::search(
         continue;
       }
 
-      if (goal_planner_utils::isIntersectingAreas(
-            transformed_vehicle_footprint, no_parking_area_polygons_)) {
+      if (
+        goal_planner_utils::isIntersectingAreas(
+          transformed_vehicle_footprint, no_parking_area_polygons_)) {
         // break here to exclude goals located laterally in no_parking_areas
         break;
       }
 
-      if (goal_planner_utils::isIntersectingAreas(
-            transformed_vehicle_footprint, no_stopping_area_polygons_)) {
+      if (
+        goal_planner_utils::isIntersectingAreas(
+          transformed_vehicle_footprint, no_stopping_area_polygons_)) {
         // break here to exclude goals located laterally in no_stopping_areas
         break;
       }
@@ -533,8 +535,9 @@ void GoalSearcher::update(
     const auto target_objects = goal_planner_utils::filterObjectsByLateralDistance(
       goal_pose, planner_data->parameters.vehicle_width, objects,
       parameters_.object_recognition_collision_check_hard_margins.back(), filter_inside);
-    if (checkCollisionWithLongitudinalDistance(
-          goal_pose, target_objects, occupancy_grid_map, planner_data)) {
+    if (
+      checkCollisionWithLongitudinalDistance(
+        goal_pose, target_objects, occupancy_grid_map, planner_data)) {
       goal_candidate.is_safe = false;
       continue;
     }
@@ -555,8 +558,9 @@ bool GoalSearcher::isSafeGoalWithMarginScaleFactor(
   const double margin =
     parameters_.object_recognition_collision_check_hard_margins.back() * margin_scale_factor;
 
-  if (utils::checkCollisionBetweenFootprintAndObjects(
-        vehicle_footprint_, goal_pose, objects, margin)) {
+  if (
+    utils::checkCollisionBetweenFootprintAndObjects(
+      vehicle_footprint_, goal_pose, objects, margin)) {
     return false;
   }
 
@@ -564,8 +568,9 @@ bool GoalSearcher::isSafeGoalWithMarginScaleFactor(
   constexpr bool filter_inside = true;
   const auto target_objects = goal_planner_utils::filterObjectsByLateralDistance(
     goal_pose, planner_data->parameters.vehicle_width, objects, margin, filter_inside);
-  if (checkCollisionWithLongitudinalDistance(
-        goal_pose, target_objects, occupancy_grid_map, planner_data)) {
+  if (
+    checkCollisionWithLongitudinalDistance(
+      goal_pose, target_objects, occupancy_grid_map, planner_data)) {
     return false;
   }
 
@@ -586,9 +591,10 @@ bool GoalSearcher::checkCollision(
     }
   }
 
-  if (utils::checkCollisionBetweenFootprintAndObjects(
-        vehicle_footprint_, pose, objects,
-        parameters_.object_recognition_collision_check_hard_margins.back())) {
+  if (
+    utils::checkCollisionBetweenFootprintAndObjects(
+      vehicle_footprint_, pose, objects,
+      parameters_.object_recognition_collision_check_hard_margins.back())) {
     return true;
   }
   return false;

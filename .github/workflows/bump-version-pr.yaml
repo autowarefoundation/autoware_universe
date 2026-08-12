@@ -1,8 +1,40 @@
+# Workflow: bump-version-pr
+#
+# Opens a release PR that bumps the package versions and updates CHANGELOG.rst
+# files via catkin_tools (catkin_generate_changelog + catkin_prepare_release).
+#
+# Triggered manually via workflow_dispatch with the following inputs:
+#   - base_version:  version (git tag) to bump from. Defaults to the latest
+#                    semantic version tag in the repository.
+#   - target_branch: branch the PR is opened against. Defaults to "main".
+#   - version_part:  which part of the semantic version to bump
+#                    (major / minor / patch).
+#
+# High-level flow:
+#   1. Check out a temporary working branch from the resolved base_version tag.
+#   2. Merge the target_branch into the working branch.
+#   3. Align package.xml versions to base_version and clear CHANGELOG.rst files
+#      so catkin_generate_changelog / catkin_prepare_release do not fail on
+#      packages whose versions have diverged from the base version.
+#   4. Run catkin_generate_changelog and catkin_prepare_release to bump the
+#      version and regenerate changelogs.
+#   5. Push the result and open a PR against target_branch.
+
 name: bump-version-pr
 
 on:
   workflow_dispatch:
     inputs:
+      base_version:
+        description: Version to bump from (defaults to the latest semantic version tag)
+        required: false
+        default: ""
+        type: string
+      target_branch:
+        description: Branch to create the PR against
+        required: false
+        default: main
+        type: string
       version_part:
         description: Which part of the version number to bump?
         required: true
@@ -20,12 +52,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: humble
           fetch-depth: 0
 
       - name: Generate token
         id: generate-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
@@ -44,37 +75,124 @@ jobs:
         run: pip3 install -U catkin_tools
         shell: bash
 
-      - name: Bump version from humble branch
-        id: bump-version-from-humble-branch
+      - name: Resolve base version
+        id: resolve_base_version
+        env:
+          INPUT_BASE_VERSION: ${{ inputs.base_version }}
         run: |
-          git checkout -b tmp/bot/bump_version_base
-          git fetch origin main
-          git merge origin/main
+          base_version="${INPUT_BASE_VERSION}"
+          if [ -z "${base_version}" ]; then
+            base_version=$(git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+          fi
+          if [ -z "${base_version}" ]; then
+            echo "Failed to resolve base version." >&2
+            exit 1
+          fi
+          if ! git rev-parse --verify "refs/tags/${base_version}" >/dev/null 2>&1; then
+            echo "Base version tag '${base_version}' does not exist." >&2
+            exit 1
+          fi
+          echo "base_version=${base_version}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Bump version from base version
+        id: bump_version
+        env:
+          BASE_VERSION: ${{ steps.resolve_base_version.outputs.base_version }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          VERSION_PART: ${{ inputs.version_part }}
+        run: |
+          git checkout -b tmp/bot/bump_version_base "refs/tags/${BASE_VERSION}"
+          git fetch origin "${TARGET_BRANCH}"
+          git merge "origin/${TARGET_BRANCH}"
+
+          # For packages whose version diverged from BASE_VERSION:
+          #   - rewrite package.xml's <version> to BASE_VERSION, and
+          #   - delete the package's CHANGELOG.rst
+          # so that catkin_generate_changelog / catkin_prepare_release do not
+          # fail. Collect the affected package names so reviewers can see
+          # which packages had their changelog reset.
+          deleted_changelog_packages_file="${RUNNER_TEMP:-/tmp}/deleted_changelog_packages.txt"
+          : > "${deleted_changelog_packages_file}"
+          while IFS= read -r -d '' pkg; do
+            current_version=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "${pkg}" | head -n 1)
+            if [ "${current_version}" = "${BASE_VERSION}" ]; then
+              continue
+            fi
+            sed -i "0,/<version>[^<]*<\/version>/s//<version>${BASE_VERSION}<\/version>/" "${pkg}"
+            changelog="$(dirname "${pkg}")/CHANGELOG.rst"
+            if [ -f "${changelog}" ]; then
+              pkg_name=$(sed -n 's:.*<name>\(.*\)</name>.*:\1:p' "${pkg}" | head -n 1)
+              [ -z "${pkg_name}" ] && pkg_name=$(dirname "${pkg}")
+              echo "${pkg_name}" >> "${deleted_changelog_packages_file}"
+              rm -f "${changelog}"
+            fi
+          done < <(find . -name package.xml -not -path "./.git/*" -print0)
+          sort -u -o "${deleted_changelog_packages_file}" "${deleted_changelog_packages_file}"
+          echo "deleted_changelog_packages_file=${deleted_changelog_packages_file}" >> $GITHUB_OUTPUT
+
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "chore: align package versions to ${BASE_VERSION} and reset changelogs"
+          fi
+
           catkin_generate_changelog -y
-          git add *
+          git add -A
           git commit -m "update CHANGELOG.rst"
-          catkin_prepare_release -y --bump ${{ inputs.version_part }} --no-push
+          catkin_prepare_release -y --bump "${VERSION_PART}" --no-push
           version=$(git describe --tags)
           echo "version=${version}" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Create target branch
+        env:
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          NEW_VERSION: ${{ steps.bump_version.outputs.version }}
         run: |
-          git checkout origin/main
+          git checkout "origin/${TARGET_BRANCH}"
           git checkout -b chore/bot/bump_version
-          git merge tmp/bot/bump_version_base
+          # Squash the working branch into a single commit so the PR has a
+          # clean history (one commit for the bump) regardless of how many
+          # intermediate commits catkin_prepare_release created.
+          git merge --squash tmp/bot/bump_version_base
+          git commit -m "chore: bump version to ${NEW_VERSION}"
           git push origin chore/bot/bump_version --force
         shell: bash
 
+      - name: Build PR body
+        id: build_pr_body
+        env:
+          BASE_VERSION: ${{ steps.resolve_base_version.outputs.base_version }}
+          NEW_VERSION: ${{ steps.bump_version.outputs.version }}
+          DELETED_CHANGELOG_PACKAGES_FILE: ${{ steps.bump_version.outputs.deleted_changelog_packages_file }}
+        run: |
+          body_file="${RUNNER_TEMP:-/tmp}/pr_body.md"
+          {
+            echo "Bump version from \`${BASE_VERSION}\` to \`${NEW_VERSION}\`."
+            echo
+            if [ -s "${DELETED_CHANGELOG_PACKAGES_FILE}" ]; then
+              printf "%s\n\n%s\n" \
+                     "## Packages whose \`CHANGELOG.rst\` was reset" \
+                     "The following packages had their \`CHANGELOG.rst\` deleted before regenerating changelogs (e.g. their version had diverged from \`${BASE_VERSION}\`). Please double-check the regenerated changelog entries for these packages:"
+              while IFS= read -r pkg; do
+                [ -z "${pkg}" ] && continue
+                echo "- \`${pkg}\`"
+              done < "${DELETED_CHANGELOG_PACKAGES_FILE}"
+            fi
+          } > "${body_file}"
+          echo "body_file=${body_file}" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Create PR
-        id: create-pr
-        run: >
-          gh
-          pr
-          create
-          --base=main
-          --body="Bump version to ${{ steps.bump-version-from-humble-branch.outputs.version }}"
-          --title="chore: bump version to ${{ steps.bump-version-from-humble-branch.outputs.version }}"
-          --head=chore/bot/bump_version
+        id: create_pr
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          BODY_FILE: ${{ steps.build_pr_body.outputs.body_file }}
+          NEW_VERSION: ${{ steps.bump_version.outputs.version }}
+        run: |
+          gh pr create \
+            --base="${TARGET_BRANCH}" \
+            --body-file="${BODY_FILE}" \
+            --title="chore: bump version to ${NEW_VERSION}" \
+            --head=chore/bot/bump_version

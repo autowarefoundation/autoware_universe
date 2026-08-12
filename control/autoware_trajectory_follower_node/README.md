@@ -140,6 +140,13 @@ Giving the longitudinal controller information about steer convergence allows it
 
 #### Parameter
 
+- `trajectory_reference_mode`: `spatial` or `temporal` (default: `spatial`)
+  - `spatial`: the reference trajectory is tracked based on distance, calculating the time step of
+    each prediction point from distance and velocity.
+  - `temporal`: the reference trajectory's `time_from_start` field is used directly to track the
+    trajectory based on time steps.
+  - This parameter is declared here and shared with the lateral (MPC) and longitudinal (PID)
+    controllers.
 - `ctrl_period`: control commands publishing period
 - `timeout_thr_sec`: duration in second after which input messages are discarded.
   - Each time the node receives lateral and longitudinal commands from each controller, it publishes an `Control` if the following two conditions are met.
