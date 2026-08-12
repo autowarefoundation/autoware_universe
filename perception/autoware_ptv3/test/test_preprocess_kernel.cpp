@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -324,6 +325,40 @@ TEST_F(PreprocessKernelTest, UnalignedRangeBoundaryKeepsCornerVoxelsDistinct)
   EXPECT_EQ(voxel_coords, (std::vector<std::int32_t>{0, 0, 0, 16, 16, 16}));
   EXPECT_EQ(serialized_code[0], serialize_coord(0, 0, 0, depth, false));
   EXPECT_EQ(serialized_code[1], serialize_coord(16, 16, 16, depth, false));
+}
+
+// Borders that are voxel-aligned in decimal but not exactly representable in binary (102.4, 0.1)
+// rely on the config evaluating the same float arithmetic as the device grid mapping: the depth
+// must stay 11 (2048 cells, no spurious boundary coordinate), a point one ULP below the border
+// must land in the last cell, and a point exactly on the border must be cropped by the strict
+// upper bound - the very exclusion the config's nextafter maximization models.
+TEST_F(PreprocessKernelTest, Base10AlignedBordersStayWithinSerializationDepth)
+{
+  PTv3ConfigParams params;
+  params.cloud_capacity = 64;
+  params.voxels_num = {1, 32, 64};
+  params.point_cloud_range = {-102.4F, -102.4F, -102.4F, 102.4F, 102.4F, 102.4F};
+  params.voxel_size = {0.1F, 0.1F, 0.1F};
+
+  const float below_max = std::nextafter(102.4F, 0.0F);
+  const std::vector<CloudPointTypeXYZI> host_points{
+    {-102.4F, -102.4F, -102.4F, 1.0F},        // exactly on the min border: grid coord (0, 0, 0)
+    {below_max, below_max, below_max, 2.0F},  // last cell: grid coord (2047, 2047, 2047)
+    {102.4F, 102.4F, 102.4F, 3.0F},           // exactly on the max border: cropped
+  };
+
+  const auto result = runGenerateFeatures(params, host_points, true);
+  ASSERT_EQ(result.num_cropped_points, 2U);
+  ASSERT_EQ(result.num_voxels, 2U);
+
+  const auto depth = config_->serialization_depth_;
+  EXPECT_EQ(depth, 11);
+
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  const auto serialized_code = copyToHost(result.serialized_code_d.get(), result.num_voxels * 2);
+  EXPECT_EQ(voxel_coords, (std::vector<std::int32_t>{0, 0, 0, 2047, 2047, 2047}));
+  EXPECT_EQ(serialized_code[0], serialize_coord(0, 0, 0, depth, false));
+  EXPECT_EQ(serialized_code[1], serialize_coord(2047, 2047, 2047, depth, false));
 }
 
 TEST_F(PreprocessKernelTest, FullReconstructionKeepsAllInputFeaturesBeforeCrop)
