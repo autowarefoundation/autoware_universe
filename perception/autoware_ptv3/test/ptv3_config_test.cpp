@@ -88,9 +88,7 @@ TEST(PTv3ConfigTest, SerializationDepthCoversUnalignedRangeBoundary)
 }
 
 // Borders that are voxel-aligned in decimal but not exactly representable in binary (neither 102.4
-// nor 0.1 is a binary float) must not gain a spurious extra coordinate from rounding: the depth is
-// derived from the same float division and floor the device mapping executes, which lands exactly
-// on the 2048 aligned cells here.
+// nor 0.1 is a binary float) must not gain a spurious extra coordinate from rounding.
 TEST(PTv3ConfigTest, SerializationDepthStaysExactForBase10AlignedRanges)
 {
   const auto config = makeDetectionConfig(
