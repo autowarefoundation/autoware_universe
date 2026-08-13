@@ -1,0 +1,50 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PlanningEvaluator.node
+
+package:
+  name: autoware_planning_evaluator
+  provider: autoware
+
+launch:
+  plugin: planning_diagnostics::PlanningEvaluatorNode
+  executable: planning_evaluator
+
+# interfaces
+subscribers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: reference_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+
+publishers:
+  - name: metrics
+    message_type: autoware_planning_msgs/msg/PlanningAnalysis
+    remap_target: ~/metrics
+
+# parameters
+param_files:
+  - name: planning_evaluator_param
+    default: config/planning_evaluator.param.yaml
+
+param_values:
+  - name: output_metrics
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: evaluate
+    trigger_conditions:
+      - on_input: trajectory
+    outcomes:
+      - to_output: metrics

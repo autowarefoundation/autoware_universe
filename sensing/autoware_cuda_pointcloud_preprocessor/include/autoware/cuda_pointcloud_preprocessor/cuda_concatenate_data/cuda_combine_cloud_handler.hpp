@@ -54,6 +54,13 @@ public:
     const std::shared_ptr<CollectorInfoBase> & collector_info);
 
   void allocate_pointclouds() override;
+
+  /// Returns the per-topic CUDA stream used while consuming that topic's cloud.
+  /// Enables stream-ordered producer/consumer lifetime handling.
+  cudaStream_t stream(const std::string & topic) const
+  {
+    return cuda_concat_struct_map_.at(topic).stream;
+  }
 };
 
 }  // namespace autoware::pointcloud_preprocessor

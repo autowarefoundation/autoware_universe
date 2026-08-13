@@ -17,6 +17,7 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <memory>
+#include <utility>
 
 namespace autoware::crosswalk_traffic_light_estimator
 {
@@ -45,10 +46,13 @@ CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
 
   pub_traffic_light_array_ =
     this->create_publisher<TrafficSignalArray>("~/output/traffic_signals", rclcpp::QoS{1});
-  pub_processing_time_ = std::make_shared<DebugPublisher>(this, "~/debug");
+  pub_processing_time_ =
+    std::make_shared<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "~/debug");
 }
 
-void CrosswalkTrafficLightEstimatorNode::on_map(const LaneletMapBin::ConstSharedPtr msg)
+void CrosswalkTrafficLightEstimatorNode::on_map(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
   RCLCPP_DEBUG(get_logger(), "[CrosswalkTrafficLightEstimatorNode]: Start loading lanelet");
   auto lanelet_map_ptr = autoware::experimental::lanelet2_utils::remove_const(
@@ -60,25 +64,25 @@ void CrosswalkTrafficLightEstimatorNode::on_map(const LaneletMapBin::ConstShared
 }
 
 void CrosswalkTrafficLightEstimatorNode::on_traffic_light_array(
-  const TrafficSignalArray::ConstSharedPtr msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg)
 {
   if (!estimator_.is_map_loaded()) {
     RCLCPP_WARN(get_logger(), "cannot process traffic light array because the map is not received");
     return;
   }
 
-  StopWatch<std::chrono::milliseconds> stop_watch;
-  stop_watch.tic("Total");
+  stop_watch_.tic("Total");
 
   const auto unregistered_ids = estimator_.find_unregistered_traffic_light_group_ids(*msg);
   for (const auto & id : unregistered_ids) {
     RCLCPP_WARN(get_logger(), "Traffic light group ID %ld is not registered in the map", id);
   }
 
-  const auto output = estimator_.estimate(*msg, get_clock()->now());
+  auto output_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_traffic_light_array_);
+  *output_ptr = estimator_.estimate(*msg, get_clock()->now());
 
-  pub_traffic_light_array_->publish(output);
-  pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch.toc("Total"));
+  pub_traffic_light_array_->publish(std::move(output_ptr));
+  pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch_.toc("Total"));
 }
 
 }  // namespace autoware::crosswalk_traffic_light_estimator

@@ -39,7 +39,7 @@
     # ==========================================================================
     # Path to model-specific parameters (architecture, normalization, classes)
     # This file is downloaded via Ansible with the model weights
-    model_param_path: $(env HOME)/autoware_data/vad/v0.1/vad-carla-tiny.param.json
+    model_param_path: $(var model_path)/v0.1/vad-carla-tiny.param.json
 
     # ==========================================================================
     # CAMERA HARDWARE CONFIGURATION (Deployment-Specific)

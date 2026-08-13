@@ -2,6 +2,137 @@
 Changelog for package autoware_mission_planner_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(direction_change_module): propagate `allow_area` to downstream modules for area-primitive route support (`#12815 <https://github.com/autowarefoundation/autoware_universe/issues/12815>`_)
+  * feat: ignore lane_departure in area primitive
+  * feat: add area primitive for isRouteValid() in mission_planner_universe
+  * feat: add allow_area for scenario_selector
+  * feat: add allow_area to planning_validator
+  * feat: add missing params in scenario module manager
+  * fix: set allow_area to false by default
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat: add reverse goal support for reverse oriented goal poses (`#12668 <https://github.com/autowarefoundation/autoware_universe/issues/12668>`_)
+  * feat: add hasDirectionAreaTag() method to map tag checks
+  * feat: add the direction_change map tag checks, forward maneuver goal pose is given priority
+  ---------
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* feat: add area support for route planning and fix DCO signoff (`#12572 <https://github.com/autowarefoundation/autoware_universe/issues/12572>`_)
+  * feat: add support for area for route planning
+  * feat(mission_planner): publish lane+area route segments and goal height
+  * fix(manual_lane_change_handler): guard lane-only APIs when route has areas
+  * feat(mission_planner): visualize route area segments as LINE_STRIP in RViz
+  * fix (remaining_distance_calculator): derive lane list from route msg when areas present in the route
+  * fix(mission_planner): drop redundant goal_height init in refine_goal_height
+  Removes cppcheck redundantInitialization warning; goal_height is always
+  set in the area vs lane branches before use.
+  * style(pre-commit): autofix
+  * fix: resolve merge conflicts
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Ryohsuke Mitsudome <ryohsuke.mitsudome@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Sarun MUKDAPITAK, emmeyteja, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_mission_planner_universe): make library name unique for goal_pose_visualizer (`#12386 <https://github.com/mitsudome-r/autoware_universe/issues/12386>`_)
+* feat(autoware_path_optimizer): reintroducing acados MPT along with changes to linking to acados (`#12300 <https://github.com/mitsudome-r/autoware_universe/issues/12300>`_)
+  * Revert "feat(autoware_path_optimizer): reverts new path optimizer due to failing builds (`#12298 <https://github.com/mitsudome-r/autoware_universe/issues/12298>`_)"
+  This reverts commit 7302e8ce79eef35b51971bbbfff28c1b40cf529e.
+  * fix to CMakeLists to propagate acados links downstream
+  * added words to spell-check
+  * committing generated files
+  * added words to cspell
+  * fix
+  * style(pre-commit): autofix
+  * update to previous placeholder
+  * Change link to public
+  * update to cspell
+  * update to cspell
+  * Revert "committing generated files"
+  This reverts commit 6496b40e552af440e57c17695fd8464155c57200.
+  * Revert "update to previous placeholder"
+  This reverts commit 82615801655f6abe49182a5fc38a0db5ec0d87f1.
+  * final
+  * build to output tree
+  * copyright
+  * fix for copyright
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(planning): remove unused lanelet2_extension header (`#12294 <https://github.com/mitsudome-r/autoware_universe/issues/12294>`_)
+  * unused lanelet2_extension in planning component
+  * unused lanelet2_extension in planning component (2)
+  * unused lanelet2_extension in planning component (3)
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_path_optimizer): reverts new path optimizer due to failing builds (`#12298 <https://github.com/mitsudome-r/autoware_universe/issues/12298>`_)
+  Revert "feat(autoware_path_optimizer): new path optimizer (`#11479 <https://github.com/mitsudome-r/autoware_universe/issues/11479>`_)"
+  This reverts commit f775ea6f8e6434531057d5703ef03f391d354d54.
+* feat(autoware_mission_planner_universe): remove glog component (`#12226 <https://github.com/mitsudome-r/autoware_universe/issues/12226>`_)
+  feat: remove glog component
+* feat(autoware_path_optimizer): new path optimizer (`#11479 <https://github.com/mitsudome-r/autoware_universe/issues/11479>`_)
+  * acados MPT
+  * fix
+  * fix
+  * changed name of variable
+  * fix
+  * match build_depends*.repos to autoware*.repos structure
+  * fix
+  * fix
+  * fix
+  * Apply suggestions from code review
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * Update planning/autoware_path_optimizer/src/acados_mpc/CMakeLists.txt
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * target_link_directories
+  * just link acados public
+  * revert unrelated changes
+  * chore: update CODEOWNERS (`#12216 <https://github.com/mitsudome-r/autoware_universe/issues/12216>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  * fix
+  * fixes for ament
+  * changes for CI
+  * fix for clang
+  * spell-check
+  * changed stub
+  * removed guards
+  * fix for build CI
+  * changes for build-test-differential
+  * changes for build-test-differential
+  * fix
+  ---------
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: awf-autoware-bot[bot] <94889083+awf-autoware-bot[bot]@users.noreply.github.com>
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* refactor(planning): deprecate toLaneletPoint/toGeomPt in costmap_generator, miscs (`#12089 <https://github.com/mitsudome-r/autoware_universe/issues/12089>`_)
+  * refactor(planning): deprecate toLaneletPoint/toGeomPt in costmap_generator, miscs
+  * fix
+  ---------
+* Contributors: Arjun Jagdish Ram, Mamoru Sobue, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Tetsuhiro Kawaguchi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -62,6 +62,10 @@ ManualLaneChangeHandler::sort_primitives_left_to_right(
 {
   using Primitive = autoware_planning_msgs::msg::LaneletPrimitive;
 
+  if (preferred_primitive.primitive_type == "area") {
+    return primitives;
+  }
+
   std::deque<Primitive> sorted_primitives;
 
   auto find_primitive = [&](lanelet::Id id) -> std::optional<Primitive> {
@@ -103,6 +107,9 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
   route_handler_.setRoute(*msg);
 
   std::for_each(route.segments.begin(), route.segments.end(), [&](auto & segment) {
+    if (segment.preferred_primitive.primitive_type == "area") {
+      return;
+    }
     segment.primitives = sort_primitives_left_to_right(
       route_handler_, segment.preferred_primitive, segment.primitives);
   });
@@ -151,6 +158,13 @@ void ManualLaneChangeHandler::set_preferred_lane(
   if (!reroute_availability || !reroute_availability->availability) {
     res->status.success = false;
     res->status.message = "Not in lane driving state. Wait for the current scenario to end.";
+    return;
+  }
+
+  if (current_route_->segments.front().preferred_primitive.primitive_type == "area") {
+    res->status.success = false;
+    res->status.message =
+      "Manual lane change is not supported when the first route segment is an area.";
     return;
   }
 

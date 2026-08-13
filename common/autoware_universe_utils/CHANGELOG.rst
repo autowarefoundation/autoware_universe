@@ -2,6 +2,36 @@
 Changelog for package autoware_universe_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): re-enable bugprone-optional-value-conversion for universe utils (`#12588 <https://github.com/autowarefoundation/autoware_universe/issues/12588>`_)
+  * fix(clang-tidy): re-enable optional value conversion check for universe utils
+  * ignoreing bugprone-optional-value-conversion until the rest of the fixes are made
+  ---------
+  Co-authored-by: mitsudome-r <ryohsuke.mitsudome@tier4.jp>
+* fix(clang-tidy): re-enable bugprone-multi-level-implicit-pointer-conversion (`#12578 <https://github.com/autowarefoundation/autoware_universe/issues/12578>`_)
+  fix(clang-tidy): re-enable multi-level pointer conversion check
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Sarun MUKDAPITAK, Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(common): use emplace/emplace_back to avoid temporary object creation (`#12238 <https://github.com/mitsudome-r/autoware_universe/issues/12238>`_)
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_universe_utils): fix test for boost geometry (`#12372 <https://github.com/mitsudome-r/autoware_universe/issues/12372>`_)
+  * fix(autoware_universe_utils): fix test for boost geometry
+* chore(universe_utils): disable convex_hull flaky tests (`#12276 <https://github.com/mitsudome-r/autoware_universe/issues/12276>`_)
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

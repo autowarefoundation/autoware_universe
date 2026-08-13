@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: HazardLightsSelector.node
+
+package:
+  name: autoware_hazard_lights_selector
+  provider: autoware
+
+launch:
+  plugin: autoware::hazard_lights_selector::HazardLightsSelectorNode
+  executable: autoware_hazard_lights_selector_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: lane_driving_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/planning/hazard_lights_command
+  - name: parking_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/system/hazard_lights_command
+
+publishers:
+  - name: hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+
+# parameters
+param_values: []
+param_files: []
+# processes
+processes:
+  - name: select_hazard_lights
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: hazard_lights_cmd

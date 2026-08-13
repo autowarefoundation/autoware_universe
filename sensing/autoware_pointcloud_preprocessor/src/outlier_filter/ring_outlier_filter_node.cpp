@@ -154,7 +154,7 @@ void RingOutlierFilterComponent::faster_filter(
       if (
         std::max(current_distance, next_distance) <
           std::min(current_distance, next_distance) * distance_ratio_ &&
-        azimuth_diff < 1.0 * (180.0 / M_PI)) {  // one degree
+        azimuth_diff < 1.0 * (M_PI / 180.0)) {  // one degree
         continue;                               // Determined to be included in the same walk
       }
 
@@ -227,8 +227,8 @@ void RingOutlierFilterComponent::faster_filter(
           output_ptr->y = input_ptr->y;
           output_ptr->z = input_ptr->z;
         }
-        const float & intensity =
-          *reinterpret_cast<const float *>(&input->data[indices[i] + input_intensity_offset]);
+        const std::uint8_t & intensity = *reinterpret_cast<const std::uint8_t *>(
+          &input->data[indices[i] + input_intensity_offset]);
         output_ptr->intensity = intensity;
 
         const std::uint8_t & return_type = *reinterpret_cast<const std::uint8_t *>(

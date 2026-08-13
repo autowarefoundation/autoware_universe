@@ -2,6 +2,19 @@
 Changelog for package yabloc_particle_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): fix unchecked optional access in yabloc particle filter (`#12620 <https://github.com/autowarefoundation/autoware_universe/issues/12620>`_)
+* Contributors: Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(yabloc_particle_filter): suppress maybe-uninitialized warning on NVIDIA DRIVE AGX Thor (`#12230 <https://github.com/mitsudome-r/autoware_universe/issues/12230>`_)
+* perf(localization): use emplace/emplace_back to avoid temporary object creation (`#12232 <https://github.com/mitsudome-r/autoware_universe/issues/12232>`_)
+* Contributors: Ryuta Kambe, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 

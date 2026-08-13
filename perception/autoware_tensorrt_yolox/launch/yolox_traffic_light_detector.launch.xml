@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <!-- cspell: ignore semseg -->
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
 
   <arg name="input/image" default="/sensing/camera/camera6/image_raw"/>
   <arg name="output/objects" default="/perception/traffic_light_recognition/camera6/detection/rois"/>

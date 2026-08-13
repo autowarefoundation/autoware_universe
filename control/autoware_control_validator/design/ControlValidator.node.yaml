@@ -1,0 +1,48 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ControlValidator.node
+
+package:
+  name: autoware_control_validator
+  provider: autoware
+
+launch:
+  plugin: autoware::control_validator::ControlValidator
+  executable: autoware_control_validator_node
+
+# interfaces
+subscribers:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: kinematics
+    message_type: nav_msgs/msg/Odometry
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: measured_acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: ~/input/reference_trajectory
+  - name: predicted_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: ~/input/predicted_trajectory
+
+publishers:
+  - name: validation_status
+    message_type: autoware_control_validator/msg/ControlValidatorStatus
+
+# parameters
+param_files:
+  - name: control_validator_param
+    default: $(find-pkg-share autoware_control_validator)/config/control_validator.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: validate_control
+    trigger_conditions:
+      - on_input: control_cmd
+    outcomes:
+      - to_output: validation_status

@@ -53,7 +53,7 @@ struct FusionRecordArr
   }
 };
 
-inline bool isUnknown(const tier4_perception_msgs::msg::TrafficLight & signal)
+inline bool is_signal_unknown(const tier4_perception_msgs::msg::TrafficLight & signal)
 {
   return signal.elements.size() == 1 &&
          signal.elements[0].color == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN &&
@@ -66,19 +66,34 @@ V at_or(const std::unordered_map<K, V> & map, const K & key, const V & value)
   return map.count(key) ? map.at(key) : value;
 }
 
-int compareRecord(const FusionRecord & r1, const FusionRecord & r2);
+double get_min_confidence(const tier4_perception_msgs::msg::TrafficLight & signal);
 
-autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(
+/**
+ * @brief Decide whether `candidate` should replace `existing` as the fused result.
+ *
+ * Records are ranked by a fixed priority order (timestamp for the same camera, then
+ * recognized-over-unknown, then visibility, then confidence). Ties favor the candidate
+ * so that a newly arrived record wins over an equally-ranked existing one.
+ *
+ * @param candidate   newly arrived record
+ * @param existing    record currently held as the best for this traffic light
+ * @return true if the candidate has a higher or equal priority than the existing record
+ */
+bool has_higher_or_equal_priority(const FusionRecord & candidate, const FusionRecord & existing);
+
+autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
   const tier4_perception_msgs::msg::TrafficLightElement & input);
 
 /**
- * @brief Currently the visible score only considers the truncation.
- * If the detection roi is very close to the image boundary, it would be considered as truncated.
+ * @brief Check whether the detection roi is fully visible, i.e. not truncated by the image
+ * boundary. If the detection roi is very close to the image boundary, it is considered as
+ * truncated.
  *
  * @param record    fusion record
- * @return 0 if traffic light is truncated, otherwise 1
+ * @return true if the traffic light is fully visible, false if truncated
  */
-int calVisibleScore(const FusionRecord & record);
+bool is_fully_visible(const FusionRecord & record);
+FusionRecord generate_failsafe_record(FusionRecord base_record);
 
 }  // namespace utils
 }  // namespace autoware::traffic_light

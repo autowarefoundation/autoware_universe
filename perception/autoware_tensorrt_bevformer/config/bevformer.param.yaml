@@ -21,8 +21,8 @@
       num_query: 900
       num_classes: 10
       code_size: 10
-      engine_file: "$(env HOME)/autoware_data/tensorrt_bevformer/bevformer_small.engine"
-      onnx_file: "$(env HOME)/autoware_data/tensorrt_bevformer/bevformer_small.onnx"
+      engine_file: "$(var data_path)/bevformer_small.engine"
+      onnx_file: "$(var data_path)/bevformer_small.onnx"
       auto_convert: true
       workspace_size: 4096
       precision: "fp16"

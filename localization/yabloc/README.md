@@ -24,7 +24,7 @@ A sample command to run YabLoc is as follows
 
 ```shell
 ros2 launch autoware_launch logging_simulator.launch.xml \
-  map_path:=$HOME/autoware_map/sample-map-rosbag\
+  map_path:=$HOME/autoware_data/maps/sample-map-rosbag\
   vehicle_model:=sample_vehicle \
   sensor_model:=sample_sensor_kit \
   pose_source:=yabloc

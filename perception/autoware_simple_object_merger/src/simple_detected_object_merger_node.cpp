@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::simple_object_merger
@@ -35,8 +36,8 @@ SimpleDetectedObjectMergerNode::SimpleDetectedObjectMergerNode(
 }
 
 void SimpleDetectedObjectMergerNode::approximateMerger(
-  const DetectedObjects::ConstSharedPtr & object_msg0,
-  const DetectedObjects::ConstSharedPtr & object_msg1)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & object_msg0,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & object_msg1)
 {
   DetectedObjects::SharedPtr transformed_objects0;
   if (node_param_.new_frame_id == object_msg0->header.frame_id) {
@@ -64,7 +65,8 @@ void SimpleDetectedObjectMergerNode::approximateMerger(
     transformed_objects1 = getTransformedObjects(object_msg1, node_param_.new_frame_id, transform1);
   }
 
-  DetectedObjects output_objects;
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_objects_);
+  auto & output_objects = *output;
   output_objects.header = object_msg0->header;
   output_objects.header.frame_id = node_param_.new_frame_id;
   output_objects.objects.reserve(
@@ -74,7 +76,7 @@ void SimpleDetectedObjectMergerNode::approximateMerger(
     output_objects.objects.end(), std::begin(transformed_objects1->objects),
     std::end(transformed_objects1->objects));
 
-  pub_objects_->publish(output_objects);
+  pub_objects_->publish(std::move(output));
 }
 
 void SimpleDetectedObjectMergerNode::onTimer()
@@ -92,12 +94,13 @@ void SimpleDetectedObjectMergerNode::onTimer()
     }
   }
 
-  DetectedObjects output_objects;
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_objects_);
+  auto & output_objects = *output;
   output_objects.header.frame_id = node_param_.new_frame_id;
 
   if (!has_valid_input) {
     output_objects.header.stamp = this->now();
-    pub_objects_->publish(output_objects);
+    pub_objects_->publish(std::move(output));
     return;
   }
 
@@ -142,7 +145,7 @@ void SimpleDetectedObjectMergerNode::onTimer()
     }
   }
 
-  pub_objects_->publish(output_objects);
+  pub_objects_->publish(std::move(output));
 }
 
 }  // namespace autoware::simple_object_merger

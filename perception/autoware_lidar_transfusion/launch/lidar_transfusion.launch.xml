@@ -2,7 +2,7 @@
 <launch>
   <arg name="input/pointcloud" default="/sensing/lidar/pointcloud"/>
   <arg name="output/objects" default="objects"/>
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="transfusion" description="options: `transfusion`"/>
   <arg name="model_path" default="$(var data_path)/lidar_transfusion"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_lidar_transfusion)/config/$(var model_name).param.yaml"/>

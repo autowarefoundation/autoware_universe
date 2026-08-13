@@ -25,6 +25,16 @@ We provide a wrapper for the `bev_pool` operation presented in [BEVFusion](https
 
 We provide a wrapper for the `segment_csr` operation presented in [torch_scatter](https://github.com/rusty1s/pytorch_scatter/tree/master). Please refer to the original code for specific details.
 
+The `SegmentCSR` TensorRT plugin supports a 2D source tensor and a 1D CSR row pointer:
+
+- `src`: row-major tensor with shape `[num_rows, num_cols]`
+- `indptr`: int64 tensor with shape `[num_segments + 1]`
+- `output`: tensor with shape `[num_segments, num_cols]`
+
+Each output row reduces the contiguous source rows `src[indptr[s] : indptr[s + 1]]` independently
+for every column. Higher-rank/batched CSR inputs are not part of this plugin contract; callers
+should flatten or reshape inputs before invoking the plugin.
+
 ### Unique
 
 While ONNX supports the unique operation, TensorRT does not provide an implementation. For this reason we implement `Unique` as `CustomUnique` to avoid name classes.

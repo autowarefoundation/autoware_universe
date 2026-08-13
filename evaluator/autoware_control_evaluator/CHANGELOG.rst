@@ -2,6 +2,64 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_control_evaluator): add object_metrics.excluded_labels fpr ignoring unknown objects (`#12659 <https://github.com/autowarefoundation/autoware_universe/issues/12659>`_)
+  * add object_metrics.excluded_labels, ignoring unknown objects by default
+  * remove unused update
+  * Update evaluator/autoware_control_evaluator/src/control_evaluator_node.cpp
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  ---------
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+* fix(control_evaluator): boundary_distance was 0 on both the left and right sides (`#12634 <https://github.com/autowarefoundation/autoware_universe/issues/12634>`_)
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* feat(control_evaluator): add lateral deviation between ego and centerline (`#12598 <https://github.com/autowarefoundation/autoware_universe/issues/12598>`_)
+  * feat(evaluator): lateral_deviation_centerline
+  * add lateral_deviation_centerline_abs
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kazunori-Nakajima, Kem (TiankuiXian), Sarun MUKDAPITAK, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(control_evaluator): add `uncrossable_boundary_distance_count` metrics (`#12503 <https://github.com/mitsudome-r/autoware_universe/issues/12503>`_)
+  feat(control_evaluator): add
+  tmp
+  fix pre-commit
+  archive
+  fix for archive
+  fix spell-check
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* fix(control_evaluator): enable recording uncrossable_boundary_distance (`#12468 <https://github.com/mitsudome-r/autoware_universe/issues/12468>`_)
+  * enable recording uncrossable_boundary_distance
+  * feat(build_depends_stable.repos): minor update autowarefoundation/autoware_cmake to 1.2.0 (`#12466 <https://github.com/mitsudome-r/autoware_universe/issues/12466>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  ---------
+  Co-authored-by: awf-autoware-bot[bot] <94889083+awf-autoware-bot[bot]@users.noreply.github.com>
+  Co-authored-by: github-actions <github-actions@github.com>
+* chore(localization, evaluator): remove unused lanelet2_extension header (`#12297 <https://github.com/mitsudome-r/autoware_universe/issues/12297>`_)
+  * unused lanelet2_extension in localization component
+  * unused lanelet2_extension in evaluator component
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - evaluator component  (`#12086 <https://github.com/mitsudome-r/autoware_universe/issues/12086>`_)
+  replace getArcCoordinates in evaluator component
+* Contributors: Kazunori-Nakajima, Kem (TiankuiXian), Sarun MUKDAPITAK, Zulfaqar Azmi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
