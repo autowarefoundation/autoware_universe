@@ -39,6 +39,7 @@ namespace
 {
 using Point2d = autoware_utils_geometry::Point2d;
 using Polygon2d = autoware_utils_geometry::Polygon2d;
+using Box2d = autoware_utils_geometry::Box2d;
 
 autoware_utils_geometry::Polygon2d toPolygon2d(const lanelet::ConstPolygon3d & lanelet_polygon)
 {
@@ -77,11 +78,24 @@ std::optional<size_t> findVegetationCrossingIndex(
   if (path.size() < 2 || vegetation_polygons.empty()) {
     return std::nullopt;
   }
-  for (auto i = 0UL; i + 1 < path.size(); ++i) {
-    const auto swept_polygon =
-      convexPolygonCoveringSegmentFootprints(path.at(i), path.at(i + 1), object_shape);
-    for (const auto & vegetation_polygon : vegetation_polygons) {
-      if (boost::geometry::intersects(swept_polygon, toPolygon2d(vegetation_polygon))) {
+
+  boost::geometry::model::multi_point<Point2d> path_footprint_points;
+  for (const auto & pose : path) {
+    for (const auto & point : autoware_utils_geometry::to_polygon2d(pose, object_shape).outer()) {
+      path_footprint_points.push_back(point);
+    }
+  }
+  const auto path_bbox = boost::geometry::return_envelope<Box2d>(path_footprint_points);
+
+  for (const auto & vegetation_polygon : vegetation_polygons) {
+    const auto vegetation_polygon_2d = toPolygon2d(vegetation_polygon);
+    if (!boost::geometry::intersects(path_bbox, vegetation_polygon_2d)) {
+      continue;
+    }
+    for (auto i = 0UL; i + 1 < path.size(); ++i) {
+      const auto swept_polygon =
+        convexPolygonCoveringSegmentFootprints(path.at(i), path.at(i + 1), object_shape);
+      if (boost::geometry::intersects(swept_polygon, vegetation_polygon_2d)) {
         return i;
       }
     }
