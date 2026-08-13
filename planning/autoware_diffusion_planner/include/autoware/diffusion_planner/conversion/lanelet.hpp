@@ -15,311 +15,128 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__CONVERSION__LANELET_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__LANELET_HPP_
 
-#include "autoware/diffusion_planner/polyline.hpp"
-
-#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
-#include <geometry_msgs/msg/detail/point__struct.hpp>
+#include <Eigen/Core>
 
 #include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/CompoundPolygon.h>
-#include <lanelet2_core/primitives/Lanelet.h>
-#include <lanelet2_core/primitives/LineString.h>
-#include <lanelet2_core/utility/Optional.h>
 
-#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
 {
-using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
-using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
-using TrafficLightIdMap = std::unordered_map<lanelet::Id, TrafficSignal>;
-using autoware_perception_msgs::msg::TrafficLightElement;
 
-/**
- * @brief Insert lane points into the container from the end of it.
- *
- * @param points Sequence of points to be inserted.
- * @param container Points container.
- */
-inline void insert_lane_points(
-  const std::vector<LanePoint> & points, std::vector<LanePoint> & container)
+enum LineType {
+  LINE_TYPE_CROSSWALK = 0,
+  LINE_TYPE_CURBSTONE = 1,
+  LINE_TYPE_GUARD_RAIL = 2,
+  LINE_TYPE_LINE_THICK = 3,
+  LINE_TYPE_LINE_THIN = 4,
+  LINE_TYPE_PEDESTRIAN_MARKING = 5,
+  LINE_TYPE_ROAD_BORDER = 6,
+  LINE_TYPE_ROAD_SHOULDER = 7,
+  LINE_TYPE_VIRTUAL = 8,
+  LINE_TYPE_ZEBRA_MARKING = 9,
+  LINE_TYPE_NUM = 10
+};
+
+const std::map<std::string, LineType> LINE_TYPE_MAP = {
+  {"crosswalk", LINE_TYPE_CROSSWALK},     {"curbstone", LINE_TYPE_CURBSTONE},
+  {"guard_rail", LINE_TYPE_GUARD_RAIL},   {"line_thick", LINE_TYPE_LINE_THICK},
+  {"line_thin", LINE_TYPE_LINE_THIN},     {"pedestrian_marking", LINE_TYPE_PEDESTRIAN_MARKING},
+  {"road_border", LINE_TYPE_ROAD_BORDER}, {"road_shoulder", LINE_TYPE_ROAD_SHOULDER},
+  {"virtual", LINE_TYPE_VIRTUAL},         {"zebra_marking", LINE_TYPE_ZEBRA_MARKING}};
+
+enum LineStringType {
+  LINE_STRING_TYPE_STOP_LINE = 0,
+  LINE_STRING_TYPE_ROAD_BORDER = 1,
+  LINE_STRING_TYPE_NUM = 2
+};
+
+const std::map<std::string, LineStringType> LINE_STRING_TYPE_MAP = {
+  {"stop_line", LINE_STRING_TYPE_STOP_LINE}, {"road_border", LINE_STRING_TYPE_ROAD_BORDER}};
+
+enum PolygonType { POLYGON_TYPE_INTERSECTION_AREA = 0, POLYGON_TYPE_NUM = 1 };
+
+const std::map<std::string, PolygonType> POLYGON_TYPE_MAP = {
+  {"intersection_area", POLYGON_TYPE_INTERSECTION_AREA}};
+
+const std::set<std::string> ACCEPTABLE_LANE_SUBTYPES = {
+  "bicycle_lane", "crosswalk", "highway", "pedestrian_lane", "road", "road_shoulder", "walkway"};
+
+using LanePoint = Eigen::Vector3d;
+using Polyline = std::vector<LanePoint>;
+
+struct Polygon
 {
-  container.reserve(container.size() * 2);
-  container.insert(container.end(), points.begin(), points.end());
-}
+  std::vector<LanePoint> points;
+  PolygonType type;
+};
 
-inline lanelet::Optional<std::string> to_type_name(const lanelet::ConstLanelet & lanelet)
+struct LineString
 {
-  return lanelet.hasAttribute("type") ? lanelet.attribute("type").as<std::string>()
-                                      : lanelet::Optional<std::string>();
-}
-
-inline lanelet::Optional<std::string> to_type_name(const lanelet::ConstLineString3d & linestring)
-{
-  return linestring.hasAttribute("type") ? linestring.attribute("type").as<std::string>()
-                                         : lanelet::Optional<std::string>();
-}
-
-/**
- * @brief Extract the subtype name from a lanelet.
- *
- * @param lanelet Lanelet instance.
- * @return std::optional<string>
- */
-inline lanelet::Optional<std::string> to_subtype_name(
-  const lanelet::ConstLanelet & lanelet) noexcept
-{
-  return lanelet.hasAttribute("subtype") ? lanelet.attribute("subtype").as<std::string>()
-                                         : lanelet::Optional<std::string>();
-}
-
-/**
- * @brief Extract the subtype name from a 3D linestring.
- *
- * @param linestring 3D linestring instance.
- * @return lanelet::Optional<std::string>
- */
-inline lanelet::Optional<std::string> to_subtype_name(
-  const lanelet::ConstLineString3d & linestring) noexcept
-{
-  return linestring.hasAttribute("subtype") ? linestring.attribute("subtype").as<std::string>()
-                                            : lanelet::Optional<std::string>();
-}
-
-/**
- * @brief Check if the specified lanelet is the turnable intersection.
- *
- * @param lanelet Lanelet instance.
- * @return true if the lanelet has the attribute named turn_direction.
- */
-inline bool is_turnable_intersection(const lanelet::ConstLanelet & lanelet) noexcept
-{
-  return lanelet.hasAttribute("turn_direction");
-}
-
-/**
- * @brief Check if the specified lanelet subtype is kind of lane.
- *
- * @param subtype
- * @return True if the lanelet subtype is the one of the (road, highway, road_shoulder,
- * pedestrian_lane, bicycle_lane, walkway).
- */
-inline bool is_lane_like(const lanelet::Optional<std::string> & subtype)
-{
-  if (!subtype) {
-    return false;
-  }
-  const auto & subtype_str = subtype.value();
-  return (
-    subtype_str == "road" || subtype_str == "highway" || subtype_str == "road_shoulder" ||
-    subtype_str == "bicycle_lane");
-  // subtype_str == "pedestrian_lane" || subtype_str == "bicycle_lane" || subtype_str == "walkway"
-}
-
-/**
- * @brief Check if the specified lanelet subtype is kind of the roadway.
- *
- * @param subtype Subtype of the corresponding lanelet.
- * @return True if the subtype is the one of the (road, highway, road_shoulder).
- */
-inline bool is_roadway_like(const lanelet::Optional<std::string> & subtype)
-{
-  if (!subtype) {
-    return false;
-  }
-  const auto & subtype_str = subtype.value();
-  return subtype_str == "road" || subtype_str == "highway" || subtype_str == "road_shoulder";
-}
-
-/**
- * @brief Check if the specified linestring is kind of the boundary.
- *
- * @param linestring 3D linestring.
- * @return True if the type is the one of the (line_thin, line_thick, road_boarder) and the subtype
- * is not virtual.
- */
-inline bool is_boundary_like(const lanelet::ConstLineString3d & linestring)
-{
-  const auto type = to_type_name(linestring);
-  if (!type) {
-    return false;
-  }
-
-  const auto & type_str = type.value();
-  return (
-    type_str == "line_thin" || type_str == "line_thick" || type_str == "road_boarder" ||
-    type_str == "virtual");
-}
-
-/**
- * @brief Check if the specified linestring is the kind of crosswalk.
- *
- * @param subtype Subtype of the corresponding polygon.
- * @return True if the lanelet subtype is the one of the (crosswalk,).
- */
-inline bool is_crosswalk_like(const lanelet::Optional<std::string> & subtype)
-{
-  if (!subtype) {
-    return false;
-  }
-
-  const auto & subtype_str = subtype.value();
-  return subtype_str == "crosswalk";
-}
+  std::vector<LanePoint> points;
+  LineStringType type;
+};
 
 struct LaneSegment
 {
   int64_t id;
-  Polyline polyline;
-  bool is_intersection{false};
-  std::vector<BoundarySegment> left_boundaries;
-  std::vector<BoundarySegment> right_boundaries;
+  Polyline centerline;
+  Polyline left_boundary;
+  Polyline right_boundary;
+  LanePoint mean_point;
+  LineType left_line_type;
+  LineType right_line_type;
   std::optional<float> speed_limit_mps{std::nullopt};
-  uint8_t traffic_light;
+  int64_t turn_direction;
+  int64_t traffic_light_id;
+
+  static constexpr int64_t TURN_DIRECTION_NONE = -1;
+  static constexpr int64_t TURN_DIRECTION_STRAIGHT = 0;
+  static constexpr int64_t TURN_DIRECTION_LEFT = 1;
+  static constexpr int64_t TURN_DIRECTION_RIGHT = 2;
+
+  static constexpr int64_t TRAFFIC_LIGHT_ID_NONE = -1;
 
   LaneSegment(
-    int64_t id, Polyline polyline, bool is_intersection,
-    const std::vector<BoundarySegment> & left_boundaries,
-    const std::vector<BoundarySegment> & right_boundaries, std::optional<float> speed_limit_mps,
-    const uint8_t traffic_light)
+    const int64_t id, const Polyline & centerline, const Polyline & left_boundary,
+    const Polyline & right_boundary, const LanePoint & mean_point, const LineType left_line_type,
+    const LineType right_line_type, const std::optional<float> speed_limit_mps,
+    const int64_t turn_direction, const int64_t traffic_light_id)
   : id(id),
-    polyline(std::move(polyline)),
-    is_intersection(is_intersection),
-    left_boundaries(left_boundaries),
-    right_boundaries(right_boundaries),
+    centerline(centerline),
+    left_boundary(left_boundary),
+    right_boundary(right_boundary),
+    mean_point(mean_point),
+    left_line_type(left_line_type),
+    right_line_type(right_line_type),
     speed_limit_mps(speed_limit_mps),
-    traffic_light(traffic_light)
+    turn_direction(turn_direction),
+    traffic_light_id(traffic_light_id)
   {
   }
+};
+
+struct LaneletMap
+{
+  std::vector<LaneSegment> lane_segments;
+  std::vector<Polygon> polygons;
+  std::vector<LineString> line_strings;
 };
 
 /**
- * @brief A class to convert lanelet map to polyline.
+ * @brief Convert a lanelet map to line segment data
+ * @param lanelet_map_ptr Pointer of loaded lanelet map.
+ * @return LaneletMap
  */
-class LaneletConverter
-{
-public:
-  /**
-   * @brief Construct a new Lanelet Converter object
-   *
-   * @param lanelet_map_ptr Pointer of loaded lanelet map.
-   * @param max_num_polyline The max number of polylines to be contained in the tensor. If the total
-   * number of polylines are less than this value, zero-filled polylines will be padded.
-   * @param max_num_point The max number of points to be contained in a single polyline.
-   * @param point_break_distance Distance threshold to separate two polylines.
-   */
-  explicit LaneletConverter(
-    const lanelet::LaneletMapConstPtr lanelet_map_ptr, size_t max_num_polyline,
-    size_t max_num_point, float point_break_distance)
-  : lanelet_map_ptr_(lanelet_map_ptr),
-    max_num_polyline_(max_num_polyline),
-    max_num_point_(max_num_point),
-    point_break_distance_(point_break_distance)
-  {
-  }
+[[nodiscard]] LaneletMap convert_to_internal_lanelet_map(
+  const lanelet::LaneletMapConstPtr lanelet_map_ptr, double line_string_max_step_m = 5.0);
 
-  /**
-   * @brief Convert a lanelet map to the polyline data except of points whose distance from the
-   * specified position is farther than the threshold.
-   *
-   * @param position Origin to check the distance from this.
-   * @param distance_threshold Distance threshold
-   * @return std::optional<PolylineData>
-   */
-  [[nodiscard]] std::optional<PolylineData> convert(
-    const geometry_msgs::msg::Point & position, double distance_threshold) const;
-
-  /**
-   * @brief Convert a lanelet map to line segment data
-   * @return std::vector<LaneSegment>
-   */
-  [[nodiscard]] std::vector<LaneSegment> convert_to_lane_segments(
-    const int64_t num_lane_points) const;
-
-  /**
-   * @brief Convert lane segment data to matrix form
-   * @return Eigen::MatrixXf
-   */
-  [[nodiscard]] Eigen::MatrixXf get_map_as_lane_segments(
-    const std::vector<LaneSegment> & lane_segments);
-
-  [[nodiscard]] Eigen::MatrixXf process_segment_to_matrix(
-    const LaneSegment & segment, float center_x, float center_y, float mask_range) const;
-
-  [[nodiscard]] Eigen::MatrixXf process_segments_to_matrix(
-    const std::vector<LaneSegment> & lane_segments,
-    std::map<int64_t, int64_t> & segment_row_indices, float center_x, float center_y,
-    float mask_range) const;
-
-  /**
-   * @brief Convert a linestring to the set of polylines.
-   *
-   * @param linestring Linestring instance.
-   * @param position Origin to check the distance from this.
-   * @param distance_threshold Distance threshold from the specified position.
-   * @return std::vector<LanePoint>
-   */
-  [[nodiscard]] static std::vector<LanePoint> from_linestring(
-    const lanelet::ConstLineString3d & linestring, const geometry_msgs::msg::Point & position,
-    double distance_threshold) noexcept;
-
-  [[nodiscard]] static std::vector<LanePoint> from_linestring(
-    const lanelet::ConstLineString3d & linestring) noexcept;
-
-  /**
-   * @brief Convert a polygon to the set of polylines.
-   *
-   * @param polygon Polygon instance.
-   * @param position Origin to check the distance from this.
-   * @param distance_threshold Distance threshold from the specified position.
-   * @return std::vector<LanePoint>
-   */
-  [[nodiscard]] static std::vector<LanePoint> from_polygon(
-    const lanelet::CompoundPolygon3d & polygon, const geometry_msgs::msg::Point & position,
-    double distance_threshold) noexcept;
-
-  [[nodiscard]] static std::vector<LanePoint> from_polygon(
-    const lanelet::CompoundPolygon3d & polygon) noexcept;
-
-private:
-  /**
-   * @brief Convert any geometry type to the set of lane points.
-   *
-   * @tparam GeometryType The type of the geometry (e.g., LineString3d, CompoundPolygon3d).
-   * @param geometry Geometry instance.
-   * @param position Origin to check the distance from this.
-   * @param distance_threshold Distance threshold from the specified position.
-   * @return std::vector<LanePoint>
-   */
-  template <typename GeometryType>
-  [[nodiscard]] static std::vector<LanePoint> from_geometry(
-    const GeometryType & geometry, const geometry_msgs::msg::Point & position,
-    double distance_threshold) noexcept;
-
-  /**
-   * @brief Convert any geometry type to the set of lane points.
-   *
-   * @tparam GeometryType The type of the geometry (e.g., LineString3d, CompoundPolygon3d).
-   * @param geometry Geometry instance.
-   * @return std::vector<LanePoint>
-   */
-  template <typename GeometryType>
-  [[nodiscard]] static std::vector<LanePoint> from_geometry(const GeometryType & geometry) noexcept;
-
-  lanelet::LaneletMapConstPtr lanelet_map_ptr_;  //!< Pointer of lanelet map.
-  size_t max_num_polyline_;                      //!< The max number of polylines.
-  size_t max_num_point_;                         //!< The max number of points.
-  float point_break_distance_;                   //!< Distance threshold to separate two polylines.
-};
-
-std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, size_t num_points);
 }  // namespace autoware::diffusion_planner
 
 #endif  // AUTOWARE__DIFFUSION_PLANNER__CONVERSION__LANELET_HPP_

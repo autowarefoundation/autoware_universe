@@ -252,7 +252,7 @@ TEST(BehaviorPathPlanningParkingDepartureUtil, generateFeasibleStopPath)
 
   // condition: valid condition
   maximum_jerk = 5.0;
-  maximum_deceleration = -3.0;
+  maximum_deceleration = 3.0;
   stop_path =
     generateFeasibleStopPath(path, planner_data, stop_pose, maximum_deceleration, maximum_jerk);
   size_t i = 0;

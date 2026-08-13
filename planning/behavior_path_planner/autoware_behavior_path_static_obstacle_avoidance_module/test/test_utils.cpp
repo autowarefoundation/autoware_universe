@@ -353,7 +353,7 @@ TEST(TestUtils, isNoNeedAvoidanceBehavior)
     object_data.direction = Direction::LEFT;
     object_data.avoid_margin = 2.0;
     object_data.envelope_poly = createEnvelopePolygon(object_data, nearest_path_pose, 0.0);
-    object_data.overhang_points = calcEnvelopeOverhangDistance(object_data, path);
+    object_data.overhang_points = calcEnvelopeOverhangDistance(object_data, path, 0.0, 0.0);
 
     EXPECT_TRUE(filtering_utils::isNoNeedAvoidanceBehavior(object_data, parameters));
     EXPECT_EQ(object_data.info, ObjectInfo::ENOUGH_LATERAL_DISTANCE);
@@ -368,7 +368,7 @@ TEST(TestUtils, isNoNeedAvoidanceBehavior)
     object_data.direction = Direction::LEFT;
     object_data.avoid_margin = 2.0;
     object_data.envelope_poly = createEnvelopePolygon(object_data, nearest_path_pose, 0.0);
-    object_data.overhang_points = calcEnvelopeOverhangDistance(object_data, path);
+    object_data.overhang_points = calcEnvelopeOverhangDistance(object_data, path, 0.0, 0.0);
 
     EXPECT_TRUE(filtering_utils::isNoNeedAvoidanceBehavior(object_data, parameters));
     EXPECT_EQ(object_data.info, ObjectInfo::LESS_THAN_EXECUTION_THRESHOLD);
@@ -383,7 +383,7 @@ TEST(TestUtils, isNoNeedAvoidanceBehavior)
     object_data.direction = Direction::LEFT;
     object_data.avoid_margin = 2.0;
     object_data.envelope_poly = createEnvelopePolygon(object_data, nearest_path_pose, 0.0);
-    object_data.overhang_points = calcEnvelopeOverhangDistance(object_data, path);
+    object_data.overhang_points = calcEnvelopeOverhangDistance(object_data, path, 0.0, 0.0);
 
     EXPECT_FALSE(filtering_utils::isNoNeedAvoidanceBehavior(object_data, parameters));
   }
@@ -997,15 +997,17 @@ TEST(TestUtils, calcEnvelopeOverhangDistance)
     object_data.direction = Direction::LEFT;
     object_data.envelope_poly = createEnvelopePolygon(object_data, nearest_path_pose, 0.0);
 
-    const auto output = calcEnvelopeOverhangDistance(object_data, path);
+    const auto output = calcEnvelopeOverhangDistance(object_data, path, 0.0, 0.0);
 
-    ASSERT_EQ(output.size(), 6);
+    ASSERT_EQ(output.size(), 8);
     EXPECT_NEAR(output.at(0).first, -0.5, epsilon);
     EXPECT_NEAR(output.at(1).first, -0.5, epsilon);
     EXPECT_NEAR(output.at(2).first, -0.5, epsilon);
-    EXPECT_NEAR(output.at(3).first, -0.5, epsilon);
-    EXPECT_NEAR(output.at(4).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(3).first, 1, epsilon);
+    EXPECT_NEAR(output.at(4).first, 1, epsilon);
     EXPECT_NEAR(output.at(5).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(6).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(7).first, 2.5, epsilon);
   }
 
   {
@@ -1016,15 +1018,17 @@ TEST(TestUtils, calcEnvelopeOverhangDistance)
     object_data.direction = Direction::RIGHT;
     object_data.envelope_poly = createEnvelopePolygon(object_data, nearest_path_pose, 0.0);
 
-    const auto output = calcEnvelopeOverhangDistance(object_data, path);
+    const auto output = calcEnvelopeOverhangDistance(object_data, path, 0.0, 0.0);
 
-    ASSERT_EQ(output.size(), 6);
+    ASSERT_EQ(output.size(), 8);
     EXPECT_NEAR(output.at(0).first, 0.5, epsilon);
     EXPECT_NEAR(output.at(1).first, 0.5, epsilon);
     EXPECT_NEAR(output.at(2).first, 0.5, epsilon);
-    EXPECT_NEAR(output.at(3).first, -2.5, epsilon);
-    EXPECT_NEAR(output.at(4).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(3).first, -1, epsilon);
+    EXPECT_NEAR(output.at(4).first, -1, epsilon);
     EXPECT_NEAR(output.at(5).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(6).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(7).first, -2.5, epsilon);
   }
 }
 

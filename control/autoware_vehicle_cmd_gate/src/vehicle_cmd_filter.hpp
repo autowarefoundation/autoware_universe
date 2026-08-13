@@ -20,6 +20,7 @@
 
 #include <autoware_control_msgs/msg/control.hpp>
 
+#include <optional>
 #include <vector>
 
 namespace autoware::vehicle_cmd_gate
@@ -48,11 +49,15 @@ public:
   VehicleCmdFilter();
   ~VehicleCmdFilter() = default;
 
-  void setWheelBase(double v) { param_.wheel_base = v; }
   void setCurrentSpeed(double v) { current_speed_ = v; }
   void setParam(const VehicleCmdFilterParam & p);
   VehicleCmdFilterParam getParam() const;
   void setPrevCmd(const Control & v) { prev_cmd_ = v; }
+  void setLogger(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock)
+  {
+    logger_ = logger;
+    clock_ = clock;
+  }
 
   void limitLongitudinalWithVel(Control & input) const;
   void limitLongitudinalWithAcc(const double dt, Control & input) const;
@@ -63,7 +68,7 @@ public:
   void limitLateralSteer(Control & input) const;
   void limitLateralSteerRate(const double dt, Control & input) const;
   void filterAll(
-    const double dt, const double current_steer_angle, Control & input,
+    const double dt, const double current_steer_angle, Control & cmd,
     IsFilterActivated & is_activated) const;
   static IsFilterActivated checkIsActivated(
     const Control & c1, const Control & c2, const double tol = 1.0e-3);
@@ -72,6 +77,8 @@ private:
   VehicleCmdFilterParam param_;
   Control prev_cmd_;
   double current_speed_ = 0.0;
+  std::optional<rclcpp::Logger> logger_;
+  rclcpp::Clock::SharedPtr clock_;
 
   bool setParameterWithValidation(const VehicleCmdFilterParam & p);
 

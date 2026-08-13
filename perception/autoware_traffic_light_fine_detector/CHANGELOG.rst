@@ -2,6 +2,134 @@
 Changelog for package autoware_traffic_light_fine_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_tensorrt_yolox): remove unused public API (`#12835 <https://github.com/autowarefoundation/autoware_universe/issues/12835>`_)
+  Remove public API symbols that have no caller in the autowarefoundation
+  and tier4 organizations (verified via GitHub code search):
+  - preprocess.{hpp,cu}: 6 unused exported GPU functions and their kernels
+  (resize_bilinear_gpu, letterbox_gpu, nchw_to_nhwc_gpu, to_float_gpu,
+  resize_bilinear_letterbox_gpu, resize_bilinear_letterbox_nhwc_to_nchw32_gpu);
+  the batch/multi-scale/argmax variants that are actually used are kept
+  - TrtYoloX::printProfiling and TrtYoloX::initPreprocessBuffer
+  - the unused cache_dir constructor parameter (documented as "unused
+  variable"); update the call sites in tensorrt_yolox_detector and
+  autoware_traffic_light_fine_detector accordingly
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(tensorrt_yolox): unify preprocessing on GPU and remove CPU path (`#12803 <https://github.com/autowarefoundation/autoware_universe/issues/12803>`_)
+  Remove the use_gpu_preprocess option and the CPU preprocessing code path so
+  that preprocessing is always performed on the GPU.
+  - Drop the use_gpu_preprocess constructor argument and use_gpu_preprocess\_ flag
+  - Delete the CPU-only preprocess(), multiScalePreprocess() and getMaskImage()
+  - Remove now-dead members input_h\_ and segmentation_out_prob_h\_
+  - Drop the preprocess_on_gpu ROS parameter, config struct member, param files,
+  JSON schema entries and the test override
+  - Remove unused includes (<fstream>, <optional>) from the touched files
+  - Update autoware_traffic_light_fine_detector for the new constructor signature
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Takahisa Ishikawa, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: default artifact paths to ~/autoware_data/ml_models (`#12523 <https://github.com/mitsudome-r/autoware_universe/issues/12523>`_)
+  feat(launches,configs): default artifact paths to ~/autoware_data/ml_models
+  Roll every per-package `data_path` / `model_path` launch-arg default
+  from `$(env HOME)/autoware_data[/...]` to
+  `$(env HOME)/autoware_data/ml_models[/...]` so standalone universe
+  launches resolve artifacts under the new `~/autoware_data/ml_models/`
+  layout (`autowarefoundation/autoware#7068 <https://github.com/autowarefoundation/autoware/issues/7068>`_).
+  When invoked through autoware_launch the parent overrides cascade and
+  already pin the new root (`autowarefoundation/autoware_launch#1835 <https://github.com/autowarefoundation/autoware_launch/issues/1835>`_); this
+  commit closes the gap for users who launch a perception / localization /
+  sensing / planning component directly with `ros2 launch <pkg>`.
+  22 launch files updated (one-line default change each):
+  - e2e/autoware_tensorrt_vad/launch/vad_carla_tiny.launch.xml
+  - localization/yabloc/yabloc_pose_initializer/launch/yabloc_pose_initializer.launch.xml
+  - perception/autoware_bevfusion/launch/bevfusion.launch.xml
+  - perception/autoware_camera_streampetr/launch/streampetr.launch.xml
+  - perception/autoware_image_projection_based_fusion/launch/pointpainting_fusion.launch.xml
+  - perception/autoware_lidar_apollo_instance_segmentation/launch/lidar_apollo_instance_segmentation.launch.xml
+  - perception/autoware_lidar_centerpoint/launch/lidar_centerpoint.launch.xml
+  - perception/autoware_lidar_frnet/launch/lidar_frnet.launch.xml
+  - perception/autoware_lidar_transfusion/launch/lidar_transfusion.launch.xml
+  - perception/autoware_ptv3/launch/ptv3.launch.xml
+  - perception/autoware_shape_estimation/launch/shape_estimation.launch.xml
+  - perception/autoware_simpl_prediction/launch/simpl.launch.xml
+  - perception/autoware_tensorrt_bevdet/launch/tensorrt_bevdet.launch.xml
+  - perception/autoware_tensorrt_bevformer/launch/bevformer.launch.xml
+  - perception/autoware_tensorrt_yolox/launch/{yolox_traffic_light_detector,yolox_tiny,yolox_s_plus_opt}.launch.xml
+  - perception/autoware_traffic_light_classifier/launch/{car,pedestrian}_traffic_light_classifier.launch.xml
+  - perception/autoware_traffic_light_fine_detector/launch/traffic_light_fine_detector.launch.xml
+  - planning/autoware_diffusion_planner/launch/diffusion_planner.launch.xml
+  - sensing/autoware_calibration_status_classifier/launch/calibration_status_classifier.launch.xml
+  Drive-by README and test fixes:
+  - e2e/autoware_tensorrt_vad/{README.md,docs/design.md}: also migrate the
+  `$HOME/autoware_map/Town01` examples to `$HOME/autoware_data/maps/Town01`.
+  - localization/yabloc/{README.md,yabloc_pose_initializer/README.md}: also
+  migrate `$HOME/autoware_map/sample-map-rosbag` to
+  `$HOME/autoware_data/maps/demos/sample-map-rosbag`.
+  - control/autoware_smart_mpc_trajectory_follower/README.md: migrate the
+  `map_path:=$HOME/autoware_map/sample-map-planning` example to
+  `$HOME/autoware_data/maps/demos/sample-map-planning`.
+  - simulator/autoware_carla_interface/README.md: migrate every
+  `$HOME/autoware_map/Town01/...` reference to
+  `$HOME/autoware_data/maps/Town01/...`.
+  - perception/{autoware_bevfusion,autoware_image_projection_based_fusion,autoware_lidar_centerpoint,autoware_tensorrt_bevformer}/README.md: copy-paste examples updated to `~/autoware_data/ml_models/<pkg>`.
+  - perception/autoware_camera_streampetr/config/ml_package_camera_streampetr.param.yaml: header comment updated.
+  - planning/autoware_diffusion_planner/README.md: prerequisites snippet updated.
+  - sensing/autoware_calibration_status_classifier/test/{test_model_inference,test_calibration_status_classifier}.cpp: hardcoded fallback ONNX path updated.
+  Users on the legacy layout can pin the old root with
+  `data_path:=$HOME/autoware_data` (or the per-package equivalent) on the
+  command line.
+  Refs: https://github.com/autowarefoundation/autoware/issues/7068
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* chore(traffic_light_recognition): add maintainer (`#12221 <https://github.com/mitsudome-r/autoware_universe/issues/12221>`_)
+  add maintainer
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* Contributors: Masaki Baba, Mete Fatih Cırıt, Taekjin LEE, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(autoware_traffic_light_fine_detector): remove cudnn dependency (`#11900 <https://github.com/autowarefoundation/autoware_universe/issues/11900>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: cppcheck for struct Detection (`#11649 <https://github.com/autowarefoundation/autoware_universe/issues/11649>`_)
+  * fix: remove unused Detection struct
+  * fix: add namespace for bevformer postprocessing
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(autoware_traffic_light_fine_detector): split utils and add test (`#10365 <https://github.com/autowarefoundation/autoware_universe/issues/10365>`_)
+  * split and add test
+  * add file
+  * style(pre-commit): autofix
+  * refactor
+  * refactor
+  * fix name
+  * chore
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Masato Saeki, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 

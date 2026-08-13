@@ -28,9 +28,12 @@ namespace control_diagnostics
 enum class Metric {
   velocity,
   acceleration,
+  lateral_acceleration_abs,
   jerk,
   lateral_deviation,
   lateral_deviation_abs,
+  lateral_deviation_centerline,
+  lateral_deviation_centerline_abs,
   yaw_deviation,
   yaw_deviation_abs,
   goal_longitudinal_deviation,
@@ -42,7 +45,9 @@ enum class Metric {
   left_boundary_distance,
   right_boundary_distance,
   left_uncrossable_boundary_distance,
+  left_uncrossable_boundary_distance_count,
   right_uncrossable_boundary_distance,
+  right_uncrossable_boundary_distance_count,
   steering_angle,
   steering_angle_abs,
   steering_rate,
@@ -50,15 +55,19 @@ enum class Metric {
   stop_deviation,
   stop_deviation_abs,
   closest_object_distance,
+  longitudinal_velocity_deviation,
   SIZE,
 };
 
 static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"velocity", Metric::velocity},
   {"acceleration", Metric::acceleration},
+  {"lateral_acceleration_abs", Metric::lateral_acceleration_abs},
   {"jerk", Metric::jerk},
   {"lateral_deviation", Metric::lateral_deviation},
   {"lateral_deviation_abs", Metric::lateral_deviation_abs},
+  {"lateral_deviation_centerline", Metric::lateral_deviation_centerline},
+  {"lateral_deviation_centerline_abs", Metric::lateral_deviation_centerline_abs},
   {"yaw_deviation", Metric::yaw_deviation},
   {"yaw_deviation_abs", Metric::yaw_deviation_abs},
   {"goal_longitudinal_deviation", Metric::goal_longitudinal_deviation},
@@ -70,7 +79,9 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"left_boundary_distance", Metric::left_boundary_distance},
   {"right_boundary_distance", Metric::right_boundary_distance},
   {"left_uncrossable_boundary_distance", Metric::left_uncrossable_boundary_distance},
+  {"left_uncrossable_boundary_distance_count", Metric::left_uncrossable_boundary_distance_count},
   {"right_uncrossable_boundary_distance", Metric::right_uncrossable_boundary_distance},
+  {"right_uncrossable_boundary_distance_count", Metric::right_uncrossable_boundary_distance_count},
   {"steering_angle", Metric::steering_angle},
   {"steering_angle_abs", Metric::steering_angle_abs},
   {"steering_rate", Metric::steering_rate},
@@ -78,14 +89,18 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"stop_deviation", Metric::stop_deviation},
   {"stop_deviation_abs", Metric::stop_deviation_abs},
   {"closest_object_distance", Metric::closest_object_distance},
+  {"longitudinal_velocity_deviation", Metric::longitudinal_velocity_deviation},
 };
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::velocity, "velocity"},
   {Metric::acceleration, "acceleration"},
+  {Metric::lateral_acceleration_abs, "lateral_acceleration_abs"},
   {Metric::jerk, "jerk"},
   {Metric::lateral_deviation, "lateral_deviation"},
   {Metric::lateral_deviation_abs, "lateral_deviation_abs"},
+  {Metric::lateral_deviation_centerline, "lateral_deviation_centerline"},
+  {Metric::lateral_deviation_centerline_abs, "lateral_deviation_centerline_abs"},
   {Metric::yaw_deviation, "yaw_deviation"},
   {Metric::yaw_deviation_abs, "yaw_deviation_abs"},
   {Metric::goal_longitudinal_deviation, "goal_longitudinal_deviation"},
@@ -97,7 +112,9 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::left_boundary_distance, "left_boundary_distance"},
   {Metric::right_boundary_distance, "right_boundary_distance"},
   {Metric::left_uncrossable_boundary_distance, "left_uncrossable_boundary_distance"},
+  {Metric::left_uncrossable_boundary_distance_count, "left_uncrossable_boundary_distance_count"},
   {Metric::right_uncrossable_boundary_distance, "right_uncrossable_boundary_distance"},
+  {Metric::right_uncrossable_boundary_distance_count, "right_uncrossable_boundary_distance_count"},
   {Metric::steering_angle, "steering_angle"},
   {Metric::steering_angle_abs, "steering_angle_abs"},
   {Metric::steering_rate, "steering_rate"},
@@ -105,17 +122,23 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::stop_deviation, "stop_deviation"},
   {Metric::stop_deviation_abs, "stop_deviation_abs"},
   {Metric::closest_object_distance, "closest_object_distance"},
+  {Metric::longitudinal_velocity_deviation, "longitudinal_velocity_deviation"},
 };
 
 // Metrics descriptions
 static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::velocity, "Velocity[m/s]"},
   {Metric::acceleration, "Acceleration[m/s^2]"},
+  {Metric::lateral_acceleration_abs, "Absolute lateral acceleration[m/s^2]"},
   {Metric::jerk, "Jerk[m/s^3]"},
   {Metric::lateral_deviation,
    "Lateral deviation from the reference trajectory[m], positive value means the ego is on the "
    "left side of the reference trajectory"},
   {Metric::lateral_deviation_abs, "Absolute lateral deviation from the reference trajectory[m]"},
+  {Metric::lateral_deviation_centerline,
+   "Lateral deviation from the centerline[m], positive value means the ego is on the left side of "
+   "the centerline"},
+  {Metric::lateral_deviation_centerline_abs, "Absolute lateral deviation from the centerline[m]"},
   {Metric::yaw_deviation,
    "Yaw deviation from the reference trajectory[rad], positive value means the ego is "
    "counterclockwise from the reference trajectory"},
@@ -137,6 +160,10 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::right_boundary_distance, "Signed distance to the right boundary[m]"},
   {Metric::left_uncrossable_boundary_distance, "Distance to the left uncrossable boundary[m]"},
   {Metric::right_uncrossable_boundary_distance, "Distance to the right uncrossable boundary[m]"},
+  {Metric::left_uncrossable_boundary_distance_count,
+   "Count of left uncrossable boundary distance crossings to <= 0.0m"},
+  {Metric::right_uncrossable_boundary_distance_count,
+   "Count of right uncrossable boundary distance crossings to <= 0.0m"},
   {Metric::steering_angle, "Steering angle[rad]"},
   {Metric::steering_angle_abs, "Absolute steering angle[rad]"},
   {Metric::steering_rate, "Steering angle rate[rad/s]"},
@@ -148,7 +175,10 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
    "Absolute deviation to the stop line when the ego stop by a module[m]"},
   {Metric::closest_object_distance,
    "Distance to the closest object[m], the objects outside of the distance_filter_thr_m (default: "
-   "30m) are ignored"},
+   "30m) or in object_metrics.excluded_labels are ignored"},
+  {Metric::longitudinal_velocity_deviation,
+   "Longitudinal velocity deviation from the reference trajectory[m], positive value means the "
+   "actual velocity is larger than the planned velocity."},
 };
 
 namespace details

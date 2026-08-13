@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_lidar_apollo_instance_segmentation parameters",
+  "type": "object",
+  "definitions": {
+    "vls-128": {
+      "type": "object",
+      "properties": {
+        "score_threshold": {
+          "type": "number",
+          "description": "If the score of a detected object is lower than this value, the object is ignored.",
+          "default": 0.1
+        },
+        "range": {
+          "type": "integer",
+          "description": "Half of the length of feature map sides. [m]",
+          "default": 90
+        },
+        "width": {
+          "type": "integer",
+          "description": "The grid width of the feature map.",
+          "default": 864
+        },
+        "height": {
+          "type": "integer",
+          "description": "The grid height of the feature map.",
+          "default": 864
+        },
+        "use_intensity_feature": {
+          "type": "boolean",
+          "description": "The flag to use intensity feature of pointcloud.",
+          "default": false
+        },
+        "use_constant_feature": {
+          "type": "boolean",
+          "description": "The flag to use direction and distance feature of pointcloud.",
+          "default": false
+        },
+        "z_offset": {
+          "type": "number",
+          "description": "z offset from target frame. [m]",
+          "default": -2.0
+        }
+      },
+      "required": [
+        "score_threshold",
+        "range",
+        "width",
+        "height",
+        "use_intensity_feature",
+        "use_constant_feature",
+        "z_offset"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/vls-128"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

@@ -24,10 +24,12 @@
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/objects_of_interest_marker_interface/objects_of_interest_marker_interface.hpp>
 #include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
@@ -57,6 +59,7 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  std::string get_short_module_name() const override { return "run_out"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     RequiredSubscriptionInfo required_subscription_info;
@@ -71,7 +74,6 @@ private:
   rclcpp::Clock::SharedPtr clock_{nullptr};
   // TODO(Maxime): move to the module interface
   rclcpp::Publisher<universe_utils::ProcessingTimeDetail>::SharedPtr timekeeper_publisher_;
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr debug_trajectory_publisher_;
   std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
   std::optional<diagnostic_updater::Updater> diagnostic_updater_ = std::nullopt;
   std::unique_ptr<autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>
@@ -83,11 +85,6 @@ private:
 
   /// @brief update whether we are currently inserting a stop that breaks the deceleration limit
   void update_unfeasible_stop_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
-  /// @brief publish a debug trajectory with the calculated slowdowns added to trajectory input used
-  /// by the module
-  void publish_debug_trajectory(
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-    const VelocityPlanningResult & planning_result);
   /// @brief populate the planning factors based on the module's planning result
   void add_planning_factors(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,

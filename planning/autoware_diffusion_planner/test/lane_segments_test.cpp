@@ -14,10 +14,17 @@
 
 #include "lane_segments_test.hpp"
 
+#include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 
 #include <Eigen/Dense>
+#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_test_utils/autoware_test_utils.hpp>
+
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 
 #include <gtest/gtest.h>
 
@@ -25,142 +32,175 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner::test
 {
 
-TEST_F(LaneSegmentsTest, ProcessSegmentToMatrixThrowsOnInvalidInput)
+TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
 {
-  // Empty polyline
-  LaneSegment invalid_segment = lane_segments_.front();
-  invalid_segment.polyline = Polyline();
-  EXPECT_EQ(preprocess::process_segment_to_matrix(invalid_segment).size(), 0);
+  /////////////
+  // Arrange //
+  /////////////
+  // Create LaneSegmentContext
+  preprocess::LaneSegmentContext context(lanelet_map_);
 
-  // Empty left boundary
-  invalid_segment = lane_segments_.front();
-  invalid_segment.left_boundaries.clear();
-  EXPECT_EQ(preprocess::process_segment_to_matrix(invalid_segment).size(), 0);
+  // Create identity transformation matrix (no transformation)
+  Eigen::Matrix4d transform_matrix = Eigen::Matrix4d::Identity();
 
-  // Empty right boundary
-  invalid_segment = lane_segments_.front();
-  invalid_segment.right_boundaries.clear();
-  EXPECT_EQ(preprocess::process_segment_to_matrix(invalid_segment).size(), 0);
+  // Create empty traffic light map (no traffic lights)
+  std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
 
-  // Wrong number of points
-  invalid_segment = lane_segments_.front();
-  auto wrong_polyline = invalid_segment.polyline;
-  // Remove a point to make it invalid
-  auto points = wrong_polyline.waypoints();
-  points.pop_back();
-  Polyline short_polyline(MapType::Lane, points);
-  invalid_segment.polyline = short_polyline;
-  EXPECT_THROW(preprocess::process_segment_to_matrix(invalid_segment), std::runtime_error);
-}
+  // Create a LaneletRoute with our test lanelet
+  autoware_planning_msgs::msg::LaneletRoute route;
 
-TEST_F(LaneSegmentsTest, ProcessSegmentsToMatrixThrowsOnEmptyInput)
-{
-  std::vector<LaneSegment> empty_segments;
-  preprocess::ColLaneIDMaps col_id_mapping;
-  EXPECT_THROW(
-    preprocess::process_segments_to_matrix(empty_segments, col_id_mapping), std::runtime_error);
-}
+  // Set center coordinates (middle of the test lanelet)
+  const double center_x = 10.0;  // Middle point along the lanelet
+  const double center_y = 0.0;   // Center of the lane
+  const double center_z = 0.0;   // Ground level
 
-TEST_F(LaneSegmentsTest, ProcessSegmentsToMatrixThrowsOnWrongRows)
-{
-  std::vector<LaneSegment> segments = lane_segments_;
-  // Patch segment to have wrong number of rows
-  LaneSegment bad_segment = segments.front();
-  auto polyline = bad_segment.polyline;
-  auto points = polyline.waypoints();
-  points.pop_back();
-  Polyline short_polyline(MapType::Lane, points);
-  bad_segment.polyline = short_polyline;
-  segments.push_back(bad_segment);
+  /////////
+  // Act //
+  /////////
+  const std::vector<int64_t> segment_indices = context.select_route_segment_indices(
+    route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+  const std::pair<std::vector<float>, std::vector<float>> result =
+    context.create_tensor_data_from_indices(
+      transform_matrix, traffic_light_id_map, segment_indices, NUM_SEGMENTS_IN_ROUTE);
 
-  preprocess::ColLaneIDMaps col_id_mapping;
-  EXPECT_THROW(
-    preprocess::process_segments_to_matrix(segments, col_id_mapping), std::runtime_error);
-}
+  ////////////
+  // Assert //
+  ////////////
+  // Check that we get valid results
+  EXPECT_FALSE(result.first.empty()) << "Route segments should not be empty";
+  EXPECT_FALSE(result.second.empty()) << "Speed limits should not be empty";
 
-TEST_F(LaneSegmentsTest, ComputeDistancesThrowsOnBadCols)
-{
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
-  // Remove a column to break divisibility
-  Eigen::MatrixXf bad_matrix = input_matrix.leftCols(input_matrix.cols() - 1);
-  std::vector<preprocess::ColWithDistance> distances;
-  EXPECT_THROW(
-    preprocess::compute_distances(bad_matrix, Eigen::Matrix4f::Identity(), distances, 0, 0, 100.0),
-    std::runtime_error);
-}
+  // Check that route segment values are reasonable (not NaN or infinite)
+  for (size_t i = 0; i < result.first.size(); ++i) {
+    EXPECT_FALSE(std::isnan(result.first[i]))
+      << "Route segment value should not be NaN at index " << i;
+    EXPECT_FALSE(std::isinf(result.first[i]))
+      << "Route segment value should not be infinite at index " << i;
+  }
 
-TEST_F(LaneSegmentsTest, TransformSelectedRowsNoTranslation)
-{
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
-
-  Eigen::MatrixXf matrix = input_matrix;
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
-  // Apply a translation
-  transform(0, 3) = 5.0f;
-  transform(1, 3) = -2.0f;
-
-  // Only dX/dY should not be translated
-  preprocess::transform_selected_rows(transform, matrix, 1, dX, false);
-  // The values should remain unchanged for dX row
-  for (int i = 0; i < matrix.cols(); ++i) {
-    EXPECT_FLOAT_EQ(matrix(dX, i), input_matrix(dX, i));
+  // Check that speed limit values are reasonable (allow NaN but check for inf)
+  for (size_t i = 0; i < result.second.size(); ++i) {
+    EXPECT_FALSE(std::isinf(result.second[i]))
+      << "Speed limit value should not be infinite at index " << i;
   }
 }
 
-TEST_F(LaneSegmentsTest, AddTrafficLightOneHotEncodingToSegmentNoTrafficLight)
+TEST_F(LaneSegmentsTest, GetFirstTrafficLightOnRoute_NoTrafficLightOnRoute)
 {
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
+  preprocess::LaneSegmentContext context(lanelet_map_);
 
-  // Should not throw or modify if traffic_light_id_map is empty
-  Eigen::MatrixXf segment_matrix = input_matrix;
+  autoware_planning_msgs::msg::LaneletRoute route;
+  route.segments.resize(1);
+  route.segments[0].preferred_primitive.id = 100;
+  route.segments[0].preferred_primitive.primitive_type = "lane";
+
+  const double center_x = 10.0;
+  const double center_y = 0.0;
+  const double center_z = 0.0;
   std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr;
-  EXPECT_NO_THROW(
-    preprocess::add_traffic_light_one_hot_encoding_to_segment(
-      segment_matrix, col_id_mapping, traffic_light_id_map, lanelet_map_ptr, 0, 0));
+
+  const auto result = context.get_first_traffic_light_on_route(
+    route, center_x, center_y, center_z, traffic_light_id_map);
+
+  EXPECT_EQ(result.traffic_light_group_id, 0)
+    << "Should return empty when no traffic light on route";
+  EXPECT_TRUE(result.elements.empty()) << "Elements should be empty when no traffic light on route";
 }
 
-TEST_F(LaneSegmentsTest, TransformAndSelectRowsThrowsOnInvalidInput)
+class GetFirstTrafficLightOnRouteTest : public ::testing::Test
 {
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
+protected:
+  void SetUp() override
+  {
+    const std::string path = autoware::test_utils::get_absolute_path_to_lanelet_map(
+      "autoware_diffusion_planner", "lanelet2_map.osm");
+    const auto map_bin = autoware::test_utils::make_map_bin_msg(path, 1.0);
 
-  // Wrong number of rows
-  Eigen::MatrixXf bad_matrix = input_matrix.topRows(input_matrix.rows() - 1);
+    lanelet_map_ = std::make_shared<lanelet::LaneletMap>();
+    lanelet::utils::conversion::fromBinMsg(map_bin, lanelet_map_);
+
+    const auto internal = convert_to_internal_lanelet_map(lanelet_map_);
+    for (const auto & seg : internal.lane_segments) {
+      if (seg.traffic_light_id != LaneSegment::TRAFFIC_LIGHT_ID_NONE) {
+        lanelet_id_with_tl_ = seg.id;
+        traffic_light_id_ = seg.traffic_light_id;
+        center_x_ = seg.centerline.front().x();
+        center_y_ = seg.centerline.front().y();
+        center_z_ = seg.centerline.front().z();
+        break;
+      }
+    }
+  }
+
+  std::shared_ptr<lanelet::LaneletMap> lanelet_map_;
+  int64_t lanelet_id_with_tl_{-1};
+  int64_t traffic_light_id_{-1};
+  double center_x_{0.0};
+  double center_y_{0.0};
+  double center_z_{0.0};
+};
+
+TEST_F(GetFirstTrafficLightOnRouteTest, TrafficLightNotInMap_ReturnsUnknown)
+{
+  ASSERT_GT(lanelet_id_with_tl_, 0) << "Test map must have at least one lanelet with traffic light";
+
+  preprocess::LaneSegmentContext context(lanelet_map_);
+
+  autoware_planning_msgs::msg::LaneletRoute route;
+  route.segments.resize(1);
+  route.segments[0].preferred_primitive.id = lanelet_id_with_tl_;
+  route.segments[0].preferred_primitive.primitive_type = "lane";
+
   std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr;
-  EXPECT_THROW(
-    preprocess::transform_and_select_rows(
-      bad_matrix, Eigen::Matrix4f::Identity(), col_id_mapping, traffic_light_id_map,
-      lanelet_map_ptr, 0, 0, 1),
-    std::invalid_argument);
 
-  // m <= 0
-  EXPECT_THROW(
-    preprocess::transform_and_select_rows(
-      input_matrix, Eigen::Matrix4f::Identity(), col_id_mapping, traffic_light_id_map,
-      lanelet_map_ptr, 0, 0, 0),
-    std::invalid_argument);
+  const auto result = context.get_first_traffic_light_on_route(
+    route, center_x_, center_y_, center_z_, traffic_light_id_map);
+
+  EXPECT_EQ(result.traffic_light_group_id, traffic_light_id_)
+    << "Should return the traffic light ID when not in perception map";
+  ASSERT_EQ(result.elements.size(), 1u) << "Should have one UNKNOWN element";
+  EXPECT_EQ(result.elements[0].color, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN)
+    << "Should report UNKNOWN when no perception data";
 }
 
-TEST_F(LaneSegmentsTest, ExtractLaneTensorDataAndSpeedTensorData)
+TEST_F(GetFirstTrafficLightOnRouteTest, TrafficLightPresentInMap_ReturnsCachedSignal)
 {
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
+  ASSERT_GT(lanelet_id_with_tl_, 0) << "Test map must have at least one lanelet with traffic light";
 
-  auto lane_tensor = preprocess::extract_lane_tensor_data(input_matrix);
-  auto lane_speed_tensor = preprocess::extract_lane_speed_tensor_data(input_matrix);
+  preprocess::LaneSegmentContext context(lanelet_map_);
 
-  EXPECT_EQ(lane_tensor.size(), SEGMENT_POINT_DIM * LANES_SHAPE[1] * POINTS_PER_SEGMENT);
-  EXPECT_EQ(lane_speed_tensor.size(), LANES_SPEED_LIMIT_SHAPE[2] * LANES_SPEED_LIMIT_SHAPE[1]);
+  autoware_planning_msgs::msg::LaneletRoute route;
+  route.segments.resize(1);
+  route.segments[0].preferred_primitive.id = lanelet_id_with_tl_;
+  route.segments[0].preferred_primitive.primitive_type = "lane";
+
+  preprocess::TrafficSignalStamped stamped;
+  stamped.signal.traffic_light_group_id = traffic_light_id_;
+  autoware_perception_msgs::msg::TrafficLightElement elem;
+  elem.color = autoware_perception_msgs::msg::TrafficLightElement::GREEN;
+  elem.shape = autoware_perception_msgs::msg::TrafficLightElement::CIRCLE;
+  elem.status = autoware_perception_msgs::msg::TrafficLightElement::SOLID_ON;
+  elem.confidence = 1.0f;
+  stamped.signal.elements.push_back(elem);
+
+  std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
+  traffic_light_id_map[static_cast<lanelet::Id>(traffic_light_id_)] = stamped;
+
+  const auto result = context.get_first_traffic_light_on_route(
+    route, center_x_, center_y_, center_z_, traffic_light_id_map);
+
+  EXPECT_EQ(result.traffic_light_group_id, traffic_light_id_)
+    << "Should return cached traffic light group ID";
+  ASSERT_EQ(result.elements.size(), 1u) << "Should have cached element";
+  EXPECT_EQ(result.elements[0].color, autoware_perception_msgs::msg::TrafficLightElement::GREEN)
+    << "Should return cached signal (GREEN)";
 }
 
 }  // namespace autoware::diffusion_planner::test

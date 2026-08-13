@@ -24,6 +24,7 @@
 #include <autoware_utils/ros/update_param.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/node.hpp>
+#include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/polygon.hpp>
 
@@ -31,7 +32,15 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/within.hpp>
+#include <boost/version.hpp>
+
+#if BOOST_VERSION < 107600  // Header removed in version 1.76.0 (Humble)
 #include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
+#endif
+
+#include <tf2_eigen/tf2_eigen.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/crop_hull.h>
@@ -41,7 +50,6 @@
 #include <pcl/point_types.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/segmentation/extract_clusters.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -50,15 +58,8 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace
 {
@@ -209,7 +210,8 @@ AEB::AEB(const rclcpp::NodeOptions & node_options)
   // start time
   const double aeb_hz = declare_parameter<double>("aeb_hz");
   const auto period_ns = rclcpp::Rate(aeb_hz).period();
-  timer_ = rclcpp::create_timer(this, this->get_clock(), period_ns, std::bind(&AEB::onTimer, this));
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, this->get_clock(), period_ns, std::bind(&AEB::onTimer, this));
 
   debug_processing_time_detail_pub_ =
     create_publisher<autoware_utils::ProcessingTimeDetail>("~/debug/processing_time_detail_ms", 1);
@@ -277,7 +279,7 @@ void AEB::onTimer()
   updater_.force_update();
 }
 
-void AEB::onImu(const Imu::ConstSharedPtr input_msg)
+void AEB::onImu(const std::shared_ptr<const Imu> & input_msg)
 {
   // transform imu
   const auto logger = get_logger();
@@ -289,9 +291,18 @@ void AEB::onImu(const Imu::ConstSharedPtr input_msg)
   tf2::doTransform(input_msg->angular_velocity, *angular_velocity_ptr_, transform_stamped.value());
 }
 
-void AEB::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
+void AEB::onPointCloud(const std::shared_ptr<const PointCloud2> & input_msg)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (input_msg->width == 0 || input_msg->height == 0) {
+    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
+      get_logger(), *get_clock(), 5000, "[AEB]: Received empty point cloud");
+    obstacle_ros_pointcloud_ptr_ = std::make_shared<PointCloud2>();
+    obstacle_ros_pointcloud_ptr_->header = input_msg->header;
+    return;
+  }
+
   PointCloud::Ptr pointcloud_ptr(new PointCloud);
   pcl::fromROSMsg(*input_msg, *pointcloud_ptr);
 
@@ -342,13 +353,13 @@ bool AEB::fetchLatestData()
     return false;
   };
 
-  current_velocity_ptr_ = sub_velocity_.take_data();
+  current_velocity_ptr_ = sub_velocity_->take_data();
   if (!current_velocity_ptr_) {
     return missing("ego velocity");
   }
 
   if (use_pointcloud_data_) {
-    const auto pointcloud_ptr = sub_point_cloud_.take_data();
+    const auto pointcloud_ptr = sub_point_cloud_->take_data();
     if (!pointcloud_ptr) {
       return missing("object pointcloud message");
     }
@@ -362,12 +373,12 @@ bool AEB::fetchLatestData()
   }
 
   if (use_predicted_object_data_) {
-    predicted_objects_ptr_ = predicted_objects_sub_.take_data();
+    predicted_objects_ptr_ = predicted_objects_sub_->take_data();
     if (!predicted_objects_ptr_) {
       return missing("predicted objects");
     }
   } else {
-    predicted_objects_ptr_.reset();
+    predicted_objects_ptr_ = {};
   }
 
   if (!obstacle_ros_pointcloud_ptr_ && !predicted_objects_ptr_) {
@@ -376,7 +387,7 @@ bool AEB::fetchLatestData()
 
   const bool has_imu_path = std::invoke([&]() {
     if (!use_imu_path_) return false;
-    const auto imu_ptr = sub_imu_.take_data();
+    const auto imu_ptr = sub_imu_->take_data();
     if (!imu_ptr) {
       return missing("imu message");
     }
@@ -389,7 +400,7 @@ bool AEB::fetchLatestData()
     if (!use_predicted_trajectory_) {
       return false;
     }
-    predicted_traj_ptr_ = sub_predicted_traj_.take_data();
+    predicted_traj_ptr_ = sub_predicted_traj_->take_data();
     return (!predicted_traj_ptr_) ? missing("control predicted trajectory") : true;
   });
 
@@ -400,7 +411,7 @@ bool AEB::fetchLatestData()
     return false;
   }
 
-  autoware_state_ = sub_autoware_state_.take_data();
+  autoware_state_ = sub_autoware_state_->take_data();
   if (check_autoware_state_ && !autoware_state_) {
     return missing("autoware_state");
   }
@@ -616,9 +627,10 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
 
   // Debug print
   if (!filtered_objects->empty() && publish_debug_pointcloud_) {
-    const auto filtered_objects_ros_pointcloud_ptr = std::make_shared<PointCloud2>();
+    auto filtered_objects_ros_pointcloud_ptr =
+      ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_obstacle_pointcloud_);
     pcl::toROSMsg(*filtered_objects, *filtered_objects_ros_pointcloud_ptr);
-    pub_obstacle_pointcloud_->publish(*filtered_objects_ros_pointcloud_ptr);
+    pub_obstacle_pointcloud_->publish(std::move(filtered_objects_ros_pointcloud_ptr));
   }
   return has_collision;
 }
@@ -955,6 +967,12 @@ void AEB::cropPointCloudWithEgoFootprintPath(
   const std::vector<Polygon2d> & ego_polys, PointCloud::Ptr filtered_objects)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  if (obstacle_ros_pointcloud_ptr_->width == 0 || obstacle_ros_pointcloud_ptr_->height == 0) {
+    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "[AEB]: Received empty obstacle point cloud, skipping crop");
+    return;
+  }
   if (ego_polys.empty()) {
     return;
   }

@@ -13,14 +13,21 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/metrics/detection_count.cpp
   src/utils/marker_utils.cpp
   src/utils/objects_filtering.cpp
+  src/perception_analytics_calculator.cpp
+  src/perception_analytics_publisher_node.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::perception_diagnostics::PerceptionOnlineEvaluatorNode"
-  EXECUTABLE ${PROJECT_NAME}_node
+  PLUGIN   "autoware::perception_diagnostics::PerceptionOnlineEvaluatorNode"
+  EXECUTABLE autoware_perception_online_evaluator_node
 )
 
-target_link_libraries(${PROJECT_NAME} glog::glog)
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN   "autoware::perception_diagnostics::PerceptionAnalyticsPublisherNode"
+  EXECUTABLE autoware_perception_analytics_publisher_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_perception_online_evaluator_node

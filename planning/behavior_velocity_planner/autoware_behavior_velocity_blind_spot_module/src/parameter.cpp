@@ -35,6 +35,11 @@ PlannerParam PlannerParam::init(rclcpp::Node & node, const std::string & ns)
     get_or_declare_parameter<double>(node, ns + ".collision_judge_debounce");
   param.critical_stopline_margin =
     get_or_declare_parameter<double>(node, ns + ".critical_stopline_margin");
+  param.detect_non_vru.car = get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.car");
+  param.detect_non_vru.truck = get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.truck");
+  param.detect_non_vru.bus = get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.bus");
+  param.detect_non_vru.trailer =
+    get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.trailer");
   param.brake.critical.deceleration =
     get_or_declare_parameter<double>(node, ns + ".brake.critical.deceleration");
   param.brake.critical.jerk = get_or_declare_parameter<double>(node, ns + ".brake.critical.jerk");

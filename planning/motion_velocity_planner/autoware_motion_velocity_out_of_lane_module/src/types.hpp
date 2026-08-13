@@ -116,6 +116,8 @@ struct EgoData
   double min_stop_arc_length{};  // [m] minimum arc length along the filtered trajectory where ego
                                  // can stop
 
+  lanelet::ConstLanelets trajectory_lanelets;  // lanelets where ego is driving and where the module
+                                               // can ignore collisions
   lanelet::ConstLanelets out_lanelets;  // lanelets where ego would be considered "out of lane"
   OutLaneletRtree out_lanelets_rtree;
 

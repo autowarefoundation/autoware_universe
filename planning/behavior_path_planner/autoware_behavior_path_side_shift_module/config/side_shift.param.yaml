@@ -7,4 +7,6 @@
       min_shifting_distance: 5.0
       min_shifting_speed: 5.56
       shift_request_time_limit: 1.0
+      drivable_area_check_mode: 1 # 0 = No check, 1 = Only current lane, 2 = Adjacent lanes included
+      min_drivable_area_margin: 0.3
       publish_debug_marker: false

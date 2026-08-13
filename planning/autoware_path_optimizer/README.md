@@ -194,7 +194,7 @@ Although it has a cons to converge to the local minima, it can get a good soluti
   - The point on the vehicle, offset forward with this parameter from the base link` tries to follow the reference path.
 
 - change or tune the method to approximate footprints with a set of circles.
-  - See [here](https://autowarefoundation.github.io/autoware_universe/main/planning/path_optimizer/docs/mpt/#collision-free)
+  - See [here](docs/mpt.md#collision-free)
   - Tuning means changing the ratio of circle's radius.
 
 ### Computation time
@@ -217,6 +217,17 @@ Although it has a cons to converge to the local minima, it can get a good soluti
 ### Parameters
 
 {{ json_to_markdown("planning/autoware_path_optimizer/schema/path_optimizer.schema.json") }}
+
+## Spell-checking (CSpell)
+
+Generated acados C code under `src/acados_mpc/c_generated_code/` is ignored in repo-wide CSpell runs. To spell-check only that folder, run from the **autoware_universe** package root (e.g. `src/universe/autoware_universe`):
+
+```bash
+cd path/to/autoware/src/universe/autoware_universe
+npx --yes cspell "planning/autoware_path_optimizer/src/acados_mpc/c_generated_code/**/*.{c,h}" --no-progress
+```
+
+Running CSpell from inside `c_generated_code` with a glob like `**/*.{c,h}` and `--config` pointing to the repo config makes the glob relative to the config directory, so the whole path_optimizer package gets checked instead of just that folder.
 
 ## How To Debug
 

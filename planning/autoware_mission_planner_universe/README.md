@@ -19,32 +19,35 @@ It distributes route requests and planning results according to current MRM oper
 
 ### Parameters
 
-| Name                               | Type   | Description                                                                                                                |
-| ---------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `map_frame`                        | string | The frame name for map                                                                                                     |
-| `arrival_check_angle_deg`          | double | Angle threshold for goal check                                                                                             |
-| `arrival_check_distance`           | double | Distance threshold for goal check                                                                                          |
-| `arrival_check_duration`           | double | Duration threshold for goal check                                                                                          |
-| `goal_angle_threshold`             | double | Max goal pose angle for goal approve                                                                                       |
-| `enable_correct_goal_pose`         | bool   | Enabling correction of goal pose according to the closest lanelet orientation                                              |
-| `reroute_time_threshold`           | double | If the time to the rerouting point at the current velocity is greater than this threshold, rerouting is possible           |
-| `minimum_reroute_length`           | double | Minimum Length for publishing a new route                                                                                  |
-| `consider_no_drivable_lanes`       | bool   | This flag is for considering no_drivable_lanes in planning or not.                                                         |
-| `allow_reroute_in_autonomous_mode` | bool   | This is a flag to allow reroute in autonomous driving mode. If false, reroute fails. If true, only safe reroute is allowed |
+| Name                                             | Type   | Description                                                                                                                |
+| ------------------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `map_frame`                                      | string | The frame name for map                                                                                                     |
+| `arrival_check_angle_deg`                        | double | Angle threshold for goal check                                                                                             |
+| `arrival_check_lateral_distance`                 | double | Lateral distance threshold for goal check                                                                                  |
+| `arrival_check_longitudinal_undershoot_distance` | double | Longitudinal distance threshold for goal check when the vehicle has not yet reached the goal                               |
+| `arrival_check_longitudinal_overshoot_distance`  | double | Longitudinal distance threshold for goal check when the vehicle has passed the goal                                        |
+| `arrival_check_duration`                         | double | Duration threshold for goal check                                                                                          |
+| `goal_angle_threshold`                           | double | Max goal pose angle for goal approve                                                                                       |
+| `enable_correct_goal_pose`                       | bool   | Enabling correction of goal pose according to the closest lanelet orientation                                              |
+| `reroute_time_threshold`                         | double | If the time to the rerouting point at the current velocity is greater than this threshold, rerouting is possible           |
+| `minimum_reroute_length`                         | double | Minimum Length for publishing a new route                                                                                  |
+| `consider_no_drivable_lanes`                     | bool   | This flag is for considering no_drivable_lanes in planning or not.                                                         |
+| `allow_reroute_in_autonomous_mode`               | bool   | This is a flag to allow reroute in autonomous driving mode. If false, reroute fails. If true, only safe reroute is allowed |
 
 ### Services
 
-| Name                                                                | Type                                     | Description                                |
-| ------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `/planning/mission_planning/mission_planner/clear_route`            | tier4_planning_msgs/srv/ClearRoute       | route clear request                        |
-| `/planning/mission_planning/mission_planner/set_waypoint_route`     | tier4_planning_msgs/srv/SetWaypointRoute | route request with lanelet waypoints.      |
-| `/planning/mission_planning/mission_planner/set_lanelet_route`      | tier4_planning_msgs/srv/SetLaneletRoute  | route request with pose waypoints.         |
-| `/planning/mission_planning/route_selector/main/clear_route`        | tier4_planning_msgs/srv/ClearRoute       | main route clear request                   |
-| `/planning/mission_planning/route_selector/main/set_waypoint_route` | tier4_planning_msgs/srv/SetWaypointRoute | main route request with lanelet waypoints. |
-| `/planning/mission_planning/route_selector/main/set_lanelet_route`  | tier4_planning_msgs/srv/SetLaneletRoute  | main route request with pose waypoints.    |
-| `/planning/mission_planning/route_selector/mrm/clear_route`         | tier4_planning_msgs/srv/ClearRoute       | mrm route clear request                    |
-| `/planning/mission_planning/route_selector/mrm/set_waypoint_route`  | tier4_planning_msgs/srv/SetWaypointRoute | mrm route request with lanelet waypoints.  |
-| `/planning/mission_planning/route_selector/mrm/set_lanelet_route`   | tier4_planning_msgs/srv/SetLaneletRoute  | mrm route request with pose waypoints.     |
+| Name                                                                 | Type                                          | Description                                |
+| -------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------ |
+| `/planning/mission_planning/mission_planner/clear_route`             | tier4_planning_msgs/srv/ClearRoute            | route clear request                        |
+| `/planning/mission_planning/mission_planner/set_waypoint_route`      | tier4_planning_msgs/srv/SetWaypointRoute      | route request with lanelet waypoints.      |
+| `/planning/mission_planning/mission_planner/set_lanelet_route`       | tier4_planning_msgs/srv/SetLaneletRoute       | route request with pose waypoints.         |
+| `/planning/mission_planning/mission_planner/set_preferred_primitive` | tier4_planning_msgs/srv/SetPreferredPrimitive | preferred-lane change request              |
+| `/planning/mission_planning/route_selector/main/clear_route`         | tier4_planning_msgs/srv/ClearRoute            | main route clear request                   |
+| `/planning/mission_planning/route_selector/main/set_waypoint_route`  | tier4_planning_msgs/srv/SetWaypointRoute      | main route request with lanelet waypoints. |
+| `/planning/mission_planning/route_selector/main/set_lanelet_route`   | tier4_planning_msgs/srv/SetLaneletRoute       | main route request with pose waypoints.    |
+| `/planning/mission_planning/route_selector/mrm/clear_route`          | tier4_planning_msgs/srv/ClearRoute            | mrm route clear request                    |
+| `/planning/mission_planning/route_selector/mrm/set_waypoint_route`   | tier4_planning_msgs/srv/SetWaypointRoute      | mrm route request with lanelet waypoints.  |
+| `/planning/mission_planning/route_selector/mrm/set_lanelet_route`    | tier4_planning_msgs/srv/SetLaneletRoute       | mrm route request with pose waypoints.     |
 
 ### Subscriptions
 
@@ -195,6 +198,10 @@ The interface for the MRM that pulls over the road shoulder. It has to be stoppe
 
 This is a goal change to pull over, avoid parked vehicles, and so on by a planning component. If the modified goal is outside the calculated route, a reroute is required. This goal modification is executed by checking the local environment and path safety as the vehicle actually approaches the destination. And this modification is allowed for both normal_route and mrm_route.
 The new route generated here is sent to the AD API so that it can also be referenced by the application. Note, however, that the specifications here are subject to change in the future.
+
+#### Setting Preferred Lane
+
+The manual lane change service allows external modification to the preferred-lanes of the current-route.
 
 #### Rerouting Limitations
 

@@ -20,7 +20,7 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 
-#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
+#include <autoware/deprecated/boundary_departure_checker/boundary_departure_checker.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -114,20 +114,6 @@ std::vector<geometry_msgs::msg::Point> generate_clothoid_path(
 std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid(
   const ArcSegment & arc_segment, const geometry_msgs::msg::Pose & start_pose, double A_min,
   double L_min, double point_interval);
-
-/**
- * @brief Improved clothoid conversion function with endpoint correction
- * @param arc_segment Arc segment to convert
- * @param start_pose Starting pose
- * @param initial_velocity Initial velocity
- * @param wheel_base Vehicle wheel base
- * @param max_steer_angle_rate Maximum steering angle rate
- * @param point_interval Interval between points
- * @return Optional clothoid path points with correction (nullopt if conversion fails)
- */
-std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid_with_correction(
-  const ArcSegment & arc_segment, const geometry_msgs::msg::Pose & start_pose,
-  double initial_velocity, double wheel_base, double max_steer_angle_rate, double point_interval);
 
 /**
  * @brief Create straight path to end pose

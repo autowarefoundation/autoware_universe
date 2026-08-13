@@ -1,6 +1,75 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package autoware_perception_online_evaluator
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_perception_online_evaluator): clear any pending metrics before next tests (`#12375 <https://github.com/mitsudome-r/autoware_universe/issues/12375>`_)
+* chore(localization, evaluator): remove unused lanelet2_extension header (`#12297 <https://github.com/mitsudome-r/autoware_universe/issues/12297>`_)
+  * unused lanelet2_extension in localization component
+  * unused lanelet2_extension in evaluator component
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_perception_online_evaluator): remove glog (`#12166 <https://github.com/mitsudome-r/autoware_universe/issues/12166>`_)
+  * feat: remove glog
+  * feat: remove google shutdown
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Tetsuhiro Kawaguchi, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(perception_online_evaluator): add missing include (`#11877 <https://github.com/autowarefoundation/autoware_universe/issues/11877>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* perf(perception_online_evaluator): reduce TF loolup fail logging level. (`#11227 <https://github.com/autowarefoundation/autoware_universe/issues/11227>`_)
+  * perf(PerceptionOnlineEvaluator): reduce TF loolup fail logging level.
+  * perf: use throttled logging
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+* Contributors: Kang, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* feat(perception_online_evaluator): add functionality to publish perception analytics info (`#11089 <https://github.com/autowarefoundation/autoware_universe/issues/11089>`_)
+  * feat: add functionality to calculate perception metrics for MOB in autoware_perception_online_evaluator
+  chore: configure settings for mob metrics calculation
+  * feat: change implementation from one topic per metric to all metrics published in one metric for better management by metric agent
+  refactor: rename FrameMetrics member to clarify variable meaning
+  refactor: use array/vector instead of unorder_map for FrameMetrics for better performance
+  chore: remap published topic name to match msg conventions
+  * fix: unittest error
+  * style(pre-commit): autofix
+  * refactor: replace MOB keyword with generalized expression of perception analytics
+  * chore: improve comment
+  * refactor: add a new autoware_perception_analytics_publisher_node to publish perception analytics info instead of using previous autoware_perception_online_evaluator_node
+  chore: modify default launch setting to match the refactoring
+  * style(pre-commit): autofix
+  * fix: add initialization for `latencies\_`
+  fix: use tf of objects timestamp instead of latest
+  feat: use ConstSharedPtr to avoid repeated copy of large message in `PerceptionAnalyticsCalculator::setPredictedObjects`
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kang, Mete Fatih Cırıt
 
 0.46.0 (2025-06-20)
 -------------------

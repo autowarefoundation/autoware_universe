@@ -24,6 +24,8 @@
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 #include <pthread.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <filesystem>
 #include <fstream>
@@ -39,6 +41,7 @@ namespace
 {
 constexpr const char * TEST_FILE = "test";
 constexpr const char * DOCKER_ENV = "/.dockerenv";
+constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/msr_reader.sock";
 
 char ** argv_;
 }  // namespace
@@ -236,31 +239,37 @@ void * msr_reader(void * args)
   ThreadTestMode * mode = reinterpret_cast<ThreadTestMode *>(args);
 
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     return nullptr;
   }
 
-  // Allow address reuse
   int ret = 0;
-  int opt = 1;
-  ret = setsockopt(
-    sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), (socklen_t)sizeof(opt));
-  if (ret < 0) {
+  ret = unlink(DEFAULT_SOCKET_PATH);
+  if ((ret < 0) && (errno != ENOENT)) {
     close(sock);
     return nullptr;
   }
 
-  // Give the socket FD the local address ADDR
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(7634);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, DEFAULT_SOCKET_PATH, sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
     close(sock);
+    unlink(DEFAULT_SOCKET_PATH);
+    return nullptr;
+  }
+
+  // As msr_reader is executed by root, we need to set the socket to be accessible by all users.
+  // The 'x' bits for the socket file are required to allow the socket to be connected
+  // by other users.
+  ret = chmod(DEFAULT_SOCKET_PATH, 0777);
+  if (ret < 0) {
+    close(sock);
+    unlink(DEFAULT_SOCKET_PATH);
     return nullptr;
   }
 
@@ -268,16 +277,18 @@ void * msr_reader(void * args)
   ret = listen(sock, 5);
   if (ret < 0) {
     close(sock);
+    unlink(DEFAULT_SOCKET_PATH);
     return nullptr;
   }
 
-  sockaddr_in client;
+  sockaddr_un client;
   socklen_t len = sizeof(client);
 
   // Await a connection on socket FD
   int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
   if (new_sock < 0) {
     close(sock);
+    unlink(DEFAULT_SOCKET_PATH);
     return nullptr;
   }
 
@@ -337,6 +348,7 @@ void * msr_reader(void * args)
   // Close the file descriptor FD
   close(new_sock);
   close(sock);
+  unlink(DEFAULT_SOCKET_PATH);
   return nullptr;
 }
 
@@ -781,6 +793,7 @@ TEST_F(CPUMonitorTestSuite, throttlingFormatErrorTest)
 
 TEST_F(CPUMonitorTestSuite, throttlingConnectErrorTest)
 {
+  // msr_reader is not running.
   updatePublishSubscribe();
 
   // Verify
@@ -790,7 +803,8 @@ TEST_F(CPUMonitorTestSuite, throttlingConnectErrorTest)
   ASSERT_EQ(status.level, DiagStatus::ERROR);
   ASSERT_STREQ(status.message.c_str(), "connect error");
   ASSERT_TRUE(findValue(status, "connect", value));
-  ASSERT_STREQ(value.c_str(), strerror(ECONNREFUSED));
+  // There is no UNIX domain socket file.
+  ASSERT_STREQ(value.c_str(), strerror(ENOENT));
 }
 
 TEST_F(CPUMonitorTestSuite, freqTest)

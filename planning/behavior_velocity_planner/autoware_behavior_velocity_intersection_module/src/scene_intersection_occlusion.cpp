@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene_intersection.hpp"
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_intersection.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 #include <autoware_utils/geometry/geometry.hpp>
@@ -119,18 +119,14 @@ IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
   const auto & path_ip = interpolated_path_info.path;
   const auto & lane_interval_ip = interpolated_path_info.lane_id_interval.value();
 
-  const auto first_attention_area_idx =
+  const auto first_inside_attention_idx =
     util::getFirstPointInsidePolygon(path_ip, lane_interval_ip, first_attention_area);
-  if (!first_attention_area_idx) {
+  if (!first_inside_attention_idx) {
     return NotOccluded{};
   }
 
-  const auto first_inside_attention_idx_ip_opt =
-    util::getFirstPointInsidePolygon(path_ip, lane_interval_ip, first_attention_area);
   const std::pair<size_t, size_t> lane_attention_interval_ip =
-    first_inside_attention_idx_ip_opt
-      ? std::make_pair(first_inside_attention_idx_ip_opt.value(), std::get<1>(lane_interval_ip))
-      : lane_interval_ip;
+    std::make_pair(first_inside_attention_idx.value(), std::get<1>(lane_interval_ip));
   const auto [lane_start_idx, lane_end_idx] = lane_attention_interval_ip;
 
   const int width = occ_grid.info.width;
@@ -289,10 +285,11 @@ IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
     if (poly_area < possible_object_area) continue;
     // check bounding box size
     const auto bbox = cv::minAreaRect(approx_contour);
-    if (const auto size = bbox.size; std::min(size.height, size.width) <
-                                       std::min(possible_object_bbox_x, possible_object_bbox_y) ||
-                                     std::max(size.height, size.width) <
-                                       std::max(possible_object_bbox_x, possible_object_bbox_y)) {
+    if (
+      const auto size = bbox.size; std::min(size.height, size.width) <
+                                     std::min(possible_object_bbox_x, possible_object_bbox_y) ||
+                                   std::max(size.height, size.width) <
+                                     std::max(possible_object_bbox_x, possible_object_bbox_y)) {
       continue;
     }
     valid_contours.push_back(approx_contour);

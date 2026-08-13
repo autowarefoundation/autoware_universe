@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "map_based_prediction/data_structure.hpp"
-#include "map_based_prediction/path_generator.hpp"
+#include "autoware/map_based_prediction/data_structure.hpp"
+#include "autoware/map_based_prediction/path_generator/path_generator.hpp"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 using autoware_perception_msgs::msg::ObjectClassification;
@@ -176,7 +175,7 @@ TEST(PathGenerator, test_generatePathForCrosswalkUser)
   reachable_crosswalk.back_left_point << -1.0, 1.0;
 
   // Generate predicted path
-  const PredictedPath predicted_path = path_generator.generatePathForCrosswalkUser(
+  const auto predicted_path = path_generator.generatePathForCrosswalkUser(
     tracked_object, reachable_crosswalk, prediction_time_horizon);
 
   // Check

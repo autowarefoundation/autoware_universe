@@ -38,7 +38,7 @@ class AvoidanceByLaneChange : public NormalLaneChange
 public:
   AvoidanceByLaneChange(
     const std::shared_ptr<LaneChangeParameters> & parameters,
-    std::shared_ptr<AvoidanceByLCParameters> avoidance_by_lane_change_parameters);
+    std::shared_ptr<AvoidanceByLCParameters> avoidance_parameters);
 
   bool specialRequiredCheck() const override;
 

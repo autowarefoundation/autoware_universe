@@ -22,18 +22,23 @@
 #include <rclcpp/time.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace autoware::diagnostic_graph_aggregator
 {
+using VariablesMap = std::unordered_map<std::string, std::string>;
 
 class Graph
 {
 public:
   explicit Graph(const std::string & path);
   Graph(const std::string & path, const std::string & id, std::shared_ptr<Logger> logger);
+  Graph(
+    const std::string & path, const std::string & id, std::shared_ptr<Logger> logger,
+    std::shared_ptr<VariablesMap> variables);
   ~Graph();
   void update(const rclcpp::Time & stamp);
   bool update(const rclcpp::Time & stamp, const DiagnosticArray & array);
@@ -43,6 +48,7 @@ public:
 
   void set_initializing(bool initializing);
   void reset();
+  std::string set_override(const std::string & path, std::optional<DiagnosticLevel> level);
   std::vector<NodeUnit *> nodes() const { return nodes_; }
   std::vector<DiagUnit *> diags() const { return diags_; }
 
@@ -53,6 +59,7 @@ private:
   std::vector<std::unique_ptr<LinkPort>> alloc_ports_;
   std::vector<NodeUnit *> nodes_;
   std::vector<DiagUnit *> diags_;
+  std::unordered_map<std::string, NodeUnit *> node_dict_;
   std::unordered_map<std::string, DiagUnit *> diag_dict_;
   std::unordered_map<std::string, DiagnosticStatus> unknown_diags_;
 };

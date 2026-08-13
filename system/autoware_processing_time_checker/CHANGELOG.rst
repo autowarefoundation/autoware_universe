@@ -2,6 +2,43 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(processing_time_cheker): add neural_network_based_planner node `processing_time_ms` (`#12529 <https://github.com/autowarefoundation/autoware_universe/issues/12529>`_)
+  * feat(diffusion_planner, trajectory_optimizer): add processing_time_ms topic
+  * feat: processing_time_checker
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* Contributors: Kazunori-Nakajima, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(run_out, processing_time_checker): support processing_time for run_out and update processing time list (`#11515 <https://github.com/autowarefoundation/autoware_universe/issues/11515>`_)
+  update processing time list and support run_out
+* chore(run_out): rm the autoware_behavior_velocity_run_out module (`#11320 <https://github.com/autowarefoundation/autoware_universe/issues/11320>`_)
+* fix(autoware_processing_time_checker): remove unused function (`#11213 <https://github.com/autowarefoundation/autoware_universe/issues/11213>`_)
+* fix(autoware_processing_time_checker): remove unused function (`#11182 <https://github.com/autowarefoundation/autoware_universe/issues/11182>`_)
+* Contributors: Kem (TiankuiXian), Maxime CLEMENT, Ryohsuke Mitsudome, Ryuta Kambe
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* feat(path_generator): publish processing time (`#10863 <https://github.com/autowarefoundation/autoware_universe/issues/10863>`_)
+* Contributors: Kosuke Takeuchi
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

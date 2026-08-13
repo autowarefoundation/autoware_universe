@@ -128,7 +128,7 @@ ConcatenatedCloudResult<MsgTraits> CloudCollector<MsgTraits>::concatenate_pointc
   std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::ConstSharedPtr>
     topic_to_cloud_map)
 {
-  return combine_cloud_handler_->combine_pointclouds(topic_to_cloud_map);
+  return combine_cloud_handler_->combine_pointclouds(topic_to_cloud_map, collector_info_);
 }
 
 template <typename MsgTraits>
@@ -169,7 +169,8 @@ void CloudCollector<MsgTraits>::show_debug_message()
 
   log_stream << "]\n";
 
-  RCLCPP_INFO(ros2_parent_node_->get_logger(), "%s", log_stream.str().c_str());
+  const std::string & str = log_stream.str();
+  RCLCPP_INFO(ros2_parent_node_->get_logger(), "%s", str.c_str());
 }
 
 template <typename MsgTraits>

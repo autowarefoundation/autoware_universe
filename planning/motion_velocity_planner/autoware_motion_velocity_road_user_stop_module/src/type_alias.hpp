@@ -15,6 +15,7 @@
 #ifndef TYPE_ALIAS_HPP_
 #define TYPE_ALIAS_HPP_
 
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
@@ -37,7 +38,7 @@ using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::LaneletRoute;
-using autoware_utils::LineString2d;
+using autoware_utils_geometry::LineString2d;
 using autoware_utils_geometry::Polygon2d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;

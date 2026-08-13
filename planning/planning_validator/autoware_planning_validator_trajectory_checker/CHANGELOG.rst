@@ -2,6 +2,64 @@
 Changelog for package autoware_planning_validator_trajectory_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): reset last_valid_trajectory when receiving new route   (`#11836 <https://github.com/autowarefoundation/autoware_universe/issues/11836>`_)
+  * fix(planning_validator): reset last_valid_trajectory when receiving new route
+  * skip check_traject_shift when ego stops
+  * fix unit test failure
+  * use ivehicle_stop_checker
+  ---------
+  Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): update QoS settings for operational mode state subscriber (`#11401 <https://github.com/autowarefoundation/autoware_universe/issues/11401>`_)
+* fix: use the correct jerk computation formula (`#11306 <https://github.com/autowarefoundation/autoware_universe/issues/11306>`_)
+  * fix: use the correct jerk computation formula
+  * also fix test script
+  ---------
+* feat(planning_validator): add operational mode state handling and validation filtering (`#11216 <https://github.com/autowarefoundation/autoware_universe/issues/11216>`_)
+  * feat(planning_validator): add operational mode state handling and validation filtering
+  * refactor(planning_validator):  unused validation_filtering method and initialize validation status with existing function
+  * feat(planning_validator): add operational mode state handling and publisher for test
+  ---------
+* Contributors: Kyoichi Sugahara, Ryohsuke Mitsudome, Yuxuan Liu
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* refactor(planning_validator): refactor planning validator configuration and error handling (`#11081 <https://github.com/autowarefoundation/autoware_universe/issues/11081>`_)
+  * refactor trajectory check error handling
+  * define set_diag_status function for each module locally
+  * update documentation
+  ---------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(planning_validator): fix conflict between trajectory shift and distance deviation checks (`#10799 <https://github.com/autowarefoundation/autoware_universe/issues/10799>`_)
+  * use global is_critical_error flag for trajectory diagnostics update
+  * add warning to readme
+  * Update planning/planning_validator/autoware_planning_validator/README.md
+  ---------
+* fix(planning_validator_trajectory_checker): set is_critical_error flag to false at start of validation (`#10912 <https://github.com/autowarefoundation/autoware_universe/issues/10912>`_)
+  set is_critical_error flag to false at start of validation
+* fix(planning_validator): check the yaw deviation of the initial trajectory (`#10878 <https://github.com/autowarefoundation/autoware_universe/issues/10878>`_)
+* Contributors: Maxime CLEMENT, Mete Fatih Cırıt, mkquda
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

@@ -71,7 +71,7 @@ public:
     if (it != cache_map_.end()) {
       cache_list_.erase(it->second);
     }
-    cache_list_.push_front({key, value});
+    cache_list_.emplace_front(key, value);
     cache_map_[key] = cache_list_.begin();
 
     if (cache_map_.size() > capacity_) {

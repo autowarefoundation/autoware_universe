@@ -19,8 +19,7 @@
 
 #include <rclcpp/logger.hpp>
 #include <rclcpp/node.hpp>
-
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <cstdint>
 #include <string>

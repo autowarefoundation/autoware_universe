@@ -34,8 +34,6 @@ bool has_common_part(const lanelet::Ids & lane_ids1, const lanelet::Ids & lane_i
 lanelet::ConstLanelets filter_lanelets_by_ids(
   const lanelet::ConstLanelets & all_lanelets, const lanelet::Ids & target_lane_ids);
 
-lanelet::ConstLanelets filter_intersection_lanelets(const lanelet::ConstLanelets & all_lanelets);
-
 lanelet::ConstLanelets get_inflow_lanelets(
   const lanelet::ConstLanelets & lanelets,
   const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets);

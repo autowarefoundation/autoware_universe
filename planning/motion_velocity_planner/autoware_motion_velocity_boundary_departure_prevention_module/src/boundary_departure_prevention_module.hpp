@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::experimental
@@ -40,10 +41,12 @@ public:
     const TrajectoryPoints & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; };
+  std::string get_short_module_name() const override { return "boundary_departure_prevention"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     return RequiredSubscriptionInfo{};
   }
+  ~BoundaryDeparturePreventionModule() override { updater_ptr_.reset(); }
 
 private:
   // === Interface and inputs validation ====
@@ -56,13 +59,52 @@ private:
   bool is_autonomous_mode() const;
 
   // === Internal logic
+  /**
+   * @brief Main entry point for boundary departure-aware velocity planning.
+   *
+   * The function first verifies input validity, checks system state (e.g., route changes,
+   * autonomy status), and initializes planning components if needed. Then it performs slow down
+   * planning to prevent the vehicle from departing road boundaries.
+   */
+
+  tl::expected<VelocityPlanningResult, std::string> plan_velocities(
+    const TrajectoryPoints & raw_trajectory_points,
+    const std::shared_ptr<const PlannerData> & planner_data);
 
   tl::expected<VelocityPlanningResult, std::string> plan_slow_down_intervals(
     const TrajectoryPoints & raw_trajectory_points,
     const std::shared_ptr<const PlannerData> & planner_data);
-  std::unordered_map<DepartureType, bool> get_diagnostics(
-    const double curr_vel, const double dist_with_offset_m);
+
+  /**
+   * @brief Update the list of critical departure points.
+   *
+   * Projects existing critical departure points onto the updated reference trajectory
+   * and removes points that are outdated (i.e., passed by the ego or shifted significantly).
+   *
+   * @param raw_ref_traj Current reference trajectory.
+   * @param offset_from_ego Minimum distance from ego to keep a point; points closer than this are
+   * removed.
+   */
+  std::pair<int8_t, std::string> get_diagnostic_status(
+    const double ego_dist_on_traj, const double curr_vel);
+
+  /**
+   * @brief Generates and publishes visualization markers for virtual walls and debugging.
+   */
+  void publish_visualization_markers();
+
+  /**
+   * @brief Helper function for virtual walls
+   */
+  void publish_virtual_walls(const rclcpp::Time & current_time);
+
+  /**
+   * @brief Helper function for debug markers
+   */
+  void publish_debug_markers(const rclcpp::Time & current_time);
+
   rclcpp::Clock::SharedPtr clock_ptr_;
+  rclcpp::Node * node_ptr_{nullptr};
 
   std::string module_name_;
   Output output_;
@@ -81,8 +123,8 @@ private:
   LaneletRoute::ConstSharedPtr route_ptr_;
   std::unordered_map<std::string, double> processing_times_ms_;
 
-  std::unique_ptr<double> last_lost_time_ptr_;
-  std::unique_ptr<double> last_found_time_ptr_;
+  double last_abnormality_fp_overlap_bound_time_{0.0};
+  double last_abnormality_fp_no_overlap_bound_time_{0.0};
 
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr ego_pred_traj_polling_sub_;
   autoware_utils::InterProcessPollingSubscriber<Control>::SharedPtr control_cmd_polling_sub_;
@@ -95,7 +137,7 @@ private:
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
-  std::unique_ptr<BoundaryDepartureChecker> boundary_departure_checker_ptr_;
+  std::unique_ptr<UncrossableBoundaryDepartureChecker> boundary_departure_checker_ptr_;
   std::unique_ptr<diagnostic_updater::Updater> updater_ptr_;
 
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;

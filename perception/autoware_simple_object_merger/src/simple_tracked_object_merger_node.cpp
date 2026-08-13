@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::simple_object_merger
@@ -91,8 +92,8 @@ SimpleTrackedObjectMergerNode::SimpleTrackedObjectMergerNode(
 }
 
 void SimpleTrackedObjectMergerNode::approximateMerger(
-  const TrackedObjects::ConstSharedPtr & object_msg0,
-  const TrackedObjects::ConstSharedPtr & object_msg1)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & object_msg0,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & object_msg1)
 {
   TrackedObjects::SharedPtr transformed_objects0;
   if (node_param_.new_frame_id == object_msg0->header.frame_id) {
@@ -120,7 +121,8 @@ void SimpleTrackedObjectMergerNode::approximateMerger(
     transformed_objects1 = getTransformedObjects(object_msg1, node_param_.new_frame_id, transform1);
   }
 
-  TrackedObjects output_objects;
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_objects_);
+  auto & output_objects = *output;
   output_objects.header = object_msg0->header;
   output_objects.header.frame_id = node_param_.new_frame_id;
   output_objects.objects.reserve(
@@ -136,19 +138,37 @@ void SimpleTrackedObjectMergerNode::approximateMerger(
     output_objects.objects.push_back(object);
   }
 
-  pub_objects_->publish(output_objects);
+  pub_objects_->publish(std::move(output));
   cleanupUUIDMap();
 }
 
 void SimpleTrackedObjectMergerNode::onTimer()
 {
-  if (!isDataReady()) {
+  rclcpp::Time latest_stamp{0, 0, this->get_clock()->get_clock_type()};
+  bool has_valid_input = false;
+
+  for (size_t i = 0; i < input_topic_size_; i++) {
+    if (objects_data_.at(i)) {
+      const auto & stamp = objects_data_.at(i)->header.stamp;
+      if (!has_valid_input || rclcpp::Time(stamp) > latest_stamp) {
+        latest_stamp = stamp;
+        has_valid_input = true;
+      }
+    }
+  }
+
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_objects_);
+  auto & output_objects = *output;
+  output_objects.header.frame_id = node_param_.new_frame_id;
+
+  if (!has_valid_input) {
+    output_objects.header.stamp = this->now();
+    pub_objects_->publish(std::move(output));
+    cleanupUUIDMap();
     return;
   }
 
-  TrackedObjects output_objects;
-  output_objects.header = objects_data_.at(0)->header;
-  output_objects.header.frame_id = node_param_.new_frame_id;
+  output_objects.header.stamp = latest_stamp;
 
   constexpr double throttle_interval = 3.0;  // seconds
   const rclcpp::Time now = this->now();
@@ -159,8 +179,12 @@ void SimpleTrackedObjectMergerNode::onTimer()
   }
 
   for (size_t i = 0; i < input_topic_size_; i++) {
-    double time_diff = rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() -
-                       rclcpp::Time(objects_data_.at(0)->header.stamp).seconds();
+    if (!objects_data_.at(i)) {
+      continue;
+    }
+
+    double time_diff =
+      rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() - latest_stamp.seconds();
     if (std::abs(time_diff) < node_param_.timeout_threshold) {
       TrackedObjects::SharedPtr transformed_objects;
       if (node_param_.new_frame_id == objects_data_.at(i)->header.frame_id) {
@@ -186,7 +210,7 @@ void SimpleTrackedObjectMergerNode::onTimer()
     }
   }
 
-  pub_objects_->publish(output_objects);
+  pub_objects_->publish(std::move(output));
   cleanupUUIDMap();
 }
 

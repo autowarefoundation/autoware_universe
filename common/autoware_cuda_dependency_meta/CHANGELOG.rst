@@ -2,6 +2,30 @@
 Changelog for package autoware_cuda_dependency_meta
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_cuda_dependency_meta): pass -fno-lto compile flag to downstream packages of autoware_cuda_dependency_meta (`#11115 <https://github.com/autowarefoundation/autoware_universe/issues/11115>`_)
+* Contributors: Esteve Fernandez, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 

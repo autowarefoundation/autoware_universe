@@ -2,6 +2,90 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(crosswalk): fix nearest stop pose usage in bvp's experimental module (`#12265 <https://github.com/mitsudome-r/autoware_universe/issues/12265>`_)
+  * fix crosswalk module to always choose nearest stop pose (11685)
+  * fix crosswalk module by updating previous stop pose before using it (11699)
+  * remove unnecessary part in arc-length based trajectory
+  ---------
+* fix(crosswalk): skip stop decision when remaining crosswalk width beside ego footprint is below threshold (`#12249 <https://github.com/mitsudome-r/autoware_universe/issues/12249>`_)
+  * fix(crosswalk): skip stop decision when remaining crosswalk width beside ego footprint is below threshold
+  * fix: for experimental module
+  ---------
+* fix(crosswalk): improve logic to detect stuck vehicle for experimental module (`#12248 <https://github.com/mitsudome-r/autoware_universe/issues/12248>`_)
+  * fix(crosswalk): improve logic to detect stuck vehicle
+  * fix: cppcheck error
+  ---------
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* fix(crosswalk): improve logic to detect stuck vehicle (`#12224 <https://github.com/mitsudome-r/autoware_universe/issues/12224>`_)
+  * fix(crosswalk): improve logic to detect stuck vehicle
+  * fix: ci error
+  ---------
+* chore: organize maintainer (`#12140 <https://github.com/mitsudome-r/autoware_universe/issues/12140>`_)
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_crosswalk_module): use Trajectory instead of PathWithLaneId (`#11840 <https://github.com/autowarefoundation/autoware_universe/issues/11840>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Giovanni Muhammad Raditya, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(crosswalk): update the previous stop pose before using it (`#11699 <https://github.com/autowarefoundation/autoware_universe/issues/11699>`_)
+* fix(crosswalk): always choose the nearest stop pose (incl previous one) (`#11658 <https://github.com/autowarefoundation/autoware_universe/issues/11658>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* fix(crosswalk): set object classification label before making decision (`#11504 <https://github.com/autowarefoundation/autoware_universe/issues/11504>`_)
+* fix(crosswalk): limit start_distance of cooperate status to positive (`#11406 <https://github.com/autowarefoundation/autoware_universe/issues/11406>`_)
+  * crop start_distance of cooperate status to positive
+  * fix style
+  ---------
+* fix(crosswalk, traffic_light): correct distance calculation by swapping src and dst (`#11393 <https://github.com/autowarefoundation/autoware_universe/issues/11393>`_)
+  * fix: correct distance calculation by swapping src and dst
+  * fix: correct distance calculation by swapping src and dst
+  ---------
+* feat(RTC, behavior_velocity_planner): set manual RTC via the lanelet map (`#11340 <https://github.com/autowarefoundation/autoware_universe/issues/11340>`_)
+  * first attempt at a solution to set the auto/manual mode for a module
+  * implementation for crosswalk and intersections modules
+  * update READMEs
+  * fix crosswalk -> intersection
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  ---------
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* fix(crosswalk): fix: incorrect inserted stop point calculation for restart suppression (`#11166 <https://github.com/autowarefoundation/autoware_universe/issues/11166>`_)
+* Contributors: Kotakku, Maxime CLEMENT, Mitsuhiro Sakamoto, Ryohsuke Mitsudome, Satoshi OTA
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(crosswalk): improve robustness to prevent stop decision from being canceled by transient noise (`#11027 <https://github.com/autowarefoundation/autoware_universe/issues/11027>`_)
+  * feat(crosswalk): improve robustness to prevent stop decision from being canceled by transient noise
+  * docs: readme
+  * fix: small change
+  ---------
+* fix(crosswalk): incorrect stop point calculation (`#10922 <https://github.com/autowarefoundation/autoware_universe/issues/10922>`_)
+* Contributors: Mete Fatih Cırıt, Satoshi OTA
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

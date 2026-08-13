@@ -2,6 +2,56 @@
 Changelog for package autoware_traffic_light_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_traffic_light_utils): rewrite hasTrafficLightCircleColor and hasTrafficLightShape into three functions to handle overseas color arrow traffic light (`#12481 <https://github.com/mitsudome-r/autoware_universe/issues/12481>`_)
+  * feat(autoware_traffic_light_utils): merge hasTrafficLightCirleColor and hasTrafficLightShape into a general function hasTrafficLightShapeColor to handle oversea color arrow traffic light
+  * feat(autoware_traffic_light_utils): merge hasTrafficLightCirleColor and hasTrafficLightShape into a general function hasTrafficLightShapeColor to handle oversea color arrow traffic light
+  * fix: modify default parameter for hasTrafficLightShapeColor
+  * fix: separate hasTrafficLightShapeColor into three functions
+  * chore(miscs): remove unused lanelet2 extension header (`#12081 <https://github.com/mitsudome-r/autoware_universe/issues/12081>`_)
+  chore(miscs): remove unused header include for lanelet2_extension
+  * fix: revert modification
+  * fix: revert modification
+  * style(pre-commit): autofix
+  * fix: change TrafficLightElement msg belonging
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(common, visualization): remove unused lanelet2_extension header (`#12296 <https://github.com/mitsudome-r/autoware_universe/issues/12296>`_)
+  * unused lanelet2_extension in common component
+  * unused lanelet2_extension in visualization component
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, Xiaoyu WANG, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* fix(autoware_traffic_light_utils): remove default value `setSignalUnknown (`#10635 <https://github.com/autowarefoundation/autoware_universe/issues/10635>`_)
+  * remove default value
+  * fix
+  ---------
+* Contributors: Masato Saeki
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

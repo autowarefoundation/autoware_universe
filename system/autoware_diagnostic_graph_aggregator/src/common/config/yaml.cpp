@@ -66,7 +66,7 @@ std::vector<ConfigYaml> ConfigYaml::list() const
   }
   std::vector<ConfigYaml> result;
   for (const auto & node : yaml_) {
-    result.push_back(ConfigYaml(node));
+    result.emplace_back(node);
   }
   return result;
 }
@@ -99,6 +99,16 @@ double ConfigYaml::float64() const
 double ConfigYaml::float64(double value) const
 {
   return yaml_.as<double>(value);
+}
+
+bool ConfigYaml::flag() const
+{
+  return yaml_.as<bool>();
+}
+
+bool ConfigYaml::flag(bool value) const
+{
+  return yaml_.as<bool>(value);
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

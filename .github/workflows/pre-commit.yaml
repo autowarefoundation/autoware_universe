@@ -7,10 +7,14 @@ name: pre-commit
 on:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pre-commit:
     if: ${{ github.event.repository.private }} # Use pre-commit.ci for public repositories
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Generate token
         id: generate-token
@@ -20,7 +24,7 @@ jobs:
           private_key: ${{ secrets.PRIVATE_KEY }}
 
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 

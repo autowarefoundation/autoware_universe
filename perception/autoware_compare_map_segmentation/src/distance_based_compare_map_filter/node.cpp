@@ -30,6 +30,12 @@ namespace autoware::compare_map_segmentation
 void DistanceBasedStaticMapLoader::onMapCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr map)
 {
+  // check for empty point cloud
+  if (map->data.empty() || map->width == 0 || map->height == 0) {
+    RCLCPP_WARN(rclcpp::get_logger("distance_based_compare_map_filter"), "Empty map received");
+    return;
+  }
+
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);

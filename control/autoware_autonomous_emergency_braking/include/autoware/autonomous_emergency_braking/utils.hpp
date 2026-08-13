@@ -18,29 +18,20 @@
 #include "autoware/autonomous_emergency_braking/node.hpp"
 
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <tf2/utils.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/detail/point__struct.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-
-#include <boost/geometry/algorithms/correct.hpp>
-
-#include <tf2/utils.h>
-
-#include <string>
-#include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
-#endif
+#include <boost/geometry/algorithms/correct.hpp>
+
+#include <string>
+#include <vector>
 
 namespace autoware::motion::control::autonomous_emergency_braking::utils
 {
@@ -120,7 +111,7 @@ Polygon2d convertObjToPolygon(const PredictedObject & obj);
  */
 std::optional<geometry_msgs::msg::TransformStamped> getTransform(
   const std::string & target_frame, const std::string & source_frame,
-  const tf2_ros::Buffer & tf_buffer, const rclcpp::Logger & logger);
+  const autoware::agnocast_wrapper::Buffer & tf_buffer, const rclcpp::Logger & logger);
 
 /**
  * @brief Get the predicted object's shape as a geometry polygon

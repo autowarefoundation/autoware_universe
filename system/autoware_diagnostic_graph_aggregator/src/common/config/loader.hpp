@@ -21,21 +21,28 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::diagnostic_graph_aggregator
 {
 
+using VariablesMap = std::unordered_map<std::string, std::string>;
+
 class ConfigLoader
 {
 public:
   explicit ConfigLoader(std::shared_ptr<Logger> logger);
+  ConfigLoader(std::shared_ptr<Logger> logger, std::shared_ptr<VariablesMap> variables);
   ~ConfigLoader();
 
   // Overall execution for normal use
   void load(const std::string & path);
   GraphData take();
   static GraphData Load(const std::string & path, std::shared_ptr<Logger> logger);
+  static GraphData Load(
+    const std::string & path, std::shared_ptr<Logger> logger,
+    std::shared_ptr<VariablesMap> variables);
 
   // Step execution for debug tools.
   void load_file_tree(const std::string & path);
@@ -61,6 +68,7 @@ private:
   BaseUnit * load_diag(ConfigYaml yaml, const std::string & name);
 
   std::shared_ptr<Logger> logger_;
+  std::shared_ptr<VariablesMap> variables_;
   std::vector<std::unique_ptr<FileData>> files_;
   std::vector<std::unique_ptr<TempUnit>> temps_;
   std::vector<std::unique_ptr<LinkUnit>> links_;

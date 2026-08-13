@@ -15,14 +15,18 @@
 #ifndef PLANNING_FACTOR_RVIZ_PLUGIN_HPP_
 #define PLANNING_FACTOR_RVIZ_PLUGIN_HPP_
 
-#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rcl_interfaces/srv/get_parameters.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <rviz_common/display.hpp>
+#include <rviz_common/properties/bool_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_default_plugins/displays/marker/marker_common.hpp>
 #include <rviz_default_plugins/displays/marker_array/marker_array_display.hpp>
 
 #include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 
+#include <mutex>
+#include <optional>
 #include <string>
 
 namespace autoware::rviz_plugins
@@ -37,7 +41,7 @@ class PlanningFactorRvizPlugin
 public:
   PlanningFactorRvizPlugin()
   : marker_common_{this},
-    baselink2front_{"Baselink To Front", 0.0, "Length between base link to front.", this},
+    show_safety_factors_{"Show Safety Factors", true, "Display safety factor markers", this},
     topic_name_{"planning_factors"}
   {
   }
@@ -52,16 +56,24 @@ public:
     this->topic_property_->setValue(topic_name_.c_str());
     this->topic_property_->setDescription("Topic to subscribe to.");
 
-    const auto vehicle_info =
-      autoware::vehicle_info_utils::VehicleInfoUtils(*rviz_ros_node_.lock()->get_raw_node())
-        .getVehicleInfo();
-    baselink2front_.setValue(vehicle_info.max_longitudinal_offset_m);
+    // Start background vehicle info request (non-blocking)
+    start_vehicle_info_request();
   }
 
   void load(const rviz_common::Config & config) override
   {
     RosTopicDisplay::Display::load(config);
     marker_common_.load(config);
+    bool show_safety_factors;
+    if (config.mapGetBool("show_safety_factors", &show_safety_factors)) {
+      show_safety_factors_.setValue(show_safety_factors);
+    }
+  }
+
+  void save(rviz_common::Config config) const override
+  {
+    RosTopicDisplay::Display::save(config);
+    config.mapSetValue("show_safety_factors", show_safety_factors_.getBool());
   }
 
   void update(float wall_dt, float ros_dt) override { marker_common_.update(wall_dt, ros_dt); }
@@ -84,20 +96,23 @@ public:
     marker_common_.addMessage(markers_ptr);
   }
 
-  void delete_marker(rviz_default_plugins::displays::MarkerID marker_id)
-  {
-    marker_common_.deleteMarker(marker_id);
-  }
-
 private:
   void processMessage(
     const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg) override;
 
+  static void start_vehicle_info_request();
+
   rviz_default_plugins::displays::MarkerCommon marker_common_;
 
-  rviz_common::properties::FloatProperty baselink2front_;
+  rviz_common::properties::BoolProperty show_safety_factors_;
 
   std::string topic_name_;
+
+  // Static members for cached vehicle info
+  static std::mutex s_mutex_;
+  static std::optional<double> s_baselink2front_;
+  static std::optional<double> s_baselink2rear_;
+  static bool s_request_started_;
 };
 }  // namespace autoware::rviz_plugins
 

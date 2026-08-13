@@ -1,0 +1,173 @@
+# Sensor mapping configuration for Autoware to CARLA
+# Maps carla_sensor_kit sensor names to CARLA sensor types and ROS topics
+
+# Default sensor kit to use (must be the _description package containing config/sensor_kit_calibration.yaml)
+default_sensor_kit_name: carla_sensor_kit_description
+
+sensor_mappings:
+  # LiDAR sensor
+  velodyne_top_base_link:
+    carla_type: sensor.lidar.ray_cast
+    id: top
+    ros_config:
+      frame_id: velodyne_top
+      topic_base: /sensing/lidar/top
+      topic_suffix: /pointcloud_before_sync
+      frequency_hz: 11
+      qos_profile: best_effort
+    parameters:
+      range: 100
+      channels: 64
+      points_per_second: 300000
+      upper_fov: 10.0
+      lower_fov: -30.0
+      rotation_frequency: 20
+      noise_stddev: 0.0
+
+  # CARLA multi-camera setup (6 cameras for 360-degree coverage)
+  CAM_FRONT/camera_link:
+    carla_type: sensor.camera.rgb
+    id: CAM_FRONT
+    ros_config:
+      frame_id: CAM_FRONT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT/camera_info
+      frequency_hz: 11
+      qos_profile: reliable
+    parameters:
+      image_size_x: 1600
+      image_size_y: 900
+      fov: 70.0
+
+  CAM_FRONT_LEFT/camera_link:
+    carla_type: sensor.camera.rgb
+    id: CAM_FRONT_LEFT
+    ros_config:
+      frame_id: CAM_FRONT_LEFT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT_LEFT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT_LEFT/camera_info
+      frequency_hz: 11
+      qos_profile: reliable
+    parameters:
+      image_size_x: 1600
+      image_size_y: 900
+      fov: 70.0
+
+  CAM_FRONT_RIGHT/camera_link:
+    carla_type: sensor.camera.rgb
+    id: CAM_FRONT_RIGHT
+    ros_config:
+      frame_id: CAM_FRONT_RIGHT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT_RIGHT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT_RIGHT/camera_info
+      frequency_hz: 11
+      qos_profile: reliable
+    parameters:
+      image_size_x: 1600
+      image_size_y: 900
+      fov: 70.0
+
+  CAM_BACK/camera_link:
+    carla_type: sensor.camera.rgb
+    id: CAM_BACK
+    ros_config:
+      frame_id: CAM_BACK/camera_optical_link
+      topic_image: /sensing/camera/CAM_BACK/image_raw
+      topic_info: /sensing/camera/CAM_BACK/camera_info
+      frequency_hz: 11
+      qos_profile: reliable
+    parameters:
+      image_size_x: 1600
+      image_size_y: 900
+      fov: 110.0
+
+  CAM_BACK_LEFT/camera_link:
+    carla_type: sensor.camera.rgb
+    id: CAM_BACK_LEFT
+    ros_config:
+      frame_id: CAM_BACK_LEFT/camera_optical_link
+      topic_image: /sensing/camera/CAM_BACK_LEFT/image_raw
+      topic_info: /sensing/camera/CAM_BACK_LEFT/camera_info
+      frequency_hz: 11
+      qos_profile: reliable
+    parameters:
+      image_size_x: 1600
+      image_size_y: 900
+      fov: 70.0
+
+  CAM_BACK_RIGHT/camera_link:
+    carla_type: sensor.camera.rgb
+    id: CAM_BACK_RIGHT
+    ros_config:
+      frame_id: CAM_BACK_RIGHT/camera_optical_link
+      topic_image: /sensing/camera/CAM_BACK_RIGHT/image_raw
+      topic_info: /sensing/camera/CAM_BACK_RIGHT/camera_info
+      frequency_hz: 11
+      qos_profile: reliable
+    parameters:
+      image_size_x: 1600
+      image_size_y: 900
+      fov: 70.0
+
+  # IMU sensor
+  tamagawa/imu_link:
+    carla_type: sensor.other.imu
+    id: imu
+    ros_config:
+      frame_id: tamagawa/imu_link
+      topic: /sensing/imu/tamagawa/imu_raw
+      frequency_hz: 50
+      qos_profile: reliable
+    parameters:
+      noise_accel_stddev_x: 0.0
+      noise_accel_stddev_y: 0.0
+      noise_accel_stddev_z: 0.0
+      noise_gyro_stddev_x: 0.0
+      noise_gyro_stddev_y: 0.0
+      noise_gyro_stddev_z: 0.0
+
+  # GNSS sensor
+  gnss_link:
+    carla_type: sensor.other.gnss
+    id: gnss
+    ros_config:
+      frame_id: map
+      topic: /sensing/gnss/pose_with_covariance
+      frequency_hz: 2
+      qos_profile: reliable
+    parameters:
+      noise_alt_stddev: 0.0
+      noise_lat_stddev: 0.0
+      noise_lon_stddev: 0.0
+      noise_alt_bias: 0.0
+      noise_lat_bias: 0.0
+      noise_lon_bias: 0.0
+    covariance:
+      # Position covariance (variance in meters²)
+      position_variance: 0.01 # 0.1m standard deviation
+      # Orientation covariance (variance in radians²)
+      orientation_variance: 1.0 # Large uncertainty - orientation not measured by GNSS
+
+# Sensor name normalization rules
+normalization:
+  strip_suffixes:
+    - _base_link
+    - _link
+    - /camera_link
+
+# Enabled sensors list
+enabled_sensors:
+  # LiDAR
+  - velodyne_top_base_link
+
+  # Cameras (6 for 360-degree coverage)
+  - CAM_FRONT/camera_link
+  - CAM_FRONT_LEFT/camera_link
+  - CAM_FRONT_RIGHT/camera_link
+  - CAM_BACK/camera_link
+  - CAM_BACK_LEFT/camera_link
+  - CAM_BACK_RIGHT/camera_link
+
+  # IMU and GNSS
+  - tamagawa/imu_link
+  - gnss_link

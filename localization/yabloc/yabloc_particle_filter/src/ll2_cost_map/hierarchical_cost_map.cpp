@@ -90,7 +90,7 @@ void HierarchicalCostMap::set_bounding_box(const pcl::PointCloud<pcl::PointXYZL>
         poly.outer().clear();
       }
     }
-    poly.outer().push_back(BgPoint(p.x, p.y));
+    poly.outer().emplace_back(p.x, p.y);
     last_label = p.label;
   }
   bounding_boxes_.push_back(poly);

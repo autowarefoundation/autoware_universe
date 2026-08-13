@@ -18,6 +18,8 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
+#include <utility>
 
 namespace autoware::shift_decider
 {
@@ -25,13 +27,13 @@ namespace autoware::shift_decider
 ShiftDecider::ShiftDecider(const rclcpp::NodeOptions & node_options)
 : Node("shift_decider", node_options)
 {
-  using std::placeholders::_1;
-
   static constexpr std::size_t queue_size = 1;
   rclcpp::QoS durable_qos(queue_size);
   durable_qos.transient_local();
 
-  park_on_goal_ = declare_parameter<bool>("park_on_goal");
+  param_listener_ =
+    std::make_shared<::shift_decider::ParamListener>(this->get_node_parameters_interface());
+  param_ = param_listener_->get_params();
 
   pub_shift_cmd_ =
     create_publisher<autoware_vehicle_msgs::msg::GearCommand>("output/gear_cmd", durable_qos);
@@ -41,9 +43,9 @@ ShiftDecider::ShiftDecider(const rclcpp::NodeOptions & node_options)
 
 void ShiftDecider::onTimer()
 {
-  control_cmd_ = sub_control_cmd_.take_data();
-  autoware_state_ = sub_autoware_state_.take_data();
-  current_gear_ptr_ = sub_current_gear_.take_data();
+  control_cmd_ = sub_control_cmd_->take_data();
+  autoware_state_ = sub_autoware_state_->take_data();
+  current_gear_ptr_ = sub_current_gear_->take_data();
   if (!autoware_state_ || !control_cmd_ || !current_gear_ptr_) {
     return;
   }
@@ -71,7 +73,7 @@ void ShiftDecider::updateCurrentShiftCmd()
     if (
       (autoware_state_->state == AutowareState::ARRIVED_GOAL ||
        autoware_state_->state == AutowareState::WAITING_FOR_ROUTE) &&
-      park_on_goal_) {
+      param_.park_on_goal) {
       shift_cmd_.command = GearCommand::PARK;
     } else {
       shift_cmd_.command = current_gear_ptr_->report;
@@ -84,8 +86,8 @@ void ShiftDecider::initTimer(double period_s)
 {
   const auto period_ns =
     std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(period_s));
-  timer_ =
-    rclcpp::create_timer(this, get_clock(), period_ns, std::bind(&ShiftDecider::onTimer, this));
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), period_ns, std::bind(&ShiftDecider::onTimer, this));
 }
 }  // namespace autoware::shift_decider
 

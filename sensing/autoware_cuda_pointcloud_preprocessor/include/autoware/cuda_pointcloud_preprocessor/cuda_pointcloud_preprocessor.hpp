@@ -30,6 +30,7 @@
 
 #include <thrust/device_vector.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -54,7 +55,9 @@ public:
 
   void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
   void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
+  void setRingOutlierFilterActive(const bool enable_filter);
   void setUndistortionType(const UndistortionType & undistortion_type);
+  void setMaxInputPointCount(const std::size_t max_input_point_count);
 
   void preallocateOutput();
   [[nodiscard]] ProcessingStats getProcessingStats() const { return stats_; }
@@ -75,11 +78,13 @@ private:
   CropBoxParameters mirror_crop_box_parameters_{};
   RingOutlierFilterParameters ring_outlier_parameters_{};
   UndistortionType undistortion_type_{UndistortionType::Invalid};
+  bool enable_ring_outlier_filter_{true};
 
   int num_rings_{};
   int max_points_per_ring_{};
-  size_t num_raw_points_{};
-  size_t num_organized_points_{};
+  std::size_t num_raw_points_{};
+  std::size_t num_organized_points_{};
+  std::size_t max_input_point_count_{};
 
   std::vector<sensor_msgs::msg::PointField> point_fields_;
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> output_pointcloud_ptr_;

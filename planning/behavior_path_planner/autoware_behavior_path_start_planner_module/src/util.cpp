@@ -17,19 +17,19 @@
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils_math/normalization.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/dispatch/distance.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
-#include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
@@ -40,8 +40,8 @@
 #include <utility>
 #include <vector>
 
-using autoware::universe_utils::normalizeRadian;
 using autoware_utils::deg2rad;
+using autoware_utils_math::normalize_radian;
 
 namespace autoware::behavior_path_planner::start_planner_utils
 {
@@ -49,10 +49,12 @@ PathWithLaneId getBackwardPath(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & shoulder_lanes,
   const Pose & current_pose, const Pose & backed_pose, const double velocity)
 {
-  const auto current_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    shoulder_lanes, current_pose, route_handler.getLaneletMapPtr());
-  const auto backed_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    shoulder_lanes, backed_pose, route_handler.getLaneletMapPtr());
+  const auto current_pose_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      shoulder_lanes, current_pose, route_handler.getLaneletMapPtr());
+  const auto backed_pose_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      shoulder_lanes, backed_pose, route_handler.getLaneletMapPtr());
 
   const double s_start = backed_pose_arc_coords.length;
   const double s_end = current_pose_arc_coords.length;
@@ -160,91 +162,6 @@ struct PathEvaluationResult
 
 }  // anonymous namespace
 
-std::vector<double> calc_curvature_from_trajectory(
-  const autoware_planning_msgs::msg::Trajectory & trajectory)
-{
-  using autoware_utils::calc_curvature;
-
-  std::vector<double> curvatures;
-
-  if (trajectory.points.size() < 3) {
-    // Cannot calculate curvature with less than 3 points
-    curvatures.resize(trajectory.points.size(), 0.0);
-    return curvatures;
-  }
-
-  curvatures.reserve(trajectory.points.size());
-
-  for (size_t i = 0; i < trajectory.points.size(); ++i) {
-    if (i == 0) {
-      // First point: use next 2 points
-      const auto & p1 = trajectory.points[0].pose.position;
-      const auto & p2 = trajectory.points[1].pose.position;
-      const auto & p3 = trajectory.points[2].pose.position;
-      curvatures.push_back(calc_curvature(p1, p2, p3));
-    } else if (i == trajectory.points.size() - 1) {
-      // Last point: use previous 2 points
-      const auto & p1 = trajectory.points[i - 2].pose.position;
-      const auto & p2 = trajectory.points[i - 1].pose.position;
-      const auto & p3 = trajectory.points[i].pose.position;
-      curvatures.push_back(calc_curvature(p1, p2, p3));
-    } else {
-      // Middle points: use surrounding points
-      const auto & p1 = trajectory.points[i - 1].pose.position;
-      const auto & p2 = trajectory.points[i].pose.position;
-      const auto & p3 = trajectory.points[i + 1].pose.position;
-      curvatures.push_back(calc_curvature(p1, p2, p3));
-    }
-  }
-
-  return curvatures;
-}
-
-std::vector<double> calc_curvature_from_points(
-  const std::vector<geometry_msgs::msg::Point> & points)
-{
-  using autoware_utils::calc_curvature;
-
-  std::vector<double> curvatures;
-
-  if (points.size() < 3) {
-    // Cannot calculate curvature with less than 3 points
-    curvatures.resize(points.size(), 0.0);
-    return curvatures;
-  }
-
-  curvatures.reserve(points.size());
-
-  for (size_t i = 0; i < points.size(); ++i) {
-    try {
-      if (i == 0) {
-        // First point: use next 2 points
-        const auto & p1 = points[0];
-        const auto & p2 = points[1];
-        const auto & p3 = points[2];
-        curvatures.push_back(calc_curvature(p1, p2, p3));
-      } else if (i == points.size() - 1) {
-        // Last point: use previous 2 points
-        const auto & p1 = points[i - 2];
-        const auto & p2 = points[i - 1];
-        const auto & p3 = points[i];
-        curvatures.push_back(calc_curvature(p1, p2, p3));
-      } else {
-        // Middle points: use surrounding points
-        const auto & p1 = points[i - 1];
-        const auto & p2 = points[i];
-        const auto & p3 = points[i + 1];
-        curvatures.push_back(calc_curvature(p1, p2, p3));
-      }
-    } catch (const std::runtime_error & e) {
-      // Set curvature to 0 if points are too close
-      curvatures.push_back(0.0);
-    }
-  }
-
-  return curvatures;
-}
-
 Pose find_target_pose_along_path(
   const PathWithLaneId & centerline_path, const Pose & start_pose,
   const double longitudinal_distance)
@@ -316,7 +233,7 @@ std::vector<int64_t> get_lane_ids_from_pose(
   // 1. First, find all lanes containing the pose
   bool found_containing_lane = false;
   for (const auto & lane : candidate_lanes) {
-    if (lanelet::utils::isInLanelet(pose, lane)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(pose, lane)) {
       lane_ids.push_back(lane.id());
       found_containing_lane = true;
     }
@@ -325,9 +242,10 @@ std::vector<int64_t> get_lane_ids_from_pose(
   // 2. Fallback processing when no containing lane is found
   if (!found_containing_lane) {
     // 2.1 Find the closest lane
-    lanelet::Lanelet closest_lanelet{};
-    if (lanelet::utils::query::getClosestLanelet(candidate_lanes, pose, &closest_lanelet)) {
-      lane_ids = {closest_lanelet.id()};
+    if (
+      const auto closest_lanelet_opt =
+        autoware::experimental::lanelet2_utils::get_closest_lanelet(candidate_lanes, pose)) {
+      lane_ids = {closest_lanelet_opt.value().id()};
     } else if (!previous_lane_ids.empty()) {
       // 2.2 If closest lane is not found, inherit lane_ids from previous point
       lane_ids = previous_lane_ids;
@@ -353,62 +271,45 @@ void set_lane_ids_to_path_point(
   point.lane_ids = get_lane_ids_from_pose(point.point.pose, road_lanes, previous_lane_ids);
 }
 
-/**
- * @brief Print detailed information of each point in PathWithLaneId
- * @param path Target PathWithLaneId
- * @param path_name Path name (for debugging)
- */
-void print_path_with_lane_id_details(const PathWithLaneId & path, const std::string & path_name)
+std::pair<double, double> calc_start_and_end_shift_length(
+  const lanelet::ConstLanelets & pull_out_lanes, const Pose & start_pose, const Pose & end_pose)
 {
-  std::cout << "=== " << path_name << " Details ===" << std::endl;
-  std::cout << "Total points: " << path.points.size() << std::endl;
+  const double start_shift_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, start_pose)
+      .distance;
+  const double finish_shift_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, end_pose).distance;
+  return {start_shift_length, finish_shift_length};
+}
 
-  double cumulative_distance = 0.0;
-
-  for (size_t i = 0; i < path.points.size(); ++i) {
-    const auto & point = path.points[i];
-    const auto & pose = point.point.pose;
-    const auto & position = pose.position;
-    const auto & orientation = pose.orientation;
-
-    // Calculate yaw angle
-    const double yaw = tf2::getYaw(orientation);
-
-    // Calculate distance from previous point
-    double distance_from_prev = 0.0;
-    if (i > 0) {
-      const auto & prev_position = path.points[i - 1].point.pose.position;
-      distance_from_prev = std::sqrt(
-        std::pow(position.x - prev_position.x, 2) + std::pow(position.y - prev_position.y, 2));
-      cumulative_distance += distance_from_prev;
-    }
-
-    // Convert lane_ids to string
-    std::string lane_ids_str = "[";
-    for (size_t j = 0; j < point.lane_ids.size(); ++j) {
-      if (j > 0) lane_ids_str += ", ";
-      lane_ids_str += std::to_string(point.lane_ids[j]);
-    }
-    lane_ids_str += "]";
-
-    // Print information
-    std::cout << std::fixed << std::setprecision(6);
-    std::cout << "[" << std::setw(3) << i << "] "
-              << "x=" << std::setw(10) << position.x << " "
-              << "y=" << std::setw(10) << position.y << " "
-              << "z=" << std::setw(10) << position.z << " "
-              << "yaw=" << std::setw(8) << yaw << " rad "
-              << "(" << std::setw(6) << yaw * 180.0 / M_PI << "°) "
-              << "quat[" << std::setw(7) << orientation.x << ", " << std::setw(7) << orientation.y
-              << ", " << std::setw(7) << orientation.z << ", " << std::setw(7) << orientation.w
-              << "] "
-              << "dist_prev=" << std::setw(8) << distance_from_prev << " "
-              << "cumulative=" << std::setw(8) << cumulative_distance << " "
-              << "lane_ids=" << lane_ids_str << std::endl;
+bool has_collision_between_shifted_path_footprints_and_objects(
+  const PathWithLaneId & ego_path, const autoware_utils::LinearRing2d & local_vehicle_footprint,
+  const PredictedObjects & dynamic_objects, const double margin, const double th_stopped_obj_vel,
+  const double shift_length, const double th_min_shift_length, const bool enable_back)
+{
+  if (shift_length < th_min_shift_length) {
+    return false;
   }
 
-  std::cout << "Total path length: " << cumulative_distance << " m" << std::endl;
-  std::cout << "=================================" << std::endl;
+  const auto & objects = dynamic_objects.objects;
+
+  std::vector<autoware_utils::Polygon2d> active_polygons;
+  active_polygons.reserve(objects.size());
+  for (const auto & obj : objects) {
+    const double obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
+    if (obj_speed >= th_stopped_obj_vel || enable_back) {
+      active_polygons.push_back(autoware_utils::to_polygon2d(obj));
+    }
+  }
+
+  const auto & pts = ego_path.points;
+  return std::any_of(pts.cbegin(), pts.cend(), [&](const auto & pt) {
+    const auto vehicle_footprint = autoware_utils::transform_vector(
+      local_vehicle_footprint, autoware_utils::pose2transform(pt.point.pose));
+    return std::any_of(active_polygons.cbegin(), active_polygons.cend(), [&](const auto & polygon) {
+      return boost::geometry::distance(polygon, vehicle_footprint) < margin;
+    });
+  });
 }
 
 }  // namespace autoware::behavior_path_planner::start_planner_utils

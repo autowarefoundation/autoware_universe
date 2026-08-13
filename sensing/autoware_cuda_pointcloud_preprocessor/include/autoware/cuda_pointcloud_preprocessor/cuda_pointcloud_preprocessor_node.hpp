@@ -29,16 +29,17 @@
 #include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/transform_datatypes.hpp>
 
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include <tf2/transform_datatypes.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <cstddef>
 #include <deque>
 #include <memory>
 #include <string>
@@ -73,6 +74,23 @@ CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, intensity)
 CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, return_type);
 CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, channel);
 
+struct InputBoundsParams
+{
+  std::size_t max_input_point_count{};
+  std::size_t max_twist_subscriber_queue_size{};
+  std::size_t max_imu_subscriber_queue_size{};
+  std::size_t max_twist_queue_size{};
+  std::size_t max_imu_queue_size{};
+};
+
+struct InputBoundsStatus
+{
+  std::size_t input_point_count{};
+  std::size_t truncated_point_count{};
+  std::size_t dropped_twist_count{};
+  std::size_t dropped_imu_count{};
+};
+
 class CudaPointcloudPreprocessorNode : public rclcpp::Node
 {
 public:
@@ -92,11 +110,13 @@ private:
   // Helper Functions
   [[nodiscard]] bool validatePointcloudLayout(
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const;
-  std::pair<double, std::uint32_t> getFirstPointTimeInfo(
+  std::pair<std::uint64_t, std::uint32_t> getFirstPointTimeInfo(
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
 
-  void updateTwistQueue(double first_point_stamp);
-  void updateImuQueue(double first_point_stamp);
+  void updateTwistQueue(std::uint64_t first_point_stamp);
+  void updateImuQueue(std::uint64_t first_point_stamp);
+  void boundTwistQueue();
+  void boundImuQueue();
   std::optional<geometry_msgs::msg::TransformStamped> lookupTransformToBase(
     const std::string & source_frame);
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> processPointcloud(
@@ -119,6 +139,8 @@ private:
   bool use_imu_;
   double processing_time_threshold_sec_;
   double timestamp_mismatch_fraction_threshold_;
+  InputBoundsParams input_bounds_params_{};
+  InputBoundsStatus latest_input_bounds_status_{};
 
   std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue_;
   std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;

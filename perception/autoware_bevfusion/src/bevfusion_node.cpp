@@ -18,10 +18,12 @@
 
 #include <cstddef>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+// Contains implementations of constructor, destructor, topic callbacks for BEVFusionNode.
 namespace autoware::bevfusion
 {
 
@@ -30,29 +32,50 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 {
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
 
-  // Modality
-  sensor_fusion_ = this->declare_parameter<bool>("sensor_fusion", descriptor);
-
-  // Non network parameters
   max_camera_lidar_delay_ = this->declare_parameter<float>("max_camera_lidar_delay", descriptor);
 
-  // TensorRT parameters
   const std::string plugins_path = this->declare_parameter<std::string>("plugins_path", descriptor);
-
-  // Network parameters
   const std::string onnx_path = this->declare_parameter<std::string>("onnx_path", descriptor);
   const std::string engine_path = this->declare_parameter<std::string>("engine_path", descriptor);
   const std::string trt_precision =
     this->declare_parameter<std::string>("trt_precision", descriptor);
+  const std::string image_backbone_onnx_path =
+    this->declare_parameter<std::string>("image_backbone_onnx_path", descriptor);
+  const std::string image_backbone_engine_path =
+    this->declare_parameter<std::string>("image_backbone_engine_path", descriptor);
+  const std::string image_backbone_trt_precision =
+    this->declare_parameter<std::string>("image_backbone_trt_precision", descriptor);
 
-  // Common parameters
+  class_names_ = this->declare_parameter<std::vector<std::string>>("class_names", descriptor);
+
+  const std::string densification_world_frame_id =
+    this->declare_parameter<std::string>("densification_world_frame_id", descriptor);
+  const int densification_num_past_frames =
+    this->declare_parameter<std::int64_t>("densification_num_past_frames", descriptor);
+
+  {  // IoU NMS
+    NMSParams p;
+    p.search_distance_2d_ =
+      this->declare_parameter<double>("iou_nms_search_distance_2d", descriptor);
+    p.iou_threshold_ = this->declare_parameter<double>("iou_nms_threshold", descriptor);
+    iou_bev_nms_.setParameters(p);
+  }
+
+  const auto allow_remapping_by_area_matrix = this->declare_parameter<std::vector<std::int64_t>>(
+    "allow_remapping_by_area_matrix", descriptor);
+  const auto min_area_matrix =
+    this->declare_parameter<std::vector<double>>("min_area_matrix", descriptor);
+  const auto max_area_matrix =
+    this->declare_parameter<std::vector<double>>("max_area_matrix", descriptor);
+  detection_class_remapper_.setParameters(
+    allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
+
   const auto out_size_factor = this->declare_parameter<std::int64_t>("out_size_factor", descriptor);
 
   auto to_float_vector = [](const auto & v) -> std::vector<float> {
     return std::vector<float>(v.begin(), v.end());
   };
 
-  // Lidar branch parameters
   const auto cloud_capacity = this->declare_parameter<std::int64_t>("cloud_capacity", descriptor);
   const auto max_points_per_voxel =
     this->declare_parameter<std::int64_t>("max_points_per_voxel", descriptor);
@@ -63,7 +86,6 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   const auto voxel_size =
     to_float_vector(this->declare_parameter<std::vector<double>>("voxel_size", descriptor));
 
-  // Camera branch parameters
   const auto d_bound =
     to_float_vector(this->declare_parameter<std::vector<double>>("d_bound", descriptor));
   const auto x_bound =
@@ -83,104 +105,149 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   const auto features_height = this->declare_parameter<std::int64_t>("features_height", descriptor);
   const auto features_width = this->declare_parameter<int>("features_width", descriptor);
   const auto num_depth_features = this->declare_parameter<int>("num_depth_features", descriptor);
-
-  // Head parameters
+  const auto image_feature_channel =
+    this->declare_parameter<std::int64_t>("image_feature_channel", descriptor);
+  const auto use_intensity = this->declare_parameter<bool>("use_intensity", descriptor);
   const auto num_proposals = this->declare_parameter<std::int64_t>("num_proposals", descriptor);
-  class_names_ = this->declare_parameter<std::vector<std::string>>("class_names", descriptor);
 
-  if (point_cloud_range.size() != 6) {
-    RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "The size of point_cloud_range != 6");
+  validateParameters(point_cloud_range, voxel_size);
 
-    throw std::runtime_error("The size of point_cloud_range != 6");
-  }
-  if (voxel_size.size() != 3) {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("bevfusion"), "The size of voxel_size != 3");
-
-    throw std::runtime_error("The size of voxel_size != 3");
-  }
-
-  // pre-process
-  const std::string densification_world_frame_id =
-    this->declare_parameter<std::string>("densification_world_frame_id", descriptor);
-  const int densification_num_past_frames =
-    this->declare_parameter<std::int64_t>("densification_num_past_frames", descriptor);
-
-  // post-process
   const float circle_nms_dist_threshold =
     static_cast<float>(this->declare_parameter<double>("circle_nms_dist_threshold", descriptor));
-  {  // IoU NMS
-    NMSParams p;
-    p.search_distance_2d_ =
-      this->declare_parameter<double>("iou_nms_search_distance_2d", descriptor);
-    p.iou_threshold_ = this->declare_parameter<double>("iou_nms_threshold", descriptor);
-    iou_bev_nms_.setParameters(p);
-  }
   const auto yaw_norm_thresholds =
     this->declare_parameter<std::vector<double>>("yaw_norm_thresholds", descriptor);
-  const float score_threshold =
-    static_cast<float>(this->declare_parameter<double>("score_threshold", descriptor));
+
+  // Distance-based score thresholds
+  const std::vector<double> distance_bin_upper_limits_double =
+    this->declare_parameter<std::vector<double>>(
+      "detection_score_thresholds.distance_bin_upper_limits", std::vector<double>{});
+  // Must set at least one upper bound
+  if (distance_bin_upper_limits_double.empty()) {
+    throw std::invalid_argument(
+      "The number of upper bounds: detection_score_thresholds.distance_bin_upper_limits must be at "
+      "least one");
+  }
+  const std::vector<float> distance_bin_upper_limits(
+    distance_bin_upper_limits_double.begin(), distance_bin_upper_limits_double.end());
+
+  // Create empty vector of thresholds for each class * number of upper bounds
+  std::vector<float> score_thresholds =
+    std::vector<float>(class_names_.size() * distance_bin_upper_limits.size(), 0.0);
+  int current_class_index = 0;
+  for (const auto & class_name : class_names_) {
+    // Construct the parameter path (e.g., "detection_score_thresholds.min_confidence_scores.CAR")
+    std::string param_path = "detection_score_thresholds.min_confidence_scores." + class_name;
+
+    // The same class name may appear multiple times in class_names_, so only declare the parameter
+    // on the first occurrence and reuse the already-declared value afterwards.
+    std::vector<double> class_score_thresholds =
+      this->has_parameter(param_path)
+        ? this->get_parameter(param_path).as_double_array()
+        : this->declare_parameter<std::vector<double>>(param_path, std::vector<double>{});
+    if (class_score_thresholds.size() != distance_bin_upper_limits.size()) {
+      throw std::invalid_argument(
+        "The number of thresholds for " + class_name +
+        " is not equal to the number of upper bounds");
+    }
+
+    // Move it to the correct position in the 1d-vector score_thresholds, where the order is number
+    // of classes * number of upper bounds
+    int current_upper_bound_index = 0;
+    for (auto class_score_threshold : class_score_thresholds) {
+      // The index is the current class index + the current upper bound index * the number of
+      // classes since score thresholds for the same class are in the same column For example, #
+      // CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
+      // [
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 0-50m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 50.0-90m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 90.0-121.0m
+      //  0.35, 0.35, 0.35, 0.35, 0.35    # 121.0-200.0m
+      // ]
+      auto score_threshold_index =
+        current_class_index + current_upper_bound_index * class_names_.size();
+      score_thresholds[score_threshold_index] = class_score_threshold;
+      current_upper_bound_index++;
+    }
+    current_class_index++;
+  }
+
+  BEVFusionConfig config(
+    class_names_.size(), plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
+    image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
+    point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
+    raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,
+    features_height, features_width, num_depth_features, image_feature_channel, num_proposals,
+    circle_nms_dist_threshold, yaw_norm_thresholds, score_thresholds, distance_bin_upper_limits,
+    use_intensity);
+
+  sensor_fusion_ = config.sensor_fusion_;
+
+  use_compressed_images_ =
+    this->declare_parameter<bool>("use_compressed_images", false, descriptor);
+  const auto run_image_undistortion =
+    this->declare_parameter<bool>("run_image_undistortion", descriptor);
 
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);
 
-  BEVFusionConfig config(
-    sensor_fusion_, plugins_path, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
-    point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
-    raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,
-    features_height, features_width, num_depth_features, num_proposals, circle_nms_dist_threshold,
-    yaw_norm_thresholds, score_threshold);
-
-  const auto allow_remapping_by_area_matrix = this->declare_parameter<std::vector<std::int64_t>>(
-    "allow_remapping_by_area_matrix", descriptor);
-  const auto min_area_matrix =
-    this->declare_parameter<std::vector<double>>("min_area_matrix", descriptor);
-  const auto max_area_matrix =
-    this->declare_parameter<std::vector<double>>("max_area_matrix", descriptor);
-  detection_class_remapper_.setParameters(
-    allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
-
-  auto trt_config =
+  auto trt_main_config =
     tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U);
-  detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_config, densification_param, config);
+  // clang-format off
+  TrtBEVFusionConfig trt_bevfusion_config = sensor_fusion_
+      ? TrtBEVFusionConfig{
+        trt_main_config,
+        tensorrt_common::TrtCommonConfig(
+          image_backbone_onnx_path, image_backbone_trt_precision,
+          image_backbone_engine_path, 1ULL << 32U)
+      }
+      : TrtBEVFusionConfig{trt_main_config, std::nullopt};
+
+  // Build Image Preprocessing Parameters
+  // TODO(KokSeang): Remove image preprocessing parameters out of BEVFusionConfig
+  auto image_pre_processing_params = ImagePreProcessingParams(
+        raw_image_height,
+        raw_image_width,
+        roi_height,
+        roi_width,
+        img_aug_scale_y,
+        img_aug_scale_x,
+        run_image_undistortion
+    );
+
+  // clang-format on
+  detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "bevfusion_trt");
+    std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(this, "bevfusion_trt");
+
+  // processing time diagnostics
+  max_allowed_processing_time_ms_ =
+    this->declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
+  max_acceptable_consecutive_delay_ms_ =
+    this->declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
+  const double validation_callback_interval_ms =
+    this->declare_parameter<double>("diagnostics.validation_callback_interval_ms");
+
+  diagnostic_processing_time_updater_.setHardwareID("bevfusion");
+  diagnostic_processing_time_updater_.add(
+    "processing_time_status", this, &BEVFusionNode::diagnoseProcessingTime);
+  diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1000.0);
 
   cloud_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
-      std::bind(&BEVFusionNode::cloudCallback, this, std::placeholders::_1));
+      std::bind(&BEVFusionNode::cloudCallback, this, std::placeholders::_1),
+      detector_ptr_->stream());
 
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS(1));
 
-  if (sensor_fusion_) {
-    image_subs_.resize(num_cameras);
-    camera_info_subs_.resize(num_cameras);
-    image_msgs_.resize(num_cameras);
-    camera_info_msgs_.resize(num_cameras);
-    lidar2camera_extrinsics_.resize(num_cameras);
+  initializeSensorFusionSubscribers(config.num_cameras_, image_pre_processing_params);
 
-    for (std::int64_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
-      image_subs_[camera_id] = this->create_subscription<sensor_msgs::msg::Image>(
-        "~/input/image" + std::to_string(camera_id), rclcpp::SensorDataQoS{}.keep_last(1),
-        [this, camera_id](const sensor_msgs::msg::Image::ConstSharedPtr msg) {
-          this->imageCallback(msg, camera_id);
-        });
+  published_time_pub_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
-      camera_info_subs_[camera_id] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-        "~/input/camera_info" + std::to_string(camera_id), rclcpp::SensorDataQoS{}.keep_last(1),
-        [this, camera_id](const sensor_msgs::msg::CameraInfo & msg) {
-          this->cameraInfoCallback(msg, camera_id);
-        });
-    }
-  }
-
-  published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
-
-  // initialize debug tool
   {
-    using autoware_utils::DebugPublisher;
-    using autoware_utils::StopWatch;
+    using autoware_utils_debug::DebugPublisher;
+    using autoware_utils_system::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic");
@@ -196,55 +263,36 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 void BEVFusionNode::cloudCallback(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr)
 {
-  lidar_frame_ = pc_msg_ptr->header.frame_id;
-
-  if (sensor_fusion_ && (!extrinsics_available_ || !images_available_ || !intrinsics_available_)) {
-    return;
-  }
-
-  if (sensor_fusion_ && !intrinsics_extrinsics_precomputed_) {
-    std::vector<sensor_msgs::msg::CameraInfo> camera_info_msgs;
-    std::vector<Matrix4f> lidar2camera_extrinsics;
-
-    std::transform(
-      camera_info_msgs_.begin(), camera_info_msgs_.end(), std::back_inserter(camera_info_msgs),
-      [](const auto & opt) { return *opt; });
-
-    std::transform(
-      lidar2camera_extrinsics_.begin(), lidar2camera_extrinsics_.end(),
-      std::back_inserter(lidar2camera_extrinsics), [](const auto & opt) { return *opt; });
-
-    detector_ptr_->setIntrinsicsExtrinsics(camera_info_msgs, lidar2camera_extrinsics);
-    intrinsics_extrinsics_precomputed_ = true;
-  }
-
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
-  if (objects_sub_count < 1) {
+
+  lidar_frame_ = pc_msg_ptr->header.frame_id;
+  if (objects_sub_count < 1 || !checkSensorFusionReadiness()) {
     return;
   }
 
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing/total", true);
   }
+
+  precomputeIntrinsicsExtrinsics();
+
   diagnostics_detector_trt_->clear();
 
-  double lidar_stamp = rclcpp::Time(pc_msg_ptr->header.stamp).seconds();
-  camera_masks_.resize(camera_info_msgs_.size());
-  for (std::size_t i = 0; i < camera_masks_.size(); ++i) {
-    camera_masks_[i] =
-      (lidar_stamp - rclcpp::Time(image_msgs_[i]->header.stamp).seconds()) < max_camera_lidar_delay_
-        ? 1.0
-        : 0.f;
-  }
+  const double lidar_stamp = rclcpp::Time(pc_msg_ptr->header.stamp).seconds();
+  computeCameraMasks(lidar_stamp);
 
   std::vector<Box3D> det_boxes3d;
   std::unordered_map<std::string, double> proc_timing;
   bool is_num_voxels_within_range = true;
-  bool is_success = detector_ptr_->detect(
-    pc_msg_ptr, image_msgs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
+  const bool is_success = detector_ptr_->detect(
+    pc_msg_ptr, camera_data_ptrs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
     is_num_voxels_within_range);
+
   if (!is_success) {
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "BEVFusion detection failed. No detection results will be published.");
     return;
   }
 
@@ -272,57 +320,31 @@ void BEVFusionNode::cloudCallback(
 
   detection_class_remapper_.mapClasses(output_msg);
 
-  if (objects_sub_count > 0) {
-    objects_pub_->publish(output_msg);
-    published_time_pub_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
-  }
-
-  diagnostics_detector_trt_->publish(pc_msg_ptr->header.stamp);
-
-  // add processing time for debug
-  if (debug_publisher_ptr_ && stop_watch_ptr_) {
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic", true);
-    const double processing_time_ms = stop_watch_ptr_->toc("processing/total", true);
-    const double pipeline_latency_ms =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds(
-          (this->get_clock()->now() - output_msg.header.stamp).nanoseconds()))
-        .count();
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/pipeline_latency_ms", pipeline_latency_ms);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/processing_time/total_ms", processing_time_ms);
-    for (const auto & [topic, time_ms] : proc_timing) {
-      debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-        topic, time_ms);
-    }
-  }
+  publishDetectionResults(output_msg, pc_msg_ptr->header);
+  publishDebugInfo(proc_timing, output_msg.header);
 }
 
 void BEVFusionNode::imageCallback(
   const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id)
 {
-  image_msgs_[camera_id] = msg;
+  camera_data_ptrs_[camera_id]->update_image_msg(msg);
 
   std::size_t num_valid_images = std::count_if(
-    image_msgs_.begin(), image_msgs_.end(),
-    [](const auto & image_msg) { return image_msg != nullptr; });
+    camera_data_ptrs_.begin(), camera_data_ptrs_.end(),
+    [](const auto & camera_data) { return camera_data->is_image_msg_available(); });
 
-  images_available_ = num_valid_images == image_msgs_.size();
+  images_available_ = num_valid_images == camera_data_ptrs_.size();
 }
 
 void BEVFusionNode::cameraInfoCallback(
   const sensor_msgs::msg::CameraInfo & msg, std::size_t camera_id)
 {
-  camera_info_msgs_[camera_id] = msg;
-
+  camera_data_ptrs_[camera_id]->update_camera_info(msg);
   std::size_t num_valid_intrinsics = std::count_if(
-    camera_info_msgs_.begin(), camera_info_msgs_.end(),
-    [](const auto & opt) { return opt.has_value(); });
+    camera_data_ptrs_.begin(), camera_data_ptrs_.end(),
+    [](const auto & camera_data) { return camera_data->is_camera_info_available(); });
 
-  intrinsics_available_ = num_valid_intrinsics == camera_info_msgs_.size();
+  intrinsics_available_ = num_valid_intrinsics == camera_data_ptrs_.size();
 
   if (
     lidar2camera_extrinsics_[camera_id].has_value() || !lidar_frame_.has_value() ||
@@ -341,7 +363,7 @@ void BEVFusionNode::cameraInfoCallback(
     Matrix4f lidar2camera_rowmajor_transform = lidar2camera_transform.eval();
     lidar2camera_extrinsics_[camera_id] = lidar2camera_rowmajor_transform;
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN(this->get_logger(), "%s", ex.what());
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("bevfusion"), ex.what());
     return;
   }
 
@@ -350,67 +372,6 @@ void BEVFusionNode::cameraInfoCallback(
     [](const auto & opt) { return opt.has_value(); });
 
   extrinsics_available_ = num_valid_extrinsics == lidar2camera_extrinsics_.size();
-}
-
-// Check the processing time and delayed timestamp
-// If the node is consistently delayed, publish an error diagnostic message
-void BEVFusionNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat)
-{
-  const rclcpp::Time timestamp_now = this->get_clock()->now();
-  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
-    diagnostic_msgs::msg::DiagnosticStatus::OK;
-  std::stringstream message{"OK"};
-
-  // Check if the node has performed inference
-  if (last_processing_time_ms_) {
-    // check processing time is acceptable
-    if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
-      stat.add("is_processing_time_ms_in_expected_range", false);
-
-      message.clear();
-      message << "Processing time exceeds the acceptable limit of "
-              << max_allowed_processing_time_ms_ << " ms by "
-              << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_) << " ms.";
-
-      // in case the processing starts with a delayed inference
-      if (!last_in_time_processing_timestamp_) {
-        last_in_time_processing_timestamp_ = timestamp_now;
-      }
-
-      diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
-    } else {
-      stat.add("is_processing_time_ms_in_expected_range", true);
-      last_in_time_processing_timestamp_ = timestamp_now;
-    }
-    stat.add("processing_time_ms", last_processing_time_ms_.value());
-
-    const double delayed_state_duration =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds(
-          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
-        .count();
-
-    // check consecutive delays
-    if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
-      stat.add("is_consecutive_processing_delay_in_range", false);
-
-      message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
-
-      diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    } else {
-      stat.add("is_consecutive_processing_delay_in_range", true);
-    }
-    stat.add("consecutive_processing_delay_ms", delayed_state_duration);
-  } else {
-    stat.add("is_processing_time_ms_in_expected_range", true);
-    stat.add("processing_time_ms", 0.0);
-    stat.add("is_consecutive_processing_delay_in_range", true);
-    stat.add("consecutive_processing_delay_ms", 0.0);
-
-    message << "Waiting for the node to perform inference.";
-  }
-
-  stat.summary(diag_level, message.str());
 }
 
 }  // namespace autoware::bevfusion

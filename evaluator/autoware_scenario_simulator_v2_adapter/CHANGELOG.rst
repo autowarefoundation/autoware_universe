@@ -1,6 +1,52 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package autoware_scenario_simulator_v2_adapter
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(simulator): enabled grouping and outputting of diagnostic errors (`#11798 <https://github.com/autowarefoundation/autoware_universe/issues/11798>`_)
+  * feat: group diagnostic information and output levels
+  * fix
+  * fix: delete extra comment
+  * style(pre-commit): autofix
+  * fix parameter and add readme
+  * fix spell
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kazunori-Nakajima, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_scenario_simulator_v2_adapter): support converting all diagnostics to UserDefinedValue (`#11033 <https://github.com/autowarefoundation/autoware_universe/issues/11033>`_)
+  * convert all diagnostics to userdefinedvalues
+  * feat(intersection_collision_checker): improve logic to address false negatives (`#11030 <https://github.com/autowarefoundation/autoware_universe/issues/11030>`_)
+  * revise and improve velocity estimation and tracking logic
+  * ensure consistent collision lane ids
+  * small refactoring
+  ---------
+  * Update evaluator/autoware_scenario_simulator_v2_adapter/src/converter_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  ---------
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+* Contributors: Kem (TiankuiXian)
 
 0.46.0 (2025-06-20)
 -------------------

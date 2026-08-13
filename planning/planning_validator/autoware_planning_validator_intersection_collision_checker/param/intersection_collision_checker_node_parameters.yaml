@@ -38,6 +38,8 @@ intersection_collision_checker_node:
     right_turn:
       enable:
         type: bool
+      check_traffic_signal:
+        type: bool
       check_crossing_lanes:
         type: bool
       check_turning_lanes:
@@ -49,6 +51,8 @@ intersection_collision_checker_node:
 
     left_turn:
       enable:
+        type: bool
+      check_traffic_signal:
         type: bool
       check_turning_lanes:
         type: bool
@@ -78,7 +82,7 @@ intersection_collision_checker_node:
         min_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
       clustering:
         tolerance:
           type: double
@@ -91,11 +95,11 @@ intersection_collision_checker_node:
         min_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
         max_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
       velocity_estimation:
         max_acceleration:
           type: double
@@ -116,7 +120,7 @@ intersection_collision_checker_node:
         buffer_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
       latency:
         type: double
         validation:

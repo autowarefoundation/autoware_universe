@@ -2,6 +2,67 @@
 Changelog for package autoware_tracking_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(data_association_matrix.param.yaml): remove OVERRIDE marker from master file (`#12802 <https://github.com/autowarefoundation/autoware_universe/issues/12802>`_)
+  chore: remove OVERRIDE marker from master file
+* feat(autoware_tracking_object_merger): update parameter to add ANIMAL and HAZARD classes (`#12778 <https://github.com/autowarefoundation/autoware_universe/issues/12778>`_)
+  update parameter to add ANIMAL and HAZARD classes
+* feat(decorative_tracker_merger): apply `agnocast_wrapper::Node` to `decorative_tracker_merger` (`#12709 <https://github.com/autowarefoundation/autoware_universe/issues/12709>`_)
+  * apply agnocast_wrapper::Node
+  * fix
+  * style(pre-commit): autofix
+  * fix clang-format
+  * fix cpplint
+  * apply copilot fix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Masaki Baba, Taeseung Sohn, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(perception): replace autoware_universe_utils with specific autoware_utils sub-packages (`#12425 <https://github.com/mitsudome-r/autoware_universe/issues/12425>`_)
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(decorative_tracker_merger): apply autoware_agnocast_wrapper for CIE (`#12331 <https://github.com/mitsudome-r/autoware_universe/issues/12331>`_)
+  feat(autoware_tracking_object_merger): apply autoware_agnocast_wrapper for CIE
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* feat(autowar_tracking_object_merger): remove glog (`#12165 <https://github.com/mitsudome-r/autoware_universe/issues/12165>`_)
+  feat: remove glog
+* Contributors: Taekjin LEE, Tetsuhiro Kawaguchi, Vishal Chauhan, atsushi yano, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 

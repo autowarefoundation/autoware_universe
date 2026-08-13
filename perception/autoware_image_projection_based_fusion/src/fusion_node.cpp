@@ -22,7 +22,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tier4_perception_msgs/msg/detected_object_with_feature.hpp>
 
 #include <boost/optional.hpp>
@@ -36,15 +38,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace autoware::image_projection_based_fusion
 {
@@ -201,9 +194,11 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
   } else if (matching_strategy_ == "advanced") {
     fusion_matching_strategy_ = std::make_unique<AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
       std::dynamic_pointer_cast<FusionNode>(shared_from_this()), id_to_offset_map_);
-    // subscribe diagnostics
-    sub_diag_ = this->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", 10, std::bind(&FusionNode::diagnostic_callback, this, std::placeholders::_1));
+    // subscribe concatenation_info
+    sub_concatenation_info_ =
+      this->create_subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+        "input/concatenation_info", rclcpp::SensorDataQoS().keep_last(10),
+        std::bind(&FusionNode::concatenation_info_callback, this, std::placeholders::_1));
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
   }
@@ -309,6 +304,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
   std::unordered_map<std::size_t, double> id_to_stamp_map,
   std::shared_ptr<FusionCollectorInfoBase> collector_info)
 {
+  std::unique_lock<std::mutex> diagnostic_lock(diagnostic_mutex_);
+
   ExportObj output_msg;
   postprocess(*(output_det3d_msg), output_msg);
 
@@ -334,7 +331,6 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
   // Move collected diagnostics info
   diagnostic_collector_info_ = std::move(collector_info);
   diagnostic_id_to_stamp_map_ = std::move(id_to_stamp_map);
-  diagnostic_updater_.force_update();
 
   // Add processing time for debugging
   if (debug_publisher_) {
@@ -365,6 +361,9 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
         timestamp_interval_ms - id_to_offset_map_[rois_id] * 1000);
     }
   }
+
+  diagnostic_lock.unlock();
+  diagnostic_updater_.force_update();
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
@@ -515,36 +514,22 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::rois_callback(
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
-void FusionNode<Msg3D, Msg2D, ExportObj>::diagnostic_callback(
-  const diagnostic_msgs::msg::DiagnosticArray::SharedPtr diagnostic_msg)
+void FusionNode<Msg3D, Msg2D, ExportObj>::concatenation_info_callback(
+  const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_msg)
 {
-  for (const auto & status : diagnostic_msg->status) {
-    // Filter for the concatenate_and_time_sync_node diagnostic message
-    if (status.name == std::string_view("concatenate_data: /sensing/lidar/concatenate_data")) {
-      std::optional<double> concatenate_timestamp_opt;
-
-      // First pass: Locate concatenated_cloud_timestamp
-      for (const auto & value : status.values) {
-        if (value.key == std::string_view("Concatenated pointcloud timestamp")) {
-          try {
-            concatenate_timestamp_opt = std::stod(value.value);
-          } catch (const std::exception & e) {
-            RCLCPP_ERROR(get_logger(), "Error parsing concatenated cloud timestamp: %s", e.what());
-          }
-        }
-      }
-
-      // Second pass: Fill key-value map only if timestamp was valid
-      if (concatenate_timestamp_opt.has_value()) {
-        std::unordered_map<std::string, std::string> key_value_map;
-        for (const auto & value : status.values) {
-          key_value_map.emplace(value.key, value.value);
-        }
-
-        concatenated_status_map_.emplace(
-          concatenate_timestamp_opt.value(), std::move(key_value_map));
-      }
-    }
+  if (
+    concatenation_info_msg->matching_strategy ==
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_NAIVE) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 1000,
+      "Set the concatenation node's matching strategy to 'advanced' in "
+      "autoware_pointcloud_preprocessor to enable advanced matching in the fusion node.");
+    return;
+  } else if (
+    concatenation_info_msg->matching_strategy ==
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_ADVANCED) {
+    double concatenate_timestamp = rclcpp::Time(concatenation_info_msg->header.stamp).seconds();
+    concatenated_info_map_.emplace(concatenate_timestamp, concatenation_info_msg);
   }
 }
 
@@ -553,13 +538,13 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::manage_concatenated_status_map(double 
 {
   constexpr double threshold_seconds = 1.0;  // Define threshold as a constant
 
-  // Remove old entries from concatenated_status_map_
-  auto it = concatenated_status_map_.begin();
-  while (it != concatenated_status_map_.end()) {
+  // Remove old entries from concatenated_info_map_
+  auto it = concatenated_info_map_.begin();
+  while (it != concatenated_info_map_.end()) {
     if (current_timestamp - it->first > threshold_seconds) {
       RCLCPP_DEBUG(
         get_logger(), "Removing old concatenation status for timestamp: %.9f", it->first);
-      it = concatenated_status_map_.erase(it);
+      it = concatenated_info_map_.erase(it);
     } else {
       ++it;
     }
@@ -644,11 +629,11 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::manage_collector_list()
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
-std::optional<std::unordered_map<std::string, std::string>>
-FusionNode<Msg3D, Msg2D, ExportObj>::find_concatenation_status(double timestamp)
+std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr>
+FusionNode<Msg3D, Msg2D, ExportObj>::find_concatenation_info(double timestamp)
 {
-  auto it = concatenated_status_map_.find(timestamp);
-  if (it != concatenated_status_map_.end()) {
+  auto it = concatenated_info_map_.find(timestamp);
+  if (it != concatenated_info_map_.end()) {
     return it->second;
   }
   return std::nullopt;
@@ -667,9 +652,13 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::show_diagnostic_message(
   std::unordered_map<std::size_t, double> id_to_stamp_map,
   std::shared_ptr<FusionCollectorInfoBase> collector_info)
 {
+  std::unique_lock<std::mutex> diagnostic_lock(diagnostic_mutex_);
+
   msg3d_fused_ = false;
   diagnostic_collector_info_ = std::move(collector_info);
   diagnostic_id_to_stamp_map_ = std::move(id_to_stamp_map);
+
+  diagnostic_lock.unlock();
   diagnostic_updater_.force_update();
 }
 
@@ -677,6 +666,8 @@ template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::check_fusion_status(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
+  std::lock_guard<std::mutex> diagnostic_lock(diagnostic_mutex_);
+
   if (publish_output_msg_ || drop_previous_but_late_output_msg_ || !msg3d_fused_) {
     stat.add("msg3d/is_fused", msg3d_fused_);
 

@@ -9,6 +9,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/debug.cpp
   src/manager.cpp
   src/scene_walkway.cpp
+  src/experimental/manager.cpp
+  src/experimental/scene_walkway.cpp
 )
 
 if(BUILD_TESTING)

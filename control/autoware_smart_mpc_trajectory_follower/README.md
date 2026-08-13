@@ -17,6 +17,14 @@ This technology makes it relatively easy to operate model predictive control, wh
   </a>
 </p>
 
+## Requirements
+
+It's recommended to install these in a virtual environment.
+
+```bash
+pip3 install numba==0.58.1 GPy
+```
+
 ## Provided features
 
 This package provides smart MPC logic for path-following control as well as mechanisms for learning and evaluation. These features are described below.
@@ -32,7 +40,7 @@ In "mppi_ilqr" mode, the initial value of iLQR is given by the MPPI solution.
 To perform a simulation, run the following command:
 
 ```bash
-ros2 launch autoware_launch planning_simulator.launch.xml map_path:=$HOME/autoware_map/sample-map-planning vehicle_model:=sample_vehicle sensor_model:=sample_sensor_kit trajectory_follower_mode:=smart_mpc_trajectory_follower
+ros2 launch autoware_launch planning_simulator.launch.xml map_path:=$HOME/autoware_data/maps/sample-map-planning vehicle_model:=sample_vehicle sensor_model:=sample_sensor_kit trajectory_follower_mode:=smart_mpc_trajectory_follower
 ```
 
 > [!NOTE]
@@ -355,7 +363,7 @@ In `run_sim.py`, the following parameters can be set:
 | Parameter                 | Type               | Description                                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | USE_TRAINED_MODEL_DIFF    | bool               | Whether the derivative of the trained model is reflected in the control                                                                                                                                                                                                                                                                                                   |
-| DATA_COLLECTION_MODE      | DataCollectionMode | Which method will be used to collect the training data　<br> "DataCollectionMode.ff": Straight line driving with feed-forward input <br> "DataCollectionMode.pp": Figure eight driving with pure pursuit control <br> "DataCollectionMode.mpc": Slalom driving with mpc                                                                                                   |
+| DATA_COLLECTION_MODE      | DataCollectionMode | Which method will be used to collect the training data <br> "DataCollectionMode.ff": Straight line driving with feed-forward input <br> "DataCollectionMode.pp": Figure eight driving with pure pursuit control <br> "DataCollectionMode.mpc": Slalom driving with mpc                                                                                                    |
 | USE_POLYNOMIAL_REGRESSION | bool               | Whether to perform polynomial regression before NN                                                                                                                                                                                                                                                                                                                        |
 | USE_SELECTED_POLYNOMIAL   | bool               | When USE_POLYNOMIAL_REGRESSION is True, perform polynomial regression using only some preselected polynomials. <br> The choice of polynomials is intended to be able to absorb the contribution of some parameter shifts based on the nominal model of the vehicle.                                                                                                       |
 | FORCE_NN_MODEL_TO_ZERO    | bool               | Whether to force the NN model to zero (i.e., erase the contribution of the NN model). <br> When USE_POLYNOMIAL_REGRESSION is True, setting FORCE_MODEL_TO_ZERO to True allows the control to reflect the results of polynomial regression only, without using NN models.                                                                                                  |

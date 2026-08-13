@@ -3,7 +3,10 @@ project(autoware_cuda_pointcloud_preprocessor)
 
 find_package(ament_cmake_auto REQUIRED)
 find_package(CUDA)
-find_package(agnocastlib)
+
+if("$ENV{ENABLE_AGNOCAST}")
+  find_package(agnocastlib)
+endif()
 
 if(NOT ${CUDA_FOUND})
   message(WARNING "cuda was not found, so the autoware_cuda_pointcloud_preprocessor package will not be built.")
@@ -13,8 +16,8 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-g -G")
 endif()
 
-if(USE_AGNOCAST AND NOT agnocastlib_FOUND)
-  message(FATAL_ERROR "agnocastlib is required when USE_AGNOCAST is enabled")
+if("$ENV{ENABLE_AGNOCAST}" AND NOT agnocastlib_FOUND)
+  message(FATAL_ERROR "agnocastlib is required when Agnocast is enabled")
 endif()
 
 ament_auto_find_build_dependencies()
@@ -28,7 +31,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunused-function)
 endif()
 
-if(USE_AGNOCAST)
+if("$ENV{ENABLE_AGNOCAST}")
+    message("Agnocast support is enabled")
     add_definitions(-DUSE_AGNOCAST_ENABLED)
 endif()
 
@@ -44,16 +48,33 @@ include_directories(
     ${CUDA_INCLUDE_DIRS}
 )
 
-# cSpell: ignore expt gencode
+# cSpell: ignore expt
 list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 20012")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-# NOTE(knzo25): PTX support for newer GPUs until we can compile directly
-list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
-# TODO(knzo25): enable when the driver supports it
-# list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+if(CUDA_VERSION VERSION_GREATER_EQUAL "12.8")
+  if(CUDA_VERSION VERSION_LESS "13.0")
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+  else()  # CUDA 13.0 renamed SM101 to SM110
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+  endif()
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
+else()
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+endif()
+
+# __host__ or __device__ annotation on lambda requires --extended-lambda nvcc flag
+list(APPEND CUDA_NVCC_FLAGS "--extended-lambda")
+
+# cSpell: ignore fmad
+# NOTE(manato): adding `--fmad=false` can reduce numerical discrepancies between CPU implementations
+# and GPU implementations of the filters. But a slight performance impact can also be introduced
+# To prioritize performance, the flag is disabled
+#
+# list(APPEND CUDA_NVCC_FLAGS "--fmad=false")
 
 ################################################################################
 ### cuda_pointcloud_preprocessor ###
@@ -61,13 +82,15 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_concatenate_data/cuda_combine_cloud_handler.cpp
   src/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.cu
   src/cuda_concatenate_data/cuda_cloud_collector.cpp
-  src/cuda_concatenate_data/cuda_collector_matching_strategy.cpp
+  src/cuda_concatenate_data/cuda_collector_matcher.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.cu
   src/cuda_pointcloud_preprocessor/common_kernels.cu
   src/cuda_pointcloud_preprocessor/organize_kernels.cu
   src/cuda_pointcloud_preprocessor/outlier_kernels.cu
+  src/cuda_outlier_filter/cuda_polar_voxel_noise_filter.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
+  src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter.cu
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
@@ -90,7 +113,7 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${autoware_cuda_utils_INCLUDE_DIRS}
 )
 
-if(USE_AGNOCAST)
+if("$ENV{ENABLE_AGNOCAST}")
     target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
         ${autoware_agnocast_wrapper_INCLUDE_DIRS}
         ${agnocastlib_INCLUDE_DIRS}
@@ -106,6 +129,8 @@ ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
+  src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter_node.cpp
+  src/cuda_outlier_filter/cuda_polar_voxel_noise_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -129,6 +154,18 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode"
   EXECUTABLE cuda_voxel_grid_downsample_filter_node
+)
+
+# ========== PolarVoxel outlier filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelOutlierFilterNode"
+  EXECUTABLE cuda_polar_voxel_outlier_filter_node
+)
+
+# ========== PolarVoxel noise filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelNoiseFilterNode"
+  EXECUTABLE cuda_polar_voxel_noise_filter_node
 )
 
 ################################################################################

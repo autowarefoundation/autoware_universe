@@ -24,6 +24,7 @@
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -37,8 +38,8 @@ class TestMemMonitor : public MemMonitor
   friend class MemMonitorTestSuite;
 
 public:
-  TestMemMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : MemMonitor(node_name, options)
+  TestMemMonitor(const std::string & /*node_name*/, const rclcpp::NodeOptions & options)
+  : MemMonitor(options)
   {
   }
 
@@ -47,10 +48,14 @@ public:
     array_ = *diag_msg;
   }
 
-  void changeUsageWarn(float usage_warn) { usage_warn_ = usage_warn; }
-  void changeUsageError(float usage_error) { usage_error_ = usage_error; }
+  void changeUsageWarn(size_t bytes) { warning_available_size_ = bytes; }
+  void changeUsageError(size_t bytes) { error_available_size_ = bytes; }
 
   void update() { updater_.force_update(); }
+  void setPeriod(const double period)
+  {
+    updater_.setPeriod(rclcpp::Duration::from_seconds(period));
+  }
 
   const std::string removePrefix(const std::string & name)
   {
@@ -59,7 +64,7 @@ public:
 
   bool findDiagStatus(const std::string & name, DiagStatus & status)  // NOLINT
   {
-    for (int i = 0; i < array_.status.size(); ++i) {
+    for (size_t i = 0; i < array_.status.size(); ++i) {
       if (removePrefix(array_.status[i].name) == name) {
         status = array_.status[i];
         return true;
@@ -67,6 +72,8 @@ public:
     }
     return false;
   }
+
+  void clearDiagArray() { array_ = diagnostic_msgs::msg::DiagnosticArray(); }
 
 private:
   diagnostic_msgs::msg::DiagnosticArray array_;
@@ -99,6 +106,7 @@ protected:
     monitor_ = std::make_unique<TestMemMonitor>("test_mem_monitor", node_options);
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
       "/diagnostics", 1000, std::bind(&TestMemMonitor::diagCallback, monitor_.get(), _1));
+    monitor_->setPeriod(10000.0);
 
     // Remove dummy executable if exists
     if (fs::exists(free_)) {
@@ -134,115 +142,85 @@ protected:
     new_path.insert(0, fmt::format("{}:", exe_dir_));
     env["PATH"] = new_path;
   }
+
+  bool waitForDiagStatus(
+    const std::string & name, DiagStatus & status, int timeout_ms = 1000)  // NOLINT
+  {
+    // Clear previous diagnostic data before waiting for new one
+    monitor_->clearDiagArray();
+
+    // Trigger update
+    monitor_->update();
+
+    // Wait for the diagnostic message to be received
+    auto start = std::chrono::steady_clock::now();
+    while (true) {
+      rclcpp::spin_some(monitor_->get_node_base_interface());
+      if (monitor_->findDiagStatus(name, status)) {
+        return true;
+      }
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() > timeout_ms) {
+        return false;
+      }
+      rclcpp::WallRate(100).sleep();  // 10ms sleep between spins
+    }
+  }
 };
 
 TEST_F(MemMonitorTestSuite, usageWarnTest)
 {
-  // Verify normal behavior
-  {
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-
-    // Verify
-    DiagStatus status;
-    std::string value;
-    ASSERT_TRUE(monitor_->findDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
-  }
+  // Get baseline level (may be WARN if swap is in use)
+  DiagStatus baseline_status;
+  ASSERT_TRUE(waitForDiagStatus("Memory Usage", baseline_status));
+  ASSERT_NE(baseline_status.level, DiagStatus::ERROR);
 
   // Verify warning
   {
     // Change warning level
-    monitor_->changeUsageWarn(0.0);
+    monitor_->changeUsageWarn(std::numeric_limits<size_t>::max());
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-
-    // Verify
     DiagStatus status;
-    ASSERT_TRUE(monitor_->findDiagStatus("Memory Usage", status));
+    ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
     ASSERT_EQ(status.level, DiagStatus::WARN);
   }
 
-  // Verify normal behavior
+  // Verify return to baseline
   {
     // Change back to normal
-    monitor_->changeUsageWarn(0.95);
+    monitor_->changeUsageWarn(0);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-
-    // Verify
     DiagStatus status;
-    ASSERT_TRUE(monitor_->findDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
+    ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
+    ASSERT_EQ(status.level, baseline_status.level);
   }
 }
 
 TEST_F(MemMonitorTestSuite, usageErrorTest)
 {
-  // Verify normal behavior
+  // Get baseline level (may be WARN if swap is in use)
+  DiagStatus baseline_status;
+  ASSERT_TRUE(waitForDiagStatus("Memory Usage", baseline_status));
+  ASSERT_NE(baseline_status.level, DiagStatus::ERROR);
+
+  // Verify error
   {
-    // Publish topic
-    monitor_->update();
+    // Change error level
+    monitor_->changeUsageError(std::numeric_limits<size_t>::max());
 
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-
-    // Verify
     DiagStatus status;
-    std::string value;
-    ASSERT_TRUE(monitor_->findDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
-  }
-
-  // Verify warning
-  {
-    // Change warning level
-    monitor_->changeUsageError(0.0);
-
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-
-    // Verify
-    DiagStatus status;
-    ASSERT_TRUE(monitor_->findDiagStatus("Memory Usage", status));
+    ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
     ASSERT_EQ(status.level, DiagStatus::ERROR);
   }
 
-  // Verify normal behavior
+  // Verify return to baseline
   {
     // Change back to normal
-    monitor_->changeUsageError(0.99);
+    monitor_->changeUsageError(0);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-
-    // Verify
     DiagStatus status;
-    ASSERT_TRUE(monitor_->findDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
+    ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
+    ASSERT_EQ(status.level, baseline_status.level);
   }
 }
 
@@ -254,18 +232,11 @@ TEST_F(MemMonitorTestSuite, usageFreeErrorTest)
   // Modify PATH temporarily
   modifyPath();
 
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-
   // Verify
   DiagStatus status;
   std::string value;
 
-  ASSERT_TRUE(monitor_->findDiagStatus("Memory Usage", status));
+  ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
   ASSERT_EQ(status.level, DiagStatus::ERROR);
   ASSERT_STREQ(status.message.c_str(), "free error");
   ASSERT_TRUE(findValue(status, "free", value));

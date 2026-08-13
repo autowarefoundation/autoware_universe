@@ -2,6 +2,71 @@
 Changelog for package autoware_motion_velocity_obstacle_cruise_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(planning): remove unused lanelet2_extension header (`#12294 <https://github.com/mitsudome-r/autoware_universe/issues/12294>`_)
+  * unused lanelet2_extension in planning component
+  * unused lanelet2_extension in planning component (2)
+  * unused lanelet2_extension in planning component (3)
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(motion_velocity_planner): publish debug trajectory for each module (`#11781 <https://github.com/autowarefoundation/autoware_universe/issues/11781>`_)
+* docs(obstacle_cruise): revise documentation (`#11841 <https://github.com/autowarefoundation/autoware_universe/issues/11841>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, Zulfaqar Azmi
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)
+  * delete bdp time publish
+  * delete dynamic_obstacle_stop time publish
+  * delete obstacle_cruise time publish
+  * delete obstacle_slow_down time publish
+  * delete obstacle_velocity_limiter time publish
+  * delete out of lane time publish
+  * delete run out time publish
+  * add short module name function
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Yuki TAKAGI
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* chore(obstacle\_*_module): add maintainer (`#11506 <https://github.com/autowarefoundation/autoware_universe/issues/11506>`_)
+* feat(obstacle_slow_down_module, obstacle_cruise_module): add safety_factor (`#10990 <https://github.com/autowarefoundation/autoware_universe/issues/10990>`_)
+  add safety factor, add planning factor test
+* Contributors: Ryohsuke Mitsudome, Tim Clephas, Yuki TAKAGI
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* docs(obstacle_cruise): align the rss computation documentation with the codes (`#11049 <https://github.com/autowarefoundation/autoware_universe/issues/11049>`_)
+  docs(obstacle_cruise): align the rss computation documentation with the codes.
+* refactor(obstacle_slowdown_module, obstacle_cruise_module): follow function name change in autoware_core (`#10840 <https://github.com/autowarefoundation/autoware_universe/issues/10840>`_)
+  change function name
+* Contributors: Mete Fatih Cırıt, Yuki TAKAGI, Yukihiro Saito, Yuxuan Liu
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

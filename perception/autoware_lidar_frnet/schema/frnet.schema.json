@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for FRNet node",
+  "$comment": "This schema is not considered in CI workflow. See https://github.com/autowarefoundation/autoware_universe/pull/8205#issuecomment-2255074224.",
+  "type": "object",
+  "definitions": {
+    "ego_crop_box": {
+      "type": "object",
+      "properties": {
+        "reference_frame": {
+          "type": "string",
+          "description": "TF frame for ego crop box bounds (e.g. base_link)."
+        },
+        "min_x": { "type": "number", "description": "Min X bound of crop box in reference frame." },
+        "min_y": { "type": "number", "description": "Min Y bound of crop box in reference frame." },
+        "min_z": { "type": "number", "description": "Min Z bound of crop box in reference frame." },
+        "max_x": { "type": "number", "description": "Max X bound of crop box in reference frame." },
+        "max_y": { "type": "number", "description": "Max Y bound of crop box in reference frame." },
+        "max_z": { "type": "number", "description": "Max Z bound of crop box in reference frame." }
+      },
+      "required": ["reference_frame", "min_x", "min_y", "min_z", "max_x", "max_y", "max_z"],
+      "additionalProperties": false
+    },
+    "filter": {
+      "type": "object",
+      "properties": {
+        "class_probability_threshold": {
+          "type": "number",
+          "description": "If any of the filter classes has probability >= this value, the point is excluded from the filtered output cloud.",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "classes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Class names to filter out when their probability exceeds the threshold.",
+          "uniqueItems": true
+        },
+        "output_format": {
+          "type": "string",
+          "description": "Filtered output point format. Empty string preserves the input format.",
+          "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
+        },
+        "ego_crop_box": {
+          "$ref": "#/definitions/ego_crop_box"
+        }
+      },
+      "required": ["class_probability_threshold", "classes", "output_format", "ego_crop_box"],
+      "additionalProperties": false
+    },
+    "frnet": {
+      "type": "object",
+      "properties": {
+        "onnx_path": {
+          "type": "string",
+          "description": "Path to ONNX model file.",
+          "pattern": "\\.onnx$"
+        },
+        "trt_precision": {
+          "type": "string",
+          "description": "TensorRT engine precision.",
+          "enum": ["fp16", "fp32"]
+        },
+        "filter": {
+          "$ref": "#/definitions/filter"
+        }
+      },
+      "required": ["onnx_path", "trt_precision", "filter"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/frnet"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

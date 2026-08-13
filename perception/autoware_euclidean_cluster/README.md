@@ -4,7 +4,8 @@
 
 autoware_euclidean_cluster is a package for clustering points into smaller parts to classify objects.
 
-This package has two clustering methods: `euclidean_cluster` and `voxel_grid_based_euclidean_cluster`.
+This package has three clustering methods: `euclidean_cluster`, `voxel_grid_based_euclidean_cluster`,
+and `label_based_euclidean_cluster`.
 
 ## Inner-workings / Algorithms
 
@@ -17,6 +18,12 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 1. A centroid in each voxel is calculated by `pcl::VoxelGrid`.
 2. The centroids are clustered by `pcl::EuclideanClusterExtraction`.
 3. The input points are clustered based on the clustered centroids.
+
+### label_based_euclidean_cluster
+
+`LabelBasedEuclideanCluster` converts a semantically segmented pointcloud into `DetectedObjects`.
+
+See [docs/label-based-euclidean-cluster.md](./docs/label-based-euclidean-cluster.md) for the node-specific behavior and configuration details.
 
 ## Inputs / Outputs
 
@@ -39,26 +46,11 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 
 #### euclidean_cluster
 
-| Name               | Type  | Description                                                                                  |
-| ------------------ | ----- | -------------------------------------------------------------------------------------------- |
-| `use_height`       | bool  | use point.z for clustering                                                                   |
-| `min_cluster_size` | int   | the minimum number of points that a cluster needs to contain in order to be considered valid |
-| `max_cluster_size` | int   | the maximum number of points that a cluster needs to contain in order to be considered valid |
-| `tolerance`        | float | the spatial cluster tolerance as a measure in the L2 Euclidean space                         |
+{{ json_to_markdown("perception/autoware_euclidean_cluster/schema/euclidean_cluster.schema.json") }}
 
 #### voxel_grid_based_euclidean_cluster
 
-| Name                                    | Type  | Description                                                                                                    |
-| --------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------- |
-| `use_height`                            | bool  | use point.z for clustering                                                                                     |
-| `min_cluster_size`                      | int   | the minimum number of voxels that a cluster needs to contain in order to be considered valid                   |
-| `max_cluster_size`                      | int   | the maximum number of voxels that a cluster needs to contain in order to be considered valid                   |
-| `tolerance`                             | float | the spatial cluster tolerance as a measure in the L2 Euclidean space                                           |
-| `voxel_leaf_size`                       | float | the voxel leaf size of x and y                                                                                 |
-| `min_points_number_per_voxel`           | int   | the minimum number of points for a voxel                                                                       |
-| `min_voxel_cluster_size_for_filtering`  | int   | The minimum voxel cluster size for a cluster to be checked for being a large cluster.                          |
-| `max_points_per_voxel_in_large_cluster` | int   | The maximum points per voxel allowed in large clusters (used for filtering dense clusters).                    |
-| `max_voxel_cluster_for_output`          | int   | The maximum number of voxel clusters to output. If the voxels exceeds this value, the cluster will be skipped. |
+{{ json_to_markdown("perception/autoware_euclidean_cluster/schema/voxel_grid_based_euclidean_cluster.schema.json") }}
 
 ## Assumptions / Known limits
 

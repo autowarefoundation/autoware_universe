@@ -1,0 +1,2535 @@
+path_with_lane_id:
+  header:
+    stamp:
+      sec: 1763703128
+      nanosec: 378743102
+    frame_id: map
+  points:
+    - point:
+        pose:
+          position:
+            x: 65375.4
+            y: 645.453
+            z: 759.286
+          orientation:
+            x: -1.30643e-05
+            y: 1.34785e-05
+            z: 0.695986
+            w: 0.718055
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.4
+            y: 646.452
+            z: 759.286
+          orientation:
+            x: -1.30684e-05
+            y: 1.34746e-05
+            z: 0.696205
+            w: 0.717843
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.4
+            y: 647.452
+            z: 759.286
+          orientation:
+            x: -1.30675e-05
+            y: 1.34754e-05
+            z: 0.696157
+            w: 0.717889
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.5
+            y: 648.451
+            z: 759.286
+          orientation:
+            x: -1.37262e-05
+            y: 1.41670e-05
+            z: 0.695844
+            w: 0.718193
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.5
+            y: 649.451
+            z: 759.286
+          orientation:
+            x: -0.000342284
+            y: 0.000353542
+            z: 0.695575
+            w: 0.718454
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.5
+            y: 650.450
+            z: 759.287
+          orientation:
+            x: -0.000342267
+            y: 0.000353558
+            z: 0.695542
+            w: 0.718486
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.6
+            y: 651.450
+            z: 759.288
+          orientation:
+            x: -0.000342265
+            y: 0.000353560
+            z: 0.695537
+            w: 0.718491
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.6
+            y: 652.449
+            z: 759.289
+          orientation:
+            x: -0.000340976
+            y: 0.000352207
+            z: 0.695560
+            w: 0.718468
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.6
+            y: 653.449
+            z: 759.290
+          orientation:
+            x: 0.000300503
+            y: -0.000310343
+            z: 0.695626
+            w: 0.718404
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.7
+            y: 654.448
+            z: 759.289
+          orientation:
+            x: 0.000300531
+            y: -0.000310316
+            z: 0.695691
+            w: 0.718341
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.7
+            y: 655.448
+            z: 759.288
+          orientation:
+            x: 0.000300542
+            y: -0.000310306
+            z: 0.695715
+            w: 0.718318
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.7
+            y: 656.447
+            z: 759.288
+          orientation:
+            x: 0.00325445
+            y: -0.00351504
+            z: 0.679375
+            w: 0.733775
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.7
+            y: 656.669
+            z: 759.285
+          orientation:
+            x: 0.00995089
+            y: -0.0120837
+            z: 0.635614
+            w: 0.771848
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.8
+            y: 657.076
+            z: 759.273
+          orientation:
+            x: 0.00659582
+            y: -0.00846040
+            z: 0.614806
+            w: 0.788605
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65375.9
+            y: 657.389
+            z: 759.266
+          orientation:
+            x: 0.00577503
+            y: -0.00760007
+            z: 0.604988
+            w: 0.796178
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65376.0
+            y: 657.790
+            z: 759.258
+          orientation:
+            x: 0.00458859
+            y: -0.00616272
+            z: 0.597192
+            w: 0.802062
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65376.2
+            y: 658.286
+            z: 759.250
+          orientation:
+            x: 0.00377022
+            y: -0.00515159
+            z: 0.590577
+            w: 0.806956
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 20913
+    - point:
+        pose:
+          position:
+            x: 65376.3
+            y: 658.880
+            z: 759.242
+          orientation:
+            x: 0.00321399
+            y: -0.00444874
+            z: 0.585602
+            w: 0.810580
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65376.5
+            y: 659.335
+            z: 759.236
+          orientation:
+            x: 0.00319824
+            y: -0.00445996
+            z: 0.582744
+            w: 0.812637
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65376.6
+            y: 659.572
+            z: 759.234
+          orientation:
+            x: 0.00448496
+            y: -0.00631541
+            z: 0.578992
+            w: 0.815296
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65376.8
+            y: 660.360
+            z: 759.221
+          orientation:
+            x: 0.00395803
+            y: -0.00565396
+            z: 0.573474
+            w: 0.819195
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65377.2
+            y: 661.241
+            z: 759.208
+          orientation:
+            x: 0.00355340
+            y: -0.00515019
+            z: 0.567889
+            w: 0.823081
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65377.5
+            y: 662.208
+            z: 759.195
+          orientation:
+            x: 0.00324718
+            y: -0.00477772
+            z: 0.562103
+            w: 0.827047
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65377.9
+            y: 663.252
+            z: 759.182
+          orientation:
+            x: 0.00351256
+            y: -0.00525095
+            z: 0.555995
+            w: 0.831162
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65378.4
+            y: 664.365
+            z: 759.167
+          orientation:
+            x: 0.00329101
+            y: -0.00498156
+            z: 0.551203
+            w: 0.834350
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65378.6
+            y: 664.932
+            z: 759.159
+          orientation:
+            x: 0.00327081
+            y: -0.00499480
+            z: 0.547824
+            w: 0.836572
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65378.9
+            y: 665.534
+            z: 759.152
+          orientation:
+            x: 0.00309572
+            y: -0.00479499
+            z: 0.542387
+            w: 0.840109
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65379.5
+            y: 666.748
+            z: 759.136
+          orientation:
+            x: 0.00294877
+            y: -0.00466071
+            z: 0.534653
+            w: 0.845053
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65380.0
+            y: 667.994
+            z: 759.121
+          orientation:
+            x: 0.00151623
+            y: -0.00243481
+            z: 0.528610
+            w: 0.848860
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65380.3
+            y: 668.561
+            z: 759.117
+          orientation:
+            x: 0.00150336
+            y: -0.00244276
+            z: 0.524127
+            w: 0.851635
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65380.7
+            y: 669.258
+            z: 759.113
+          orientation:
+            x: 0.00152267
+            y: -0.00251843
+            z: 0.517393
+            w: 0.855743
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65381.2
+            y: 670.338
+            z: 759.106
+          orientation:
+            x: 0.00150832
+            y: -0.00252648
+            z: 0.512600
+            w: 0.858623
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65381.3
+            y: 670.528
+            z: 759.105
+          orientation:
+            x: 0.00313866
+            y: -0.00534864
+            z: 0.506100
+            w: 0.862452
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65382.1
+            y: 671.788
+            z: 759.087
+          orientation:
+            x: 0.00310129
+            y: -0.00538365
+            z: 0.499150
+            w: 0.866493
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65382.2
+            y: 672.083
+            z: 759.082
+          orientation:
+            x: 0.00306168
+            y: -0.00540714
+            z: 0.492714
+            w: 0.870169
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94801
+    - point:
+        pose:
+          position:
+            x: 65382.8
+            y: 673.027
+            z: 759.069
+          orientation:
+            x: 0.00304401
+            y: -0.00551182
+            z: 0.483434
+            w: 0.875358
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94792
+    - point:
+        pose:
+          position:
+            x: 65383.3
+            y: 673.788
+            z: 759.057
+          orientation:
+            x: 0.00299961
+            y: -0.00553495
+            z: 0.476460
+            w: 0.879174
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94792
+    - point:
+        pose:
+          position:
+            x: 65383.6
+            y: 674.230
+            z: 759.051
+          orientation:
+            x: 0.00331888
+            y: -0.00630624
+            z: 0.465714
+            w: 0.884907
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94792
+    - point:
+        pose:
+          position:
+            x: 65384.4
+            y: 675.386
+            z: 759.031
+          orientation:
+            x: 0.00327470
+            y: -0.00652504
+            z: 0.448536
+            w: 0.893735
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 94792
+    - point:
+        pose:
+          position:
+            x: 65385.2
+            y: 676.484
+            z: 759.011
+          orientation:
+            x: 0.00326556
+            y: -0.00678031
+            z: 0.433907
+            w: 0.900926
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65385.6
+            y: 677.032
+            z: 759.000
+          orientation:
+            x: 0.00318736
+            y: -0.00681608
+            z: 0.423586
+            w: 0.905825
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65386.0
+            y: 677.513
+            z: 758.991
+          orientation:
+            x: 0.00316906
+            y: -0.00711309
+            z: 0.406950
+            w: 0.913417
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65386.9
+            y: 678.466
+            z: 758.971
+          orientation:
+            x: 0.00296152
+            y: -0.00716339
+            z: 0.382049
+            w: 0.924109
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65387.7
+            y: 679.336
+            z: 758.952
+          orientation:
+            x: 0.00289695
+            y: -0.00755148
+            z: 0.358163
+            w: 0.933624
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65388.4
+            y: 679.910
+            z: 758.938
+          orientation:
+            x: 0.00277775
+            y: -0.00758912
+            z: 0.343706
+            w: 0.939042
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65388.6
+            y: 680.118
+            z: 758.933
+          orientation:
+            x: 0.00273321
+            y: -0.00799007
+            z: 0.323651
+            w: 0.946139
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65389.5
+            y: 680.810
+            z: 758.914
+          orientation:
+            x: 0.00228296
+            y: -0.00728027
+            z: 0.299207
+            w: 0.954158
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65390.0
+            y: 681.124
+            z: 758.905
+          orientation:
+            x: 0.00215224
+            y: -0.00731931
+            z: 0.282098
+            w: 0.959355
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65390.4
+            y: 681.413
+            z: 758.897
+          orientation:
+            x: 0.00325512
+            y: -0.0122633
+            z: 0.256531
+            w: 0.966453
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65391.3
+            y: 681.930
+            z: 758.871
+          orientation:
+            x: 0.00268910
+            y: -0.0112574
+            z: 0.232322
+            w: 0.972570
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65391.7
+            y: 682.121
+            z: 758.861
+          orientation:
+            x: 0.00249426
+            y: -0.0113077
+            z: 0.215387
+            w: 0.976460
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95091
+    - point:
+        pose:
+          position:
+            x: 65392.2
+            y: 682.367
+            z: 758.847
+          orientation:
+            x: 0.00227047
+            y: -0.0116856
+            z: 0.190716
+            w: 0.981573
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65393.1
+            y: 682.734
+            z: 758.824
+          orientation:
+            x: 0.00206656
+            y: -0.0119510
+            z: 0.170379
+            w: 0.985304
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65393.5
+            y: 682.880
+            z: 758.813
+          orientation:
+            x: 0.00191967
+            y: -0.0119812
+            z: 0.158194
+            w: 0.987333
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65394.0
+            y: 683.044
+            z: 758.801
+          orientation:
+            x: 0.00168082
+            y: -0.0115292
+            z: 0.144254
+            w: 0.989472
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65395.0
+            y: 683.315
+            z: 758.779
+          orientation:
+            x: -0.000274416
+            y: 0.00198636
+            z: 0.136850
+            w: 0.990590
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65395.5
+            y: 683.458
+            z: 758.781
+          orientation:
+            x: -0.000266279
+            y: 0.00198589
+            z: 0.132896
+            w: 0.991128
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65395.9
+            y: 683.566
+            z: 758.782
+          orientation:
+            x: 0.00716992
+            y: -0.0689442
+            z: 0.103189
+            w: 0.992244
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65397.2
+            y: 683.839
+            z: 758.597
+          orientation:
+            x: 0.00000
+            y: 0.00000
+            z: -0.00534641
+            w: 0.999986
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65397.4
+            y: 683.836
+            z: 758.597
+          orientation:
+            x: 0.00000
+            y: 0.00000
+            z: -0.00534641
+            w: 0.999986
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65397.7
+            y: 683.833
+            z: 758.597
+          orientation:
+            x: 0.00000
+            y: 0.00000
+            z: -0.00534641
+            w: 0.999986
+        longitudinal_velocity_mps: 2.29125
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+    - point:
+        pose:
+          position:
+            x: 65398.4
+            y: 683.826
+            z: 758.597
+          orientation:
+            x: 0.00000
+            y: 0.00000
+            z: -0.00534641
+            w: 0.999986
+        longitudinal_velocity_mps: 0.00000
+        lateral_velocity_mps: 0.00000
+        heading_rate_rps: 0.00000
+        is_final: false
+      lane_ids:
+        - 95089
+  left_bound:
+    - x: 65372.3
+      y: 644.560
+      z: 759.316
+    - x: 65372.3
+      y: 644.623
+      z: 759.316
+    - x: 65373.4
+      y: 644.585
+      z: 759.317
+    - x: 65372.1
+      y: 646.010
+      z: 759.317
+    - x: 65370.1
+      y: 648.274
+      z: 759.254
+    - x: 65370.1
+      y: 651.921
+      z: 759.315
+    - x: 65370.1
+      y: 653.827
+      z: 759.323
+    - x: 65370.2
+      y: 655.692
+      z: 759.320
+    - x: 65370.2
+      y: 657.653
+      z: 759.320
+    - x: 65370.2
+      y: 658.735
+      z: 759.274
+    - x: 65370.2
+      y: 660.902
+      z: 759.301
+    - x: 65370.3
+      y: 663.075
+      z: 759.295
+    - x: 65370.4
+      y: 663.788
+      z: 759.291
+    - x: 65370.5
+      y: 665.138
+      z: 759.280
+    - x: 65370.7
+      y: 666.514
+      z: 759.268
+    - x: 65371.2
+      y: 667.942
+      z: 759.259
+    - x: 65371.8
+      y: 669.211
+      z: 759.241
+    - x: 65372.4
+      y: 670.435
+      z: 759.214
+    - x: 65373.2
+      y: 671.673
+      z: 759.194
+    - x: 65374.1
+      y: 672.715
+      z: 759.171
+    - x: 65374.9
+      y: 673.415
+      z: 759.171
+    - x: 65376.1
+      y: 674.661
+      z: 759.121
+    - x: 65378.1
+      y: 676.562
+      z: 759.070
+    - x: 65379.9
+      y: 678.376
+      z: 759.030
+    - x: 65380.8
+      y: 679.242
+      z: 759.030
+    - x: 65381.8
+      y: 680.185
+      z: 759.020
+    - x: 65383.0
+      y: 681.379
+      z: 759.028
+    - x: 65385.2
+      y: 683.498
+      z: 758.981
+    - x: 65386.3
+      y: 684.339
+      z: 758.959
+    - x: 65387.4
+      y: 685.025
+      z: 758.938
+    - x: 65388.7
+      y: 685.624
+      z: 758.917
+    - x: 65390.0
+      y: 686.079
+      z: 758.894
+    - x: 65391.3
+      y: 686.425
+      z: 758.865
+    - x: 65392.6
+      y: 686.626
+      z: 758.843
+    - x: 65394.0
+      y: 686.677
+      z: 758.822
+    - x: 65395.8
+      y: 686.649
+      z: 758.789
+    - x: 65398.1
+      y: 686.624
+      z: 758.714
+    - x: 65405.6
+      y: 686.544
+      z: 758.568
+  right_bound:
+    - x: 65379.3
+      y: 644.946
+      z: 759.208
+    - x: 65379.3
+      y: 648.482
+      z: 759.205
+    - x: 65379.3
+      y: 649.501
+      z: 759.205
+    - x: 65379.3
+      y: 651.501
+      z: 759.205
+    - x: 65379.4
+      y: 653.464
+      z: 759.202
+    - x: 65379.4
+      y: 655.454
+      z: 759.202
+    - x: 65379.5
+      y: 656.740
+      z: 759.206
+    - x: 65379.6
+      y: 658.476
+      z: 759.200
+    - x: 65379.6
+      y: 658.562
+      z: 759.200
+    - x: 65379.9
+      y: 660.152
+      z: 759.196
+    - x: 65380.3
+      y: 661.775
+      z: 759.188
+    - x: 65380.9
+      y: 663.357
+      z: 759.180
+    - x: 65381.7
+      y: 664.879
+      z: 759.170
+    - x: 65382.5
+      y: 666.303
+      z: 759.151
+    - x: 65383.6
+      y: 667.668
+      z: 759.123
+    - x: 65384.7
+      y: 668.872
+      z: 759.091
+    - x: 65385.0
+      y: 669.171
+      z: 759.083
+    - x: 65385.1
+      y: 669.215
+      z: 759.083
+    - x: 65386.1
+      y: 670.089
+      z: 759.055
+    - x: 65387.5
+      y: 671.001
+      z: 759.021
+    - x: 65389.0
+      y: 671.812
+      z: 758.987
+    - x: 65390.6
+      y: 672.493
+      z: 758.952
+    - x: 65393.2
+      y: 673.446
+      z: 758.888
+    - x: 65393.6
+      y: 673.523
+      z: 758.886
+    - x: 65394.5
+      y: 673.839
+      z: 758.856
+    - x: 65396.1
+      y: 674.327
+      z: 758.856
+    - x: 65397.4
+      y: 674.713
+      z: 758.783
+    - x: 65400.4
+      y: 675.551
+      z: 758.712
+    - x: 65403.3
+      y: 676.252
+      z: 758.642
+    - x: 65404.0
+      y: 676.432
+      z: 758.624
+    - x: 65403.4
+      y: 679.188
+      z: 758.635
+    - x: 65406.6
+      y: 679.924
+      z: 758.558
+marker_array:
+  markers:
+    - header:
+        stamp:
+          sec: 1763703126
+          nanosec: 178649562
+        frame_id: map
+      ns: pull_over_area_0
+      id: 255
+      type: 4
+      action: 0
+      pose:
+        position:
+          x: 0.00000
+          y: 0.00000
+          z: 0.00000
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: 0.00000
+          w: 1.00000
+      scale:
+        x: 0.100000
+        y: 0.00000
+        z: 0.00000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points:
+        - x: 65403.3
+          y: 682.527
+          z: 758.725
+        - x: 65403.3
+          y: 682.527
+          z: 758.725
+        - x: 65402.7
+          y: 682.533
+          z: 758.725
+        - x: 65402.4
+          y: 682.536
+          z: 758.725
+        - x: 65402.3
+          y: 682.538
+          z: 758.725
+        - x: 65399.3
+          y: 682.569
+          z: 758.725
+        - x: 65396.8
+          y: 682.596
+          z: 758.725
+        - x: 65396.8
+          y: 682.596
+          z: 758.725
+        - x: 65395.3
+          y: 682.612
+          z: 758.725
+        - x: 65395.3
+          y: 682.612
+          z: 758.725
+        - x: 65394.6
+          y: 682.620
+          z: 758.725
+        - x: 65393.8
+          y: 682.628
+          z: 758.725
+        - x: 65393.9
+          y: 685.920
+          z: 758.725
+        - x: 65394.6
+          y: 685.912
+          z: 758.725
+        - x: 65394.6
+          y: 685.912
+          z: 758.725
+        - x: 65395.4
+          y: 685.904
+          z: 758.725
+        - x: 65397.6
+          y: 685.880
+          z: 758.725
+        - x: 65404.1
+          y: 685.810
+          z: 758.725
+        - x: 65404.1
+          y: 682.519
+          z: 758.725
+        - x: 65403.3
+          y: 682.527
+          z: 758.725
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416795795
+        frame_id: map
+      ns: goal_candidates
+      id: 255
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65398.4
+          y: 684.726
+          z: 758.597
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416798575
+        frame_id: map
+      ns: goal_candidates
+      id: 256
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65397.6
+          y: 684.734
+          z: 758.612
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416799723
+        frame_id: map
+      ns: goal_candidates
+      id: 257
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.9
+          y: 684.742
+          z: 758.627
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416800649
+        frame_id: map
+      ns: goal_candidates
+      id: 258
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.1
+          y: 684.750
+          z: 758.641
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416801109
+        frame_id: map
+      ns: goal_candidates
+      id: 259
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65395.4
+          y: 684.758
+          z: 758.656
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416802142
+        frame_id: map
+      ns: goal_candidates
+      id: 260
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65398.4
+          y: 684.426
+          z: 758.597
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416802605
+        frame_id: map
+      ns: goal_candidates
+      id: 261
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65397.6
+          y: 684.434
+          z: 758.612
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416803146
+        frame_id: map
+      ns: goal_candidates
+      id: 262
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.9
+          y: 684.442
+          z: 758.627
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416803774
+        frame_id: map
+      ns: goal_candidates
+      id: 263
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.1
+          y: 684.450
+          z: 758.641
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416805543
+        frame_id: map
+      ns: goal_candidates
+      id: 264
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65395.4
+          y: 684.458
+          z: 758.656
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416805996
+        frame_id: map
+      ns: goal_candidates
+      id: 265
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65398.4
+          y: 684.126
+          z: 758.597
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416806575
+        frame_id: map
+      ns: goal_candidates
+      id: 266
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65397.6
+          y: 684.134
+          z: 758.612
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416807057
+        frame_id: map
+      ns: goal_candidates
+      id: 267
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.9
+          y: 684.142
+          z: 758.627
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416807656
+        frame_id: map
+      ns: goal_candidates
+      id: 268
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.1
+          y: 684.150
+          z: 758.641
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416808220
+        frame_id: map
+      ns: goal_candidates
+      id: 269
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65395.4
+          y: 684.158
+          z: 758.656
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416808661
+        frame_id: map
+      ns: goal_candidates
+      id: 270
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65398.4
+          y: 683.826
+          z: 758.597
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416809111
+        frame_id: map
+      ns: goal_candidates
+      id: 271
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65397.6
+          y: 683.834
+          z: 758.612
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416813176
+        frame_id: map
+      ns: goal_candidates
+      id: 272
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.9
+          y: 683.842
+          z: 758.627
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416814014
+        frame_id: map
+      ns: goal_candidates
+      id: 273
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65396.1
+          y: 683.850
+          z: 758.641
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416814547
+        frame_id: map
+      ns: goal_candidates
+      id: 274
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65395.4
+          y: 683.858
+          z: 758.656
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.500000
+        y: 0.250000
+        z: 0.250000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 0.00000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416965897
+        frame_id: map
+      ns: pull_over_start_pose
+      id: 255
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65375.7
+          y: 656.355
+          z: 759.288
+        orientation:
+          x: 0.000300542
+          y: -0.000310306
+          z: 0.695715
+          w: 0.718318
+      scale:
+        x: 0.700000
+        y: 0.300000
+        z: 0.300000
+      color:
+        r: 0.300000
+        g: 0.300000
+        b: 0.900000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703128
+          nanosec: 416967548
+        frame_id: map
+      ns: pull_over_end_pose
+      id: 255
+      type: 0
+      action: 0
+      pose:
+        position:
+          x: 65398.4
+          y: 683.826
+          z: 758.597
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.700000
+        y: 0.300000
+        z: 0.300000
+      color:
+        r: 0.300000
+        g: 0.300000
+        b: 0.900000
+        a: 0.999000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: ""
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false
+    - header:
+        stamp:
+          sec: 1763703126
+          nanosec: 178649562
+        frame_id: map
+      ns: planner_type
+      id: 255
+      type: 9
+      action: 0
+      pose:
+        position:
+          x: 65398.4
+          y: 683.826
+          z: 758.597
+        orientation:
+          x: 0.00000
+          y: 0.00000
+          z: -0.00534641
+          w: 0.999986
+      scale:
+        x: 0.00000
+        y: 0.00000
+        z: 1.00000
+      color:
+        r: 1.00000
+        g: 1.00000
+        b: 1.00000
+        a: 0.990000
+      lifetime:
+        sec: 1
+        nanosec: 500000000
+      frame_locked: true
+      points: []
+      colors: []
+      texture_resource: ""
+      texture:
+        header:
+          stamp:
+            sec: 0
+            nanosec: 0
+          frame_id: ""
+        format: ""
+        data: []
+      uv_coordinates: []
+      text: BEZIER 0/0
+      mesh_resource: ""
+      mesh_file:
+        filename: ""
+        data: []
+      mesh_use_embedded_materials: false

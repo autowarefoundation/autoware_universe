@@ -61,16 +61,11 @@
 #include <rviz_default_plugins/tools/pose/pose_tool.hpp>
 #endif
 
+#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <tier4_simulation_msgs/msg/dummy_object.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/optional.hpp>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 #include <tf2_ros/transform_listener.h>
 
@@ -83,7 +78,7 @@ namespace rviz_plugins
 
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::Shape;
-using tier4_simulation_msgs::msg::DummyObject;
+using autoware_simulation_msgs::msg::SimulatedObject;
 
 class InteractiveObject
 {
@@ -121,6 +116,8 @@ public:
     const std::array<uint8_t, 16> & uuid) const;
   [[nodiscard]] boost::optional<tf2::Transform> transform(
     const std::array<uint8_t, 16> & uuid) const;
+  [[nodiscard]] InteractiveObject * getTargetObject() const;
+  [[nodiscard]] boost::optional<std::array<uint8_t, 16>> getTargetUuid() const;
 
 private:
   size_t nearest(const Ogre::Vector3 & point) const;
@@ -137,18 +134,19 @@ public:
   int processMouseEvent(rviz_common::ViewportMouseEvent & event) override;
   int processKeyEvent(QKeyEvent * event, rviz_common::RenderPanel * panel) override;
 
-  [[nodiscard]] virtual DummyObject createObjectMsg() const = 0;
+  [[nodiscard]] virtual SimulatedObject createObjectMsg() const = 0;
 
 protected Q_SLOTS:
   virtual void updateTopic();
 
 protected:  // NOLINT for Qt
   rclcpp::Clock::SharedPtr clock_;
-  rclcpp::Publisher<DummyObject>::SharedPtr dummy_object_info_pub_;
+  rclcpp::Publisher<SimulatedObject>::SharedPtr dummy_object_info_pub_;
 
   rviz_default_plugins::tools::MoveTool move_tool_;
 
   rviz_common::properties::BoolProperty * enable_interactive_property_;
+  rviz_common::properties::BoolProperty * predicted_property_;
   rviz_common::properties::StringProperty * topic_property_;
   rviz_common::properties::FloatProperty * std_dev_x_;
   rviz_common::properties::FloatProperty * std_dev_y_;

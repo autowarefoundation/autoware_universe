@@ -17,6 +17,7 @@
 
 #include <autoware_planning_validator_rear_collision_checker/rear_collision_checker_node_parameters.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -110,9 +111,9 @@ using PointCloudObjects = std::vector<PointCloudObject>;
 
 struct DebugData
 {
-  autoware_utils::LineString3d reachable_line;
+  autoware_utils_geometry::LineString3d reachable_line;
 
-  autoware_utils::LineString3d stoppable_line;
+  autoware_utils_geometry::LineString3d stoppable_line;
 
   lanelet::ConstLanelets current_lanes;
 
@@ -128,7 +129,7 @@ struct DebugData
 
   Behavior shift_behavior{Behavior::NONE};
 
-  std::vector<autoware_utils::Polygon3d> hull_polygons;
+  std::vector<autoware_utils_geometry::Polygon3d> hull_polygons;
 
   std::vector<size_t> pointcloud_nums{};
 

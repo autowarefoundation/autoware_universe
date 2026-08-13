@@ -55,8 +55,8 @@ public:
   void filter(
     const PointCloud2 & input, const Pose & pose, PointCloud2 & output, PointCloud2 & outlier);
   void filter(
-    const PointCloud2 & high_conf_input, const PointCloud2 & low_conf_input, const Pose & pose,
-    PointCloud2 & output, PointCloud2 & outlier);
+    const PointCloud2 & high_conf_xyz_cloud, const PointCloud2 & low_conf_xyz_cloud,
+    const Pose & pose, PointCloud2 & output, PointCloud2 & outlier);
 
 private:
   float search_radius_;
@@ -74,8 +74,7 @@ public:
 
 private:
   void onOccupancyGridMapAndPointCloud2(
-    const OccupancyGrid::ConstSharedPtr & input_occupancy_grid_map,
-    const PointCloud2::ConstSharedPtr & input_pointcloud);
+    const OccupancyGrid::ConstSharedPtr & input_ogm, const PointCloud2::ConstSharedPtr & input_pc);
   void filterByOccupancyGridMap(
     const OccupancyGrid & occupancy_grid_map, const PointCloud2 & pointcloud,
     PointCloud2 & high_confidence, PointCloud2 & low_confidence, PointCloud2 & out_ogm);
@@ -96,7 +95,7 @@ private:
 
   private:
     void transformToBaseLink(
-      const PointCloud2 & input, const Header & header, PointCloud2 & output);
+      const PointCloud2 & pointcloud_input, const Header & header, PointCloud2 & output);
     rclcpp::Publisher<PointCloud2>::SharedPtr outlier_pointcloud_pub_;
     rclcpp::Publisher<PointCloud2>::SharedPtr low_confidence_pointcloud_pub_;
     rclcpp::Publisher<PointCloud2>::SharedPtr high_confidence_pointcloud_pub_;

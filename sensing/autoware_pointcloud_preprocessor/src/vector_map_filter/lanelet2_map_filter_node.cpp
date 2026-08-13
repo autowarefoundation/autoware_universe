@@ -181,8 +181,9 @@ pcl::PointCloud<pcl::PointXYZ> Lanelet2MapFilterComponent::getLaneFilteredPointC
   }
 
   for (auto & point : downsampled_cloud->points) {
-    if (pointWithinLanelets(
-          Point2d(point.x + centroid[0], point.y + centroid[1]), intersected_lanelets)) {
+    if (
+      pointWithinLanelets(
+        Point2d(point.x + centroid[0], point.y + centroid[1]), intersected_lanelets)) {
       const size_t index = voxel_grid.getCentroidIndex(point);
       for (auto & original_point : downsampled2original_map[index].points) {
         original_point.x += centroid[0];
@@ -240,8 +241,8 @@ void Lanelet2MapFilterComponent::pointcloudCallback(const PointCloud2ConstPtr cl
 void Lanelet2MapFilterComponent::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr map_msg)
 {
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg));
   const lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
   road_lanelets_ = lanelet::utils::query::roadLanelets(all_lanelets);
 }

@@ -2,6 +2,95 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_universe): use autoware_ament_auto_package in perception utility packages (`#12281 <https://github.com/mitsudome-r/autoware_universe/issues/12281>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* revert: feat(compare_map_filter) apply agnocast publisher to `voxel_compare_map_filter` (`#12346 <https://github.com/mitsudome-r/autoware_universe/issues/12346>`_)
+  Revert "feat(compare_map_filter): apply agnocast publisher to `voxel_based_compare_map_filter` (`#12304 <https://github.com/mitsudome-r/autoware_universe/issues/12304>`_)"
+  This reverts commit d702d678392837529fad335c4fce38cfff95f64b.
+* feat(compare_map_filter): apply agnocast publisher to `voxel_based_compare_map_filter` (`#12304 <https://github.com/mitsudome-r/autoware_universe/issues/12304>`_)
+  * apply agnocast publisher to voxel_based_compare_map_filter
+  * style(pre-commit): autofix
+  * delete agnocastlib dependency
+  * add agnocast dependency to voxel_based_compare_map_filter.launch.xml
+  * add TODO coment
+  * style(pre-commit): autofix
+  * clang-format
+  * dummy change for ci
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(compare_map_segmentation): ignore Werror=array-bounds (`#12316 <https://github.com/mitsudome-r/autoware_universe/issues/12316>`_)
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Taekjin LEE, Vishal Chauhan, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(compare_map_segmentation): ignore -Warray-bounds (`#11929 <https://github.com/autowarefoundation/autoware_universe/issues/11929>`_)
+* fix: qos compatibility (`#11878 <https://github.com/autowarefoundation/autoware_universe/issues/11878>`_)
+* feat(pointcloud_preprocessor): improve cloud validation (`#11853 <https://github.com/autowarefoundation/autoware_universe/issues/11853>`_)
+* feat(pointcloud_preprocessor): validate indices (`#11852 <https://github.com/autowarefoundation/autoware_universe/issues/11852>`_)
+* feat(pointcloud_preprocessor): simplify is_valid (`#11851 <https://github.com/autowarefoundation/autoware_universe/issues/11851>`_)
+* fix(autoware_compare_map_segmentation): use async service call in VoxelGridDynamicMapLoader to prevent deadlock (`#11814 <https://github.com/autowarefoundation/autoware_universe/issues/11814>`_)
+  * refactor(voxel_grid_map_loader): simplify async request handling
+  Replaced blocking wait with a callback mechanism for handling map update requests. This improves responsiveness and error handling when retrieving differential pointcloud maps.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_compare_map_segmentation): add missing launch param (`#11825 <https://github.com/autowarefoundation/autoware_universe/issues/11825>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, badai nguyen
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* fix(autoware_compare_map_segmentation): add empty point cloud guards (`#11748 <https://github.com/autowarefoundation/autoware_universe/issues/11748>`_)
+  * fix(autoware_compare_map_segmentation): add empty point cloud guards
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add guard in compare_elevation_map_filter
+  - Add guard in distance_based_compare_map_filter
+  - Add guard in voxel_distance_based_compare_map_filter
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Yutaka Kondo
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_compare_map_segmentation): add lanelet elevation filter (`#11289 <https://github.com/autowarefoundation/autoware_universe/issues/11289>`_)
+  * feat(autoware_compare_map_segmentation): add lanelet elevation filter
+  * feat(autoware_compare_map_segmentation): fix default height threshold
+  ---------
+* Contributors: Kaan Çolak, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

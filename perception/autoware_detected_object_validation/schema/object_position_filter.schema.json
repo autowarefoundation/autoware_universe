@@ -48,6 +48,16 @@
               "type": "boolean",
               "default": false,
               "description": "Filter for PEDESTRIAN label"
+            },
+            "ANIMAL": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for ANIMAL label"
+            },
+            "HAZARD": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for HAZARD label"
             }
           },
           "required": [
@@ -58,7 +68,9 @@
             "TRAILER",
             "MOTORCYCLE",
             "BICYCLE",
-            "PEDESTRIAN"
+            "PEDESTRIAN",
+            "ANIMAL",
+            "HAZARD"
           ]
         },
         "upper_bound_x": {

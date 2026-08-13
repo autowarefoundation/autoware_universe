@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    hdd_reader_port: 7635
+    hdd_reader_socket_path: "/tmp/hdd_reader.sock"
     num_disks: 1
     disks: # Until multi type lists are allowed, name N the disks as disk0...disk{N-1}
       disk0:

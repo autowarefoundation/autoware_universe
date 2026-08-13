@@ -1,5 +1,19 @@
 # autoware_operation_mode_transition_manager
 
+## Note
+
+The state management functionality of this package is currently being moved to the command_mode_decider package.
+When used with the command_mode_decider package, this package is only responsible for determining transition conditions.
+Also, the data `status`, `in_autoware_control`, and `in_transition` contained in the debug topic is not available, so use the `/system/command_mode_decider/debug` topic instead.
+
+- in_autoware_control: True when the current command mode is manual mode (default value 1000).
+- in_transition: See the is_in_transition function in the command_mode_decider package.
+- status:
+  - If in_autoware_control, `DISENGAGE (autoware mode = curr_mode)`
+  - Else if in_transition, `curr_mode (in transition from prev_mode)`
+  - Else `curr_mode`
+  - Note: `curr_mode = current operation mode` and `prev_mode = last operation mode`
+
 ## Purpose / Use cases
 
 This module is responsible for managing the different modes of operation for the Autoware system. The possible modes are:
@@ -60,7 +74,7 @@ For the transition availability/completion check:
 
 - /control/command/control_cmd [`autoware_control_msgs/msg/Control`]: vehicle control signal
 - /localization/kinematic_state [`nav_msgs/msg/Odometry`]: ego vehicle state
-- /planning/scenario_planning/trajectory [`autoware_planning_msgs/msg/Trajectory`]: planning trajectory
+- /planning/trajectory [`autoware_planning_msgs/msg/Trajectory`]: planning trajectory
 - /vehicle/status/control_mode [`autoware_vehicle_msgs/msg/ControlModeReport`]: vehicle control mode (autonomous/manual)
 - /control/vehicle_cmd_gate/operation_mode [`autoware_adapi_v1_msgs/msg/OperationModeState`]: the operation mode in the `vehicle_cmd_gate`. (To be removed)
 

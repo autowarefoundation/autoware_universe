@@ -140,8 +140,8 @@ void VectorMapInsideAreaFilterComponent::mapCallback(
 {
   tf_input_frame_ = map_msg->header.frame_id;
 
-  const auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr);
+  const auto lanelet_map_ptr =
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg);
   polygon_lanelets_ = lanelet::utils::query::getAllPolygonsByType(lanelet_map_ptr, polygon_type_);
 }
 

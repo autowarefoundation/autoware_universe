@@ -27,8 +27,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
-#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -47,6 +46,7 @@
 #include <cstddef>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -75,8 +75,8 @@ public:
     typename Msg3D::SharedPtr & output_det3d_msg,
     std::unordered_map<std::size_t, double> id_to_stamp_map,
     std::shared_ptr<FusionCollectorInfoBase> collector_info);
-  std::optional<std::unordered_map<std::string, std::string>> find_concatenation_status(
-    double timestamp);
+  std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr>
+  find_concatenation_info(double timestamp);
   void show_diagnostic_message(
     std::unordered_map<std::size_t, double> id_to_stamp_map,
     std::shared_ptr<FusionCollectorInfoBase> collector_info);
@@ -117,9 +117,11 @@ private:
   std::unordered_map<std::size_t, double> id_to_offset_map_;
 
   // timestamp: (key, value)
-  std::unordered_map<double, std::unordered_map<std::string, std::string>> concatenated_status_map_;
+  std::unordered_map<double, autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr>
+    concatenated_info_map_;
 
   diagnostic_updater::Updater diagnostic_updater_{this};
+  mutable std::mutex diagnostic_mutex_;
   std::shared_ptr<FusionCollectorInfoBase> diagnostic_collector_info_;
   std::unordered_map<std::size_t, double> diagnostic_id_to_stamp_map_;
 
@@ -141,7 +143,8 @@ protected:
   // callback for rois subscription
   void rois_callback(const typename Msg2D::ConstSharedPtr rois_msg, const std::size_t rois_id);
 
-  void diagnostic_callback(const diagnostic_msgs::msg::DiagnosticArray::SharedPtr diagnostic_msg);
+  void concatenation_info_callback(
+    const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_msg);
 
   // Custom process methods
   virtual void postprocess(const Msg3D & processing_msg, ExportObj & output_msg);
@@ -156,7 +159,8 @@ protected:
 
   // 3d detection subscription
   typename rclcpp::Subscription<Msg3D>::SharedPtr msg3d_sub_;
-  rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr sub_diag_;
+  rclcpp::Subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>::SharedPtr
+    sub_concatenation_info_;
 
   // parameters for out_of_scope filter
   float filter_scope_min_x_;

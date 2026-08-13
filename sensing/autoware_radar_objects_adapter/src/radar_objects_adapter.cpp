@@ -14,16 +14,30 @@
 
 #include "radar_objects_adapter.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
 namespace autoware
 {
+// Maps for classification remapping
+using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
+const std::map<std::string, std::uint8_t> RadarObjectsAdapter::RADAR_LABEL_TO_UINT_MAP = {
+  {"UNKNOWN", RadarClassification::UNKNOWN}, {"CAR", RadarClassification::CAR},
+  {"TRUCK", RadarClassification::TRUCK},     {"MOTORCYCLE", RadarClassification::MOTORCYCLE},
+  {"BICYCLE", RadarClassification::BICYCLE}, {"PEDESTRIAN", RadarClassification::PEDESTRIAN},
+  {"ANIMAL", RadarClassification::ANIMAL},   {"HAZARD", RadarClassification::HAZARD}};
+using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
+const std::map<std::string, std::uint8_t> RadarObjectsAdapter::OBJECT_LABEL_TO_UINT_MAP = {
+  {"UNKNOWN", ObjectClassification::UNKNOWN}, {"CAR", ObjectClassification::CAR},
+  {"TRUCK", ObjectClassification::TRUCK},     {"BUS", ObjectClassification::BUS},
+  {"TRAILER", ObjectClassification::TRAILER}, {"MOTORCYCLE", ObjectClassification::MOTORCYCLE},
+  {"BICYCLE", ObjectClassification::BICYCLE}, {"PEDESTRIAN", ObjectClassification::PEDESTRIAN},
+  {"ANIMAL", ObjectClassification::ANIMAL}};
 
 float mask_cov_value(double value)
 {
@@ -42,11 +56,13 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     "~/input/radar_info", rclcpp::SensorDataQoS(),
     std::bind(&RadarObjectsAdapter::radar_info_callback, this, std::placeholders::_1));
 
-  detections_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/detections", rclcpp::QoS(10).reliable().transient_local());
+  detections_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::DetectedObjects, "~/output/detections",
+    rclcpp::QoS(10).reliable().transient_local());
 
-  tracks_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-    "~/output/tracks", rclcpp::QoS(10).reliable().transient_local());
+  tracks_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::TrackedObjects, "~/output/tracks",
+    rclcpp::QoS(10).reliable().transient_local());
 
   default_position_z_ = this->declare_parameter<float>("default_position_z");
   default_velocity_z_ = this->declare_parameter<float>("default_velocity_z");
@@ -65,14 +81,57 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
   for (std::size_t i = 0; i < sizeof(std::size_t); ++i) {
     topic_hash_code_[i] = static_cast<std::uint8_t>((hash_code >> (i * 8)) & 0xFF);
   }
+
+  // Load classification remap policy
+  // classification_remap_ : std::unordered_map<std::string, std::string>
+  // declare_parameter 用 string → string マップ
+  classification_remap_str_["UNKNOWN"] =
+    declare_parameter<std::string>("classification_remap.UNKNOWN", "UNKNOWN");
+  classification_remap_str_["CAR"] =
+    declare_parameter<std::string>("classification_remap.CAR", "CAR");
+  classification_remap_str_["TRUCK"] =
+    declare_parameter<std::string>("classification_remap.TRUCK", "TRUCK");
+  classification_remap_str_["MOTORCYCLE"] =
+    declare_parameter<std::string>("classification_remap.MOTORCYCLE", "MOTORCYCLE");
+  classification_remap_str_["BICYCLE"] =
+    declare_parameter<std::string>("classification_remap.BICYCLE", "BICYCLE");
+  classification_remap_str_["PEDESTRIAN"] =
+    declare_parameter<std::string>("classification_remap.PEDESTRIAN", "PEDESTRIAN");
+  classification_remap_str_["ANIMAL"] =
+    declare_parameter<std::string>("classification_remap.ANIMAL", "ANIMAL");
+  classification_remap_str_["HAZARD"] =
+    declare_parameter<std::string>("classification_remap.HAZARD", "UNKNOWN");
+
+  classification_remap_.clear();
+  for (const auto & kv : classification_remap_str_) {
+    const std::string & radar_label = kv.first;        // e.g. "CAR"
+    const std::string & perception_label = kv.second;  // e.g. "TRUCK"
+
+    // Radar string → uint8
+    uint8_t radar_id = RadarObjectsAdapter::RADAR_LABEL_TO_UINT_MAP.at(radar_label);
+
+    // Perception string → uint8
+    uint8_t perception_id = ObjectClassification::UNKNOWN;
+    auto it = OBJECT_LABEL_TO_UINT_MAP.find(perception_label);
+    if (it != OBJECT_LABEL_TO_UINT_MAP.end()) {
+      perception_id = it->second;
+    } else {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "classification_remap: invalid Perception label '%s' for radar '%s'. Using UNKNOWN.",
+        perception_label.c_str(), radar_label.c_str());
+    }
+
+    classification_remap_[radar_id] = perception_id;
+  }
 }
 
 void RadarObjectsAdapter::radar_cov_to_detection_pose_cov(
   const std::array<float, 6> & radar_pose_cov, const double orientation_std,
   std::array<double, 36> & pose_cov)
 {
-  using DETECTION_COV_IDX = autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware::universe_utils::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
+  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
 
   pose_cov[DETECTION_COV_IDX::X_X] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::X_X]);
   pose_cov[DETECTION_COV_IDX::X_Y] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::X_Y]);
@@ -88,8 +147,8 @@ void RadarObjectsAdapter::radar_cov_to_detection_twist_cov(
   const std::array<float, 6> & radar_twist_cov, const float yaw, const float yaw_rate_std,
   std::array<double, 36> & twist_cov)
 {
-  using DETECTION_COV_IDX = autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware::universe_utils::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
+  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
 
   const float c = std::cos(yaw);
   const float s = std::sin(yaw);
@@ -118,8 +177,8 @@ void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
   const std::array<float, 6> & radar_acceleration_cov, const float yaw,
   std::array<double, 36> & acceleration_cov)
 {
-  using DETECTION_COV_IDX = autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware::universe_utils::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
+  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
 
   const float c = std::cos(yaw);
   const float s = std::sin(yaw);
@@ -173,7 +232,7 @@ void RadarObjectsAdapter::populate_common_fields(
   output_pose.position.x = input_object.position.x;
   output_pose.position.y = input_object.position.y;
   output_pose.position.z = position_z_available_ ? input_object.position.z : default_position_z_;
-  output_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
+  output_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
 
   radar_cov_to_detection_pose_cov(
     input_object.position_covariance, input_object.orientation_std,
@@ -211,50 +270,29 @@ void RadarObjectsAdapter::populate_classifications(
   const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
   std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications)
 {
-  using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
   using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
 
   for (const auto & input_classification : input_classifications) {
-    ObjectClassification output_classification;
-
-    switch (input_classification.label) {
-      case RadarClassification::UNKNOWN:
-        output_classification.label = ObjectClassification::UNKNOWN;
-        break;
-      case RadarClassification::CAR:
-        output_classification.label = ObjectClassification::CAR;
-        break;
-      case RadarClassification::TRUCK:
-        output_classification.label = ObjectClassification::TRUCK;
-        break;
-      case RadarClassification::MOTORCYCLE:
-        output_classification.label = ObjectClassification::MOTORCYCLE;
-        break;
-      case RadarClassification::BICYCLE:
-        output_classification.label = ObjectClassification::BICYCLE;
-        break;
-      case RadarClassification::PEDESTRIAN:
-        output_classification.label = ObjectClassification::PEDESTRIAN;
-        break;
-      case RadarClassification::ANIMAL:
-        output_classification.label = ObjectClassification::ANIMAL;
-        break;
-      case RadarClassification::HAZARD:
-        output_classification.label = ObjectClassification::UNKNOWN;
-        break;
-      default:
-        continue;
+    // class remap based on policy defined in parameter
+    if (classification_remap_.count(input_classification.label)) {
+      ObjectClassification output_classification;
+      output_classification.label = classification_remap_.at(input_classification.label);
+      output_classification.probability = input_classification.probability;
+      output_classifications.push_back(output_classification);
+    } else {
+      // if no remap rule matched, set UNKNOWN
+      ObjectClassification output_classification;
+      output_classification.label = ObjectClassification::UNKNOWN;
+      output_classification.probability = input_classification.probability;
+      output_classifications.push_back(output_classification);
     }
-
-    output_classification.probability = input_classification.probability;
-    output_classifications.push_back(output_classification);
   }
 }
 
 void RadarObjectsAdapter::parse_as_detections(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg)
 {
-  auto output_msg_ptr = std::make_unique<autoware_perception_msgs::msg::DetectedObjects>();
+  auto output_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(detections_pub_);
   auto & output_msg = *output_msg_ptr;
 
   output_msg.header = input_msg.header;
@@ -263,8 +301,18 @@ void RadarObjectsAdapter::parse_as_detections(
   for (const auto & input_object : input_msg.objects) {
     autoware_perception_msgs::msg::DetectedObject output_object;
 
+    // Populate common fields
     const auto & yaw = input_object.orientation;
     populate_common_fields(input_object, output_object, yaw);
+
+    // Set flags for kinematics
+    output_object.kinematics.has_position_covariance = true;
+    output_object.kinematics.orientation_availability =
+      autoware_perception_msgs::msg::DetectedObjectKinematics::AVAILABLE;
+    output_object.kinematics.has_twist = true;
+    output_object.kinematics.has_twist_covariance = true;
+
+    // Set classification
     populate_classifications(input_object.classifications, output_object.classification);
 
     output_msg.objects.push_back(output_object);
@@ -276,7 +324,7 @@ void RadarObjectsAdapter::parse_as_detections(
 void RadarObjectsAdapter::parse_as_tracks(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg)
 {
-  auto output_msg_ptr = std::make_unique<autoware_perception_msgs::msg::TrackedObjects>();
+  auto output_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(tracks_pub_);
   auto & output_msg = *output_msg_ptr;
 
   output_msg.header = input_msg.header;
@@ -298,8 +346,18 @@ void RadarObjectsAdapter::parse_as_tracks(
       }
     }
 
+    // Populate common fields
     const auto & yaw = input_object.orientation;
     populate_common_fields(input_object, output_object, yaw);
+
+    // Set flags for kinematics
+    output_object.kinematics.orientation_availability =
+      autoware_perception_msgs::msg::TrackedObjectKinematics::AVAILABLE;
+    output_object.kinematics.is_stationary =
+      input_object.movement_status !=
+      autoware_sensing_msgs::msg::RadarObject::MOVEMENT_STATUS_DYNAMIC;
+
+    // Populate classification
     populate_classifications(input_object.classifications, output_object.classification);
 
     output_msg.objects.push_back(output_object);

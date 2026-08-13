@@ -18,19 +18,13 @@
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils.hpp"
 
 #include <pcl_ros/transforms.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <nav_msgs/msg/occupancy_grid.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
 
 #include <memory>
 #include <string>
@@ -192,9 +186,22 @@ void LaserscanBasedOccupancyGridMapNode::onLaserscanPointCloud2WithObstacleAndRa
       inner_st_ptr = std::make_unique<ScopedTimeTrack>("transformPointcloud", *time_keeper_);
 
     try {
-      utils::transformPointcloud(*laserscan_pc_ptr, *tf2_, map_frame_, trans_laserscan_pc);
-      utils::transformPointcloud(filtered_obstacle_pc, *tf2_, map_frame_, trans_obstacle_pc);
-      utils::transformPointcloud(filtered_raw_pc, *tf2_, map_frame_, trans_raw_pc);
+      bool ok_ls =
+        utils::transformPointcloud(*laserscan_pc_ptr, *tf2_, map_frame_, trans_laserscan_pc);
+      bool ok_obs =
+        utils::transformPointcloud(filtered_obstacle_pc, *tf2_, map_frame_, trans_obstacle_pc);
+      bool ok_raw = utils::transformPointcloud(filtered_raw_pc, *tf2_, map_frame_, trans_raw_pc);
+
+      // check if tf is available
+      if (!ok_ls || !ok_obs || !ok_raw) {
+        RCLCPP_WARN(
+          get_logger(),
+          "Skip frame: TF unavailable (ls:%d obs:%d raw:%d). from [%s] to [%s] at %.3f", ok_ls,
+          ok_obs, ok_raw, filtered_obstacle_pc.header.frame_id.c_str(), map_frame_.c_str(),
+          rclcpp::Time(filtered_obstacle_pc.header.stamp).seconds());
+        return;
+      }
+
       gridmap_origin =
         utils::getPose(laserscan_pc_ptr->header.stamp, *tf2_, gridmap_origin_frame_, map_frame_);
       scan_origin =

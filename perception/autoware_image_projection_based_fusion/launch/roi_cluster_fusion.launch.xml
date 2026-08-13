@@ -1,4 +1,5 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="input/rois_number" default="6"/>
   <arg name="input/rois0" default="rois0"/>
   <arg name="input/camera_info0" default="/camera_info0"/>
@@ -19,6 +20,7 @@
   <arg name="input/rois8" default="rois8"/>
   <arg name="input/camera_info8" default="/camera_info8"/>
   <arg name="input/clusters" default="clusters"/>
+  <arg name="input/concatenation_info" default="/sensing/lidar/concatenated/pointcloud_info"/>
   <arg name="output/clusters" default="labeled_clusters"/>
   <arg name="param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/roi_cluster_fusion.param.yaml"/>
   <arg name="sync_param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/fusion_common.param.yaml"/>
@@ -35,10 +37,12 @@
   <arg name="input/image8" default="/image_raw8"/>
   <group>
     <node pkg="autoware_image_projection_based_fusion" exec="roi_cluster_fusion_node" name="roi_cluster_fusion" output="screen">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
       <param name="rois_number" value="$(var input/rois_number)"/>
       <param from="$(var param_path)"/>
       <param from="$(var sync_param_path)"/>
       <remap from="input" to="$(var input/clusters)"/>
+      <remap from="input/concatenation_info" to="$(var input/concatenation_info)"/>
       <remap from="output" to="$(var output/clusters)"/>
 
       <!-- rois, camera and info -->

@@ -2,6 +2,51 @@
 Changelog for package yabloc_image_processing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(yabloc_image_processing): sync with launcher side parameter (`#12520 <https://github.com/autowarefoundation/autoware_universe/issues/12520>`_)
+  sync with launcher side parameter
+* fix(clang-tidy): fix unchecked optional access in yabloc image processing (`#12613 <https://github.com/autowarefoundation/autoware_universe/issues/12613>`_)
+* Contributors: Kento Yabuuchi, Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(localization): use emplace/emplace_back to avoid temporary object creation (`#12232 <https://github.com/mitsudome-r/autoware_universe/issues/12232>`_)
+* Contributors: github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* chore(yabloc_image_processing, autoware_pose_estimator_arbiter): resolve cmake targets (`#11795 <https://github.com/autowarefoundation/autoware_universe/issues/11795>`_)
+  * resolve sophus
+  * resolve magic_enum
+  ---------
+* Contributors: Ryohsuke Mitsudome, Taeseung Sohn
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore: update maintainer (`#11373 <https://github.com/autowarefoundation/autoware_universe/issues/11373>`_)
+  * chore: update maintainer
+  remove Ryu Yamamoto
+  * chore: update maintainer
+  remove Kento Yabuuchi
+  * chore: update maintainer
+  remove Shintaro Sakoda
+  ---------
+* Contributors: Motz, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 

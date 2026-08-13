@@ -1,0 +1,161 @@
+cmake_minimum_required(VERSION 3.14)
+project(autoware_camera_streampetr)
+
+find_package(autoware_cmake REQUIRED)
+autoware_package()
+
+add_compile_options(-Wno-deprecated-declarations)
+
+option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
+
+# set flags for CUDA availability
+option(CUDA_AVAIL "CUDA available" OFF)
+find_package(CUDA)
+if(CUDA_FOUND)
+  find_library(CUBLAS_LIBRARIES cublas HINTS
+    ${CUDA_TOOLKIT_ROOT_DIR}/lib64
+    ${CUDA_TOOLKIT_ROOT_DIR}/lib
+  )
+  if(CUDA_VERBOSE)
+    message("CUDA is available!")
+    message("CUDA Libs: ${CUDA_LIBRARIES}")
+    message("CUDA Headers: ${CUDA_INCLUDE_DIRS}")
+  endif()
+  # Note: cublas_device was depreciated in CUDA version 9.2
+  #       https://forums.developer.nvidia.com/t/where-can-i-find-libcublas-device-so-or-libcublas-device-a/67251/4
+  #       In LibTorch, CUDA_cublas_device_LIBRARY is used.
+  unset(CUDA_cublas_device_LIBRARY CACHE)
+  set(CUDA_AVAIL ON)
+else()
+  message("CUDA NOT FOUND")
+  set(CUDA_AVAIL OFF)
+endif()
+
+# set flags for TensorRT availability
+option(TRT_AVAIL "TensorRT available" OFF)
+# try to find the tensorRT modules
+find_library(NVINFER nvinfer)
+find_library(NVONNXPARSER nvonnxparser)
+if(NVINFER AND NVONNXPARSER)
+  if(CUDA_VERBOSE)
+    message("TensorRT is available!")
+    message("NVINFER: ${NVINFER}")
+    message("NVONNXPARSER: ${NVONNXPARSER}")
+  endif()
+  set(TRT_AVAIL ON)
+else()
+  message("TensorRT is NOT Available")
+  set(TRT_AVAIL OFF)
+endif()
+
+if(TRT_AVAIL AND CUDA_AVAIL)
+  find_package(ament_cmake_auto REQUIRED)
+  find_package(yaml-cpp REQUIRED)
+  ament_auto_find_build_dependencies()
+
+  include_directories(
+    include
+    ${CUDA_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+  )
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
+    set(CUDA_NVCC_FLAGS "-g -G")
+  endif()
+
+  ament_auto_add_library(${PROJECT_NAME}_lib SHARED
+    lib/postprocess/non_maximum_suppression.cpp
+    lib/network/camera_data_store.cpp
+    lib/network/camera_ego_mask.cpp
+    lib/network/network.cpp
+  )
+
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "12.8")
+    if(CUDA_VERSION VERSION_LESS "13.0")
+      list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+    else()  # CUDA 13.0 renamed SM101 to SM110
+      list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+    endif()
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
+  else()
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+  endif()
+
+  cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
+    lib/postprocess/circle_nms_kernel.cu
+    lib/postprocess/postprocess_kernel.cu
+    lib/network/ego_mask_kernel.cu
+    lib/network/memory.cu
+    lib/network/preprocess_kernel.cu
+  )
+
+  target_link_libraries(
+    ${PROJECT_NAME}_lib
+    ${NVINFER}
+    ${NVONNXPARSER}
+    ${CUDA_LIBRARIES}
+    ${CUBLAS_LIBRARIES}
+    ${CUDA_curand_LIBRARY}
+    ${PROJECT_NAME}_cuda_lib
+    ${OpenCV_LIBRARIES}
+    yaml-cpp
+  )
+
+  target_include_directories(${PROJECT_NAME}_lib
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
+  )
+
+  # To suppress unknown-pragmas error. The root-cause is CUB library in CUDA 11.6.
+  # This issue was fixed by https://github.com/NVIDIA/cub/commit/7d608bf1dc14553e2fb219eabeed80b76621b6fe
+  target_include_directories(${PROJECT_NAME}_lib
+    SYSTEM PUBLIC
+    ${CUDA_INCLUDE_DIRS}
+  )
+
+  target_include_directories(${PROJECT_NAME}_cuda_lib
+    SYSTEM PUBLIC
+    ${autoware_cuda_utils_INCLUDE_DIRS}
+  )
+
+  ament_auto_add_library(${PROJECT_NAME}_component SHARED
+    src/node.cpp
+  )
+
+  target_link_libraries(${PROJECT_NAME}_component
+    ${PROJECT_NAME}_lib
+  )
+
+  rclcpp_components_register_node(${PROJECT_NAME}_component
+    PLUGIN "autoware::camera_streampetr::StreamPetrNode"
+    EXECUTABLE ${PROJECT_NAME}_node
+    EXECUTOR MultiThreadedExecutor
+  )
+
+  install(
+    TARGETS ${PROJECT_NAME}_cuda_lib
+    DESTINATION lib
+  )
+
+  ament_auto_package(
+    INSTALL_TO_SHARE
+      launch
+      config
+  )
+
+else()
+  find_package(ament_cmake_auto REQUIRED)
+  ament_auto_find_build_dependencies()
+
+  autoware_ament_auto_package(
+    INSTALL_TO_SHARE
+      launch
+  )
+endif()

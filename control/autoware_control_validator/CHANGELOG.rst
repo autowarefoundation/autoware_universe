@@ -2,6 +2,85 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: control : fix contol packages compile error when using ros2 jazzy (`#11556 <https://github.com/autowarefoundation/autoware_universe/issues/11556>`_)
+* Contributors: Ryohsuke Mitsudome, 心刚
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* refactor(control_validator): reduce copy and add test for trajectory aligning (`#11718 <https://github.com/autowarefoundation/autoware_universe/issues/11718>`_)
+  * feat: add max trajectory size for reference trajectory alignment
+  * refactor: feed reverse trajectory before calculation
+  * refactor: add and arrange appropriate empty vector guards
+  * refactor: use only the first and the last segments of ref trajectory
+  * refactor: expose align function into detail namespace so that it can be tested
+  * add test for align_trajectory_with_reference_trajectory
+  * refactor: use boundary segment directly on interpolation
+  * minor: remove unnecessary reference from const bool&
+  * add explicit type guard for size >= 2
+  * addressing copilot review
+  * refactor clamping trajectory function for clearer branching and algorithm flow
+  * add 2d case test (including pathological one)
+  * revise test code
+  * disable pathological test case
+  * copilot review response
+  ---------
+* feat(control_validator): add low-pass filter parameters for vehicle and target velocities only for over_velocity (`#11610 <https://github.com/autowarefoundation/autoware_universe/issues/11610>`_)
+  * feat(control_validator): add low-pass filter parameters for vehicle and target velocities for over_velocity
+  ---------
+* Contributors: Kyoichi Sugahara, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taeseung Sohn
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(planning_validator): init validation status (`#11119 <https://github.com/autowarefoundation/autoware_universe/issues/11119>`_)
+  * fix(planning_validator): init validation status
+  * fix(control_validator): init validation status
+  ---------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(control_validator): enhance trajectory validation with previous reference trajectory (`#10939 <https://github.com/autowarefoundation/autoware_universe/issues/10939>`_)
+  * feat(control_validator): enhance trajectory validation with previous reference trajectory
+  * fix(test_control_validator): update lateral deviation test cases to reflect validation status
+  ---------
+* fix(autoware_control_validator): prevent division by zero in time calculation (`#10926 <https://github.com/autowarefoundation/autoware_universe/issues/10926>`_)
+  * fix(lateral_jerk_validator): prevent division by zero in time calculation
+  * fix(lateral_jerk_validator): improve stability by enforcing minimum time difference for calculations
+  ---------
+* feat(control_validator): disable control validator error report when not in autonomous control (`#10871 <https://github.com/autowarefoundation/autoware_universe/issues/10871>`_)
+  * feat(control_validator): disable control validator error report when not in autonomous control
+  * also fix control validator launch
+  * fix: work with yaw validator; fix yaw validator missing in all valid; add a debug info
+  * chore: get rid of the yaw warn in is_all_valid
+  * chore: fix topic remapping in launch file
+  ---------
+* feat(control_validator): 2 thresholds for the yaw deviation (warn/error) (`#10876 <https://github.com/autowarefoundation/autoware_universe/issues/10876>`_)
+* feat(control_validator): add yaw_deviation (`#10872 <https://github.com/autowarefoundation/autoware_universe/issues/10872>`_)
+* Contributors: Kyoichi Sugahara, Maxime CLEMENT, Mete Fatih Cırıt, Satoshi OTA, Yukihiro Saito, Yuxuan Liu
+
 0.46.0 (2025-06-20)
 -------------------
 

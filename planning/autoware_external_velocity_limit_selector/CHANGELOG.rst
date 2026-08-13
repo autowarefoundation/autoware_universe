@@ -2,6 +2,38 @@
 Changelog for package autoware_external_velocity_limit_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_universe): use autoware_ament_auto_package in planning packages (`#12291 <https://github.com/mitsudome-r/autoware_universe/issues/12291>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* fix(external_velocity_limit_selector): correctly handle clear command on empty table (`#11463 <https://github.com/mitsudome-r/autoware_universe/issues/11463>`_)
+  * Update clearVelocityLimit to call updateVelocityLimit
+  Call updateVelocityLimit when the velocity limit table is empty.
+  Fixes `#11370 <https://github.com/mitsudome-r/autoware_universe/issues/11370>`_
+  * Change expected velocity limit in test case
+  Update test to check max_velocity against max_vel_param, because limit of 0.0 does not make sense
+  ---------
+* Contributors: Marvin Seegert, Vishal Chauhan, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 

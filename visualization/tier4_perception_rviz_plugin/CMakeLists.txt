@@ -5,6 +5,9 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(Qt5 REQUIRED COMPONENTS Widgets)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 set(OD_PLUGIN_LIB_SRC
   src/object_detection/detected_objects_wf_display.cpp
   src/object_detection/detected_objects_wf_helper.cpp
@@ -12,21 +15,13 @@ set(OD_PLUGIN_LIB_SRC
 
 set(OD_PLUGIN_LIB_HEADERS
   include/tier4_perception_rviz_plugin/visibility_control.hpp
-)
-
-set(OD_PLUGIN_LIB_HEADERS_TO_WRAP
   include/tier4_perception_rviz_plugin/object_detection/detected_objects_wf_display.hpp
   include/tier4_perception_rviz_plugin/object_detection/detected_objects_wf_helper.hpp
 )
 
-foreach(header "${OD_PLUGIN_LIB_HEADERS_TO_WRAP}")
-  qt5_wrap_cpp(OD_PLUGIN_LIB_HEADERS_MOC "${header}")
-endforeach()
-
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${COMMON_SRC}
   ${OD_PLUGIN_LIB_HEADERS}
-  ${OD_PLUGIN_LIB_HEADERS_MOC}
   ${OD_PLUGIN_LIB_SRC}
 )
 target_link_libraries(${PROJECT_NAME}

@@ -16,13 +16,13 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/node_options.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <gtest/gtest-param-test.h>
 #include <gtest/gtest.h>
-#include <tf2/LinearMath/Quaternion.h>
 
 #include <cmath>
 #include <memory>
@@ -100,7 +100,8 @@ protected:
          "/config/test_vehicle_info.param.yaml"});
 
     node_ = std::make_shared<ControlValidator>(options);
-    trajectory_validator_ = std::make_shared<TrajectoryValidator>(*node_);
+    ::control_validator::ParamListener param_listener(node_->get_node_parameters_interface());
+    trajectory_validator_ = std::make_shared<TrajectoryValidator>(param_listener.get_params());
   }
   void TearDown() override { rclcpp::shutdown(); }
 
@@ -203,7 +204,8 @@ protected:
          "/config/test_vehicle_info.param.yaml"});
 
     node_ = std::make_shared<ControlValidator>(options);
-    acceleration_validator_ = std::make_shared<AccelerationValidator>(*node_);
+    ::control_validator::ParamListener param_listener(node_->get_node_parameters_interface());
+    acceleration_validator_ = std::make_shared<AccelerationValidator>(param_listener.get_params());
   }
   void TearDown() override { rclcpp::shutdown(); }
 

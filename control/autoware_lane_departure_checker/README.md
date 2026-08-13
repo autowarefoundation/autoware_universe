@@ -51,7 +51,7 @@ This package includes the following features:
 - /localization/kinematic_state [`nav_msgs::msg::Odometry`]
 - /map/vector_map [`autoware_map_msgs::msg::LaneletMapBin`]
 - /planning/mission_planning/route [`autoware_planning_msgs::msg::LaneletRoute`]
-- /planning/scenario_planning/trajectory [`autoware_planning_msgs::msg::Trajectory`]
+- /planning/trajectory [`autoware_planning_msgs::msg::Trajectory`]
 - /control/trajectory_follower/predicted_trajectory [`autoware_planning_msgs::msg::Trajectory`]
 
 ### Output
@@ -89,13 +89,11 @@ This package includes the following features:
 
 ### Core Parameters
 
-| Name                       | Type   | Description                                                                        | Default value |
-| :------------------------- | :----- | :--------------------------------------------------------------------------------- | :------------ |
-| footprint_margin_scale     | double | Coefficient for expanding footprint margin. Multiplied by 1 standard deviation.    | 1.0           |
-| footprint_extra_margin     | double | Coefficient for expanding footprint margin. When checking for lane departure       | 0.0           |
-| resample_interval          | double | Minimum Euclidean distance between points when resample trajectory.[m]             | 0.3           |
-| max_deceleration           | double | Maximum deceleration when calculating braking distance.                            | 2.8           |
-| delay_time                 | double | Delay time which took to actuate brake when calculating braking distance. [second] | 1.3           |
-| max_lateral_deviation      | double | Maximum lateral deviation in vehicle coordinate. [m]                               | 2.0           |
-| max_longitudinal_deviation | double | Maximum longitudinal deviation in vehicle coordinate. [m]                          | 2.0           |
-| max_yaw_deviation_deg      | double | Maximum ego yaw deviation from trajectory. [deg]                                   | 60.0          |
+| Name                   | Type   | Description                                                                        | Default value |
+| :--------------------- | :----- | :--------------------------------------------------------------------------------- | :------------ |
+| footprint_margin_scale | double | Coefficient for expanding footprint margin. Multiplied by 1 standard deviation.    | 1.0           |
+| footprint_extra_margin | double | Coefficient for expanding footprint margin. When checking for lane departure       | 0.0           |
+| resample_interval      | double | Minimum Euclidean distance between points when resample trajectory.[m]             | 0.3           |
+| max_deceleration       | double | Maximum deceleration when calculating braking distance.                            | 2.8           |
+| delay_time             | double | Delay time which took to actuate brake when calculating braking distance. [second] | 1.3           |
+| min_braking_distance   | double | Minimum braking distance. [m]                                                      | 0.0           |

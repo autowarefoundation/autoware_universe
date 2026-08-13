@@ -19,7 +19,9 @@
 #include <autoware_utils/math/trigonometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
+#include <memory>
 #include <string>
+#include <thread>
 
 namespace autoware::rviz_plugins
 {
@@ -148,9 +150,84 @@ visualization_msgs::msg::MarkerArray createTargetMarker(
 }
 }  // namespace
 
+// Definition of static member variables
+std::mutex PlanningFactorRvizPlugin::s_mutex_;
+std::optional<double> PlanningFactorRvizPlugin::s_baselink2front_;
+std::optional<double> PlanningFactorRvizPlugin::s_baselink2rear_;
+bool PlanningFactorRvizPlugin::s_request_started_{false};
+
+void PlanningFactorRvizPlugin::start_vehicle_info_request()
+{
+  {
+    std::lock_guard<std::mutex> lock(s_mutex_);
+    if (s_request_started_ || s_baselink2front_.has_value()) {
+      return;
+    }
+    s_request_started_ = true;
+  }
+
+  // Start a detached thread to handle service call
+  std::thread([]() {
+    try {
+      if (!rclcpp::ok()) {
+        return;
+      }
+
+      auto node = std::make_shared<rclcpp::Node>("planning_factor_rviz_plugin_vehicle_info_node");
+      auto client = node->create_client<rcl_interfaces::srv::GetParameters>(
+        "/adapi/node/vehicle_info/get_parameters");
+
+      // Wait for service to be ready
+      while (rclcpp::ok() && !client->wait_for_service(std::chrono::seconds(1))) {
+        RCLCPP_WARN_ONCE(
+          rclcpp::get_logger("PlanningFactorRvizPlugin"), "Waiting for vehicle_info service...");
+      }
+
+      if (!rclcpp::ok()) {
+        return;
+      }
+
+      // Send request
+      auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
+      request->names = {"wheel_base", "front_overhang", "rear_overhang"};
+      auto future = client->async_send_request(request);
+
+      // Wait for response
+      if (
+        rclcpp::spin_until_future_complete(node, future, std::chrono::seconds(10)) ==
+        rclcpp::FutureReturnCode::SUCCESS) {
+        const auto & response = future.get();
+        if (response->values.size() >= 3) {
+          const double wheel_base = response->values[0].double_value;
+          const double front_overhang = response->values[1].double_value;
+          const double rear_overhang = response->values[2].double_value;
+          std::lock_guard<std::mutex> lock(s_mutex_);
+          s_baselink2front_ = wheel_base + front_overhang;
+          s_baselink2rear_ = rear_overhang;
+        }
+      }
+    } catch (...) {
+      // Ignore exceptions during shutdown
+    }
+  }).detach();
+}
+
 void PlanningFactorRvizPlugin::processMessage(
   const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg)
 {
+  // Cache both bumper offsets so STOP visualization can respect reverse maneuvers.
+  double baselink2front = 0.0;
+  double baselink2rear = 0.0;
+  {
+    std::lock_guard<std::mutex> lock(s_mutex_);
+    if (s_baselink2front_.has_value()) {
+      baselink2front = s_baselink2front_.value();
+    }
+    if (s_baselink2rear_.has_value()) {
+      baselink2rear = s_baselink2rear_.value();
+    }
+  }
+
   size_t i = 0L;
   for (const auto & factor : msg->factors) {
     const auto text = factor.module + (factor.detail.empty() ? "" : " (" + factor.detail + ")");
@@ -158,26 +235,51 @@ void PlanningFactorRvizPlugin::processMessage(
     switch (factor.behavior) {
       case autoware_internal_planning_msgs::msg::PlanningFactor::STOP:
         for (const auto & control_point : factor.control_points) {
+          // Planning factors already carry driving direction. Use the matching bumper offset so
+          // STOP walls align with the effective leading edge in reverse as well as forward.
+          const double longitudinal_offset =
+            factor.is_driving_forward ? baselink2front : baselink2rear;
           const auto virtual_wall = createStopVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
+            control_point.pose, text, msg->header.stamp, i++, longitudinal_offset, "",
+            factor.is_driving_forward);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
 
       case autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
         for (const auto & control_point : factor.control_points) {
+          // Planning factors already carry driving direction. Use the matching bumper offset so
+          // SLOWDOWN walls align with the effective leading edge in reverse as well as forward.
+          const double longitudinal_offset =
+            factor.is_driving_forward ? baselink2front : baselink2rear;
           const auto virtual_wall = createSlowDownVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
+            control_point.pose, text, msg->header.stamp, i++, longitudinal_offset, "",
+            factor.is_driving_forward);
+          add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
+        }
+        break;
+
+      case autoware_internal_planning_msgs::msg::PlanningFactor::UNKNOWN:
+        for (const auto & control_point : factor.control_points) {
+          // Planning factors already carry driving direction. Use the matching bumper offset so
+          // UNKNOWN walls align with the effective leading edge in reverse as well as forward.
+          const double longitudinal_offset =
+            factor.is_driving_forward ? baselink2front : baselink2rear;
+          const auto virtual_wall = createSlowDownVirtualWallMarker(
+            control_point.pose, text, msg->header.stamp, i++, longitudinal_offset, "",
+            factor.is_driving_forward);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
     }
 
-    for (const auto & safety_factor : factor.safety_factors.factors) {
-      const auto color = safety_factor.is_safe ? getGreen(0.999) : getRed(0.999);
-      for (const auto & point : safety_factor.points) {
-        const auto safety_factor_marker = createTargetMarker(i++, point, color, factor.module);
-        add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(safety_factor_marker));
+    if (show_safety_factors_.getBool()) {
+      for (const auto & safety_factor : factor.safety_factors.factors) {
+        const auto color = safety_factor.is_safe ? getGreen(0.999) : getRed(0.999);
+        for (const auto & point : safety_factor.points) {
+          const auto safety_factor_marker = createTargetMarker(i++, point, color, factor.module);
+          add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(safety_factor_marker));
+        }
       }
     }
   }

@@ -1,3 +1,5 @@
 /**:
   ros__parameters:
-    available_size: 1024 # MB
+    available_size: 1024 # MiB
+    warning_margin: 0 # MiB
+    swap_error_threshold: 1024 # MiB

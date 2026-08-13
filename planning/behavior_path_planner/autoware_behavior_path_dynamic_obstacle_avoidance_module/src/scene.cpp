@@ -20,7 +20,6 @@
 #include "autoware/signal_processing/lowpass_filter_1d.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
@@ -103,8 +102,8 @@ void appendExtractedPolygonMarker(
 bool isEndPointsConnected(
   const lanelet::ConstLanelet & left_lane, const lanelet::ConstLanelet & right_lane)
 {
-  const auto & left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
-  const auto & right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
+  const auto left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
+  const auto right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
 
   constexpr double epsilon = 1e-5;
   return (right_back_point_2d - left_back_point_2d).norm() < epsilon;
@@ -114,19 +113,6 @@ template <typename T>
 void pushUniqueVector(T & base_vector, const T & additional_vector)
 {
   base_vector.insert(base_vector.end(), additional_vector.begin(), additional_vector.end());
-}
-
-template <typename T>
-std::optional<T> getObjectFromUuid(const std::vector<T> & objects, const std::string & target_uuid)
-{
-  const auto itr = std::find_if(objects.begin(), objects.end(), [&](const auto & object) {
-    return object.uuid == target_uuid;
-  });
-
-  if (itr == objects.end()) {
-    return std::nullopt;
-  }
-  return *itr;
 }
 
 std::pair<double, double> projectObstacleVelocityToTrajectory(
@@ -327,7 +313,9 @@ DynamicObstacleAvoidanceModule::DynamicObstacleAvoidanceModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{
+    name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface},  // NOLINT
   parameters_{std::move(parameters)},
   target_objects_manager_{TargetObjectsManager(
     parameters_->successive_num_to_entry_dynamic_avoidance_condition,

@@ -1,0 +1,8 @@
+<launch>
+  <arg name="map_topic_name" default="/map/vector_map"/>
+  <node pkg="autoware_manual_lane_change_handler" exec="autoware_manual_lane_change_handler_node" name="manual_lane_change_handler" namespace="">
+    <remap from="~/input/vector_map" to="$(var map_topic_name)"/>
+    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+    <remap from="~/input/reroute_availability" to="/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/output/is_reroute_available"/>
+  </node>
+</launch>

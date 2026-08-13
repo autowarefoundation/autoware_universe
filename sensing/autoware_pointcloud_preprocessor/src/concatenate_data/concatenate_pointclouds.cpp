@@ -98,7 +98,8 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 
   // Cloud info
   {
-    concatenation_info_ = std::make_unique<ConcatenationInfo>("naive", input_topics_);
+    concatenation_info_manager_ =
+      std::make_unique<ConcatenationInfoManager>("naive", input_topics_);
   }
 
   // Output Publishers
@@ -125,7 +126,7 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 
     // First input_topics_.size () filters are valid
     for (size_t d = 0; d < input_topics_.size(); ++d) {
-      cloud_stdmap_.insert(std::make_pair(input_topics_[d], nullptr));
+      cloud_stdmap_.emplace(input_topics_[d], nullptr);
       cloud_stdmap_tmp_ = cloud_stdmap_;
 
       // CAN'T use auto type here.
@@ -259,9 +260,9 @@ void PointCloudConcatenationComponent::combineClouds(
       if (concatenation_info_ptr == nullptr) {
         concatenation_info_ptr =
           std::make_shared<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-            concatenation_info_->reset_and_get_base_info());
+            concatenation_info_manager_->reset_and_get_base_info());
       }
-      concatenation_info_->update_source_from_point_cloud(
+      concatenation_info_manager_->update_source_from_point_cloud(
         *transformed_cloud_ptr, e.first,
         autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK, *concatenation_info_ptr);
     } else {
@@ -269,7 +270,7 @@ void PointCloudConcatenationComponent::combineClouds(
     }
   }
   if (concatenation_info_ptr != nullptr && concat_cloud_ptr != nullptr) {
-    concatenation_info_->set_result(*concat_cloud_ptr, *concatenation_info_ptr);
+    concatenation_info_manager_->set_result(*concat_cloud_ptr, *concatenation_info_ptr);
   }
 }
 

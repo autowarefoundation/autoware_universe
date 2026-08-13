@@ -2,16 +2,19 @@
   <arg name="output_metrics" default="false"/>
   <arg name="input/odometry" default="/localization/kinematic_state"/>
   <arg name="input/acceleration" default="/localization/acceleration"/>
-  <arg name="input/trajectory" default="/planning/scenario_planning/trajectory"/>
+  <arg name="input/trajectory" default="/planning/trajectory"/>
   <arg name="input/vector_map" default="/map/vector_map"/>
   <arg name="input/route" default="/planning/mission_planning/route"/>
   <arg name="input/behavior_path" default="/planning/scenario_planning/lane_driving/behavior_planning/path_with_lane_id"/>
   <arg name="input/steering_status" default="/vehicle/status/steering_status"/>
   <arg name="input/objects" default="/perception/object_recognition/objects"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <!-- control evaluator -->
   <group>
     <node name="control_evaluator" exec="control_evaluator" pkg="autoware_control_evaluator">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
       <param from="$(find-pkg-share autoware_control_evaluator)/config/control_evaluator.param.yaml"/>
       <param name="output_metrics" value="$(var output_metrics)"/>
       <remap from="~/input/odometry" to="$(var input/odometry)"/>

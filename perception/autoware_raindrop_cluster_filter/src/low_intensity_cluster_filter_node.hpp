@@ -20,6 +20,7 @@
 #include "autoware_utils/system/stop_watch.hpp"
 
 #include <Eigen/Eigen>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
@@ -39,13 +40,13 @@ public:
   explicit LowIntensityClusterFilter(const rclcpp::NodeOptions & node_options);
 
 private:
-  void objectCallback(
-    const tier4_perception_msgs::msg::DetectedObjectsWithFeature::ConstSharedPtr input_msg);
+  // cppcheck-suppress unknownMacro
+  void objectCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature) input_msg);
   bool isValidatedCluster(const sensor_msgs::msg::PointCloud2 & cluster);
 
-  rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr object_pub_;
-  rclcpp::Subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr
-    object_sub_;
+  AUTOWARE_PUBLISHER_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) object_pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) object_sub_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;

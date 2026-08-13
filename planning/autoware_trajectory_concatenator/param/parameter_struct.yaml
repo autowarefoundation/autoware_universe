@@ -1,0 +1,6 @@
+concatenator:
+  duration_time:
+    type: double
+    default_value: 0.2
+    description: Duration time to keep the trajectory (it will be deleted once exceeding this value).
+    read_only: false

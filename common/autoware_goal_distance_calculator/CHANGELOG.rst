@@ -2,6 +2,31 @@
 Changelog for package autoware_goal_distance_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(autoware_goal_distance_calculator): remove duplicated goal distance calculator assignment (`#11575 <https://github.com/autowarefoundation/autoware_universe/issues/11575>`_)
+  remove duplicated goal distance calculator assignment
+* Contributors: Ryohsuke Mitsudome, danielsanchezaran
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 

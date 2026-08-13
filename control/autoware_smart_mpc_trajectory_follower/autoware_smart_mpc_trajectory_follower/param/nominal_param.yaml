@@ -1,4 +1,4 @@
-# default parameter is set for sample_vehicle of AWF: https://github.com/autowarefoundation/sample_vehicle_launch/tree/main/sample_vehicle_description
+# default parameter is set for sample_vehicle of AWF: https://github.com/autowarefoundation/autoware_core/blob/main/description/autoware_sample_vehicle_description
 nominal_parameter:
   vehicle_info:
     wheel_base: 2.79

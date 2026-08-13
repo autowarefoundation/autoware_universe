@@ -1,0 +1,58 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: CameraParticleCorrector.node
+package:
+  name: yabloc_particle_filter
+  provider: autoware
+launch:
+  plugin: yabloc::modularized_particle_filter::CameraParticleCorrector
+  executable: yabloc_camera_particle_corrector_node
+# interfaces
+subscribers:
+  - name: predicted_particles
+    message_type: yabloc_particle_filter/msg/ParticleArray
+  - name: line_segments_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: ll2_road_marking
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: ll2_bounding_box
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: pose
+    message_type: geometry_msgs/msg/PoseStamped
+publishers:
+  - name: weighted_particles
+    message_type: yabloc_particle_filter/msg/ParticleArray
+  - name: match_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/debug/match_image
+  - name: cost_map_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/debug/cost_map_image
+  - name: cost_map_range
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/cost_map_range
+  - name: state_string
+    message_type: std_msgs/msg/String
+    remap_target: ~/debug/state_string
+  - name: scored_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/debug/scored_cloud
+  - name: scored_post_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/debug/scored_post_cloud
+servers:
+  - name: switch_srv
+    message_type: std_srvs/srv/SetBool
+    remap_target: ~/service/switch_srv
+# parameters
+param_files:
+  - name: camera_particle_corrector_param
+    default: config/camera_particle_corrector.param.yaml
+param_values: []
+# processes
+processes:
+  - name: correct_with_camera
+    trigger_conditions:
+      - on_input: predicted_particles
+    outcomes:
+      - to_output: weighted_particles

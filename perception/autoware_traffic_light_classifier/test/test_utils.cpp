@@ -1,0 +1,254 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "../src/traffic_light_classifier_process.hpp"
+
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <opencv2/imgcodecs.hpp>
+
+#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
+
+#include <gtest/gtest.h>
+
+#include <string>
+
+bool readImage(const std::string & filename, cv::Mat & rgb_img)
+{
+  const auto package_dir =
+    ament_index_cpp::get_package_share_directory("autoware_traffic_light_classifier");
+  const auto path = package_dir + "/test_data/" + filename;
+  const cv::Mat img = cv::imread(path);
+  if (img.empty()) {
+    return false;
+  }
+  cv::cvtColor(img, rgb_img, cv::COLOR_BGR2RGB);
+  return true;
+}
+
+///////////////////////////////////////////////////////////
+// check over exposure case
+TEST(is_over_exposure, normal)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("normal.png", rgb_img));
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_over_exposure, backlight_weak)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("backlight_weak.png", rgb_img));
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_over_exposure, backlight_medium)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("backlight_medium.png", rgb_img));
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_over_exposure, backlight_strong)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("backlight_strong.png", rgb_img));
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
+  EXPECT_TRUE(result);
+}
+
+///////////////////////////////////////////////////////////
+// check under exposure case
+TEST(is_under_exposure, normal)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_normal.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_under_exposure, dimmed_weak)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_dimmed_weak.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_under_exposure, dimmed_medium)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_dimmed_medium.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_under_exposure, dimmed_strong)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_dimmed_strong.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
+  EXPECT_TRUE(result);
+}
+
+TEST(convert_color_string_to_t4, normal)
+{
+  using tier4_perception_msgs::msg::TrafficLightElement;
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_string_to_t4("red"), TrafficLightElement::RED);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_string_to_t4("yellow"),
+    TrafficLightElement::AMBER);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_string_to_t4("green"),
+    TrafficLightElement::GREEN);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_string_to_t4("white"),
+    TrafficLightElement::WHITE);
+  EXPECT_EQ(  // return UNKNOWN for unknown string
+    autoware::traffic_light::utils::convert_color_string_to_t4("abcde"),
+    TrafficLightElement::UNKNOWN);
+}
+
+TEST(convert_shape_string_to_t4, normal)
+{
+  using tier4_perception_msgs::msg::TrafficLightElement;
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("circle"),
+    TrafficLightElement::CIRCLE);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("left"),
+    TrafficLightElement::LEFT_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("right"),
+    TrafficLightElement::RIGHT_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("straight"),
+    TrafficLightElement::UP_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("up_left"),
+    TrafficLightElement::UP_LEFT_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("up_right"),
+    TrafficLightElement::UP_RIGHT_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("down"),
+    TrafficLightElement::DOWN_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("down_left"),
+    TrafficLightElement::DOWN_LEFT_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("down_right"),
+    TrafficLightElement::DOWN_RIGHT_ARROW);
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_string_to_t4("cross"),
+    TrafficLightElement::CROSS);
+  EXPECT_EQ(  // return UNKNOWN for unknown string
+    autoware::traffic_light::utils::convert_shape_string_to_t4("abcde"),
+    TrafficLightElement::UNKNOWN);
+}
+
+TEST(convert_color_t4_to_string, normal)
+{
+  using tier4_perception_msgs::msg::TrafficLightElement;
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_t4_to_string(TrafficLightElement::RED), "red");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_t4_to_string(TrafficLightElement::AMBER),
+    "yellow");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_t4_to_string(TrafficLightElement::GREEN),
+    "green");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_color_t4_to_string(TrafficLightElement::WHITE),
+    "white");
+  EXPECT_EQ(  // return "unknown" for unknown enum value
+    autoware::traffic_light::utils::convert_color_t4_to_string(99),
+    "unknown");
+}
+
+TEST(convert_shape_t4_to_string, normal)
+{
+  using tier4_perception_msgs::msg::TrafficLightElement;
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::CIRCLE),
+    "circle");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::LEFT_ARROW),
+    "left");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::RIGHT_ARROW),
+    "right");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::UP_ARROW),
+    "straight");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::UP_LEFT_ARROW),
+    "up_left");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::UP_RIGHT_ARROW),
+    "up_right");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::DOWN_ARROW),
+    "down");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(
+      TrafficLightElement::DOWN_LEFT_ARROW),
+    "down_left");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(
+      TrafficLightElement::DOWN_RIGHT_ARROW),
+    "down_right");
+  EXPECT_EQ(
+    autoware::traffic_light::utils::convert_shape_t4_to_string(TrafficLightElement::CROSS),
+    "cross");
+  EXPECT_EQ(  // return "unknown" for unknown enum value
+    autoware::traffic_light::utils::convert_shape_t4_to_string(99),
+    "unknown");
+}
+
+TEST(is_color_label, normal)
+{
+  EXPECT_TRUE(autoware::traffic_light::utils::is_color_label("red"));
+  EXPECT_TRUE(autoware::traffic_light::utils::is_color_label("yellow"));
+  EXPECT_TRUE(autoware::traffic_light::utils::is_color_label("green"));
+  EXPECT_TRUE(autoware::traffic_light::utils::is_color_label("white"));
+  EXPECT_FALSE(autoware::traffic_light::utils::is_color_label("circle"));
+  EXPECT_FALSE(autoware::traffic_light::utils::is_color_label("right"));
+  EXPECT_FALSE(autoware::traffic_light::utils::is_color_label("abcde"));
+}
+
+int main(int argc, char ** argv)
+{
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

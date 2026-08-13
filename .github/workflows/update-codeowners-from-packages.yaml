@@ -9,6 +9,10 @@ on:
     - cron: 0 0 * * *
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-secret:
     uses: autowarefoundation/autoware-github-actions/.github/workflows/check-secret.yaml@v1
@@ -18,7 +22,7 @@ jobs:
   update-codeowners-from-packages:
     needs: check-secret
     if: ${{ needs.check-secret.outputs.set == 'true' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Generate token
         id: generate-token

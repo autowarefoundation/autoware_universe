@@ -2,6 +2,175 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(euclidean_cluster): extract clustering logic from ROS node (`#12804 <https://github.com/autowarefoundation/autoware_universe/issues/12804>`_)
+  * refactor: extract core logic from ROS node
+  * test: update unit test and integration test for node
+  * chore: restore note
+  * refactor: add explicit validation in the constructor
+  * test: fix test
+  * refactor: apply tl_expected to the return value of processor
+  ---------
+* refactor(euclidean_cluster): replace hardcoded label handling with parameter driven parsing (`#12796 <https://github.com/autowarefoundation/autoware_universe/issues/12796>`_)
+  * refactor: replace hardcoded label handling with parameter-driven parsing
+  * test: add unittest
+  * refactor: add a helper function between parsing label cluster params and confusable label groups params
+  ---------
+* feat(label_based_euclidean_cluster): add per-label clustering parameter overrides and update clusterer retrieval (`#12738 <https://github.com/autowarefoundation/autoware_universe/issues/12738>`_)
+  * feat(label_based_euclidean_cluster): add per-label clustering parameter overrides and update clusterer retrieval
+  * style(pre-commit): autofix
+  * feat(label_based_euclidean_cluster): add support for merging confusable label pairs with configurable parameters
+  * feat(label_based_euclidean_cluster): refine clustering parameters and add hazard label configuration
+  * feat(euclidean_cluster): add max_cluster_diagonal_size parameter for cluster splitting
+  * Revert "feat(euclidean_cluster): add max_cluster_diagonal_size parameter for cluster splitting"
+  This reverts commit cf4b9277535051df13c64fc5c5262acbe46cff8d.
+  * feat(voxel_grid_based_euclidean_cluster): enhance parameter descriptions
+  * feat(voxel_grid_based_euclidean_cluster): implement cluster splitting for oversized groups and update parameter descriptions
+  * Refactor Euclidean Cluster Parameters and Update Documentation
+  - Renamed parameters in the voxel grid based Euclidean cluster configuration for clarity:
+  - `min_points_number_per_voxel` to `min_points_per_voxel`
+  - `min_cluster_size` to `min_points_per_cluster`
+  - `max_cluster_size` to `max_voxels_per_cluster`
+  - `max_voxel_cluster_for_output` to `max_voxels_per_cluster`
+  - `min_voxel_cluster_size_for_filtering` to `point_capping_voxel_threshold`
+  - Updated related documentation to reflect parameter name changes and their descriptions.
+  - Adjusted constructor signatures and member variables in the Euclidean cluster classes to accommodate new parameter names.
+  - Modified the logic in the clustering algorithms to utilize the updated parameters.
+  - Updated unit tests to ensure compatibility with the new parameter names and validate functionality.
+  * style(pre-commit): autofix
+  * feat(euclidean_cluster): rename parameters for clarity and consistency across configurations
+  * feat: standardize parameter naming to include suffix '_m' for tolerance and voxel leaf size across configurations
+  * feat: update voxel leaf size and max voxels per cluster, and improve label assignment logging
+  * feat: rename and update parameters for merged component size to use bounding circle diameter
+  * feat: add confusable cluster merger implementation and integrate into label-based clustering
+  * feat: improve comments for clarity and include string_view header in label-based clustering node
+  * feat: refactor clustering parameters and improve label mapping efficiency
+  * feat: streamline parameter documentation by removing redundant comments in voxel grid configuration
+  * feat: refine label clustering parameters and enhance documentation clarity
+  * feat: update clustering parameters for improved performance and accuracy
+  * feat: rename variables for clarity and consistency in clustering algorithms
+  * feat: enhance label clustering with per-label parameter overrides and confusable label merging
+  * feat: add validation for confusable label groups to ensure minimum label count and tolerance
+  * feat: enhance parameter retrieval with type checking for integers and floats
+  * feat: reorganize schema definitions for clarity and consistency in label clustering
+  * feat: add max_merged_size_m to required properties for label merging configuration
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(label_based_euclidean_cluster): apply agnocast to publisher for label_based_euclidean_cluster (`#12720 <https://github.com/autowarefoundation/autoware_universe/issues/12720>`_)
+  apply agnocast to publisher
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(euclidean_cluster): resolve invalid type error (`#12724 <https://github.com/autowarefoundation/autoware_universe/issues/12724>`_)
+  fix: resolve invalid type error
+* feat(perception): add new cluster and merger (`#12682 <https://github.com/autowarefoundation/autoware_universe/issues/12682>`_)
+  * feat: add label-based clustering algorithm
+  * feat: update cluster
+  * feat: update cluster
+  * feat(object_merger): add a new merger (`#2906 <https://github.com/autowarefoundation/autoware_universe/issues/2906>`_)
+  * fix: missign mapped_label
+  * chore: move shape policy to launch
+  * fix: label_based_EU node name
+  * fix: using voxel_based EC
+  * feat: add support of keeping dimensions option
+  * feat: replace convex hull by union
+  * style(pre-commit): autofix
+  * refactor: shape fitting
+  * refactor: min/max computation
+  * refactor: define UnionGeometry
+  * refactor: separate grouping sub objects and building fused objects into two functions
+  * refactor: seprate functions
+  * feat: add support of hazard
+  * docs: add document for LabelBasedEuclideanCluster
+  * chore: fix spell check
+  * chore: fix launcher
+  * chore: modify pushable_pullable to pedestrian
+  * chore: add schema file for label_based_euclidean_cluster
+  * chore: add schema file for object_fusion_merger
+  ---------
+  Co-authored-by: badai-nguyen <dai.nguyen@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Kotaro Uetake, Taekjin LEE, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_universe): use autoware_ament_auto_package in perception utility packages (`#12281 <https://github.com/mitsudome-r/autoware_universe/issues/12281>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* feat(voxel_grid_based_euclidean_cluster): use CallbackIsolatedAgnocastExecutor for voxel_grid_based_euclidean_cluster (`#12361 <https://github.com/mitsudome-r/autoware_universe/issues/12361>`_)
+  * apply cie to voxel_grid_based_euclidean_cluster
+  * update to launch.py
+  * set use_multithread=true
+  * fix launch
+  ---------
+* feat(euclidean_cluster): apply agnocast publisher to `/clusters` topic (`#12341 <https://github.com/mitsudome-r/autoware_universe/issues/12341>`_)
+  apply agnocast publisher to /clusters topic
+* fix(autoware_euclidean_cluster): ensure continuous publishing even with empty input (`#12257 <https://github.com/mitsudome-r/autoware_universe/issues/12257>`_)
+  * fix(autoware_euclidean_cluster): ensure continuous publishing even with empty input
+  * fix
+  ---------
+  Co-authored-by: Takahisa Ishikawa <interimadd@gmail.com>
+* Contributors: ISP akm, Koichi Imai, Taekjin LEE, Vishal Chauhan, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore: use local default config files instead of autoware_launch and fix arg propagation chain (`#12031 <https://github.com/autowarefoundation/autoware_universe/issues/12031>`_)
+  * use local default config files instead of autoware_launch
+  * update tier4_perception_launch to drill down the param path
+  * add propagation chains for sync_param_path, irregular_object_detector_param_path and change default for sync_param_path, ogm_outlier_filter_param_path
+  * append ogm_outlier_filter.param.yaml propagation chain
+  * style(pre-commit): autofix
+  * Revert "style(pre-commit): autofix"
+  This reverts commit b34af00301c6c292c0068951552f6630042afac3.
+  * Revert "append ogm_outlier_filter.param.yaml propagation chain"
+  This reverts commit 0e44926d6b51a46868a0a8ff280565c643f3e515.
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(euclidean_cluster): ignore inline pcl eigen warning (`#11917 <https://github.com/autowarefoundation/autoware_universe/issues/11917>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taeseung Sohn
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(autoware_euclidean_cluster): add empty point cloud guards (`#11744 <https://github.com/autowarefoundation/autoware_universe/issues/11744>`_)
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add empty data guards in euclidean_cluster_node.cpp
+  - Add early return in voxel_grid_based_euclidean_cluster_node.cpp
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_euclidean_cluster): created the schema file, updated the readme file and deleted the default parameter in node files code (`#10085 <https://github.com/autowarefoundation/autoware_universe/issues/10085>`_)
+  * feat(autoware_euclidean_cluster): Created the schema file, updated the readme file and deleted the default paramter in node files code
+  * style(pre-commit): autofix
+  * Update euclidean_cluster.schema.json
+  done spell check error thank you
+  * Update euclidean_cluster_node.cpp
+  Updated missing type
+  * fix(autoware_euclidean_cluster): remove unexpected properties
+  * fix: undo unnecessary modification
+  * remove unused parameters
+  * fix: schema error
+  * style(pre-commit): autofix
+  * fix: build error
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Ryohsuke Mitsudome <ryohsuke.mitsudome@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Vishal Chauhan
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

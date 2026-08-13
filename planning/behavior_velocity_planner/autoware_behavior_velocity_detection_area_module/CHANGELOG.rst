@@ -2,6 +2,81 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_trajectory): define set stopline in Trajectory class (`#12008 <https://github.com/mitsudome-r/autoware_universe/issues/12008>`_)
+  * replace usage with set_stopline function
+  * replace additiona usage with set_stopline function
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12141 <https://github.com/mitsudome-r/autoware_universe/issues/12141>`_)
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(detection_area): implement unified handling for unstoppable situations (`#11638 <https://github.com/autowarefoundation/autoware_universe/issues/11638>`_)
+  * feat(detection_area): implement unified handling for unstoppable situations
+  Implement unified handling for unstoppable situations in both detection_area
+  and detection_area/experimental modules with enhanced policy handling.
+  * fix(detection_area): update unstoppable_policy to stop_after_stopline
+  * docs(detection_area): enhance unstoppable situation handling with new parameters
+  ---------
+* feat(detection_area): update object detection logic to use polygon intersection for detection areas (`#11625 <https://github.com/autowarefoundation/autoware_universe/issues/11625>`_)
+* feat(behavior_velocity_detection_area_module): add target filtering parameters to DetectionAreaModuleManager (`#11636 <https://github.com/autowarefoundation/autoware_universe/issues/11636>`_)
+* feat(behavior_velocity_detection_area_module): use Trajectory instead of PathWithLaneId (`#11583 <https://github.com/autowarefoundation/autoware_universe/issues/11583>`_)
+  * use Trajectory instead of PathWithLaneId
+  * Update planning/behavior_velocity_planner/autoware_behavior_velocity_detection_area_module/src/experimental/scene.cpp
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+  * Update planning/behavior_velocity_planner/autoware_behavior_velocity_detection_area_module/src/experimental/scene.cpp
+  ---------
+  Co-authored-by: Yukinari Hisaki <42021302+yhisaki@users.noreply.github.com>
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* feat(detection_area): enable stopping based on predicted objects (`#11588 <https://github.com/autowarefoundation/autoware_universe/issues/11588>`_)
+  * feat(detection_area): enhance obstacle detection with target filtering for various object types
+  - Added support for detecting predicted objects in the detection area alongside pointcloud data.
+  - Introduced target filtering parameters in the configuration to specify which object types (e.g., cars, trucks, pedestrians) should trigger stop planning.
+  - Updated README to reflect changes in detection logic and configuration options.
+  - Modified relevant source files to implement the new detection logic and parameter handling.
+  This enhancement improves the module's ability to respond to a wider range of obstacles, increasing safety and reliability in planning scenarios.
+  * docs(detection_area): update README to clarify detection area and target filtering parameters
+  * refactor(detection_area): simplify detection source assignment and enhance target object filtering
+  ---------
+* chore(detection_area): add Yukinari Hisaki and Takumi Odashima as maintainers (`#11587 <https://github.com/autowarefoundation/autoware_universe/issues/11587>`_)
+  chore(package.xml): add Yukinari Hisaki and Takumi Odashima as maintainers
+* Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome, Tim Clephas, Yukinari Hisaki
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(detection_area): set stop point behind actual stop line when ego exceeds max acceleration (`#10919 <https://github.com/autowarefoundation/autoware_universe/issues/10919>`_)
+  * feat(detection_area): set stop point behind actual stop line when ego exceeds max acceleration
+  * remove unintended change
+  ---------
+* Contributors: Mete Fatih Cırıt, Yukinari Hisaki
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    # Node
+    update_rate: 10.0
+
+    # Core
+    delay_time: 0.3 # delay time of vehicle [s]
+    max_deceleration: 2.0 # max deceleration [m/ss]

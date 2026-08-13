@@ -2,6 +2,88 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(simple_object_merger): apply `agnocast_wrapper::Node` to simple_object_merger (`#12706 <https://github.com/autowarefoundation/autoware_universe/issues/12706>`_)
+  * apply agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  * use autoware_utils get_transform
+  * use WrapperTransformListener
+  * fix to use shared_ptr
+  * update for tflistener
+  * fix to align with original
+  * fix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(autoware_simple_object_merger): apply autoware_agnocast_wrapper for CIE (`#12327 <https://github.com/mitsudome-r/autoware_universe/issues/12327>`_)
+  * feat(autoware_simple_object_merger): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_simple_object_merger): apply CIE to SimpleDetectedObjectMergerNode
+  Apply autoware_agnocast_wrapper_register_node to SimpleDetectedObjectMergerNode
+  in addition to the existing SimpleTrackedObjectMergerNode.
+  ---------
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* Contributors: Taekjin LEE, Vishal Chauhan, atsushi yano, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_simple_object_merger): make the merger parallel  (`#11832 <https://github.com/autowarefoundation/autoware_universe/issues/11832>`_)
+  * refactor(object_merger): improve timestamp handling in onTimer method
+  - Updated the onTimer method in SimpleDetectedObjectMergerNode and SimpleTrackedObjectMergerNode to handle cases where no valid input is available, ensuring a proper timestamp is set for output objects.
+  - Added checks to skip null object data and publish an empty output if no valid input is found, enhancing robustness.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(image_object_locator): add near range camera VRU detector to perception pipeline (`#11622 <https://github.com/autowarefoundation/autoware_universe/issues/11622>`_)
+  add near range camera VRU detector to perception pipeline
+* fix(simple_object_merger): replace unexpected std::const_pointer_cast() into std::make_shared() (`#11399 <https://github.com/autowarefoundation/autoware_universe/issues/11399>`_)
+  fix: replace unexpected const_pointer_cast() into make_shared()
+  Co-authored-by: Masaki Baba <masaki.baba.2@tier4.jp>
+* chore(perception): add maintainer (`#11458 <https://github.com/autowarefoundation/autoware_universe/issues/11458>`_)
+  add maintainer
+* Contributors: Kotaro Uetake, Masaki Baba, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(simple object merger): handle when tf could not get properly (`#10934 <https://github.com/autowarefoundation/autoware_universe/issues/10934>`_)
+  * fix(simple_object_merger): handle null transforms in object merging
+  * fix(simple_object_merger): optimize transformation handling for detected and tracked objects
+  ---------
+* fix(autoware_simple_object_merger): templatize simple object merger (`#10785 <https://github.com/autowarefoundation/autoware_universe/issues/10785>`_)
+  * templatize node and add merger for tracked objects
+  * add test
+  * refactor file name and structure, revert node name
+  * add missing include
+  * refactor: override onTimer method in object merger nodes
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Masaki Baba, Mete Fatih Cırıt, Taekjin LEE
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

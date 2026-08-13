@@ -95,10 +95,15 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
   trackers_sub_ = create_subscription<autoware_perception_msgs::msg::TrackedObjects>(
     "~/input/tracked_objects", rclcpp::QoS{1},
     std::bind(&TrackerHandler::onTrackedObjects, &tracker_handler_, std::placeholders::_1));
-  initial_objects_sub_ =
-    create_subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
-      "~/input/initial_objects", rclcpp::QoS{1},
-      std::bind(&DetectionByTracker::onObjects, this, std::placeholders::_1));
+  AUTOWARE_SUBSCRIPTION_OPTIONS options;
+  initial_objects_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature, "~/input/initial_objects",
+    rclcpp::QoS{1},
+    [this](
+      const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+        tier4_perception_msgs::msg::DetectedObjectsWithFeature) &
+      input_msg) { onObjects(input_msg); },
+    options);
   objects_pub_ =
     create_publisher<autoware_perception_msgs::msg::DetectedObjects>("~/output", rclcpp::QoS{1});
 
@@ -111,13 +116,15 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
   tracker_ignore_.MOTORCYCLE = declare_parameter<bool>("tracker_ignore_label.MOTORCYCLE");
   tracker_ignore_.BICYCLE = declare_parameter<bool>("tracker_ignore_label.BICYCLE");
   tracker_ignore_.PEDESTRIAN = declare_parameter<bool>("tracker_ignore_label.PEDESTRIAN");
+  tracker_ignore_.ANIMAL = declare_parameter<bool>("tracker_ignore_label.ANIMAL");
+  tracker_ignore_.HAZARD = declare_parameter<bool>("tracker_ignore_label.HAZARD");
 
   // set maximum search setting for merger/divider
   setMaxSearchRange();
 
   shape_estimator_ = std::make_shared<autoware::shape_estimation::ShapeEstimator>(true, true);
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
-    false, 10, 10000, 0.7, 0.3, 0, std::numeric_limits<int>::max(), std::numeric_limits<int>::max(),
+    false, 10, 0.7, 0.3, 0, std::numeric_limits<int>::max(), std::numeric_limits<int>::max(),
     10000);
   debugger_ = std::make_shared<Debugger>(this);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
@@ -148,7 +155,8 @@ void DetectionByTracker::setMaxSearchRange()
 }
 
 void DetectionByTracker::onObjects(
-  const tier4_perception_msgs::msg::DetectedObjectsWithFeature::ConstSharedPtr input_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) &
+  input_msg)
 {
   debugger_->startMeasureProcessingTime();
   autoware_perception_msgs::msg::DetectedObjects detected_objects;
@@ -275,17 +283,16 @@ float DetectionByTracker::optimizeUnderSegmentedObject(
   constexpr float initial_voxel_size = initial_cluster_range / 2.0f;
   float voxel_size = initial_voxel_size;
   // set clustering parameters to max values to keep the original behavior here
-  constexpr int min_voxel_cluster_size_for_filtering = std::numeric_limits<int>::max();
-  constexpr int max_points_per_voxel_in_large_cluster = std::numeric_limits<int>::max();
-  constexpr int max_voxel_cluster_for_output = 10000;
+  constexpr int large_cluster_voxel_count_threshold = std::numeric_limits<int>::max();
+  constexpr int large_cluster_max_points_per_voxel = std::numeric_limits<int>::max();
+  constexpr int max_voxels_per_cluster = 10000;
 
   const auto & label = target_object.classification.front().label;
 
   // initialize clustering parameters
   autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster cluster(
-    false, 4, 10000, initial_cluster_range, initial_voxel_size, 0,
-    min_voxel_cluster_size_for_filtering, max_points_per_voxel_in_large_cluster,
-    max_voxel_cluster_for_output);
+    false, 4, initial_cluster_range, initial_voxel_size, 0, large_cluster_voxel_count_threshold,
+    large_cluster_max_points_per_voxel, max_voxels_per_cluster);
 
   // convert to pcl
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cluster(new pcl::PointCloud<pcl::PointXYZ>);

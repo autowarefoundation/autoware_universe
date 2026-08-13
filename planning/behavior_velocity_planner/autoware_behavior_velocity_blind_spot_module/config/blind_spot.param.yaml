@@ -7,6 +7,11 @@
       minimum_default_velocity: 1.388 # [m/s]
       collision_judge_debounce: 0.5 # [s]
       critical_stopline_margin: 1.0 # [m]
+      detect_non_vru:
+        car: false
+        truck: false
+        bus: false
+        trailer: false
       brake:
         critical:
           deceleration: -6.0 # [m/ss]

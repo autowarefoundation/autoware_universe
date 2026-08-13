@@ -98,13 +98,13 @@ bool skip_object_condition(
     prev_decisions && (prev_decisions->decisions.back().type == stop ||
                        (prev_decisions->decisions.back().collision.has_value() &&
                         prev_decisions->decisions.back().collision->type == collision));
+  if (!object.has_target_label) {
+    return skip_object;
+  }
   if (is_previous_target) {
     return !skip_object;
   }
   if (params.ignore_if_stopped && object.is_stopped) {
-    return skip_object;
-  }
-  if (!object.has_target_label) {
     return skip_object;
   }
   if (!filtering_data.ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(
@@ -202,8 +202,9 @@ std::optional<size_t> get_cut_predicted_path_index(
     cut_segments_rtree.query(
       boost::geometry::index::intersects(segment), std::back_inserter(query_results));
     for (const auto & candidate : query_results) {
-      if (universe_utils::intersect(
-            segment.first, segment.second, candidate.first.first, candidate.first.second)) {
+      if (
+        universe_utils::intersect(
+          segment.first, segment.second, candidate.first.first, candidate.first.second)) {
         return true;
       }
     }
@@ -293,9 +294,10 @@ std::vector<Object> prepare_dynamic_objects(
     classify(filtered_object, object->predicted_object, target_labels, params);
     calculate_current_footprint(filtered_object, object->predicted_object);
     const auto & previous_object_decisions = previous_decisions.get(filtered_object.uuid);
-    if (skip_object_condition(
-          filtered_object, previous_object_decisions, ego_rear_segment,
-          filtering_data[filtered_object.label], params)) {
+    if (
+      skip_object_condition(
+        filtered_object, previous_object_decisions, ego_rear_segment,
+        filtering_data[filtered_object.label], params)) {
       continue;
     }
     calculate_predicted_path_footprints(filtered_object, object->predicted_object, params);

@@ -207,12 +207,12 @@ Polygon2d convertObjToPolygon(const PredictedObject & obj)
 
 std::optional<geometry_msgs::msg::TransformStamped> getTransform(
   const std::string & target_frame, const std::string & source_frame,
-  const tf2_ros::Buffer & tf_buffer, const rclcpp::Logger & logger)
+  const autoware::agnocast_wrapper::Buffer & tf_buffer, const rclcpp::Logger & logger)
 {
   geometry_msgs::msg::TransformStamped tf_current_pose;
   try {
     tf_current_pose = tf_buffer.lookupTransform(
-      target_frame, source_frame, rclcpp::Time(0), rclcpp::Duration::from_seconds(1.0));
+      target_frame, source_frame, tf2::TimePointZero, tf2::durationFromSec(1.0));
   } catch (tf2::TransformException & ex) {
     RCLCPP_ERROR_STREAM(
       logger, "[AEB] Failed to look up transform from " + source_frame + " to " + target_frame);

@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="input/objects" default="/perception/object_recognition/detection/clustering/objects_with_feature"/>
   <arg name="output/objects" default="/perception/object_recognition/detection/clustering/validated_objects_with_feature"/>
 
   <arg name="low_intensity_cluster_filter_param_path" default="$(find-pkg-share autoware_raindrop_cluster_filter)/config/low_intensity_cluster_filter.param.yaml"/>
 
   <node pkg="autoware_raindrop_cluster_filter" exec="low_intensity_cluster_filter_node" name="low_intensity_cluster_filter_node" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="input/objects" to="$(var input/objects)"/>
     <remap from="output/objects" to="$(var output/objects)"/>
     <param name="input_obstacle_pointcloud" value="false"/>

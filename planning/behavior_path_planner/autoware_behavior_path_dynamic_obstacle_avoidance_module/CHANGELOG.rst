@@ -2,6 +2,48 @@
 Changelog for package autoware_behavior_path_dynamic_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12119 <https://github.com/mitsudome-r/autoware_universe/issues/12119>`_)
+  * chore: organize maintainer
+  * fix: ci error
+  ---------
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(behavior_path_dynamic_obstacle_avoidance_module): avoid dangling pointers (`#11925 <https://github.com/autowarefoundation/autoware_universe/issues/11925>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_behavior_path_dynamic_obstacle_avoidance_module): remove unused function (`#11191 <https://github.com/autowarefoundation/autoware_universe/issues/11191>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt
+
 0.46.0 (2025-06-20)
 -------------------
 

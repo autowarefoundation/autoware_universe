@@ -15,11 +15,11 @@
 #include "lanelet_filter_base.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware_lanelet2_extension/utility/message_conversion.hpp"
-#include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -53,10 +53,10 @@ using TriangleMesh = std::vector<std::array<Eigen::Vector3d, 3>>;
 template <typename ObjsMsgType, typename ObjMsgType>
 ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::ObjectLaneletFilterBase(
   const std::string & node_name, const rclcpp::NodeOptions & node_options)
-: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
+: autoware::agnocast_wrapper::Node(node_name, node_options),
+  tf_buffer_(this->get_clock()),
+  tf_listener_(tf_buffer_, *this)
 {
-  using std::placeholders::_1;
-
   // Set parameters
   filter_target_.UNKNOWN = declare_parameter<bool>("filter_target_label.UNKNOWN");
   filter_target_.CAR = declare_parameter<bool>("filter_target_label.CAR");
@@ -66,6 +66,8 @@ ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::ObjectLaneletFilterBase(
   filter_target_.MOTORCYCLE = declare_parameter<bool>("filter_target_label.MOTORCYCLE");
   filter_target_.BICYCLE = declare_parameter<bool>("filter_target_label.BICYCLE");
   filter_target_.PEDESTRIAN = declare_parameter<bool>("filter_target_label.PEDESTRIAN");
+  filter_target_.ANIMAL = declare_parameter<bool>("filter_target_label.ANIMAL");
+  filter_target_.HAZARD = declare_parameter<bool>("filter_target_label.HAZARD");
 
   // Set filter settings
   filter_settings_.lanelet_xy_overlap_filter =
@@ -100,14 +102,20 @@ ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::ObjectLaneletFilterBase(
   // Set publisher/subscriber
   map_sub_ = this->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "input/vector_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&ObjectLaneletFilterBase::mapCallback, this, _1));
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & msg) {
+      mapCallback(msg);
+    });
   object_sub_ = this->create_subscription<ObjsMsgType>(
-    "input/object", rclcpp::QoS{1}, std::bind(&ObjectLaneletFilterBase::objectCallback, this, _1));
+    "input/object", rclcpp::QoS{1},
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & msg) { objectCallback(msg); });
   object_pub_ = this->create_publisher<ObjsMsgType>("output/object", rclcpp::QoS{1});
 
   debug_publisher_ =
-    std::make_unique<autoware_utils::DebugPublisher>(this, "object_lanelet_filter");
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+    std::make_unique<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "object_lanelet_filter");
+  published_time_publisher_ =
+    std::make_unique<autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(
+      this);
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   if (filter_settings_.debug) {
     viz_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -318,24 +326,24 @@ bool isPointAboveLaneletMesh(
 
 template <typename ObjsMsgType, typename ObjMsgType>
 void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::mapCallback(
-  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr map_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & map_msg)
 {
   lanelet_frame_id_ = map_msg->header.frame_id;
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg));
 }
 
 template <typename ObjsMsgType, typename ObjMsgType>
 void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::objectCallback(
-  const typename ObjsMsgType::ConstSharedPtr input_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & input_msg)
 {
   stop_watch_ptr_->tic("processing_time");
 
   // Guard
   if (object_pub_->get_subscription_count() < 1) return;
 
-  ObjsMsgType output_object_msg;
-  output_object_msg.header = input_msg->header;
+  auto output_object_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(object_pub_);
+  output_object_msg->header = input_msg->header;
 
   if (!lanelet_map_ptr_) {
     RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 3000, "No vector map received.");
@@ -369,18 +377,18 @@ void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::objectCallback(
     for (size_t index = 0; index < transformed_objects.objects.size(); ++index) {
       const auto & transformed_object = transformed_objects.objects.at(index);
       const auto & input_object = input_msg->objects.at(index);
-      filterObject(transformed_object, input_object, local_rtree, output_object_msg);
+      filterObject(transformed_object, input_object, local_rtree, *output_object_msg);
     }
   }
 
-  object_pub_->publish(output_object_msg);
-  published_time_publisher_->publish_if_subscribed(object_pub_, output_object_msg.header.stamp);
+  const auto output_stamp = output_object_msg->header.stamp;
+  object_pub_->publish(std::move(output_object_msg));
+  published_time_publisher_->publish_if_subscribed(object_pub_, output_stamp);
 
   // Publish debug info
   const double pipeline_latency =
     std::chrono::duration<double, std::milli>(
-      std::chrono::nanoseconds(
-        (this->get_clock()->now() - output_object_msg.header.stamp).nanoseconds()))
+      std::chrono::nanoseconds((this->get_clock()->now() - output_stamp).nanoseconds()))
       .count();
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/pipeline_latency_ms", pipeline_latency);
@@ -419,7 +427,11 @@ bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::filterObject(
     bg::envelope(object_polygon, bbox_of_convex_hull);
     std::vector<BoxAndLanelet> candidates;
     // only use the lanelets that intersect with the object's bounding box
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    // on NVIDIA DRIVE AGX Thor, boost::geometry triggers a false positive warning
     local_rtree.query(bgi::intersects(bbox_of_convex_hull), std::back_inserter(candidates));
+#pragma GCC diagnostic pop
 
     bool filter_pass = true;
     // 1. is polygon overlap with road lanelets or shoulder lanelets
@@ -640,8 +652,10 @@ bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::isSameDirectionWithLanele
       continue;
     }
 
-    const double lane_yaw = lanelet::utils::getLaneletAngle(
-      box_and_lanelet.second.lanelet, object.kinematics.pose_with_covariance.pose.position);
+    const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      box_and_lanelet.second.lanelet,
+      autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+        .basicPoint());
     const double delta_yaw = object_velocity_yaw - lane_yaw;
     const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     const double abs_norm_delta_yaw = std::fabs(normalized_delta_yaw);

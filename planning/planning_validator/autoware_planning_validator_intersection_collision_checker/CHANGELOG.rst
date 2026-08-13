@@ -2,6 +2,147 @@
 Changelog for package autoware_planning_validator_intersection_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_traffic_light_utils): rewrite hasTrafficLightCircleColor and hasTrafficLightShape into three functions to handle overseas color arrow traffic light (`#12481 <https://github.com/mitsudome-r/autoware_universe/issues/12481>`_)
+  * feat(autoware_traffic_light_utils): merge hasTrafficLightCirleColor and hasTrafficLightShape into a general function hasTrafficLightShapeColor to handle oversea color arrow traffic light
+  * feat(autoware_traffic_light_utils): merge hasTrafficLightCirleColor and hasTrafficLightShape into a general function hasTrafficLightShapeColor to handle oversea color arrow traffic light
+  * fix: modify default parameter for hasTrafficLightShapeColor
+  * fix: separate hasTrafficLightShapeColor into three functions
+  * chore(miscs): remove unused lanelet2 extension header (`#12081 <https://github.com/mitsudome-r/autoware_universe/issues/12081>`_)
+  chore(miscs): remove unused header include for lanelet2_extension
+  * fix: revert modification
+  * fix: revert modification
+  * style(pre-commit): autofix
+  * fix: change TrafficLightElement msg belonging
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix: bound int 32 range for rqt_reconfigure older than 1.1.4 (`#12349 <https://github.com/mitsudome-r/autoware_universe/issues/12349>`_)
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - planning component (`#12083 <https://github.com/mitsudome-r/autoware_universe/issues/12083>`_)
+  * replace getArcCoordinates in planning component
+  * replace getCenterlineWithOffset in planning component
+  * replace getRight/LeftBoundWithOffset in planning component
+  * replace getExpandedLanelet(s) in planning component
+  * replace combineLaneletsShape in planning component
+  * remove log for empty combine_lanelet_opt
+  * bind reference to optional value
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, Xiaoyu WANG, Yuxuan Liu, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(intersection_collision_checker): use traffic light context for intersection collision detection (`#11238 <https://github.com/autowarefoundation/autoware_universe/issues/11238>`_)
+  * fix: subscribe traffic singals
+  * fix: add flag to check traffic signal
+  * fix: change traffic light check logic
+  * fix: use node clock
+  * fix: amber
+  * docs: validator
+  * docs: icc
+  * docs: icc
+  * docs: icc
+  * fix: typo
+  * docs: validator
+  * fix: add param
+  ---------
+* fix(planning_validator): remove unused function (`#11176 <https://github.com/autowarefoundation/autoware_universe/issues/11176>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe, Sarun MUKDAPITAK, Satoshi OTA
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* refactor(planning_validator): refactor planning validator configuration and error handling (`#11081 <https://github.com/autowarefoundation/autoware_universe/issues/11081>`_)
+  * refactor trajectory check error handling
+  * define set_diag_status function for each module locally
+  * update documentation
+  ---------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* docs(intersection_collision_checker): update documentation (`#11070 <https://github.com/autowarefoundation/autoware_universe/issues/11070>`_)
+  * update implementation description in readme
+  * update parameters description in readme
+  * fix spelling mistakes
+  ---------
+* fix(intersection_collision_checker): improve logic for objects near overlap (`#11058 <https://github.com/autowarefoundation/autoware_universe/issues/11058>`_)
+  * parameterize max history time
+  * improve logic for object near overlap point
+  ---------
+* fix(intersection_collision_checker): use parameter instead of static constexpr (`#11034 <https://github.com/autowarefoundation/autoware_universe/issues/11034>`_)
+  use parameter instead of static constexpr
+* feat(intersection_collision_checker): improve logic to address false negatives (`#11030 <https://github.com/autowarefoundation/autoware_universe/issues/11030>`_)
+  * revise and improve velocity estimation and tracking logic
+  * ensure consistent collision lane ids
+  * small refactoring
+  ---------
+* feat(intersection_collision_checker): improve icc debug markers (`#10967 <https://github.com/autowarefoundation/autoware_universe/issues/10967>`_)
+  * add DebugData struct
+  * refactor and publish debug info and markers
+  * always publish lanelet debug markers
+  * refactor debug markers code
+  * remove unused functions
+  * pass string by reference
+  * set is_safe flag for rear_collision_checker debug data
+  * fix for cpp check
+  * add maintainer
+  ---------
+* feat(intersection_collision_checker): improve target lane selection and velocity estimation to reduce false positives (`#10928 <https://github.com/autowarefoundation/autoware_universe/issues/10928>`_)
+  * reset velocity and track time for too high acceleration. apply max velocity threshold
+  * refine target lanes selection
+  * add package maintainers
+  * fix behavior for objects close to overlap
+  ---------
+* feat(intersection_collision_checker): improve feature to reduce false positive occurrence (`#10899 <https://github.com/autowarefoundation/autoware_universe/issues/10899>`_)
+  * keep a map of already detected target lanelets
+  * fix on/off time buffers logic
+  * add debug marker to visualize colliding object
+  * use resampled trajectory instead of raw trajectory
+  * fix overlap index computation
+  * fix on/off time buffers logic for rear collision checker
+  * fix planning .pages file, fix format
+  * update readme
+  * ignore not moving pcd object
+  * handle case when object is very close to overlap point
+  ---------
+* feat(planning_validator): improve intersection collision checker implementation (`#10839 <https://github.com/autowarefoundation/autoware_universe/issues/10839>`_)
+  * use parameter generator library
+  * add pointcloud latency compensation
+  * change msg field name
+  * add readme file
+  * add parameters dection to readme
+  * publish planning factor for intersection_collision_checker
+  * refactor lanelet selection and filtering
+  * update readme
+  * set safety factor array in planning factor
+  * clean up includes
+  * publish planning factor for rear collision checker
+  * fix spelling
+  * rename variables to avoid shadowing
+  * Update planning/planning_validator/autoware_planning_validator/src/node.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * fix planning factor initialization
+  * fix format
+  * add on time buffer
+  ---------
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt, mkquda
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

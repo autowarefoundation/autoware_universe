@@ -16,6 +16,7 @@
 #include "pose_estimator_type.hpp"
 #include "stopper/stopper_artag.hpp"
 #include "stopper/stopper_eagleye.hpp"
+#include "stopper/stopper_lidar_marker.hpp"
 #include "stopper/stopper_ndt.hpp"
 #include "stopper/stopper_yabloc.hpp"
 #include "switch_rule/enable_all_rule.hpp"
@@ -100,6 +101,15 @@ PoseEstimatorArbiter::PoseEstimatorArbiter(const rclcpp::NodeOptions & options)
       PoseEstimatorType::artag, std::make_shared<stopper::StopperArTag>(this, shared_data_));
     sub_artag_input_ = create_subscription<Image>(
       "~/input/artag/image", sensor_qos, shared_data_->artag_input_image.create_callback());
+  }
+  if (is_running(PoseEstimatorType::lidar_marker)) {
+    // Get list of lidar_marker_localizer instance names from parameter
+    std::vector<std::string> lidar_marker_instance_names =
+      this->declare_parameter<std::vector<std::string>>("lidar_marker_instance_names");
+
+    stoppers_.emplace(
+      PoseEstimatorType::lidar_marker, std::make_shared<stopper::StopperLidarMarker>(
+                                         this, shared_data_, lidar_marker_instance_names));
   }
 
   // Subscribers for switch rule

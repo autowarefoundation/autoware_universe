@@ -6,6 +6,7 @@ autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/stop_mode_operator.cpp"
+  "src/continuous_condition.cpp"
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}

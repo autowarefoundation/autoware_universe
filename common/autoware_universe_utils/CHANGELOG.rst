@@ -2,6 +2,70 @@
 Changelog for package autoware_universe_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): re-enable bugprone-optional-value-conversion for universe utils (`#12588 <https://github.com/autowarefoundation/autoware_universe/issues/12588>`_)
+  * fix(clang-tidy): re-enable optional value conversion check for universe utils
+  * ignoreing bugprone-optional-value-conversion until the rest of the fixes are made
+  ---------
+  Co-authored-by: mitsudome-r <ryohsuke.mitsudome@tier4.jp>
+* fix(clang-tidy): re-enable bugprone-multi-level-implicit-pointer-conversion (`#12578 <https://github.com/autowarefoundation/autoware_universe/issues/12578>`_)
+  fix(clang-tidy): re-enable multi-level pointer conversion check
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Sarun MUKDAPITAK, Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(common): use emplace/emplace_back to avoid temporary object creation (`#12238 <https://github.com/mitsudome-r/autoware_universe/issues/12238>`_)
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_universe_utils): fix test for boost geometry (`#12372 <https://github.com/mitsudome-r/autoware_universe/issues/12372>`_)
+  * fix(autoware_universe_utils): fix test for boost geometry
+* chore(universe_utils): disable convex_hull flaky tests (`#12276 <https://github.com/mitsudome-r/autoware_universe/issues/12276>`_)
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* chore(autoware_universe_utils): add maintainers (`#11996 <https://github.com/autowarefoundation/autoware_universe/issues/11996>`_)
+  add maintainers for autoware_universe_utils
+* chore(autoware_universe_utils): add a maintainer (`#11991 <https://github.com/autowarefoundation/autoware_universe/issues/11991>`_)
+* fix(autoware_universe_utils): convex_hull syntax for boost 1.83+ (`#11838 <https://github.com/autowarefoundation/autoware_universe/issues/11838>`_)
+* Contributors: Amadeusz Szymko, Junya Sasaki, Ryohsuke Mitsudome, mkquda
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_vehicle_info_utils): refactor footprint generation (`#11696 <https://github.com/autowarefoundation/autoware_universe/issues/11696>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

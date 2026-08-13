@@ -291,9 +291,9 @@ struct StartPlannerParameters
     object_types_to_check_for_path_generation{};
   double center_line_path_interval{0.0};
   double lane_departure_check_expansion_margin{0.0};
+  double minimum_shift_length{0.5};
 
   // shift pull out
-  bool enable_shift_pull_out{false};
   bool check_shift_path_lane_departure{false};
   bool allow_check_shift_path_lane_departure_override{false};
   double shift_collision_check_distance_from_end{0.0};
@@ -306,10 +306,8 @@ struct StartPlannerParameters
   double end_pose_curvature_threshold{0.0};
   double maximum_longitudinal_deviation{0.0};
   // geometric pull out
-  bool enable_geometric_pull_out{false};
   double geometric_collision_check_distance_from_end{0.0};
   bool divide_pull_out_path{false};
-  bool enable_clothoid_fallback{false};
   // Enable clothoid path search when no path is found with collision margins
   ParallelParkingParameters parallel_parking_parameters{};
 
@@ -318,13 +316,16 @@ struct StartPlannerParameters
   double clothoid_acceleration{0.0};
   std::vector<double> clothoid_max_steer_angles_deg{};
   double clothoid_max_steer_angle_rate_deg_per_sec{0.0};
+  double clothoid_collision_check_distance_from_end{0.0};
   bool check_clothoid_path_lane_departure{true};  // enable lane departure check for clothoid path
 
-  // search start pose backward
-  std::string search_priority;  // "efficient_path" or "short_back_distance"
+  // List of planner types in priority order (e.g., ["SHIFT", "GEOMETRIC", "CLOTHOID"])
+  std::vector<std::string> search_priority{};
+  // Search policy: "planner_priority" or "distance_priority"
+  std::string search_policy{};
   bool enable_back{false};
   double backward_velocity{0.0};
-  double max_back_distance{0.0};
+  double max_back_distance{0.0};  // max backward distance to search start pose
   double backward_search_resolution{0.0};
   double backward_path_update_duration{0.0};
   double ignore_distance_from_lane_end{0.0};
@@ -340,11 +341,13 @@ struct StartPlannerParameters
   AstarParam astar_parameters;
   RRTStarParam rrt_star_parameters;
 
+  // turn signal
+  std::string turn_signal_on_centerline_start;
   // stop condition
   double maximum_deceleration_for_stop{0.0};
   double maximum_jerk_for_stop{0.0};
 
-  // hysteresis parameter
+  // hysteresis parameters
   double hysteresis_factor_expand_rate{0.0};
 
   // path safety checker

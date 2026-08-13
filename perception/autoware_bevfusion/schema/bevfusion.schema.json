@@ -7,11 +7,6 @@
     "bevfusion": {
       "type": "object",
       "properties": {
-        "sensor_fusion": {
-          "type": "boolean",
-          "description": "Whether to use camera-lidar fusion or not.",
-          "default": true
-        },
         "max_camera_lidar_delay": {
           "type": "number",
           "description": "Maximum delay between the lidar and the latest camera in seconds.",
@@ -39,14 +34,30 @@
         "onnx_path": {
           "type": "string",
           "description": "A path to ONNX model file.",
-          "default": "$(var model_path)/bevfusion.onnx",
+          "default": "$(var model_path)/bevfusion_camera_lidar.onnx",
           "pattern": "\\.onnx$"
         },
         "engine_path": {
           "type": "string",
           "description": "A path to TensorRT engine file.",
-          "default": "$(var model_path)/bevfusion.engine",
+          "default": "$(var model_path)/bevfusion_camera_lidar.engine",
           "pattern": "\\.engine$"
+        },
+        "image_backbone_onnx_path": {
+          "type": "string",
+          "description": "A path to ONNX model file for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.",
+          "default": "$(var model_path)/bevfusion_image_backbone.onnx"
+        },
+        "image_backbone_engine_path": {
+          "type": "string",
+          "description": "A path to TensorRT engine file for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.",
+          "default": "$(var model_path)/bevfusion_image_backbone.engine"
+        },
+        "image_backbone_trt_precision": {
+          "type": "string",
+          "description": "A precision of TensorRT engine for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.",
+          "default": "fp16",
+          "enum": ["fp16", "fp32", ""]
         },
         "densification_num_past_frames": {
           "type": "integer",
@@ -58,6 +69,11 @@
           "type": "string",
           "description": "A name of frame id where world coordinates system is defined with respect to.",
           "default": "map"
+        },
+        "run_image_undistortion": {
+          "type": "boolean",
+          "description": "A flag to run image undistortion.",
+          "default": true
         },
         "circle_nms_dist_threshold": {
           "type": "number",
@@ -89,28 +105,76 @@
           "description": "A thresholds array of direction vectors norm, all of objects with vector norm less than this threshold are ignored.",
           "default": [0.3, 0.3, 0.3, 0.3, 0.0]
         },
-        "score_threshold": {
-          "type": "number",
-          "description": "A threshold value of confidence score, all of objects with score less than this threshold are ignored.",
-          "default": 0.2,
-          "minimum": 0.0
+        "detection_score_thresholds": {
+          "type": "object",
+          "description": "A dictionary of minimum confidence scores for each class and a distance bin upper limits.",
+          "properties": {
+            "distance_bin_upper_limits": {
+              "type": "array",
+              "description": "An array of upper bounds of each distance bin.",
+              "default": [50.0, 90.0, 121.0, 200.0]
+            },
+            "min_confidence_scores": {
+              "type": "object",
+              "description": "A dictionary of minimum confidence scores for each class.",
+              "properties": {
+                "CAR": {
+                  "type": "array",
+                  "description": "A minimum confidence score for CAR in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "TRUCK": {
+                  "type": "array",
+                  "description": "A minimum confidence score for TRUCK in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "BUS": {
+                  "type": "array",
+                  "description": "A minimum confidence score for BUS in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "BICYCLE": {
+                  "type": "array",
+                  "description": "A minimum confidence score for BICYCLE in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "PEDESTRIAN": {
+                  "type": "array",
+                  "description": "A minimum confidence score for PEDESTRIAN in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "TRAFFIC_CONE": {
+                  "type": "array",
+                  "description": "A minimum confidence score for TRAFFIC_CONE in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "BARRIER": {
+                  "type": "array",
+                  "description": "A minimum confidence score for BARRIER in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                }
+              }
+            }
+          }
         }
       },
       "required": [
-        "sensor_fusion",
         "max_camera_lidar_delay",
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
         "onnx_path",
         "engine_path",
+        "image_backbone_onnx_path",
+        "image_backbone_engine_path",
+        "image_backbone_trt_precision",
         "densification_num_past_frames",
         "densification_world_frame_id",
         "circle_nms_dist_threshold",
         "iou_nms_search_distance_2d",
         "iou_nms_threshold",
         "yaw_norm_thresholds",
-        "score_threshold"
+        "detection_score_thresholds"
       ],
       "additionalProperties": false
     }

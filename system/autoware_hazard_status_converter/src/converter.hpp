@@ -16,7 +16,7 @@
 #define CONVERTER_HPP_
 
 #include <autoware/diagnostic_graph_utils/subscription.hpp>
-#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_system_msgs/msg/hazard_status_stamped.hpp>
@@ -33,19 +33,23 @@ public:
   explicit Converter(const rclcpp::NodeOptions & options);
 
 private:
+  using EmergencyHolding = tier4_system_msgs::msg::EmergencyHoldingState;
+  using HazardStatus = autoware_system_msgs::msg::HazardStatus;
   using HazardStatusStamped = autoware_system_msgs::msg::HazardStatusStamped;
   using DiagGraph = autoware::diagnostic_graph_utils::DiagGraph;
   using DiagUnit = autoware::diagnostic_graph_utils::DiagUnit;
   using DiagNode = autoware::diagnostic_graph_utils::DiagNode;
   void on_create(DiagGraph::ConstSharedPtr graph);
   void on_update(DiagGraph::ConstSharedPtr graph);
-  autoware::diagnostic_graph_utils::DiagGraphSubscription sub_graph_;
   rclcpp::Publisher<HazardStatusStamped>::SharedPtr pub_hazard_;
-  autoware_utils::InterProcessPollingSubscriber<tier4_system_msgs::msg::EmergencyHoldingState>
-    sub_emergency_holding_{this, "~/input/emergency_holding"};
+  autoware::diagnostic_graph_utils::DiagGraphSubscription sub_graph_;
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<EmergencyHolding>::SharedPtr
+    sub_emergency_holding_;
 
   DiagNode * auto_mode_root_;
   std::unordered_set<DiagUnit *> auto_mode_tree_;
+
+  uint8_t emergency_threshold_;
 };
 
 }  // namespace autoware::hazard_status_converter

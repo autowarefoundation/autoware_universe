@@ -42,7 +42,9 @@ BidirectionalTrafficModule::BidirectionalTrafficModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
-: SceneModuleInterface{name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{
+    name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface},  // NOLINT
   parameters_(parameters),
   has_trajectory_bidirectional_lane_overlap_(false)
 {
@@ -124,8 +126,9 @@ void BidirectionalTrafficModule::updateData()
                       .build(previous_path.points);
 
   if (!trajectory) {
-    RCLCPP_ERROR(
-      getLogger(), "Failed to build trajectory in BidirectionalTrafficModule::updateData");
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000,
+      "Failed to build trajectory in BidirectionalTrafficModule::updateData");
     return;
   }
 

@@ -20,10 +20,12 @@
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
+#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -40,6 +42,8 @@ namespace autoware::planning_validator
 {
 using autoware::route_handler::RouteHandler;
 using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_perception_msgs::msg::TrafficLightElement;
+using autoware_perception_msgs::msg::TrafficLightGroupArray;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -75,8 +79,10 @@ struct PlanningValidatorParams
 {
   bool publish_diag = true;
   bool display_on_terminal = true;
+  bool allow_area = false;
   double soft_stop_deceleration{};
   double soft_stop_jerk_lim{};
+  double th_traffic_light_timeout{0.5};
   int diag_error_count_threshold{};
   InvalidTrajectoryHandlingType default_handling_type{};
 };
@@ -93,6 +99,7 @@ struct PlanningValidatorData
   Odometry::ConstSharedPtr current_kinematics;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration;
   PointCloud2::ConstSharedPtr obstacle_pointcloud;
+  TrafficLightGroupArray::ConstSharedPtr traffic_signals;
 
   std::shared_ptr<RouteHandler> route_handler{std::make_shared<RouteHandler>()};
 
@@ -151,6 +158,7 @@ struct PlanningValidatorData
     if (msg) {
       if (!msg->segments.empty()) {
         route_handler->setRoute(*msg);
+        last_valid_trajectory.reset();
       }
     }
   }
@@ -168,12 +176,14 @@ struct PlanningValidatorContext
   explicit PlanningValidatorContext(rclcpp::Node * node)
   : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
     tf_buffer{node->get_clock()},
-    tf_listener{tf_buffer}
+    tf_listener{tf_buffer},
+    clock{node->get_clock()}
   {
     debug_pose_publisher = std::make_shared<PlanningValidatorDebugMarkerPublisher>(node);
     data = std::make_shared<PlanningValidatorData>();
     validation_status = std::make_shared<PlanningValidatorStatus>();
     diag_updater = std::make_shared<Updater>(node);
+    vehicle_stop_checker_ = std::make_shared<autoware::motion_utils::VehicleStopChecker>(node);
     init_validation_status();
   }
 
@@ -185,9 +195,39 @@ struct PlanningValidatorContext
   std::shared_ptr<Updater> diag_updater = nullptr;
   std::shared_ptr<PlanningValidatorData> data = nullptr;
   std::shared_ptr<PlanningValidatorStatus> validation_status = nullptr;
+  std::shared_ptr<autoware::motion_utils::VehicleStopChecker> vehicle_stop_checker_ = nullptr;
 
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
+  rclcpp::Clock::SharedPtr clock{};
+
+  auto get_traffic_signal(const int64_t group_id) -> std::optional<std::vector<TrafficLightElement>>
+  {
+    if (!data) {
+      return std::nullopt;
+    }
+
+    if (!data->traffic_signals) {
+      return std::nullopt;
+    }
+
+    const auto & traffic_signals = data->traffic_signals;
+
+    const auto elapsed_time = (clock->now() - traffic_signals->stamp).seconds();
+    if (elapsed_time > params.th_traffic_light_timeout) {
+      return std::nullopt;
+    }
+
+    const auto itr = std::find_if(
+      traffic_signals->traffic_light_groups.begin(), traffic_signals->traffic_light_groups.end(),
+      [&group_id](const auto & group) { return group.traffic_light_group_id == group_id; });
+
+    if (itr == traffic_signals->traffic_light_groups.end()) {
+      return std::nullopt;
+    }
+
+    return itr->elements;
+  }
 
   void set_diag_id(const std::string & id)
   {

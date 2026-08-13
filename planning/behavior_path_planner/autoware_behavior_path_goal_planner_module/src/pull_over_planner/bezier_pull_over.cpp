@@ -19,6 +19,8 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware_bezier_sampler/bezier_sampling.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -48,6 +50,7 @@ std::optional<PullOverPath> BezierPullOver::plan(
   [[maybe_unused]] const BehaviorModuleOutput & upstream_module_output)
 {
   const auto & route_handler = planner_data->route_handler;
+  const double backward_path_length = planner_data->parameters.backward_path_length;
   const double min_jerk = parameters_.minimum_lateral_jerk;
   const double max_jerk = parameters_.maximum_lateral_jerk;
   const double backward_search_length = parameters_.backward_goal_search_length;
@@ -57,7 +60,8 @@ std::optional<PullOverPath> BezierPullOver::plan(
     std::abs(max_jerk - min_jerk) / shift_sampling_num;
 
   const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
-    upstream_module_output.path, planner_data, backward_search_length, forward_search_length);
+    upstream_module_output.path, planner_data, backward_path_length + backward_search_length,
+    forward_search_length);
 
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, backward_search_length, forward_search_length);
@@ -92,10 +96,11 @@ std::vector<PullOverPath> BezierPullOver::plans(
   const int shift_sampling_num = parameters_.shift_sampling_num;
   [[maybe_unused]] const double jerk_resolution =
     std::abs(max_jerk - min_jerk) / shift_sampling_num;
+  const double backward_path_length = planner_data->parameters.backward_path_length;
 
-  const auto road_lanes = utils::getExtendedCurrentLanesFromPath(
-    upstream_module_output.path, planner_data, backward_search_length, forward_search_length,
-    /*forward_only_in_route*/ false);
+  const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
+    upstream_module_output.path, planner_data, backward_search_length + backward_path_length,
+    forward_search_length);
 
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, backward_search_length, forward_search_length);
@@ -148,8 +153,10 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
   // case2) crop path if shift end pose is ahead of previous module path terminal pose
   const auto processed_prev_module_path = std::invoke([&]() -> std::optional<PathWithLaneId> {
     const bool extend_previous_module_path =
-      lanelet::utils::getArcCoordinates(road_lanes, shift_end_pose).length >
-      lanelet::utils::getArcCoordinates(road_lanes, prev_module_path_terminal_pose).length;
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, shift_end_pose)
+        .length > autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                    road_lanes, prev_module_path_terminal_pose)
+                    .length;
     if (extend_previous_module_path) {  // case1
       // NOTE: The previous module may insert a zero velocity at the end of the path, so remove it
       // by setting remove_connected_zero_velocity=true. Inserting a velocity of 0 into the goal is
@@ -185,12 +192,13 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
   std::vector<std::tuple<double, double, double>> params;
   const size_t n_sample_v_init = 2;
   const size_t n_sample_v_final = 2;
+  const double min_v_coeff = 0.1;
   const size_t n_sample_acc = 1;
   for (unsigned i = 0; i <= n_sample_v_init; ++i) {
     for (unsigned j = 0; j <= n_sample_v_final; j++) {
       for (unsigned k = 0; k <= n_sample_acc; k++) {
-        const double v_init_coeff = i * (1.0 / n_sample_v_init);
-        const double v_final_coeff = j * 0.25 / (1.0 / n_sample_v_final);
+        const double v_init_coeff = std::max(min_v_coeff, i * (1.0 / n_sample_v_init));
+        const double v_final_coeff = std::max(min_v_coeff, j * 0.25 / (1.0 / n_sample_v_final));
         const double acc_coeff = k * (10.0 / n_sample_acc);
         params.emplace_back(v_init_coeff, v_final_coeff, acc_coeff);
       }
@@ -288,9 +296,10 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
       PathPointWithLaneId p{};
       p.point.longitudinal_velocity_mps = 0.0;
       p.point.pose = goal_pose;
-      lanelet::Lanelet goal_lanelet{};
-      if (lanelet::utils::query::getClosestLanelet(lanes, goal_pose, &goal_lanelet)) {
-        p.lane_ids = {goal_lanelet.id()};
+      const auto goal_lanelet_opt =
+        autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, goal_pose);
+      if (!goal_lanelet_opt) {
+        p.lane_ids = {goal_lanelet_opt.value().id()};
       } else {
         p.lane_ids = shifted_path.path.points.back().lane_ids;
       }
@@ -298,15 +307,19 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
     }
 
     // set lane_id and velocity to shifted_path
-    for (size_t i = path_shifter.getShiftLines().front().start_idx;
-         i < shifted_path.path.points.size() - 1; ++i) {
+    if (path_shifter.getShiftLines().empty()) {
+      continue;
+    }
+    const size_t start_idx = path_shifter.getShiftLines().front().start_idx;
+    for (size_t i = start_idx; i < shifted_path.path.points.size() - 1; ++i) {
       auto & point = shifted_path.path.points.at(i);
       point.point.longitudinal_velocity_mps =
         std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
-      lanelet::Lanelet lanelet{};
-      if (lanelet::utils::query::getClosestLanelet(lanes, point.point.pose, &lanelet)) {
-        point.lane_ids = {lanelet.id()};  // overwrite lane_ids
-      } else {
+      const auto lanelet_opt =
+        autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, point.point.pose);
+      if (lanelet_opt) {
+        point.lane_ids = {lanelet_opt.value().id()};  // overwrite lane_ids
+      } else if (i > 0) {
         point.lane_ids = shifted_path.path.points.at(i - 1).lane_ids;
       }
     }
@@ -364,17 +377,20 @@ PathWithLaneId BezierPullOver::generateReferencePath(
   const double pull_over_velocity = parameters_.pull_over_velocity;
   const double deceleration_interval = parameters_.deceleration_interval;
 
-  const auto current_road_arc_coords = lanelet::utils::getArcCoordinates(road_lanes, current_pose);
+  const auto current_road_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, current_pose);
   const double s_start = current_road_arc_coords.length - backward_path_length;
   const double s_end = std::max(
-    lanelet::utils::getArcCoordinates(road_lanes, end_pose).length,
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, end_pose).length,
     s_start + std::numeric_limits<double>::epsilon());
   auto road_lane_reference_path = route_handler->getCenterLinePath(road_lanes, s_start, s_end);
 
   // decelerate velocity linearly to minimum pull over velocity
   // (or keep original velocity if it is lower than pull over velocity)
   for (auto & point : road_lane_reference_path.points) {
-    const auto arclength = lanelet::utils::getArcCoordinates(road_lanes, point.point.pose).length;
+    const auto arclength =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, point.point.pose)
+        .length;
     const double distance_to_pull_over_start =
       std::clamp(s_end - arclength, 0.0, deceleration_interval);
     const auto decelerated_velocity = static_cast<float>(

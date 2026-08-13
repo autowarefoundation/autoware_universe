@@ -2,6 +2,79 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(`autoware_default_adapi_universe`): add timeout diagnostics to adapi manual control for heartbeat monitoring with new ADAPI (>= 1.9.0) (`#11554 <https://github.com/mitsudome-r/autoware_universe/issues/11554>`_)
+  * feat: add timeout diagnostics for new ADAPI (>=1.9.0) adaptation
+  * fix: missing parameters for timeout diagnostics
+  * cosmetic: fix comment
+  * style(pre-commit): autofix
+  * bug: fix wrong parameter configuration
+  * The parameters are used only by local and remote modes
+  * fix: by pre-commit as following output
+  ```
+  system/autoware_default_adapi_universe/src/manual_control.cpp:52:  Add #include <memory> for make_unique<>  [build/include_what_you_use] [4]
+  Done processing system/autoware_default_adapi_universe/src/manual_control.cpp
+  Total errors found: 1
+  system/autoware_default_adapi_universe/src/manual_control.hpp:104:  Add #include <memory> for unique_ptr<>  [build/include_what_you_use] [4]
+  Done processing system/autoware_default_adapi_universe/src/manual_control.hpp
+  Total errors found: 1
+  ```
+  * style(pre-commit): autofix
+  * bug: fix wrong update logic for last received time
+  * fix: by pre-commit
+  * bug: fix a missing dependency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Junya Sasaki, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: system related packages support jazzy (`#11626 <https://github.com/autowarefoundation/autoware_universe/issues/11626>`_)
+* Contributors: Ryohsuke Mitsudome, 心刚
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* fix(default_adapi_universe): add energy normalize parameter (`#11546 <https://github.com/autowarefoundation/autoware_universe/issues/11546>`_)
+  * fix(default_adapi_universe): add energy normalize parameter
+  * modify ratio
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Takagi, Isamu
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(default_adapi_universe): add a maintainer (`#11619 <https://github.com/autowarefoundation/autoware_universe/issues/11619>`_)
+* feat(autoware_default_adapi_universe): add roundabout handling to planning factors (`#11300 <https://github.com/autowarefoundation/autoware_universe/issues/11300>`_)
+  feat(planning): add roundabout handling to planning factors and conversion map
+* fix(autoware_default_adapi_universe): comment out unused functions (`#11305 <https://github.com/autowarefoundation/autoware_universe/issues/11305>`_)
+* Contributors: Junya Sasaki, Ryohsuke Mitsudome, Sho Iwasawa, Takagi, Isamu
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(default_adapi_universe): check mrm state when reset diag (`#10894 <https://github.com/autowarefoundation/autoware_universe/issues/10894>`_)
+* feat(autoware_default_adapi_universe)!: remove interface ported to Autoware Core (`#10918 <https://github.com/autowarefoundation/autoware_universe/issues/10918>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Takagi, Isamu <isamu.takagi@tier4.jp>
+* docs(default_adapi_universe): add detailed description for autoware state arrived (`#10904 <https://github.com/autowarefoundation/autoware_universe/issues/10904>`_)
+  * focs(default_adapi_universe): add time for autoware state arrived
+  * add description
+  ---------
+* feat(default_ad_api): use polling subscription (`#7588 <https://github.com/autowarefoundation/autoware_universe/issues/7588>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Takagi, Isamu
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

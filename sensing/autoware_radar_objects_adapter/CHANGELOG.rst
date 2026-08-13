@@ -2,6 +2,70 @@
 Changelog for package autoware_radar_objects_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(radar_objects_adapter): apply agnocast for publisher of `radar_objects_adapter` (`#12756 <https://github.com/autowarefoundation/autoware_universe/issues/12756>`_)
+  apply agnocast for publisher
+* Contributors: Koichi Imai, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_radar_objects_adapter): remove dependency on autoware_universe_utils in sensing (`#12407 <https://github.com/mitsudome-r/autoware_universe/issues/12407>`_)
+  * feat(autoware_radar_objects_adapter): replace autoware_universe_utils with autoware_utils
+  Replace dependency on autoware_universe_utils with autoware_utils
+  in sensing/autoware_radar_objects_adapter.
+  Related to `#12376 <https://github.com/mitsudome-r/autoware_universe/issues/12376>`_
+  * fix: rename createQuaternionFromYaw to create_quaternion_from_yaw
+  * fix(autoware_radar_objects_adapter): use autoware_utils_geometry
+  ---------
+  Co-authored-by: github-actions <github-actions@github.com>
+* feat(radar_objects_adapter): apply autoware_agnocast_wrapper for CIE (`#12326 <https://github.com/mitsudome-r/autoware_universe/issues/12326>`_)
+  feat(autoware_radar_objects_adapter): apply autoware_agnocast_wrapper for CIE
+* docs(sensing): fix mkdocs macro rendering and links in sensing pages (`#12111 <https://github.com/mitsudome-r/autoware_universe/issues/12111>`_)
+  docs(sensing): fix mkdocs macro paths, links, and schema fields
+* Contributors: Max Schmeller, Vishal Chauhan, atsushi yano, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(radar_objects_adapter): enable to class remap and relocate bike labels into car (`#11570 <https://github.com/autowarefoundation/autoware_universe/issues/11570>`_)
+  * feat: add radar class remap function to radar remap
+  * chore: fix schema
+  * fix: update default classification
+  * docs: update readme
+  * style(pre-commit): autofix
+  * docs: fix readme
+  * Update sensing/autoware_radar_objects_adapter/schema/radar_objects_adapter.schema.json
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  * fix: precommit-fix
+  * fix: fix radar object adapter param from list to dict style
+  * chore: fix schema
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(autoware_radar_objects_adapter): object orientation availability (`#11164 <https://github.com/autowarefoundation/autoware_universe/issues/11164>`_)
+  * fix(radar_objects_adapter): set orientation availability for detected and tracked objects
+  * style(pre-commit): autofix
+  * fix(radar_objects_adapter): enhance kinematics data for detected and tracked objects
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE, Yoshi Ri
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 

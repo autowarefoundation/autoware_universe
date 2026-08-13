@@ -78,9 +78,9 @@ void RoiDetectedObjectFusionNode::preprocess(DetectedObjects & output_msg)
 
   int64_t timestamp_nsec =
     output_msg.header.stamp.sec * static_cast<int64_t>(1e9) + output_msg.header.stamp.nanosec;
-  passthrough_object_flags_map_.insert(std::make_pair(timestamp_nsec, passthrough_object_flags));
-  fused_object_flags_map_.insert(std::make_pair(timestamp_nsec, fused_object_flags));
-  ignored_object_flags_map_.insert(std::make_pair(timestamp_nsec, ignored_object_flags));
+  passthrough_object_flags_map_.emplace(timestamp_nsec, passthrough_object_flags);
+  fused_object_flags_map_.emplace(timestamp_nsec, fused_object_flags);
+  ignored_object_flags_map_.emplace(timestamp_nsec, ignored_object_flags);
 }
 
 void RoiDetectedObjectFusionNode::fuse_on_single_image(
@@ -164,8 +164,9 @@ RoiDetectedObjectFusionNode::generateDetectedObjectRoIs(
       }
 
       Eigen::Vector2d proj_point;
-      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-            cv::Point3d(point.x(), point.y(), point.z()), proj_point)) {
+      if (
+        det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+          cv::Point3d(point.x(), point.y(), point.z()), proj_point)) {
         const double px = proj_point.x();
         const double py = proj_point.y();
 
@@ -196,7 +197,7 @@ RoiDetectedObjectFusionNode::generateDetectedObjectRoIs(
     object_roi.feature.roi.width = idx_max_x - idx_min_x;
     object_roi.feature.roi.height = idx_max_y - idx_min_y;
     object_roi.object = object;
-    object_roi_map.insert(std::make_pair(obj_i, object_roi));
+    object_roi_map.emplace(obj_i, object_roi);
 
     if (debugger_) {
       debugger_->obstacle_rois_.push_back(object_roi.feature.roi);

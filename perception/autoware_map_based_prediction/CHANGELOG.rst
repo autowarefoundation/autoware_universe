@@ -2,6 +2,155 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_map_based_prediction): flip footprint points when object direction is flipped (`#12751 <https://github.com/autowarefoundation/autoware_universe/issues/12751>`_)
+  fix(object_tracker): flip footprint points in updateObjectData method
+* feat(map_based_prediction): apply agnocast subscription to `map_based_prediction` (`#12676 <https://github.com/autowarefoundation/autoware_universe/issues/12676>`_)
+  * apply agnocast sub
+  * style(pre-commit): autofix
+  * delete suppress comments for cppcheck
+  * add
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(autoware_map_based_prediction): total refactoring - split monolitic node.cpp (`#12687 <https://github.com/autowarefoundation/autoware_universe/issues/12687>`_)
+  * decompose files. build failed
+  * split node class. build failed
+  * fix build
+  * refactor(map_based_prediction): reorganize code structure and enhance callbacks functionality
+  * refactor vru predictor
+  * refactor(path_generator): reorganize FrenetPoint structure and enhance path generation functions
+  * refactor(map_based_prediction): restructure callbacks and diagnostics integration for improved state management
+  * Refactor predictor vehicle module into sub-modules
+  - Introduced DebugModule for visualization marker generation.
+  - Created ManeuverPredictor for handling maneuver predictions.
+  - Added ObjectTracker for managing object data and history.
+  - Implemented PathProcessor for path prediction and processing.
+  - Updated PredictorVehicle to utilize the new sub-modules, improving code organization and maintainability.
+  - Adjusted method signatures to pass object history and parameters appropriately.
+  - Ensured all new classes are integrated with existing functionality while maintaining the original behavior.
+  * refactor: streamline code formatting and improve readability across multiple files
+  * refactor(map_based_prediction): introduce NodeParams struct and streamline parameter handling for predictors
+  * fix: correct copyright formatting across multiple files
+  * refactor: update include directives for improved dependency management and code clarity
+  * refactor: reorganize include directives for improved clarity and dependency management
+  * Potential fix for pull request finding
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+  * refactor: improve parameter handling and readability in FenceModule and TrafficSignalModule
+  * refactor: add missing include for algorithm in fence.cpp
+  * refactor: change debug_markers parameter from reference to pointer in prediction methods
+  * refactor: remove empty predicted reference paths from conversion results
+  * refactor: change path_with_smallest_avg_curvature to optional for better handling of empty states
+  refactor: enhance path prediction logic to handle off-lane vehicles when no optimal path is found
+  refactor: remove early exit for empty straight path in prediction logic
+  ---------
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+* Contributors: Koichi Imai, Taekjin LEE, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(map_based_prediction): apply autoware_agnocast_wrapper for CIE (`#12332 <https://github.com/mitsudome-r/autoware_universe/issues/12332>`_)
+  * feat(autoware_map_based_prediction): apply autoware_agnocast_wrapper for CIE
+  * fix(autoware_map_based_prediction): fix alphabetical order in package.xml
+  ---------
+* chore(perception): remove unused lanelet2_extension header (`#12295 <https://github.com/mitsudome-r/autoware_universe/issues/12295>`_)
+  unused lanelet2_extension in perception component
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* feat(autoware_map_based_prediction): remove glog (`#12167 <https://github.com/mitsudome-r/autoware_universe/issues/12167>`_)
+  feat: remove glog
+* feat(map_based_prediction): apply the custom find-nearest function (`#12128 <https://github.com/mitsudome-r/autoware_universe/issues/12128>`_)
+  * feat: apply the custom find-nearest function
+  * chore: update comment
+  ---------
+* refactor(map_based_prediction): rename ObjectData and CrosswalkUserData (`#11767 <https://github.com/mitsudome-r/autoware_universe/issues/11767>`_)
+  refactor: rename ObjectData and CrosswalkUserData
+* Contributors: Kotaro Uetake, Sarun MUKDAPITAK, Taekjin LEE, Tetsuhiro Kawaguchi, atsushi yano, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(perception, localization): replace getClosestLanelet function (`#12033 <https://github.com/autowarefoundation/autoware_universe/issues/12033>`_)
+  * refactor(perception, localization): replace getClosestLanelet function
+  * replace toGeomMsg
+  ---------
+* fix(map_based_prediction): remove yaw correction for orientation unavailable (`#12027 <https://github.com/autowarefoundation/autoware_universe/issues/12027>`_)
+  * remove yaw correction for orientation unavailable
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(map_based_prediction): use explicit Eigen init (`#11918 <https://github.com/autowarefoundation/autoware_universe/issues/11918>`_)
+* Contributors: Mamoru Sobue, Masaki Baba, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* fix(autoware_map_based_prediction): add missing parameter definitions in schema (`#11722 <https://github.com/autowarefoundation/autoware_universe/issues/11722>`_)
+  fix: add missing parameter definitions in schema
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Taekjin LEE
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(map_based_prediction): check fence for default crosswalk user path (`#11568 <https://github.com/autowarefoundation/autoware_universe/issues/11568>`_)
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in perception component  (`#11387 <https://github.com/autowarefoundation/autoware_universe/issues/11387>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(map_based_prediction): use lateral distance with crosswalks (`#11481 <https://github.com/autowarefoundation/autoware_universe/issues/11481>`_)
+* feat(map_based_prediction): max distance for on road crosswalk users (`#11459 <https://github.com/autowarefoundation/autoware_universe/issues/11459>`_)
+* fix(map_based_prediction): better fence prunning for crosswalk users (`#11457 <https://github.com/autowarefoundation/autoware_universe/issues/11457>`_)
+* Contributors: Mamoru Sobue, Maxime CLEMENT, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(map_based_prediction): pedestrian crossing intention estimation logic (`#11084 <https://github.com/autowarefoundation/autoware_universe/issues/11084>`_)
+  * fix: reset crossing intention estimation when pedestrian starts or finishes crossing
+  * chore: rename variable for readability
+  ---------
+* feat(map_based_prediction): prevent predicted path from chattering under noisy pose and velocity estimation (`#11028 <https://github.com/autowarefoundation/autoware_universe/issues/11028>`_)
+  * feat(map_based_prediction): prevent predicted path from chattering under noisy pose and velocity estimation
+  * docs: update readme
+  * docs: update readme
+  * docs: update readme
+  ---------
+* fix(autoware_map_based_prediction): take most probable class for prediction (`#10930 <https://github.com/autowarefoundation/autoware_universe/issues/10930>`_)
+  * refactor(prediction): add getMaxProbabilityLabel function and rename changeLabelForPrediction to changeVRULabelForPrediction
+  * style(pre-commit): autofix
+  * refactor(prediction): remove getMaxProbabilityLabel function and update label retrieval in MapBasedPredictionNode
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_map_based_prediction): bug fix for pedestrian orientation flip (`#10906 <https://github.com/autowarefoundation/autoware_universe/issues/10906>`_)
+  * fix(predictor_vru): improve velocity calculation for crosswalk user prediction
+  Updated the velocity threshold check to use std::hypot for better accuracy in calculating the object's velocity. This change ensures that the predicted object's orientation and velocity are correctly set based on the calculated speed.
+  * refactor(predictor_vru): change object velocity variable to const
+  ---------
+* Contributors: Mete Fatih Cırıt, Satoshi OTA, Taekjin LEE
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

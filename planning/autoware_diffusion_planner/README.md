@@ -16,6 +16,31 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 
 ---
 
+## How to use
+
+### (1) Prerequisites
+
+Make sure that the directory specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml` points to the correct model version and contains the required model weight and parameter files.
+
+```bash
+$ ls ~/autoware_data/ml_models/diffusion_planner/v4.0/
+diffusion_planner.onnx diffusion_planner.param.json
+```
+
+This can be downloaded by following [Download artifacts](https://github.com/autowarefoundation/autoware/blob/main/ansible/roles/artifacts/README.md#download-artifacts).
+
+### (2) Launch the planning simulator
+
+Pass `planning_setting:=diffusion_planner` to switch the planning stack from the rule-based scenario planner to the diffusion planner. This argument automatically swaps the trajectory generator, the planning validator input topic, and the diagnostics graph, so no additional launch-file edits are required.
+
+```bash
+ros2 launch autoware_launch planning_simulator.launch.xml \
+  map_path:=/path/to/your/map \
+  vehicle_model:=sample_vehicle \
+  sensor_model:=sample_sensor_kit \
+  planning_setting:=diffusion_planner
+```
+
 ## Features
 
 - **Diffusion-based trajectory generation** for flexible and robust planning
@@ -51,24 +76,27 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 
 ## Inputs
 
-| Topic                     | Message Type                                        | Description              |
-| ------------------------- | --------------------------------------------------- | ------------------------ |
-| `~/input/odometry`        | nav_msgs/msg/Odometry                               | Ego vehicle odometry     |
-| `~/input/acceleration`    | geometry_msgs/msg/AccelWithCovarianceStamped        | Ego acceleration         |
-| `~/input/tracked_objects` | autoware_perception_msgs/msg/TrackedObjects         | Detected dynamic objects |
-| `~/input/traffic_signals` | autoware_perception_msgs/msg/TrafficLightGroupArray | Traffic light states     |
-| `~/input/vector_map`      | autoware_map_msgs/msg/LaneletMapBin                 | Lanelet2 map             |
-| `~/input/route`           | autoware_planning_msgs/msg/LaneletRoute             | Route information        |
+| Topic                     | Message Type                                        | Description                |
+| ------------------------- | --------------------------------------------------- | -------------------------- |
+| `~/input/odometry`        | nav_msgs/msg/Odometry                               | Ego vehicle odometry       |
+| `~/input/acceleration`    | geometry_msgs/msg/AccelWithCovarianceStamped        | Ego acceleration           |
+| `~/input/tracked_objects` | autoware_perception_msgs/msg/TrackedObjects         | Detected dynamic objects   |
+| `~/input/traffic_signals` | autoware_perception_msgs/msg/TrafficLightGroupArray | Traffic light states       |
+| `~/input/vector_map`      | autoware_map_msgs/msg/LaneletMapBin                 | Lanelet2 map               |
+| `~/input/route`           | autoware_planning_msgs/msg/LaneletRoute             | Route information          |
+| `~/input/turn_indicators` | autoware_vehicle_msgs/msg/TurnIndicatorsReport      | Turn indicator information |
 
 ## Outputs
 
-| Topic                        | Message Type                                              | Description                                |
-| ---------------------------- | --------------------------------------------------------- | ------------------------------------------ |
-| `~/output/trajectory`        | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle     |
-| `~/output/trajectories`      | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories            |
-| `~/output/predicted_objects` | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects |
-| `~/debug/lane_marker`        | visualization_msgs/msg/MarkerArray                        | Lane debug markers                         |
-| `~/debug/route_marker`       | visualization_msgs/msg/MarkerArray                        | Route debug markers                        |
+| Topic                           | Message Type                                              | Description                                                |
+| ------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------- |
+| `~/output/trajectory`           | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle                     |
+| `~/output/trajectories`         | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories                            |
+| `~/output/predicted_objects`    | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects                 |
+| `~/output/turn_indicators`      | autoware_vehicle_msgs/msg/TurnIndicatorsCommand           | Planned turn indicator command                             |
+| `~/output/debug/traffic_signal` | autoware_perception_msgs/msg/TrafficLightGroup            | First traffic light on route (ego forward) for RViz/ad_api |
+| `~/debug/lane_marker`           | visualization_msgs/msg/MarkerArray                        | Lane debug markers                                         |
+| `~/debug/route_marker`          | visualization_msgs/msg/MarkerArray                        | Route debug markers                                        |
 
 ---
 
@@ -83,24 +111,33 @@ colcon test-result --all
 
 ---
 
-## ❗ Limitations
+## ONNX Model and Versioning
 
-While the Diffusion Planner shows promising capabilities, there are several limitations to be aware of:
+The Diffusion Planner relies on an ONNX model for inference.
+To ensure compatibility between models and the ROS 2 node implementation, the model versioning scheme follows **major** and **minor** numbers:
+The model version is defined either by the directory name provided to the node or within the `diffusion_planner.param.json` configuration file.
 
-- **Route Termination**:
-  The route input to the model consists of a sequence of preferred lanelets from the current position to the goal region. However, **this route does not necessarily end exactly at the goal position**. As a result, the ego vehicle **may continue driving past the goal** instead of stopping at the target location.
+- **Major version**
+  Incremented when there are changes in the model **inputs/outputs or architecture**.
 
-- **Training Dataset Domain Gap**:
-  The provided diffusion model checkpoint was trained on datasets using a **proprietary Lanelet2 map that is not publicly available**. Consequently, **performance may significantly degrade when running on other maps**, especially in environments with different topology or tagging conventions.
+  > :warning: Models with different major versions are **not compatible** with the current ROS node.
 
-- **Route Adherence & Lane Changing**:
-  The model sometimes **fails to strictly follow the preferred lanelet route**. If the ego vehicle leaves the preferred lane (e.g., to avoid an obstacle), it tends to **only return to the route during curves**. It **seldom performs deliberate lane changes** to merge back into the correct route on straight segments.
+- **Minor version**
+  Incremented when **only the weight files are updated**.
+  As long as the major version matches, the node remains compatible, and the new model can be used directly.
 
-- **Agent and Obstacle Avoidance**:
-  Although the planner **reacts to other agents and can perform avoidance maneuvers**, this behavior is **not fully reliable**. In some cases, **collisions with static or dynamic obstacles may still occur** due to ignored agents or insufficient context comprehension.
+To download the latest model, follow [Download artifacts](https://github.com/autowarefoundation/autoware/blob/main/ansible/roles/artifacts/README.md#download-artifacts).
 
-- **Lack of Static Object Context**:
-  Static environment context such as **traffic cones, guard rails, or construction barriers** is **not currently provided to the model**. Instead, an **empty tensor** is passed in their place, which can lead to **limited understanding of occlusions or drivable boundaries**.
+### Model Version History
+
+| Version | Release Date | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                    | ROS Node Compatibility |
+| ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **0.1** | 2025/07/05   | - First public release<br>- Route planning based on TIER IV real data                                                                                                                                                                                                                                                                                                                                                                    | NG                     |
+| **1.0** | 2025/09/12   | - Route Termination learning<br>- Output turn-signal (indicator) <br>- Lane type integration in HD map for improved accuracy<br>- Added datasets:<br>&nbsp;&nbsp;- Synthetic Data: **4.0M points**<br>&nbsp;&nbsp;- Real Data: **1.5M points**                                                                                                                                                                                           | NG                     |
+| **2.0** | 2025/11/26   | - Increased the number of acceptable lane types ("crosswalk", "pedestrian_lane" and "walkway") for left and right boundaries. <br>- Added `Polygon` and `LineString` as acceptable input types. <br>- Increased the maximum length of each history record to 3 seconds. <br>- Added support for turn_indicator as an input (this is just an interface, not used in v2.0 weights). <br>- Increased `NUM_SEGMENTS_IN_LANE` from 70 to 140. | NG                     |
+| **3.0** | 2026/01/09   | - Added `TURN_INDICATOR_OUTPUT_KEEP` to allow the model to focus on the timing of status change. <br>- Conducted Supervised Fine-Tuning (SFT) with carefully filtered data. <br>- Increased the encoder layers from 3 to 6.                                                                                                                                                                                                              | OK                     |
+| **3.1** | 2026/03/05   | - ONNX simplified model for faster TRT engine build and reduced GPU memory. <br>- Same weights as v3.0 (no retraining).                                                                                                                                                                                                                                                                                                                  | OK                     |
+| **4.0** | 2026/03/23   | - Added `delay` input for Real-Time Chunking (RTC): reuses first N timesteps from the previous prediction for trajectory continuity. <br>- Added one-hot type encoding for polygons (`intersection_area`) and line strings (`stop_line`, `road_border`). <br>- Increased `NUM_LINE_STRINGS` from 10 to 60. <br>- Added line string resampling (`line_string_max_step_m`). <br>- Added debug visualization for line strings.              | OK                     |
 
 ---
 

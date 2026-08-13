@@ -1,0 +1,210 @@
+cmake_minimum_required(VERSION 3.14)
+project(autoware_ptv3)
+
+find_package(autoware_cmake REQUIRED)
+autoware_package()
+
+add_compile_options(-Wno-deprecated-declarations)
+
+option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
+
+# set flags for CUDA availability
+option(CUDA_AVAIL "CUDA available" OFF)
+find_package(CUDA)
+if(CUDA_FOUND)
+  find_library(CUBLAS_LIBRARIES cublas HINTS
+    ${CUDA_TOOLKIT_ROOT_DIR}/lib64
+    ${CUDA_TOOLKIT_ROOT_DIR}/lib
+  )
+  if(CUDA_VERBOSE)
+    message("CUDA is available!")
+    message("CUDA Libs: ${CUDA_LIBRARIES}")
+    message("CUDA Headers: ${CUDA_INCLUDE_DIRS}")
+  endif()
+  # Note: cublas_device was depreciated in CUDA version 9.2
+  #       https://forums.developer.nvidia.com/t/where-can-i-find-libcublas-device-so-or-libcublas-device-a/67251/4
+  #       In LibTorch, CUDA_cublas_device_LIBRARY is used.
+  unset(CUDA_cublas_device_LIBRARY CACHE)
+  set(CUDA_AVAIL ON)
+else()
+  message("CUDA NOT FOUND")
+  set(CUDA_AVAIL OFF)
+endif()
+
+# set flags for TensorRT availability
+option(TRT_AVAIL "TensorRT available" OFF)
+# try to find the tensorRT modules
+find_library(NVINFER nvinfer)
+find_library(NVONNXPARSER nvonnxparser)
+if(NVINFER AND NVONNXPARSER)
+  if(CUDA_VERBOSE)
+    message("TensorRT is available!")
+    message("NVINFER: ${NVINFER}")
+    message("NVONNXPARSER: ${NVONNXPARSER}")
+  endif()
+  set(TRT_AVAIL ON)
+else()
+  message("TensorRT is NOT available")
+  set(TRT_AVAIL OFF)
+endif()
+
+if(TRT_AVAIL AND CUDA_AVAIL)
+  include_directories(
+    include
+    ${CUDA_INCLUDE_DIRS}
+  )
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
+  endif()
+
+  # cSpell:ignore expt
+  list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "12.8")
+    if(CUDA_VERSION VERSION_LESS "13.0")
+      list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+    else()  # CUDA 13.0 renamed SM101 to SM110
+      list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+    endif()
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
+  else()
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+  endif()
+
+  cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
+    lib/postprocess/postprocess_kernel.cu
+    lib/postprocess/detection3d_postprocess.cu
+    lib/preprocess/preprocess_kernel.cu
+  )
+
+  target_include_directories(${PROJECT_NAME}_cuda_lib
+    SYSTEM PUBLIC
+    ${autoware_cuda_utils_INCLUDE_DIRS}
+  )
+  ament_target_dependencies(${PROJECT_NAME}_cuda_lib
+    autoware_point_types
+  )
+
+  ament_auto_add_library(${PROJECT_NAME}_lib SHARED
+    lib/ptv3_trt.cpp
+    lib/ros_utils.cpp
+  )
+
+  target_compile_definitions(${PROJECT_NAME}_lib PRIVATE
+    TENSORRT_VERSION_MAJOR=${TENSORRT_VERSION_MAJOR}
+  )
+
+  target_link_libraries(${PROJECT_NAME}_lib
+    ${NVINFER}
+    ${NVONNXPARSER}
+    ${CUDA_LIBRARIES}
+    ${CUBLAS_LIBRARIES}
+    ${CUDA_curand_LIBRARY}
+    ${PROJECT_NAME}_cuda_lib
+  )
+
+  # To suppress unknown-pragmas error. The root-cause is CUB library in CUDA 11.6.
+  # This issue was fixed by https://github.com/NVIDIA/cub/commit/7d608bf1dc14553e2fb219eabeed80b76621b6fe
+  target_include_directories(${PROJECT_NAME}_lib
+    SYSTEM PUBLIC
+    ${CUDA_INCLUDE_DIRS}
+    ${autoware_point_types_INCLUDE_DIRS}
+  )
+
+  ament_auto_add_library(${PROJECT_NAME}_component SHARED
+    src/ptv3_node.cpp
+  )
+
+  target_link_libraries(${PROJECT_NAME}_component
+    ${PROJECT_NAME}_lib
+  )
+
+  rclcpp_components_register_node(${PROJECT_NAME}_component
+    PLUGIN "autoware::ptv3::PTv3Node"
+    EXECUTABLE ${PROJECT_NAME}_node
+  )
+
+  install(
+    TARGETS ${PROJECT_NAME}_cuda_lib
+    DESTINATION lib
+  )
+
+  if(BUILD_TESTING)
+    ament_add_gtest(ptv3_config_test
+      test/ptv3_config_test.cpp
+    )
+    target_include_directories(ptv3_config_test PRIVATE include)
+
+    ament_add_gtest(serialized_pooling_metadata_test
+      test/serialized_pooling_metadata_test.cpp
+    )
+    if(TARGET serialized_pooling_metadata_test)
+      target_link_libraries(serialized_pooling_metadata_test
+        CUDA::cudart
+        ${PROJECT_NAME}_cuda_lib
+      )
+      target_include_directories(serialized_pooling_metadata_test PRIVATE
+        include
+        ${CUDA_INCLUDE_DIRS}
+      )
+    endif()
+
+    ament_add_gtest(test_preprocess_kernel
+      test/test_preprocess_kernel.cpp
+    )
+
+    target_link_libraries(test_preprocess_kernel
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+
+    ament_add_gtest(postprocess_kernel_test
+      test/postprocess_kernel_test.cpp
+    )
+    target_link_libraries(postprocess_kernel_test
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+    target_include_directories(postprocess_kernel_test PRIVATE
+      include
+      ${CUDA_INCLUDE_DIRS}
+    )
+
+    ament_target_dependencies(postprocess_kernel_test autoware_point_types)
+
+    ament_add_gtest(detection3d_postprocess_test
+      test/detection3d_postprocess_test.cpp
+    )
+
+    target_link_libraries(detection3d_postprocess_test
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+
+    ament_add_gtest(ros_utils_test
+      test/ros_utils_test.cpp
+    )
+
+    target_link_libraries(ros_utils_test
+      ${PROJECT_NAME}_lib
+    )
+
+  endif()
+
+  autoware_ament_auto_package(
+    INSTALL_TO_SHARE
+      launch
+      config
+  )
+
+else()
+  autoware_ament_auto_package(
+    INSTALL_TO_SHARE
+      launch
+  )
+endif()

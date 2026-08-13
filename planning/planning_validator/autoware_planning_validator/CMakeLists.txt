@@ -18,6 +18,10 @@ ament_auto_add_library(autoware_planning_validator_component SHARED
   src/utils.cpp
 )
 
+ament_target_dependencies(autoware_planning_validator_component
+  autoware_adapi_v1_msgs
+)
+
 rclcpp_components_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::planning_validator::PlanningValidatorNode"
   EXECUTABLE ${PROJECT_NAME}_node

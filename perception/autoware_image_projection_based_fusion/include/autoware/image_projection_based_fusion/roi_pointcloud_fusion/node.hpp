@@ -17,10 +17,13 @@
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::image_projection_based_fusion
@@ -31,6 +34,7 @@ public:
   explicit RoiPointCloudFusionNode(const rclcpp::NodeOptions & options);
 
 private:
+  AUTOWARE_PUBLISHER_PTR(ClusterMsgType) agnocast_pub_ptr_;
   rclcpp::Publisher<PointCloudMsgType>::SharedPtr point_pub_ptr_;
   rclcpp::Publisher<PointCloudMsgType>::SharedPtr cluster_debug_pub_;
 
@@ -45,7 +49,7 @@ private:
   int min_cluster_size_{1};
   int max_cluster_size_{20};
   double max_object_size_{2.0};
-  bool fuse_unknown_only_{true};
+  std::unordered_map<uint8_t, bool> fusion_enabled_classes_;
   double cluster_2d_tolerance_;
   double roi_scale_factor_{1.0};
   bool override_class_with_unknown_{false};

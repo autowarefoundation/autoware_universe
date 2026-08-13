@@ -2,6 +2,68 @@
 Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(obstacle_slowdown): the second planning factor velocity is 0 (`#11984 <https://github.com/autowarefoundation/autoware_universe/issues/11984>`_)
+  * fix the second planning factor velocity
+  * pre-commit
+  ---------
+* feat(motion_velocity_planner): publish debug trajectory for each module (`#11781 <https://github.com/autowarefoundation/autoware_universe/issues/11781>`_)
+* Contributors: Kem (TiankuiXian), Maxime CLEMENT, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)
+  * delete bdp time publish
+  * delete dynamic_obstacle_stop time publish
+  * delete obstacle_cruise time publish
+  * delete obstacle_slow_down time publish
+  * delete obstacle_velocity_limiter time publish
+  * delete out of lane time publish
+  * delete run out time publish
+  * add short module name function
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Yuki TAKAGI
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(obstacle_slow_down): fix left/right judgment, update of deceleration constraint calculation (`#11590 <https://github.com/autowarefoundation/autoware_universe/issues/11590>`_)
+* feat(obstacle_slow_down): update velocity calclation (`#11502 <https://github.com/autowarefoundation/autoware_universe/issues/11502>`_)
+* feat(obstacle_slow_down): add obstacle filtter (`#11498 <https://github.com/autowarefoundation/autoware_universe/issues/11498>`_)
+* chore(obstacle\_*_module): add maintainer (`#11506 <https://github.com/autowarefoundation/autoware_universe/issues/11506>`_)
+* feat(obstacle_slow_down): add curve margin feature (`#11343 <https://github.com/autowarefoundation/autoware_universe/issues/11343>`_)
+  * add curve margin
+  ---------
+* fix(obstacle_slow_down): suppress unnecessary virtual walls and planning factors (`#11355 <https://github.com/autowarefoundation/autoware_universe/issues/11355>`_)
+* feat(obstacle_slow_down_module, obstacle_cruise_module): add safety_factor (`#10990 <https://github.com/autowarefoundation/autoware_universe/issues/10990>`_)
+  add safety factor, add planning factor test
+* chore(obstacle_slow_down): add debug print (`#11050 <https://github.com/autowarefoundation/autoware_universe/issues/11050>`_)
+* refactor(obstacle_slow_down): sync motion_velocity_planner chnge (`#11209 <https://github.com/autowarefoundation/autoware_universe/issues/11209>`_)
+  refactor
+* Contributors: Ryohsuke Mitsudome, Takayuki Murooka, Yuki TAKAGI
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(obstacle_slow_down): rework type specific params, split left/right (`#10993 <https://github.com/autowarefoundation/autoware_universe/issues/10993>`_)
+* refactor(obstacle_slowdown_module, obstacle_cruise_module): follow function name change in autoware_core (`#10840 <https://github.com/autowarefoundation/autoware_universe/issues/10840>`_)
+  change function name
+* Contributors: Maxime CLEMENT, Mete Fatih Cırıt, Yuki TAKAGI
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

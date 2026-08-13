@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "decision_result.hpp"
+#include "autoware/behavior_velocity_intersection_module/decision_result.hpp"
 
 #include <string>
 
@@ -38,8 +38,7 @@ std::string formatDecisionResult(
     return rtc + "StuckStop";
   }
   if (std::holds_alternative<YieldStuckStop>(decision_result)) {
-    const auto & state = std::get<YieldStuckStop>(decision_result);
-    return rtc + "YieldStuckStop:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "YieldStuckStop";
   }
   if (std::holds_alternative<NonOccludedCollisionStop>(decision_result)) {
     const auto & state = std::get<NonOccludedCollisionStop>(decision_result);

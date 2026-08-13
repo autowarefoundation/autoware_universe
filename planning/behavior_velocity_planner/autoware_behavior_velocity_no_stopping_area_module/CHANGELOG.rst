@@ -2,6 +2,50 @@
 Changelog for package autoware_behavior_velocity_no_stopping_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(behavior_velocity_no_stopping_area): declare predicted_objects subscription and guard null deref (`#12860 <https://github.com/autowarefoundation/autoware_universe/issues/12860>`_)
+  feat(behavior_velocity_planner): update required subscriptions and handle predicted objects in no stopping area module
+* Contributors: Taekjin LEE, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_trajectory): define set stopline in Trajectory class (`#12008 <https://github.com/mitsudome-r/autoware_universe/issues/12008>`_)
+  * replace usage with set_stopline function
+  * replace additiona usage with set_stopline function
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* feat(behavior_velocity_no_stopping_area_module): use Trajectory instead of PathWithLaneId (`#11584 <https://github.com/mitsudome-r/autoware_universe/issues/11584>`_)
+  * use Trajectory instead of PathWithLaneId
+  * move is_stoppable() to PassJudge member
+  * handle case where either one is empty
+  ---------
+* Contributors: Mitsuhiro Sakamoto, Sarun MUKDAPITAK, github-actions, nishikawa-masaki
+
+0.50.0 (2026-02-14)
+-------------------
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt
+
 0.46.0 (2025-06-20)
 -------------------
 

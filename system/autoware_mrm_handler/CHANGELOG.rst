@@ -1,6 +1,43 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package autoware_mrm_handler
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(mrm_handler): remove @veqcc from maintainers (`#12519 <https://github.com/mitsudome-r/autoware_universe/issues/12519>`_)
+* Contributors: Ryuta Kambe, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: system related packages support jazzy (`#11626 <https://github.com/autowarefoundation/autoware_universe/issues/11626>`_)
+* Contributors: Ryohsuke Mitsudome, 心刚
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_mrm_handler): remove duplicate return (`#11194 <https://github.com/autowarefoundation/autoware_universe/issues/11194>`_)
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* feat: use mrm in all operation mode state (`#10259 <https://github.com/autowarefoundation/autoware_universe/issues/10259>`_)
+  * feat: use mrm in all operation mode
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Tetsuhiro Kawaguchi
 
 0.46.0 (2025-06-20)
 -------------------

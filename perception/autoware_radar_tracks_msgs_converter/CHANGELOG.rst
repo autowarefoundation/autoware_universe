@@ -2,6 +2,47 @@
 Changelog for package autoware_radar_tracks_msgs_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(radar_tracks_msgs_converter): enhance thread safety and data handling (`#12132 <https://github.com/mitsudome-r/autoware_universe/issues/12132>`_)
+  * fix(radar_tracks_msgs_converter): enhance thread safety and data handling
+  * Added mutex protection to shared data access in radar_tracks_msgs_converter_node.
+  * Updated methods to use local copies of radar and odometry data for thread-safe operations.
+  * Modified function signatures to accept radar and odometry data as parameters for better encapsulation.
+  This change improves the robustness of the radar tracks message converter by ensuring that data is accessed safely in a multi-threaded environment.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Yoshi Ri, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+* fix(radar_tracks_objects_converter): publish topic even if objects array is empty (`#11002 <https://github.com/autowarefoundation/autoware_universe/issues/11002>`_)
+  fix: publish topic even if objects is empty
+* Contributors: Yoshi Ri
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

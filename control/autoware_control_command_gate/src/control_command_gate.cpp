@@ -36,13 +36,19 @@ VehicleCmdFilterParam declare_filter_params(rclcpp::Node & node, const std::stri
   VehicleCmdFilterParam p;
   p.vel_lim = node.declare_parameter<double>(ns + "vel_lim");
   p.reference_speed_points = node.declare_parameter<LimitArray>(ns + "reference_speed_points");
-  p.steer_lim = node.declare_parameter<LimitArray>(ns + "steer_lim");
-  p.steer_rate_lim = node.declare_parameter<LimitArray>(ns + "steer_rate_lim");
-  p.lon_acc_lim = node.declare_parameter<LimitArray>(ns + "lon_acc_lim");
-  p.lon_jerk_lim = node.declare_parameter<LimitArray>(ns + "lon_jerk_lim");
-  p.lat_acc_lim = node.declare_parameter<LimitArray>(ns + "lat_acc_lim");
-  p.lat_jerk_lim = node.declare_parameter<LimitArray>(ns + "lat_jerk_lim");
-  p.actual_steer_diff_lim = node.declare_parameter<LimitArray>(ns + "actual_steer_diff_lim");
+  p.lon_acc_lim_for_lon_vel = node.declare_parameter<LimitArray>(ns + "lon_acc_lim_for_lon_vel");
+  p.lon_jerk_lim_for_lon_acc = node.declare_parameter<LimitArray>(ns + "lon_jerk_lim_for_lon_acc");
+  p.lat_acc_lim_for_steer_cmd =
+    node.declare_parameter<LimitArray>(ns + "lat_acc_lim_for_steer_cmd");
+  p.lat_jerk_lim_for_steer_cmd =
+    node.declare_parameter<LimitArray>(ns + "lat_jerk_lim_for_steer_cmd");
+  p.steer_cmd_lim = node.declare_parameter<LimitArray>(ns + "steer_cmd_lim");
+  p.steer_rate_lim_for_steer_cmd =
+    node.declare_parameter<LimitArray>(ns + "steer_rate_lim_for_steer_cmd");
+  p.steer_cmd_diff_lim_from_current_steer =
+    node.declare_parameter<LimitArray>(ns + "steer_cmd_diff_lim_from_current_steer");
+  p.lat_jerk_lim_for_steer_rate =
+    node.declare_parameter<double>(ns + "lat_jerk_lim_for_steer_rate");
   return p;
 }
 
@@ -53,8 +59,14 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
   using std::placeholders::_2;
 
   // Create ROS interface.
-  pub_status_ =
+  pub_source_ =
     create_publisher<CommandSourceStatus>("~/source/status", rclcpp::QoS(1).transient_local());
+  pub_filter_ =
+    create_publisher<CommandFilterStatus>("~/filter/status", rclcpp::QoS(1).transient_local());
+  srv_source_ = create_service<ChangeCommandSource>(
+    "~/source/change", std::bind(&ControlCmdGate::on_change_source, this, _1, _2));
+  srv_filter_ = create_service<ChangeCommandFilter>(
+    "~/filter/change", std::bind(&ControlCmdGate::on_change_filter, this, _1, _2));
   srv_select_ = create_service<SelectCommandSource>(
     "~/source/select", std::bind(&ControlCmdGate::on_select_source, this, _1, _2));
 
@@ -125,6 +137,7 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
   // Select initial command source. Note that the select function calls on_change_source.
   selector_->select_builtin_source(builtin);
   publish_source_status();
+  publish_filter_status();
 
   const auto period = rclcpp::Rate(declare_parameter<double>("rate")).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
@@ -135,6 +148,31 @@ void ControlCmdGate::on_timer()
   selector_->update();
   compatibility_->publish();
   publish_source_status();
+  publish_filter_status();
+}
+
+void ControlCmdGate::on_change_source(
+  const ChangeCommandSource::Request::SharedPtr req,
+  const ChangeCommandSource::Response::SharedPtr res)
+{
+  const auto error = selector_->select(req->source);
+  if (!error.empty()) {
+    res->status.success = false;
+    res->status.message = error;
+    RCLCPP_ERROR_STREAM(get_logger(), error);
+    return;
+  }
+  res->status.success = true;
+  publish_source_status();
+}
+
+void ControlCmdGate::on_change_filter(
+  const ChangeCommandFilter::Request::SharedPtr req,
+  const ChangeCommandFilter::Response::SharedPtr res)
+{
+  output_filter_->set_transition_flag(req->filter);
+  res->status.success = true;
+  publish_filter_status();
 }
 
 void ControlCmdGate::on_select_source(
@@ -148,32 +186,35 @@ void ControlCmdGate::on_select_source(
     RCLCPP_ERROR_STREAM(get_logger(), error);
     return;
   }
-  const auto message = "select command source: " + std::to_string(req->source);
-  res->status.success = true;
-  res->status.message = message;
-  RCLCPP_INFO_STREAM(get_logger(), message);
-
-  // Update transition flag if command source is changed.
   output_filter_->set_transition_flag(req->transition);
+  res->status.success = true;
   publish_source_status();
+  publish_filter_status();
 }
 
 void ControlCmdGate::publish_source_status()
 {
   const auto current_source = selector_->get_source();
-  const auto transition_flag = output_filter_->get_transition_flag();
-  if (current_source_ == current_source && transition_flag_ == transition_flag) {
-    return;
-  }
+  if (current_source_ == current_source) return;
   current_source_ = current_source;
-  transition_flag_ = transition_flag;
 
   CommandSourceStatus msg;
   msg.stamp = now();
-  msg.source = current_source_;
-  msg.transition = transition_flag_;
-  pub_status_->publish(msg);
+  msg.source = current_source;
+  pub_source_->publish(msg);
 };
+
+void ControlCmdGate::publish_filter_status()
+{
+  const auto transition_flag = output_filter_->get_transition_flag();
+  if (transition_flag_ == transition_flag) return;
+  transition_flag_ = transition_flag;
+
+  CommandFilterStatus msg;
+  msg.stamp = now();
+  msg.filter = transition_flag;
+  pub_filter_->publish(msg);
+}
 
 }  // namespace autoware::control_command_gate
 

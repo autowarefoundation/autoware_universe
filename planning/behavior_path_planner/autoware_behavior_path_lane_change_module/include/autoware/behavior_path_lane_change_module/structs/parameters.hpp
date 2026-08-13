@@ -88,9 +88,6 @@ struct CancelParameters
 
 struct CollisionCheckParameters
 {
-  bool enable_for_prepare_phase_in_general_lanes{false};
-  bool enable_for_prepare_phase_in_intersection{true};
-  bool enable_for_prepare_phase_in_turns{true};
   bool check_current_lane{true};
   bool check_other_lanes{true};
   bool use_all_predicted_paths{false};
@@ -110,6 +107,7 @@ struct SafetyParameters
   RSSparams rss_params_for_parked{};
   RSSparams rss_params_for_abort{};
   RSSparams rss_params_for_stuck{};
+  RSSparams rss_params_for_prepare{};
   ObjectTypesToCheck target_object_types{};
   CollisionCheckParameters collision_check{};
 };
@@ -171,6 +169,7 @@ struct Parameters
   double backward_length_buffer_for_blocking_object{0.0};
   double backward_length_from_intersection{5.0};
   bool enable_stopped_vehicle_buffer{false};
+  double overhang_tolerance{0.0};
 
   // parked vehicle
   double object_check_min_road_shoulder_width{0.5};
@@ -192,6 +191,14 @@ struct Parameters
   double lane_change_finish_judge_buffer{3.0};
   double th_finish_judge_lateral_diff{0.2};
   double th_finish_judge_yaw_diff{autoware_utils::deg2rad(3.0)};
+
+  // path miss detection parameters
+  double path_miss_threshold_longitudinal{5.0};
+  bool enable_path_miss_detection{false};
+
+  // path miss velocity scaling parameters
+  std::vector<double> path_miss_velocity_points{0.0, 20.0};
+  std::vector<double> path_miss_lateral_thresholds{2.0, 0.8};
 
   // debug marker
   bool publish_debug_marker{false};

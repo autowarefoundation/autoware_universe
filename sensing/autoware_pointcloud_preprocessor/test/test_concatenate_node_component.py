@@ -483,6 +483,8 @@ class TestConcatenateNode(unittest.TestCase):
             "The concatenation node have weird output",
         )
 
+        GLOBAL_SECONDS += 1
+
     def test_3_abnormal_null_pointcloud(self):
         """Test the abnormal situation when a pointcloud is empty.
 
@@ -645,6 +647,8 @@ class TestConcatenateNode(unittest.TestCase):
             np.allclose(concatenate_cloud, expected_pointcloud, atol=1e-3),
             "The concatenation node have weird output",
         )
+
+        GLOBAL_SECONDS += 1
 
     def test_6_abnormal_single_pointcloud_drop(self):
         """Test the abnormal situation when a pointcloud was dropped.

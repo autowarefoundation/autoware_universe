@@ -1,8 +1,29 @@
 /**:
   ros__parameters:
-    initial_covariance: 1000.0
-    steer_update_hz: 10.0
-    forgetting_factor: 0.999
-    valid_min_velocity: 5.0
-    valid_max_steer: 0.05
-    warn_steer_offset_deg: 2.5
+    update_hz: 10.0 # [Hz]
+    initial_covariance: 0.5
+    initial_offset: 0.0 # [rad]
+    process_noise_covariance: 5.0e-8
+    measurement_noise_covariance: 1.0
+    denominator_floor: 1.0e-12
+    covariance_floor: 1.0e-12
+    min_velocity: 1.0 # [m/s]
+    max_steer: 0.02 # [rad]
+    max_steer_rate: 0.01 # [rad/s]
+    max_ang_velocity: 0.02 # [rad/s]
+    max_steer_buffer: 2.0 # [s]
+    max_pose_lag: 0.5 # [s]
+
+    calibration:
+      mode: "off"  # Options: ["off", "manual", "auto"]
+
+      # Logic thresholds
+      update_offset_th: 0.001        # min error to trigger an AUTO update [rad]
+      covariance_th: 0.0015 # max uncertainty to trust the estimate
+
+      # Persistence & Safety
+      min_steady_duration: 10.0     # required duration of continuous estimation data [s]
+      max_offset_limit: 0.05        # safety cap to prevent extreme calibration jumps [rad]
+      min_update_interval: 100.0    # minimum duration between updates [s]
+
+      warning_offset_th: 0.005      # offset threshold to trigger a warning [rad]

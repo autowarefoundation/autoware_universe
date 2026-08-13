@@ -14,18 +14,17 @@
 
 #include "autoware_frenet_planner/frenet_planner.hpp"
 
-#include <autoware_auto_common/helper_functions/angle_utils.hpp>
 #include <autoware_frenet_planner/conversions.hpp>
 #include <autoware_frenet_planner/polynomials.hpp>
 #include <autoware_frenet_planner/structures.hpp>
 #include <autoware_sampler_common/structures.hpp>
 #include <autoware_sampler_common/transform/spline_transform.hpp>
+#include <autoware_utils_math/normalization.hpp>
 #include <eigen3/Eigen/Eigen>
+#include <tf2/utils.hpp>
 
 #include "autoware_planning_msgs/msg/path.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -142,8 +141,7 @@ void calculateCartesian(
 
     // Calculate curvatures
     for (size_t i = 1; i < path.yaws.size(); ++i) {
-      const auto dyaw =
-        autoware::common::helper_functions::wrap_angle(path.yaws[i] - path.yaws[i - 1]);
+      const auto dyaw = autoware_utils_math::normalize_radian(path.yaws[i] - path.yaws[i - 1]);
       path.curvatures.push_back(dyaw / (path.lengths[i] - path.lengths[i - 1]));
     }
     path.curvatures.push_back(path.curvatures.back());
@@ -162,8 +160,7 @@ void calculateCartesian(
     d_yaws.reserve(trajectory.yaws.size());
     for (size_t i = 0; i + 1 < trajectory.yaws.size(); ++i)
       d_yaws.push_back(
-        autoware::common::helper_functions::wrap_angle(
-          trajectory.yaws[i + 1] - trajectory.yaws[i]));
+        autoware_utils_math::normalize_radian(trajectory.yaws[i + 1] - trajectory.yaws[i]));
     d_yaws.push_back(0.0);
     // Calculate curvatures
     for (size_t i = 1; i < trajectory.yaws.size(); ++i) {

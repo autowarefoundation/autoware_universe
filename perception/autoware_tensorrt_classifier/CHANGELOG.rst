@@ -2,6 +2,37 @@
 Changelog for package autoware_tensorrt_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_tensorrt_classifier): cuda 12.0 build compatibility (`#12190 <https://github.com/mitsudome-r/autoware_universe/issues/12190>`_)
+  * feat(autoware_tensorrt_classifier): CUDA 12.0+ build compatibility
+  * feat: restore Turing arch
+  ---------
+* Contributors: Amadeusz Szymko, github-actions
+
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_tensorrt_classifier): update nvcc flags (`#12055 <https://github.com/autowarefoundation/autoware_universe/issues/12055>`_)
+* chore(autoware_tensorrt_classifier): remove cudnn dependency (`#11895 <https://github.com/autowarefoundation/autoware_universe/issues/11895>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
+0.47.0 (2025-08-11)
+-------------------
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

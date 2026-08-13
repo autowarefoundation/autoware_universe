@@ -14,6 +14,7 @@
 
 #include "converter.hpp"
 
+#include <algorithm>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -23,6 +24,18 @@ namespace autoware::hazard_status_converter
 
 Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", options)
 {
+  if (declare_parameter<bool>("include_latent_fault_in_emergency")) {
+    emergency_threshold_ = HazardStatus::LATENT_FAULT;
+  } else {
+    emergency_threshold_ = HazardStatus::SINGLE_POINT_FAULT;
+  }
+
+  if (declare_parameter<bool>("use_external_emergency_holding")) {
+    sub_emergency_holding_ =
+      autoware_utils_rclcpp::InterProcessPollingSubscriber<EmergencyHolding>::create_subscription(
+        this, "~/input/emergency_holding");
+  }
+
   using std::placeholders::_1;
   pub_hazard_ = create_publisher<HazardStatusStamped>("~/hazard_status", rclcpp::QoS(1));
   sub_graph_.register_create_callback(std::bind(&Converter::on_create, this, _1));
@@ -62,7 +75,6 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
 {
   using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
   using DiagnosticLevel = DiagnosticStatus::_level_type;
-  using HazardStatus = autoware_system_msgs::msg::HazardStatus;
   using HazardLevel = HazardStatus::_level_type;
 
   const auto get_hazard_level = [](DiagnosticLevel unit_level, DiagnosticLevel root_level) {
@@ -84,13 +96,6 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
     return HazardStatus::SINGLE_POINT_FAULT;
   };
 
-  const auto get_system_level = [](const HazardStatus & status) {
-    if (!status.diag_single_point_fault.empty()) return HazardStatus::SINGLE_POINT_FAULT;
-    if (!status.diag_latent_fault.empty()) return HazardStatus::LATENT_FAULT;
-    if (!status.diag_safe_fault.empty()) return HazardStatus::SAFE_FAULT;
-    return HazardStatus::NO_FAULT;
-  };
-
   const auto get_hazards_vector = [](HazardStatus & status, HazardLevel level) {
     if (level == HazardStatus::SINGLE_POINT_FAULT) return &status.diag_single_point_fault;
     if (level == HazardStatus::LATENT_FAULT) return &status.diag_latent_fault;
@@ -105,23 +110,38 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   }
 
   // Calculate hazard level from unit level and root level.
+  auto max_hazard_level = HazardStatus::NO_FAULT;
+  auto max_hazard_latch = HazardStatus::NO_FAULT;
   HazardStatusStamped hazard;
   for (const auto & unit : graph->units()) {
-    if (unit->path_or_name().empty()) continue;
     const bool is_auto_tree = auto_mode_tree_.count(unit);
     const auto root_level = is_auto_tree ? auto_mode_root_->level() : DiagnosticStatus::OK;
     const auto unit_level = unit->level();
-    if (auto diags = get_hazards_vector(hazard.status, get_hazard_level(unit_level, root_level))) {
-      diags->push_back(unit->create_diagnostic_status());
+    const auto hazard_level = get_hazard_level(unit_level, root_level);
+    max_hazard_level = std::max(max_hazard_level, hazard_level);
+
+    if (auto node = dynamic_cast<DiagNode *>(unit)) {
+      const auto unit_latch = node->latch_level();
+      const auto hazard_latch = get_hazard_level(unit_latch, root_level);
+      max_hazard_latch = std::max(max_hazard_latch, hazard_latch);
+    }
+
+    if (!unit->path_or_name().empty()) {
+      if (auto diags = get_hazards_vector(hazard.status, hazard_level)) {
+        diags->push_back(unit->create_diagnostic_status());
+      }
     }
   }
   hazard.stamp = graph->updated_stamp();
-  hazard.status.level = get_system_level(hazard.status);
-  hazard.status.emergency = hazard.status.level == HazardStatus::SINGLE_POINT_FAULT;
+  hazard.status.level = max_hazard_level;
+  hazard.status.emergency = max_hazard_level >= emergency_threshold_;
+  hazard.status.emergency_holding = max_hazard_latch >= emergency_threshold_;
 
-  const auto is_emergency_holding = sub_emergency_holding_.take_data();
-  hazard.status.emergency_holding =
-    is_emergency_holding == nullptr ? false : is_emergency_holding->is_holding;
+  if (sub_emergency_holding_) {
+    const auto ptr = sub_emergency_holding_->take_data();
+    hazard.status.emergency_holding = ptr ? ptr->is_holding : false;
+  }
+
   pub_hazard_->publish(hazard);
 }
 

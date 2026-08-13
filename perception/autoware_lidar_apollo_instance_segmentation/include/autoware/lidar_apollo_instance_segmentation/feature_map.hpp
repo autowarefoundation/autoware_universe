@@ -41,6 +41,7 @@ public:
   virtual void initializeMap(std::vector<float> & map) = 0;
   virtual void resetMap(std::vector<float> & map) = 0;
   FeatureMapInterface(const int _channels, const int _width, const int _height, const int _range);
+  virtual ~FeatureMapInterface() = default;
 };
 
 struct FeatureMap : public FeatureMapInterface

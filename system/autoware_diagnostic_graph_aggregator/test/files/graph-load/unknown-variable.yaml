@@ -1,0 +1,2 @@
+files:
+  - { path: $(var unknown_variable) }

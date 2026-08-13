@@ -1,0 +1,19 @@
+<launch>
+  <arg name="input/lanelet_map_bin" default="/map/vector_map"/>
+  <arg name="input/object_recognition" default="/perception/object_recognition/detection/objects"/>
+  <arg name="input/predicted_trajectory" default="/control/trajectory_follower/lateral/predicted_trajectory"/>
+  <arg name="input/odometry" default="/localization/kinematic_state"/>
+  <arg name="config_file" default="$(find-pkg-share autoware_spheric_collision_detector)/config/spheric_collision_detector.param.yaml"/>
+  <!-- vehicle info -->
+  <arg name="vehicle_info_param_file" default="$(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml"/>
+
+  <node pkg="autoware_spheric_collision_detector" exec="spheric_collision_detector_node" name="spheric_collision_detector_node" output="screen">
+    <param from="$(var config_file)"/>
+    <param from="$(var vehicle_info_param_file)"/>
+
+    <remap from="input/lanelet_map_bin" to="$(var input/lanelet_map_bin)"/>
+    <remap from="input/object_recognition" to="$(var input/object_recognition)"/>
+    <remap from="input/predicted_trajectory" to="$(var input/predicted_trajectory)"/>
+    <remap from="input/odometry" to="$(var input/odometry)"/>
+  </node>
+</launch>

@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,27 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Taekjin Lee
-//
+
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/tracker/motion_model/ctrv_motion_model.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/msg_covariance.hpp>
-
-#include <tf2/LinearMath/Quaternion.h>
+#include <autoware_utils_geometry/msg/covariance.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 namespace autoware::multi_object_tracker
 {
 // cspell: ignore CTRV
 // Constant Turn Rate and constant Velocity (CTRV) motion model
-using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 CTRVMotionModel::CTRVMotionModel() : logger_(rclcpp::get_logger("CTRVMotionModel"))
 {
@@ -196,6 +192,23 @@ bool CTRVMotionModel::updateStatePoseHeadVel(
   return ekf_.update(Y, C, R);
 }
 
+bool CTRVMotionModel::flipOrientation()
+{
+  if (!checkInitialized()) return false;
+
+  StateVec X_t;
+  StateMat P_t;
+  ekf_.getX(X_t);
+  ekf_.getP(P_t);
+  X_t(IDX::YAW) = autoware_utils_math::normalize_radian(X_t(IDX::YAW) + M_PI);
+  X_t(IDX::VEL) = -X_t(IDX::VEL);
+  // covariance transform T*P*T^T: negate the VEL cross-covariances
+  P_t.row(IDX::VEL) *= -1.0;
+  P_t.col(IDX::VEL) *= -1.0;
+  ekf_.init(X_t, P_t);
+  return true;
+}
+
 bool CTRVMotionModel::limitStates()
 {
   StateVec X_t;
@@ -218,7 +231,7 @@ bool CTRVMotionModel::limitStates()
     X_t(IDX::WZ) = X_t(IDX::WZ) < 0 ? -motion_params_.max_wz : motion_params_.max_wz;
   }
   // normalize yaw
-  X_t(IDX::YAW) = autoware_utils::normalize_radian(X_t(IDX::YAW));
+  X_t(IDX::YAW) = autoware_utils_math::normalize_radian(X_t(IDX::YAW));
 
   // overwrite state
   ekf_.init(X_t, P_t);
@@ -327,7 +340,7 @@ bool CTRVMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  // do not change z
+  pose.position.z = z_;
 
   // set orientation
   tf2::Quaternion quaternion;
