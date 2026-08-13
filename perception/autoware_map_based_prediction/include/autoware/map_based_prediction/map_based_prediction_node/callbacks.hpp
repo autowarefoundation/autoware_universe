@@ -23,6 +23,7 @@
 
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
@@ -80,7 +81,8 @@ private:
 
   NodeState & state_;
 
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray) sub_traffic_signals_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<TrafficLightGroupArray>::SharedPtr
+    sub_traffic_signals_;
   TfListener transform_listener_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
@@ -89,8 +91,7 @@ private:
 
   Diagnostics * diagnostics_{};
 
-  void trafficSignalsCallback(
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg);
+  void trafficSignalsCallback(const std::shared_ptr<const TrafficLightGroupArray> & msg);
   void publish(
     AUTOWARE_MESSAGE_UNIQUE_PTR(PredictedObjects) output,
     const visualization_msgs::msg::MarkerArray & debug_markers) const;

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
@@ -24,12 +24,11 @@
 
 namespace autoware::trajectory_optimizer::plugin
 {
-void TrajectoryPointFixer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryPointFixer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
-  if (!params.use_trajectory_point_fixer) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
   auto & semantic_speed_tracker = data.semantic_speed_tracker;
   trajectory_point_fixer_utils::remove_invalid_points(traj_points);
@@ -41,7 +40,7 @@ void TrajectoryPointFixer::optimize_trajectory(
 
   if (fixer_params_.resample_close_points) {
     trajectory_point_fixer_utils::resample_close_proximity_points(
-      traj_points, semantic_speed_tracker, data.current_odometry,
+      traj_points, semantic_speed_tracker, *data.current_odometry,
       fixer_params_.min_dist_to_resample_m, fixer_params_.stop_detection_velocity_threshold_mps);
   }
 
@@ -54,48 +53,19 @@ void TrajectoryPointFixer::optimize_trajectory(
       traj_points, semantic_speed_tracker, fixer_params_.stop_detection_velocity_threshold_mps);
     trajectory_point_fixer_utils::build_stop_approach_ranges(traj_points, semantic_speed_tracker);
   }
+  return ProcessingResult::Modified;
 }
 
-void TrajectoryPointFixer::set_up_params()
+void TrajectoryPointFixer::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-
-  fixer_params_.remove_close_points =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_point_fixer.remove_close_points");
-  fixer_params_.resample_close_points =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_point_fixer.resample_close_points");
-  fixer_params_.min_dist_to_remove_m =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_remove_m");
-  fixer_params_.min_dist_to_resample_m =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_resample_m");
-  fixer_params_.stop_detection_velocity_threshold_mps = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_point_fixer.stop_detection_velocity_threshold_mps");
+  enabled_ = params.use_trajectory_point_fixer;
+  fixer_params_ = params.trajectory_point_fixer;
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryPointFixer::update_params(const TrajectoryProcessorParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<bool>(
-    parameters, "trajectory_point_fixer.remove_close_points", fixer_params_.remove_close_points);
-  update_param<bool>(
-    parameters, "trajectory_point_fixer.resample_close_points",
-    fixer_params_.resample_close_points);
-  update_param<double>(
-    parameters, "trajectory_point_fixer.min_dist_to_remove_m", fixer_params_.min_dist_to_remove_m);
-  update_param<double>(
-    parameters, "trajectory_point_fixer.min_dist_to_resample_m",
-    fixer_params_.min_dist_to_resample_m);
-  update_param<double>(
-    parameters, "trajectory_point_fixer.stop_detection_velocity_threshold_mps",
-    fixer_params_.stop_detection_velocity_threshold_mps);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  enabled_ = params.use_trajectory_point_fixer;
+  fixer_params_ = params.trajectory_point_fixer;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin
@@ -103,4 +73,4 @@ rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryPointFixer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

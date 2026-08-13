@@ -56,4 +56,3 @@ public:
 
 // clang-format off
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__RADIUS_SEARCH_2D_OUTLIER_FILTER_NODE_HPP_  // NOLINT
-// clang-format on

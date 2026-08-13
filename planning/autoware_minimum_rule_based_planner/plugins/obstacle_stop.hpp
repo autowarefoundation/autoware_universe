@@ -15,7 +15,7 @@
 #ifndef PLANNING__AUTOWARE_MINIMUM_RULE_BASED_PLANNER__PLUGINS__OBSTACLE_STOP_HPP_
 #define PLANNING__AUTOWARE_MINIMUM_RULE_BASED_PLANNER__PLUGINS__OBSTACLE_STOP_HPP_
 
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 #include "plugin_interface.hpp"
 
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>

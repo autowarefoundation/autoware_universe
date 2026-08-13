@@ -23,7 +23,7 @@ namespace autoware::lane_departure_checker
 {
 using autoware_utils::get_or_declare_parameter;
 
-Param init(rclcpp::Node & node)
+Param init(autoware::agnocast_wrapper::Node & node)
 {
   Param p;
   p.footprint_margin_scale = get_or_declare_parameter<double>(node, "footprint_margin_scale");
@@ -38,7 +38,7 @@ Param init(rclcpp::Node & node)
   return p;
 }
 
-NodeParam NodeParam::init(rclcpp::Node & node)
+NodeParam NodeParam::init(autoware::agnocast_wrapper::Node & node)
 {
   NodeParam p;
   p.will_out_of_lane_checker = get_or_declare_parameter<bool>(node, "will_out_of_lane_checker");

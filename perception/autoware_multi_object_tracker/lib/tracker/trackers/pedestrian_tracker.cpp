@@ -130,7 +130,7 @@ bool PedestrianTracker::measure(
 
   updateKinematics(object);
 
-  shape_model_.update(object, channel_info.trust_extension, motion_model_.getYawState());
+  shape_model_.update(object, channel_info.trust_extension, motion_model_.getYawState(), time);
 
   removeCache();
   return true;

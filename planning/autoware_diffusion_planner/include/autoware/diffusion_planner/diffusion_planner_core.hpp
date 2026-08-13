@@ -94,7 +94,7 @@ struct PlannerOutput
   Trajectory trajectory;
   CandidateTrajectories candidate_trajectories;
   PredictedObjects predicted_objects;
-  TurnIndicatorsCommand turn_indicator_command;
+  TurnIndicatorsCommand turn_indicators_command;
   Float32MultiArray denoising_steps;
   std::unordered_map<std::string, std::vector<bool>> guidance_triggered;
 };
@@ -111,6 +111,12 @@ struct FrameContext
 struct DiffusionPlannerParams
 {
   std::string model_type;
+  std::string base_model_directory;
+  std::string args_filename;
+  std::string single_step_model_filename;
+  std::string encoder_model_filename;
+  std::string decoder_model_filename;
+  std::string turn_indicator_model_filename;
   std::string single_step_model_path;
   std::string encoder_model_path;
   std::string decoder_model_path;
@@ -123,7 +129,6 @@ struct DiffusionPlannerParams
   bool build_only;
   double planning_frequency_hz;
   bool ignore_neighbors;
-  bool ignore_unknown_neighbors;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
   std::vector<double> temperature_list;
@@ -178,6 +183,8 @@ public:
    * @param params New parameters to apply
    */
   void update_params(const DiffusionPlannerParams & params);
+
+  void resolve_model_paths();
 
   /**
    * @brief Prepare frame context for inference.
@@ -329,7 +336,13 @@ private:
   bool centerline_guidance_enabled_{false};
 
   // Postprocessing
-  postprocess::TurnIndicatorManager turn_indicator_manager_;
+  std::vector<postprocess::TurnIndicatorManager> turn_indicator_managers_;
+
+  /**
+   * @brief Resize the per-trajectory turn indicator managers to the current batch size and
+   *        apply the latest hold duration / keep offset parameters to each of them.
+   */
+  void sync_turn_indicator_managers();
 
   // History data
   std::deque<nav_msgs::msg::Odometry> ego_history_;

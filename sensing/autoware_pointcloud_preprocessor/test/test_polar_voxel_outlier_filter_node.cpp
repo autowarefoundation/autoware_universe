@@ -181,6 +181,11 @@ rclcpp::NodeOptions make_node_options()
     .append_parameter_override("use_return_type_classification", true)
     .append_parameter_override("filter_secondary_returns", false)
     .append_parameter_override("secondary_noise_threshold", 1)
+    .append_parameter_override("low_visibility_entropy_threshold", 0.0)
+    .append_parameter_override("low_visibility_anisotropy_threshold", 1.0)
+    .append_parameter_override("low_visibility_average_intensity_threshold", 255.0)
+    .append_parameter_override("low_visibility_sparse_voxel_point_count_threshold", 10)
+    .append_parameter_override("low_visibility_sparse_voxel_secondary_return_ratio_threshold", 0.2)
     .append_parameter_override("intensity_threshold", 5)
     .append_parameter_override("primary_return_types", std::vector<int64_t>{1, 6, 8, 10})
     .append_parameter_override("visibility_warn_threshold", 0.7)
@@ -304,6 +309,8 @@ TEST_F(PolarVoxelOutlierFilterTest, VisibilityMetric)
       .append_parameter_override("intensity_threshold", intensity_threshold)
       .append_parameter_override("voxel_points_threshold", 1)
       .append_parameter_override("secondary_noise_threshold", secondary_noise_threshold)
+      // Isolate the secondary-return threshold path under test from the sparse-voxel rule.
+      .append_parameter_override("low_visibility_sparse_voxel_point_count_threshold", 0)
       .append_parameter_override("visibility_estimation_max_secondary_voxel_count", 2);
   PolarVoxelOutlierFilterComponentPublic node(options);
   auto input = make_filter_test_cloud();

@@ -48,24 +48,6 @@ rclcpp::NodeOptions allow_dynamic_params(const rclcpp::NodeOptions & original_op
   return options;
 }
 
-/// @brief Check whether the configured mapping explicitly ignores the class.
-bool is_ignored_mapping(const std::string & mapped_label)
-{
-  return mapped_label == "ignore";
-}
-
-/// @brief Normalize configured label names to the uppercase form expected by toLabel().
-/// NOTE: This function no longer uses once
-/// https://github.com/autowarefoundation/autoware_core/pull/1184 has been merged.
-std::string normalize_object_label_name(const std::string & label_name)
-{
-  std::string normalized = label_name;
-  std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char c) {
-    return static_cast<char>(std::toupper(c));
-  });
-  return normalized;
-}
-
 /// @brief Convert an integer parameter into a validated shape policy.
 ShapePolicy to_shape_policy(const std::uint8_t value)
 {
@@ -77,51 +59,6 @@ ShapePolicy to_shape_policy(const std::uint8_t value)
     default:
       throw std::runtime_error("shape_policy must be 0 (ALL_POLYGON) or 1 (LABEL_DEPEND)");
   }
-}
-
-/// @brief Extract ordered class mappings from parameter overrides.
-std::vector<std::pair<std::string, std::string>> extract_class_mappings(
-  const rclcpp::NodeOptions & options)
-{
-  constexpr auto prefix = "class_names.";
-  std::vector<std::pair<std::string, std::string>> class_mappings;
-
-  for (const auto & parameter : options.parameter_overrides()) {
-    const auto & parameter_name = parameter.get_name();
-    if (parameter_name.rfind(prefix, 0) != 0) {
-      continue;
-    }
-
-    if (parameter.get_type() != rclcpp::ParameterType::PARAMETER_STRING) {
-      continue;
-    }
-
-    class_mappings.emplace_back(
-      parameter_name.substr(std::string(prefix).size()), parameter.as_string());
-  }
-
-  return class_mappings;
-}
-
-/// @brief Build class-id to object-label map from ordered class mappings.
-std::unordered_map<std::uint8_t, std::uint8_t> build_target_label_map(
-  const std::vector<std::pair<std::string, std::string>> & class_mappings)
-{
-  std::unordered_map<std::uint8_t, std::uint8_t> class_id_to_object_label;
-
-  for (size_t class_id_value = 0; class_id_value < class_mappings.size(); ++class_id_value) {
-    const auto & [original_class_name, mapped_label_name] = class_mappings.at(class_id_value);
-    static_cast<void>(original_class_name);
-    const auto class_id = static_cast<std::uint8_t>(class_id_value);
-    if (is_ignored_mapping(mapped_label_name)) {
-      continue;
-    }
-
-    class_id_to_object_label[class_id] =
-      object_recognition_utils::toLabel(normalize_object_label_name(mapped_label_name));
-  }
-
-  return class_id_to_object_label;
 }
 
 struct NestedOverrideName
@@ -147,16 +84,17 @@ std::optional<NestedOverrideName> parse_nested_override_name(
   return NestedOverrideName{rest.substr(0, dot_pos), rest.substr(dot_pos + 1)};
 }
 
-/// @brief Extract per-label parameter prefixes from nested overrides.
+/// @brief Extract per-label parameter prefixes from declared parameters.
 std::unordered_map<std::string, std::string> load_label_cluster_parameter_prefixes(
-  const rclcpp::NodeOptions & options)
+  autoware::agnocast_wrapper::Node & node)
 {
   constexpr std::string_view prefix = "label_cluster_params.";
 
   std::unordered_map<std::string, std::string> outputs;
 
-  for (const auto & parameter : options.parameter_overrides()) {
-    const auto nested_name = parse_nested_override_name(parameter.get_name(), prefix);
+  const auto listed = node.list_parameters({"label_cluster_params"}, 0);
+  for (const auto & parameter_name : listed.names) {
+    const auto nested_name = parse_nested_override_name(parameter_name, prefix);
     if (!nested_name) {
       continue;
     }
@@ -167,19 +105,21 @@ std::unordered_map<std::string, std::string> load_label_cluster_parameter_prefix
   return outputs;
 }
 
-/// @brief Parse confusable_label_groups.* parameters from NodeOptions overrides.
-std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptions & options)
+/// @brief Parse confusable_label_groups.* parameters from declared parameters.
+std::vector<ConfusableLabelGroup> load_confusable_groups(autoware::agnocast_wrapper::Node & node)
 {
   constexpr std::string_view prefix = "confusable_label_groups.";
   std::unordered_map<std::string, ConfusableLabelGroup> groups_map;
   std::unordered_set<std::string> provided_keys;
 
-  for (const auto & param : options.parameter_overrides()) {
-    const auto nested_name = parse_nested_override_name(param.get_name(), prefix);
+  const auto listed = node.list_parameters({"confusable_label_groups"}, 0);
+  for (const auto & parameter_name : listed.names) {
+    const auto nested_name = parse_nested_override_name(parameter_name, prefix);
     if (!nested_name) {
       continue;
     }
 
+    const auto param = node.get_parameter(parameter_name);
     const auto & group_name = nested_name->group_name;
     const auto & key = nested_name->key;
     auto & group = groups_map[group_name];
@@ -196,8 +136,7 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
     } else if (
       key == "labels" && param.get_type() == rclcpp::ParameterType::PARAMETER_STRING_ARRAY) {
       for (const auto & label_name : param.as_string_array()) {
-        group.labels.push_back(
-          object_recognition_utils::toLabel(normalize_object_label_name(label_name)));
+        group.labels.push_back(object_recognition_utils::toLabel(label_name));
       }
     }
   }
@@ -230,12 +169,6 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   const auto shape_policy = to_shape_policy(
     autoware_utils_rclcpp::get_or_declare_parameter<uint8_t>(*this, "shape_policy"));
 
-  const auto class_mappings = extract_class_mappings(options);
-  const auto class_id_to_object_label = build_target_label_map(class_mappings);
-  if (class_id_to_object_label.empty()) {
-    throw std::runtime_error("No supported classes were configured for clustering");
-  }
-
   // Initialize the default voxel grid based euclidean cluster
   const auto use_height =
     autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_height");
@@ -265,7 +198,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>>
     label_cluster_executers;
   {
-    for (const auto & entry : load_label_cluster_parameter_prefixes(options)) {
+    for (const auto & entry : load_label_cluster_parameter_prefixes(*this)) {
       const auto & label_name = entry.first;
       const auto & label_prefix = entry.second;
       auto has = [&](const std::string & key) { return this->has_parameter(label_prefix + key); };
@@ -299,7 +232,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
                  : static_cast<float>(param.as_double());
       };
 
-      const auto label = object_recognition_utils::toLabel(normalize_object_label_name(label_name));
+      const auto label = object_recognition_utils::toLabel(label_name);
       label_cluster_executers[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
         get_bool("use_height", use_height),
         get_int("min_points_per_cluster", min_points_per_cluster),
@@ -320,30 +253,34 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
     autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_boost_bbox_optimizer"));
 
   // Load confusable label groups
-  const auto confusable_groups = load_confusable_groups(options);
+  const auto confusable_groups = load_confusable_groups(*this);
 
   // Create the core clustering processor
   processor_ = std::make_unique<LabelBasedEuclideanCluster>(
-    class_id_to_object_label, min_probability, shape_policy, default_cluster,
-    label_cluster_executers, shape_estimator, confusable_groups);
+    min_probability, shape_policy, default_cluster, label_cluster_executers, shape_estimator,
+    confusable_groups);
 
   // Set up ROS pub/sub
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "input", rclcpp::SensorDataQoS().keep_last(1),
+    "input/pointcloud", rclcpp::SensorDataQoS().keep_last(1),
     std::bind(&LabelBasedEuclideanClusterNode::on_pointcloud, this, _1));
-  objects_pub_ = AUTOWARE_CREATE_PUBLISHER2(
-    autoware_perception_msgs::msg::DetectedObjects, "output", rclcpp::QoS{1});
+  objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+    "output/objects", rclcpp::QoS{1});
+  segments_pub_ =
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("output/pointcloud", rclcpp::QoS{1});
 
   // Initialize timing and debug
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
-  debug_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, "~/debug");
+  debug_publisher_ =
+    std::make_unique<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "~/debug");
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
 }
 
 void LabelBasedEuclideanClusterNode::on_pointcloud(
-  sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) & input_msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
 
@@ -355,13 +292,15 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
     return;
   }
 
-  auto output_msg = std::move(result.value());
+  auto output = std::move(result.value());
 
   // Populate ROS-specific fields
-  output_msg.header = input_msg->header;
+  output.objects.header = input_msg->header;
+  output.segments.header = input_msg->header;
 
   // Publish the result
-  objects_pub_->publish(std::move(output_msg));
+  objects_pub_->publish(output.objects);
+  segments_pub_->publish(output.segments);
 
   // Handle timing and debug output
   if (debug_publisher_) {

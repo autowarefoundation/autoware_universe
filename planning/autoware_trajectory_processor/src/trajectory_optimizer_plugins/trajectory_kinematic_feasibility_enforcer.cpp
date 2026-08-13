@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_kinematic_feasibility_enforcer.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_kinematic_feasibility_enforcer.hpp"
 
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_processor/utils.hpp"
 
 #include <Eigen/Core>
 #include <autoware_utils/ros/parameter.hpp>
@@ -33,27 +33,27 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryKinematicFeasibilityEnforcer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   // Check if plugin is enabled
-  if (!params.use_kinematic_feasibility_enforcer) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
 
   // Need at least 2 points
   if (traj_points.size() < 2) {
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Always use ego pose as anchor (current vehicle state)
-  const auto & ego_odometry = data.current_odometry;
+  const auto & ego_odometry = *data.current_odometry;
 
   // Apply kinematic feasibility constraints
   // This adjusts positions and headings while preserving segment distances
   // Velocities and time stamps remain unchanged to preserve dt structure for QP smoother
   enforce_ackermann_yaw_rate_constraints(traj_points, ego_odometry);
+  return ProcessingResult::Modified;
 }
 
 void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constraints(
@@ -172,20 +172,15 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   traj_points.back().pose.orientation = traj_points[traj_points.size() - 2].pose.orientation;
 }
 
-void TrajectoryKinematicFeasibilityEnforcer::set_up_params()
+void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryProcessorParams & params)
 {
   auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
 
   // Get vehicle info
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
 
-  // Plugin-specific parameter
-  feasibility_params_.max_yaw_rate_rad_s = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s");
-
-  feasibility_params_.time_step_s =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_kinematic_feasibility.time_step_s");
+  enabled_ = params.use_kinematic_feasibility_enforcer;
+  feasibility_params_ = params.trajectory_kinematic_feasibility;
 
   // Log configuration
   RCLCPP_INFO(
@@ -197,22 +192,10 @@ void TrajectoryKinematicFeasibilityEnforcer::set_up_params()
     vehicle_info_.max_steer_angle_rad * 180.0 / M_PI);
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryKinematicFeasibilityEnforcer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryKinematicFeasibilityEnforcer::update_params(const TrajectoryProcessorParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<double>(
-    parameters, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s",
-    feasibility_params_.max_yaw_rate_rad_s);
-
-  update_param<double>(
-    parameters, "trajectory_kinematic_feasibility.time_step_s", feasibility_params_.time_step_s);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  enabled_ = params.use_kinematic_feasibility_enforcer;
+  feasibility_params_ = params.trajectory_kinematic_feasibility;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin
@@ -220,4 +203,4 @@ rcl_interfaces::msg::SetParametersResult TrajectoryKinematicFeasibilityEnforcer:
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

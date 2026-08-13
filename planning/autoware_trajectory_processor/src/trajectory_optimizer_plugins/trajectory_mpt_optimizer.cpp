@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_mpt_optimizer.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_mpt_optimizer.hpp"
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
+#include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -35,12 +35,9 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryMPTOptimizer::initialize(
-  const std::string & name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+void TrajectoryMPTOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
-  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
-
+  auto node_ptr = get_node_ptr();
   RCLCPP_INFO(node_ptr->get_logger(), "MPT Optimizer plugin: Starting initialization...");
 
   try {
@@ -52,7 +49,28 @@ void TrajectoryMPTOptimizer::initialize(
     debug_data_ptr_ = std::make_shared<DebugData>();
 
     // Set up parameters
-    set_up_params();
+    enabled_ = params.use_mpt_optimizer;
+    mpt_params_.corridor_width_m = params.trajectory_mpt_optimizer.corridor_width_m;
+    mpt_params_.enable_adaptive_width = params.trajectory_mpt_optimizer.enable_adaptive_width;
+    mpt_params_.curvature_width_factor = params.trajectory_mpt_optimizer.curvature_width_factor;
+    mpt_params_.velocity_width_factor = params.trajectory_mpt_optimizer.velocity_width_factor;
+    mpt_params_.min_clearance_m = params.trajectory_mpt_optimizer.min_clearance_m;
+    mpt_params_.reset_previous_data_each_iteration =
+      params.trajectory_mpt_optimizer.reset_previous_data_each_iteration;
+    mpt_params_.enable_debug_info = params.trajectory_mpt_optimizer.enable_debug_info;
+
+    traj_param_.output_delta_arc_length = params.trajectory_mpt_optimizer.output_delta_arc_length_m;
+    traj_param_.output_backward_traj_length =
+      params.trajectory_mpt_optimizer.output_backward_traj_length_m;
+
+    ego_nearest_param_.dist_threshold =
+      params.trajectory_mpt_optimizer.ego_nearest_dist_threshold_m;
+    ego_nearest_param_.yaw_threshold =
+      autoware_utils_math::deg2rad(params.trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg);
+
+    mpt_params_.acceleration_moving_average_window =
+      params.trajectory_mpt_optimizer.acceleration_moving_average_window;
+
     RCLCPP_INFO(node_ptr->get_logger(), "MPT: Parameters set up");
 
     // Create TimeKeeper for performance profiling
@@ -79,108 +97,58 @@ void TrajectoryMPTOptimizer::initialize(
   }
 }
 
-void TrajectoryMPTOptimizer::set_up_params()
+void TrajectoryMPTOptimizer::update_params(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
+  enabled_ = params.use_mpt_optimizer;
+  mpt_params_ = params.trajectory_mpt_optimizer;
 
-  mpt_params_.corridor_width_m =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_mpt_optimizer.corridor_width_m");
-  mpt_params_.enable_adaptive_width =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_mpt_optimizer.enable_adaptive_width");
-  mpt_params_.curvature_width_factor =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_mpt_optimizer.curvature_width_factor");
-  mpt_params_.velocity_width_factor =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_mpt_optimizer.velocity_width_factor");
-  mpt_params_.min_clearance_m =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_mpt_optimizer.min_clearance_m");
+  traj_param_.output_delta_arc_length = params.trajectory_mpt_optimizer.output_delta_arc_length_m;
+  traj_param_.output_backward_traj_length = mpt_params_.output_backward_traj_length_m;
 
-  mpt_params_.reset_previous_data_each_iteration = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_mpt_optimizer.reset_previous_data_each_iteration");
-  mpt_params_.enable_debug_info =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_mpt_optimizer.enable_debug_info");
-
-  traj_param_.output_delta_arc_length = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_mpt_optimizer.output_delta_arc_length_m");
-  traj_param_.output_backward_traj_length = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_mpt_optimizer.output_backward_traj_length_m");
-
-  // Ego nearest parameters
-  ego_nearest_param_.dist_threshold = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_mpt_optimizer.ego_nearest_dist_threshold_m");
-  const auto ego_nearest_yaw_threshold_deg = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg");
-  ego_nearest_param_.yaw_threshold = autoware_utils_math::deg2rad(ego_nearest_yaw_threshold_deg);
-
-  // Acceleration smoothing parameters
-  mpt_params_.acceleration_moving_average_window = get_or_declare_parameter<int>(
-    *node_ptr, "trajectory_mpt_optimizer.acceleration_moving_average_window");
-}
-
-rcl_interfaces::msg::SetParametersResult TrajectoryMPTOptimizer::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
-{
-  using autoware_utils_rclcpp::update_param;
-
-  update_param(
-    parameters, "trajectory_mpt_optimizer.corridor_width_m", mpt_params_.corridor_width_m);
-  update_param(
-    parameters, "trajectory_mpt_optimizer.enable_adaptive_width",
-    mpt_params_.enable_adaptive_width);
-  update_param(
-    parameters, "trajectory_mpt_optimizer.curvature_width_factor",
-    mpt_params_.curvature_width_factor);
-  update_param(
-    parameters, "trajectory_mpt_optimizer.velocity_width_factor",
-    mpt_params_.velocity_width_factor);
-  update_param(parameters, "trajectory_mpt_optimizer.min_clearance_m", mpt_params_.min_clearance_m);
-
-  update_param(
-    parameters, "trajectory_mpt_optimizer.reset_previous_data_each_iteration",
-    mpt_params_.reset_previous_data_each_iteration);
-  update_param(
-    parameters, "trajectory_mpt_optimizer.enable_debug_info", mpt_params_.enable_debug_info);
-
-  update_param(
-    parameters, "trajectory_mpt_optimizer.output_delta_arc_length_m",
-    traj_param_.output_delta_arc_length);
-  update_param(
-    parameters, "trajectory_mpt_optimizer.output_backward_traj_length_m",
-    traj_param_.output_backward_traj_length);
-
-  update_param(
-    parameters, "trajectory_mpt_optimizer.ego_nearest_dist_threshold_m",
-    ego_nearest_param_.dist_threshold);
-
-  double ego_nearest_yaw_threshold_deg = 0.0;
-  if (update_param(
-        parameters, "trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg",
-        ego_nearest_yaw_threshold_deg)) {
-    ego_nearest_param_.yaw_threshold = autoware_utils_math::deg2rad(ego_nearest_yaw_threshold_deg);
-  }
-
-  update_param(
-    parameters, "trajectory_mpt_optimizer.acceleration_moving_average_window",
-    mpt_params_.acceleration_moving_average_window);
+  ego_nearest_param_.dist_threshold = mpt_params_.ego_nearest_dist_threshold_m;
+  ego_nearest_param_.yaw_threshold =
+    autoware_utils_math::deg2rad(mpt_params_.ego_nearest_yaw_threshold_deg);
 
   if (mpt_optimizer_ptr_) {
+    std::vector<rclcpp::Parameter> parameters = {
+      rclcpp::Parameter("trajectory_mpt_optimizer.corridor_width_m", mpt_params_.corridor_width_m),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.enable_adaptive_width", mpt_params_.enable_adaptive_width),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.curvature_width_factor", mpt_params_.curvature_width_factor),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.velocity_width_factor", mpt_params_.velocity_width_factor),
+      rclcpp::Parameter("trajectory_mpt_optimizer.min_clearance_m", mpt_params_.min_clearance_m),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.reset_previous_data_each_iteration",
+        mpt_params_.reset_previous_data_each_iteration),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.enable_debug_info", mpt_params_.enable_debug_info),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.output_delta_arc_length_m", traj_param_.output_delta_arc_length),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.output_backward_traj_length_m",
+        traj_param_.output_backward_traj_length),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.ego_nearest_dist_threshold_m", ego_nearest_param_.dist_threshold),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg",
+        mpt_params_.ego_nearest_yaw_threshold_deg),
+      rclcpp::Parameter(
+        "trajectory_mpt_optimizer.acceleration_moving_average_window",
+        mpt_params_.acceleration_moving_average_window)};
     mpt_optimizer_ptr_->onParam(parameters);
   }
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  return result;
 }
 
-void TrajectoryMPTOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryMPTOptimizer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
   // Skip if MPT optimizer is disabled
-  if (!params.use_mpt_optimizer) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
 
   // Minimum points required for optimization
@@ -190,7 +158,7 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "MPT: Trajectory too short (%zu < %zu points), skipping", traj_points.size(),
       min_points_for_optimization);
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Reset previous data if configured (for diffusion planner's new trajectories each cycle)
@@ -223,14 +191,14 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
     RCLCPP_DEBUG_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "MPT: Optimization failed, keeping original trajectory");
-    return;
+    return ProcessingResult::Unchanged;
   }
   // Validate optimized trajectory
   if (optimized_traj->empty()) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "MPT: Returned empty trajectory, keeping original");
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Apply optimized trajectory
@@ -243,17 +211,18 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
   RCLCPP_DEBUG_THROTTLE(
     get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
     "MPT: Optimized %zu->%zu points, recalculated dynamics", original_size, traj_points.size());
+  return ProcessingResult::Modified;
 }
 
 PlannerData TrajectoryMPTOptimizer::create_planner_data(
   const TrajectoryPoints & traj_points, const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
-  const TrajectoryOptimizerData & data) const
+  const TrajectoryProcessorData & data) const
 {
   PlannerData planner_data;
 
   // Create header from odometry frame
   planner_data.header.stamp = get_node_ptr()->now();
-  planner_data.header.frame_id = data.current_odometry.header.frame_id;
+  planner_data.header.frame_id = data.current_odometry->header.frame_id;
 
   // Set trajectory points
   planner_data.traj_points = traj_points;
@@ -263,8 +232,8 @@ PlannerData TrajectoryMPTOptimizer::create_planner_data(
   planner_data.right_bound = bounds.right_bound;
 
   // Set ego state
-  planner_data.ego_pose = data.current_odometry.pose.pose;
-  planner_data.ego_vel = data.current_odometry.twist.twist.linear.x;
+  planner_data.ego_pose = data.current_odometry->pose.pose;
+  planner_data.ego_vel = data.current_odometry->twist.twist.linear.x;
 
   return planner_data;
 }
@@ -340,4 +309,4 @@ void TrajectoryMPTOptimizer::publish_debug_markers(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

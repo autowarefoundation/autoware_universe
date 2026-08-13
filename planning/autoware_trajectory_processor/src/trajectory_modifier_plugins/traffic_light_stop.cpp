@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/traffic_light_stop.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_plugins/traffic_light_stop.hpp"
 
 #include "autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -24,7 +24,7 @@
 namespace
 {
 autoware::traffic_light_compliance_checker::Parameters to_checker_params(
-  const autoware::trajectory_modifier::plugin::TrajectoryModifierParams & params)
+  const autoware::trajectory_processor::TrajectoryProcessorParams & params)
 {
   const auto tl_stop_p = params.traffic_light_stop;
   const auto stopping_params = params.stopping_constraints;
@@ -35,9 +35,13 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.treat_amber_light_as_red_light = tl_stop_p.treat_amber_light_as_red;
   p.treat_unknown_light_as_red_light = tl_stop_p.treat_unknown_light_as_red;
   p.stop_overshoot_margin = tl_stop_p.overshoot_tolerance;
+  p.allow_if_cannot_stop_distance = tl_stop_p.allow_if_cannot_stop_distance;
   p.stable_duration_threshold_red = tl_stop_p.th_stable_duration_red;
   p.stable_duration_threshold_amber = tl_stop_p.th_stable_duration_amber;
+  p.stable_duration_threshold_unknown = tl_stop_p.th_stable_duration_unknown;
   p.amber_rejection_hysteresis_duration = tl_stop_p.th_amber_rejection_hysteresis;
+  p.delay_response_time = tl_stop_p.delay_response_time;
+  p.ego_stopped_velocity_threshold = tl_stop_p.ego_stopped_vel_th;
   p.checked_trajectory_length.deceleration_limit = stopping_params.nominal_deceleration;
   p.checked_trajectory_length.jerk_limit = stopping_params.jerk_limit;
   return p;
@@ -47,7 +51,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 namespace autoware::trajectory_modifier::plugin
 {
 
-void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryModifierParams & params)
+void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryProcessorParams & params)
 {
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
@@ -65,7 +69,7 @@ void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryModifierPa
       to_checker_params(params), context_->vehicle_info);
 }
 
-void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryModifierParams & params)
+void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_traffic_light_stop;
   params_ = params.traffic_light_stop;
@@ -74,7 +78,8 @@ void TrafficLightStop::update_params([[maybe_unused]] const TrajectoryModifierPa
 }
 
 bool TrafficLightStop::is_trajectory_modification_required(
-  [[maybe_unused]] const TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input)
+  [[maybe_unused]] const TrajectoryPoints & traj_points,
+  [[maybe_unused]] const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "TrafficLightStop::is_trajectory_modification_required", *get_time_keeper());
@@ -88,14 +93,14 @@ bool TrafficLightStop::is_trajectory_modification_required(
   return check_traffic_lights(traj_points, input);
 }
 
-bool TrafficLightStop::check_inputs(const InputData & input)
+bool TrafficLightStop::check_inputs(const TrajectoryProcessorData & input)
 {
   return input.current_odometry && input.current_acceleration && input.route &&
          input.traffic_light_signals && input.lanelet_map;
 }
 
 bool TrafficLightStop::check_traffic_lights(
-  const TrajectoryPoints & traj_points, const InputData & input)
+  const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "TrafficLightStop::check_traffic_lights", *get_time_keeper());
@@ -128,11 +133,10 @@ bool TrafficLightStop::check_traffic_lights(
   return true;
 }
 
-bool TrafficLightStop::modify_trajectory(
-  [[maybe_unused]] TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input)
+ProcessingResult TrafficLightStop::process(
+  [[maybe_unused]] TrajectoryPoints & traj_points, [[maybe_unused]] TrajectoryProcessorData & input)
 {
-  autoware_utils_debug::ScopedTimeTrack st(
-    "TrafficLightStop::modify_trajectory", *get_time_keeper());
+  autoware_utils_debug::ScopedTimeTrack st("TrafficLightStop::process", *get_time_keeper());
   debug_data_ = DebugData{};
 
   if (is_trajectory_modification_required(traj_points, input) && nearest_violation_) {
@@ -140,10 +144,11 @@ bool TrafficLightStop::modify_trajectory(
   }
 
   publish_debug_string();
-  return debug_data_.active;
+  return debug_data_.active ? ProcessingResult::Modified : ProcessingResult::Unchanged;
 }
 
-bool TrafficLightStop::set_stop_point(TrajectoryPoints & traj_points, const InputData & input)
+bool TrafficLightStop::set_stop_point(
+  TrajectoryPoints & traj_points, const TrajectoryProcessorData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("TrafficLightStop::set_stop_point", *get_time_keeper());
 
@@ -185,7 +190,9 @@ bool TrafficLightStop::set_stop_point(TrajectoryPoints & traj_points, const Inpu
   auto distance =
     motion_utils::calcSignedArcLength(traj_points, ego_pose.position, stop_pose.position);
   if (std::isnan(distance)) distance = 0.0;
-  planning_factor_interface_->add(distance, stop_pose, PlanningFactor::STOP, SafetyFactorArray{});
+  planning_factor_interface_->add(
+    distance, stop_pose, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    SafetyFactorArray{});
 
   debug_data_.stop_point_arc_length = target_stop_point_arc_length;
 
@@ -199,13 +206,19 @@ void TrafficLightStop::publish_debug_string() const
 {
   std::ostringstream ss;
   ss << std::fixed << std::setprecision(2) << std::boolalpha;
-  ss << "TRAFFIC LIGHT STOP MODIFIER: " << "\n";
-  ss << "\t\t" << "ACTIVE: " << debug_data_.active << "\n";
+  ss << "TRAFFIC LIGHT STOP MODIFIER: "
+     << "\n";
+  ss << "\t\t"
+     << "ACTIVE: " << debug_data_.active << "\n";
   if (debug_data_.active) {
-    ss << "\t\t" << "VIOLATIONS: " << debug_data_.violations_count << "\n";
-    ss << "\t\t" << "NEAREST VIOLATION: " << debug_data_.nearest_violation_arc_length << " m"
+    ss << "\t\t"
+       << "VIOLATIONS: " << debug_data_.violations_count << "\n";
+    ss << "\t\t"
+       << "NEAREST VIOLATION: " << debug_data_.nearest_violation_arc_length << " m"
        << "\n";
-    ss << "\t\t" << "STOP POINT: " << debug_data_.stop_point_arc_length << " m" << "\n";
+    ss << "\t\t"
+       << "STOP POINT: " << debug_data_.stop_point_arc_length << " m"
+       << "\n";
   }
   StringStamped string_stamp;
   string_stamp.stamp = get_clock()->now();
@@ -218,4 +231,4 @@ void TrafficLightStop::publish_debug_string() const
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::trajectory_modifier::plugin::TrafficLightStop,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
