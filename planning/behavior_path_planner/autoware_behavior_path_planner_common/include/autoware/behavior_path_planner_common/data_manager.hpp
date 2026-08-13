@@ -268,6 +268,8 @@ struct PlannerData
     parameters.ego_nearest_yaw_threshold =
       node.declare_parameter<double>("ego_nearest_yaw_threshold");
 
+    route_handler->setAllowArea(node.declare_parameter<bool>("allow_area"));
+
     drivable_area_expansion_parameters.init(node);
   }
 

@@ -20,12 +20,15 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace autoware::diagnostic_graph_aggregator
 {
 
 AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggregator", options)
 {
+  allow_override_ = declare_parameter<bool>("allow_override_for_debugging");
+
   const auto stamp = now();
 
   // Init diagnostics graph.
@@ -50,7 +53,10 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
 
   // Init plugins.
   if (declare_parameter<bool>("use_command_mode_mappings")) {
-    availability_ = std::make_unique<CommandModeMapping>(*this, *graph_);
+    command_modes_ = std::make_unique<CommandModeMapping>(*this, *graph_);
+  }
+  if (declare_parameter<bool>("use_driving_mode_mappings")) {
+    driving_modes_ = std::make_unique<DrivingModeMapping>(*this, *graph_);
   }
 
   // Init ros interface.
@@ -67,17 +73,26 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
     srv_reset_ = create_service<ResetDiagGraph>(
       "~/reset",
       std::bind(&AggregatorNode::on_reset, this, std::placeholders::_1, std::placeholders::_2));
-    srv_set_initializing_ = create_service<SetBool>(
+    srv_set_initializing_ = create_service<SetInitializing>(
       "~/set_initializing",
       std::bind(
         &AggregatorNode::on_set_initializing, this, std::placeholders::_1, std::placeholders::_2));
+    srv_set_override_ = create_service<SetOverride>(
+      "~/set_override",
+      std::bind(
+        &AggregatorNode::on_set_override, this, std::placeholders::_1, std::placeholders::_2));
 
     const auto rate = rclcpp::Rate(declare_parameter<double>("rate"));
-    timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
+    timer_ = autoware::agnocast_wrapper::create_timer(
+      this, get_clock(), rate.period(), [this]() { on_timer(); });
   }
 
   // Send structure topic once.
-  pub_struct_->publish(graph_->create_struct_msg(stamp));
+  {
+    auto struct_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_struct_);
+    *struct_msg = graph_->create_struct_msg(stamp);
+    pub_struct_->publish(std::move(struct_msg));
+  }
 }
 
 AggregatorNode::~AggregatorNode()
@@ -92,11 +107,20 @@ void AggregatorNode::on_timer()
   graph_->update(stamp);
 
   // Publish status.
-  pub_status_->publish(graph_->create_status_msg(stamp));
-  pub_unknown_->publish(graph_->create_unknown_msg(stamp));
+  {
+    auto status_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_status_);
+    *status_msg = graph_->create_status_msg(stamp);
+    pub_status_->publish(std::move(status_msg));
+  }
+  {
+    auto unknown_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_unknown_);
+    *unknown_msg = graph_->create_unknown_msg(stamp);
+    pub_unknown_->publish(std::move(unknown_msg));
+  }
 
   // Update plugins.
-  if (availability_) availability_->update(stamp);
+  if (command_modes_) command_modes_->update(stamp);
+  if (driving_modes_) driving_modes_->update(stamp);
 }
 
 void AggregatorNode::on_diag(const DiagnosticArray & msg)
@@ -105,17 +129,44 @@ void AggregatorNode::on_diag(const DiagnosticArray & msg)
 }
 
 void AggregatorNode::on_reset(
-  const ResetDiagGraph::Request::SharedPtr, const ResetDiagGraph::Response::SharedPtr response)
+  AUTOWARE_SERVER_REQUEST_PTR(ResetDiagGraph),
+  AUTOWARE_SERVER_RESPONSE_PTR(ResetDiagGraph) response)
 {
   graph_->reset();
   response->status.success = true;
 }
 
 void AggregatorNode::on_set_initializing(
-  const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response)
+  AUTOWARE_SERVER_REQUEST_PTR(SetInitializing) request,
+  AUTOWARE_SERVER_RESPONSE_PTR(SetInitializing) response)
 {
   graph_->set_initializing(request->data);
   response->success = true;
+}
+
+void AggregatorNode::on_set_override(
+  AUTOWARE_SERVER_REQUEST_PTR(SetOverride) request,
+  AUTOWARE_SERVER_RESPONSE_PTR(SetOverride) response)
+{
+  if (!allow_override_) {
+    response->status.success = false;
+    response->status.message = "override not allowed";
+    return;
+  }
+  if (request->level == SetOverride::Request::CLEAR) {
+    const auto error = graph_->set_override(request->path, std::nullopt);
+    response->status.success = error.empty();
+    response->status.message = error;
+    return;
+  }
+  if (request->level <= DiagnosticStatus::ERROR) {
+    const auto error = graph_->set_override(request->path, request->level);
+    response->status.success = error.empty();
+    response->status.message = error;
+    return;
+  }
+  response->status.success = false;
+  response->status.message = "invalid level: " + std::to_string(request->level);
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

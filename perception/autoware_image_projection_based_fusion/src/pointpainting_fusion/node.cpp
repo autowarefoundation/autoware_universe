@@ -470,8 +470,9 @@ dc   | dc dc dc  dc ||zc|
 
       // project
       Eigen::Vector2d projected_point;
-      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-            cv::Point3d(p_x, p_y, p_z), projected_point)) {
+      if (
+        det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+          cv::Point3d(p_x, p_y, p_z), projected_point)) {
         // iterate 2d bbox
         for (const auto & feature_object : objects) {
           sensor_msgs::msg::RegionOfInterest roi = feature_object.feature.roi;

@@ -280,9 +280,10 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   const auto default_stopline_ip_and_valid = [&]() -> std::pair<size_t, bool> {
     bool default_stopline_valid = true;
     int stop_idx_ip_int = -1;
-    if (const auto map_stop_idx_ip =
-          getStopLineIndexFromMap(interpolated_path_info, assigned_lanelet);
-        map_stop_idx_ip) {
+    if (
+      const auto map_stop_idx_ip =
+        getStopLineIndexFromMap(interpolated_path_info, assigned_lanelet);
+      map_stop_idx_ip) {
       stop_idx_ip_int = static_cast<int>(map_stop_idx_ip.value()) - base2front_idx_dist;
     }
     if (stop_idx_ip_int < 0) {
@@ -346,8 +347,8 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     const auto & base_pose0 = path_ip.points.at(default_stopline_ip).point.pose;
     const auto path_footprint0 =
       autoware_utils::transform_vector(local_footprint, autoware_utils::pose2transform(base_pose0));
-    if (bg::intersects(
-          path_footprint0, lanelet::utils::to2D(first_attention_area).basicPolygon())) {
+    if (
+      bg::intersects(path_footprint0, lanelet::utils::to2D(first_attention_area).basicPolygon())) {
       return {0, false};
     }
     int occlusion_peeking_line_ip_int = static_cast<int>(first_attention_stopline_ip) +
@@ -527,8 +528,9 @@ static std::vector<std::deque<lanelet::ConstLanelet>> getPrecedingLaneletsUptoIn
       // remove prev_lanelet from preceding_lanelet_sequences
       continue;
     }
-    if (const std::string turn_direction = prev_lanelet.attributeOr("turn_direction", "else");
-        turn_direction == "left" || turn_direction == "right") {
+    if (
+      const std::string turn_direction = prev_lanelet.attributeOr("turn_direction", "else");
+      turn_direction == "left" || turn_direction == "right") {
       continue;
     }
 
@@ -559,8 +561,9 @@ static std::vector<lanelet::ConstLanelets> getPrecedingLaneletsUptoIntersection(
       // remove prev_lanelet from preceding_lanelet_sequences
       continue;
     }
-    if (const std::string turn_direction = prev_lanelet.attributeOr("turn_direction", "else");
-        turn_direction == "left" || turn_direction == "right") {
+    if (
+      const std::string turn_direction = prev_lanelet.attributeOr("turn_direction", "else");
+      turn_direction == "left" || turn_direction == "right") {
       continue;
     }
     // convert deque into vector
@@ -585,8 +588,9 @@ IntersectionLanelets IntersectionModule::generateObjectiveLanelets(
 
   // retrieve a stopline associated with a traffic light
   bool has_traffic_light = false;
-  if (const auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<lanelet::TrafficLight>();
-      tl_reg_elems.size() != 0) {
+  if (
+    const auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<lanelet::TrafficLight>();
+    tl_reg_elems.size() != 0) {
     const auto tl_reg_elem = tl_reg_elems.front();
     const auto stopline_opt = tl_reg_elem->stopLine();
     if (!!stopline_opt) has_traffic_light = true;

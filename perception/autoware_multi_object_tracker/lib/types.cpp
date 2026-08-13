@@ -14,7 +14,6 @@
 
 #include "autoware/multi_object_tracker/types.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/object_model/uuid.hpp"
 
 #include <cmath>
@@ -149,7 +148,7 @@ autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObj
   tracked_object.kinematics.orientation_availability =
     convertOrientationAvailabilityToMsg(dyn_object.kinematics.orientation_availability);
 
-  tracked_object.kinematics.is_stationary = false;
+  tracked_object.kinematics.is_stationary = dyn_object.kinematics.is_stationary;
 
   tracked_object.shape = dyn_object.shape;
 

@@ -16,6 +16,8 @@
 
 #include "types.hpp"
 
+#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
+
 #include <utility>
 
 namespace autoware::traffic_light
@@ -71,8 +73,12 @@ inline SignalLUT extract_common_signals(const SignalLUT & lut_a, const SignalLUT
  * @param state_b Second StateKey.
  * @return Conflict status and common signals (StateKey).
  */
-ConflictStatus SignalValidator::check_conflict(const StateKey & state_a, const StateKey & state_b)
+namespace signal_validator
 {
+ConflictStatus check_conflict(const StateKey & state_a, const StateKey & state_b)
+{
+  using TrafficLightElement = tier4_perception_msgs::msg::TrafficLightElement;
+
   // check if states match across signals.
   //
   // NOTE: Currently, identical shape/color pairs (e.g., duplicate entries)
@@ -119,5 +125,6 @@ ConflictStatus SignalValidator::check_conflict(const StateKey & state_a, const S
     }
   }
 }
+}  // namespace signal_validator
 
 }  // namespace autoware::traffic_light

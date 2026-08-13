@@ -48,6 +48,16 @@
               "type": "boolean",
               "default": true,
               "description": "Whether to enable fusion for objects with PEDESTRIAN class."
+            },
+            "ANIMAL": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to enable fusion for objects with ANIMAL class."
+            },
+            "HAZARD": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to enable fusion for objects with HAZARD class."
             }
           },
           "required": [
@@ -58,7 +68,9 @@
             "TRAILER",
             "MOTORCYCLE",
             "BICYCLE",
-            "PEDESTRIAN"
+            "PEDESTRIAN",
+            "ANIMAL",
+            "HAZARD"
           ]
         },
         "override_class_with_unknown": {

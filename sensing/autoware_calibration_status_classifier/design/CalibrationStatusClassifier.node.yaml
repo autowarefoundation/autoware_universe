@@ -1,0 +1,63 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: CalibrationStatusClassifier.node
+
+package:
+  name: autoware_calibration_status_classifier
+  provider: autoware
+
+launch:
+  plugin: autoware::calibration_status_classifier::CalibrationStatusClassifierNode
+  executable: calibration_status_classifier_node
+  node_output: screen
+
+# interfaces
+# NOTE: linear_velocity / angular_velocity / objects subscriber message types are
+# configurable (prerequisite.*.source); defaults shown. camera/lidar I/O is built
+# dynamically from input.cloud_topics / input.image_topics (one pair by default).
+subscribers:
+  - name: lidar
+    message_type: sensor_msgs/msg/PointCloud2
+    global: /sensing/lidar/concatenated/pointcloud
+  - name: camera
+    message_type: sensor_msgs/msg/Image
+    global: /sensing/camera/camera8/image_raw
+  - name: linear_velocity
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+    remap_target: ~/input/linear_velocity
+  - name: angular_velocity
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+    remap_target: ~/input/angular_velocity
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+    remap_target: ~/input/objects
+
+publishers:
+  - name: preview_image
+    message_type: sensor_msgs/msg/Image
+    global: /sensing/camera/camera8/calibration_status_classifier/preview_image
+
+servers:
+  - name: validate_calibration_srv
+    message_type: std_srvs/srv/Trigger
+    remap_target: ~/input/validate_calibration_srv
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/calibration_status_classifier.param.yaml
+  - name: ml_param_file
+    default: config/ml_package_calibration_status_classifier.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: classify
+    trigger_conditions:
+      - and:
+          - on_input: lidar
+          - on_input: camera
+    outcomes:
+      - to_output: preview_image

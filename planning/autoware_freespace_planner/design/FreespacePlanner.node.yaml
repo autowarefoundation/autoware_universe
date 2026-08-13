@@ -1,0 +1,48 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: FreespacePlanner.node
+
+package:
+  name: autoware_freespace_planner
+  provider: autoware
+
+launch:
+  plugin: autoware::freespace_planner::FreespacePlannerNode
+  executable: freespace_planner
+
+# interfaces
+subscribers:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: scenario
+    message_type: autoware_internal_planning_msgs/msg/Scenario
+  - name: occupancy_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: is_completed
+    message_type: std_msgs/msg/Bool
+    remap_target: is_completed
+
+# parameters
+param_files:
+  - name: freespace_planner_param
+    default: $(find-pkg-share autoware_freespace_planner)/config/freespace_planner.param.yaml
+  - name: vehicle_param
+    default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: plan_freespace
+    trigger_conditions:
+      - on_input: occupancy_grid
+      - on_input: odometry
+    outcomes:
+      - to_output: trajectory

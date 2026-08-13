@@ -1,0 +1,44 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: PoseCovarianceModifier.node
+package:
+  name: autoware_pose_covariance_modifier
+  provider: autoware
+launch:
+  plugin: autoware::pose_covariance_modifier::PoseCovarianceModifierNode
+  executable: autoware_pose_covariance_modifier_node
+# interfaces
+subscribers:
+  - name: gnss_pose_with_cov
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: input_gnss_pose_with_cov_topic
+  - name: ndt_pose_with_cov
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: input_ndt_pose_with_cov_topic
+publishers:
+  - name: pose_with_covariance
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: output_pose_with_covariance_topic
+  - name: selected_pose_type
+    message_type: std_msgs/msg/String
+  - name: ndt_position_stddev
+    message_type: std_msgs/msg/Float64
+    remap_target: ~/debug/ndt_position_stddev
+  - name: gnss_position_stddev
+    message_type: std_msgs/msg/Float64
+    remap_target: ~/debug/gnss_position_stddev
+# parameters
+param_files:
+  - name: pose_covariance_modifier_param
+    default: config/pose_covariance_modifier.param.yaml
+param_values: []
+# processes
+processes:
+  - name: modify_pose_covariance
+    trigger_conditions:
+      - on_input: ndt_pose_with_cov
+    outcomes:
+      - to_output: pose_with_covariance
+      - to_output: selected_pose_type
+      - to_output: ndt_position_stddev
+      - to_output: gnss_position_stddev

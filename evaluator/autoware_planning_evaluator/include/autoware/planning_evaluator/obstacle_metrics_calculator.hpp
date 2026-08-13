@@ -90,8 +90,8 @@ struct EgoTrajectoryPoint
   void setPolygon(const VehicleInfo & ego_vehicle_info)
   {
     if (!polygon.has_value()) {
-      const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
-        ego_vehicle_info.createFootprint(), autoware_utils::pose2transform(pose));
+      const autoware_utils::LinearRing2d ego_footprint =
+        ego_vehicle_info.createFootprint(0.0, pose);
       Polygon2d ego_polygon;
       ego_polygon.outer() = ego_footprint;
       bg::correct(ego_polygon);

@@ -15,6 +15,7 @@
 #include "autoware/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
 
 #include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/math/normalization.hpp"
 
 #include <experimental/optional>  // NOLINT
 #include <tf2/LinearMath/Matrix3x3.hpp>
@@ -24,15 +25,22 @@
 
 #include <algorithm>
 #include <limits>
+#include <optional>
 #include <utility>
+#include <vector>
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
 namespace longitudinal_utils
 {
-
-bool isValidTrajectory(const Trajectory & traj)
+bool isValidTrajectory(const Trajectory & traj, const bool use_temporal_trajectory)
 {
+  // Check if trajectory is empty first
+  if (traj.points.empty()) {
+    return false;
+  }
+
+  double prev_t = -std::numeric_limits<double>::infinity();
   for (const auto & p : traj.points) {
     if (
       !isfinite(p.pose.position.x) || !isfinite(p.pose.position.y) ||
@@ -43,11 +51,14 @@ bool isValidTrajectory(const Trajectory & traj)
       !isfinite(p.heading_rate_rps)) {
       return false;
     }
-  }
 
-  // when trajectory is empty
-  if (traj.points.empty()) {
-    return false;
+    if (use_temporal_trajectory) {
+      const double t = rclcpp::Duration(p.time_from_start).seconds();
+      if (!std::isfinite(t) || t <= prev_t) {
+        return false;
+      }
+      prev_t = t;
+    }
   }
 
   return true;
@@ -185,5 +196,60 @@ geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
   }
   return p;
 }
+
+std::pair<TrajectoryPoint, size_t> lerpTrajectoryPointByTime(
+  const std::vector<TrajectoryPoint> & points, const double target_time)
+{
+  if (points.empty()) {
+    return std::make_pair(TrajectoryPoint{}, 0);
+  }
+  if (points.size() == 1) {
+    return std::make_pair(points.front(), 0);
+  }
+
+  const double front_time = rclcpp::Duration(points.front().time_from_start).seconds();
+  if (target_time <= front_time) {
+    return std::make_pair(points.front(), 0);
+  }
+
+  const double back_time = rclcpp::Duration(points.back().time_from_start).seconds();
+  if (target_time >= back_time) {
+    return std::make_pair(points.back(), points.size() - 1);
+  }
+
+  for (size_t i = 0; i < points.size() - 1; ++i) {
+    const double t0 = rclcpp::Duration(points.at(i).time_from_start).seconds();
+    const double t1 = rclcpp::Duration(points.at(i + 1).time_from_start).seconds();
+    if (target_time > t1) {
+      continue;
+    }
+    const double ratio = std::clamp(
+      (target_time - t0) / std::max(t1 - t0, std::numeric_limits<double>::epsilon()), 0.0, 1.0);
+    auto interpolated = points.at(i);
+    const auto & p0 = points.at(i);
+    const auto & p1 = points.at(i + 1);
+    interpolated.pose.position.x =
+      autoware::interpolation::lerp(p0.pose.position.x, p1.pose.position.x, ratio);
+    interpolated.pose.position.y =
+      autoware::interpolation::lerp(p0.pose.position.y, p1.pose.position.y, ratio);
+    interpolated.pose.position.z =
+      autoware::interpolation::lerp(p0.pose.position.z, p1.pose.position.z, ratio);
+    interpolated.pose.orientation =
+      autoware::interpolation::lerpOrientation(p0.pose.orientation, p1.pose.orientation, ratio);
+    interpolated.longitudinal_velocity_mps = autoware::interpolation::lerp(
+      p0.longitudinal_velocity_mps, p1.longitudinal_velocity_mps, ratio);
+    interpolated.lateral_velocity_mps =
+      autoware::interpolation::lerp(p0.lateral_velocity_mps, p1.lateral_velocity_mps, ratio);
+    interpolated.acceleration_mps2 =
+      autoware::interpolation::lerp(p0.acceleration_mps2, p1.acceleration_mps2, ratio);
+    interpolated.heading_rate_rps =
+      autoware::interpolation::lerp(p0.heading_rate_rps, p1.heading_rate_rps, ratio);
+    interpolated.time_from_start = rclcpp::Duration::from_seconds(target_time);
+    return std::make_pair(interpolated, i);
+  }
+
+  return std::make_pair(points.back(), points.size() - 1);
+}
+
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller
