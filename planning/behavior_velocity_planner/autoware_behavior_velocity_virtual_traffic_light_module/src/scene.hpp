@@ -70,6 +70,8 @@ public:
     autoware_internal_planning_msgs::msg::PathWithLaneId path{};
     std::optional<geometry_msgs::msg::Pose> stop_head_pose_at_stop_line;
     std::optional<geometry_msgs::msg::Pose> stop_head_pose_at_end_line;
+    bool is_driving_forward{true};
+    double leading_bumper_longitudinal_offset_m{0.0};
   };
 
   struct PlannerParam

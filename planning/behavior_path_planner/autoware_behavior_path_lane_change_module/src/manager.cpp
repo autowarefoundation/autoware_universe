@@ -205,6 +205,7 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
     get_or_declare_parameter<double>(*node, parameter("backward_length_from_intersection"));
   p.enable_stopped_vehicle_buffer =
     get_or_declare_parameter<bool>(*node, parameter("enable_stopped_vehicle_buffer"));
+  p.overhang_tolerance = get_or_declare_parameter<double>(*node, parameter("overhang_tolerance"));
 
   if (p.backward_length_buffer_for_end_of_lane < 1.0) {
     RCLCPP_WARN_STREAM(

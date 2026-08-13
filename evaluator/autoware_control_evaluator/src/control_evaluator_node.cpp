@@ -20,6 +20,7 @@
 #include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
@@ -29,6 +30,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -37,12 +39,42 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace control_diagnostics
 {
 namespace bg = boost::geometry;
+
+namespace
+{
+using autoware_perception_msgs::msg::ObjectClassification;
+
+const std::unordered_map<std::string, uint8_t> kObjectLabelNameToValue = {
+  {"unknown", ObjectClassification::UNKNOWN},
+  {"car", ObjectClassification::CAR},
+  {"truck", ObjectClassification::TRUCK},
+  {"bus", ObjectClassification::BUS},
+  {"trailer", ObjectClassification::TRAILER},
+  {"motorcycle", ObjectClassification::MOTORCYCLE},
+  {"bicycle", ObjectClassification::BICYCLE},
+  {"pedestrian", ObjectClassification::PEDESTRIAN},
+  {"animal", ObjectClassification::ANIMAL},
+  {"hazard", ObjectClassification::HAZARD},
+  {"over_drivable", ObjectClassification::OVER_DRIVABLE},
+  {"under_drivable", ObjectClassification::UNDER_DRIVABLE},
+};
+
+std::optional<uint8_t> label_from_string(const std::string & label_name)
+{
+  const auto it = kObjectLabelNameToValue.find(label_name);
+  if (it == kObjectLabelNameToValue.end()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+}  // namespace
 
 ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_options)
 : Node("control_evaluator", node_options),
@@ -61,8 +93,9 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
     declare_parameter<std::string>("planning_factor_metrics.topic_prefix");
   for (const auto & module_name : stop_deviation_modules_) {
     planning_factors_sub_.emplace(
-      module_name, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>(
-                     this, topic_prefix + module_name));
+      module_name,
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<PlanningFactorArray>(
+        this, topic_prefix + module_name));
     stop_deviation_accumulators_.emplace(module_name, Accumulator<double>());
     stop_deviation_abs_accumulators_.emplace(module_name, Accumulator<double>());
   }
@@ -75,6 +108,18 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
   distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
+  const std::vector<std::string> excluded_labels = declare_parameter<std::vector<std::string>>(
+    "object_metrics.excluded_labels", std::vector<std::string>{"unknown"});
+  for (const auto & label_name : excluded_labels) {
+    const auto label = label_from_string(label_name);
+    if (label) {
+      excluded_object_labels_.insert(*label);
+    } else {
+      RCLCPP_ERROR(
+        get_logger(), "Unknown object label '%s' in object_metrics.excluded_labels",
+        label_name.c_str());
+    }
+  }
 
   // Setting about Output metrics only when the vehicle is moving
   const bool output_metrics_only_moving_enabled =
@@ -98,8 +143,8 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
 
   // Timer callback to publish evaluator diagnostics
   using namespace std::literals::chrono_literals;
-  timer_ =
-    rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&ControlEvaluatorNode::onTimer, this));
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), 100ms, std::bind(&ControlEvaluatorNode::onTimer, this));
 }
 
 ControlEvaluatorNode::~ControlEvaluatorNode()
@@ -187,7 +232,7 @@ void ControlEvaluatorNode::getRouteData()
 {
   // route
   {
-    const auto msg = route_subscriber_.take_data();
+    const auto msg = route_subscriber_->take_data();
     if (msg) {
       if (msg->segments.empty()) {
         RCLCPP_ERROR(get_logger(), "input route is empty. ignored");
@@ -199,7 +244,7 @@ void ControlEvaluatorNode::getRouteData()
 
   // map
   {
-    const auto msg = vector_map_subscriber_.take_data();
+    const auto msg = vector_map_subscriber_->take_data();
     if (msg) {
       route_handler_.setMap(*msg);
     }
@@ -259,9 +304,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
   const PathWithLaneId & behavior_path, const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  const auto current_vehicle_footprint = autoware_utils::transform_vector(
-    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
+  const auto current_vehicle_footprint = vehicle_info_.createFootprint(0.0, ego_pose);
 
   if (behavior_path.left_bound.size() >= 1) {
     LineString2d left_boundary;
@@ -308,35 +351,34 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
       route_handler_.getLaneletMapPtr(), ego_pose, search_distance)) {
     const auto & nearby_uncrossable_lines = *nearby_uncrossable_lines_opt;
 
-    const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
-    const auto local_fp = vehicle_info_.createFootprint();
-    const auto current_fp = autoware_utils::transform_vector(local_fp, transformed_pose);
+    const auto current_fp = vehicle_info_.createFootprint(0.0, ego_pose);
     const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
 
-    auto is_overlapping{false};
     for (const auto & nearby_ls : nearby_uncrossable_lines) {
       const auto & basic_ls = nearby_ls.basicLineString();
       for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
         const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
 
-        is_overlapping = !boost::geometry::disjoint(current_fp, segment);
-        if (is_overlapping) {
-          nearest_left = 0.0;
-          nearest_right = 0.0;
-          break;
-        }
-
         const auto dist_to_left = boost::geometry::distance(segment, side.left);
         const auto dist_to_right = boost::geometry::distance(segment, side.right);
-        if (dist_to_left < dist_to_right) {
-          nearest_left = std::min(dist_to_left, nearest_left);
-        } else {
-          nearest_right = std::min(dist_to_right, nearest_right);
+
+        // Update the nearest distance to the boundary.
+        bool left_touched = dist_to_left <= 0.0;
+        bool right_touched = dist_to_right <= 0.0;
+        if (left_touched) nearest_left = 0.0;
+        if (right_touched) nearest_right = 0.0;
+
+        if (!left_touched && !right_touched) {
+          if (dist_to_left < dist_to_right) {
+            nearest_left = std::min(dist_to_left, nearest_left);
+          } else {
+            nearest_right = std::min(dist_to_right, nearest_right);
+          }
         }
+
+        if (nearest_left == 0.0 && nearest_right == 0.0) break;
       }
-      if (is_overlapping) {
-        break;
-      }
+      if (nearest_left == 0.0 && nearest_right == 0.0) break;
     }
   }
 
@@ -459,6 +501,18 @@ void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, con
   AddMetricMsg(Metric::yaw_deviation_abs, metric_value_abs);
 }
 
+void ControlEvaluatorNode::AddLateralDeviationCenterlineMetricMsg(const Pose & ego_pose)
+{
+  const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
+  const double metric_value = arc_coordinates.distance;
+  const double metric_value_abs = std::abs(metric_value);
+
+  AddMetricMsg(Metric::lateral_deviation_centerline, metric_value);
+  AddMetricMsg(Metric::lateral_deviation_centerline_abs, metric_value_abs);
+}
+
 void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 {
   const Pose ego_pose = odom.pose.pose;
@@ -491,8 +545,7 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 
 void ControlEvaluatorNode::AddStopDeviationMetricMsg()
 {
-  const auto get_min_distance_signed =
-    [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
+  const auto get_min_distance_signed = [](const auto & planning_factors) -> std::optional<double> {
     std::optional<double> min_distance = std::nullopt;
     for (const auto & factor : planning_factors->factors) {
       if (factor.behavior == PlanningFactor::STOP) {
@@ -510,7 +563,7 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg()
   // get min_distance from each module
   std::vector<std::pair<std::string, double>> min_distances;
   for (auto & [module_name, planning_factor_sub_] : planning_factors_sub_) {
-    const auto planning_factors = planning_factor_sub_.take_data();
+    const auto planning_factors = planning_factor_sub_->take_data();
     if (
       !planning_factors || planning_factors->factors.empty() ||
       stop_deviation_modules_.count(module_name) == 0) {
@@ -560,9 +613,8 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
   }
 
   const auto ego_polygon = [&]() -> autoware_utils::Polygon2d {
-    const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info_.createFootprint();
-    const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
-      local_ego_footprint, autoware_utils::pose2transform(odom.pose.pose));
+    const autoware_utils::LinearRing2d ego_footprint =
+      vehicle_info_.createFootprint(0.0, odom.pose.pose);
 
     autoware_utils::Polygon2d ego_polygon;
     ego_polygon.outer() = ego_footprint;
@@ -572,6 +624,12 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
 
   double minimum_distance = std::numeric_limits<double>::max();
   for (const auto & object : objects.objects) {
+    const auto label =
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    if (excluded_object_labels_.find(label) != excluded_object_labels_.end()) {
+      continue;
+    }
+
     const double center_distance = autoware_utils::calc_distance2d(
       odom.pose.pose.position, object.kinematics.initial_pose_with_covariance.pose.position);
     if (center_distance > distance_filter_thr_m_) {
@@ -605,7 +663,7 @@ void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
-  const auto odom = odometry_sub_.take_data();
+  const auto odom = odometry_sub_->take_data();
   if (odom) {
     const Pose ego_pose = odom->pose.pose;
     ego_speed_ = std::abs(odom->twist.twist.linear.x);
@@ -614,19 +672,19 @@ void ControlEvaluatorNode::onTimer()
     AddStopDeviationMetricMsg();
 
     // add object related metrics
-    const auto objects = objects_sub_.take_data();
+    const auto objects = objects_sub_->take_data();
     if (objects) {
       AddObjectMetricMsg(*odom, *objects);
     }
 
     // add kinematic info
-    const auto acc = accel_sub_.take_data();
+    const auto acc = accel_sub_->take_data();
     if (acc) {
       AddKinematicStateMetricMsg(*odom, *acc);
     }
 
     // add deviation metrics
-    const auto traj = traj_sub_.take_data();
+    const auto traj = traj_sub_->take_data();
     if (traj && !traj->points.empty()) {
       AddLateralDeviationMetricMsg(*traj, ego_pose.position);
       AddYawDeviationMetricMsg(*traj, ego_pose);
@@ -637,10 +695,11 @@ void ControlEvaluatorNode::onTimer()
     if (route_handler_.isHandlerReady()) {
       // add goal deviation metrics
       AddLaneletInfoMsg(ego_pose);
+      AddLateralDeviationCenterlineMetricMsg(ego_pose);
       AddGoalDeviationMetricMsg(*odom);
 
       // add boundary distance metrics
-      const auto behavior_path = behavior_path_subscriber_.take_data();
+      const auto behavior_path = behavior_path_subscriber_->take_data();
       if (behavior_path) {
         AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
       }
@@ -649,7 +708,7 @@ void ControlEvaluatorNode::onTimer()
   }
 
   // add steering metrics
-  const auto steering_status = steering_sub_.take_data();
+  const auto steering_status = steering_sub_->take_data();
   if (steering_status) {
     AddSteeringMetricMsg(*steering_status);
   }

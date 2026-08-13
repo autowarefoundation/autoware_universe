@@ -17,7 +17,7 @@ subscribers: []
 
 publishers:
   - name: object
-    message_type: tier4_simulation_msgs/msg/DummyObject
+    message_type: autoware_simulation_msgs/msg/SimulatedObject
 
 # parameters
 param_files: []

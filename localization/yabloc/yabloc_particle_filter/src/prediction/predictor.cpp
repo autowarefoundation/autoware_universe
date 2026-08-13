@@ -270,7 +270,8 @@ void Predictor::on_weighted_particles(const ParticleArray::ConstSharedPtr weight
   // NOTE: **We need not to check particle_array_opt.has_value().**
   // Since the weighted_particles is generated from messages published from this node,
   // the particle_array must have an entity in this function.
-  ParticleArray particle_array = particle_array_opt_.value();
+  const auto particle_array_value = particle_array_opt_.value_or(ParticleArray{});
+  ParticleArray particle_array = particle_array_value;
 
   // ==========================================================================
   // From here, weighting section
@@ -338,8 +339,9 @@ void Predictor::publish_mean_pose(
 
   // Publish TF
   {
+    const auto particle_array = particle_array_opt_.value_or(ParticleArray{});
     geometry_msgs::msg::TransformStamped transform;
-    transform.header.stamp = particle_array_opt_->header.stamp;
+    transform.header.stamp = particle_array.header.stamp;
     transform.header.frame_id = "map";
     transform.child_frame_id = "particle_filter";
     transform.transform.translation.x = mean_pose.position.x;

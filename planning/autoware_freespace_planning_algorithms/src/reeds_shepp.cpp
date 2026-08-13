@@ -158,6 +158,7 @@ inline bool LpSpRp(double x, double y, double phi, double & t, double & u, doubl
 void CSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & path)
 {
   double t, u, v, L_min = path.length(), L;
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpSpLp(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path =
       ReedsSheppStateSpace::ReedsSheppPath(ReedsSheppStateSpace::reedsSheppPathType[14], t, u, v);
@@ -165,6 +166,7 @@ void CSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpSpLp(-x, y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -173,6 +175,7 @@ void CSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpSpLp(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path =
@@ -181,12 +184,14 @@ void CSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpSpLp(-x, -y, phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip + reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
       ReedsSheppStateSpace::reedsSheppPathType[15], -t, -u, -v);
     L_min = L;
   }
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpSpRp(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path =
       ReedsSheppStateSpace::ReedsSheppPath(ReedsSheppStateSpace::reedsSheppPathType[12], t, u, v);
@@ -194,6 +199,7 @@ void CSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpSpRp(-x, y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -202,6 +208,7 @@ void CSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpSpRp(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path =
@@ -233,11 +240,13 @@ inline bool LpRmL(double x, double y, double phi, double & t, double & u, double
 void CCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & path)
 {
   double t, u, v, L_min = path.length(), L;
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmL(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path =
       ReedsSheppStateSpace::ReedsSheppPath(ReedsSheppStateSpace::reedsSheppPathType[0], t, u, v);
     L_min = L;
   }
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmL(-x, y, -phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     // time flip
     path =
@@ -246,6 +255,7 @@ void CCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpRmL(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path =
@@ -254,6 +264,7 @@ void CCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpRmL(-x, -y, phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip + reflect
   {
     path =
@@ -263,6 +274,7 @@ void CCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
 
   // backwards
   double xb = x * std::cos(phi) + y * std::sin(phi), yb = x * std::sin(phi) - y * std::cos(phi);
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmL(xb, yb, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path =
       ReedsSheppStateSpace::ReedsSheppPath(ReedsSheppStateSpace::reedsSheppPathType[0], v, u, t);
@@ -270,6 +282,7 @@ void CCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpRmL(-xb, yb, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path =
@@ -278,6 +291,7 @@ void CCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & 
   }
   if (
     LpRmL(xb, -yb, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path =
@@ -331,6 +345,7 @@ void CCCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
 {
   double t, u, v, L_min = path.length(), L;
   if (
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     LpRupLumRm(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + 2. * std::abs(u) + std::abs(v))) {
     path = ReedsSheppStateSpace::ReedsSheppPath(
       ReedsSheppStateSpace::reedsSheppPathType[2], t, u, -u, v);
@@ -338,6 +353,7 @@ void CCCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRupLumRm(-x, y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + 2. * std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -346,6 +362,7 @@ void CCCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRupLumRm(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + 2. * std::abs(u) + std::abs(v)))  // reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -354,6 +371,7 @@ void CCCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRupLumRm(-x, -y, phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + 2. * std::abs(u) + std::abs(v)))  // time flip + reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -362,6 +380,7 @@ void CCCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
 
   if (
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     LpRumLumRp(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + 2. * std::abs(u) + std::abs(v))) {
     path =
       ReedsSheppStateSpace::ReedsSheppPath(ReedsSheppStateSpace::reedsSheppPathType[2], t, u, u, v);
@@ -369,6 +388,7 @@ void CCCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRumLumRp(-x, y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + 2. * std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -377,6 +397,7 @@ void CCCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRumLumRp(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + 2. * std::abs(u) + std::abs(v)))  // reflect
   {
     path =
@@ -428,6 +449,7 @@ inline bool LpRmSmRm(double x, double y, double phi, double & t, double & u, dou
 void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & path)
 {
   double t, u, v, L_min = path.length() - .5 * pi, L;
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmSmLm(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path = ReedsSheppStateSpace::ReedsSheppPath(
       ReedsSheppStateSpace::reedsSheppPathType[4], t, -.5 * pi, u, v);
@@ -435,6 +457,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmLm(-x, y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -443,6 +466,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmLm(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -451,6 +475,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmLm(-x, -y, phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip + reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -458,6 +483,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
     L_min = L;
   }
 
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmSmRm(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path = ReedsSheppStateSpace::ReedsSheppPath(
       ReedsSheppStateSpace::reedsSheppPathType[8], t, -.5 * pi, u, v);
@@ -465,6 +491,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmRm(-x, y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -473,6 +500,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmRm(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -481,6 +509,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmRm(-x, -y, phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip + reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -490,6 +519,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
 
   // backwards
   double xb = x * std::cos(phi) + y * std::sin(phi), yb = x * std::sin(phi) - y * std::cos(phi);
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmSmLm(xb, yb, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path = ReedsSheppStateSpace::ReedsSheppPath(
       ReedsSheppStateSpace::reedsSheppPathType[6], v, u, -.5 * pi, t);
@@ -497,6 +527,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmLm(-xb, yb, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -505,6 +536,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmLm(xb, -yb, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -513,6 +545,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmLm(-xb, -yb, phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip + reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -520,6 +553,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
     L_min = L;
   }
 
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmSmRm(xb, yb, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path = ReedsSheppStateSpace::ReedsSheppPath(
       ReedsSheppStateSpace::reedsSheppPathType[10], v, u, -.5 * pi, t);
@@ -527,6 +561,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmRm(-xb, yb, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -535,6 +570,7 @@ void CCSC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath &
   }
   if (
     LpRmSmRm(xb, -yb, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -573,6 +609,7 @@ inline bool LpRmSLmRp(double x, double y, double phi, double & t, double & u, do
 void CCSCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath & path)
 {
   double t, u, v, L_min = path.length() - pi, L;
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   if (LpRmSLmRp(x, y, phi, t, u, v) && L_min > (L = std::abs(t) + std::abs(u) + std::abs(v))) {
     path = ReedsSheppStateSpace::ReedsSheppPath(
       ReedsSheppStateSpace::reedsSheppPathType[16], t, -.5 * pi, u, -.5 * pi, v);
@@ -580,6 +617,7 @@ void CCSCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath 
   }
   if (
     LpRmSLmRp(-x, y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // time flip
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(
@@ -588,6 +626,7 @@ void CCSCC(double x, double y, double phi, ReedsSheppStateSpace::ReedsSheppPath 
   }
   if (
     LpRmSLmRp(x, -y, -phi, t, u, v) &&
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
     L_min > (L = std::abs(t) + std::abs(u) + std::abs(v)))  // reflect
   {
     path = ReedsSheppStateSpace::ReedsSheppPath(

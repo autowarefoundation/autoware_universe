@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <library path="autoware_trajectory_validator_plugins">
-  <class type="safety::OutOfLaneFilter"
+  <class type="safety::UncrossableBoundaryDepartureFilter"
     base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
     <description>
-      Filters trajectories that go out of lane boundaries
+      Filters trajectories that cross uncrossable boundaries
     </description>
   </class>
   <class type="safety::VehicleConstraintFilter"
@@ -17,6 +17,13 @@
     <description>
       Filter for checking traffic light violations.
       Rejects trajectories that would pass through red or amber traffic lights.
+    </description>
+  </class>
+  <class type="traffic_rule::CrosswalkFilter"
+         base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
+    <description>
+      Filter for checking crosswalk violations.
+      Rejects trajectories that would violate crosswalk traffic rules.
     </description>
   </class>
 </library>

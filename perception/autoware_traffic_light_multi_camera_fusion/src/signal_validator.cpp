@@ -16,13 +16,15 @@
 
 #include "types.hpp"
 
+#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
+
 #include <utility>
 
 namespace autoware::traffic_light
 {
 namespace
 {
-inline StateKey signalLutToStateKey(const SignalLUT & lut)
+inline StateKey signal_lut_to_state_key(const SignalLUT & lut)
 {
   StateKey state_key;
   for (const auto & signal : lut) {
@@ -32,7 +34,7 @@ inline StateKey signalLutToStateKey(const SignalLUT & lut)
   return state_key;
 }
 
-inline SignalLUT createSignalLUT(const StateKey & state_key)
+inline SignalLUT create_signal_lut(const StateKey & state_key)
 {
   SignalLUT signal_lut;
 
@@ -43,7 +45,7 @@ inline SignalLUT createSignalLUT(const StateKey & state_key)
   return signal_lut;
 };
 
-inline SignalLUT extractCommonSignals(const SignalLUT & lut_a, const SignalLUT & lut_b)
+inline SignalLUT extract_common_signals(const SignalLUT & lut_a, const SignalLUT & lut_b)
 {
   SignalLUT common_lut;
 
@@ -71,8 +73,12 @@ inline SignalLUT extractCommonSignals(const SignalLUT & lut_a, const SignalLUT &
  * @param state_b Second StateKey.
  * @return Conflict status and common signals (StateKey).
  */
-ConflictStatus SignalValidator::checkConflict(const StateKey & state_a, const StateKey & state_b)
+namespace signal_validator
 {
+ConflictStatus check_conflict(const StateKey & state_a, const StateKey & state_b)
+{
+  using TrafficLightElement = tier4_perception_msgs::msg::TrafficLightElement;
+
   // check if states match across signals.
   //
   // NOTE: Currently, identical shape/color pairs (e.g., duplicate entries)
@@ -83,8 +89,8 @@ ConflictStatus SignalValidator::checkConflict(const StateKey & state_a, const St
     return ConflictStatus{ConflictType::NO_CONFLICT, state_a};
   }
 
-  SignalLUT lut_a = createSignalLUT(state_a);
-  SignalLUT lut_b = createSignalLUT(state_b);
+  SignalLUT lut_a = create_signal_lut(state_a);
+  SignalLUT lut_b = create_signal_lut(state_b);
 
   constexpr std::pair<uint8_t, uint8_t> unknown_pair{
     TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN};
@@ -107,8 +113,8 @@ ConflictStatus SignalValidator::checkConflict(const StateKey & state_a, const St
     // however, the returned state key depends on the input order
     return ConflictStatus{ConflictType::NO_CONFLICT, state_a};
   } else {
-    const SignalLUT lut_common = extractCommonSignals(lut_a, lut_b);
-    const StateKey common_state_key = signalLutToStateKey(lut_common);
+    const SignalLUT lut_common = extract_common_signals(lut_a, lut_b);
+    const StateKey common_state_key = signal_lut_to_state_key(lut_common);
 
     // all matching cases are already handled.
     // only need to check for full or partial conflicts.
@@ -119,5 +125,6 @@ ConflictStatus SignalValidator::checkConflict(const StateKey & state_a, const St
     }
   }
 }
+}  // namespace signal_validator
 
 }  // namespace autoware::traffic_light

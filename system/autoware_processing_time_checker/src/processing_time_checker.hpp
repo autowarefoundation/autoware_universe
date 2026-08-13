@@ -18,6 +18,7 @@
 #include "autoware_utils/math/accumulator.hpp"
 #include "digestible.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
@@ -36,7 +37,7 @@ using MetricMsg = tier4_metric_msgs::msg::Metric;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using autoware_internal_debug_msgs::msg::Float64Stamped;
 
-class ProcessingTimeChecker : public rclcpp::Node
+class ProcessingTimeChecker : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ProcessingTimeChecker(const rclcpp::NodeOptions & node_options);
@@ -45,10 +46,10 @@ public:
 private:
   void on_timer();
 
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
-  rclcpp::Publisher<MetricArrayMsg>::SharedPtr metrics_pub_;
-  std::vector<rclcpp::Subscription<Float64Stamped>::SharedPtr> processing_time_subscribers_;
+  AUTOWARE_PUBLISHER_PTR(MetricArrayMsg) metrics_pub_;
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(Float64Stamped)> processing_time_subscribers_;
 
   // parameters
   bool output_metrics_;
