@@ -1,0 +1,36 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: UndistortNode.node
+package:
+  name: yabloc_image_processing
+  provider: autoware
+launch:
+  plugin: yabloc::undistort::UndistortNode
+  executable: yabloc_undistort_node
+# interfaces
+subscribers:
+  - name: image_raw
+    message_type: sensor_msgs/msg/Image
+  - name: image_raw_compressed
+    message_type: sensor_msgs/msg/CompressedImage
+    remap_target: ~/input/image_raw/compressed
+  - name: camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+publishers:
+  - name: resized_info
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: resized_image
+    message_type: sensor_msgs/msg/Image
+# parameters
+param_files:
+  - name: undistort_param
+    default: config/undistort.param.yaml
+param_values: []
+# processes
+processes:
+  - name: undistort_image
+    trigger_conditions:
+      - on_input: image_raw
+    outcomes:
+      - to_output: resized_image
+      - to_output: resized_info

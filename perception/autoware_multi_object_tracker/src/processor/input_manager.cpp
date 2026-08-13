@@ -15,7 +15,6 @@
 #include "input_manager.hpp"
 
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
@@ -68,7 +67,7 @@ void InputStream::push(
 }
 
 std::optional<types::DynamicObjectList> InputStream::processMessage(
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
   const rclcpp::Time timestamp = objects.header.stamp;
@@ -277,7 +276,7 @@ void InputManager::push(
 
 std::optional<types::DynamicObjectList> InputManager::processMessage(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(

@@ -154,7 +154,7 @@ void RingOutlierFilterComponent::faster_filter(
       if (
         std::max(current_distance, next_distance) <
           std::min(current_distance, next_distance) * distance_ratio_ &&
-        azimuth_diff < 1.0 * (180.0 / M_PI)) {  // one degree
+        azimuth_diff < 1.0 * (M_PI / 180.0)) {  // one degree
         continue;                               // Determined to be included in the same walk
       }
 

@@ -2,6 +2,22 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(simple_object_merger): apply `agnocast_wrapper::Node` to simple_object_merger (`#12706 <https://github.com/autowarefoundation/autoware_universe/issues/12706>`_)
+  * apply agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  * use autoware_utils get_transform
+  * use WrapperTransformListener
+  * fix to use shared_ptr
+  * update for tflistener
+  * fix to align with original
+  * fix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

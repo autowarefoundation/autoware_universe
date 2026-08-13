@@ -20,6 +20,24 @@
 namespace autoware::ptv3
 {
 
+/**
+ * @brief Box record shared by CUDA decode and ROS conversion.
+ */
+struct Box3D
+{
+  int label{-1};
+  float score{0.0f};
+  float x{0.0f};
+  float y{0.0f};
+  float z{0.0f};
+  float length{0.0f};
+  float width{0.0f};
+  float height{0.0f};
+  float yaw{0.0f};
+  float vel_x{0.0f};
+  float vel_y{0.0f};
+};
+
 // cspell: ignore divup
 template <typename T1, typename T2>
 unsigned int divup(const T1 a, const T2 b)
