@@ -50,9 +50,10 @@
 // From NVIDIA/DL4AGX
 
 #include "autoware/camera_streampetr/cuda_utils.hpp"
-#include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 #include "autoware/camera_streampetr/postprocess/postprocess_kernel.hpp"
 #include "autoware/camera_streampetr/utils.hpp"
+
+#include <perception_utils/iou_bev_nms.hpp>
 
 // TensorRT Common
 #include "autoware/tensorrt_common/tensorrt_common.hpp"
@@ -234,7 +235,7 @@ private:
   std::unique_ptr<Duration> dur_postprocess_;
 
   std::unique_ptr<PostprocessCuda> postprocess_cuda_;
-  NonMaximumSuppression iou_bev_nms_;
+  perception_utils::IouBevNms iou_bev_nms_;
 
   bool is_inference_initialized_ = false;
   Memory mem_;

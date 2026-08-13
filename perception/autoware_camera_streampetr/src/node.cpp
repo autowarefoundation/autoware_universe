@@ -15,7 +15,6 @@
 #include "autoware/camera_streampetr/node.hpp"
 
 #include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
-#include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <Eigen/Dense>
 #include <image_transport/image_transport.hpp>
