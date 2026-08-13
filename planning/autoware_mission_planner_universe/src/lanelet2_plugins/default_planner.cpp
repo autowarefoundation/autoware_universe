@@ -103,6 +103,8 @@ void DefaultPlanner::initialize_common(rclcpp::Node * node)
   param_.consider_no_drivable_lanes = node_->declare_parameter<bool>("consider_no_drivable_lanes");
   param_.check_footprint_inside_lanes =
     node_->declare_parameter<bool>("check_footprint_inside_lanes");
+  param_.allow_area = node_->declare_parameter<bool>("allow_area", false);
+  route_handler_.setAllowArea(param_.allow_area);
 }
 
 void DefaultPlanner::initialize(rclcpp::Node * node)
@@ -284,10 +286,10 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
 
   // check if goal is in shoulder lanelet
   const auto shoulder_lanelets = route_handler_.getShoulderLaneletsAtPose(goal);
-  if (const auto closest_shoulder_lanelet_opt =
-        experimental::lanelet2_utils::get_closest_lanelet_within_constraint(
-          shoulder_lanelets, goal);
-      closest_shoulder_lanelet_opt) {
+  if (
+    const auto closest_shoulder_lanelet_opt =
+      experimental::lanelet2_utils::get_closest_lanelet_within_constraint(shoulder_lanelets, goal);
+    closest_shoulder_lanelet_opt) {
     const auto & closest_shoulder_lanelet = closest_shoulder_lanelet_opt.value();
     const auto lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
       closest_shoulder_lanelet,

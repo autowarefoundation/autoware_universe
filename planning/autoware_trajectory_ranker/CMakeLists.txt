@@ -31,14 +31,18 @@ target_compile_options(${PROJECT_NAME} PUBLIC
   -Wno-error=deprecated-declarations
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::trajectory_ranker::TrajectoryRanker"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
-rclcpp_components_register_node(simple_trajectory_ranker_node
+autoware_agnocast_wrapper_register_node(simple_trajectory_ranker_node
   PLUGIN "autoware::trajectory_ranker::SimpleTrajectoryRanker"
   EXECUTABLE simple_trajectory_ranker
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ament_auto_add_library(autoware_trajectory_ranker_plugins SHARED
@@ -90,12 +94,14 @@ if(BUILD_TESTING)
     autoware_trajectory_ranker_plugins
   )
 
-  ament_add_gtest(test_simple_trajectory_ranker_node
-    test/simple_trajectory_ranker_node_test.cpp
-  )
-  target_link_libraries(test_simple_trajectory_ranker_node
-    simple_trajectory_ranker_node
-  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_gtest(test_simple_trajectory_ranker_node
+      test/simple_trajectory_ranker_node_test.cpp
+    )
+    target_link_libraries(test_simple_trajectory_ranker_node
+      simple_trajectory_ranker_node
+    )
+  endif()
 endif()
 
 ament_auto_package(

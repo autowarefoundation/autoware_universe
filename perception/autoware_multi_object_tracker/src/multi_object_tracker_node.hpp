@@ -18,11 +18,15 @@
 #include "debugger/debugger.hpp"
 #include "multi_object_tracker_core.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware_utils_debug/published_time_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
 #include <vector>
@@ -30,24 +34,25 @@
 namespace autoware::multi_object_tracker
 {
 
-class MultiObjectTracker : public rclcpp::Node
+class MultiObjectTracker : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MultiObjectTracker(const rclcpp::NodeOptions & node_options);
 
 private:
   // ROS interface
-  std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr>
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(autoware_perception_msgs::msg::DetectedObjects)>
     sub_objects_array_{};
+  AUTOWARE_SUBSCRIPTION_PTR(nav_msgs::msg::Odometry) sub_odometry_ {};
 
-  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) tracked_objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) merged_objects_pub_;
 
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    detailed_processing_time_publisher_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
+  detailed_processing_time_publisher_;
 
   // publish timer
-  rclcpp::TimerBase::SharedPtr publish_timer_;
+  AUTOWARE_TIMER_PTR publish_timer_;
 
   // parameters and internal state
   MultiObjectTrackerParameters params_;
@@ -56,14 +61,16 @@ private:
   // debugger
   std::unique_ptr<TrackerDebugger> debugger_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
+    published_time_publisher_;
 
   // callback functions
   void onTimer();
   void processObjects();
   void onMeasurement(
     const size_t channel_index,
-    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
 
   // publish processes
   void publish();

@@ -135,7 +135,7 @@ class InitializeInterface(object):
     def load_world(self):
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
-        client.load_world(self.carla_map)
+        client.load_world_if_different(self.carla_map)
 
         # Wait for the world to be fully loaded
         # This is critical for non-default maps that need time to load

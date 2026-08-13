@@ -85,7 +85,9 @@ StaticObstacleAvoidanceModule::StaticObstacleAvoidanceModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{
+    name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface},  // NOLINT
   helper_{std::make_shared<AvoidanceHelper>(parameters)},
   parameters_{parameters},
   generator_{parameters}
@@ -1315,6 +1317,17 @@ CandidateOutput StaticObstacleAvoidanceModule::planCandidate() const
 
   auto shifted_path = data.candidate_path;
 
+  // In rare cases, updateData() returns early (e.g. after a modified goal),
+  // so fillShiftLine() is skipped and shifted_path remains empty.
+  // planWaitingApproval() may still call planCandidate(). Without this guard,
+  // findEgoIndex(shifted_path) would call validateNonEmpty() and throw
+  // std::invalid_argument.
+  if (shifted_path.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000, "Candidate path is empty. Skip planning candidate.");
+    return output;
+  }
+
   if (data.safe_shift_line.empty()) {
     const size_t ego_idx = planner_data_->findEgoIndex(shifted_path.path.points);
     utils::clipPathLength(
@@ -1562,9 +1575,10 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
       const size_t start_idx = shift_line.start_idx;
       const size_t end_idx = shift_line.end_idx;
 
-      if (is_return_shift(
-            shift_line.start_shift_length, shift_line.end_shift_length,
-            parameters_->lateral_small_shift_threshold)) {
+      if (
+        is_return_shift(
+          shift_line.start_shift_length, shift_line.end_shift_length,
+          parameters_->lateral_small_shift_threshold)) {
         continue;
       }
 
@@ -1646,9 +1660,10 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
   if (is_close_distance_avoidance) {
     return parameters_->policy_close_distance_avoidance == "manual";
   }
-  if (is_return_shift(
-        shift_line.start_shift_length, shift_line.end_shift_length,
-        parameters_->lateral_small_shift_threshold)) {
+  if (
+    is_return_shift(
+      shift_line.start_shift_length, shift_line.end_shift_length,
+      parameters_->lateral_small_shift_threshold)) {
     return false;
   }
 

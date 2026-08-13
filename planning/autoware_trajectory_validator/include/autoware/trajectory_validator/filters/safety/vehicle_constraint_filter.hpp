@@ -33,7 +33,8 @@ class VehicleConstraintFilter final : public plugin::ValidatorInterface
 public:
   VehicleConstraintFilter();
 
-  result_t is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) final;
+  result_t is_feasible(
+    const CandidateTrajectory & candidate_trajectory, const FilterContext & context) final;
 
   void update_parameters(const validator::Params & params) final;
 

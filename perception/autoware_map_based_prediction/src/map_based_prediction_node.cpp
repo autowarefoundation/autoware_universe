@@ -150,10 +150,9 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   const bool use_debug_marker = declare_parameter<bool>("publish_debug_markers");
 
   if (use_time_publisher) {
-    diagnostics_->setPublishedTimePublisher(
-      std::make_unique<autoware_utils::PublishedTimePublisher>(this));
+    diagnostics_->setPublishedTimePublisher(std::make_unique<PublishedTimePublisher>(this));
     diagnostics_->setProcessingTimePublisher(
-      std::make_unique<autoware_utils::DebugPublisher>(this, "map_based_prediction"));
+      std::make_unique<DebugPublisher>(this, "map_based_prediction"));
   }
 
   if (use_time_keeper) {
@@ -186,12 +185,19 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   }
 
   // --- ROS subscriptions ---
+  AUTOWARE_SUBSCRIPTION_OPTIONS sub_options{};
   sub_objects_ = this->create_subscription<TrackedObjects>(
     "~/input/objects", 1,
-    [this](const TrackedObjects::ConstSharedPtr msg) { objects_callback_->objectsCallback(msg); });
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & msg) {
+      objects_callback_->objectsCallback(msg);
+    },
+    sub_options);
   sub_map_ = this->create_subscription<LaneletMapBin>(
     "/vector_map", rclcpp::QoS{1}.transient_local(),
-    [this](const LaneletMapBin::ConstSharedPtr msg) { map_callback_->mapCallback(msg); });
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg) {
+      map_callback_->mapCallback(msg);
+    },
+    sub_options);
 
   // --- Dynamic reconfigure ---
   set_param_res_ = this->add_on_set_parameters_callback(

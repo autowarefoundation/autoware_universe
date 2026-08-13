@@ -44,7 +44,7 @@ autoware_agnocast_wrapper_register_node(map_based_prediction_node
   PLUGIN "autoware::map_based_prediction::MapBasedPredictionNode"
   EXECUTABLE map_based_prediction
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ## Tests

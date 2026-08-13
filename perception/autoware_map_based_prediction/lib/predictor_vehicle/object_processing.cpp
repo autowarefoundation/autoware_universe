@@ -141,7 +141,7 @@ lanelet::ConstLanelets getLanelets(const map_based_prediction::LaneletsData & da
 }
 }  // namespace
 
-ObjectTracker::ObjectTracker(rclcpp::Node & node) : node_(node)
+ObjectTracker::ObjectTracker(autoware::agnocast_wrapper::Node & node) : node_(node)
 {
 }
 
@@ -195,6 +195,10 @@ void ObjectTracker::updateObjectData(TrackedObject & object)
       autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + original_yaw);
     object.kinematics.twist_with_covariance.twist.linear.x *= -1.0;
     object.kinematics.twist_with_covariance.twist.linear.y *= -1.0;
+    for (auto & point : object.shape.footprint.points) {
+      point.x = -point.x;
+      point.y = -point.y;
+    }
   }
 }
 

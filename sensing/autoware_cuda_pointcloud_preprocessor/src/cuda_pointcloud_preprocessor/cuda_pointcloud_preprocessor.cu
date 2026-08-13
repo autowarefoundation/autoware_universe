@@ -36,7 +36,9 @@
 #include <thrust/reduce.h>
 #include <thrust/scan.h>
 
+#include <algorithm>
 #include <cstdint>
+#include <stdexcept>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -140,6 +142,14 @@ void CudaPointcloudPreprocessor::setUndistortionType(const UndistortionType & un
   }
 
   undistortion_type_ = undistortion_type;
+}
+
+void CudaPointcloudPreprocessor::setMaxInputPointCount(const std::size_t max_input_point_count)
+{
+  if (max_input_point_count == 0) {
+    throw std::runtime_error("max_input_point_count must be positive");
+  }
+  max_input_point_count_ = max_input_point_count;
 }
 
 void CudaPointcloudPreprocessor::preallocateOutput()
@@ -281,8 +291,10 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   const std::uint32_t first_point_rel_stamp_nsec)
 {
   auto frame_id = input_pointcloud_msg.header.frame_id;
-  num_raw_points_ = static_cast<int>(input_pointcloud_msg.width * input_pointcloud_msg.height);
-  num_organized_points_ = num_rings_ * max_points_per_ring_;
+  const auto input_point_count =
+    static_cast<std::size_t>(input_pointcloud_msg.width) * input_pointcloud_msg.height;
+  num_raw_points_ = std::min(input_point_count, max_input_point_count_);
+  num_organized_points_ = static_cast<std::size_t>(num_rings_) * max_points_per_ring_;
 
   if (num_raw_points_ == 0) {
     output_pointcloud_ptr_->row_step = 0;

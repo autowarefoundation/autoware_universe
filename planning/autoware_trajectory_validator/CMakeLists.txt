@@ -16,6 +16,7 @@ ament_auto_add_library(${trajectory_validator_lib_target} SHARED
   src/trajectory_validator_wrapper.cpp
   src/detail/trajectory_validator.cpp
 )
+autoware_agnocast_wrapper_setup(${trajectory_validator_lib_target})
 
 target_link_libraries(${trajectory_validator_lib_target}
   ${PROJECT_NAME}_param
@@ -29,6 +30,7 @@ ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
   src/filters/safety/uncrossable_boundary_departure.cpp
   src/filters/safety/vehicle_constraint_filter.cpp
   src/filters/traffic_rule/traffic_light_filter.cpp
+  src/filters/traffic_rule/crosswalk_filter.cpp
 )
 
 target_link_libraries(autoware_trajectory_validator_plugins
@@ -41,6 +43,7 @@ unset(PYTHON_EXECUTABLE)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MetricReport.msg"
+  "msg/RiskLevel.msg"
   "msg/ValidationReport.msg"
   "msg/ValidationReportArray.msg"
   DEPENDENCIES
@@ -80,6 +83,12 @@ if(BUILD_TESTING)
     autoware_trajectory_validator_plugins
   )
 
+  ament_add_gtest(test_crosswalk_filter
+    test/plugins/test_crosswalk_filter.cpp
+  )
+  target_link_libraries(test_crosswalk_filter
+    autoware_trajectory_validator_plugins
+  )
 
 endif()
 
