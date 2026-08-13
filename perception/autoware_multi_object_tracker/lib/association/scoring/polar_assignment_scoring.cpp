@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/association/scoring/polar_assignment_scoring.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
 
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>

@@ -3,10 +3,15 @@
 
   <arg name="input_objects" default="/perception/object_recognition/objects"/>
   <arg name="input_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="input_odometry" default="/localization/kinematic_state"/>
+
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
 
   <node pkg="autoware_collision_detector" exec="autoware_collision_detector_node" name="collision_detector" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var param_path)"/>
     <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>
+    <remap from="~/input/odometry" to="$(var input_odometry)"/>
   </node>
 </launch>

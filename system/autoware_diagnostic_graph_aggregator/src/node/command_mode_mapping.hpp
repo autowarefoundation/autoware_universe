@@ -17,6 +17,7 @@
 
 #include "types/forward.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_system_msgs/msg/command_mode_availability.hpp>
@@ -29,14 +30,14 @@ namespace autoware::diagnostic_graph_aggregator
 class CommandModeMapping
 {
 public:
-  CommandModeMapping(rclcpp::Node & node, const Graph & graph);
+  CommandModeMapping(autoware::agnocast_wrapper::Node & node, const Graph & graph);
   void update(const rclcpp::Time & stamp) const;
 
 private:
   using Availability = tier4_system_msgs::msg::CommandModeAvailability;
   using AvailabilityItem = tier4_system_msgs::msg::CommandModeAvailabilityItem;
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<Availability>::SharedPtr pub_;
+  AUTOWARE_TIMER_PTR timer_;
+  AUTOWARE_PUBLISHER_PTR(Availability) pub_;
 
   std::unordered_map<uint16_t, BaseUnit *> mode_to_unit_;
 };

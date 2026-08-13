@@ -142,6 +142,16 @@
                   "type": "array",
                   "description": "A minimum confidence score for PEDESTRIAN in each distance bin.",
                   "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "TRAFFIC_CONE": {
+                  "type": "array",
+                  "description": "A minimum confidence score for TRAFFIC_CONE in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
+                },
+                "BARRIER": {
+                  "type": "array",
+                  "description": "A minimum confidence score for BARRIER in each distance bin.",
+                  "default": [0.1, 0.1, 0.1, 0.1]
                 }
               }
             }

@@ -7,11 +7,14 @@
   <arg name="output_topic" default="objects"/>
   <arg name="input_topic" default="/perception/object_recognition/tracking/objects"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_map_based_prediction" exec="map_based_prediction" name="map_based_prediction" output="both">
     <param from="$(var param_path)"/>
     <remap from="/vector_map" to="$(var vector_map_topic)"/>
     <remap from="/traffic_signals" to="$(var traffic_signals_topic)"/>
     <remap from="~/output/objects" to="$(var output_topic)"/>
     <remap from="~/input/objects" to="$(var input_topic)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>

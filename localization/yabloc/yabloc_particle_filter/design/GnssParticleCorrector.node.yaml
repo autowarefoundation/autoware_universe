@@ -1,0 +1,35 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: GnssParticleCorrector.node
+package:
+  name: yabloc_particle_filter
+  provider: autoware
+launch:
+  plugin: yabloc::modularized_particle_filter::GnssParticleCorrector
+  executable: yabloc_gnss_particle_corrector_node
+# interfaces
+subscribers:
+  - name: predicted_particles
+    message_type: yabloc_particle_filter/msg/ParticleArray
+  - name: pose_with_covariance
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+  - name: height
+    message_type: std_msgs/msg/Float32
+publishers:
+  - name: weighted_particles
+    message_type: yabloc_particle_filter/msg/ParticleArray
+  - name: gnss_range_marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/gnss_range_marker
+# parameters
+param_files:
+  - name: gnss_particle_corrector_param
+    default: config/gnss_particle_corrector.param.yaml
+param_values: []
+# processes
+processes:
+  - name: correct_with_gnss
+    trigger_conditions:
+      - on_input: predicted_particles
+    outcomes:
+      - to_output: weighted_particles

@@ -22,6 +22,7 @@
 #include <NvInferRuntime.h>
 #include <dlfcn.h>
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -106,6 +107,27 @@ bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
         profile_dim.tensor_name.c_str(), nvinfer1::OptProfileSelector::kMAX, profile_dim.max_dims);
     }
     builder_config_->addOptimizationProfile(profile);
+  }
+
+  // Apply dtype overrides from NetworkIO to the parsed network inputs and outputs.
+  if (network_io_) {
+    const auto apply_dtype = [&](nvinfer1::ITensor * tensor, const char * io_type) {
+      if (!tensor) return;
+      const auto it = std::find_if(network_io_->begin(), network_io_->end(), [&](const auto & io) {
+        return io.tensor_name == tensor->getName() && io.dtype.has_value();
+      });
+      if (it == network_io_->end()) return;
+      tensor->setType(*it->dtype);
+      logger_->log(
+        nvinfer1::ILogger::Severity::kINFO, "Setting %s tensor '%s' to dtype %s", io_type,
+        tensor->getName(), dtype_name(*it->dtype));
+    };
+    for (int i = 0; i < network_->getNbInputs(); ++i) {
+      apply_dtype(network_->getInput(i), "input");
+    }
+    for (int i = 0; i < network_->getNbOutputs(); ++i) {
+      apply_dtype(network_->getOutput(i), "output");
+    }
   }
 
   auto build_engine_with_log = [this]() -> bool {
@@ -480,7 +502,7 @@ bool TrtCommon::initialize()
     return false;
   }
 
-#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH < 10000
+#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH < 100000
   const auto explicit_batch =
     1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
   network_ = TrtUniquePtr<nvinfer1::INetworkDefinition>(builder_->createNetworkV2(explicit_batch));
@@ -578,21 +600,22 @@ bool TrtCommon::buildEngineFromOnnx()
 
 bool TrtCommon::validateEngine()
 {
-#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8600
+#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH >= 80600
   std::ifstream engine_file(trt_config_->engine_path);
   std::stringstream engine_buffer;
   engine_buffer << engine_file.rdbuf();
   std::string engine_str = engine_buffer.str();
 
   auto const blob = reinterpret_cast<uint8_t *>(engine_str.data());
+  auto const plan_major = static_cast<int32_t>(blob[TRT_MAJOR_IDX]);
+  auto const plan_minor = static_cast<int32_t>(blob[TRT_MINOR_IDX]);
+  auto const plan_patch = static_cast<int32_t>(blob[TRT_PATCH_IDX]);
   logger_->log(
-    nvinfer1::ILogger::Severity::kINFO, "Plan was created with TensorRT %d.%d.%d",
-    static_cast<int32_t>(blob[TRT_MAJOR_IDX]), static_cast<int32_t>(blob[TRT_MINOR_IDX]),
-    static_cast<int32_t>(blob[TRT_PATCH_IDX]));
-  auto plan_ver = static_cast<int32_t>(blob[TRT_MAJOR_IDX]) * 1000 +
-                  static_cast<int32_t>(blob[TRT_MINOR_IDX]) * 100 +
-                  static_cast<int32_t>(blob[TRT_PATCH_IDX]);
-  if (plan_ver != (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH) {
+    nvinfer1::ILogger::Severity::kINFO, "Plan was created with TensorRT %d.%d.%d", plan_major,
+    plan_minor, plan_patch);
+  if (
+    plan_major != NV_TENSORRT_MAJOR || plan_minor != NV_TENSORRT_MINOR ||
+    plan_patch != NV_TENSORRT_PATCH) {
     logger_->log(
       nvinfer1::ILogger::Severity::kWARNING,
       "Plan was created with a different version of TensorRT! Current version: %d.%d.%d",
@@ -700,6 +723,17 @@ bool TrtCommon::validateNetworkIO()
         "Invalid tensor. Current configuration: %s. Cached engine: %s", io.toString().c_str(),
         tensor_from_engine.toString().c_str());
       success = false;
+    }
+    if (io.dtype) {
+      const auto actual_dtype = getTensorDataType(io.tensor_name.c_str());
+      if (!actual_dtype || *actual_dtype != *io.dtype) {
+        logger_->log(
+          nvinfer1::ILogger::Severity::kERROR,
+          "Tensor '%s' dtype mismatch. Current configuration: %s. Cached engine: %s",
+          io.tensor_name.c_str(), dtype_name(*io.dtype),
+          actual_dtype ? dtype_name(*actual_dtype) : "unknown");
+        success = false;
+      }
     }
   }
 

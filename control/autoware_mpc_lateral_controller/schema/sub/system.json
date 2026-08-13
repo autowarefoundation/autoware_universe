@@ -20,6 +20,12 @@
           "type": "boolean",
           "description": "flag to use x0_delayed as initial state for predicted trajectory",
           "default": true
+        },
+        "trajectory_reference_mode": {
+          "type": "string",
+          "description": "trajectory tracking mode: \"spatial\" (indexes the trajectory by distance) or \"temporal\" (uses the trajectory's time_from_start directly). Normally set once at the `autoware_trajectory_follower_node` level; declared here as well only as a fallback default for standalone use of this node.",
+          "enum": ["spatial", "temporal"],
+          "default": "spatial"
         }
       },
       "required": [
