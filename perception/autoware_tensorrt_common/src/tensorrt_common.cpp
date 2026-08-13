@@ -615,7 +615,6 @@ bool TrtCommon::buildEngineFromOnnx()
 
 bool TrtCommon::validateEngine()
 {
-#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH >= 80600
   std::ifstream engine_file(trt_config_->engine_path);
   std::stringstream engine_buffer;
   engine_buffer << engine_file.rdbuf();
@@ -637,7 +636,6 @@ bool TrtCommon::validateEngine()
       NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
     return false;
   }
-#endif
   return true;
 }
 
