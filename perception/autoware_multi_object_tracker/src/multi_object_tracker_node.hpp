@@ -53,6 +53,7 @@ private:
 
   // publish timer
   AUTOWARE_TIMER_PTR publish_timer_;
+  AUTOWARE_TIMER_PTR batch_timer_;
 
   // parameters and internal state
   MultiObjectTrackerParameters params_;
@@ -67,6 +68,7 @@ private:
 
   // callback functions
   void onTimer();
+  void onBatchTimer();
   void processObjects();
   void onMeasurement(
     const size_t channel_index,

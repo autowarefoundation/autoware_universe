@@ -282,6 +282,12 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   ////// callback timer
+  // Measurement batch processing is timer-backed so a stalled latency-reference stream cannot block
+  // all tracker updates. The measurement callback trigger below is kept as a low-latency fast path.
+  const auto batch_timer_period = rclcpp::Rate(params_.publish_rate).period();
+  batch_timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), batch_timer_period, std::bind(&MultiObjectTracker::onBatchTimer, this));
+
   // The publish timer is an independent trigger: when disabled, tracks are published on
   // measurement; when enabled, the timer drives publishing. The export reference
   // (delay_compensation) is orthogonal.
@@ -344,6 +350,14 @@ void MultiObjectTracker::processObjects()
   if (result.should_publish) {
     publish();
   }
+}
+
+void MultiObjectTracker::onBatchTimer()
+{
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  processObjects();
 }
 
 void MultiObjectTracker::onTimer()

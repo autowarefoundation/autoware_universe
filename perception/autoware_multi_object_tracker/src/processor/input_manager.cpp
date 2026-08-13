@@ -332,34 +332,57 @@ void InputManager::getObjectTimeInterval(
   }
 }
 
-void InputManager::optimizeTimings()
+bool InputManager::isStreamFresh(const InputStream & input_stream, const rclcpp::Time & now) const
 {
-  double max_latency_mean = 0.0;
-  uint selected_stream_idx = 0;
-  double selected_stream_latency_std = 0.1;
-  double selected_stream_interval = 0.1;
-  double selected_stream_interval_std = 0.01;
+  if (!input_stream.isTimeInitialized()) {
+    return false;
+  }
+
+  double latency_mean, latency_var, interval_mean, interval_var;
+  input_stream.getTimeStatistics(latency_mean, latency_var, interval_mean, interval_var);
+
+  constexpr double min_freshness_timeout = 0.3;     // [s]
+  constexpr double interval_timeout_multiplier = 3.0;
+  const double expected_interval = interval_mean > 1e-3 ? interval_mean : target_stream_interval_;
+  const double freshness_timeout =
+    std::max(min_freshness_timeout, interval_timeout_multiplier * expected_interval);
+
+  return (now - input_stream.getLatestMessageTime()).seconds() <= freshness_timeout;
+}
+
+void InputManager::optimizeTimings(const rclcpp::Time & now)
+{
+  double max_latency_mean = -1.0;
+  uint selected_stream_idx = target_stream_idx_;
+  double selected_stream_latency_std = target_stream_latency_std_;
+  double selected_stream_interval = target_stream_interval_;
+  double selected_stream_interval_std = target_stream_interval_std_;
+  bool selected_stream = false;
 
   {
     // ANALYSIS: Get the streams statistics
-    // select the stream that has the maximum latency
+    // select the fresh stream that has the maximum latency
     double latency_mean, latency_var, interval_mean, interval_var;
     for (const auto & input_stream : input_streams_) {
-      if (!input_stream->isTimeInitialized()) continue;
+      if (!isStreamFresh(*input_stream, now)) continue;
       input_stream->getTimeStatistics(latency_mean, latency_var, interval_mean, interval_var);
-      if (latency_mean > max_latency_mean) {
+      if (!selected_stream || latency_mean > max_latency_mean) {
         max_latency_mean = latency_mean;
         selected_stream_idx = input_stream->getIndex();
         selected_stream_latency_std = std::sqrt(latency_var);
         selected_stream_interval = interval_mean;
         selected_stream_interval_std = std::sqrt(interval_var);
+        selected_stream = true;
       }
     }
   }
 
+  if (!selected_stream) {
+    return;
+  }
+
   // Set the target stream index, which has the maximum latency
   // trigger will be called next time
-  // if no stream is initialized, the target stream index will be 0 and wait for the initialization
   target_stream_idx_ = selected_stream_idx;
   target_stream_latency_ = max_latency_mean;
   target_stream_latency_std_ = selected_stream_latency_std;
@@ -378,15 +401,14 @@ bool InputManager::getObjects(
   // Clear the objects
   objects_with_associations.clear();
 
+  // Optimize the target stream, latency, and its band before computing the batch window so a stale
+  // target can fail over to a fresh stream within the same processing cycle.
+  optimizeTimings(now);
+
   // Get the time interval for the objects
   rclcpp::Time object_latest_time;
   rclcpp::Time object_earliest_time;
   getObjectTimeInterval(now, object_latest_time, object_earliest_time);
-
-  // Optimize the target stream, latency, and its band
-  // The result will be used for the next time, so the optimization is after getting the time
-  // interval
-  optimizeTimings();
 
   // Get objects from all input streams
   // adds up to the objects vector for efficient processing

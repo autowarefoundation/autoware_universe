@@ -66,6 +66,7 @@ public:
     interval_var = interval_var_;
   }
   rclcpp::Time getLatestMeasurementTime() const { return latest_measurement_time_; }
+  rclcpp::Time getLatestMessageTime() const { return latest_message_time_; }
 
 private:
   const types::InputChannel channel_;
@@ -129,7 +130,8 @@ private:
   void getObjectTimeInterval(
     const rclcpp::Time & now, rclcpp::Time & object_latest_time,
     rclcpp::Time & object_earliest_time) const;
-  void optimizeTimings();
+  bool isStreamFresh(const InputStream & input_stream, const rclcpp::Time & now) const;
+  void optimizeTimings(const rclcpp::Time & now);
 };
 
 }  // namespace autoware::multi_object_tracker

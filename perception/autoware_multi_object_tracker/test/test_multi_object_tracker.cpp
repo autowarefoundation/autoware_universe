@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "../src/multi_object_tracker_node.hpp"
+#include "../src/processor/input_manager.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
@@ -36,6 +37,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -490,6 +492,141 @@ public:
   MultiObjectTrackerTest() = default;
   ~MultiObjectTrackerTest() override = default;
 };
+
+namespace
+{
+
+constexpr size_t kHighLatencyChannel = 0;
+constexpr size_t kLowLatencyChannel = 1;
+constexpr auto kTargetStaleWait = 600ms;
+
+std::vector<autoware::multi_object_tracker::types::InputChannel> makeInputManagerChannels()
+{
+  std::vector<autoware::multi_object_tracker::types::InputChannel> channels;
+  channels.reserve(2);
+
+  for (size_t i = 0; i < 2; ++i) {
+    autoware::multi_object_tracker::types::InputChannel channel;
+    channel.index = static_cast<uint>(i);
+    channel.is_enabled = true;
+    channel.long_name = "test_channel_" + std::to_string(i);
+    channel.short_name = "ch" + std::to_string(i);
+    channel.is_spawn_enabled = true;
+    channel.trust_existence_probability = true;
+    channel.trust_extension = true;
+    channel.trust_classification = true;
+    channel.trust_orientation = true;
+    channels.push_back(channel);
+  }
+
+  return channels;
+}
+
+autoware::multi_object_tracker::InputManager makeInputManagerForTriggerTest(
+  const rclcpp::Clock::SharedPtr & clock)
+{
+  autoware::multi_object_tracker::InputManager manager(
+    nullptr, rclcpp::get_logger("test_input_manager"), clock);
+  manager.init(makeInputManagerChannels());
+  return manager;
+}
+
+rclcpp::Time pushEmptyMeasurement(
+  autoware::multi_object_tracker::InputManager & manager, const size_t channel_index,
+  const rclcpp::Clock::SharedPtr & clock, const double latency_sec)
+{
+  autoware::multi_object_tracker::types::DynamicObjectList objects;
+  objects.channel_index = static_cast<uint>(channel_index);
+  const rclcpp::Time measurement_time =
+    clock->now() - rclcpp::Duration::from_seconds(latency_sec);
+  objects.header.stamp = static_cast<builtin_interfaces::msg::Time>(measurement_time);
+
+  manager.push(channel_index, objects, autoware::multi_object_tracker::types::AssociationResult{});
+  return measurement_time;
+}
+
+void feedRegularMeasurements(
+  autoware::multi_object_tracker::InputManager & manager, const size_t channel_index,
+  const rclcpp::Clock::SharedPtr & clock, const double latency_sec, const size_t count)
+{
+  for (size_t i = 0; i < count; ++i) {
+    pushEmptyMeasurement(manager, channel_index, clock, latency_sec);
+    std::this_thread::sleep_for(1ms);
+  }
+}
+
+void initializeLatencyStatistics(
+  autoware::multi_object_tracker::InputManager & manager, const rclcpp::Clock::SharedPtr & clock)
+{
+  for (size_t i = 0; i < 20; ++i) {
+    pushEmptyMeasurement(manager, kHighLatencyChannel, clock, 0.5);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, clock, 0.05);
+    std::this_thread::sleep_for(1ms);
+  }
+
+  autoware::multi_object_tracker::types::ObjectsWithAssociationList objects;
+  manager.getObjects(clock->now(), objects);
+}
+
+bool hasMeasurementAtOrAfter(
+  const autoware::multi_object_tracker::types::ObjectsWithAssociationList & objects,
+  const size_t channel_index, const rclcpp::Time & timestamp)
+{
+  return std::any_of(
+    objects.begin(), objects.end(), [&](const auto & objects_with_association) {
+      return objects_with_association.objects.channel_index == channel_index &&
+             objects_with_association.getTimestamp() >= timestamp;
+    });
+}
+
+}  // namespace
+
+TEST(InputManagerTargetSelection, SelectsLargestLatencyStreamAfterTimingOptimization)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+
+  initializeLatencyStatistics(manager, clock);
+
+  EXPECT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+}
+
+TEST(InputManagerTargetSelection, FailsOverFromStaleTargetToFreshStream)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+  initializeLatencyStatistics(manager, clock);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  std::this_thread::sleep_for(kTargetStaleWait);
+  feedRegularMeasurements(manager, kLowLatencyChannel, clock, 0.05, 5);
+
+  autoware::multi_object_tracker::types::ObjectsWithAssociationList objects;
+  manager.getObjects(clock->now(), objects);
+
+  EXPECT_EQ(manager.getTargetChannelIdx(), kLowLatencyChannel);
+}
+
+TEST(InputManagerTargetSelection, BatchWindowAdvancesWithFreshStreamAfterTargetDropout)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+  initializeLatencyStatistics(manager, clock);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  std::this_thread::sleep_for(kTargetStaleWait);
+  rclcpp::Time latest_fresh_measurement(0, 0, RCL_ROS_TIME);
+  for (size_t i = 0; i < 5; ++i) {
+    latest_fresh_measurement =
+      pushEmptyMeasurement(manager, kLowLatencyChannel, clock, 0.05);
+    std::this_thread::sleep_for(1ms);
+  }
+
+  autoware::multi_object_tracker::types::ObjectsWithAssociationList objects;
+  manager.getObjects(clock->now(), objects);
+
+  EXPECT_TRUE(hasMeasurementAtOrAfter(objects, kLowLatencyChannel, latest_fresh_measurement));
+}
 
 TEST_F(MultiObjectTrackerTest, DISABLED_PerformanceVsCarCount)
 {
