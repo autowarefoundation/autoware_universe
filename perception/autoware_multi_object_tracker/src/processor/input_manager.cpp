@@ -341,7 +341,7 @@ bool InputManager::isStreamFresh(const InputStream & input_stream, const rclcpp:
   double latency_mean, latency_var, interval_mean, interval_var;
   input_stream.getTimeStatistics(latency_mean, latency_var, interval_mean, interval_var);
 
-  constexpr double min_freshness_timeout = 0.3;     // [s]
+  constexpr double min_freshness_timeout = 0.3;  // [s]
   constexpr double interval_timeout_multiplier = 3.0;
   const double expected_interval = interval_mean > 1e-3 ? interval_mean : target_stream_interval_;
   const double freshness_timeout =

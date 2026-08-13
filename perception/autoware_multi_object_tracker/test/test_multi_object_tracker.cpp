@@ -537,8 +537,7 @@ rclcpp::Time pushEmptyMeasurement(
 {
   autoware::multi_object_tracker::types::DynamicObjectList objects;
   objects.channel_index = static_cast<uint>(channel_index);
-  const rclcpp::Time measurement_time =
-    clock->now() - rclcpp::Duration::from_seconds(latency_sec);
+  const rclcpp::Time measurement_time = clock->now() - rclcpp::Duration::from_seconds(latency_sec);
   objects.header.stamp = static_cast<builtin_interfaces::msg::Time>(measurement_time);
 
   manager.push(channel_index, objects, autoware::multi_object_tracker::types::AssociationResult{});
@@ -572,11 +571,10 @@ bool hasMeasurementAtOrAfter(
   const autoware::multi_object_tracker::types::ObjectsWithAssociationList & objects,
   const size_t channel_index, const rclcpp::Time & timestamp)
 {
-  return std::any_of(
-    objects.begin(), objects.end(), [&](const auto & objects_with_association) {
-      return objects_with_association.objects.channel_index == channel_index &&
-             objects_with_association.getTimestamp() >= timestamp;
-    });
+  return std::any_of(objects.begin(), objects.end(), [&](const auto & objects_with_association) {
+    return objects_with_association.objects.channel_index == channel_index &&
+           objects_with_association.getTimestamp() >= timestamp;
+  });
 }
 
 }  // namespace
@@ -617,8 +615,7 @@ TEST(InputManagerTargetSelection, BatchWindowAdvancesWithFreshStreamAfterTargetD
   std::this_thread::sleep_for(kTargetStaleWait);
   rclcpp::Time latest_fresh_measurement(0, 0, RCL_ROS_TIME);
   for (size_t i = 0; i < 5; ++i) {
-    latest_fresh_measurement =
-      pushEmptyMeasurement(manager, kLowLatencyChannel, clock, 0.05);
+    latest_fresh_measurement = pushEmptyMeasurement(manager, kLowLatencyChannel, clock, 0.05);
     std::this_thread::sleep_for(1ms);
   }
 
