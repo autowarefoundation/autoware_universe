@@ -30,7 +30,7 @@
 #include <cmath>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 ProcessingResult TrajectoryKinematicFeasibilityEnforcer::process(
@@ -198,9 +198,9 @@ void TrajectoryKinematicFeasibilityEnforcer::update_params(const TrajectoryProce
   feasibility_params_ = params.trajectory_kinematic_feasibility;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer,
+  autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

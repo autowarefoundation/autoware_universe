@@ -23,7 +23,7 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 ProcessingResult TrajectorySplineSmoother::process(
   TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
@@ -55,9 +55,9 @@ void TrajectorySplineSmoother::update_params(const TrajectoryProcessorParams & p
   spline_params_ = params.trajectory_spline_smoother;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother,
+  autoware::trajectory_processor::plugin::TrajectorySplineSmoother,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

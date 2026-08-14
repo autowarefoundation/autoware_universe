@@ -25,7 +25,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_temporal_mpt_optimizer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_temporal_mpt_optimizer_utils
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -62,7 +62,7 @@ double compute_yaw_psi_bias(double x0_yaw, double yaw_at_start);
 TemporalMPTReferences build_temporal_mpt_references(
   const TrajectoryPoints & traj_points, const std::array<double, temporal_mpt::NX> & x0);
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_temporal_mpt_optimizer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_temporal_mpt_optimizer_utils
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_UTILS_HPP_

@@ -46,7 +46,7 @@ ObstacleTypeParameters to_obstacle_type_parameters(
 }
 
 Parameters to_proximity_checker_parameters(
-  const trajectory_modifier_params::Params::SurroundObstacleStop & params)
+  const trajectory_processor_params::Params::SurroundObstacleStop & params)
 {
   Parameters parameters;
   parameters.pointcloud_enable_check = params.use_pointcloud;
@@ -96,7 +96,7 @@ Parameters to_proximity_checker_parameters(
 }
 }  // namespace
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void SurroundObstacleStop::on_initialize(const TrajectoryProcessorParams & params)
@@ -280,9 +280,9 @@ void SurroundObstacleStop::publish_debug_string(const bool is_active) const
   pub_debug_text_->publish(string_stamp);
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::SurroundObstacleStop,
+  autoware::trajectory_processor::plugin::SurroundObstacleStop,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

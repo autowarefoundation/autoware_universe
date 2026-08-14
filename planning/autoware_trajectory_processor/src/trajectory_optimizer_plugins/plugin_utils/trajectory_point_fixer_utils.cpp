@@ -28,7 +28,7 @@
 #include <cmath>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_point_fixer_utils
 {
 
 std::vector<std::vector<size_t>> get_close_proximity_clusters(
@@ -274,7 +274,7 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
     std::remove_if(
       input_trajectory.begin(), input_trajectory.end(),
       [](const TrajectoryPoint & point) {
-        return !autoware::trajectory_optimizer::utils::validate_point(point);
+        return !autoware::trajectory_processor::utils::validate_point(point);
       }),
     input_trajectory.end());
 
@@ -334,4 +334,4 @@ void remove_close_proximity_points(
   }
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_point_fixer_utils

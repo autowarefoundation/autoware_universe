@@ -22,7 +22,7 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 ProcessingResult TrajectoryPointFixer::process(
   TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
@@ -68,9 +68,9 @@ void TrajectoryPointFixer::update_params(const TrajectoryProcessorParams & param
   fixer_params_ = params.trajectory_point_fixer;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryPointFixer,
+  autoware::trajectory_processor::plugin::TrajectoryPointFixer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

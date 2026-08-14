@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 ProcessingResult TrajectoryEBSmootherOptimizer::process(
@@ -59,9 +59,9 @@ void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryProcessorParam
   // TODO(Maxime): support parameter updates of internal objects
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer,
+  autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

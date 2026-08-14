@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
@@ -61,7 +61,7 @@ private:
   std::shared_ptr<EBPathSmoother> eb_path_smoother_ptr_{nullptr};
   mutable std::shared_ptr<SmootherTimekeeper> smoother_time_keeper_ptr_{nullptr};
 };
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EB_SMOOTHER_OPTIMIZER_HPP_

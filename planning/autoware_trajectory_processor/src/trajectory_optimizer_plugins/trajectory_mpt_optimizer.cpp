@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void TrajectoryMPTOptimizer::on_initialize(const TrajectoryProcessorParams & params)
@@ -303,10 +303,10 @@ void TrajectoryMPTOptimizer::publish_debug_markers(
   debug_markers_pub_->publish(markers);
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // Export plugin
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer,
+  autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

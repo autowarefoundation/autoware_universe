@@ -48,7 +48,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
@@ -513,6 +513,6 @@ private:
   boost::uuids::random_generator id_generator_;
 };
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_

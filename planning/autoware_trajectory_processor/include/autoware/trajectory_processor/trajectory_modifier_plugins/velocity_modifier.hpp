@@ -20,14 +20,14 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
 using autoware::trajectory_processor::plugin::ProcessingResult;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
-using ModifierParams = trajectory_modifier_params::Params;
+using ModifierParams = trajectory_processor_params::Params;
 
 class VelocityModifier : public TrajectoryProcessorPluginBase
 {
@@ -57,6 +57,6 @@ private:
     TrajectoryPoints & trajectory, const double jerk, const double decel) const;
 };
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__VELOCITY_MODIFIER_HPP_

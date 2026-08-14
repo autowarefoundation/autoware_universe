@@ -12,23 +12,23 @@ The default trajectory optimizer pipeline runs many plugins in sequence after ba
 
 ```yaml
 plugin_names:
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+  - "autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+  - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryExtender"
 ```
 
 **TrajectoryTemporalMPTOptimizer** is intended to replace that entire post-`TrajectoryPointFixer` chain with a single joint optimization step. When enabled, a minimal pipeline is:
 
 ```yaml
 plugin_names:
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer"
 
 use_temporal_mpt_optimizer: true
 ```

@@ -48,7 +48,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 }
 }  // namespace
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryProcessorParams & params)
@@ -226,9 +226,9 @@ void TrafficLightStop::publish_debug_string() const
   pub_debug_text_->publish(string_stamp);
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::TrafficLightStop,
+  autoware::trajectory_processor::plugin::TrafficLightStop,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

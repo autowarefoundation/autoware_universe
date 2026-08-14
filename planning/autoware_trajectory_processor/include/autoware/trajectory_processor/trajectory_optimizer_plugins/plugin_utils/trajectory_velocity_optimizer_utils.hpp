@@ -25,9 +25,9 @@
 #include <memory>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_velocity_optimizer_utils
 {
-using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
+using autoware::trajectory_processor::plugin::ContinuousJerkSmoother;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using nav_msgs::msg::Odometry;
@@ -99,7 +99,7 @@ void filter_velocity(
   const double nearest_yaw_threshold_rad, const std::shared_ptr<ContinuousJerkSmoother> & smoother,
   const Odometry & current_odometry, const std::vector<double> & max_velocity_per_point = {});
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_velocity_optimizer_utils
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_VELOCITY_OPTIMIZER_UTILS_HPP_

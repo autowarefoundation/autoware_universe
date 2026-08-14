@@ -33,7 +33,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
@@ -41,7 +41,7 @@ using autoware::trajectory_processor::plugin::ProcessingResult;
 using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
+using autoware::trajectory_processor::plugin::ContinuousJerkSmoother;
 using autoware_internal_planning_msgs::msg::VelocityLimit;
 
 struct TrajectoryVelocityOptimizerParams
@@ -81,7 +81,7 @@ private:
     sub_planning_velocity_;
   rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
 };
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_

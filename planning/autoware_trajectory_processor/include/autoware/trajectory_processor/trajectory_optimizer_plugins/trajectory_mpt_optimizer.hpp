@@ -20,7 +20,7 @@
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
 #include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
-#include <autoware_trajectory_processor/trajectory_optimizer_param.hpp>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
@@ -93,7 +93,7 @@ private:
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
   // Parameter structs
-  trajectory_optimizer_node_params::Params::TrajectoryMptOptimizer mpt_params_;
+  trajectory_processor_params::Params::TrajectoryMptOptimizer mpt_params_;
   EgoNearestParam ego_nearest_param_;
   TrajectoryParam traj_param_;
   std::shared_ptr<DebugData> debug_data_ptr_;
@@ -108,7 +108,7 @@ private:
     const TrajectoryPoints & traj_points) const;
 };
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_MPT_OPTIMIZER_HPP_
