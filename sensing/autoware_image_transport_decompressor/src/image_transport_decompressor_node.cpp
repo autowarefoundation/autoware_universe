@@ -50,6 +50,8 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <rclcpp/logger.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <sensor_msgs/image_encodings.hpp>
 
@@ -59,11 +61,9 @@
 #include <cv_bridge/cv_bridge.h>
 #endif
 
-#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace autoware::image_preprocessor
 {
@@ -78,48 +78,50 @@ ImageTransportDecompressor::ImageTransportDecompressor(const rclcpp::NodeOptions
     create_publisher<sensor_msgs::msg::Image>("~/output/raw_image", rclcpp::SensorDataQoS());
 }
 
-void ImageTransportDecompressor::onCompressedImage(
-  const sensor_msgs::msg::CompressedImage::ConstSharedPtr input_compressed_image_msg)
+bool decompress(
+  const sensor_msgs::msg::CompressedImage & compressed_image,
+  const std::string & requested_encoding, sensor_msgs::msg::Image & output)
 {
-  cv_bridge::CvImagePtr cv_ptr(new cv_bridge::CvImage);
+  const auto logger = rclcpp::get_logger("image_transport_decompressor");
+
+  cv_bridge::CvImage cv_image;
   // Copy message header
-  cv_ptr->header = input_compressed_image_msg->header;
+  cv_image.header = compressed_image.header;
 
   // Decode color/mono image
   try {
-    cv_ptr->image = cv::imdecode(cv::Mat(input_compressed_image_msg->data), cv::IMREAD_COLOR);
+    cv_image.image = cv::imdecode(cv::Mat(compressed_image.data), cv::IMREAD_COLOR);
 
     // Assign image encoding string
-    const size_t split_pos = input_compressed_image_msg->format.find(';');
+    const size_t split_pos = compressed_image.format.find(';');
     if (split_pos == std::string::npos) {
       // Older version of compressed_image_transport does not signal image format
-      switch (cv_ptr->image.channels()) {
+      switch (cv_image.image.channels()) {
         case 1:
-          cv_ptr->encoding = sensor_msgs::image_encodings::MONO8;
+          cv_image.encoding = sensor_msgs::image_encodings::MONO8;
           break;
         case 3:
-          cv_ptr->encoding = sensor_msgs::image_encodings::BGR8;
+          cv_image.encoding = sensor_msgs::image_encodings::BGR8;
           break;
         default:
-          RCLCPP_ERROR(
-            get_logger(), "Unsupported number of channels: %i", cv_ptr->image.channels());
+          RCLCPP_ERROR(logger, "Unsupported number of channels: %i", cv_image.image.channels());
           break;
       }
     } else {
       std::string image_encoding;
-      if (encoding_ == std::string("rgb8")) {
+      if (requested_encoding == std::string("rgb8")) {
         image_encoding = "rgb8";
-      } else if (encoding_ == std::string("bgr8")) {
+      } else if (requested_encoding == std::string("bgr8")) {
         image_encoding = "bgr8";
       } else {
         // default encoding
-        image_encoding = input_compressed_image_msg->format.substr(0, split_pos);
+        image_encoding = compressed_image.format.substr(0, split_pos);
       }
 
-      cv_ptr->encoding = image_encoding;
+      cv_image.encoding = image_encoding;
 
       if (sensor_msgs::image_encodings::isColor(image_encoding)) {
-        std::string compressed_encoding = input_compressed_image_msg->format.substr(split_pos);
+        std::string compressed_encoding = compressed_image.format.substr(split_pos);
         bool compressed_bgr_image =
           (compressed_encoding.find("compressed bgr") != std::string::npos);
 
@@ -129,55 +131,69 @@ void ImageTransportDecompressor::onCompressedImage(
           if (
             (image_encoding == sensor_msgs::image_encodings::RGB8) ||
             (image_encoding == sensor_msgs::image_encodings::RGB16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_BGR2RGB);
+            cv::cvtColor(cv_image.image, cv_image.image, CV_BGR2RGB);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
             (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_BGR2RGBA);
+            cv::cvtColor(cv_image.image, cv_image.image, CV_BGR2RGBA);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
             (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_BGR2BGRA);
+            cv::cvtColor(cv_image.image, cv_image.image, CV_BGR2BGRA);
           }
         } else {
           // if necessary convert colors from rgb to bgr
           if (
             (image_encoding == sensor_msgs::image_encodings::BGR8) ||
             (image_encoding == sensor_msgs::image_encodings::BGR16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_RGB2BGR);
+            cv::cvtColor(cv_image.image, cv_image.image, CV_RGB2BGR);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
             (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_RGB2BGRA);
+            cv::cvtColor(cv_image.image, cv_image.image, CV_RGB2BGRA);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
             (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_RGB2RGBA);
+            cv::cvtColor(cv_image.image, cv_image.image, CV_RGB2RGBA);
           }
         }
       }
     }
   } catch (cv::Exception & e) {
-    RCLCPP_ERROR(get_logger(), "%s", e.what());
+    RCLCPP_ERROR(logger, "%s", e.what());
   }
 
-  size_t rows = cv_ptr->image.rows;
-  size_t cols = cv_ptr->image.cols;
+  size_t rows = cv_image.image.rows;
+  size_t cols = cv_image.image.cols;
 
-  if ((rows > 0) && (cols > 0)) {
-    // Publish message to user callback
-    auto image_ptr = std::make_unique<sensor_msgs::msg::Image>(*cv_ptr->toImageMsg());
-    raw_image_pub_->publish(std::move(image_ptr));
+  if ((rows == 0) || (cols == 0)) {
+    return false;
   }
+
+  cv_image.toImageMsg(output);
+  return true;
 }
+
+void ImageTransportDecompressor::onCompressedImage(
+  const sensor_msgs::msg::CompressedImage::ConstSharedPtr input_compressed_image_msg)
+{
+  auto raw_image_msg = std::make_unique<sensor_msgs::msg::Image>();
+  if (!image_transport_decompressor::decompress(
+        *input_compressed_image_msg, encoding_, *raw_image_msg)) {
+    return;
+  }
+
+  raw_image_pub_->publish(std::move(raw_image_msg));
+}
+
 }  // namespace autoware::image_preprocessor
 
 #include <rclcpp_components/register_node_macro.hpp>
