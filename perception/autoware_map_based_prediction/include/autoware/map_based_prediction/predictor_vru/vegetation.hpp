@@ -39,8 +39,9 @@ public:
     const PredictedPathWithArrivalIndex & predicted_path,
     const autoware_perception_msgs::msg::Shape & object_shape) const;
 
-  [[nodiscard]] std::vector<PredictedPath> cutPathsCrossingVegetation(
-    const autoware_perception_msgs::msg::PredictedObject & predicted_object) const;
+  [[nodiscard]] PredictedPath cutPathsCrossingVegetation(
+    const PredictedPath & predicted_path,
+    const autoware_perception_msgs::msg::Shape & object_shape) const;
 
 private:
   lanelet::LaneletMapUPtr vegetation_layer_{nullptr};

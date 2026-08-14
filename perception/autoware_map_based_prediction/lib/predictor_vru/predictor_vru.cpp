@@ -243,12 +243,11 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       mutable_object, params_.prediction_time_horizon);
     predicted_path.confidence = 1.0;
 
+    const PredictedPath predicted_path_cut_with_fences =
+      fence_module_.cutPathBeforeFences(predicted_path);
     predicted_object.kinematics.predicted_paths.push_back(
-      fence_module_.cutPathBeforeFences(predicted_path));
-
-    const std::vector<PredictedPath> paths_cut_with_vegetation =
-      vegetation_module_.cutPathsCrossingVegetation(predicted_object);
-    predicted_object.kinematics.predicted_paths = paths_cut_with_vegetation;
+      vegetation_module_.cutPathsCrossingVegetation(
+        predicted_path_cut_with_fences, mutable_object.shape));
   }
 
   boost::optional<lanelet::ConstLanelet> crossing_crosswalk{boost::none};
