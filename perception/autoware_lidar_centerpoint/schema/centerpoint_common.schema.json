@@ -6,6 +6,59 @@
     "centerpoint_common": {
       "type": "object",
       "properties": {
+        "cloud_capacity": {
+          "type": "integer",
+          "description": "Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).",
+          "default": 2000000,
+          "minimum": 1
+        },
+        "post_process_params": {
+          "type": "object",
+          "description": "Parameters for post-processing.",
+          "properties": {
+            "circle_nms_dist_threshold": {
+              "type": "number",
+              "description": "A distance threshold of circle NMS.",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "iou_nms_search_distance_2d": {
+              "type": "number",
+              "description": "A maximum distance value to search the nearest objects.",
+              "default": 10.0,
+              "minimum": 0.0
+            },
+            "iou_nms_threshold": {
+              "type": "number",
+              "description": "A threshold value of NMS using IoU score.",
+              "default": 0.1,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "yaw_norm_thresholds": {
+              "type": "array",
+              "description": "An array of distance threshold values of norm of yaw [rad].",
+              "default": [0.3, 0.3, 0.3, 0.3, 0.0]
+            }
+          }
+        },
+        "densification_params": {
+          "type": "object",
+          "description": "Parameters for pointcloud densification.",
+          "properties": {
+            "world_frame_id": {
+              "type": "string",
+              "description": "A name of frame id where world coordinates system is defined with respect to.",
+              "default": "map"
+            },
+            "num_past_frames": {
+              "type": "integer",
+              "description": "A number of past frames to be considered as same input frame.",
+              "default": 1,
+              "minimum": 0
+            }
+          }
+        },
         "diagnostics": {
           "type": "object",
           "description": "Parameters for diagnostics.",
@@ -31,7 +84,7 @@
           }
         }
       },
-      "required": ["diagnostics"]
+      "required": ["cloud_capacity", "post_process_params", "densification_params", "diagnostics"]
     }
   },
   "properties": {
