@@ -44,57 +44,56 @@
 
 namespace
 {
-// The node name is fixed, so its topics are known in advance.
 constexpr const char * input_topic = "/image_transport_decompressor/input/compressed_image";
 constexpr const char * output_topic = "/image_transport_decompressor/output/raw_image";
 
 constexpr int image_width = 4;
 constexpr int image_height = 2;
 
-// Pixel values of the image the sender compressed, in the channel order of the compressed stream
-// (BGR, as signalled by "compressed bgr8" and friends). The 16-bit variants are scaled by 257 so
-// that a lossless reduction to 8 bits yields exactly the 8-bit values, which keeps the expected
-// bytes below readable.
+// Every camera below sends the same picture: 4x2 pixels, all of them the same colour. A color
+// camera sends red 30, green 20, blue 10 and, when it has one, alpha 50. A grayscale or Bayer
+// camera sends 40.
 constexpr int blue = 10;
 constexpr int green = 20;
 constexpr int red = 30;
 constexpr int alpha = 50;
 constexpr int gray = 40;
+// A 16-bit camera sends each of the values above multiplied by 257. This is worked around OpenCV
+// behavior, not anything about real cameras: OpenCV's 16-to-8-bit decode keeps only the high byte
+// of each 16-bit sample, so a plain value like 10 (0x000A) would decode to 0. Multiplying by 257
+// duplicates the value into both bytes (10 * 257 = 0x0A0A), so OpenCV's high-byte-only decode still
+// yields 10, and the 8-bit constants above double as the 16-bit expected values.
 constexpr int scale = 257;
 
-// What a sender publishes for a camera of the given encoding, using the format strings
-// compressed_image_transport emits.
-struct SourceImage
+// Channel count and bit depth of every image encoding this test mentions.
+struct EncodingSpec
 {
-  std::string format;
-  int type;
-  cv::Scalar pixel;
+  int channels;
+  int bits;
 };
 
-const std::map<std::string, SourceImage> & source_images()
+const std::map<std::string, EncodingSpec> encoding_specs = {
+  {"mono8", {1, 8}}, {"mono16", {1, 16}}, {"bayer_rggb8", {1, 8}}, {"yuv422", {2, 8}},
+  {"rgb8", {3, 8}},  {"bgr8", {3, 8}},    {"rgb16", {3, 16}},      {"bgr16", {3, 16}},
+  {"rgba8", {4, 8}}, {"bgra8", {4, 8}},   {"rgba16", {4, 16}},     {"bgra16", {4, 16}}};
+
+// Possible encoding combination of "<camera encoding>; <codec> compressed <compressed encoding>"
+// <compressed encoding> is basically "bgr*" because a color picture is converted to BGR order first
+// A grayscale or Bayer picture is compressed as is, and then the sender writes nothing after
+// "compressed".
+const std::map<std::string, std::string> compressed_encodings = {
+  {"mono8", ""},        {"mono16", ""},       {"rgb8", "bgr8"},   {"bgr8", "bgr8"},
+  {"rgba8", "bgra8"},   {"bgra8", "bgra8"},   {"rgb16", "bgr16"}, {"bgr16", "bgr16"},
+  {"rgba16", "bgra16"}, {"bgra16", "bgra16"}, {"yuv422", "bgr8"}, {"bayer_rggb8", ""}};
+
+cv::Mat make_source_image(const EncodingSpec & spec)
 {
-  static const std::map<std::string, SourceImage> images = {
-    {"mono8", {"mono8; png compressed ", CV_8UC1, cv::Scalar(gray)}},
-    {"mono16", {"mono16; png compressed ", CV_16UC1, cv::Scalar(gray * scale)}},
-    {"rgb8", {"rgb8; png compressed bgr8", CV_8UC3, cv::Scalar(blue, green, red)}},
-    {"bgr8", {"bgr8; png compressed bgr8", CV_8UC3, cv::Scalar(blue, green, red)}},
-    {"rgba8", {"rgba8; png compressed bgra8", CV_8UC4, cv::Scalar(blue, green, red, alpha)}},
-    {"bgra8", {"bgra8; png compressed bgra8", CV_8UC4, cv::Scalar(blue, green, red, alpha)}},
-    {"rgb16",
-     {"rgb16; png compressed bgr16", CV_16UC3,
-      cv::Scalar(blue * scale, green * scale, red * scale)}},
-    {"bgr16",
-     {"bgr16; png compressed bgr16", CV_16UC3,
-      cv::Scalar(blue * scale, green * scale, red * scale)}},
-    {"rgba16",
-     {"rgba16; png compressed bgra16", CV_16UC4,
-      cv::Scalar(blue * scale, green * scale, red * scale, alpha * scale)}},
-    {"bgra16",
-     {"bgra16; png compressed bgra16", CV_16UC4,
-      cv::Scalar(blue * scale, green * scale, red * scale, alpha * scale)}},
-    {"yuv422", {"yuv422; png compressed bgr8", CV_8UC3, cv::Scalar(blue, green, red)}},
-    {"bayer_rggb8", {"bayer_rggb8; png compressed ", CV_8UC1, cv::Scalar(gray)}}};
-  return images;
+  const int sample = spec.bits == 16 ? scale : 1;
+  const cv::Scalar color =
+    spec.channels == 1 ? cv::Scalar(gray * sample)
+                       : cv::Scalar(blue * sample, green * sample, red * sample, alpha * sample);
+  const int depth = spec.bits == 16 ? CV_16U : CV_8U;
+  return cv::Mat(image_height, image_width, CV_MAKETYPE(depth, spec.channels), color);
 }
 
 // One row of the matrix: which camera published, under which "encoding" parameter, and what the
@@ -113,15 +112,14 @@ struct DecompressorCase
   bool expected_consistent;
 };
 
-// Bytes a pixel of the given encoding occupies, as literals so that the assertions do not depend
-// on the code under test.
+// Bytes a pixel of the given encoding occupies, or 0 when the encoding is not one of the above.
 size_t bytes_per_pixel(const std::string & encoding)
 {
-  static const std::map<std::string, size_t> sizes = {
-    {"mono8", 1}, {"mono16", 2}, {"bayer_rggb8", 1}, {"yuv422", 2}, {"rgb8", 3},   {"bgr8", 3},
-    {"rgb16", 6}, {"bgr16", 6},  {"rgba8", 4},       {"bgra8", 4},  {"rgba16", 8}, {"bgra16", 8}};
-  const auto size = sizes.find(encoding);
-  return size == sizes.end() ? 0 : size->second;
+  const auto spec = encoding_specs.find(encoding);
+  if (spec == encoding_specs.end()) {
+    return 0;
+  }
+  return static_cast<size_t>(spec->second.channels) * static_cast<size_t>(spec->second.bits / 8);
 }
 
 // A message is only interpretable if its step and data size match its encoding.
@@ -132,25 +130,33 @@ bool is_consistent_with_encoding(const sensor_msgs::msg::Image & image)
          image.data.size() == static_cast<size_t>(image.height) * image.step;
 }
 
-// The payload is always PNG so that the expected pixel values stay exact; the codec named in the
-// format field is not what selects the decoder.
-sensor_msgs::msg::CompressedImage make_compressed_image(
-  const std::string & format, const cv::Mat & image)
+// PNG, not JPEG: JPEG is lossy, so it would change the pixel values below and break the expected
+// bytes in the test cases. The node never looks at which codec produced the bytes — it decodes
+// through cv::imdecode(data, IMREAD_COLOR), which detects the codec from the bytes themselves —
+// and JPEG-compressed input has been separately confirmed to decode the same way, so testing with
+// PNG alone is enough.
+std::vector<uint8_t> encode_png(const cv::Mat & image)
 {
-  sensor_msgs::msg::CompressedImage message;
-  message.header.frame_id = "camera";
-  message.format = format;
-  if (!cv::imencode(".png", image, message.data)) {
+  std::vector<uint8_t> data;
+  if (!cv::imencode(".png", image, data)) {
     throw std::runtime_error("failed to prepare the compressed test input");
   }
-  return message;
+  return data;
 }
 
-sensor_msgs::msg::CompressedImage make_compressed_image(const std::string & source_encoding)
+// The compressed image a camera of the given encoding reaches the node as. The sender writes
+// "<camera encoding>; <codec> compressed <compressed encoding>" into the format field.
+sensor_msgs::msg::CompressedImage compressed_image_from_camera(const std::string & camera_encoding)
 {
-  const auto & source = source_images().at(source_encoding);
-  return make_compressed_image(
-    source.format, cv::Mat(image_height, image_width, source.type, source.pixel));
+  const std::string & compressed_encoding = compressed_encodings.at(camera_encoding);
+  const std::string & payload_encoding =
+    compressed_encoding.empty() ? camera_encoding : compressed_encoding;
+
+  sensor_msgs::msg::CompressedImage message;
+  message.header.frame_id = "camera";
+  message.format = camera_encoding + "; png compressed " + compressed_encoding;
+  message.data = encode_png(make_source_image(encoding_specs.at(payload_encoding)));
+  return message;
 }
 
 std::vector<uint8_t> leading_bytes(const sensor_msgs::msg::Image & image, const size_t count)
@@ -335,7 +341,7 @@ TEST_P(ImageTransportDecompressorNodeTest, PublishesDecompressedImage)
   start_decompressor_node(test_case.parameter_encoding);
 
   // Act
-  const auto image = publish_and_wait(make_compressed_image(test_case.source_encoding));
+  const auto image = publish_and_wait(compressed_image_from_camera(test_case.source_encoding));
 
   // Assert
   ASSERT_NE(image, nullptr) << "no image was published within the timeout";
@@ -383,9 +389,13 @@ TEST_F(ImageTransportDecompressorNodeEdgeCaseTest, IgnoresEncodingParameterWitho
   // Arrange
   start_decompressor_node("rgb8");
   const cv::Mat compressed(image_height, image_width, CV_8UC3, cv::Scalar(blue, green, red));
+  sensor_msgs::msg::CompressedImage message;
+  message.header.frame_id = "camera";
+  message.format = "png";  // legacy senders write only the codec name, with no ';' separator
+  message.data = encode_png(compressed);
 
   // Act
-  const auto image = publish_and_wait(make_compressed_image("png", compressed));
+  const auto image = publish_and_wait(message);
 
   // Assert
   ASSERT_NE(image, nullptr) << "no image was published within the timeout";
@@ -421,7 +431,7 @@ TEST_F(ImageTransportDecompressorNodeEdgeCaseTest, MalformedSixteenBitOutputIsRe
   start_decompressor_node("default");
 
   // Act
-  const auto image = publish_and_wait(make_compressed_image("rgb16"));
+  const auto image = publish_and_wait(compressed_image_from_camera("rgb16"));
 
   // Assert
   ASSERT_NE(image, nullptr) << "no image was published within the timeout";
@@ -443,9 +453,13 @@ TEST_F(ImageTransportDecompressorNodeEdgeCaseTest, MalformedGrayscaleOutputIsSil
       source.at<uint8_t>(row, column) = static_cast<uint8_t>(column * 20);
     }
   }
+  sensor_msgs::msg::CompressedImage message;
+  message.header.frame_id = "camera";
+  message.format = "mono8; png compressed ";
+  message.data = encode_png(source);
 
   // Act
-  const auto image = publish_and_wait(make_compressed_image("mono8; png compressed ", source));
+  const auto image = publish_and_wait(message);
 
   // Assert
   ASSERT_NE(image, nullptr) << "no image was published within the timeout";
