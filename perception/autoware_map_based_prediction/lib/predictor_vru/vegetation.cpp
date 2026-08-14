@@ -172,7 +172,7 @@ bool VegetationModule::doesPathCrossAnyVegetationBeforeCrosswalk(
   lanelet::BasicLineString2d predicted_path_ls;
   const size_t last_idx = std::min(predicted_path.arrival_index, predicted_path.path.size() - 1);
   for (auto i = 0UL; i <= last_idx; ++i) {
-    const auto & pt = predicted_path.path[i];
+    const auto & pt = predicted_path.path.at(i);
     predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
   }
   const auto candidates =
