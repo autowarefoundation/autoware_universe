@@ -2,20 +2,20 @@
   ros__parameters:
     # Complete plugin execution order: modifiers followed by optimizers.
     plugin_names:
-      - "autoware::trajectory_modifier::plugin::StopPointFixer"
-      - "autoware::trajectory_modifier::plugin::SurroundObstacleStop"
-      - "autoware::trajectory_modifier::plugin::ObstacleStop"
-      - "autoware::trajectory_modifier::plugin::TrafficLightStop"
-      - "autoware::trajectory_modifier::plugin::VelocityModifier"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
-      - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
+      - "autoware::trajectory_processor::plugin::StopPointFixer"
+      - "autoware::trajectory_processor::plugin::SurroundObstacleStop"
+      - "autoware::trajectory_processor::plugin::ObstacleStop"
+      - "autoware::trajectory_processor::plugin::TrafficLightStop"
+      - "autoware::trajectory_processor::plugin::VelocityModifier"
+      - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+      - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
+      - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+      - "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
+      - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+      - "autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"
+      - "autoware::trajectory_processor::plugin::TrajectoryExtender"
     use_stop_point_fixer: true
     use_obstacle_stop: true
     use_traffic_light_stop: true

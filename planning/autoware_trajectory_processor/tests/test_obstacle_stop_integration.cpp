@@ -40,10 +40,10 @@
 
 namespace
 {
-using autoware::trajectory_modifier::plugin::ObstacleStop;
 using autoware::trajectory_processor::TrajectoryProcessorContext;
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ObstacleStop;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::test::process_plugin;
 using autoware_perception_msgs::msg::ObjectClassification;

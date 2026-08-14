@@ -192,7 +192,7 @@ void TrajectoryProcessor::on_trajectories(const CandidateTrajectories::ConstShar
     }
     if (candidate.points.size() < 3) {
       candidate.points =
-        autoware::trajectory_optimizer::utils::generate_three_point_stopped_trajectory(
+        autoware::trajectory_processor::utils::generate_three_point_stopped_trajectory(
           candidate.points, *data.current_odometry);
     }
   }

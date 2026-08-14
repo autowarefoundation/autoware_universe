@@ -159,26 +159,26 @@ TEST(TrajectoryProcessorParamsTest, PreservesDefaultCombinedPipelineOrder)
 {
   const TrajectoryProcessorParams params;
   const std::vector<std::string> expected = {
-    "autoware::trajectory_modifier::plugin::StopPointFixer",
-    "autoware::trajectory_modifier::plugin::SurroundObstacleStop",
-    "autoware::trajectory_modifier::plugin::ObstacleStop",
-    "autoware::trajectory_modifier::plugin::TrafficLightStop",
-    "autoware::trajectory_modifier::plugin::VelocityModifier",
-    "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
-    "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
-    "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryExtender"};
+    "autoware::trajectory_processor::plugin::StopPointFixer",
+    "autoware::trajectory_processor::plugin::SurroundObstacleStop",
+    "autoware::trajectory_processor::plugin::ObstacleStop",
+    "autoware::trajectory_processor::plugin::TrafficLightStop",
+    "autoware::trajectory_processor::plugin::VelocityModifier",
+    "autoware::trajectory_processor::plugin::TrajectoryPointFixer",
+    "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer",
+    "autoware::trajectory_processor::plugin::TrajectoryQPSmoother",
+    "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer",
+    "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer",
+    "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer",
+    "autoware::trajectory_processor::plugin::TrajectorySplineSmoother",
+    "autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer",
+    "autoware::trajectory_processor::plugin::TrajectoryExtender"};
 
   EXPECT_EQ(params.plugin_names, expected);
   EXPECT_EQ(
     std::count(
       params.plugin_names.begin(), params.plugin_names.end(),
-      "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"),
+      "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"),
     2);
 }
 
@@ -223,20 +223,20 @@ TEST_F(TrajectoryProcessorPluginBaseTest, LoadsEveryPluginThroughCommonInterface
     "autoware_trajectory_processor",
     "autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase");
   const std::vector<std::string> plugin_classes = {
-    "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
-    "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
-    "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
-    "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer",
-    "autoware::trajectory_modifier::plugin::StopPointFixer",
-    "autoware::trajectory_modifier::plugin::ObstacleStop",
-    "autoware::trajectory_modifier::plugin::VelocityModifier",
-    "autoware::trajectory_modifier::plugin::SurroundObstacleStop",
-    "autoware::trajectory_modifier::plugin::TrafficLightStop"};
+    "autoware::trajectory_processor::plugin::TrajectoryPointFixer",
+    "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer",
+    "autoware::trajectory_processor::plugin::TrajectoryQPSmoother",
+    "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer",
+    "autoware::trajectory_processor::plugin::TrajectorySplineSmoother",
+    "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer",
+    "autoware::trajectory_processor::plugin::TrajectoryExtender",
+    "autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer",
+    "autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer",
+    "autoware::trajectory_processor::plugin::StopPointFixer",
+    "autoware::trajectory_processor::plugin::ObstacleStop",
+    "autoware::trajectory_processor::plugin::VelocityModifier",
+    "autoware::trajectory_processor::plugin::SurroundObstacleStop",
+    "autoware::trajectory_processor::plugin::TrafficLightStop"};
 
   std::vector<std::shared_ptr<TrajectoryProcessorPluginBase>> plugins;
   for (const auto & class_name : plugin_classes) {

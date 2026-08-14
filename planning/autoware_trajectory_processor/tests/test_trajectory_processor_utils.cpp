@@ -29,9 +29,9 @@ TEST(TrajectoryProcessorUtilsTest, ValidatesTrajectoryPoint)
   valid_point.pose.position.y = 1.0;
   valid_point.pose.position.z = 1.0;
   valid_point.pose.orientation.w = 1.0;
-  EXPECT_TRUE(autoware::trajectory_optimizer::utils::validate_point(valid_point));
+  EXPECT_TRUE(autoware::trajectory_processor::utils::validate_point(valid_point));
 
   TrajectoryPoint invalid_point;
   invalid_point.pose.position.x = std::nan("");
-  EXPECT_FALSE(autoware::trajectory_optimizer::utils::validate_point(invalid_point));
+  EXPECT_FALSE(autoware::trajectory_processor::utils::validate_point(invalid_point));
 }

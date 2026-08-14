@@ -35,11 +35,11 @@
 
 namespace
 {
-using autoware::trajectory_modifier::plugin::VelocityModifier;
 using autoware::trajectory_processor::TrajectoryProcessorContext;
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::VelocityModifier;
 using autoware::trajectory_processor::test::process_plugin;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 

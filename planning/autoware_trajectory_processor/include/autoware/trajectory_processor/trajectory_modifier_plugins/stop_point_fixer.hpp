@@ -17,7 +17,7 @@
 
 #include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
@@ -55,6 +55,6 @@ private:
   ModifierParams::StopPointFixer params_;
 };
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__STOP_POINT_FIXER_HPP_

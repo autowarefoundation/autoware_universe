@@ -27,16 +27,16 @@ Plugins are loaded based on the `plugin_names` parameter, which defines both whi
 
 ```yaml
 plugin_names:
-  - "autoware::trajectory_modifier::plugin::StopPointFixer"
-  - "autoware::trajectory_modifier::plugin::ObstacleStop"
-  - "autoware::trajectory_modifier::plugin::VelocityModifier"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::StopPointFixer"
+  - "autoware::trajectory_processor::plugin::ObstacleStop"
+  - "autoware::trajectory_processor::plugin::VelocityModifier"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryExtender"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
 ```
 
 ### Available Plugins
@@ -116,10 +116,10 @@ To change plugin execution order, modify the `plugin_names` array in `config/tra
 ```yaml
 # Example: Run spline smoother before velocity optimizer
 plugin_names:
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
 ```
 
 ##### CRITICAL: QP Smoother Ordering Constraint

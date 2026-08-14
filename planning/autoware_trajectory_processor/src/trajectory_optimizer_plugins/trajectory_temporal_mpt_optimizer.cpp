@@ -43,7 +43,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 namespace
 {
@@ -464,9 +464,9 @@ void TrajectoryTemporalMPTOptimizer::publish_temporal_mpt_debug_io(
   }
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer,
+  autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
