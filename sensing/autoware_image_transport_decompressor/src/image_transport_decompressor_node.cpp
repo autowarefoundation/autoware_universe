@@ -46,7 +46,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include "autoware/image_transport_decompressor/image_transport_decompressor.hpp"
+#include "autoware/image_transport_decompressor/image_transport_decompressor_node.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
