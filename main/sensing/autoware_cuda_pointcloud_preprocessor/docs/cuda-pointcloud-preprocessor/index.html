@@ -23063,6 +23063,27 @@ In particular, this node implements:</p>
 <td>N/A</td>
 </tr>
 <tr>
+<td>max_input_point_count</td>
+<td>integer</td>
+<td>Maximum number of input points processed per cloud. Larger inputs are reported as errors and truncated to the first N points.</td>
+<td>691200</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>max_twist_frequency_hz</td>
+<td>float</td>
+<td>Maximum expected twist input frequency. Used with twist_imu_queue_window_sec to bound the twist queue.</td>
+<td>200.0</td>
+<td>&gt;0.0</td>
+</tr>
+<tr>
+<td>max_imu_frequency_hz</td>
+<td>float</td>
+<td>Maximum expected IMU input frequency. Used with twist_imu_queue_window_sec to bound the IMU queue.</td>
+<td>200.0</td>
+<td>&gt;0.0</td>
+</tr>
+<tr>
 <td>crop_box.min_x</td>
 <td>array</td>
 <td>An array in which each element is the minimum x value in a crop box</td>
