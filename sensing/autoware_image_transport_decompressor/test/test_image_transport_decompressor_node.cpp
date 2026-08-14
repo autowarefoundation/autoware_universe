@@ -201,8 +201,8 @@ const std::vector<DecompressorCase> rgb8_cases = {
   // The sender already converted this camera to BGR, so only the channel order is applied.
   {"yuv422", "rgb8", "rgb8", 12, 24, {red, green, blue}, true},
   // KNOWN DEFECT: forcing a color encoding discards what the camera sent. A grayscale image is
-  // inflated to three identical channels, a Bayer image likewise instead of being demosaicked, a
-  // 16-bit image keeps only its upper 8 bits, and an alpha channel is dropped.
+  // inflated to three identical channels, a Bayer image likewise instead of being converted to
+  // color, a 16-bit image keeps only its upper 8 bits, and an alpha channel is dropped.
   {"mono8", "rgb8", "rgb8", 12, 24, {gray, gray, gray}, true},
   {"mono16", "rgb8", "rgb8", 12, 24, {gray, gray, gray}, true},
   {"bayer_rggb8", "rgb8", "rgb8", 12, 24, {gray, gray, gray}, true},
