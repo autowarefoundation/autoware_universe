@@ -18,6 +18,10 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::ptv3
@@ -62,6 +66,57 @@ TEST(RosUtilsTest, ConvertsUnknownBoxLabelWithoutTwist)
   ASSERT_EQ(object.classification.size(), 1U);
   EXPECT_EQ(object.classification.front().label, ObjectClassification::UNKNOWN);
   EXPECT_FALSE(object.kinematics.has_twist);
+}
+
+class ClassificationRemapTest : public ::testing::Test
+{
+protected:
+  static void SetUpTestSuite() { rclcpp::init(0, nullptr); }
+  static void TearDownTestSuite() { rclcpp::shutdown(); }
+
+  static rclcpp::Node::SharedPtr makeNode(const std::vector<rclcpp::Parameter> & overrides)
+  {
+    rclcpp::NodeOptions options;
+    options.parameter_overrides(overrides);
+    return std::make_shared<rclcpp::Node>("class_remap_test_node", options);
+  }
+};
+
+TEST_F(ClassificationRemapTest, ResolvesRemapKeyedByClassName)
+{
+  const auto node = makeNode(
+    {{"segmentation3d.class_remap.car", "CAR"},
+     {"segmentation3d.class_remap.traffic_cone", "HAZARD"}});
+
+  const auto class_remaps =
+    declare_class_remap(*node, {"car", "traffic_cone"}, rcl_interfaces::msg::ParameterDescriptor{});
+
+  ASSERT_EQ(class_remaps.size(), 2U);
+  EXPECT_EQ(class_remaps.at("car"), "CAR");
+  EXPECT_EQ(class_remaps.at("traffic_cone"), "HAZARD");
+}
+
+TEST_F(ClassificationRemapTest, SkipsRemapEntriesNotInClassNames)
+{
+  const auto node = makeNode(
+    {{"segmentation3d.class_remap.car", "CAR"},
+     {"segmentation3d.class_remap.vegetation", "VEGETATION"}});
+
+  const auto class_remaps =
+    declare_class_remap(*node, {"car"}, rcl_interfaces::msg::ParameterDescriptor{});
+
+  ASSERT_EQ(class_remaps.size(), 1U);
+  EXPECT_EQ(class_remaps.at("car"), "CAR");
+  EXPECT_EQ(class_remaps.count("vegetation"), 0U);
+}
+
+TEST_F(ClassificationRemapTest, ThrowsWhenClassIsNotMapped)
+{
+  const auto node = makeNode({{"segmentation3d.class_remap.car", "CAR"}});
+
+  EXPECT_THROW(
+    declare_class_remap(*node, {"car", "truck"}, rcl_interfaces::msg::ParameterDescriptor{}),
+    std::runtime_error);
 }
 
 }  // namespace test

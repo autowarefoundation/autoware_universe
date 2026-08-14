@@ -20,7 +20,9 @@
 
 #include <cmath>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::ptv3
@@ -100,6 +102,30 @@ std::uint8_t get_classification_type(const std::string & class_name)
     return Label::HAZARD;
   }
   return Label::UNKNOWN;
+}
+
+std::unordered_map<std::string, std::string> declare_class_remap(
+  rclcpp::Node & node, const std::vector<std::string> & class_names,
+  const rcl_interfaces::msg::ParameterDescriptor & descriptor)
+{
+  std::unordered_map<std::string, std::string> class_remaps;
+  class_remaps.reserve(class_names.size());
+
+  // The remap keys live in ptv3.param.yaml while class_names comes from the ml_package parameter
+  // file, so report which one is out of sync when an entry is missing.
+  for (const auto & class_name : class_names) {
+    const std::string param_name = "segmentation3d.class_remap." + class_name;
+    const auto class_remap =
+      node.declare_parameter<std::string>(param_name, std::string{}, descriptor);
+    if (class_remap.empty()) {
+      throw std::runtime_error(
+        "segmentation3d.class_remap is missing an entry for class '" + class_name +
+        "'. Every segmentation3d.class_names entry must be mapped in ptv3.param.yaml.");
+    }
+    class_remaps.emplace(class_name, class_remap);
+  }
+
+  return class_remaps;
 }
 
 }  // namespace autoware::ptv3
