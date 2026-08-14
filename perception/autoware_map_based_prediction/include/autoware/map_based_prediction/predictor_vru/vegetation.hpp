@@ -18,6 +18,7 @@
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_perception_msgs/msg/shape.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -32,11 +33,13 @@ class VegetationModule
 public:
   VegetationModule() = default;
 
-  /// @pre lanelet_map_ptr is non-null when building from a map; nullptr clears the layer.
-  void build_from_map(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
+  void buildFromMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
 
-  /// Return the object's predicted paths trimmed where the footprint enters a vegetation area.
-  [[nodiscard]] std::vector<PredictedPath> cut_paths_crossing_vegetation(
+  [[nodiscard]] bool doesPathCrossAnyVegetationBeforeCrosswalk(
+    const PredictedPathWithArrivalIndex & predicted_path,
+    const autoware_perception_msgs::msg::Shape & object_shape) const;
+
+  [[nodiscard]] std::vector<PredictedPath> cutPathsCrossingVegetation(
     const autoware_perception_msgs::msg::PredictedObject & predicted_object) const;
 
 private:

@@ -28,7 +28,6 @@
 
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -93,11 +92,8 @@ public:
   void loadCurrentCrosswalkUsers(const TrackedObjects & objects);
   void removeOldKnownMatches(const double current_time, const double buffer_time);
 
-  PredictedObject predict(
-    const std_msgs::msg::Header & header, const TrackedObject & object,
-    visualization_msgs::msg::MarkerArray * debug_markers);
-  PredictedObjects retrieveUndetectedObjects(
-    const rclcpp::Time & stamp, visualization_msgs::msg::MarkerArray * debug_markers);
+  PredictedObject predict(const std_msgs::msg::Header & header, const TrackedObject & object);
+  PredictedObjects retrieveUndetectedObjects();
 
 private:
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
@@ -115,9 +111,7 @@ private:
 
   Params params_{};
 
-  PredictedObject getPredictedObjectAsCrosswalkUser(
-    const TrackedObject & object, const rclcpp::Time & stamp,
-    visualization_msgs::msg::MarkerArray * debug_markers);
+  PredictedObject getPredictedObjectAsCrosswalkUser(const TrackedObject & object);
 };
 
 }  // namespace autoware::map_based_prediction
