@@ -50,8 +50,6 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <rclcpp/logger.hpp>
-#include <rclcpp/logging.hpp>
 
 #include <sensor_msgs/image_encodings.hpp>
 
@@ -62,15 +60,16 @@
 #endif
 
 #include <string>
+#include <utility>
 
 namespace autoware::image_preprocessor::image_transport_decompressor
 {
 
-bool decompress(
+DecompressResult decompress(
   const sensor_msgs::msg::CompressedImage & compressed_image,
-  const std::string & requested_encoding, sensor_msgs::msg::Image & output)
+  const std::string & requested_encoding)
 {
-  const auto logger = rclcpp::get_logger("image_transport_decompressor");
+  DecompressResult result;
 
   cv_bridge::CvImage cv_image;
   // Copy message header
@@ -92,7 +91,9 @@ bool decompress(
           cv_image.encoding = sensor_msgs::image_encodings::BGR8;
           break;
         default:
-          RCLCPP_ERROR(logger, "Unsupported number of channels: %i", cv_image.image.channels());
+          result.severity = Severity::Error;
+          result.message =
+            "Unsupported number of channels: " + std::to_string(cv_image.image.channels());
           break;
       }
     } else {
@@ -155,19 +156,19 @@ bool decompress(
         }
       }
     }
-  } catch (cv::Exception & e) {
-    RCLCPP_ERROR(logger, "%s", e.what());
+  } catch (const cv::Exception & e) {
+    result.severity = Severity::Error;
+    result.message = e.what();
   }
 
-  size_t rows = cv_image.image.rows;
-  size_t cols = cv_image.image.cols;
-
-  if ((rows == 0) || (cols == 0)) {
-    return false;
+  if ((cv_image.image.rows == 0) || (cv_image.image.cols == 0)) {
+    return result;
   }
 
-  cv_image.toImageMsg(output);
-  return true;
+  sensor_msgs::msg::Image image_msg;
+  cv_image.toImageMsg(image_msg);
+  result.image = std::move(image_msg);
+  return result;
 }
 
 }  // namespace autoware::image_preprocessor::image_transport_decompressor

@@ -36,13 +36,15 @@ ImageTransportDecompressor::ImageTransportDecompressor(const rclcpp::NodeOptions
 void ImageTransportDecompressor::onCompressedImage(
   const sensor_msgs::msg::CompressedImage::ConstSharedPtr input_compressed_image_msg)
 {
-  auto raw_image_msg = std::make_unique<sensor_msgs::msg::Image>();
-  if (!image_transport_decompressor::decompress(
-        *input_compressed_image_msg, encoding_, *raw_image_msg)) {
+  auto result = image_transport_decompressor::decompress(*input_compressed_image_msg, encoding_);
+  if (result.severity == image_transport_decompressor::Severity::Error) {
+    RCLCPP_ERROR(get_logger(), "%s", result.message.c_str());
+  }
+  if (!result.image) {
     return;
   }
 
-  raw_image_pub_->publish(std::move(raw_image_msg));
+  raw_image_pub_->publish(std::make_unique<sensor_msgs::msg::Image>(std::move(*result.image)));
 }
 
 }  // namespace autoware::image_preprocessor
