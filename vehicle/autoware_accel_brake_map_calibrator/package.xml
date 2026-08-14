@@ -35,9 +35,14 @@
   <depend>tier4_vehicle_msgs</depend>
   <depend>visualization_msgs</depend>
 
+  <exec_depend>ament_index_python</exec_depend>
   <exec_depend>python3-matplotlib</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-pandas</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rviz2</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>

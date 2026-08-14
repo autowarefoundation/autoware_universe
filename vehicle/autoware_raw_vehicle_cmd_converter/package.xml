@@ -34,6 +34,9 @@
   <depend>rclcpp_components</depend>
   <depend>tier4_vehicle_msgs</depend>
 
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
   <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
