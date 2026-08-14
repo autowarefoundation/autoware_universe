@@ -40,25 +40,6 @@ namespace
 using Point2d = autoware_utils_geometry::Point2d;
 using Polygon2d = autoware_utils_geometry::Polygon2d;
 
-bool hasRequiredInfo(const autoware_perception_msgs::msg::PredictedObject & predicted_object)
-{
-  using autoware_perception_msgs::msg::Shape;
-  if (predicted_object.kinematics.predicted_paths.empty()) {
-    return false;
-  }
-  const auto & shape = predicted_object.shape;
-  switch (shape.type) {
-    case Shape::BOUNDING_BOX:
-      return shape.dimensions.x > 0.0 && shape.dimensions.y > 0.0;
-    case Shape::CYLINDER:
-      return shape.dimensions.x > 0.0;
-    case Shape::POLYGON:
-      return !shape.footprint.points.empty();
-    default:
-      return false;
-  }
-}
-
 autoware_utils_geometry::Polygon2d toPolygon2d(const lanelet::ConstPolygon3d & lanelet_polygon)
 {
   autoware_utils_geometry::Polygon2d polygon;
@@ -174,7 +155,7 @@ std::vector<PredictedPath> VegetationModule::cutPathsCrossingVegetation(
   const autoware_perception_msgs::msg::PredictedObject & predicted_object) const
 {
   std::vector<PredictedPath> cut_paths = predicted_object.kinematics.predicted_paths;
-  if (!hasRequiredInfo(predicted_object) || !vegetation_layer_) {
+  if (cut_paths.empty() || !vegetation_layer_) {
     return cut_paths;
   }
 
