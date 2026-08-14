@@ -23070,6 +23070,20 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
 <td>N/A</td>
 </tr>
 <tr>
+<td>object_motion_resampling.enable</td>
+<td>boolean</td>
+<td>Re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp (read-only)</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>object_motion_resampling.max_extrapolation_time</td>
+<td>float</td>
+<td>Maximum extrapolation horizon [s], both forward from the newest and backward from the oldest observation</td>
+<td>0.5</td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>start_guidance.reference_distance_m</td>
 <td>float</td>
 <td>Reference straight-line distance between the ego trajectory start and terminal point [m]</td>
