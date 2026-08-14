@@ -564,7 +564,7 @@ bool TrtCommon::initialize()
 
 bool TrtCommon::isStronglyTyped() const
 {
-  return trt_config_->precision == "as-is";
+  return trt_config_->precision == "strongly-typed";
 }
 
 bool TrtCommon::buildEngineFromOnnx()
