@@ -188,7 +188,7 @@ void TrajectoryProcessor::on_trajectories(const CandidateTrajectories::ConstShar
       if (!modified_instances.empty()) {
         modified_instances += ", ";
       }
-      modified_instances += processor_plugin->get_name();
+      modified_instances += processor_plugin->get_short_name();
     }
     if (candidate.points.size() < 3) {
       candidate.points =
