@@ -45,6 +45,7 @@ from .modules import ROSPublisherManager
 from .modules import SensorKitLoader
 from .modules import SensorPublishWorker
 from .modules import SensorRegistry
+from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import carla_location_to_ros_point
 from .modules.carla_utils import carla_rotation_to_ros_quaternion
@@ -71,6 +72,9 @@ class carla_ros2_interface(object):
             "vehicle_type": (rclpy.Parameter.Type.STRING, None),
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
+            "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
+            "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
+            "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -441,11 +445,73 @@ class carla_ros2_interface(object):
         point_cloud_msg = create_cloud(header, fields, structured_lidar_data)
         publisher.publish(point_cloud_msg)
 
+    def _project_initialpose_to_ground(self, carla_pose_transform):
+        """Return the CARLA ground height under the pose, or None to skip snapping.
+
+        Returns None when spawn_point_ground_snap is disabled, when the CARLA
+        world does not expose ``ground_projection`` (older APIs), or when no
+        ground point is found, so callers fall back to the fixed z-offset.
+        """
+        if not self.param_values["spawn_point_ground_snap"]:
+            return None
+
+        world = CarlaDataProvider.get_world()
+        if world is None or not hasattr(world, "ground_projection"):
+            return None
+
+        sample_offsets = (
+            (0.0, 0.0),
+            (0.75, 0.0),
+            (-0.75, 0.0),
+            (0.0, 0.75),
+            (0.0, -0.75),
+            (1.5, 0.0),
+            (-1.5, 0.0),
+            (0.0, 1.5),
+            (0.0, -1.5),
+        )
+        projected_heights = []
+        try:
+            for offset_x, offset_y in sample_offsets:
+                search_origin = carla.Location(
+                    x=carla_pose_transform.location.x + offset_x,
+                    y=carla_pose_transform.location.y + offset_y,
+                    z=1000.0,
+                )
+                labelled_point = world.ground_projection(search_origin, 10000.0)
+                if labelled_point is not None:
+                    projected_heights.append(labelled_point.location.z)
+        except RuntimeError as exc:
+            self.logger.warning(f"Could not ground-snap initial pose: {exc}")
+            return None
+
+        if not projected_heights:
+            return None
+        return max(projected_heights)
+
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
-        pose.position.z += 2.0
         carla_pose_transform = ros_pose_to_carla_transform(pose)
+
+        # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
+        # map-frame z is meaningless here. When spawn_point_ground_snap is
+        # enabled and CARLA exposes ground_projection, snap onto the map
+        # geometry; otherwise fall back to the fixed +2.0 z-offset that has
+        # always been applied.
+        ground_z = self._project_initialpose_to_ground(carla_pose_transform)
+        if ground_z is not None:
+            carla_pose_transform.location.z = (
+                ground_z + self.param_values["initial_pose_ground_offset_z"]
+            )
+            self.logger.info(
+                "Ground-snapped initial pose: "
+                f"ground_z={ground_z:.3f}, "
+                f"offset_z={self.param_values['initial_pose_ground_offset_z']:.3f}, "
+                f"pose_z={carla_pose_transform.location.z:.3f}"
+            )
+        else:
+            carla_pose_transform.location.z += 2.0
 
         with self._state_lock:
             if self.ego_actor is not None:

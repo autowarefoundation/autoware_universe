@@ -77,6 +77,8 @@ class InitializeInterface(object):
         self.spawn_point = self.param_["spawn_point"]
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
+        self.spawn_point_ground_snap = self.param_["spawn_point_ground_snap"]
+        self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -95,6 +97,67 @@ class InitializeInterface(object):
         else:
             randomize = True
         return spawn_point, randomize
+
+    def _snap_spawn_point_to_ground(self, spawn_point):
+        """Snap a spawn point onto the CARLA map geometry, if enabled.
+
+        When spawn_point_ground_snap is disabled, or the CARLA world does not
+        expose ``ground_projection`` (older APIs), or no ground point is found,
+        the spawn point is returned unchanged so behavior matches the fixed
+        z that the caller already set.
+        """
+        if not self.spawn_point_ground_snap:
+            return spawn_point
+
+        if not hasattr(self.world, "ground_projection"):
+            print(
+                "WARNING: CARLA world has no ground_projection(); "
+                "skipping spawn-point ground snapping"
+            )
+            return spawn_point
+
+        sample_offsets = (
+            (0.0, 0.0),
+            (0.75, 0.0),
+            (-0.75, 0.0),
+            (0.0, 0.75),
+            (0.0, -0.75),
+            (1.5, 0.0),
+            (-1.5, 0.0),
+            (0.0, 1.5),
+            (0.0, -1.5),
+        )
+        projected_heights = []
+        try:
+            for offset_x, offset_y in sample_offsets:
+                search_origin = carla.Location(
+                    x=spawn_point.location.x + offset_x,
+                    y=spawn_point.location.y + offset_y,
+                    z=1000.0,
+                )
+                labelled_point = self.world.ground_projection(search_origin, 10000.0)
+                if labelled_point is not None:
+                    projected_heights.append(labelled_point.location.z)
+        except RuntimeError as exc:
+            print(f"WARNING: Could not ground-snap CARLA spawn point: {exc}")
+            return spawn_point
+
+        if not projected_heights:
+            print("WARNING: Could not ground-snap CARLA spawn point: no ground projection found")
+            return spawn_point
+
+        ground_z = max(projected_heights)
+        snapped = carla.Transform(carla.Location(), spawn_point.rotation)
+        snapped.location.x = spawn_point.location.x
+        snapped.location.y = spawn_point.location.y
+        snapped.location.z = ground_z + self.spawn_point_ground_offset_z
+        print(
+            "Ground-snapped spawn point: "
+            f"ground_z={ground_z:.3f}, offset_z={self.spawn_point_ground_offset_z:.3f}, "
+            f"spawn_z={snapped.location.z:.3f}",
+            flush=True,
+        )
+        return snapped
 
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
@@ -160,6 +223,8 @@ class InitializeInterface(object):
         CarlaDataProvider.set_client(client)
 
         spawn_point, randomize = self._parse_spawn_point()
+        if not randomize:
+            spawn_point = self._snap_spawn_point_to_ground(spawn_point)
         self.ego_actor = CarlaDataProvider.request_new_actor(
             self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
         )
