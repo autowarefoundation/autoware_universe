@@ -167,6 +167,7 @@ Required model files:
 - `simplify_extract_img_feat.onnx` (backbone)
 - `simplify_pts_head_memory.onnx` (head)
 - `simplify_position_embedding.onnx` (position embedding)
+- `ml_package_camera_streampetr.param.yaml` (ML package config)
 
 If you want to train and deploy your own model, you can find the source code for that in [AWML](https://github.com/tier4/AWML/tree/main/projects/StreamPETR).
 

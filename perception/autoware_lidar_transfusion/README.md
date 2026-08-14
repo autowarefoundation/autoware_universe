@@ -83,7 +83,7 @@ ros2 topic echo <input_topic> --field fields
 
 ## Trained Models
 
-The model bundle (`transfusion.onnx`) is hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/lidar_transfusion/tree/v2.1).
+The model bundle (`transfusion.onnx` and `transfusion_ml_package.param.yaml`) is hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/lidar_transfusion/tree/v2.1).
 The [ansible artifacts role](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts) downloads it into `~/autoware_data/ml_models/lidar_transfusion`.
 
 The model was trained in TIER IV's internal database (~11k lidar frames) for 50 epochs.
