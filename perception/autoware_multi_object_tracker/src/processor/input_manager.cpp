@@ -414,14 +414,15 @@ bool InputManager::getObjects(
   // Clear the objects
   objects_with_associations.clear();
 
-  // Optimize the target stream, latency, and its band before computing the batch window so a stale
-  // target can fail over to a fresh stream within the same processing cycle.
-  optimizeChannelTimings(now);
-
   // Get the time interval for the objects
   rclcpp::Time object_latest_time;
   rclcpp::Time object_earliest_time;
   getObjectTimeInterval(now, object_latest_time, object_earliest_time);
+
+  // Optimize the target stream, latency, and its band.
+  // The result will be used for the next time, so the optimization is after getting the time
+  // interval.
+  optimizeChannelTimings(now);
 
   // Get objects from all input streams
   // adds up to the objects vector for efficient processing
