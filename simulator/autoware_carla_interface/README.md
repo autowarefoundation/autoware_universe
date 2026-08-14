@@ -10,6 +10,11 @@ This ros package enables communication between Autoware and CARLA for autonomous
 | ubuntu |  ros   | carla  | autoware |
 | :----: | :----: | :----: | :------: |
 | 22.04  | humble | 0.9.15 |   Main   |
+| 24.04  | jazzy  | 0.10.0 |   Main   |
+
+CARLA 0.9.15 remains the reference environment. CARLA 0.10.0 is additionally
+supported; see [CARLA 0.10.0](#carla-0100) below for the extra install steps
+and launch arguments.
 
 ## Setup
 
@@ -36,6 +41,30 @@ This ros package enables communication between Autoware and CARLA for autonomous
    ```yaml
    projector_type: Local
    ```
+
+### CARLA 0.10.0
+
+<!-- cspell:ignore cp312 -->
+
+CARLA 0.10.0 (Unreal Engine 5) is supported in addition to 0.9.15. It differs
+from the 0.9.x line in a few ways that the bridge accounts for:
+
+- **Python client**: install the CARLA 0.10.0 client wheel built for
+  **Python 3.12** (the `cp312` wheel), matching Ubuntu 24.04 / ROS 2 Jazzy.
+- **Levels/maps**: some 0.10 levels are authored with their own local origin
+  and do not always expose OpenDRIVE metadata that Autoware can parse. Use the
+  map name and origin arguments to align them with the Autoware map frame.
+- **Launch arguments** (all default to the 0.9-compatible behavior, so they
+  are only needed for 0.10 levels that require them):
+  - `carla_map` — explicit CARLA level name when it differs from the
+    `map_path` directory name.
+  - `force_load_world` — always reload the level via `client.load_world()`.
+  - `map_origin_x` / `map_origin_y` — offset between the CARLA world origin
+    and the Autoware map frame origin.
+  - `spawn_point_ground_snap` (with `spawn_point_ground_offset_z` /
+    `initial_pose_ground_offset_z`) — snap the spawn point and RViz initial
+    pose onto the CARLA map geometry.
+  - `no_rendering_mode` — disable rendering for headless/faster simulation.
 
 ### Build
 
