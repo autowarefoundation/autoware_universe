@@ -14,6 +14,7 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
+#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
@@ -125,6 +126,20 @@ std::vector<AgentHistory> AgentData::transformed_and_trimmed_histories(
   for (auto & history : histories) {
     history.apply_transform(transform);
   }
+
+  // Keep only agents inside the same square range as the map (LANE_MASK_RANGE_M around the ego).
+  // After apply_transform the poses are in the ego frame, so the ego sits at the origin and the
+  // range check reduces to |x| <= range && |y| <= range.
+  constexpr double RANGE_M = autoware::diffusion_planner::constants::LANE_MASK_RANGE_M;
+  histories.erase(
+    std::remove_if(
+      histories.begin(), histories.end(),
+      [](const AgentHistory & history) {
+        const AgentState & latest_state = history.get_latest_state();
+        return std::abs(latest_state.pose(0, 3)) > RANGE_M ||
+               std::abs(latest_state.pose(1, 3)) > RANGE_M;
+      }),
+    histories.end());
 
   std::sort(histories.begin(), histories.end(), [](const AgentHistory & a, const AgentHistory & b) {
     const double a_dist =
