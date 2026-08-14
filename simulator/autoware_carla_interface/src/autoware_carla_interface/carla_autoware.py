@@ -77,6 +77,7 @@ class InitializeInterface(object):
         self.spawn_point = self.param_["spawn_point"]
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
+        self.force_load_world = self.param_["force_load_world"]
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -95,6 +96,58 @@ class InitializeInterface(object):
         else:
             randomize = True
         return spawn_point, randomize
+
+    def _load_carla_world(self, client):
+        """Load the requested map while supporting CARLA Python API version differences."""
+        if self.force_load_world:
+            print(f"Loading CARLA world '{self.carla_map}' with client.load_world()", flush=True)
+            try:
+                client.load_world(self.carla_map)
+                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+            except RuntimeError as exc:
+                if "Connection refused" in str(exc):
+                    raise
+                print(
+                    "WARNING: client.load_world() raised while loading "
+                    f"'{self.carla_map}'; continuing with current world: {exc}",
+                    flush=True,
+                )
+            return
+
+        if hasattr(client, "load_world_if_different"):
+            try:
+                print(
+                    f"Loading CARLA world '{self.carla_map}' with load_world_if_different()",
+                    flush=True,
+                )
+                client.load_world_if_different(self.carla_map)
+                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+                return
+            except RuntimeError as exc:
+                print(
+                    "WARNING: load_world_if_different failed; falling back to load_world "
+                    f"for '{self.carla_map}': {exc}"
+                )
+
+        current_map = None
+        try:
+            current_map = client.get_world().get_map().name.split("/")[-1]
+        except RuntimeError:
+            pass
+
+        if current_map != self.carla_map:
+            print(f"Loading CARLA world '{self.carla_map}' with client.load_world()", flush=True)
+            try:
+                client.load_world(self.carla_map)
+                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+            except RuntimeError as exc:
+                if "Connection refused" in str(exc):
+                    raise
+                print(
+                    "WARNING: client.load_world() raised while loading "
+                    f"'{self.carla_map}'; continuing with current world: {exc}",
+                    flush=True,
+                )
 
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
@@ -135,7 +188,7 @@ class InitializeInterface(object):
     def load_world(self):
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
-        client.load_world_if_different(self.carla_map)
+        self._load_carla_world(client)
 
         # Wait for the world to be fully loaded
         # This is critical for non-default maps that need time to load
