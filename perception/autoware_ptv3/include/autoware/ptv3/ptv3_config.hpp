@@ -96,23 +96,25 @@ public:
     grid_y_size_ = grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
     grid_z_size_ = grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
 
-    // The serialization depth must cover every coordinate the device-side grid mapping
-    // (floor(p / size) - floor(min_range / size), see gridCoord) can emit. That is one more than
-    // the rounded cell count above when a range boundary is not voxel-aligned: [0.5, 16.5) with
-    // unit voxels emits 0..16. Sizing the depth from the rounded count would then drop the extra
-    // coordinate's top Morton bit and silently merge its voxels with coordinate 0's. The largest
-    // coordinate is attained at the largest float below max_range, since the crop accepts
-    // min_range <= p < max_range and float division is monotonic.
+    // The serialization depth and the per-stage voxel capacities must cover every coordinate the
+    // device-side grid mapping (floor(p / size) - floor(min_range / size), see gridCoord) can
+    // emit. That is one more than the rounded cell count above when a range boundary is not
+    // voxel-aligned: [0.5, 16.5) with unit voxels emits 0..16. Sizing the depth from the rounded
+    // count would then drop the extra coordinate's top Morton bit and silently merge its voxels
+    // with coordinate 0's. The largest coordinate is attained at the largest float below
+    // max_range, since the crop accepts min_range <= p < max_range and float division is
+    // monotonic.
     const auto effective_grid_cells =
       [](const float min_range, const float max_range, const float size) {
         const float min_coord = std::floor(min_range / size);
         const float max_coord = std::floor(std::nextafter(max_range, min_range) / size);
         return static_cast<std::int64_t>(max_coord - min_coord) + 1;
       };
-    const auto max_effective_cells = std::max(
-      {effective_grid_cells(min_x_range_, max_x_range_, voxel_x_size_),
-       effective_grid_cells(min_y_range_, max_y_range_, voxel_y_size_),
-       effective_grid_cells(min_z_range_, max_z_range_, voxel_z_size_)});
+    effective_grid_x_size_ = effective_grid_cells(min_x_range_, max_x_range_, voxel_x_size_);
+    effective_grid_y_size_ = effective_grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
+    effective_grid_z_size_ = effective_grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
+    const auto max_effective_cells =
+      std::max({effective_grid_x_size_, effective_grid_y_size_, effective_grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_effective_cells))));
     auto max_voxels_depth =
@@ -364,7 +366,10 @@ public:
 
   // Hard geometric voxel-count bound for one encoder stage: a stage cannot hold more voxels
   // than the sparse grid has cells at its cumulative pooling depth, and pooling never grows
-  // the voxel count, so min(max_num_voxels_, grid cells) is safe for any input.
+  // the voxel count, so min(max_num_voxels_, grid cells) is safe for any input. The cell counts
+  // must be the effective ones (the coordinates the grid mapping can actually emit, see the
+  // constructor); the rounded counts fall one cell per unaligned axis short, and this bound sizes
+  // the encoder stage buffers and TensorRT profiles.
   [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
   {
     std::int64_t cumulative_depth = 0;
@@ -376,8 +381,8 @@ public:
     const auto ceil_shift = [cumulative_depth](const std::int64_t size) {
       return (size + (std::int64_t{1} << cumulative_depth) - 1) >> cumulative_depth;
     };
-    const auto grid_cells =
-      ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) * ceil_shift(grid_z_size_);
+    const auto grid_cells = ceil_shift(effective_grid_x_size_) *
+                            ceil_shift(effective_grid_y_size_) * ceil_shift(effective_grid_z_size_);
     return std::min(max_num_voxels_, grid_cells);
   }
 
@@ -442,10 +447,17 @@ public:
   float voxel_y_size_{};
   float voxel_z_size_{};
 
-  // Grid size
+  // Grid size (rounded from the range extents)
   std::int64_t grid_x_size_{};
   std::int64_t grid_y_size_{};
   std::int64_t grid_z_size_{};
+
+  // Cell counts the device grid mapping can actually emit: one more than grid_*_size_ on each
+  // axis whose range boundary is not voxel-aligned. Size serialization_depth_ and the per-stage
+  // voxel capacities.
+  std::int64_t effective_grid_x_size_{};
+  std::int64_t effective_grid_y_size_{};
+  std::int64_t effective_grid_z_size_{};
 
   ///// RUNTIME DIMENSIONS /////
   std::array<std::int64_t, 3> voxels_num_{};

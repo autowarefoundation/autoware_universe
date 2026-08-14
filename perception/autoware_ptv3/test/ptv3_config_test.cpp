@@ -30,10 +30,11 @@ PTv3Config makeDetectionConfig(
   const std::vector<float> & distance_bin_upper_limits = {10.0F, 20.0F},
   const std::vector<float> & detection_score_thresholds = {0.1F, 0.2F, 0.3F, 0.4F},
   const std::vector<float> & yaw_norm_thresholds = {0.1F, 0.2F},
-  const std::vector<float> & voxel_size = {1.0F, 1.0F, 1.0F})
+  const std::vector<float> & voxel_size = {1.0F, 1.0F, 1.0F},
+  const std::vector<std::int64_t> & voxels_num = {1, 4, 8})
 {
   return PTv3Config(
-    false, true, "", 8, {1, 4, 8}, point_cloud_range, voxel_size, {}, {"z", "z-trans"},
+    false, true, "", 8, voxels_num, point_cloud_range, voxel_size, {}, {"z", "z-trans"},
     {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false, "", {}, {"CAR", "PEDESTRIAN"},
     bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
     true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
@@ -85,6 +86,21 @@ TEST(PTv3ConfigTest, SerializationDepthCoversUnalignedRangeBoundary)
 
   const auto unaligned = makeDetectionConfig({0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 4.5F});
   EXPECT_EQ(unaligned.serialization_depth_, 5);
+}
+
+// The per-stage voxel-count bound must also be derived from the coordinates the grid mapping can
+// emit: [0.5, 16.5) x [0.5, 16.5) x [0.5, 4.5) with unit voxels emits 17 x 17 x 5 coordinates, so
+// stage 0 can hold up to 1445 distinct voxels and a stride-2 stage ceil(17/2)^2 * ceil(5/2) = 243.
+// Bounding by the rounded 16 x 16 x 4 grid would under-allocate the encoder stage buffers and the
+// TensorRT profiles sized from this capacity.
+TEST(PTv3ConfigTest, StageVoxelCapacityCoversUnalignedRangeBoundary)
+{
+  const auto config = makeDetectionConfig(
+    {0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 4.5F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
+    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {1, 1024, 4096});
+  EXPECT_EQ(config.stage_voxel_capacity(0), 17 * 17 * 5);
+  EXPECT_EQ(config.stage_voxel_capacity(1), 9 * 9 * 3);
+  EXPECT_EQ(config.stage_voxel_capacity(4), 2 * 2 * 1);
 }
 
 // Borders that are voxel-aligned in decimal but not exactly representable in binary (neither 102.4
