@@ -296,10 +296,8 @@ TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
   }
 }
 
-// A range boundary that is not voxel-aligned makes the grid mapping emit one more coordinate than
-// max_range - min_range suggests: [0.5, 16.5) with unit voxels emits 0..16. The serialization
-// depth must cover that extra coordinate; with a 4-bit depth serializeCoord would drop bit 4 and
-// the two corner voxels below would deduplicate into one.
+// End-to-end check of the unaligned-boundary depth handling: the corner voxel (16, 16, 16) needs
+// a fifth coordinate bit, without which it would deduplicate into (0, 0, 0).
 TEST_F(PreprocessKernelTest, UnalignedRangeBoundaryKeepsCornerVoxelsDistinct)
 {
   PTv3ConfigParams params;
@@ -327,11 +325,9 @@ TEST_F(PreprocessKernelTest, UnalignedRangeBoundaryKeepsCornerVoxelsDistinct)
   EXPECT_EQ(serialized_code[1], serialize_coord(16, 16, 16, depth, false));
 }
 
-// Borders that are voxel-aligned in decimal but not exactly representable in binary (102.4, 0.1)
-// rely on the config evaluating the same float arithmetic as the device grid mapping: the depth
-// must stay 11 (2048 cells, no spurious boundary coordinate), a point one ULP below the border
-// must land in the last cell, and a point exactly on the border must be cropped by the strict
-// upper bound - the very exclusion the config's nextafter maximization models.
+// Decimal-aligned borders (neither 102.4 nor 0.1 is a binary float) rely on the config using the
+// same float arithmetic as the device mapping: depth stays 11, a point one ULP below the border
+// lands in the last cell, and a point exactly on the border is cropped.
 TEST_F(PreprocessKernelTest, Base10AlignedBordersStayWithinSerializationDepth)
 {
   PTv3ConfigParams params;

@@ -75,10 +75,8 @@ TEST(PTv3ConfigTest, RejectsInvalidDetectionThresholdTables)
     std::runtime_error);
 }
 
-// A range boundary that is not voxel-aligned makes the floor-based grid mapping emit one more
-// coordinate than the rounded cell count suggests ([0.5, 16.5) with unit voxels emits 0..16), and
-// the serialization depth must cover it; a 4-bit depth would drop the extra coordinate's top
-// Morton bit and merge its voxels with coordinate 0's.
+// [0.5, 16.5) with unit voxels emits coordinates 0..16; a depth sized for 16 cells would drop the
+// boundary coordinate's top Morton bit and merge its voxels with coordinate 0's.
 TEST(PTv3ConfigTest, SerializationDepthCoversUnalignedRangeBoundary)
 {
   const auto aligned = makeDetectionConfig();
@@ -88,11 +86,9 @@ TEST(PTv3ConfigTest, SerializationDepthCoversUnalignedRangeBoundary)
   EXPECT_EQ(unaligned.serialization_depth_, 5);
 }
 
-// The per-stage voxel-count bound must also be derived from the coordinates the grid mapping can
-// emit: [0.5, 16.5) x [0.5, 16.5) x [0.5, 4.5) with unit voxels emits 17 x 17 x 5 coordinates, so
-// stage 0 can hold up to 1445 distinct voxels and a stride-2 stage ceil(17/2)^2 * ceil(5/2) = 243.
-// Bounding by the rounded 16 x 16 x 4 grid would under-allocate the encoder stage buffers and the
-// TensorRT profiles sized from this capacity.
+// The same boundary coordinates count toward the per-stage voxel bound: 17 x 17 x 5 cells at
+// stage 0, ceil'd per stride-2 stage. A 16 x 16 x 4 bound would under-size the encoder stage
+// buffers and TensorRT profiles.
 TEST(PTv3ConfigTest, StageVoxelCapacityCoversUnalignedRangeBoundary)
 {
   const auto config = makeDetectionConfig(
