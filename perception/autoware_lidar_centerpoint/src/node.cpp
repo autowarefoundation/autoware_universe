@@ -81,16 +81,24 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   std::vector<int64_t> allow_remapping_by_area_matrix;
   std::vector<double> min_area_matrix;
   std::vector<double> max_area_matrix;
-  for (const auto & entry : rclcpp::parameter_map_from_yaml_file(class_remapper_param_path)) {
-    for (const auto & param : entry.second) {
-      if (param.get_name() == "allow_remapping_by_area_matrix") {
-        allow_remapping_by_area_matrix = param.as_integer_array();
-      } else if (param.get_name() == "min_area_matrix") {
-        min_area_matrix = param.as_double_array();
-      } else if (param.get_name() == "max_area_matrix") {
-        max_area_matrix = param.as_double_array();
+  if (!std::filesystem::exists(class_remapper_param_path)) {
+    throw std::invalid_argument("Class remapper file not found: " + class_remapper_param_path);
+  }
+  try {
+    for (const auto & entry : rclcpp::parameter_map_from_yaml_file(class_remapper_param_path)) {
+      for (const auto & param : entry.second) {
+        if (param.get_name() == "allow_remapping_by_area_matrix") {
+          allow_remapping_by_area_matrix = param.as_integer_array();
+        } else if (param.get_name() == "min_area_matrix") {
+          min_area_matrix = param.as_double_array();
+        } else if (param.get_name() == "max_area_matrix") {
+          max_area_matrix = param.as_double_array();
+        }
       }
     }
+  } catch (const std::exception & e) {
+    throw std::invalid_argument(
+      "Failed to parse class remapper file: " + class_remapper_param_path + " (" + e.what() + ")");
   }
   // matrices are indexed by ObjectClassification label on both axes
   if (
