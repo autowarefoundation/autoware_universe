@@ -5,7 +5,6 @@
   <version>0.52.0</version>
   <description>The autoware_planning_validator_rear_collision_checker package</description>
 
-  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
   <maintainer email="kyoichi.sugahara@tier4.jp">kyoichi sugahara</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
