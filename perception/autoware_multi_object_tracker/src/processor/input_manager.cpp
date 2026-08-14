@@ -49,6 +49,13 @@ InputStream::InputStream(
 void InputStream::push(
   const types::DynamicObjectList & objects, const types::AssociationResult & association)
 {
+  push(objects, association, clock_->now());
+}
+
+void InputStream::push(
+  const types::DynamicObjectList & objects, const types::AssociationResult & association,
+  const rclcpp::Time & now)
+{
   // Move the objects_with_uncertainty to the objects queue
   objects_que_.push_back(types::ObjectsWithAssociation{objects, association});
   while (objects_que_.size() > que_size_) {
@@ -56,7 +63,6 @@ void InputStream::push(
   }
 
   // update the timing statistics
-  rclcpp::Time now = clock_->now();
   rclcpp::Time objects_time(objects.header.stamp);
   updateTimingStatus(now, objects_time);
 
@@ -265,13 +271,20 @@ void InputManager::push(
   const size_t channel_index, const types::DynamicObjectList & objects,
   const types::AssociationResult & association)
 {
+  push(channel_index, objects, association, clock_->now());
+}
+
+void InputManager::push(
+  const size_t channel_index, const types::DynamicObjectList & objects,
+  const types::AssociationResult & association, const rclcpp::Time & now)
+{
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(
       logger_, "InputManager::push Invalid channel index: %lu, input_streams_ size: %lu",
       channel_index, input_streams_.size());
     return;
   }
-  input_streams_.at(channel_index)->push(objects, association);
+  input_streams_.at(channel_index)->push(objects, association, now);
 }
 
 std::optional<types::DynamicObjectList> InputManager::processMessage(
@@ -350,7 +363,7 @@ bool InputManager::isStreamFresh(const InputStream & input_stream, const rclcpp:
   return (now - input_stream.getLatestMessageTime()).seconds() <= freshness_timeout;
 }
 
-void InputManager::optimizeTimings(const rclcpp::Time & now)
+void InputManager::optimizeChannelTimings(const rclcpp::Time & now)
 {
   double max_latency_mean = -1.0;
   uint selected_stream_idx = target_stream_idx_;
@@ -403,7 +416,7 @@ bool InputManager::getObjects(
 
   // Optimize the target stream, latency, and its band before computing the batch window so a stale
   // target can fail over to a fresh stream within the same processing cycle.
-  optimizeTimings(now);
+  optimizeChannelTimings(now);
 
   // Get the time interval for the objects
   rclcpp::Time object_latest_time;
