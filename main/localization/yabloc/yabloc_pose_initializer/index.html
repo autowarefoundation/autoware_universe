@@ -22741,14 +22741,11 @@
 <ul>
 <li><a href="#camera_pose_initializer">camera_pose_initializer</a></li>
 </ul>
-<p>This package requires the pre-trained semantic segmentation model for runtime. This model is usually downloaded by <code>ansible</code> during env preparation phase of the <a href="https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/">installation</a>.
+<p>This package requires the pre-trained semantic segmentation model for runtime. This model is usually downloaded by the <a href="https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts">ansible artifacts role</a> during the installation.
 It is also possible to download it manually. Even if the model is not downloaded, initialization will still complete, but the accuracy may be compromised.</p>
-<p>To download and extract the model manually:</p>
+<p>The model is hosted on <a href="https://huggingface.co/AutowareFoundation/yabloc_pose_initializer/tree/v1.0">Hugging Face</a>. To download it manually with the <a href="https://huggingface.co/docs/huggingface_hub/guides/cli">hf CLI</a>:</p>
 <p><code>bash
-$ mkdir -p ~/autoware_data/ml_models/yabloc_pose_initializer/
-$ wget -P ~/autoware_data/ml_models/yabloc_pose_initializer/ \
-       https://autoware-files.s3.us-west-2.amazonaws.com/models/yabloc/136_road-segmentation-adas-0001/resources.tar.gz
-$ tar xzf ~/autoware_data/ml_models/yabloc_pose_initializer/resources.tar.gz -C ~/autoware_data/ml_models/yabloc_pose_initializer/</code></p>
+hf download AutowareFoundation/yabloc_pose_initializer --revision v1.0 --local-dir ~/autoware_data/ml_models/yabloc_pose_initializer</code></p>
 <h2 id="note">Note<a class="headerlink" href="#note" title="Permanent link">#</a></h2>
 <p>This package makes use of external code. The trained files are provided by apollo. The trained files are automatically downloaded during env preparation.</p>
 <p>Original model URL</p>

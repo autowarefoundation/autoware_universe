@@ -23163,12 +23163,13 @@ ros2 launch autoware_camera_streampetr tensorrt_stream_petr.launch.xml log_level
 <li><strong>The input images are undistorted</strong></li>
 </ul>
 <h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>
-<p>You can download the ONNX model files for StreamPETR. The files should be placed in the appropriate model directory as specified in the launch configuration.</p>
+<p>The model bundle is hosted on <a href="https://huggingface.co/AutowareFoundation/camera_streampetr/tree/v1.0">Hugging Face</a>. The <a href="https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts">ansible artifacts role</a> downloads it into <code>~/autoware_data/ml_models/camera_streampetr</code>.</p>
 <p>Required model files:</p>
 <ul>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/streampetr/v1/simplify_extract_img_feat.onnx">Backbone ONNX Model</a></li>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/streampetr/v1/simplify_pts_head_memory.onnx">Head ONNX Model</a></li>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/streampetr/v1/simplify_position_embedding.onnx">Position Embedding ONNX Model</a></li>
+<li><code>simplify_extract_img_feat.onnx</code> (backbone)</li>
+<li><code>simplify_pts_head_memory.onnx</code> (head)</li>
+<li><code>simplify_position_embedding.onnx</code> (position embedding)</li>
+<li><code>ml_package_camera_streampetr.param.yaml</code> (ML package config)</li>
 </ul>
 <p>If you want to train and deploy your own model, you can find the source code for that in <a href="https://github.com/tier4/AWML/tree/main/projects/StreamPETR">AWML</a>.</p>
 <h2 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h2>
