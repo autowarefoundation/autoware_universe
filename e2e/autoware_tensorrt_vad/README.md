@@ -120,7 +120,7 @@ To download the latest models, simply run the provided setup script:
 The models will be downloaded to `~/autoware_data/ml_models/vad/` by default.
 
 **Manual Download** (if needed):
-Models are hosted at: <https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/carla_tiny/v0.1/>
+Models are hosted at: <https://huggingface.co/AutowareFoundation/tensorrt_vad/tree/v0.1>
 
 ### Model Preparation
 

@@ -310,22 +310,22 @@ ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_path:=
 
 #### v4.0 (2026/07)
 
-The model bundle moved to per-variant folders (`base`/`tiny`/`sigma`/`short_range`) with uniform file names, hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/lidar_centerpoint). `sigma` and `short_range` weights are published for the first time. Earlier revisions remain available as tags on the same repository (`v3.0` = flat layout).
+The model bundle moved to per-variant folders (`base`/`tiny`/`sigma`/`short_range`) with uniform file names, hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/lidar_centerpoint/tree/v4.0). `sigma` and `short_range` weights are published for the first time. Earlier revisions remain available as tags on the same repository (`v3.0` = flat layout). The `v1` and `v0` files below are not distributed any more.
 
 #### v1 (2022/07/06)
 
-| Name               | URLs                                                                                                     | Description                                                                                                                        |
-| ------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `centerpoint`      | [pts_voxel_encoder][v1-encoder-centerpoint] <br> [pts_backbone_neck_head][v1-head-centerpoint]           | There is a single change due to the limitation in the implementation of this package. `num_filters=[32, 32]` of `PillarFeatureNet` |
-| `centerpoint_tiny` | [pts_voxel_encoder][v1-encoder-centerpoint-tiny] <br> [pts_backbone_neck_head][v1-head-centerpoint-tiny] | The same model as `default` of `v0`.                                                                                               |
+| Name               | Files                                             | Description                                                                                                                        |
+| ------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `centerpoint`      | `pts_voxel_encoder` <br> `pts_backbone_neck_head` | There is a single change due to the limitation in the implementation of this package. `num_filters=[32, 32]` of `PillarFeatureNet` |
+| `centerpoint_tiny` | `pts_voxel_encoder` <br> `pts_backbone_neck_head` | The same model as `default` of `v0`.                                                                                               |
 
 These changes are compared with [this configuration](https://github.com/tianweiy/CenterPoint/blob/v0.2/configs/waymo/pp/waymo_centerpoint_pp_two_pfn_stride1_3x.py).
 
 #### v0 (2021/12/03)
 
-| Name      | URLs                                                                                   | Description                                                                                                                                          |
-| --------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `default` | [pts_voxel_encoder][v0-encoder-default] <br> [pts_backbone_neck_head][v0-head-default] | There are two changes from the original CenterPoint architecture. `num_filters=[32]` of `PillarFeatureNet` and `ds_layer_strides=[2, 2, 2]` of `RPN` |
+| Name      | Files                                             | Description                                                                                                                                          |
+| --------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default` | `pts_voxel_encoder` <br> `pts_backbone_neck_head` | There are two changes from the original CenterPoint architecture. `num_filters=[32]` of `PillarFeatureNet` and `ds_layer_strides=[2, 2, 2]` of `RPN` |
 
 ## (Optional) Error detection and handling
 
@@ -377,13 +377,6 @@ Example:
   Currently, this package can't handle the chattering obstacles well. We plan to add some probabilistic filters in the perception layer to improve it.
   Also, there are some parameters that should be global(e.g. vehicle size, max steering, etc.). These will be refactored and defined as global parameters so that we can share the same parameters between different nodes.
 -->
-
-[v0-encoder-default]: https://awf.ml.dev.web.auto/perception/models/pts_voxel_encoder_default.onnx
-[v0-head-default]: https://awf.ml.dev.web.auto/perception/models/pts_backbone_neck_head_default.onnx
-[v1-encoder-centerpoint]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_voxel_encoder_centerpoint.onnx
-[v1-head-centerpoint]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_backbone_neck_head_centerpoint.onnx
-[v1-encoder-centerpoint-tiny]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_voxel_encoder_centerpoint_tiny.onnx
-[v1-head-centerpoint-tiny]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_backbone_neck_head_centerpoint_tiny.onnx
 
 ## Acknowledgment: deepen.ai's 3D Annotation Tools Contribution
 
