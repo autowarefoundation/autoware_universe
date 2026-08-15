@@ -19,8 +19,8 @@
 namespace autoware::map_based_prediction
 {
 
-PredictorVehicle::PredictorVehicle(rclcpp::Node & node)
-: node_(node), object_tracker_(node), maneuver_predictor_(node), path_processor_(node)
+PredictorVehicle::PredictorVehicle(autoware::agnocast_wrapper::Node & node)
+: object_tracker_(node), maneuver_predictor_(node), path_processor_(node)
 {
   path_processor_.setManeuverPredictor(maneuver_predictor_);
   path_processor_.setObjectTracker(object_tracker_);

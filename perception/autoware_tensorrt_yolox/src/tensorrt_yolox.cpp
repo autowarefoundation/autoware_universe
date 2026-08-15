@@ -36,8 +36,7 @@ namespace autoware::tensorrt_yolox
 TrtYoloX::TrtYoloX(
   TrtCommonConfig & trt_config, const int num_class, const float score_threshold,
   const float nms_threshold, const uint8_t gpu_id, std::string calibration_image_list_path,
-  const double norm_factor, [[maybe_unused]] const std::string & cache_dir,
-  const CalibrationConfig & calib_config)
+  const double norm_factor, const CalibrationConfig & calib_config)
 : gpu_id_(gpu_id), is_gpu_initialized_(false)
 {
   if (!setCudaDeviceId(gpu_id_)) {
@@ -82,7 +81,7 @@ TrtYoloX::TrtYoloX(
 
     std::vector<std::string> calibration_images;
     if (calibration_image_list_path != "") {
-      calibration_images = load_image_list(calibration_image_list_path, "");
+      calibration_images = load_image_list(calibration_image_list_path);
     }
     tensorrt_yolox::ImageStream stream(batch_size_, network_input_dims, calibration_images);
     fs::path calibration_table{trt_config.onnx_path};
@@ -153,11 +152,6 @@ TrtYoloX::TrtYoloX(
       nms_threshold_ = nms_threshold;
       // Todo : Support multiple segmentation heads
       multitask_++;
-      /*
-      std::stringstream s;
-      s << "\"" << model_path << "\" is unsupported format";
-      throw std::runtime_error{s.str()};
-      */
   }
   // GPU memory allocation
   const auto input_dims = trt_common_->getTensorShape(0);
@@ -244,74 +238,6 @@ bool TrtYoloX::setCudaDeviceId(const uint8_t gpu_id)
   } else {
     return true;
   }
-}
-
-void TrtYoloX::initPreprocessBuffer(int width, int height)
-{
-  // if size of source input has been changed...
-  if (src_width_ != -1 || src_height_ != -1) {
-    if (width != src_width_ || height != src_height_) {
-      // Free cuda memory to reallocate
-      if (image_buf_h_) {
-        image_buf_h_.reset();
-      }
-      if (image_buf_d_) {
-        image_buf_d_.reset();
-      }
-    }
-  }
-  src_width_ = width;
-  src_height_ = height;
-  auto input_dims = trt_common_->getTensorShape(0);
-  bool const hasRuntimeDim = std::any_of(
-    input_dims.d, input_dims.d + input_dims.nbDims,
-    [](int32_t input_dim) { return input_dim == -1; });
-  if (hasRuntimeDim) {
-    input_dims.d[0] = batch_size_;
-  }
-  if (!image_buf_h_) {
-    if (!trt_common_->setInputShape(0, input_dims)) {
-      return;
-    }
-    scales_.clear();
-  }
-  const float input_height = static_cast<float>(input_dims.d[2]);
-  const float input_width = static_cast<float>(input_dims.d[3]);
-  if (!image_buf_h_) {
-    const float scale = std::min(input_width / width, input_height / height);
-    for (int b = 0; b < batch_size_; b++) {
-      scales_.emplace_back(scale);
-    }
-    image_buf_h_ = autoware::cuda_utils::make_unique_host<unsigned char[]>(
-      width * height * 3 * batch_size_, cudaHostAllocWriteCombined);
-    image_buf_d_ =
-      autoware::cuda_utils::make_unique<unsigned char[]>(width * height * 3 * batch_size_);
-  }
-  if (multitask_) {
-    size_t argmax_out_elem_num = 0;
-    for (int m = 0; m < multitask_; m++) {
-      const auto output_dims =
-        trt_common_->getTensorShape(m + 2);  // 0 : input, 1 : output for detections
-      const float scale = std::min(
-        output_dims.d[3] / static_cast<float>(width),
-        output_dims.d[2] / static_cast<float>(height));
-      int out_w = static_cast<int>(width * scale);
-      int out_h = static_cast<int>(height * scale);
-      // size_t out_elem_num = std::accumulate(
-      // output_dims.d + 1, output_dims.d + output_dims.nbDims, 1, std::multiplies<int>());
-      // out_elem_num = out_elem_num * batch_size_;
-      size_t out_elem_num = out_w * out_h * batch_size_;
-      argmax_out_elem_num += out_elem_num;
-    }
-    argmax_buf_h_ = autoware::cuda_utils::make_unique_host<unsigned char[]>(
-      argmax_out_elem_num, cudaHostAllocPortable);
-    argmax_buf_d_ = autoware::cuda_utils::make_unique<unsigned char[]>(argmax_out_elem_num);
-  }
-}
-
-void TrtYoloX::printProfiling(void)
-{
-  trt_common_->printProfiling();
 }
 
 void TrtYoloX::preprocessGpu(const std::vector<cv::Mat> & images)
@@ -406,8 +332,7 @@ void TrtYoloX::preprocessGpu(const std::vector<cv::Mat> & images)
 }
 
 bool TrtYoloX::doInference(
-  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks,
-  [[maybe_unused]] std::vector<cv::Mat> & color_masks)
+  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks)
 {
   if (!setCudaDeviceId(gpu_id_)) {
     return false;
@@ -416,7 +341,7 @@ bool TrtYoloX::doInference(
   preprocessGpu(images);
 
   if (needs_output_decode_) {
-    return feedforwardAndDecode(images, objects, masks, color_masks);
+    return feedforwardAndDecode(images, objects, masks);
   } else {
     return feedforward(images, objects);
   }
@@ -561,8 +486,7 @@ bool TrtYoloX::feedforward(const std::vector<cv::Mat> & images, ObjectArrays & o
 }
 
 bool TrtYoloX::feedforwardAndDecode(
-  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & out_masks,
-  [[maybe_unused]] std::vector<cv::Mat> & color_masks)
+  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & out_masks)
 {
   std::vector<void *> buffers = {input_d_.get(), out_prob_d_.get()};
   if (multitask_) {

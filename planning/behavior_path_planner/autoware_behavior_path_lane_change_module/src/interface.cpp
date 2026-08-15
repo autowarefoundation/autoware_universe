@@ -46,7 +46,13 @@ LaneChangeInterface::LaneChangeInterface(
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface,
   std::unique_ptr<LaneChangeBase> && module_type)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface, ModuleStatus::WAITING_APPROVAL},  // NOLINT
+: SceneModuleInterface{
+    name,
+    node,
+    rtc_interface_ptr_map,
+    objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface,
+    ModuleStatus::WAITING_APPROVAL},  // NOLINT
   parameters_{std::move(parameters)},
   module_type_{std::move(module_type)}
 {

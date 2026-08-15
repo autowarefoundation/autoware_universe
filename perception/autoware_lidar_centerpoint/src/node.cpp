@@ -22,9 +22,11 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <pcl_ros/transforms.hpp>
+#include <rclcpp/parameter_map.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -45,11 +47,20 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<int>("densification_params.num_past_frames");
   const std::string trt_precision = this->declare_parameter<std::string>("trt_precision");
   const std::size_t cloud_capacity = this->declare_parameter<std::int64_t>("cloud_capacity");
-  const std::string encoder_onnx_path = this->declare_parameter<std::string>("encoder_onnx_path");
+  // weight file entries are file names relative to model_path; absolute paths pass through
+  const std::filesystem::path model_path(this->declare_parameter<std::string>("model_path", ""));
+  const auto resolve_path = [&model_path](const std::string & file) {
+    const std::filesystem::path path(file);
+    return path.is_absolute() ? path.string() : (model_path / path).string();
+  };
+  const std::string encoder_onnx_path =
+    resolve_path(this->declare_parameter<std::string>("encoder_onnx_path"));
   const std::string encoder_engine_path =
-    this->declare_parameter<std::string>("encoder_engine_path");
-  const std::string head_onnx_path = this->declare_parameter<std::string>("head_onnx_path");
-  const std::string head_engine_path = this->declare_parameter<std::string>("head_engine_path");
+    resolve_path(this->declare_parameter<std::string>("encoder_engine_path"));
+  const std::string head_onnx_path =
+    resolve_path(this->declare_parameter<std::string>("head_onnx_path"));
+  const std::string head_engine_path =
+    resolve_path(this->declare_parameter<std::string>("head_engine_path"));
   class_names_ = this->declare_parameter<std::vector<std::string>>("model_params.class_names");
   has_twist_ = this->declare_parameter<bool>("model_params.has_twist");
   const std::size_t point_feature_size = static_cast<std::size_t>(
@@ -64,10 +75,37 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<std::int64_t>("model_params.downsample_factor"));
   const std::size_t encoder_in_feature_size = static_cast<std::size_t>(
     this->declare_parameter<std::int64_t>("model_params.encoder_in_feature_size"));
-  const auto allow_remapping_by_area_matrix =
-    this->declare_parameter<std::vector<int64_t>>("allow_remapping_by_area_matrix");
-  const auto min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
-  const auto max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
+  // class remapper matrices are loaded from the file referenced in the model manifest
+  const std::string class_remapper_param_path =
+    resolve_path(this->declare_parameter<std::string>("class_remapper_param_path"));
+  std::vector<int64_t> allow_remapping_by_area_matrix;
+  std::vector<double> min_area_matrix;
+  std::vector<double> max_area_matrix;
+  if (!std::filesystem::exists(class_remapper_param_path)) {
+    throw std::invalid_argument("Class remapper file not found: " + class_remapper_param_path);
+  }
+  try {
+    for (const auto & entry : rclcpp::parameter_map_from_yaml_file(class_remapper_param_path)) {
+      for (const auto & param : entry.second) {
+        if (param.get_name() == "allow_remapping_by_area_matrix") {
+          allow_remapping_by_area_matrix = param.as_integer_array();
+        } else if (param.get_name() == "min_area_matrix") {
+          min_area_matrix = param.as_double_array();
+        } else if (param.get_name() == "max_area_matrix") {
+          max_area_matrix = param.as_double_array();
+        }
+      }
+    }
+  } catch (const std::exception & e) {
+    throw std::invalid_argument(
+      "Failed to parse class remapper file: " + class_remapper_param_path + " (" + e.what() + ")");
+  }
+  // matrices are indexed by ObjectClassification label on both axes
+  if (
+    allow_remapping_by_area_matrix.empty() || min_area_matrix.empty() || max_area_matrix.empty()) {
+    throw std::invalid_argument(
+      "Class remapper matrices must be non-empty: " + class_remapper_param_path);
+  }
 
   // Distance-based score thresholds
   const std::vector<double> distance_bin_upper_limits_double =

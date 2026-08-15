@@ -115,8 +115,9 @@ void VehicleConstraintFilter::update_parameters(const validator::Params & params
 }
 
 VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext &)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext &)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (!vehicle_info_ptr_) {
     return tl::make_unexpected("Vehicle info not set");
   }
@@ -127,7 +128,7 @@ VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
   std::vector<MetricReport> metrics;
   for (const auto & checker : checkers_) {
     auto report = (this->*checker)(traj_points);
-    is_feasible &= report.level == MetricReport::SAFE;
+    is_feasible &= report.risk.level == RiskLevel::SAFE;
     metrics.push_back(report);
   }
 
@@ -138,36 +139,42 @@ MetricReport VehicleConstraintFilter::check_speed(const TrajectoryPoints & traj_
 {
   const auto [max_observed, is_ok] = is_speed_ok(traj_points, params_.max_speed);
 
+  RiskLevel risk_level;
+  risk_level.level = is_ok ? RiskLevel::SAFE : RiskLevel::DANGER;
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
     .metric_name("check_speed")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
+    .risk(risk_level);
 }
 
 MetricReport VehicleConstraintFilter::check_acceleration(const TrajectoryPoints & traj_points) const
 {
   const auto [max_observed, is_ok] = is_acceleration_ok(traj_points, params_.max_acceleration);
 
+  RiskLevel risk_level;
+  risk_level.level = is_ok ? RiskLevel::SAFE : RiskLevel::DANGER;
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
     .metric_name("check_acceleration")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
+    .risk(risk_level);
 }
 
 MetricReport VehicleConstraintFilter::check_deceleration(const TrajectoryPoints & traj_points) const
 {
   const auto [max_observed, is_ok] = is_deceleration_ok(traj_points, params_.max_deceleration);
 
+  RiskLevel risk_level;
+  risk_level.level = is_ok ? RiskLevel::SAFE : RiskLevel::DANGER;
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
     .metric_name("check_deceleration")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
+    .risk(risk_level);
 }
 
 MetricReport VehicleConstraintFilter::check_steering_angle(
@@ -176,12 +183,14 @@ MetricReport VehicleConstraintFilter::check_steering_angle(
   const auto [max_observed, is_ok] =
     is_steering_angle_ok(traj_points, *vehicle_info_ptr_, params_.max_steering_angle);
 
+  RiskLevel risk_level;
+  risk_level.level = is_ok ? RiskLevel::SAFE : RiskLevel::DANGER;
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
     .metric_name("check_steering_angle")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
+    .risk(risk_level);
 }
 
 MetricReport VehicleConstraintFilter::check_steering_rate(
@@ -190,12 +199,14 @@ MetricReport VehicleConstraintFilter::check_steering_rate(
   const auto [max_observed, is_ok] =
     is_steering_rate_ok(traj_points, *vehicle_info_ptr_, params_.max_steering_rate);
 
+  RiskLevel risk_level;
+  risk_level.level = is_ok ? RiskLevel::SAFE : RiskLevel::DANGER;
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
     .metric_name("check_steering_rate")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
+    .risk(risk_level);
 }
 
 // --- Helper functions for constraint checks ---

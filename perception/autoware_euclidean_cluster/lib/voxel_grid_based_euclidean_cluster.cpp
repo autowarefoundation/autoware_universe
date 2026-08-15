@@ -138,6 +138,24 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
   std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters)
 {
+  std::vector<IndexedCluster> indexed_clusters;
+  const bool success = cluster(pointcloud, indexed_clusters);
+  if (!success) {
+    return false;
+  }
+
+  clusters.clear();
+  clusters.reserve(indexed_clusters.size());
+  for (auto & cluster : indexed_clusters) {
+    clusters.push_back(std::move(cluster.cloud));
+  }
+  return true;
+}
+
+bool VoxelGridBasedEuclideanCluster::cluster(
+  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+  std::vector<IndexedCluster> & clusters)
+{
   // 1) Voxel grid filtering
   pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   constexpr float Z_AXIS_VOXEL_SIZE = 100000.0f;
@@ -218,7 +236,8 @@ bool VoxelGridBasedEuclideanCluster::cluster(
         }
         voxel_point_count++;
       }
-      clusters.at(cluster_idx).push_back(point);
+      clusters.at(cluster_idx).cloud.push_back(point);
+      clusters.at(cluster_idx).indices.push_back(static_cast<int>(random_index));
     }
   }
 
@@ -226,10 +245,16 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   clusters.erase(
     std::remove_if(
       clusters.begin(), clusters.end(),
-      [this](const pcl::PointCloud<pcl::PointXYZ> & cluster) {
-        return static_cast<int>(cluster.size()) < min_points_per_cluster_;
+      [this](const IndexedCluster & cluster) {
+        return static_cast<int>(cluster.cloud.size()) < min_points_per_cluster_;
       }),
     clusters.end());
+
+  for (auto & cluster : clusters) {
+    cluster.cloud.width = cluster.cloud.points.size();
+    cluster.cloud.height = 1;
+    cluster.cloud.is_dense = false;
+  }
 
   return true;
 }

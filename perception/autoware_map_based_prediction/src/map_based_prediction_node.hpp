@@ -20,6 +20,7 @@
 #include "autoware/map_based_prediction/map_based_prediction_node/diagnostics.hpp"
 
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -29,7 +30,7 @@
 namespace autoware::map_based_prediction
 {
 
-class MapBasedPredictionNode : public rclcpp::Node
+class MapBasedPredictionNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MapBasedPredictionNode(const rclcpp::NodeOptions & node_options);
@@ -38,15 +39,14 @@ private:
   AUTOWARE_SUBSCRIPTION_PTR(TrackedObjects) sub_objects_;
   AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;
 
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
-    detailed_processing_time_publisher_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils::ProcessingTimeDetail) detailed_processing_time_publisher_;
 
   NodeState state_;
   std::unique_ptr<Diagnostics> diagnostics_;
   std::unique_ptr<MapCallback> map_callback_;
   std::unique_ptr<ObjectsCallback> objects_callback_;
 
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   rcl_interfaces::msg::SetParametersResult onParam(
     const std::vector<rclcpp::Parameter> & parameters);
 };

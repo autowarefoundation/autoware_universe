@@ -1,4 +1,4 @@
-// Copyright 2023 The Autoware Contributors
+// Copyright 2026 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,45 +15,86 @@
 #ifndef AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_HPP_
 #define AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_HPP_
 
-#include <autoware/agnocast_wrapper/node.hpp>
-#include <autoware/traffic_light_arbiter/traffic_light_arbiter_core.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <autoware/traffic_light_arbiter/signal_match_validator.hpp>
+#include <rclcpp/time.hpp>
 
-#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
+#include <lanelet2_core/Forward.h>
+
 #include <memory>
+#include <optional>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
 
-class TrafficLightArbiter : public autoware::agnocast_wrapper::Node
+class TrafficLightArbiter
 {
 public:
-  explicit TrafficLightArbiter(const rclcpp::NodeOptions & options);
+  using Element = autoware_perception_msgs::msg::TrafficLightElement;
+  using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
+  using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
+  using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
+
+  TrafficLightArbiter(
+    SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
+    double external_time_tolerance, double perception_time_tolerance);
+
+  // Extracts and stores the regulatory-element IDs the Core needs from the map
+  // (vehicle traffic lights, plus pedestrian ones when signal matching is on).
+  void set_map(const lanelet::LaneletMapConstPtr & map);
+
+  // Stores the latest perception msg, then evicts external cache entries that
+  // are stale relative to its stamp.
+  void ingest_perception(const TrafficSignalArray & msg);
+
+  // Rejects the msg (returns false) when its stamp is too far from current_time;
+  // otherwise refreshes the external cache, sweeps stale entries, returns true.
+  bool ingest_external(const TrafficSignalArray & msg, const rclcpp::Time & current_time);
+
+  // Result of one arbitration cycle. `output` holds the arbitrated signals by
+  // value; std::nullopt means no map has arrived yet, so the Node skips the
+  // publish. The Core leaves output unstamped — the Node owns stamp inheritance
+  // and uses latest_input_time for staleness logging.
+  struct ArbitrationResult
+  {
+    std::optional<TrafficSignalArray> output;  // stamp left default; Node fills it in.
+    std::vector<lanelet::Id> off_map_signal_ids;
+    rclcpp::Time latest_input_time{0, 0, RCL_ROS_TIME};
+  };
+  ArbitrationResult arbitrate() const;
 
 private:
-  using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
-  using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
+  // True when |current_time - msg_stamp| exceeds external_delay_tolerance_.
+  // Used by ingest_external for admission control.
+  bool is_external_outdated(
+    const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
 
-  AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) map_sub_;
-  AUTOWARE_SUBSCRIPTION_PTR(TrafficSignalArray) perception_tlr_sub_;
-  AUTOWARE_SUBSCRIPTION_PTR(TrafficSignalArray) external_tlr_sub_;
-  AUTOWARE_PUBLISHER_PTR(TrafficSignalArray) pub_;
+  // Sweeps external cache: removes every stored entry whose stamp deviates
+  // from `reference_time` beyond `tolerance`.
+  void sweep_expired_external_signals(const rclcpp::Time & reference_time, double tolerance);
 
-  void on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg);
-  void on_perception_msg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg);
-  void on_external_msg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg);
-  void arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp);
+  // Signal matching is on iff the validator exists: it is created in the
+  // constructor exactly when matching is enabled and never replaced afterward,
+  // so the pointer is the single source of truth for the mode.
+  bool is_signal_matching_enabled() const { return signal_match_validator_ != nullptr; }
 
-  // Emits one DEBUG line per expired entry; called from the on_*_msg
-  // handlers with the result of the corresponding ingest_*().
-  void log_expired_external_signals(
-    const std::vector<TrafficLightArbiterCore::ExpiredExternalSignal> & expired);
+  SourcePriority source_priority_;
+  double external_delay_tolerance_;
+  double external_time_tolerance_;
+  double perception_time_tolerance_;
 
-  std::unique_ptr<TrafficLightArbiterCore> core_;
+  std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
+  std::unique_ptr<SignalMatchValidator> signal_match_validator_;
+
+  TrafficSignalArray perception_traffic_light_;
+  std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
 };
+
 }  // namespace autoware::traffic_light
 
 #endif  // AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_HPP_

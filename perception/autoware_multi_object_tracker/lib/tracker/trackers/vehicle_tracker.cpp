@@ -17,7 +17,7 @@
 #include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
@@ -26,12 +26,16 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
+#include <cmath>
 
 namespace autoware::multi_object_tracker
 {
 
 namespace
 {
+
+// Prediction time over which the axle-covariance blend reaches full decoupling.
+constexpr double kAxleBlendTimeConstant = 1.0;  // [s]
 
 types::DynamicObject normalizeYaw(const types::DynamicObject & object, const double reference_yaw)
 {
@@ -59,7 +63,8 @@ VehicleTracker::VehicleTracker(
   logger_(rclcpp::get_logger("VehicleTracker")),
   object_model_(object_model),
   shape_model_(object_model),
-  shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER)
+  shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER),
+  sign_belief_(object.kinematics.orientation_availability, time)
 {
   // set tracker type based on object model
   switch (object_model.type) {
@@ -145,12 +150,26 @@ VehicleTracker::VehicleTracker(
 
 bool VehicleTracker::predict(const rclcpp::Time & time)
 {
+  // Capture the interval since the last measurement correction.
+  time_since_correction_ = getElapsedTimeFromLastUpdate(time);
   return motion_model_.predictState(time);
+}
+
+void VehicleTracker::applyAxleCovarianceBlend()
+{
+  const double blend_ratio = std::clamp(time_since_correction_ / kAxleBlendTimeConstant, 0.0, 1.0);
+  if (blend_ratio <= 0.0) return;  // no time elapsed
+
+  motion_model_.blendAxleCovariance(blend_ratio);
 }
 
 bool VehicleTracker::updateKinematics(
   const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
+  // Re-symmetrize the axle covariance so a common-mode lateral bias translates the box to absorb
+  // localization error.
+  applyAxleCovarianceBlend();
+
   // Use measurement length only when the channel and shape are trustworthy.
   const bool is_bbox = (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   const bool can_update_shape = channel_info.trust_extension && is_bbox;
@@ -182,16 +201,7 @@ bool VehicleTracker::updateKinematics(
     } else {
       is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance, length);
     }
-    const double pre_limit_yaw = motion_model_.getYawState();
     motion_model_.limitStates();
-    // Flip stored footprint when yaw-limit correction reverses heading by 180°
-    if (shape_model_.isFootprintValid()) {
-      const double yaw_diff =
-        autoware_utils_math::normalize_radian(motion_model_.getYawState() - pre_limit_yaw);
-      if (std::abs(yaw_diff) > M_PI_2) {
-        shape_model_.flipFootprintXY();
-      }
-    }
   }
 
   // Low-pass filter on z position (2D motion model does not track z).
@@ -204,19 +214,24 @@ bool VehicleTracker::updateKinematics(
 }
 
 bool VehicleTracker::updateWheelKinematics(
-  const UpdateStrategy & strategy, const types::DynamicObject & measurement)
+  const UpdateStrategy & strategy, const types::DynamicObject & measurement,
+  const types::DynamicObject & prediction)
 {
+  // Relax the front/rear covariance asymmetry before the wheel-anchor EKF update.
+  applyAxleCovarianceBlend();
+
+  // When polygon and tracked widths disagree, the observed edge center is a biased lateral
+  // measurement that the wheel-base lever amplifies into yaw. correctWheelAnchor() nudges the
+  // anchor and folds the extra lateral variance into pose_cov.
   std::array<double, 36> pose_cov = measurement.pose_covariance;
-  bool is_updated = false;
-  if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
-    is_updated = motion_model_.updateStatePoseFront(
-      strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
-  } else {
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
-    is_updated =
-      motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
-  }
+  const geometry_msgs::msg::Point anchor_point =
+    correctWheelAnchor(prediction, measurement.shape.dimensions.y, strategy.anchor_point, pose_cov);
+
+  const bool measure_front = strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE;
+  shape_update_anchor_ = measure_front ? BicycleMotionModel::LengthUpdateAnchor::FRONT
+                                       : BicycleMotionModel::LengthUpdateAnchor::REAR;
+  const bool is_updated =
+    motion_model_.updateStatePoseWheel(anchor_point.x, anchor_point.y, pose_cov, measure_front);
   // Wheel-anchor EKF only updates x/y; z position and height are applied here.
   constexpr double z_gain = 0.4;
   motion_model_.updateZ(measurement.pose.position.z, z_gain);
@@ -237,7 +252,19 @@ bool VehicleTracker::measure(
       dt);
   }
 
-  const types::DynamicObject corrected = normalizeYaw(in_object, motion_model_.getYawState());
+  // The raw yaw sign votes on the heading-sign belief before normalization discards it.
+  const double tracker_yaw = motion_model_.getYawState();
+  if (
+    in_object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
+    channel_info.trust_orientation) {
+    const double raw_yaw_diff =
+      autoware_utils_math::normalize_radian(tf2::getYaw(in_object.pose.orientation) - tracker_yaw);
+    sign_belief_.vote(
+      time, raw_yaw_diff,
+      in_object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE);
+  }
+
+  const types::DynamicObject corrected = normalizeYaw(in_object, tracker_yaw);
 
   const bool is_bbox = (corrected.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   updateKinematics(corrected, channel_info);
@@ -254,9 +281,31 @@ bool VehicleTracker::measure(
   shape_model_.updateFootprint(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+  evaluateSignFlip(time);
+
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();
   return true;
+}
+
+void VehicleTracker::evaluateSignFlip(const rclcpp::Time & time)
+{
+  const double vel_long = motion_model_.getStateElement(IDX::U);
+  const double vel_var = motion_model_.getCovarianceElement(IDX::U, IDX::U);
+  if (sign_belief_.shouldFlip(time, vel_long, vel_var)) {
+    flipOrientationSign();
+  }
+}
+
+// 180° heading flip of the full tracker state: motion model, stored footprint, and sign belief.
+void VehicleTracker::flipOrientationSign()
+{
+  motion_model_.flipOrientation();
+  if (shape_model_.isFootprintValid()) {
+    shape_model_.flipFootprintXY();
+  }
+  sign_belief_.onFlipped();
+  removeCache();
 }
 
 bool VehicleTracker::getMotionState(
@@ -299,8 +348,7 @@ bool VehicleTracker::getTrackedObject(
 
 bool VehicleTracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
 {
   const auto aligned = shapes::alignClusterToOrientation(measurement, motion_model_.getYawState());
   const types::DynamicObject & meas = aligned ? *aligned : measurement;
@@ -308,8 +356,8 @@ bool VehicleTracker::conditionedUpdate(
   UpdateStrategy strategy = determineUpdateStrategy(meas, prediction);
 
   if (strategy.type == UpdateStrategyType::WEAK_UPDATE) {
-    types::DynamicObject pseudo_measurement = prediction;
-    createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape, true);
+    const types::DynamicObject pseudo_measurement =
+      createPseudoMeasurement(measurement, prediction, true);
 
     const types::DynamicObject pseudo_corrected =
       normalizeYaw(pseudo_measurement, motion_model_.getYawState());
@@ -327,12 +375,16 @@ bool VehicleTracker::conditionedUpdate(
     shape_model_.updateFootprint(
       measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+    evaluateSignFlip(measurement_time);
+
     shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
     removeCache();
     return true;
   }
 
-  const bool is_updated = updateWheelKinematics(strategy, measurement);
+  // Use the aligned measurement so the polygon width/anchor are expressed in the tracker frame
+  // (raw cluster dimensions.y is in the cluster's own local frame).
+  const bool is_updated = updateWheelKinematics(strategy, meas, prediction);
 
   geometry_msgs::msg::Pose tracker_pose;
   std::array<double, 36> dummy_cov{};
@@ -341,6 +393,8 @@ bool VehicleTracker::conditionedUpdate(
     measurement_time, tracker_pose, dummy_cov, dummy_twist, dummy_cov);
   shape_model_.updateFootprint(
     measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
+
+  evaluateSignFlip(measurement_time);
 
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();

@@ -72,20 +72,8 @@
          These relays subscribe the raw image, which forces the interface to
          convert and publish every CAM_FRONT frame; skip them in light-weight
          mode like the republish nodes below. -->
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_image_relay"
-      args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_camera_info_relay"
-      args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+    <node pkg="topic_tools" exec="relay" name="traffic_light_image_relay" args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"/>
+    <node pkg="topic_tools" exec="relay" name="traffic_light_camera_info_relay" args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"/>
 
     <!-- Image transport nodes to create compressed versions for all cameras -->
     <node
@@ -93,7 +81,6 @@
       exec="republish"
       name="cam_front_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <node
@@ -136,7 +123,6 @@
       exec="republish"
       name="traffic_light_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <!-- Multi-camera combiner for RViz visualization -->
@@ -195,16 +181,16 @@
         </composable_node>
       </node_container>
 
-      <!-- Load shift decider as composable node -->
-      <load_composable_node target="/e2e_control_container">
-        <composable_node pkg="autoware_shift_decider" plugin="autoware::shift_decider::ShiftDecider" name="autoware_shift_decider">
-          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
-          <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
-          <remap from="input/state" to="/autoware/state"/>
-          <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
-          <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
-        </composable_node>
-      </load_composable_node>
+      <!-- shift_decider runs as standalone node -->
+      <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+      <node pkg="autoware_shift_decider" exec="autoware_shift_decider" name="autoware_shift_decider" output="screen">
+        <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
+        <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
+        <remap from="input/state" to="/autoware/state"/>
+        <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
+        <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
+        <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+      </node>
 
       <node pkg="topic_tools" exec="relay" name="trajectory_follower_control_cmd_relay" output="log" args="/trajectory_follower/control_cmd /trajectory_follower_control_cmd"/>
 

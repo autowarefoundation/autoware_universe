@@ -17,6 +17,7 @@
 #include <pcl/kdtree/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
 
+#include <utility>
 #include <vector>
 
 namespace autoware::euclidean_cluster
@@ -51,6 +52,24 @@ bool EuclideanCluster::cluster(
   const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
   std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters)
 {
+  std::vector<IndexedCluster> indexed_clusters;
+  const bool success = cluster(pointcloud, indexed_clusters);
+  if (!success) {
+    return false;
+  }
+
+  clusters.clear();
+  clusters.reserve(indexed_clusters.size());
+  for (auto & cluster : indexed_clusters) {
+    clusters.push_back(std::move(cluster.cloud));
+  }
+  return true;
+}
+
+bool EuclideanCluster::cluster(
+  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+  std::vector<IndexedCluster> & clusters)
+{
   // convert 2d pointcloud
   pcl::PointCloud<pcl::PointXYZ>::ConstPtr pointcloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   if (!use_height_) {
@@ -83,15 +102,18 @@ bool EuclideanCluster::cluster(
 
   // build output
   {
+    clusters.clear();
+    clusters.reserve(cluster_indices.size());
     for (const auto & cluster : cluster_indices) {
-      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZ>);
+      IndexedCluster indexed_cluster;
+      indexed_cluster.indices = cluster.indices;
       for (const auto & point_idx : cluster.indices) {
-        cloud_cluster->points.push_back(pointcloud->points[point_idx]);
+        indexed_cluster.cloud.points.push_back(pointcloud->points[point_idx]);
       }
-      clusters.push_back(*cloud_cluster);
-      clusters.back().width = cloud_cluster->points.size();
-      clusters.back().height = 1;
-      clusters.back().is_dense = false;
+      indexed_cluster.cloud.width = indexed_cluster.cloud.points.size();
+      indexed_cluster.cloud.height = 1;
+      indexed_cluster.cloud.is_dense = false;
+      clusters.push_back(std::move(indexed_cluster));
     }
   }
   return true;

@@ -48,41 +48,32 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<std::string>("calibration_image_list_path");
   config.gpu_id = this->declare_parameter<uint8_t>("gpu_id");
 
-  config.label_path = this->declare_parameter<std::string>("label_path");
-  config.semseg_color_map_path =
+  const auto label_path = this->declare_parameter<std::string>("label_path");
+  const auto semseg_color_map_path =
     this->declare_parameter<std::string>("semantic_segmentation_color_map_path", "");
-
   // if the remap file path is an empty string, it will not do remap the labels
-  config.roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
-  config.roi_to_semseg_remap_path =
+  const auto roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
+  const auto roi_to_semseg_remap_path =
     this->declare_parameter<std::string>("roi_to_semantic_segmentation_remap_path", "");
+
+  // read the label / remap / color-map files into structured data outside the detector
+  try {
+    config.roi_labels = load_label_maps(label_path, roi_remap_path, roi_to_semseg_remap_path);
+    config.semseg_color_map = load_segmentation_colormap(semseg_color_map_path);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to load label files: %s", e.what());
+    rclcpp::shutdown();
+    return;
+  }
 
   config.is_roi_overlap_semseg = declare_parameter<bool>("is_roi_overlap_segmentation");
   config.is_publish_color_mask = declare_parameter<bool>("is_publish_color_mask");
   config.overlap_roi_score_threshold = declare_parameter<float>("overlap_roi_score_threshold");
-  config.roi_overlay_semseg_labels.UNKNOWN =
-    declare_parameter<bool>("roi_overlay_segmentation_label.UNKNOWN");
-  config.roi_overlay_semseg_labels.CAR =
-    declare_parameter<bool>("roi_overlay_segmentation_label.CAR");
-  config.roi_overlay_semseg_labels.TRUCK =
-    declare_parameter<bool>("roi_overlay_segmentation_label.TRUCK");
-  config.roi_overlay_semseg_labels.BUS =
-    declare_parameter<bool>("roi_overlay_segmentation_label.BUS");
-  config.roi_overlay_semseg_labels.MOTORCYCLE =
-    declare_parameter<bool>("roi_overlay_segmentation_label.MOTORCYCLE");
-  config.roi_overlay_semseg_labels.BICYCLE =
-    declare_parameter<bool>("roi_overlay_segmentation_label.BICYCLE");
-  config.roi_overlay_semseg_labels.PEDESTRIAN =
-    declare_parameter<bool>("roi_overlay_segmentation_label.PEDESTRIAN");
-  config.roi_overlay_semseg_labels.ANIMAL =
-    declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
-  config.roi_overlay_semseg_labels.HAZARD =
-    declare_parameter<bool>("roi_overlay_segmentation_label.HAZARD");
 
-  detector_ = std::make_unique<TrtYoloXDetector>(config);
-
-  if (!detector_->isGPUInitialized()) {
-    RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", config.gpu_id);
+  try {
+    detector_ = std::make_unique<TrtYoloXDetector>(config);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
     rclcpp::shutdown();
     return;
   }

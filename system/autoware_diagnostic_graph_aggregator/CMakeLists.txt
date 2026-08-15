@@ -28,6 +28,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 ament_auto_add_library(aggregator SHARED
   "src/node/aggregator.cpp"
   "src/node/command_mode_mapping.cpp"
+  "src/node/driving_mode_mapping.cpp"
 )
 ament_auto_add_library(converter SHARED
   "src/node/converter.cpp"
@@ -49,14 +50,14 @@ target_include_directories(${PROJECT_NAME}_test PRIVATE src/common)
 autoware_agnocast_wrapper_register_node(aggregator
   PLUGIN "autoware::diagnostic_graph_aggregator::AggregatorNode"
   EXECUTABLE "aggregator_node"
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 autoware_agnocast_wrapper_register_node(converter
   PLUGIN "autoware::diagnostic_graph_aggregator::ConverterNode"
   EXECUTABLE "converter_node"
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
