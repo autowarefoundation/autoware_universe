@@ -23473,21 +23473,9 @@ ros2 launch autoware_bevfusion bevfusion.launch.xml log_level:=debug</code></p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>This node assumes that the input pointcloud follows the <code>PointXYZIRC</code> layout defined in <code>autoware_point_types</code>.</p>
 <h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>
-<p>You can download the onnx and config files in the following links.
-The files need to be placed inside <code>$(env HOME)/autoware_data/ml_models/bevfusion</code></p>
-<ul>
-<li>lidar-only model:<ul>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/bevfusion_lidar.onnx">onnx</a></li>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/ml_package_bevfusion_lidar.param.yaml">config</a></li>
-</ul>
-</li>
-<li>camera-lidar model:<ul>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/bevfusion_camera_lidar.onnx">onnx</a></li>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/ml_package_bevfusion_camera_lidar.param.yaml">config</a></li>
-</ul>
-</li>
-<li><a href="https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/detection_class_remapper.param.yaml">class remapper</a></li>
-</ul>
+<p>The model bundle is hosted on <a href="https://huggingface.co/AutowareFoundation/bevfusion/tree/v2.0">Hugging Face</a>.
+The <a href="https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts">ansible artifacts role</a> downloads it into <code>$(env HOME)/autoware_data/ml_models/bevfusion</code>.
+It holds the ONNX files and the ML package configs for the lidar-only and the camera-lidar models, and the class remapper.</p>
 <p>The model was trained in TIER IV's internal database (~35k lidar frames) for 30 epochs.</p>
 <h3 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h3>
 <h2 id="referencesexternal-links">References/External links<a class="headerlink" href="#referencesexternal-links" title="Permanent link">#</a></h2>

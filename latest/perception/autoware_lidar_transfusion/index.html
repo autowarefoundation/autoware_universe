@@ -23279,10 +23279,8 @@ For debug purposes, you can validate your pointcloud topic using simple command:
 <p><code>bash
 ros2 topic echo &lt;input_topic&gt; --field fields</code></p>
 <h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>
-<p>You can download the onnx format of trained models by clicking on the links below.</p>
-<ul>
-<li>TransFusion: <a href="https://awf.ml.dev.web.auto/perception/models/transfusion/t4xx1_90m/v2/transfusion.onnx">transfusion.onnx</a></li>
-</ul>
+<p>The model bundle (<code>transfusion.onnx</code> and <code>transfusion_ml_package.param.yaml</code>) is hosted on <a href="https://huggingface.co/AutowareFoundation/lidar_transfusion/tree/v2.1">Hugging Face</a>.
+The <a href="https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts">ansible artifacts role</a> downloads it into <code>~/autoware_data/ml_models/lidar_transfusion</code>.</p>
 <p>The model was trained in TIER IV's internal database (~11k lidar frames) for 50 epochs.</p>
 <h3 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h3>
 <h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
