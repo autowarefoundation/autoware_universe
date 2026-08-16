@@ -166,6 +166,27 @@ std::vector<Polygon2d> calcOverlappingPoints(const Polygon2d & polygon1, const P
   return intersection_polygons;
 }
 
+template <class T>
+bool isObjectPathStepOverlappingAttentionArea(
+  const T & object_path, const geometry_msgs::msg::Polygon & object_polygon,
+  const size_t path_index, const double object_bounding_radius,
+  const bg::model::box<Point2d> & attention_bbox, const Polygon2d & attention_area)
+{
+  const auto & object_position = autoware_utils::get_pose(object_path.at(path_index)).position;
+  const bg::model::box<Point2d> object_bbox(
+    Point2d(object_position.x - object_bounding_radius, object_position.y - object_bounding_radius),
+    Point2d(
+      object_position.x + object_bounding_radius, object_position.y + object_bounding_radius));
+  if (!bg::intersects(object_bbox, attention_bbox)) {
+    return false;
+  }
+
+  return !calcOverlappingPoints(
+            createMultiStepPolygon(object_path, object_polygon, path_index, path_index),
+            attention_area)
+            .empty();
+}
+
 autoware_internal_debug_msgs::msg::StringStamped createStringStampedMessage(
   const rclcpp::Time & now, const int64_t module_id_,
   const std::vector<std::tuple<std::string, CollisionPoint, CollisionState>> & collision_points)
@@ -788,15 +809,19 @@ std::optional<CollisionPoint> CrosswalkModule::getCollisionPoint(
 
   double minimum_stop_dist = std::numeric_limits<double>::max();
   std::optional<CollisionPoint> nearest_collision_point{std::nullopt};
+
+  boost::geometry::model::box<Point2d> attention_bbox;
+  boost::geometry::envelope(attention_area, attention_bbox);
+  const double obj_bounding_radius =
+    0.5 * std::hypot(object.shape.dimensions.x, object.shape.dimensions.y);
+
   for (const auto & obj_path : object.kinematics.predicted_paths) {
     size_t start_idx{0};
     bool is_start_idx_initialized{false};
     for (size_t i = 0; i < obj_path.path.size(); ++i) {
-      // For effective computation, the point and polygon intersection is calculated first.
-      const auto obj_one_step_polygon = createMultiStepPolygon(obj_path.path, obj_polygon, i, i);
-      const auto one_step_intersection_polygons =
-        calcOverlappingPoints(obj_one_step_polygon, attention_area);
-      if (!one_step_intersection_polygons.empty()) {
+      const auto one_step_overlaps = isObjectPathStepOverlappingAttentionArea(
+        obj_path.path, obj_polygon, i, obj_bounding_radius, attention_bbox, attention_area);
+      if (one_step_overlaps) {
         if (!is_start_idx_initialized) {
           start_idx = i;
           is_start_idx_initialized = true;
