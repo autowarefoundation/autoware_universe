@@ -61,8 +61,8 @@
        Output Topics
        ======================================== -->
   <arg name="output_objects" default="/perception/object_recognition/objects" description="Predicted objects with trajectories"/>
-  <arg name="output_trajectory" default="/planning/scenario_planning/trajectory" description="Selected ego trajectory"/>
-  <arg name="output_candidate_trajectories" default="/planning/scenario_planning/vad/candidate_trajectories" description="All 6 candidate trajectories (visualization)"/>
+  <arg name="output_trajectory" default="/planning/trajectory" description="Selected ego trajectory"/>
+  <arg name="output_candidate_trajectories" default="/planning/vad/candidate_trajectories" description="All 6 candidate trajectories (visualization)"/>
   <arg name="output_map_points" default="/perception/vad/map_points" description="Predicted map elements (PointCloud2)"/>
 
   <!-- ========================================

@@ -12,8 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/component_interface_specs/system.hpp"
 #include "autoware/component_interface_specs_universe/system.hpp"
 #include "gtest/gtest.h"
+
+#include <type_traits>
+
+// Proves the universe symbols are re-exports of the canonical core types, not
+// redefinitions: consumers see one definition, one version authority.
+// MrmState was promoted universe -> core; this asserts the identity survives.
+TEST(system_universe, reexports_core)
+{
+  namespace core = autoware::component_interface_specs::system;
+  namespace universe = autoware::component_interface_specs_universe::system;
+  static_assert(std::is_same_v<universe::MrmState, core::MrmState>);
+  static_assert(std::is_same_v<universe::ChangeOperationMode, core::ChangeOperationMode>);
+  SUCCEED();
+}
 
 TEST(system, interface)
 {

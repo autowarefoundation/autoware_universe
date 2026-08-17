@@ -17,41 +17,51 @@
             "UNKNOWN": {
               "type": "boolean",
               "description": "If true, objects with the 'UNKNOWN' label will be ignored during processing.",
-              "default": true
+              "default": false
             },
             "CAR": {
               "type": "boolean",
               "description": "If true, objects with the 'CAR' label will be ignored during processing.",
-              "default": true
+              "default": false
             },
             "TRUCK": {
               "type": "boolean",
               "description": "If true, objects with the 'TRUCK' label will be ignored during processing.",
-              "default": true
+              "default": false
             },
             "BUS": {
               "type": "boolean",
               "description": "If true, objects with the 'BUS' label will be ignored during processing.",
-              "default": true
+              "default": false
             },
             "TRAILER": {
               "type": "boolean",
               "description": "If true, objects with the 'TRAILER' label will be ignored during processing.",
-              "default": true
+              "default": false
             },
             "MOTORCYCLE": {
               "type": "boolean",
               "description": "If true, objects with the 'MOTORCYCLE' label will be ignored during processing.",
-              "default": true
+              "default": false
             },
             "BICYCLE": {
               "type": "boolean",
               "description": "If true, objects with the 'BICYCLE' label will be ignored during processing.",
-              "default": true
+              "default": false
             },
             "PEDESTRIAN": {
               "type": "boolean",
               "description": "If true, objects with the 'PEDESTRIAN' label will be ignored during processing.",
+              "default": true
+            },
+            "ANIMAL": {
+              "type": "boolean",
+              "description": "If true, objects with the 'ANIMAL' label will be ignored during processing.",
+              "default": false
+            },
+            "HAZARD": {
+              "type": "boolean",
+              "description": "If true, objects with the 'HAZARD' label will be ignored during processing.",
               "default": false
             }
           }
@@ -72,7 +82,7 @@
                 "type": "boolean"
               },
               "description": "Flags to enable validation for each ROI. Must have the same number as the input ROIs.",
-              "default": [false, false, false, false, false, false, false, false]
+              "default": [false, false, false, false, false, false, false, false, false, false]
             },
             "remove_truncated": {
               "type": "array",
@@ -81,7 +91,7 @@
                 "default": false
               },
               "description": "If this is true, the object will be removed when its ROI is evaluated as truncated. Must have the same number as the input ROIs.",
-              "default": [false, false, false, false, false, false, false, false]
+              "default": [false, false, false, false, false, false, false, false, false, false]
             },
             "image_border_truncation_horizontal_margin_ratio": {
               "type": "number",

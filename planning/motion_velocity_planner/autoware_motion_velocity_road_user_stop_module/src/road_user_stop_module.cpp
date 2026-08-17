@@ -907,7 +907,7 @@ std::optional<Point> RoadUserStopModule::plan_stop(
         continue;
       }
     }
-    determined_zero_vel_dist = candidate_zero_vel_dist.value();
+    determined_zero_vel_dist = candidate_zero_vel_dist;
     determined_stop_obstacle = stop_obstacle;
     determined_desired_stop_margin = desired_stop_margin;
   }
@@ -1090,7 +1090,7 @@ std::optional<Point> RoadUserStopModule::calc_stop_point(
   autoware_utils_visualization::append_marker_array(markers, &debug_data_.stop_wall_marker);
 
   // update debug data
-  debug_data_.stop_index = zero_vel_idx.value();
+  debug_data_.stop_index = zero_vel_idx;
   debug_data_.stop_point = stop_point;
 
   // update virtual wall position for the object in TrackedObject

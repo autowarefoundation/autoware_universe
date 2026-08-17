@@ -39,8 +39,7 @@ constexpr double AREA_RATIO_THRESHOLD = 1.3;
 /// Returns score=0.0 when the pair fails any gate and should be rejected.
 ScoringResult calculateBevAssignmentScore(
   const types::DynamicObject & tracked_object, classes::Label tracker_label,
-  types::TrackerType tracker_type,
-  const AssociatorConfig::TrackerAssociationParameters & association_params,
+  types::TrackerType tracker_type, const AssociationProfile & association_params,
   const types::DynamicObject & measurement_object, classes::Label measurement_label,
   const InverseCovariance2D & inv_cov, double unknown_association_giou_threshold);
 

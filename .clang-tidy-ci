@@ -1,7 +1,6 @@
 Checks: "
   -*,
   bugprone-*,
-  -bugprone-assignment-in-if-condition,
   -bugprone-branch-clone,
   -bugprone-easily-swappable-parameters,
   -bugprone-empty-catch,
@@ -10,7 +9,6 @@ Checks: "
   -bugprone-infinite-loop,
   -bugprone-integer-division,
   -bugprone-macro-parentheses,
-  -bugprone-multi-level-implicit-pointer-conversion,
   -bugprone-narrowing-conversions,
   -bugprone-optional-value-conversion,
   -bugprone-parent-virtual-call,
@@ -28,6 +26,4 @@ ExtraArgs:
   - -Wno-c11-extensions
   - -Wno-unknown-warning-option
   - -Wno-deprecated-declarations
-  - -Wno-unused-private-field
   - -Wno-unused-but-set-variable
-  - -Wno-deprecated-builtins

@@ -119,14 +119,14 @@ void ShapeEstimationNode::callback(
     const auto label = get_label(object.classification);
     const auto is_vehicle = label_is_vehicle(label);
     const auto & feature = feature_object.feature;
+
+    if (feature.cluster.data.empty()) {
+      continue;
+    }
+
     // convert ros to pcl
     pcl::PointCloud<pcl::PointXYZ>::Ptr cluster(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(feature.cluster, *cluster);
-
-    // check cluster data
-    if (cluster->empty()) {
-      continue;
-    }
 
 #ifdef USE_CUDA
     // If ml based shape estimation is enabled, add object to input batch and continue

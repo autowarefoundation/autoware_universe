@@ -1,0 +1,61 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PTv3.node
+
+package:
+  name: autoware_ptv3
+  provider: autoware
+
+launch:
+  plugin: autoware::ptv3::PTv3Node
+  executable: autoware_ptv3_node
+  node_output: screen
+
+# interfaces
+# pointcloud transported over cuda_blackboard (CudaPointCloud2), shown as PointCloud2.
+# each output has a cuda_blackboard companion (.../cuda) of the same negotiated type.
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud
+  - name: pointcloud_cuda
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud/cuda
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/objects
+  - name: pointcloud_filtered
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/filtered
+  - name: pointcloud_segmentation
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/segmentation
+  - name: pointcloud_visualization
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/visualization
+
+# parameters
+param_files:
+  - name: model_param
+    default: config/ptv3.param.yaml
+  - name: backbone_ml_package_param
+    default: ml_package_backbone_ptv3.param.yaml
+  - name: d_head_ml_package_param
+    default: ml_package_d_head_ptv3.param.yaml
+
+param_values:
+  - name: build_only
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: segment
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: objects
+      - to_output: pointcloud_segmentation

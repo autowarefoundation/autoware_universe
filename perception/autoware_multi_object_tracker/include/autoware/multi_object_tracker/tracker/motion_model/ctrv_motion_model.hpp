@@ -74,7 +74,12 @@ public:
 
   bool adjustPosition(const double & x, const double & y);
 
+  // 180° heading flip of the raw state: rotate yaw by pi and negate the velocity.
+  bool flipOrientation();
+
   bool limitStates();
+
+  double getYawState() const noexcept { return getStateElement(IDX::YAW); }
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 

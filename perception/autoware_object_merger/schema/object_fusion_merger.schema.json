@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Object Fusion Merger Node",
+  "type": "object",
+  "definitions": {
+    "object_fusion_merger": {
+      "type": "object",
+      "properties": {
+        "sync_queue_size": {
+          "type": "integer",
+          "description": "The size of the synchronization queue.",
+          "default": 20
+        },
+        "base_link_frame_id": {
+          "type": "string",
+          "description": "The frame ID used for transforming and fusing input objects.",
+          "default": "base_link"
+        },
+        "keep_input_dimensions": {
+          "type": "boolean",
+          "description": "Whether to keep the original main-object dimensions instead of expanding them during fusion.",
+          "default": false
+        }
+      },
+      "required": ["sync_queue_size", "base_link_frame_id", "keep_input_dimensions"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/object_fusion_merger"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

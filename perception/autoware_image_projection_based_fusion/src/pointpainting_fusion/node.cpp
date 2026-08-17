@@ -227,10 +227,10 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
   {
-    autoware::lidar_centerpoint::NMSParams p;
-    p.search_distance_2d_ =
+    perception_utils::IouBevNmsParams p;
+    p.search_distance_2d =
       this->declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
-    p.iou_threshold_ = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
+    p.iou_threshold = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
     iou_bev_nms_.setParameters(p);
   }
 
@@ -470,8 +470,9 @@ dc   | dc dc dc  dc ||zc|
 
       // project
       Eigen::Vector2d projected_point;
-      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-            cv::Point3d(p_x, p_y, p_z), projected_point)) {
+      if (
+        det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+          cv::Point3d(p_x, p_y, p_z), projected_point)) {
         // iterate 2d bbox
         for (const auto & feature_object : objects) {
           sensor_msgs::msg::RegionOfInterest roi = feature_object.feature.roi;

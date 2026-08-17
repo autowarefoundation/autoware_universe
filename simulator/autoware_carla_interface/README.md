@@ -102,6 +102,36 @@ The combined view shows all 6 cameras with labels: FL (Front-Left), F (Front), F
 <!-- <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/> -->
 ```
 
+### Following the Ego Vehicle with the CARLA Spectator Camera
+
+The `spectator_follow` script locks the CARLA spectator (free) camera to the ego vehicle, so the in-simulator view chases the car automatically instead of having to pan manually. It connects to the running CARLA server, looks up the ego actor by its `role_name`, and updates the spectator transform at a fixed rate.
+
+Run it in a separate terminal while CARLA and the Autoware bridge are running:
+
+```bash
+ros2 run autoware_carla_interface spectator_follow
+```
+
+Common options (all optional):
+
+| Flag         | Default       | Description                                                 |
+| ------------ | ------------- | ----------------------------------------------------------- |
+| `--host`     | `localhost`   | CARLA server host                                           |
+| `--port`     | `2000`        | CARLA server RPC port                                       |
+| `--role`     | `ego_vehicle` | `role_name` attribute of the ego actor to follow            |
+| `--distance` | `8.0`         | Meters behind the ego vehicle (use `0` for a top-down view) |
+| `--height`   | `4.0`         | Meters above the ego vehicle                                |
+| `--pitch`    | `-15.0`       | Camera pitch in degrees (negative looks down)               |
+| `--rate`     | `30.0`        | Update rate in Hz                                           |
+
+For a top-down view directly above the ego vehicle:
+
+```bash
+ros2 run autoware_carla_interface spectator_follow --distance 0 --height 30 --pitch -90
+```
+
+Press `Ctrl+C` to stop the script. It will keep retrying if the ego actor is not yet spawned, and re-acquire it if it is removed and respawned.
+
 ## Inner-workings / Algorithms
 
 The `InitializeInterface` class is key to setting up both the CARLA world and the ego vehicle. It fetches configuration parameters through the `autoware_carla_interface.launch.xml`.
@@ -114,21 +144,22 @@ Ego vehicle commands from Autoware are processed through the `autoware_raw_vehic
 
 All the key parameters can be configured in `autoware_carla_interface.launch.xml`.
 
-| Name                     | Type   | Default Value                                                                     | Description                                                                                                                                                                                                         |
-| ------------------------ | ------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `host`                   | string | "localhost"                                                                       | Hostname for the CARLA server                                                                                                                                                                                       |
-| `port`                   | int    | "2000"                                                                            | Port number for the CARLA server                                                                                                                                                                                    |
-| `timeout`                | int    | 20                                                                                | Timeout for the CARLA client                                                                                                                                                                                        |
-| `ego_vehicle_role_name`  | string | "ego_vehicle"                                                                     | Role name for the ego vehicle                                                                                                                                                                                       |
-| `vehicle_type`           | string | "vehicle.toyota.prius"                                                            | Blueprint ID of the vehicle to spawn. The Blueprint ID of vehicles can be found in [CARLA Blueprint ID](https://carla.readthedocs.io/en/latest/catalogue_vehicles/)                                                 |
-| `spawn_point`            | string | None                                                                              | Coordinates for spawning the ego vehicle (None is random). Format = [x, y, z, roll, pitch, yaw]                                                                                                                     |
-| `sync_mode`              | bool   | True                                                                              | Boolean flag to set synchronous mode in CARLA                                                                                                                                                                       |
-| `fixed_delta_seconds`    | double | 0.05                                                                              | Time step for the simulation (related to client FPS)                                                                                                                                                                |
-| `use_traffic_manager`    | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                        |
-| `max_real_delta_seconds` | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                 |
-| `sensor_kit_name`        | string | "carla_sensor_kit_description"                                                    | Name of the sensor kit package to use for sensor configuration. Should be the \*\_description package containing config/sensor_kit_calibration.yaml                                                                 |
-| `sensor_mapping_file`    | string | "$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"           | Path to sensor mapping YAML configuration file                                                                                                                                                                      |
-| `config_file`            | string | "$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml" | Control mapping file to be used in `autoware_raw_vehicle_cmd_converter`. Current control are calibrated based on `vehicle.toyota.prius` Blueprints ID in CARLA. Changing the vehicle type may need a recalibration. |
+| Name                              | Type   | Default Value                                                                     | Description                                                                                                                                                                                                         |
+| --------------------------------- | ------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `host`                            | string | "localhost"                                                                       | Hostname for the CARLA server                                                                                                                                                                                       |
+| `port`                            | int    | "2000"                                                                            | Port number for the CARLA server                                                                                                                                                                                    |
+| `timeout`                         | int    | 20                                                                                | Timeout for the CARLA client                                                                                                                                                                                        |
+| `ego_vehicle_role_name`           | string | "ego_vehicle"                                                                     | Role name for the ego vehicle                                                                                                                                                                                       |
+| `vehicle_type`                    | string | "vehicle.toyota.prius"                                                            | Blueprint ID of the vehicle to spawn. The Blueprint ID of vehicles can be found in [CARLA Blueprint ID](https://carla.readthedocs.io/en/latest/catalogue_vehicles/)                                                 |
+| `spawn_point`                     | string | None                                                                              | Coordinates for spawning the ego vehicle (None is random). Format = [x, y, z, roll, pitch, yaw]                                                                                                                     |
+| `sync_mode`                       | bool   | True                                                                              | Boolean flag to set synchronous mode in CARLA                                                                                                                                                                       |
+| `fixed_delta_seconds`             | double | 0.05                                                                              | Time step for the simulation (related to client FPS)                                                                                                                                                                |
+| `use_traffic_manager`             | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                        |
+| `max_real_delta_seconds`          | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                 |
+| `sensor_kit_name`                 | string | "carla_sensor_kit_description"                                                    | Name of the sensor kit package to use for sensor configuration. Should be the \*\_description package containing config/sensor_kit_calibration.yaml                                                                 |
+| `use_light_weight_sensor_mapping` | bool   | False                                                                             | If True, uses `sensor_mapping_light_weight.yaml` instead of the default `sensor_mapping.yaml` to reduce simulator load. See [Sensor Mapping (CARLA-specific)](#2-sensor-mapping-carla-specific) for details.        |
+| `sensor_mapping_file`             | string | "$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"           | Path to sensor mapping YAML configuration file. When `use_light_weight_sensor_mapping` is True, this defaults to `config/sensor_mapping_light_weight.yaml`.                                                         |
+| `config_file`                     | string | "$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml" | Control mapping file to be used in `autoware_raw_vehicle_cmd_converter`. Current control are calibrated based on `vehicle.toyota.prius` Blueprints ID in CARLA. Changing the vehicle type may need a recalibration. |
 
 ### Sensor Configuration
 
@@ -175,13 +206,74 @@ sensor_mappings:
       topic_info: /sensing/camera/CAM_FRONT/camera_info
       frequency_hz: 11
       qos_profile: reliable
+      image_encoding: bgra8
     parameters:
       image_size_x: 1600
       image_size_y: 900
       fov: 70.0
 ```
 
+`image_encoding` applies to cameras and accepts `bgra8` (default, what CARLA
+renders) or `mono8`. Publishing `mono8` converts once in the bridge and sends a
+quarter of the bytes, which is worth it when every consumer of that camera
+works on luminance alone, such as feature tracking or visual odometry. A
+1600x900 frame is 5,760,000 bytes as `bgra8` and 1,440,000 bytes as `mono8`.
+
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
+
+##### Sensor Noise
+
+The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
+is what reproducing a run wants. It also means anything consuming those sensors
+sees a measurement no hardware produces: a localisation or odometry stack scored
+against a perfect gyro reports an accuracy it will not reach on a vehicle.
+
+Set any of the CARLA noise attributes under the sensor's `parameters` to get a
+sensor that behaves like hardware:
+
+```yaml
+sensor_mappings:
+  imu_link:
+    carla_type: sensor.other.imu
+    id: imu
+    ros_config:
+      frame_id: tamagawa/imu_link
+      topic: /sensing/imu/imu_data
+      frequency_hz: 50
+    parameters:
+      noise_gyro_stddev_x: 0.001
+      noise_gyro_stddev_y: 0.001
+      noise_gyro_stddev_z: 0.001
+      noise_gyro_bias_x: 0.0005
+      noise_accel_stddev_x: 0.01
+```
+
+Recognised names are `noise_accel_stddev_{x,y,z}`, `noise_gyro_stddev_{x,y,z}`
+and `noise_gyro_bias_{x,y,z}` for the IMU, and `noise_{alt,lat,lon}_stddev` and
+`noise_{alt,lat,lon}_bias` for the GNSS. Anything left out stays at zero.
+
+##### Light-Weight Sensor Mapping
+
+For machines with limited GPU/CPU resources, an alternative `config/sensor_mapping_light_weight.yaml` is provided to reduce simulator load. Compared to the default mapping, it:
+
+- Uses a **single front camera** (`CAM_FRONT`) instead of the 6-camera 360-degree setup, with a wider FOV (120°) and lower resolution (1080x720) to roughly cover the area in front of the vehicle.
+- Lowers sensor frequencies (e.g., LiDAR/camera at 10 Hz instead of 11 Hz).
+- Keeps the same LiDAR, IMU, and GNSS configuration as the default mapping.
+
+When enabled via `use_light_weight_sensor_mapping:=True`, the launch file also skips the `image_transport` republish nodes for the disabled cameras and the `multi_camera_combiner` node automatically.
+
+Example usage:
+
+```bash
+ros2 launch autoware_launch e2e_simulator.launch.xml \
+    map_path:=$HOME/autoware_map/Town01 \
+    vehicle_model:=sample_vehicle \
+    sensor_model:=carla_sensor_kit \
+    simulator_type:=carla \
+    use_light_weight_sensor_mapping:=True
+```
+
+Note that with this configuration, features that depend on the surround cameras (such as the multi-camera RViz view) are unavailable.
 
 ### World Loading
 

@@ -119,9 +119,11 @@ private:
 
     // Publish CameraInfo
     {
-      scaled_info_->header = info_->header;
-      if (!OVERRIDE_FRAME_ID_.empty()) scaled_info_->header.frame_id = OVERRIDE_FRAME_ID_;
-      pub_info_->publish(scaled_info_.value());
+      auto scaled_info = scaled_info_.value_or(CameraInfo{});
+      const auto info = info_.value_or(CameraInfo{});
+      scaled_info.header = info.header;
+      if (!OVERRIDE_FRAME_ID_.empty()) scaled_info.header.frame_id = OVERRIDE_FRAME_ID_;
+      pub_info_->publish(scaled_info);
     }
 
     // Publish Image

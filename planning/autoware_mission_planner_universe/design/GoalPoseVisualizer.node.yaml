@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: GoalPoseVisualizer.node
+
+package:
+  name: autoware_mission_planner_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::mission_planner_universe::GoalPoseVisualizer
+  executable: goal_pose_visualizer
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: input/route
+
+publishers:
+  - name: goal_pose
+    message_type: geometry_msgs/msg/PoseStamped
+    remap_target: output/goal_pose
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: visualize
+    trigger_conditions:
+      - on_input: route
+    outcomes:
+      - to_output: goal_pose

@@ -38,11 +38,11 @@ void MultiCameraPreprocessor::cleanup_cuda_resources()
     d_resized_buffer_ = nullptr;
   }
   if (d_input_image_ptrs_) {
-    cudaFree(d_input_image_ptrs_);
+    cudaFree(reinterpret_cast<void *>(d_input_image_ptrs_));
     d_input_image_ptrs_ = nullptr;
   }
   if (d_resized_image_ptrs_) {
-    cudaFree(d_resized_image_ptrs_);
+    cudaFree(reinterpret_cast<void *>(d_resized_image_ptrs_));
     d_resized_image_ptrs_ = nullptr;
   }
 }
