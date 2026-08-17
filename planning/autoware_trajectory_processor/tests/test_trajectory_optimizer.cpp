@@ -14,13 +14,17 @@
 
 #include "autoware/trajectory_processor/utils.hpp"
 
-#include <gtest/gtest.h>
+#include <rclcpp/rclcpp.hpp>
 
-#include <cmath>
+#include <gtest/gtest.h>
 
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
-TEST(TrajectoryProcessorUtilsTest, ValidatesTrajectoryPoint)
+class TrajectoryOptimizerUtilsTest : public ::testing::Test
+{
+};
+
+TEST_F(TrajectoryOptimizerUtilsTest, ValidatePoint)
 {
   TrajectoryPoint valid_point;
   valid_point.longitudinal_velocity_mps = 1.0;
@@ -28,10 +32,13 @@ TEST(TrajectoryProcessorUtilsTest, ValidatesTrajectoryPoint)
   valid_point.pose.position.x = 1.0;
   valid_point.pose.position.y = 1.0;
   valid_point.pose.position.z = 1.0;
+  valid_point.pose.orientation.x = 0.0;
+  valid_point.pose.orientation.y = 0.0;
+  valid_point.pose.orientation.z = 0.0;
   valid_point.pose.orientation.w = 1.0;
-  EXPECT_TRUE(autoware::trajectory_processor::utils::validate_point(valid_point));
+  ASSERT_TRUE(autoware::trajectory_optimizer::utils::validate_point(valid_point));
 
   TrajectoryPoint invalid_point;
   invalid_point.pose.position.x = std::nan("");
-  EXPECT_FALSE(autoware::trajectory_processor::utils::validate_point(invalid_point));
+  ASSERT_FALSE(autoware::trajectory_optimizer::utils::validate_point(invalid_point));
 }

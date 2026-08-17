@@ -108,12 +108,13 @@ void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
 
   auto try_load_optimizer_plugin = [&](const std::string & plugin_path, const std::string & name)
     -> std::shared_ptr<OptimizerPluginInterface> {
-    trajectory_processor::TrajectoryProcessorParams processor_params;
-    processor_params.use_eb_smoother = true;
+    trajectory_optimizer_node_params::Params optimizer_params;
+    optimizer_params.use_eb_smoother = true;
     try {
       auto plugin = plugin_loader_->createSharedInstance(plugin_path);
       plugin->initialize(
-        plugin_path, name, this, time_keeper_, optimizer_context_, processor_params);
+        plugin_path, name, this, time_keeper_, optimizer_context_,
+        trajectory_processor::TrajectoryProcessorParams{optimizer_params});
       pub_debug_optimizer_module_trajectories_[plugin->get_name()] =
         this->create_publisher<Trajectory>(
           "~/debug/optimizer/" + plugin->get_name() + "/trajectory", 1);
@@ -127,7 +128,7 @@ void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
   };
 
   path_smoother_ = try_load_optimizer_plugin(
-    "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer", "eb_smoother");
+    "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer", "eb_smoother");
 
   // Set up velocity optimizer
   // NOTE(odashima):

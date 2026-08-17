@@ -227,10 +227,10 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
   {
-    perception_utils::IouBevNmsParams p;
-    p.search_distance_2d =
+    autoware::lidar_centerpoint::NMSParams p;
+    p.search_distance_2d_ =
       this->declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
-    p.iou_threshold = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
+    p.iou_threshold_ = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
     iou_bev_nms_.setParameters(p);
   }
 
