@@ -66,10 +66,10 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   const float circle_nms_dist_threshold =
     static_cast<float>(this->declare_parameter<double>("circle_nms_dist_threshold", descriptor));
   {  // IoU NMS
-    NMSParams p;
-    p.search_distance_2d_ =
+    perception_utils::IouBevNmsParams p;
+    p.search_distance_2d =
       this->declare_parameter<double>("iou_nms_search_distance_2d", descriptor);
-    p.iou_threshold_ = this->declare_parameter<double>("iou_nms_threshold", descriptor);
+    p.iou_threshold = this->declare_parameter<double>("iou_nms_threshold", descriptor);
     iou_bev_nms_.setParameters(p);
   }
   const auto yaw_norm_thresholds =
