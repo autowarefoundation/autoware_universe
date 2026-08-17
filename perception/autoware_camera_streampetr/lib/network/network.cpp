@@ -192,7 +192,6 @@ void StreamPetrNetwork::initializeMemoryAndProfiling()
   dur_backbone_ = std::make_unique<Duration>("backbone", profiler_);
   dur_ptshead_ = std::make_unique<Duration>("ptshead", profiler_);
   dur_pos_embed_ = std::make_unique<Duration>("pos_embed", profiler_);
-  dur_postprocess_ = std::make_unique<Duration>("postprocess", profiler_);
 
   postprocess_cuda_ = std::make_unique<PostprocessCuda>(
     PostProcessingConfig(
@@ -223,9 +222,7 @@ void StreamPetrNetwork::wipe_memory()
 }
 
 void StreamPetrNetwork::inference_detector(
-  const InferenceInputs & inputs,
-  std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects,
-  std::vector<float> & forward_time_ms)
+  const InferenceInputs & inputs, std::vector<float> & forward_time_ms)
 {
   if (!is_inference_initialized_) {
     initializePositionEmbedding(inputs);
@@ -235,14 +232,13 @@ void StreamPetrNetwork::inference_detector(
   executeBackbone(inputs);
   executePtsHead(inputs);
 
+  // The enqueues above are asynchronous: without this sync the caller's inference time would
+  // only measure the enqueueing, and the GPU wait would leak into whatever it times next.
   cudaStreamSynchronize(stream_);
-
-  executePostprocessing(output_objects);
 
   forward_time_ms.push_back(dur_backbone_->Elapsed());
   forward_time_ms.push_back(dur_ptshead_->Elapsed());
   forward_time_ms.push_back(dur_pos_embed_->Elapsed());
-  forward_time_ms.push_back(dur_postprocess_->Elapsed());
 }
 
 void StreamPetrNetwork::initializePositionEmbedding(const InferenceInputs & inputs)
@@ -303,11 +299,10 @@ void StreamPetrNetwork::executePtsHead(const InferenceInputs & inputs)
   dur_ptshead_->MarkEnd(stream_);
 }
 
-void StreamPetrNetwork::executePostprocessing(
+void StreamPetrNetwork::postprocess(
   std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects)
 {
   std::vector<Box3D> det_boxes3d;
-  dur_postprocess_->MarkBegin(stream_);
   postprocess_cuda_->generateDetectedBoxes3D_launch(
     static_cast<const float *>(pts_head_->bindings["all_cls_scores"]->ptr),
     static_cast<const float *>(pts_head_->bindings["all_bbox_preds"]->ptr), det_boxes3d, stream_);
@@ -323,7 +318,6 @@ void StreamPetrNetwork::executePostprocessing(
   } else {
     output_objects = std::move(raw_objects);
   }
-  dur_postprocess_->MarkEnd(stream_);
 }
 
 StreamPetrNetwork::~StreamPetrNetwork()

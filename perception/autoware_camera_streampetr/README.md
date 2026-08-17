@@ -69,17 +69,17 @@ No                  Yes                                                         
 
 ### Output
 
-| Name                            | Type                                                | Description                                                               | RTX 3090 Latency (ms) |
-| ------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------- | --------------------- |
-| `~/output/objects`              | `autoware_perception_msgs::msg::DetectedObjects`    | Detected objects.                                                         | —                     |
-| `latency/preprocess`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocessing time per image(ms).                                         | 3.25                  |
-| `latency/total`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms): preprocessing + inference + postprocessing.   | 26.04                 |
-| `latency/inference`             | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total inference time (ms).                                                | 22.13                 |
-| `latency/inference/backbone`    | `autoware_internal_debug_msgs::msg::Float64Stamped` | Backbone inference time (ms).                                             | 16.21                 |
-| `latency/inference/ptshead`     | `autoware_internal_debug_msgs::msg::Float64Stamped` | Points head inference time (ms).                                          | 5.45                  |
-| `latency/inference/pos_embed`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Position embedding inference time (ms).                                   | 0.40                  |
-| `latency/inference/postprocess` | `autoware_internal_debug_msgs::msg::Float64Stamped` | nms + filtering + converting network predictions to autoware format (ms). | 0.40                  |
-| `latency/cycle_time_ms`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | Time between two consecutive predictions (ms).                            | 110.65                |
+| Name                          | Type                                                | Description                                                                                                    | RTX 3090 Latency (ms) |
+| ----------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `~/output/objects`            | `autoware_perception_msgs::msg::DetectedObjects`    | Detected objects.                                                                                              | —                     |
+| `latency/preprocess`          | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocessing time per image(ms).                                                                              | 3.25                  |
+| `latency/total`               | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms): preprocessing + inference + postprocessing.                                        | 26.04                 |
+| `latency/inference`           | `autoware_internal_debug_msgs::msg::Float64Stamped` | Model forward pass (ms), stream-synchronized before returning.                                                 | 22.13                 |
+| `latency/inference/backbone`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Backbone inference time (ms).                                                                                  | 16.21                 |
+| `latency/inference/ptshead`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Points head inference time (ms).                                                                               | 5.45                  |
+| `latency/inference/pos_embed` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Position embedding inference time (ms).                                                                        | 0.40                  |
+| `latency/postprocess`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | bbox decode + nms + converting network predictions to autoware format (ms); disjoint from `latency/inference`. | 0.40                  |
+| `latency/cycle_time_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Time between two consecutive predictions (ms).                                                                 | 110.65                |
 
 All `latency/*` topics are published only when `debug_mode` is enabled.
 
@@ -133,11 +133,14 @@ that is not densely packed, and those frames never reach the model.
 longer than `diagnostics.max_acceptable_consecutive_delay_ms`. It reports "waiting" until the
 first inference completes, and carries a per-stage breakdown of the thresholded cycle —
 `preprocess_time_ms`, `inference_time_ms` and `postprocess_time_ms`, mirroring the
-`latency/preprocess`, `latency/inference` and `latency/inference/postprocess` debug topics — so
-an over-budget `processing_time_ms` can be localized without enabling `debug_mode`. The stages
-do not add up to the total: `postprocess_time_ms` is measured inside the `inference_time_ms`
-window, and `preprocess_time_ms` is the cost of a single image rather than the sum over the
-cameras — compare them against their own history instead.
+`latency/preprocess`, `latency/inference` and `latency/postprocess` debug topics — so an
+over-budget `processing_time_ms` can be localized without enabling `debug_mode`.
+
+`inference_time_ms` (the model forward pass) and `postprocess_time_ms` (bbox decode and NMS)
+are disjoint stages. `preprocess_time_ms` however is the cost of a single image rather than the
+sum over the cameras, and the total is started from the anchor camera's callback, so
+preprocessing done in the other cameras' callbacks falls outside it — the stages do not add up
+to `processing_time_ms`; compare `preprocess_time_ms` against its own history instead.
 
 The newest published detection is reported under both clocks, because `processing_time_ms` only
 covers the work done inside the node:

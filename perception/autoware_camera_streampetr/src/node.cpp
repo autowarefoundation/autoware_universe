@@ -366,9 +366,10 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     return;
   }
 
-  const auto [output_objects, forward_time_ms, inference_time_ms] = inference_result.value();
-  publish_detection_results(stamp, output_objects);
-  publish_debug_metrics(forward_time_ms, inference_time_ms);
+  const auto & result = inference_result.value();
+  publish_detection_results(stamp, result.objects);
+  publish_debug_metrics(
+    result.forward_time_ms, result.inference_time_ms, result.postprocess_time_ms);
 }
 
 bool StreamPetrNode::validate_camera_sync()
@@ -433,25 +434,25 @@ void StreamPetrNode::cleanup_on_failure()
   }
 }
 
-std::optional<std::tuple<
-  std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
-StreamPetrNode::perform_inference()
+std::optional<StreamPetrNode::InferenceResult> StreamPetrNode::perform_inference()
 {
+  InferenceResult result;
+
   stop_watch_.tic("latency/inference");
-
-  std::vector<float> forward_time_ms;
-  std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
-
   InferenceInputs inputs = create_inference_inputs();
-  network_->inference_detector(inputs, output_objects, forward_time_ms);
+  network_->inference_detector(inputs, result.forward_time_ms);
+  result.inference_time_ms = stop_watch_.toc("latency/inference", true);
 
+  // The decode only reads the head's output bindings, so the cameras can resume before it.
   if (multithreading_) {
     data_store_->unfreeze_updates();
   }
 
-  const double inference_time_ms = stop_watch_.toc("latency/inference", true);
+  stop_watch_.tic("latency/postprocess");
+  network_->postprocess(result.objects);
+  result.postprocess_time_ms = stop_watch_.toc("latency/postprocess", true);
 
-  return std::make_tuple(output_objects, forward_time_ms, inference_time_ms);
+  return result;
 }
 
 InferenceInputs StreamPetrNode::create_inference_inputs()
@@ -483,7 +484,7 @@ void StreamPetrNode::publish_detection_results(
 }
 
 void StreamPetrNode::publish_debug_metrics(
-  const std::vector<float> & forward_time_ms, double inference_time_ms)
+  const std::vector<float> & forward_time_ms, double inference_time_ms, double postprocess_time_ms)
 {
   // Latched before the debug_mode_ gate below: the processing-time watchdog is always active,
   // and these localize an over-budget total without enabling debug_mode.
@@ -491,7 +492,7 @@ void StreamPetrNode::publish_debug_metrics(
   last_processing_time_ms_ = processing_time_ms;
   last_preprocess_time_ms_ = data_store_->get_preprocess_time_ms();
   last_inference_time_ms_ = inference_time_ms;
-  last_postprocess_time_ms_ = forward_time_ms[3];
+  last_postprocess_time_ms_ = postprocess_time_ms;
 
   if (!debug_publisher_ptr_) {
     return;
@@ -510,7 +511,7 @@ void StreamPetrNode::publish_debug_metrics(
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "latency/inference/pos_embed", forward_time_ms[2]);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/inference/postprocess", forward_time_ms[3]);
+    "latency/postprocess", postprocess_time_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "latency/cycle_time_ms", stop_watch_.toc("latency/cycle_time_ms", true));
   stop_watch_.tic("latency/cycle_time_ms");
