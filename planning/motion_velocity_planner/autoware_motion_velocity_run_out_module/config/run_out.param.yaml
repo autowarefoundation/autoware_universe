@@ -44,7 +44,7 @@
         # for each target labels we can specify the following parameters
         DEFAULT:
           ignore:  # options to ignore some objects
-            if_stopped: false # if true, object with a velocity bellow the threshold are ignored
+            if_stopped: false # if true, object with a velocity less than the threshold are ignored
             stopped_velocity_threshold: 0.25  # [m/s]
             if_on_ego_trajectory: true  # if true, object located on the ego trajectory footprint are ignored
             if_behind_ego: true  # if true, objects located behind the ego vehicles are ignored
