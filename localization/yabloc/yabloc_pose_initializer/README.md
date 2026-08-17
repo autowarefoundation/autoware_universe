@@ -4,16 +4,13 @@ This package contains a node related to initial pose estimation.
 
 - [camera_pose_initializer](#camera_pose_initializer)
 
-This package requires the pre-trained semantic segmentation model for runtime. This model is usually downloaded by `ansible` during env preparation phase of the [installation](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/).
+This package requires the pre-trained semantic segmentation model for runtime. This model is usually downloaded by the [ansible artifacts role](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts) during the installation.
 It is also possible to download it manually. Even if the model is not downloaded, initialization will still complete, but the accuracy may be compromised.
 
-To download and extract the model manually:
+The model is hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/yabloc_pose_initializer/tree/v1.0). To download it manually with the [hf CLI](https://huggingface.co/docs/huggingface_hub/guides/cli):
 
 ```bash
-$ mkdir -p ~/autoware_data/ml_models/yabloc_pose_initializer/
-$ wget -P ~/autoware_data/ml_models/yabloc_pose_initializer/ \
-       https://autoware-files.s3.us-west-2.amazonaws.com/models/yabloc/136_road-segmentation-adas-0001/resources.tar.gz
-$ tar xzf ~/autoware_data/ml_models/yabloc_pose_initializer/resources.tar.gz -C ~/autoware_data/ml_models/yabloc_pose_initializer/
+hf download AutowareFoundation/yabloc_pose_initializer --revision v1.0 --local-dir ~/autoware_data/ml_models/yabloc_pose_initializer
 ```
 
 ## Note

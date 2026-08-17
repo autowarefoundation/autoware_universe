@@ -99,7 +99,7 @@ Parameters to_proximity_checker_parameters(const SurroundObstacleStopParams & pa
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
-namespace utils = autoware::trajectory_modifier::utils;
+namespace utils = autoware::trajectory_processor::utils;
 
 void SurroundObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
 {
