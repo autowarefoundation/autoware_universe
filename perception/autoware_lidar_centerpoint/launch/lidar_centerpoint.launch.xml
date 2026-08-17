@@ -4,11 +4,7 @@
   <arg name="output/objects" default="objects"/>
   <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
   <arg name="node_name" default="lidar_centerpoint" description="node name for autoware_lidar_centerpoint_node"/>
-  <arg name="model_name" default="centerpoint_tiny" description="options: `centerpoint`, `centerpoint_tiny` or `centerpoint_short_range`"/>
-  <arg name="model_path" default="$(var data_path)/$(var node_name)"/>
-  <arg name="model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config/$(var model_name).param.yaml"/>
-  <arg name="ml_package_param_path" default="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>
-  <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
+  <arg name="model_path" default="$(var data_path)/lidar_centerpoint/tiny" description="directory containing the model artifacts"/>
   <arg name="common_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config/centerpoint_common.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
 
@@ -21,9 +17,8 @@
         <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
         <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
         <remap from="~/output/objects" to="$(var output/objects)"/>
-        <param from="$(var model_param_path)" allow_substs="true"/>
-        <param from="$(var ml_package_param_path)" allow_substs="true"/>
-        <param from="$(var class_remapper_param_path)"/>
+        <param name="model_path" value="$(var model_path)"/>
+        <param from="$(var model_path)/ml_package.param.yaml" allow_substs="true"/>
         <param from="$(var common_param_path)"/>
 
         <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
@@ -37,9 +32,8 @@
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
       <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>
-      <param from="$(var model_param_path)" allow_substs="true"/>
-      <param from="$(var ml_package_param_path)" allow_substs="true"/>
-      <param from="$(var class_remapper_param_path)"/>
+      <param name="model_path" value="$(var model_path)"/>
+      <param from="$(var model_path)/ml_package.param.yaml" allow_substs="true"/>
       <param from="$(var common_param_path)"/>
 
       <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
