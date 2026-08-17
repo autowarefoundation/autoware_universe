@@ -19,7 +19,7 @@
 
 namespace autoware::camera_streampetr
 {
-cudaError_t resizeAndExtractRoi_launch(
+cudaError_t resize_and_extract_roi_launch(
   const std::uint8_t * input_img, float * output_img,
   int camera_offset,                // Camera offset in the input image
   int H, int W,                     // Original image dimensions

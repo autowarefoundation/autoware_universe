@@ -46,20 +46,20 @@ struct EgoMaskParams
   std::vector<std::optional<EgoMaskRoiConfig>> roi_mask_configs;
 };
 
-std::vector<std::optional<EgoMaskRoiConfig>> loadEgoMaskRoiConfigs(
+std::vector<std::optional<EgoMaskRoiConfig>> load_ego_mask_roi_configs(
   const EgoMaskParams & params, std::size_t rois_number);
 
-std::vector<EgoMaskPolygon> parsePolygonsYamlFile(const std::string & path);
+std::vector<EgoMaskPolygon> parse_polygons_yaml_file(const std::string & path);
 
-std::vector<EgoMaskPolygon> parsePolygonsYamlText(const std::string & yaml_text);
+std::vector<EgoMaskPolygon> parse_polygons_yaml_text(const std::string & yaml_text);
 
 /** Build UINT8 mask (255 inside polygons, 0 elsewhere) at full image resolution. */
-std::vector<std::uint8_t> buildEgoMaskRaster(
+std::vector<std::uint8_t> build_ego_mask_raster(
   const std::vector<EgoMaskPolygon> & polygons, int width, int height);
 
 // The fill is written channel by channel, so it must already be in the same order as the image
 // buffer; see fill_in_source_order() in camera_data_store.cpp.
-cudaError_t applyEgoMask_launch(
+cudaError_t apply_ego_mask_launch(
   std::uint8_t * image, const std::uint8_t * mask, int height, int width, std::uint8_t fill_c0,
   std::uint8_t fill_c1, std::uint8_t fill_c2, cudaStream_t stream);
 

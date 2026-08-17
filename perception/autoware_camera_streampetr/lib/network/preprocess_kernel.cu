@@ -47,7 +47,7 @@ namespace autoware::camera_streampetr
 // The model consumes RGB, so the output planes and `mean`/`std` are in RGB order. A BGR source is
 // handled by `swap_rb`, which exchanges channels 0 and 2 while writing the planar output -- free,
 // because that write is scattered per channel anyway.
-__global__ void resizeAndExtractRoi_kernel(
+__global__ void resize_and_extract_roi_kernel(
   const std::uint8_t * __restrict__ input_img, float * __restrict__ output_img,
   int camera_offset,                 // Offset in output buffer (for multi-camera batching)
   int in_h, int in_w,                // Input dimensions
@@ -159,7 +159,7 @@ __global__ void resizeAndExtractRoi_kernel(
   output_img[camera_offset + (dst_c2 * area + out_idx)] = (sum_c2 - mean[dst_c2]) / std[dst_c2];
 }
 
-cudaError_t resizeAndExtractRoi_launch(
+cudaError_t resize_and_extract_roi_launch(
   const std::uint8_t * input_img, float * output_img,
   int camera_offset,         // Camera offset in the input image
   int H, int W,              // Original image dimensions
@@ -174,7 +174,7 @@ cudaError_t resizeAndExtractRoi_launch(
   dim3 blocks(divup(W3, threads.x), divup(H3, threads.y));
 
   // Launch the kernel
-  resizeAndExtractRoi_kernel<<<blocks, threads, 0, stream>>>(
+  resize_and_extract_roi_kernel<<<blocks, threads, 0, stream>>>(
     input_img, output_img, camera_offset, H, W, H2, W2, H3, W3, y_start, x_start, channel_wise_mean,
     channel_wise_std, swap_rb);
 
