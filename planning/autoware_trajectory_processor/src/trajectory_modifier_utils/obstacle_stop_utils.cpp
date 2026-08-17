@@ -17,6 +17,7 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
@@ -309,21 +310,32 @@ geometry_msgs::msg::Pose get_predicted_obj_pose_at_time(
     return extrapolate_object_pose_from_kinematics(object, t);
   }
 
-  const auto & pred_path = object.kinematics.predicted_paths.front();
-  if (pred_path.path.size() < 2) {
+  const auto predicted_path = [&]() {
+    std::optional<autoware_perception_msgs::msg::PredictedPath> p;
+    for (const auto & path : object.kinematics.predicted_paths) {
+      if (path.path.empty()) continue;
+      if (!p || path.confidence > p->confidence) p = path;
+    }
+    return p;
+  }();
+
+  if (!predicted_path) {
     return extrapolate_object_pose_from_kinematics(object, t);
   }
 
-  const auto dt = std::max(rclcpp::Duration(pred_path.time_step).seconds(), 1e-3);
-  const double max_time = dt * static_cast<double>(pred_path.path.size() - 1);
-  const double clamped_t = std::clamp(t, 0.0, max_time);
+  const double dt = std::max(rclcpp::Duration(predicted_path->time_step).seconds(), 1e-3);
+  const double path_horizon = dt * static_cast<double>(predicted_path->path.size() - 1);
+  if (t >= path_horizon) {
+    return predicted_path->path.back();
+  }
 
-  const auto index = static_cast<size_t>(std::floor(clamped_t / dt));
-  const size_t next_index = std::min(index + 1, pred_path.path.size() - 1);
-  const double ratio = (clamped_t - static_cast<double>(index) * dt) / dt;
+  auto interpolated_pose =
+    autoware::object_recognition_utils::calcInterpolatedPose(*predicted_path, t);
+  if (!interpolated_pose) {
+    return extrapolate_object_pose_from_kinematics(object, t);
+  }
 
-  return autoware_utils_geometry::calc_interpolated_pose(
-    pred_path.path.at(index), pred_path.path.at(next_index), ratio, false);
+  return interpolated_pose.value();
 }
 
 ObjectState get_object_state_at_time(
