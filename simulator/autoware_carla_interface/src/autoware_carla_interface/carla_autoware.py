@@ -135,9 +135,9 @@ class InitializeInterface(object):
                     y=spawn_point.location.y + offset_y,
                     z=1000.0,
                 )
-                labelled_point = self.world.ground_projection(search_origin, 10000.0)
-                if labelled_point is not None:
-                    projected_heights.append(labelled_point.location.z)
+                labeled_point = self.world.ground_projection(search_origin, 10000.0)
+                if labeled_point is not None:
+                    projected_heights.append(labeled_point.location.z)
         except RuntimeError as exc:
             print(f"WARNING: Could not ground-snap CARLA spawn point: {exc}")
             return spawn_point

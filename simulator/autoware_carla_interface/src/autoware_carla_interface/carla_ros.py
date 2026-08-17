@@ -478,9 +478,9 @@ class carla_ros2_interface(object):
                     y=carla_pose_transform.location.y + offset_y,
                     z=1000.0,
                 )
-                labelled_point = world.ground_projection(search_origin, 10000.0)
-                if labelled_point is not None:
-                    projected_heights.append(labelled_point.location.z)
+                labeled_point = world.ground_projection(search_origin, 10000.0)
+                if labeled_point is not None:
+                    projected_heights.append(labeled_point.location.z)
         except RuntimeError as exc:
             self.logger.warning(f"Could not ground-snap initial pose: {exc}")
             return None
