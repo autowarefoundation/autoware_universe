@@ -40,8 +40,15 @@ namespace
 {
 
 // Fixed-point formatting for /diagnostics values. DiagnosticStatusWrapper's double overload
-// prints large values in scientific notation (1.78461e+09), which is unreadable for long ages;
-// format them as strings instead, like the concatenate node does.
+// prints large values in scientific notation (1.78461e+09), which is unreadable for epoch
+// timestamps and long ages; format them as strings instead, like the concatenate node does.
+std::string format_timestamp(const double seconds)
+{
+  char buffer[32];
+  std::snprintf(buffer, sizeof(buffer), "%.9f", seconds);
+  return std::string(buffer);
+}
+
 std::string format_milliseconds(const double milliseconds)
 {
   char buffer[32];
@@ -291,16 +298,17 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     this, rois_number_, roi_height, roi_width, anchor_camera_id_,
     declare_parameter<bool>("is_distorted_image"), ego_mask_params);
 
+  stop_watch_.tic("latency/cycle_time_ms");
   if (debug_mode_) {
-    using autoware_utils::DebugPublisher;
-    using autoware_utils::StopWatch;
-    stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
-    debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
-    stop_watch_ptr_->tic("latency/cycle_time_ms");
+    debug_publisher_ptr_ = std::make_unique<autoware_utils::DebugPublisher>(this, this->get_name());
   }
 
-  // Diagnostics, always on: the only place where a missing, stalled or rejected camera becomes
-  // visible outside the node's log.
+  // Diagnostics, always on: the only place where a missing camera, a rejected encoding or a
+  // stalled pipeline becomes visible outside the node's log.
+  max_allowed_processing_time_ms_ =
+    declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
+  max_acceptable_consecutive_delay_ms_ =
+    declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
   max_image_age_ms_ = declare_parameter<double>("diagnostics.max_image_age_ms");
   const double validation_callback_interval_ms =
     declare_parameter<double>("diagnostics.validation_callback_interval_ms");
@@ -309,6 +317,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // their statuses have to stay distinguishable by hardware_id.
   diagnostic_updater_.setHardwareID(this->get_name());
   diagnostic_updater_.add("camera_status", this, &StreamPetrNode::diagnose_camera_status);
+  diagnostic_updater_.add(
+    "processing_time_status", this, &StreamPetrNode::diagnose_processing_time);
   diagnostic_updater_.setPeriod(validation_callback_interval_ms / 1000.0);
 }
 
@@ -321,8 +331,8 @@ void StreamPetrNode::camera_info_callback(
 void StreamPetrNode::camera_image_callback(
   Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
 {
-  if (stop_watch_ptr_ && anchor_camera_id_ == camera_id) {
-    stop_watch_ptr_->tic("latency/total");
+  if (anchor_camera_id_ == camera_id) {
+    stop_watch_.tic("latency/total");
   }
 
   const auto objects_sub_count =
@@ -427,9 +437,7 @@ std::optional<std::tuple<
   std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
 StreamPetrNode::perform_inference()
 {
-  if (stop_watch_ptr_) {
-    stop_watch_ptr_->tic("latency/inference");
-  }
+  stop_watch_.tic("latency/inference");
 
   std::vector<float> forward_time_ms;
   std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
@@ -441,10 +449,7 @@ StreamPetrNode::perform_inference()
     data_store_->unfreeze_updates();
   }
 
-  double inference_time_ms = -1.0;
-  if (stop_watch_ptr_) {
-    inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
-  }
+  const double inference_time_ms = stop_watch_.toc("latency/inference", true);
 
   return std::make_tuple(output_objects, forward_time_ms, inference_time_ms);
 }
@@ -471,17 +476,29 @@ void StreamPetrNode::publish_detection_results(
   output_msg.header.frame_id = "base_link";
   output_msg.header.stamp = stamp;
   pub_objects_->publish(output_msg);
+  // Latched as a pair so the diagnostics can relate the two clocks: stamp is the sensing instant
+  // these detections were computed for, the node clock is when they left the node.
+  last_output_frame_stamp_ = stamp;
+  last_publish_stamp_ = this->get_clock()->now();
 }
 
 void StreamPetrNode::publish_debug_metrics(
   const std::vector<float> & forward_time_ms, double inference_time_ms)
 {
-  if (!debug_publisher_ptr_ || !stop_watch_ptr_) {
+  // Latched before the debug_mode_ gate below: the processing-time watchdog is always active,
+  // and these localize an over-budget total without enabling debug_mode.
+  const double processing_time_ms = stop_watch_.toc("latency/total", true);
+  last_processing_time_ms_ = processing_time_ms;
+  last_preprocess_time_ms_ = data_store_->get_preprocess_time_ms();
+  last_inference_time_ms_ = inference_time_ms;
+  last_postprocess_time_ms_ = forward_time_ms[3];
+
+  if (!debug_publisher_ptr_) {
     return;
   }
 
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/total", stop_watch_ptr_->toc("latency/total", true));
+    "latency/total", processing_time_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "latency/preprocess", data_store_->get_preprocess_time_ms());
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -495,8 +512,8 @@ void StreamPetrNode::publish_debug_metrics(
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "latency/inference/postprocess", forward_time_ms[3]);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/cycle_time_ms", stop_watch_ptr_->toc("latency/cycle_time_ms", true));
-  stop_watch_ptr_->tic("latency/cycle_time_ms");
+    "latency/cycle_time_ms", stop_watch_.toc("latency/cycle_time_ms", true));
+  stop_watch_.tic("latency/cycle_time_ms");
 }
 
 void StreamPetrNode::diagnose_camera_status(diagnostic_updater::DiagnosticStatusWrapper & stat)
@@ -606,6 +623,114 @@ void StreamPetrNode::diagnose_camera_status(diagnostic_updater::DiagnosticStatus
 
   const std::string summary = message.str();
   stat.summary(level, summary.empty() ? "OK" : summary);
+}
+
+void StreamPetrNode::add_no_inference_diagnostics(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message)
+{
+  stat.add("is_processing_time_ms_in_expected_range", true);
+  stat.add("processing_time_ms", "n/a");
+  stat.add("preprocess_time_ms", "n/a");
+  stat.add("inference_time_ms", "n/a");
+  stat.add("postprocess_time_ms", "n/a");
+  stat.add("is_consecutive_processing_delay_in_range", true);
+  stat.add("consecutive_processing_delay_ms", "n/a");
+  message << "Waiting for the node to perform inference.";
+}
+
+diagnostic_msgs::msg::DiagnosticStatus::_level_type StreamPetrNode::check_processing_time_status(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+  const rclcpp::Time & timestamp_now)
+{
+  const double processing_time_ms = last_processing_time_ms_.value();
+
+  if (processing_time_ms > max_allowed_processing_time_ms_) {
+    stat.add("is_processing_time_ms_in_expected_range", false);
+
+    message << "Processing time exceeds the acceptable limit of " << max_allowed_processing_time_ms_
+            << " ms by " << (processing_time_ms - max_allowed_processing_time_ms_) << " ms.";
+
+    if (!last_in_time_processing_timestamp_) {
+      last_in_time_processing_timestamp_ = timestamp_now;
+    }
+
+    return diagnostic_msgs::msg::DiagnosticStatus::WARN;
+  }
+
+  stat.add("is_processing_time_ms_in_expected_range", true);
+  last_in_time_processing_timestamp_ = timestamp_now;
+  return diagnostic_msgs::msg::DiagnosticStatus::OK;
+}
+
+diagnostic_msgs::msg::DiagnosticStatus::_level_type StreamPetrNode::check_consecutive_delays(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+  const rclcpp::Time & timestamp_now,
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level)
+{
+  // check_processing_time_status() ran first and set the timestamp on both of its paths.
+  const double delayed_state_duration_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+      .count();
+
+  if (delayed_state_duration_ms > max_acceptable_consecutive_delay_ms_) {
+    stat.add("is_consecutive_processing_delay_in_range", false);
+    stat.add("consecutive_processing_delay_ms", format_milliseconds(delayed_state_duration_ms));
+    message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
+    return diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+  }
+
+  stat.add("is_consecutive_processing_delay_in_range", true);
+  stat.add("consecutive_processing_delay_ms", format_milliseconds(delayed_state_duration_ms));
+  return current_level;
+}
+
+// Timer driven, like the camera status above: a node that has stopped inferring altogether still
+// has to report, and that is precisely when step() is no longer running.
+void StreamPetrNode::diagnose_processing_time(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time timestamp_now = this->get_clock()->now();
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
+    diagnostic_msgs::msg::DiagnosticStatus::OK;
+  // Left empty rather than seeded with "OK": a stringstream constructed from a string starts its
+  // put position at 0, so the first << would partially overwrite the seed instead of replacing it.
+  std::stringstream message;
+
+  if (!last_processing_time_ms_) {
+    add_no_inference_diagnostics(stat, message);
+  } else {
+    diag_level = check_processing_time_status(stat, message, timestamp_now);
+    stat.add("processing_time_ms", format_milliseconds(last_processing_time_ms_.value()));
+    // Per-stage breakdown of the same cycle. The watchdog thresholds only the total; these
+    // localize an over-budget cycle to preprocessing, model inference or postprocessing.
+    stat.add("preprocess_time_ms", format_milliseconds(last_preprocess_time_ms_));
+    stat.add("inference_time_ms", format_milliseconds(last_inference_time_ms_));
+    stat.add("postprocess_time_ms", format_milliseconds(last_postprocess_time_ms_));
+    diag_level = check_consecutive_delays(stat, message, timestamp_now, diag_level);
+  }
+  // The newest published detection under both clocks: frame stamp vs publish instant exposes the
+  // end-to-end latency ahead of the node; the age of the publish instant answers "how long since
+  // the node last produced objects". Clamped at zero, like the camera ages: a rosbag loop rewinds
+  // the clock behind the latched stamps.
+  if (last_output_frame_stamp_ && last_publish_stamp_) {
+    const double output_latency_ms = std::max(
+      0.0, (last_publish_stamp_->seconds() - last_output_frame_stamp_->seconds()) * 1000.0);
+    const double time_since_last_publish_ms =
+      std::max(0.0, (timestamp_now.seconds() - last_publish_stamp_->seconds()) * 1000.0);
+    stat.add("last_frame_timestamp", format_timestamp(last_output_frame_stamp_->seconds()));
+    stat.add("last_published_timestamp", format_timestamp(last_publish_stamp_->seconds()));
+    stat.add("output_latency_ms", format_milliseconds(output_latency_ms));
+    stat.add("time_since_last_publish_ms", format_milliseconds(time_since_last_publish_ms));
+  } else {
+    stat.add("last_frame_timestamp", "never");
+    stat.add("last_published_timestamp", "never");
+    stat.add("output_latency_ms", "n/a");
+    stat.add("time_since_last_publish_ms", "n/a");
+  }
+
+  const std::string summary = message.str();
+  stat.summary(diag_level, summary.empty() ? "OK" : summary);
 }
 
 std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector()

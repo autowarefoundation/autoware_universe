@@ -93,6 +93,19 @@ private:
   // would report it.
   void diagnose_camera_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
+  // Processing-time watchdog, mirroring autoware_bevfusion: WARN once a cycle exceeds the
+  // configured budget, escalating to ERROR if it stays over budget continuously.
+  void diagnose_processing_time(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  void add_no_inference_diagnostics(
+    diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message);
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type check_processing_time_status(
+    diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+    const rclcpp::Time & timestamp_now);
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type check_consecutive_delays(
+    diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+    const rclcpp::Time & timestamp_now,
+    diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level);
+
   std::optional<std::pair<std::vector<float>, std::vector<float>>> get_ego_pose_vector(
     const rclcpp::Time & stamp);
   std::optional<std::vector<float>> get_camera_extrinsics_vector();
@@ -144,16 +157,32 @@ private:
   float current_prediction_timestamp_;
 
   // debugger
-  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
+  // Always on: the processing-time watchdog reads the per-cycle total even when the debug
+  // topics are disabled. Only the publisher stays gated behind debug_mode_.
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
   const bool debug_mode_;
 
-  // diagnostics: timer driven, so the camera status keeps reporting when the cameras stop --
-  // precisely the condition it exists for.
+  // diagnostics: one updater, two tasks (camera_status and processing_time_status), so both
+  // statuses are timer driven and always arrive in the same /diagnostics message.
   diagnostic_updater::Updater diagnostic_updater_{this};
+  double max_allowed_processing_time_ms_;
+  double max_acceptable_consecutive_delay_ms_;
   // A camera whose newest frame is older than this (node clock minus header stamp) is reported
   // as stalled at ERROR level; cameras that have not delivered a first frame yet stay a WARN.
   double max_image_age_ms_;
+  // Unset until the first successful inference, which the watchdog reports as "waiting" rather
+  // than as a violation.
+  std::optional<double> last_processing_time_ms_;
+  // Per-stage breakdown of the cycle behind last_processing_time_ms_, latched together with it.
+  double last_preprocess_time_ms_{0.0};
+  double last_inference_time_ms_{0.0};
+  double last_postprocess_time_ms_{0.0};
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
+  // The most recent published detection under both clocks: the header stamp it was computed for
+  // (the sensing instant) and the node-clock instant it left the node.
+  std::optional<rclcpp::Time> last_output_frame_stamp_;
+  std::optional<rclcpp::Time> last_publish_stamp_;
 };
 
 }  // namespace autoware::camera_streampetr

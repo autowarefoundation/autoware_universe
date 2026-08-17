@@ -85,9 +85,17 @@ All `latency/*` topics are published only when `debug_mode` is enabled.
 
 ### Diagnostics
 
-Published on `/diagnostics` regardless of `debug_mode`, from a timer-driven updater (period
-`diagnostics.validation_callback_interval_ms`, hardware_id = the node name), so it keeps
-reporting when the cameras stop — precisely the condition it exists for.
+Published on `/diagnostics` regardless of `debug_mode`. Both statuses are tasks of one
+timer-driven updater (period `diagnostics.validation_callback_interval_ms`, hardware_id = the
+node name), so they keep reporting when the cameras or the inference stop — precisely the
+conditions they exist for — and always arrive in the same `/diagnostics` message. One status per
+failure mode, so a diagnostic graph can route input trouble and processing-time trouble to
+different paths.
+
+| Name                     | Description                                           |
+| ------------------------ | ----------------------------------------------------- |
+| `camera_status`          | Per-camera input availability, staleness and validity |
+| `processing_time_status` | Per-cycle processing-time watchdog                    |
 
 `camera_status` reports three key/values per camera — the resolved input `cameraN/topic` (the
 model input index and the physical camera differ on every deployment), `cameraN/image_age_ms`
@@ -119,6 +127,32 @@ The summary level is the worst camera state; additionally an inter-camera stamp 
 `rejected` and `stale` are `ERROR` rather than `WARN` because neither recovers until the
 publisher is fixed: a rejected camera publishes an encoding other than `rgb8`/`bgr8`, or a buffer
 that is not densely packed, and those frames never reach the model.
+
+`processing_time_status` reports `WARN` once a cycle exceeds
+`diagnostics.max_allowed_processing_time_ms`, escalating to `ERROR` if it stays over budget for
+longer than `diagnostics.max_acceptable_consecutive_delay_ms`. It reports "waiting" until the
+first inference completes, and carries a per-stage breakdown of the thresholded cycle —
+`preprocess_time_ms`, `inference_time_ms` and `postprocess_time_ms`, mirroring the
+`latency/preprocess`, `latency/inference` and `latency/inference/postprocess` debug topics — so
+an over-budget `processing_time_ms` can be localized without enabling `debug_mode`. The stages
+do not add up to the total: `postprocess_time_ms` is measured inside the `inference_time_ms`
+window, and `preprocess_time_ms` is the cost of a single image rather than the sum over the
+cameras — compare them against their own history instead.
+
+The newest published detection is reported under both clocks, because `processing_time_ms` only
+covers the work done inside the node:
+
+| Key                          | Description                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `last_frame_timestamp`       | Header stamp the detections were computed for (the sensing instant)                                       |
+| `last_published_timestamp`   | Node-clock instant at which they left the node                                                            |
+| `output_latency_ms`          | The difference: end-to-end latency, including the camera transport and the decode queue ahead of the node |
+| `time_since_last_publish_ms` | Age of `last_published_timestamp`, i.e. how long since the node last produced objects                     |
+
+These are observational only — the level is still decided by the processing-time thresholds
+alone. Comparing a node clock against a header stamp requires both to share a time base, so a
+rosbag replay has to publish `/clock` and the node has to run with `use_sim_time` for
+`output_latency_ms` and `time_since_last_publish_ms` to be meaningful.
 
 ## Parameters
 
@@ -169,6 +203,8 @@ Example polygon files: `config/camera9_polygons.yaml`, `config/camera10_polygons
 - `anchor_camera_id`: ID of the anchor camera for synchronization (default: 0)
 - `debug_mode`: Enable debug mode for timing measurements
 - `build_only`: Build TensorRT engines and exit without running inference
+- `diagnostics.max_allowed_processing_time_ms`: Per-cycle processing-time budget; exceeding it raises a `WARN` (default: 200.0)
+- `diagnostics.max_acceptable_consecutive_delay_ms`: How long the processing time may stay over budget before the `WARN` escalates to an `ERROR` (default: 1000.0)
 - `diagnostics.max_image_age_ms`: A camera whose newest frame is older than this is reported as stalled at `ERROR` level (default: 300.0)
 - `diagnostics.validation_callback_interval_ms`: Interval of the diagnostic callbacks (default: 100.0)
 
