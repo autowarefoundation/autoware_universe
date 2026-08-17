@@ -22,10 +22,12 @@
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
@@ -47,6 +49,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -85,6 +88,11 @@ private:
     const std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects);
   void publish_debug_metrics(const std::vector<float> & forward_time_ms, double inference_time_ms);
 
+  // Per-camera input health (waiting / rejected / stale / active). Timer driven rather than
+  // published from a camera callback: a dead camera must not silence the very diagnostic that
+  // would report it.
+  void diagnose_camera_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
+
   std::optional<std::pair<std::vector<float>, std::vector<float>>> get_ego_pose_vector(
     const rclcpp::Time & stamp);
   std::optional<std::vector<float>> get_camera_extrinsics_vector();
@@ -113,6 +121,10 @@ private:
   std::vector<rclcpp::CallbackGroup::SharedPtr> camera_callback_groups_;
 
   std::vector<image_transport::Subscriber> camera_image_subs_;
+  // Resolved image topic per model input index, surfaced by the camera_status diagnostic: the
+  // model index (camera0..N) and the physical camera topic differ on every deployment, and the
+  // mapping otherwise lives only in launch-file remaps.
+  std::vector<std::string> camera_image_topics_;
   rclcpp::Publisher<DetectedObjects>::SharedPtr pub_objects_;
 
   tf2_ros::Buffer tf_buffer_;
@@ -135,6 +147,13 @@ private:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
   const bool debug_mode_;
+
+  // diagnostics: timer driven, so the camera status keeps reporting when the cameras stop --
+  // precisely the condition it exists for.
+  diagnostic_updater::Updater diagnostic_updater_{this};
+  // A camera whose newest frame is older than this (node clock minus header stamp) is reported
+  // as stalled at ERROR level; cameras that have not delivered a first frame yet stay a WARN.
+  double max_image_age_ms_;
 };
 
 }  // namespace autoware::camera_streampetr

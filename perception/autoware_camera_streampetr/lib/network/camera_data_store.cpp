@@ -129,7 +129,8 @@ CameraDataStore::CameraDataStore(
   preprocess_time_ms_(0.0f),
   is_distorted_image_(is_distorted_image),
   logger_(node->get_logger()),
-  clock_(node->get_clock())
+  clock_(node->get_clock()),
+  input_rejected_(rois_number)
 {
   image_input_ = std::make_shared<Tensor>(
     "image_input", nvinfer1::Dims{5, {1, rois_number, 3, image_height, image_width}},
@@ -267,6 +268,7 @@ bool CameraDataStore::validate_image_message(
       "Camera %d publishes unsupported encoding '%s'. Only 'rgb8' and 'bgr8' can be fed to the "
       "model; dropping frames from this camera.",
       camera_id, encoding.c_str());
+    input_rejected_[camera_id] = true;
     return false;
   }
 
@@ -286,9 +288,11 @@ bool CameraDataStore::validate_image_message(
       "step %zu and %zu bytes is required; dropping frames from this camera.",
       camera_id, input_camera_image_msg->width, input_camera_image_msg->height, encoding.c_str(),
       input_camera_image_msg->step, input_camera_image_msg->data.size(), row_bytes, expected_size);
+    input_rejected_[camera_id] = true;
     return false;
   }
 
+  input_rejected_[camera_id] = false;
   return true;
 }
 
@@ -520,6 +524,18 @@ bool CameraDataStore::check_if_all_camera_image_received() const
     }
   }
   return true;
+}
+
+std::vector<CameraDataStore::CameraStatus> CameraDataStore::get_camera_status() const
+{
+  std::vector<CameraStatus> status(rois_number_);
+  for (size_t camera_id = 0; camera_id < rois_number_; ++camera_id) {
+    status[camera_id].camera_info_received = static_cast<bool>(camera_info_list_[camera_id]);
+    status[camera_id].image_received = camera_image_timestamp_[camera_id] >= 0;
+    status[camera_id].input_rejected = input_rejected_[camera_id];
+    status[camera_id].last_image_timestamp = camera_image_timestamp_[camera_id];
+  }
+  return status;
 }
 
 float CameraDataStore::check_if_all_images_synced() const

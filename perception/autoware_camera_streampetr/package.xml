@@ -17,6 +17,8 @@
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>

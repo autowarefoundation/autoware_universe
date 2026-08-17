@@ -81,6 +81,45 @@ No                  Yes                                                         
 | `latency/inference/postprocess` | `autoware_internal_debug_msgs::msg::Float64Stamped` | nms + filtering + converting network predictions to autoware format (ms). | 0.40                  |
 | `latency/cycle_time_ms`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | Time between two consecutive predictions (ms).                            | 110.65                |
 
+All `latency/*` topics are published only when `debug_mode` is enabled.
+
+### Diagnostics
+
+Published on `/diagnostics` regardless of `debug_mode`, from a timer-driven updater (period
+`diagnostics.validation_callback_interval_ms`, hardware_id = the node name), so it keeps
+reporting when the cameras stop — precisely the condition it exists for.
+
+`camera_status` reports three key/values per camera — the resolved input `cameraN/topic` (the
+model input index and the physical camera differ on every deployment), `cameraN/image_age_ms`
+(node clock minus newest header stamp; `n/a` until the first frame) and `cameraN/state`, which
+collapses the camera into one state, most-specific-cause first:
+
+| `cameraN/state`       | Meaning                                                     | Level   |
+| --------------------- | ----------------------------------------------------------- | ------- |
+| `rejected`            | Newest frame dropped by the input validation                | `ERROR` |
+| `waiting_camera_info` | No `camera_info` yet (normal during start-up)               | `WARN`  |
+| `waiting_image`       | No first frame yet (normal during start-up)                 | `WARN`  |
+| `stale`               | Used to publish; newest frame older than `max_image_age_ms` | `ERROR` |
+| `active`              | Healthy                                                     | `OK`    |
+
+plus summary key/values:
+
+| Key                                          | Meaning                                                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------------ |
+| `num_cameras`                                | Expected camera count (`rois_number`)                                          |
+| `num_waiting` / `num_stale` / `num_rejected` | State counts; the summary level falls out of these                             |
+| `stalest_camera_id` / `stalest_image_age_ms` | The camera that has gone longest without a new frame                           |
+| `max_inter_camera_time_diff_ms`              | Subscriber-side stamp spread between cameras (`n/a` while cameras are missing) |
+
+Timestamps and ages are formatted as fixed-point strings (never scientific notation), like the
+pointcloud concatenation node's diagnostics.
+
+The summary level is the worst camera state; additionally an inter-camera stamp spread above
+`max_camera_time_diff` raises a `WARN` (prediction cycles are being skipped by the sync check).
+`rejected` and `stale` are `ERROR` rather than `WARN` because neither recovers until the
+publisher is fixed: a rejected camera publishes an encoding other than `rgb8`/`bgr8`, or a buffer
+that is not densely packed, and those frames never reach the model.
+
 ## Parameters
 
 ### StreamPETR node
@@ -130,6 +169,8 @@ Example polygon files: `config/camera9_polygons.yaml`, `config/camera10_polygons
 - `anchor_camera_id`: ID of the anchor camera for synchronization (default: 0)
 - `debug_mode`: Enable debug mode for timing measurements
 - `build_only`: Build TensorRT engines and exit without running inference
+- `diagnostics.max_image_age_ms`: A camera whose newest frame is older than this is reported as stalled at `ERROR` level (default: 300.0)
+- `diagnostics.validation_callback_interval_ms`: Interval of the diagnostic callbacks (default: 100.0)
 
 ### The `build_only` option
 
