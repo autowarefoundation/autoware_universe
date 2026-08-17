@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
 
 void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points)
@@ -671,4 +671,4 @@ void ObstacleTracker::update_points(
   }
 }
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop

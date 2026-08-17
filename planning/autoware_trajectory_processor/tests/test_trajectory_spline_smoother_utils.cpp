@@ -19,7 +19,7 @@
 
 #include <vector>
 
-using autoware::trajectory_optimizer::plugin::trajectory_spline_smoother_utils::apply_spline;
+using autoware::trajectory_processor::plugin::trajectory_spline_smoother_utils::apply_spline;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using trajectory_optimizer_test_utils::create_sample_trajectory;
 
