@@ -67,6 +67,11 @@ protected:
   {
     PTv3ConfigParams params;
     params.source_reconstruction = source_reconstruction;
+    initializePreprocess(params);
+  }
+
+  void initializePreprocess(const PTv3ConfigParams & params)
+  {
     config_.emplace(makeConfig(params));
     preprocess_ = std::make_unique<PreprocessCuda>(*config_, stream_);
   }
@@ -94,7 +99,16 @@ protected:
     const std::string & source_reconstruction, const std::vector<CloudPointTypeXYZI> & host_points,
     const bool with_source_outputs)
   {
-    initializePreprocess(source_reconstruction);
+    PTv3ConfigParams params;
+    params.source_reconstruction = source_reconstruction;
+    return runGenerateFeatures(params, host_points, with_source_outputs);
+  }
+
+  GenerateFeaturesResult runGenerateFeatures(
+    const PTv3ConfigParams & params, const std::vector<CloudPointTypeXYZI> & host_points,
+    const bool with_source_outputs)
+  {
+    initializePreprocess(params);
     const auto & config = *config_;
 
     auto input_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(host_points.size());
@@ -201,6 +215,39 @@ TEST_F(PreprocessKernelTest, PartialReconstructionBuildsVoxelCoords)
     const auto z = voxel_coords[voxel_idx * 3 + 2];
     EXPECT_TRUE(
       (x == 0 && y == 0 && z == 0) || (x == 1 && y == 1 && z == 1) || (x == 2 && y == 2 && z == 2));
+  }
+}
+
+TEST_F(PreprocessKernelTest, CroppedVoxelCoordsStayInsideGridBounds)
+{
+  PTv3ConfigParams params;
+  params.source_reconstruction = "partial";
+  params.point_cloud_range = {0.0F, 0.0F, 0.0F, 4.0F, 4.0F, 4.0F};
+
+  const std::vector<CloudPointTypeXYZI> host_points{
+    {0.0F, 0.0F, 0.0F, 1.0F}, {3.999F, 3.999F, 3.999F, 2.0F}, {4.0F, 0.0F, 0.0F, 3.0F},
+    {0.0F, 4.0F, 0.0F, 4.0F}, {0.0F, 0.0F, 4.0F, 5.0F},       {-0.001F, 0.0F, 0.0F, 6.0F},
+  };
+
+  const auto result = runGenerateFeatures(params, host_points, true);
+  EXPECT_EQ(result.num_cropped_points, 2U);
+  EXPECT_EQ(result.num_voxels, 2U);
+
+  const auto crop_mask = copyToHost(preprocess_->cropMask(), host_points.size());
+  EXPECT_EQ(crop_mask, (std::vector<std::uint32_t>{1, 1, 0, 0, 0, 0}));
+
+  const auto & config = *config_;
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  for (std::size_t voxel_idx = 0; voxel_idx < result.num_voxels; ++voxel_idx) {
+    const auto x = voxel_coords[voxel_idx * 3 + 0];
+    const auto y = voxel_coords[voxel_idx * 3 + 1];
+    const auto z = voxel_coords[voxel_idx * 3 + 2];
+    EXPECT_GE(x, 0);
+    EXPECT_GE(y, 0);
+    EXPECT_GE(z, 0);
+    EXPECT_LT(x, config.grid_x_size_);
+    EXPECT_LT(y, config.grid_y_size_);
+    EXPECT_LT(z, config.grid_z_size_);
   }
 }
 

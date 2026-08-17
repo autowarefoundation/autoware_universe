@@ -316,6 +316,14 @@ public:
    */
   void printProfiling() const;
 
+  /**
+   * @brief Whether the network is built strongly typed (precision "strongly-typed"): tensor
+   * precisions are taken from the model itself.
+   *
+   * @return Whether the network is strongly typed.
+   */
+  [[nodiscard]] bool isStronglyTyped() const;
+
 private:
   /**
    * @brief Initialize TensorRT common.

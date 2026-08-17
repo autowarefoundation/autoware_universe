@@ -48,7 +48,7 @@ MpcLateralController::MpcLateralController(
 
   diag_updater_ = diag_updater;
 
-  m_mpc = std::make_unique<MPC>(node);
+  m_mpc = std::make_unique<MPC>();
 
   const auto ctrl_period = node.get_parameter("ctrl_period").as_double();
   m_mpc->m_ctrl_period = ctrl_period;
@@ -166,6 +166,13 @@ MpcLateralController::MpcLateralController(
   m_mpc->m_publish_debug_trajectories = dp_bool("publish_debug_trajectories");
 
   m_pub_predicted_traj = node.create_publisher<Trajectory>("~/output/predicted_trajectory", 1);
+  m_pub_predicted_traj_frenet =
+    node.create_publisher<Trajectory>("~/debug/predicted_trajectory_in_frenet_coordinate", 1);
+  m_pub_resampled_reference_traj =
+    node.create_publisher<Trajectory>("~/debug/resampled_reference_trajectory", 1);
+  m_pub_nearest_pose = node.create_publisher<PoseStamped>("~/debug/nearest_pose", 1);
+  m_pub_nearest_segment_traj = node.create_publisher<Trajectory>("~/debug/nearest_segment", 1);
+  m_pub_nearest_info = node.create_publisher<Float32MultiArrayStamped>("~/debug/nearest_info", 1);
   m_pub_debug_values =
     node.create_publisher<Float32MultiArrayStamped>("~/output/lateral_diagnostic", 1);
   m_pub_steer_offset = node.create_publisher<Float32Stamped>("~/output/estimated_steer_offset", 1);
@@ -237,7 +244,7 @@ std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface
   }
 
   if (qp_solver_type == "osqp") {
-    qpsolver_ptr = std::make_shared<QPSolverOSQP>(logger_, clock_);
+    qpsolver_ptr = std::make_shared<QPSolverOSQP>();
     return qpsolver_ptr;
   }
 
@@ -263,6 +270,9 @@ void MpcLateralController::setupDiag()
 trajectory_follower::LateralOutput MpcLateralController::run(
   trajectory_follower::InputData const & input_data)
 {
+  // Timestamp of this control cycle, shared by every message this call publishes.
+  const builtin_interfaces::msg::Time stamp = clock_->now();
+
   // set input data
   setTrajectory(input_data.current_trajectory, input_data.current_odometry);
 
@@ -284,10 +294,6 @@ trajectory_follower::LateralOutput MpcLateralController::run(
                                   : 0.0;
   m_current_steering.steering_tire_angle += static_cast<float>(m_steering_offset_filtered_);
 
-  Lateral ctrl_cmd;
-  Trajectory predicted_traj;
-  Float32MultiArrayStamped debug_values;
-
   const bool is_under_control = input_data.current_operation_mode.is_autoware_control_enabled &&
                                 input_data.current_operation_mode.mode ==
                                   autoware_adapi_v1_msgs::msg::OperationModeState::AUTONOMOUS;
@@ -297,10 +303,9 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     m_is_ctrl_cmd_prev_initialized = true;
   }
 
-  trajectory_follower::LateralHorizon ctrl_cmd_horizon{};
-  const auto mpc_solved_status = m_mpc->calculateMPC(
-    m_current_steering, m_current_kinematic_state, ctrl_cmd, predicted_traj, debug_values,
-    ctrl_cmd_horizon);
+  auto mpc_solved_status =
+    m_mpc->calculateMPC(m_current_steering, m_current_kinematic_state, stamp);
+  Lateral ctrl_cmd = mpc_solved_status.ctrl_cmd;
 
   if (
     (m_mpc_solved_status.result == true && mpc_solved_status.result == false) ||
@@ -322,16 +327,17 @@ trajectory_follower::LateralOutput MpcLateralController::run(
 
   ctrl_cmd.steering_tire_angle -= static_cast<float>(m_steering_offset_filtered_);
 
-  publishPredictedTraj(predicted_traj);
-  publishDebugValues(debug_values);
+  publishPredictedTraj(mpc_solved_status.predicted_trajectory);
+  publishDebugMessages(mpc_solved_status.debug_msgs);
+  publishDebugValues(mpc_solved_status.diagnostic);
 
   const auto createLateralOutput =
-    [this](
+    [this, &stamp](
       const auto & cmd, const bool is_mpc_solved,
       const auto & cmd_horizon) -> trajectory_follower::LateralOutput {
     trajectory_follower::LateralOutput output;
-    output.control_cmd = createCtrlCmdMsg(cmd);
-    output.control_cmd_horizon = createCtrlCmdHorizonMsg(cmd_horizon);
+    output.control_cmd = createCtrlCmdMsg(cmd, stamp);
+    output.control_cmd_horizon = createCtrlCmdHorizonMsg(cmd_horizon, stamp);
     // To be sure current steering of the vehicle is desired steering angle, we need to check
     // following conditions.
     // 1. At the last loop, mpc should be solved because command should be optimized output.
@@ -351,7 +357,7 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     }
     // Use previous command value as previous raw steer command
     m_mpc->m_raw_steer_cmd_prev = m_ctrl_cmd_prev.steering_tire_angle;
-    return createLateralOutput(m_ctrl_cmd_prev, false, ctrl_cmd_horizon);
+    return createLateralOutput(m_ctrl_cmd_prev, false, mpc_solved_status.ctrl_cmd_horizon);
   }
 
   if (!mpc_solved_status.result) {
@@ -360,7 +366,8 @@ trajectory_follower::LateralOutput MpcLateralController::run(
   }
 
   m_ctrl_cmd_prev = ctrl_cmd;
-  return createLateralOutput(ctrl_cmd, mpc_solved_status.result, ctrl_cmd_horizon);
+  return createLateralOutput(
+    ctrl_cmd, mpc_solved_status.result, mpc_solved_status.ctrl_cmd_horizon);
 }
 
 bool MpcLateralController::isSteerConverged(const Lateral & cmd) const
@@ -493,35 +500,46 @@ bool MpcLateralController::isStoppedState() const
   return std::fabs(target_vel) < m_stop_state_entry_target_speed;
 }
 
-Lateral MpcLateralController::createCtrlCmdMsg(const Lateral & ctrl_cmd)
+Lateral MpcLateralController::createCtrlCmdMsg(
+  const Lateral & ctrl_cmd, const builtin_interfaces::msg::Time & stamp)
 {
   auto out = ctrl_cmd;
-  out.stamp = clock_->now();
+  out.stamp = stamp;
   m_steer_cmd_prev = out.steering_tire_angle;
   return out;
 }
 
 LateralHorizon MpcLateralController::createCtrlCmdHorizonMsg(
-  const LateralHorizon & ctrl_cmd_horizon) const
+  const LateralHorizon & ctrl_cmd_horizon, const builtin_interfaces::msg::Time & stamp) const
 {
   auto out = ctrl_cmd_horizon;
-  const auto now = clock_->now();
   for (auto & cmd : out.controls) {
-    cmd.stamp = now;
+    cmd.stamp = stamp;
   }
   return out;
 }
 
 void MpcLateralController::publishPredictedTraj(Trajectory & predicted_traj) const
 {
-  predicted_traj.header.stamp = clock_->now();
-  predicted_traj.header.frame_id = m_current_trajectory.header.frame_id;
   m_pub_predicted_traj->publish(predicted_traj);
+}
+
+void MpcLateralController::publishDebugMessages(
+  std::optional<MpcDebugTopicMessage> & debug_msgs) const
+{
+  if (!debug_msgs) {
+    return;
+  }
+
+  m_pub_predicted_traj_frenet->publish(debug_msgs->predicted_trajectory_frenet);
+  m_pub_resampled_reference_traj->publish(debug_msgs->resampled_reference_trajectory);
+  m_pub_nearest_pose->publish(debug_msgs->nearest_pose);
+  m_pub_nearest_segment_traj->publish(debug_msgs->nearest_segment_trajectory);
+  m_pub_nearest_info->publish(debug_msgs->nearest_info);
 }
 
 void MpcLateralController::publishDebugValues(Float32MultiArrayStamped & debug_values) const
 {
-  debug_values.stamp = clock_->now();
   m_pub_debug_values->publish(debug_values);
 
   Float32Stamped offset;

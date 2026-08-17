@@ -17,8 +17,8 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_QP_SMOOTHER_HPP_
 
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/semantic_speed_tracker.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <Eigen/Dense>
 #include <autoware/osqp_interface/osqp_interface.hpp>
@@ -32,8 +32,13 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
+using autoware::trajectory_processor::SemanticSpeedTracker;
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -51,22 +56,22 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
  * Constraints: fixed initial position
  * Post-processing: velocity/acceleration derived from smoothed path geometry
  */
-class TrajectoryQPSmoother : public TrajectoryOptimizerPluginBase
+class TrajectoryQPSmoother : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectoryQPSmoother() = default;
   ~TrajectoryQPSmoother() = default;
 
-  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
 
-  void update_params(const TrajectoryOptimizerParams & params) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
 protected:
-  void on_initialize(const TrajectoryOptimizerParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   // QP smoother specific parameters
-  trajectory_optimizer_node_params::Params::TrajectoryQpSmoother qp_params_;
+  trajectory_processor_params::Params::TrajectoryQpSmoother qp_params_;
 
   /**
    * @brief Solve the QP problem for trajectory smoothing
@@ -116,7 +121,7 @@ private:
     const TrajectoryPoints & input_trajectory) const;
 };
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_QP_SMOOTHER_HPP_

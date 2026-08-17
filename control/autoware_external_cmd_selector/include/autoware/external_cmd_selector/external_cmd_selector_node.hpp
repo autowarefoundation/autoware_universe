@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__EXTERNAL_CMD_SELECTOR__EXTERNAL_CMD_SELECTOR_NODE_HPP_
 #define AUTOWARE__EXTERNAL_CMD_SELECTOR__EXTERNAL_CMD_SELECTOR_NODE_HPP_
 
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <diagnostic_updater/update_functions.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -33,7 +35,7 @@
 
 namespace autoware::external_cmd_selector
 {
-class ExternalCmdSelector : public rclcpp::Node
+class ExternalCmdSelector : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ExternalCmdSelector(const rclcpp::NodeOptions & node_options);
@@ -55,54 +57,58 @@ private:
   rclcpp::CallbackGroup::SharedPtr callback_group_services_;
 
   // Publisher
-  rclcpp::Publisher<CommandSourceMode>::SharedPtr pub_current_selector_mode_;
-  rclcpp::Publisher<PedalsCommand>::SharedPtr pub_pedals_cmd_;
-  rclcpp::Publisher<SteeringCommand>::SharedPtr pub_steering_cmd_;
-  rclcpp::Publisher<OperatorHeartbeat>::SharedPtr pub_heartbeat_;
-  rclcpp::Publisher<GearCommand>::SharedPtr pub_gear_cmd_;
-  rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_cmd_;
-  rclcpp::Publisher<HazardLightsCommand>::SharedPtr pub_hazard_lights_cmd_;
+  AUTOWARE_PUBLISHER_PTR(CommandSourceMode) pub_current_selector_mode_;
+  AUTOWARE_PUBLISHER_PTR(PedalsCommand) pub_pedals_cmd_;
+  AUTOWARE_PUBLISHER_PTR(SteeringCommand) pub_steering_cmd_;
+  AUTOWARE_PUBLISHER_PTR(OperatorHeartbeat) pub_heartbeat_;
+  AUTOWARE_PUBLISHER_PTR(GearCommand) pub_gear_cmd_;
+  AUTOWARE_PUBLISHER_PTR(TurnIndicatorsCommand) pub_turn_indicators_cmd_;
+  AUTOWARE_PUBLISHER_PTR(HazardLightsCommand) pub_hazard_lights_cmd_;
 
   // Subscriber
-  rclcpp::Subscription<PedalsCommand>::SharedPtr sub_local_pedals_cmd_;
-  rclcpp::Subscription<SteeringCommand>::SharedPtr sub_local_steering_cmd_;
-  rclcpp::Subscription<OperatorHeartbeat>::SharedPtr sub_local_heartbeat_;
-  rclcpp::Subscription<GearCommand>::SharedPtr sub_local_gear_cmd_;
-  rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_local_turn_indicators_cmd_;
-  rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_local_hazard_lights_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(PedalsCommand) sub_local_pedals_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(SteeringCommand) sub_local_steering_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(OperatorHeartbeat) sub_local_heartbeat_;
+  AUTOWARE_SUBSCRIPTION_PTR(GearCommand) sub_local_gear_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(TurnIndicatorsCommand) sub_local_turn_indicators_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(HazardLightsCommand) sub_local_hazard_lights_cmd_;
 
-  rclcpp::Subscription<PedalsCommand>::SharedPtr sub_remote_pedals_cmd_;
-  rclcpp::Subscription<SteeringCommand>::SharedPtr sub_remote_steering_cmd_;
-  rclcpp::Subscription<OperatorHeartbeat>::SharedPtr sub_remote_heartbeat_;
-  rclcpp::Subscription<GearCommand>::SharedPtr sub_remote_gear_cmd_;
-  rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_remote_turn_indicators_cmd_;
-  rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_remote_hazard_lights_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(PedalsCommand) sub_remote_pedals_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(SteeringCommand) sub_remote_steering_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(OperatorHeartbeat) sub_remote_heartbeat_;
+  AUTOWARE_SUBSCRIPTION_PTR(GearCommand) sub_remote_gear_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(TurnIndicatorsCommand) sub_remote_turn_indicators_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(HazardLightsCommand) sub_remote_hazard_lights_cmd_;
 
   template <class T, class F>
-  std::function<void(const T &)> bind_on_cmd(F && func, uint8_t mode)
+  std::function<void(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(T) &)> bind_on_cmd(
+    F && func, uint8_t mode)
   {
     return std::bind(func, this, std::placeholders::_1, mode);
   }
-  void on_pedals_cmd(const PedalsCommand & msg, uint8_t mode);
-  void on_steering_cmd(const SteeringCommand & msg, uint8_t mode);
-  void on_heartbeat(const OperatorHeartbeat & msg, uint8_t mode);
-  void on_gear_cmd(const GearCommand & msg, uint8_t mode);
-  void on_turn_indicators_cmd(const TurnIndicatorsCommand & msg, uint8_t mode);
-  void on_hazard_lights_cmd(const HazardLightsCommand & msg, uint8_t mode);
+  void on_pedals_cmd(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PedalsCommand) & msg, uint8_t mode);
+  void on_steering_cmd(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SteeringCommand) & msg, uint8_t mode);
+  void on_heartbeat(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(OperatorHeartbeat) & msg, uint8_t mode);
+  void on_gear_cmd(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(GearCommand) & msg, uint8_t mode);
+  void on_turn_indicators_cmd(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TurnIndicatorsCommand) & msg, uint8_t mode);
+  void on_hazard_lights_cmd(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(HazardLightsCommand) & msg, uint8_t mode);
 
   // Service
-  rclcpp::Service<CommandSourceSelect>::SharedPtr srv_select_external_command_;
+  AUTOWARE_SERVICE_PTR(CommandSourceSelect) srv_select_external_command_;
   std::atomic<uint8_t> current_selector_mode_;
   bool on_select_external_command(
-    const CommandSourceSelect::Request::SharedPtr req,
-    const CommandSourceSelect::Response::SharedPtr res);
+    const AUTOWARE_SERVER_REQUEST_PTR(CommandSourceSelect) & req,
+    const AUTOWARE_SERVER_RESPONSE_PTR(CommandSourceSelect) & res);
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
   void on_timer();
 
   // Diagnostics Updater
-  diagnostic_updater::Updater updater_{this};
+  autoware::agnocast_wrapper::diagnostic_updater::Updater updater_{this};
 };
 }  // namespace autoware::external_cmd_selector
 #endif  // AUTOWARE__EXTERNAL_CMD_SELECTOR__EXTERNAL_CMD_SELECTOR_NODE_HPP_

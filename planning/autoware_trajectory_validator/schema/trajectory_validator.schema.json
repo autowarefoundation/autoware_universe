@@ -55,6 +55,78 @@
           "required": [],
           "additionalProperties": false
         },
+        "crosswalk": {
+          "type": "object",
+          "properties": {
+            "object_types": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of object types to consider as target object (e.g., 'pedestrian', 'bicycle').",
+              "default": ["pedestrian", "bicycle"]
+            },
+            "lon_detection_margin": {
+              "type": "number",
+              "description": "Longitudinal extrusion length of sidewalk-side from crosswalk edge [m].",
+              "default": 2.0,
+              "minimum": 0.0
+            },
+            "lat_detection_margin": {
+              "type": "number",
+              "description": "Lateral extrusion length of sidewalk-side from crosswalk edge [m].",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "object_clear_time_th": {
+              "type": "number",
+              "description": "Duration threshold to clear target object when no longer seen [s].",
+              "default": 0.3,
+              "minimum": 0.0
+            },
+            "distance_hysteresis_th": {
+              "type": "number",
+              "description": "Hysteresis threshold to consider the object as the same object [m].",
+              "default": 0.3,
+              "minimum": 0.0
+            },
+            "overshoot_tolerance": {
+              "type": "number",
+              "description": "Maximum overshoot distance allowed to consider the trajectory feasible [m].",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "nominal_deceleration": {
+              "type": "number",
+              "description": "Nominal deceleration to calculate the stop distance used as trajectory length limit [m/s²].",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "nominal_jerk": {
+              "type": "number",
+              "description": "Nominal jerk to calculate the stop distance used as trajectory length limit [m/s³].",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "stop_duration": {
+              "type": "number",
+              "description": "Minimum duration of the stop to consider the trajectory feasible [s].",
+              "default": 3.0,
+              "minimum": 0.0
+            },
+            "arrived_distance_threshold": {
+              "type": "number",
+              "description": "Threshold to check if the ego vehicle has arrived at crosswalk stop line [m].",
+              "default": 5.0,
+              "minimum": 0.0
+            },
+            "use_trajectory_time": {
+              "type": "boolean",
+              "description": "Whether to use the embedded trajectory time to evaluate the stop duration.",
+              "default": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
         "traffic_light": {
           "type": "object",
           "properties": {

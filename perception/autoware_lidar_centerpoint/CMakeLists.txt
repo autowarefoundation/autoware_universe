@@ -64,7 +64,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     lib/detection_class_remapper.cpp
     lib/utils.cpp
     lib/ros_utils.cpp
-    lib/postprocess/non_maximum_suppression.cpp
     lib/preprocess/pointcloud_densification.cpp
     lib/preprocess/voxel_generator.cpp
   )
@@ -149,10 +148,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ament_auto_add_gtest(test_ros_utils
       test/test_ros_utils.cpp
     )
-    ament_auto_add_gtest(test_nms
-      test/test_nms.cpp
-    )
-
     # Temporary disabled, tracked by:
     # https://github.com/autowarefoundation/autoware_universe/issues/7724
 #    ament_auto_add_gtest(test_voxel_generator
@@ -205,7 +200,7 @@ else()
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
   )

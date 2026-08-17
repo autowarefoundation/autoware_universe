@@ -43,7 +43,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 namespace
 {
@@ -96,7 +96,7 @@ std::string expand_user_path_string(const std::string & p)
 }  // namespace
 
 void TrajectoryTemporalMPTOptimizer::set_mpt_params(
-  const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params)
+  const trajectory_processor_params::Params::TrajectoryTemporalMptOptimizer & params)
 {
   mpt_params_.cg_distance_from_rear_axle_ratio = params.cg_distance_from_rear_axle_ratio;
   mpt_params_.min_points_for_optimization =
@@ -108,7 +108,7 @@ void TrajectoryTemporalMPTOptimizer::set_mpt_params(
   mpt_params_.log_replay_fixture_to_console = params.log_replay_fixture_to_console;
 }
 
-void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
   auto node_ptr = get_node_ptr();
 
@@ -130,30 +130,30 @@ void TrajectoryTemporalMPTOptimizer::on_initialize(const TrajectoryOptimizerPara
   create_or_reset_solver();
 }
 
-void TrajectoryTemporalMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryTemporalMPTOptimizer::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_temporal_mpt_optimizer;
   set_mpt_params(params.trajectory_temporal_mpt_optimizer);
 }
 
-void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryTemporalMPTOptimizer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
-  if (!enabled_) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
 
   if (!acados_interface_) {
     create_or_reset_solver();
   }
   if (!acados_interface_) {
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   const size_t min_points = std::max<size_t>(2, mpt_params_.min_points_for_optimization);
   if (traj_points.size() < min_points) {
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   const TrajectoryPoints reference_snapshot = traj_points;
@@ -179,7 +179,7 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     x0, reference_snapshot, solution, refs.start_idx, refs.terminal_idx, data, traj_points);
 
   if (solution.status != 0) {
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   for (size_t i = 0; i <= temporal_mpt::N; ++i) {
@@ -209,12 +209,13 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
       p.acceleration_mps2 = static_cast<float>(solution.utraj[i][0]);
     }
   }
+  return ProcessingResult::Modified;
 }
 
 void TrajectoryTemporalMPTOptimizer::log_debug_info(
   const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_snapshot,
   const temporal_mpt::AcadosSolution & solution, const size_t start_idx, const size_t terminal_idx,
-  const TrajectoryOptimizerData & data, const TrajectoryPoints & traj_points)
+  const TrajectoryProcessorData & data, const TrajectoryPoints & traj_points)
 {
   write_temporal_mpt_replay_fixture(x0, reference_snapshot, solution.status);
 
@@ -223,7 +224,7 @@ void TrajectoryTemporalMPTOptimizer::log_debug_info(
   }
 
   if (mpt_params_.publish_debug_topics) {
-    publish_temporal_mpt_debug_io(reference_snapshot, data.current_odometry, solution);
+    publish_temporal_mpt_debug_io(reference_snapshot, *data.current_odometry, solution);
   }
 }
 
@@ -343,7 +344,7 @@ void TrajectoryTemporalMPTOptimizer::create_or_reset_solver()
 
 void TrajectoryTemporalMPTOptimizer::log_acados_solve_debug(
   const int acados_status, const std::array<double, temporal_mpt::NX> & x0, const size_t start_idx,
-  const size_t terminal_idx, const TrajectoryOptimizerData & data,
+  const size_t terminal_idx, const TrajectoryProcessorData & data,
   const TrajectoryPoints & traj_points) const
 {
   rclcpp::Node * const node = get_node_ptr();
@@ -369,8 +370,8 @@ void TrajectoryTemporalMPTOptimizer::log_acados_solve_debug(
     x0[0], x0[1], x0[2], x0[3], start_idx, terminal_idx);
   RCLCPP_DEBUG(
     logger, "odom twist linear (map/body per msg): x=%.6f y=%.6f z=%.6f",
-    data.current_odometry.twist.twist.linear.x, data.current_odometry.twist.twist.linear.y,
-    data.current_odometry.twist.twist.linear.z);
+    data.current_odometry->twist.twist.linear.x, data.current_odometry->twist.twist.linear.y,
+    data.current_odometry->twist.twist.linear.z);
 
   std::ostringstream oss;
   oss << "trajectory points (" << traj_points.size() << "): [";
@@ -463,9 +464,9 @@ void TrajectoryTemporalMPTOptimizer::publish_temporal_mpt_debug_io(
   }
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

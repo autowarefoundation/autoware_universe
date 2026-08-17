@@ -47,9 +47,9 @@ public:
     const std::vector<std::int64_t> & pooling_strides = {},
     const std::vector<std::int64_t> & enc_channels = {},
     const std::vector<std::int64_t> & palette = {},
-    const float filter_class_probability_threshold = {},
     const std::vector<std::string> & filter_classes = {},
-    const std::string & filter_output_format = {}, const std::string & source_reconstruction = {},
+    const std::string & filter_output_format = {}, const bool filter_apply_to_segmentation = {},
+    const std::string & source_reconstruction = {},
     const std::vector<std::int64_t> & dec_depths = {},
     const std::vector<std::string> & detection_class_names = {},
     const std::vector<float> & bbox_voxel_size = {},
@@ -120,9 +120,9 @@ public:
           class_name.begin(), class_name.end(), class_name.begin(),
           [](unsigned char c) { return std::tolower(c); });
       }
-      filter_class_probability_threshold_ = filter_class_probability_threshold;
       filter_class_indices_ = make_filter_class_indices(segmentation_class_names_, filter_classes);
       filter_output_format_ = filter_output_format;
+      filter_apply_to_segmentation_ = filter_apply_to_segmentation;
       source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
 
       // dec_depths drives the seg-head engine input set: block stages consume their
@@ -215,6 +215,15 @@ public:
         static_cast<std::size_t>((max_y_range_ - min_y_range_) / bbox_voxel_y_size_);
       if (bbox_grid_x_size == 0 || bbox_grid_y_size == 0) {
         throw std::runtime_error("bbox_voxel_size produces an empty detection grid.");
+      }
+      if (
+        std::abs(
+          (static_cast<float>(bbox_grid_x_size) * bbox_voxel_x_size_) -
+          (max_x_range_ - min_x_range_)) > eps ||
+        std::abs(
+          (static_cast<float>(bbox_grid_y_size) * bbox_voxel_y_size_) -
+          (max_y_range_ - min_y_range_)) > eps) {
+        throw std::runtime_error("bbox_voxel_size must evenly cover the point cloud xy range.");
       }
       det_grid_x_size_ = bbox_grid_x_size;
       det_grid_y_size_ = bbox_grid_y_size;
@@ -384,9 +393,9 @@ public:
   // Segmentation head
   std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage
   std::vector<float> colors_rgb_;
-  float filter_class_probability_threshold_{};
   std::vector<std::uint32_t> filter_class_indices_;
   std::string filter_output_format_;
+  bool filter_apply_to_segmentation_{};
   SourceReconstruction source_reconstruction_{SourceReconstruction::NONE};
 
   // Detection head

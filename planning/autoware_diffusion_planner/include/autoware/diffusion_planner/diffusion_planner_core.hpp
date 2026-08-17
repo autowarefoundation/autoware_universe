@@ -16,6 +16,7 @@
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_CORE_HPP_
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
+#include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/inference/guidance/centerline_guidance.hpp"
 #include "autoware/diffusion_planner/inference/guidance/start_guidance.hpp"
 #include "autoware/diffusion_planner/inference/guidance/stop_guidance.hpp"
@@ -111,6 +112,12 @@ struct FrameContext
 struct DiffusionPlannerParams
 {
   std::string model_type;
+  std::string base_model_directory;
+  std::string args_filename;
+  std::string single_step_model_filename;
+  std::string encoder_model_filename;
+  std::string decoder_model_filename;
+  std::string turn_indicator_model_filename;
   std::string single_step_model_path;
   std::string encoder_model_path;
   std::string decoder_model_path;
@@ -134,6 +141,7 @@ struct DiffusionPlannerParams
   int64_t delay_step;
   double line_string_max_step_m;
   bool use_time_interpolation;
+  HistoryResamplingParams object_motion_resampling;
   int dpm_solver_steps;
   double start_guidance_reference_distance_m;
   double start_guidance_max_scale;
@@ -177,6 +185,8 @@ public:
    * @param params New parameters to apply
    */
   void update_params(const DiffusionPlannerParams & params);
+
+  void resolve_model_paths();
 
   /**
    * @brief Prepare frame context for inference.

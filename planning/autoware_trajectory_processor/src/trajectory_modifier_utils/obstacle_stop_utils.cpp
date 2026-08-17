@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
 
 void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points)
@@ -214,8 +214,9 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 
   PointCloud::Ptr pointcloud_in_polygon(new PointCloud);
   for (const auto & point : *pointcloud) {
-    if (boost::geometry::within(
-          autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
+    if (
+      boost::geometry::within(
+        autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
       pointcloud_in_polygon->push_back(point);
     }
   }
@@ -670,4 +671,4 @@ void ObstacleTracker::update_points(
   }
 }
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop
