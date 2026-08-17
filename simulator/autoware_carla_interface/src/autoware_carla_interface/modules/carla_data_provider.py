@@ -521,6 +521,12 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
         )
 
         if random_location:
+            if not CarlaDataProvider._spawn_points:
+                raise RuntimeError(
+                    "Cannot spawn actor at a random location: no map spawn points are "
+                    "available (the CARLA map metadata could not be loaded). Provide an "
+                    "explicit spawn_point instead of random_location."
+                )
             actor = None
             while not actor:
                 spawn_point = CarlaDataProvider._rng.choice(CarlaDataProvider._spawn_points)
