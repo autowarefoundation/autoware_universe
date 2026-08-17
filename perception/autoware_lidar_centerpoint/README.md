@@ -257,7 +257,6 @@ python projects/AutowareCenterPoint/centerpoint_onnx_converter.py --cfg projects
 Rename the exported ONNX files to `pts_voxel_encoder.onnx` and `pts_backbone_neck_head.onnx`, and create a **ml_package.param.yaml** next to them. Set the model parameters like
 point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file.
 
-
 #### Launch the lidar_centerpoint node
 
 ```bash
