@@ -23,7 +23,7 @@
 #include <cmath>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils
 {
 
 double calculate_acceleration_from_velocity_and_distance(
@@ -222,4 +222,4 @@ BoundsPair generate_bounds(
   return bounds;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils

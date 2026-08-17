@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
@@ -49,8 +49,8 @@ protected:
 
 private:
   Trajectory past_ego_state_trajectory_;
-  trajectory_optimizer_node_params::Params::TrajectoryExtender extender_params_;
+  trajectory_processor_params::Params::TrajectoryExtender extender_params_;
 };
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EXTENDER_HPP_
