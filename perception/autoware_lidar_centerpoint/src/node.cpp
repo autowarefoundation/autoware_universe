@@ -15,6 +15,7 @@
 #include "autoware/lidar_centerpoint/node.hpp"
 
 #include "autoware/lidar_centerpoint/centerpoint_config.hpp"
+#include "autoware/lidar_centerpoint/ml_package_version.hpp"
 #include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
 #include "autoware/lidar_centerpoint/ros_utils.hpp"
 #include "autoware/lidar_centerpoint/utils.hpp"
@@ -37,10 +38,10 @@ namespace autoware::lidar_centerpoint
 LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_options)
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
+  check_ml_package_version(this->declare_parameter<std::string>("version", ""));
+
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
-  const auto yaw_norm_thresholds =
-    this->declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
   const std::string densification_world_frame_id =
     this->declare_parameter<std::string>("densification_params.world_frame_id");
   const int densification_num_past_frames =
@@ -75,6 +76,12 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<std::int64_t>("model_params.downsample_factor"));
   const std::size_t encoder_in_feature_size = static_cast<std::size_t>(
     this->declare_parameter<std::int64_t>("model_params.encoder_in_feature_size"));
+  const auto yaw_norm_thresholds =
+    this->declare_parameter<std::vector<double>>("model_params.yaw_norm_thresholds");
+  if (yaw_norm_thresholds.size() != class_names_.size()) {
+    throw std::invalid_argument(
+      "The number of yaw_norm_thresholds is not equal to the number of classes");
+  }
   // class remapper matrices are loaded from the file referenced in the model manifest
   const std::string class_remapper_param_path =
     resolve_path(this->declare_parameter<std::string>("class_remapper_param_path"));
