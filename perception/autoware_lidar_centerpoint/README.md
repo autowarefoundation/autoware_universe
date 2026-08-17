@@ -257,38 +257,6 @@ python projects/AutowareCenterPoint/centerpoint_onnx_converter.py --cfg projects
 Rename the exported ONNX files to `pts_voxel_encoder.onnx` and `pts_backbone_neck_head.onnx`, and create a **ml_package.param.yaml** next to them. Set the model parameters like
 point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file.
 
-```yaml
-/**:
-  ros__parameters:
-    # model bundle version, checked against the range the node supports
-    version: v4.1
-    # model files, relative to model_path
-    encoder_onnx_path: pts_voxel_encoder.onnx
-    encoder_engine_path: pts_voxel_encoder.engine
-    head_onnx_path: pts_backbone_neck_head.onnx
-    head_engine_path: pts_backbone_neck_head.engine
-    class_remapper_param_path: detection_class_remapper.param.yaml
-    trt_precision: fp16
-    model_params:
-      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
-      point_feature_size: 4
-      max_voxel_size: 40000
-      point_cloud_range: [-51.2, -51.2, -3.0, 51.2, 51.2, 5.0]
-      voxel_size: [0.2, 0.2, 8.0]
-      downsample_factor: 1
-      encoder_in_feature_size: 9
-      has_variance: false
-      has_twist: false
-      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
-      detection_score_thresholds:
-        distance_bin_upper_limits: [50.0, 90.0, 121.0, 200.0]
-        min_confidence_scores:
-          CAR: [0.35, 0.35, 0.35, 0.35]
-          TRUCK: [0.35, 0.35, 0.35, 0.35]
-          BUS: [0.35, 0.35, 0.35, 0.35]
-          BICYCLE: [0.35, 0.35, 0.35, 0.35]
-          PEDESTRIAN: [0.35, 0.35, 0.35, 0.35]
-```
 
 #### Launch the lidar_centerpoint node
 
