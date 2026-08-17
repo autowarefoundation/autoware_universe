@@ -430,8 +430,9 @@ void CameraDataStore::update_metadata_and_timing(
   camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
 
   auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  preprocess_time_ms_ = duration.count();
+  // Sub-millisecond precision: preprocessing runs ~2 ms per frame, so a duration_cast to whole
+  // milliseconds would quantize away most of the signal the diagnostics report.
+  preprocess_time_ms_ = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 }
 
 void CameraDataStore::update_camera_info(
