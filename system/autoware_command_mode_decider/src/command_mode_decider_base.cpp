@@ -60,22 +60,24 @@ CommandModeDeciderBase::CommandModeDeciderBase(const rclcpp::NodeOptions & optio
   is_modes_ready_ = false;
   command_mode_status_.init(command_modes);
 
-  const auto operation_mode = declare_parameter<uint16_t>("initial_operation_mode");
-  const auto autoware_control = declare_parameter<bool>("initial_autoware_control");
+  {
+    const auto operation_mode = declare_parameter<uint16_t>("initial_operation_mode");
+    const auto autoware_control = declare_parameter<bool>("initial_autoware_control");
 
-  if (operation_mode == autoware::command_mode_types::modes::manual) {
-    throw std::invalid_argument(
-      "initial_operation_mode must not be manual, use initial_autoware_control=false instead");
+    if (operation_mode == autoware::command_mode_types::modes::manual) {
+      throw std::invalid_argument(
+        "initial_operation_mode must not be manual, use initial_autoware_control=false instead");
+    }
+
+    system_request_.operation_mode = operation_mode;
+    system_request_.autoware_control = autoware_control;
+
+    curr_autoware_control_ = false;
+    curr_manual_control_ = false;
+    curr_operation_mode_ = autoware::command_mode_types::modes::unknown;
+    curr_mode_ = autoware::command_mode_types::modes::unknown;
+    last_mode_ = autoware_control ? operation_mode : autoware::command_mode_types::modes::manual;
   }
-
-  system_request_.operation_mode = operation_mode;
-  system_request_.autoware_control = autoware_control;
-
-  curr_autoware_control_ = false;
-  curr_manual_control_ = false;
-  curr_operation_mode_ = autoware::command_mode_types::modes::unknown;
-  curr_mode_ = autoware::command_mode_types::modes::unknown;
-  last_mode_ = autoware_control ? operation_mode : autoware::command_mode_types::modes::manual;
 
   request_stamp_ = std::nullopt;
   transition_stamp_ = std::nullopt;
