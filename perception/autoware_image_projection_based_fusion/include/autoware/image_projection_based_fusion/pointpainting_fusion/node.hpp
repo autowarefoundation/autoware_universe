@@ -17,7 +17,6 @@
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 #include "autoware/image_projection_based_fusion/pointpainting_fusion/pointpainting_trt.hpp"
-#include "autoware/lidar_centerpoint/postprocess/non_maximum_suppression.hpp"
 
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
@@ -25,6 +24,7 @@
 #include <autoware/lidar_centerpoint/detection_class_remapper.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <perception_utils/iou_bev_nms.hpp>
 
 #include <map>
 #include <memory>
@@ -71,7 +71,7 @@ private:
   bool has_variance_{false};
   bool has_twist_{false};
 
-  autoware::lidar_centerpoint::NonMaximumSuppression iou_bev_nms_;
+  perception_utils::IouBevNms iou_bev_nms_;
   autoware::lidar_centerpoint::DetectionClassRemapper detection_class_remapper_;
 
   std::unique_ptr<image_projection_based_fusion::PointPaintingTRT> detector_ptr_{nullptr};
