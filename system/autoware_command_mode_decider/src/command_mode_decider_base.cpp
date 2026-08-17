@@ -60,6 +60,8 @@ CommandModeDeciderBase::CommandModeDeciderBase(const rclcpp::NodeOptions & optio
   is_modes_ready_ = false;
   command_mode_status_.init(command_modes);
 
+  // The operation_mode and autoware_control represent the states of the respective gates.
+  // On the other hand, the curr_mode_ and last_mode_ are composite states of these.
   {
     const auto operation_mode = declare_parameter<uint16_t>("initial_operation_mode");
     const auto autoware_control = declare_parameter<bool>("initial_autoware_control");
