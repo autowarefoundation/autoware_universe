@@ -44,7 +44,7 @@ public:
     const autoware_perception_msgs::msg::Shape & object_shape) const;
 
 private:
-  lanelet::LaneletMapUPtr vegetation_layer_{nullptr};
+  lanelet::LaneletMapConstUPtr vegetation_layer_{nullptr};
 };
 
 }  // namespace autoware::map_based_prediction
