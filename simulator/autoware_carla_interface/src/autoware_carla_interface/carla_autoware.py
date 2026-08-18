@@ -121,10 +121,13 @@ class InitializeInterface(object):
         snapped.location.x = spawn_point.location.x
         snapped.location.y = spawn_point.location.y
         snapped.location.z = ground_z + self.spawn_point_ground_offset_z
+        # NOTE: request_new_actor() adds an unconditional +0.2 m safety lift for
+        # non-prop models, so the actual spawn z is requested_z + 0.2. This log
+        # reports the requested pose before that downstream lift.
         print(
             "Ground-snapped spawn point: "
             f"ground_z={ground_z:.3f}, offset_z={self.spawn_point_ground_offset_z:.3f}, "
-            f"spawn_z={snapped.location.z:.3f}",
+            f"requested_z={snapped.location.z:.3f} (before safety lift)",
             flush=True,
         )
         return snapped
