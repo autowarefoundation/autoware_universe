@@ -216,20 +216,12 @@ void DiffusionPlanner::set_up_params()
     "object_motion_resampling.enable", true, resampling_enable_descriptor);
   params_.object_motion_resampling.max_extrapolation_time =
     this->declare_parameter<double>("object_motion_resampling.max_extrapolation_time", 0.5);
-  params_.ego_snap_to_prev_trajectory =
-    this->declare_parameter<bool>("ego_snap_to_prev_trajectory", true);
-  params_.ego_snap_max_position_error_m =
-    this->declare_parameter<double>("ego_snap_max_position_error_m", 0.3);
-  params_.ego_snap_max_yaw_error_deg =
-    this->declare_parameter<double>("ego_snap_max_yaw_error_deg", 5.0);
-  // Read-only: the resampling and legacy paths keep incompatible history buffers, so the mode is
-  // fixed for the node's lifetime.
-  rcl_interfaces::msg::ParameterDescriptor resampling_enable_descriptor;
-  resampling_enable_descriptor.read_only = true;
-  params_.object_motion_resampling.enable = this->declare_parameter<bool>(
-    "object_motion_resampling.enable", true, resampling_enable_descriptor);
-  params_.object_motion_resampling.max_extrapolation_time =
-    this->declare_parameter<double>("object_motion_resampling.max_extrapolation_time", 0.5);
+  params_.ego_snap_to_prev_trajectory.enable =
+    this->declare_parameter<bool>("ego_snap_to_prev_trajectory.enable", true);
+  params_.ego_snap_to_prev_trajectory.max_position_error_m =
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.max_position_error_m", 0.3);
+  params_.ego_snap_to_prev_trajectory.max_yaw_error_deg =
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.max_yaw_error_deg", 5.0);
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
@@ -350,11 +342,14 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(parameters, "line_string_max_step_m", temp_params.line_string_max_step_m);
     update_param<bool>(parameters, "use_time_interpolation", temp_params.use_time_interpolation);
     update_param<bool>(
-      parameters, "ego_snap_to_prev_trajectory", temp_params.ego_snap_to_prev_trajectory);
+      parameters, "ego_snap_to_prev_trajectory.enable",
+      temp_params.ego_snap_to_prev_trajectory.enable);
     update_param<double>(
-      parameters, "ego_snap_max_position_error_m", temp_params.ego_snap_max_position_error_m);
+      parameters, "ego_snap_to_prev_trajectory.max_position_error_m",
+      temp_params.ego_snap_to_prev_trajectory.max_position_error_m);
     update_param<double>(
-      parameters, "ego_snap_max_yaw_error_deg", temp_params.ego_snap_max_yaw_error_deg);
+      parameters, "ego_snap_to_prev_trajectory.max_yaw_error_deg",
+      temp_params.ego_snap_to_prev_trajectory.max_yaw_error_deg);
     update_param<double>(
       parameters, "object_motion_resampling.max_extrapolation_time",
       temp_params.object_motion_resampling.max_extrapolation_time);

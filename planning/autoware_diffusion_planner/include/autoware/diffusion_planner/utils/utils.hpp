@@ -92,6 +92,9 @@ struct PolylineProjection
  * foot position as (x, y) and an orientation obtained by spherically interpolating (slerp) the two
  * endpoint orientations by the projection ratio. The z component is left at 0.
  *
+ * @note Only the first few segments of the polyline are searched (see MAX_SEGMENT_COUNT in the
+ *       implementation); segments beyond that are never selected.
+ *
  * @param query_x X coordinate of the query point.
  * @param query_y Y coordinate of the query point.
  * @param polyline Sequence of poses (must contain at least two elements) forming the polyline.

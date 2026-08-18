@@ -114,6 +114,26 @@ struct FrameContext
   std::optional<double> snapped_interpolation_time_s;
 };
 
+/**
+ * @brief Parameters for snapping the ego pose onto the previous planning trajectory.
+ *
+ * The ego pose fed to the model is replaced by the foot of the perpendicular to the closest
+ * segment of the previous planning trajectory, so that consecutive frames stay on a single
+ * consistent trajectory instead of re-planning from a slightly drifted localization pose. The
+ * error limits reject the snap when the previous trajectory no longer reflects reality.
+ */
+struct EgoSnapParams
+{
+  // When false, the raw ego pose is used as-is.
+  bool enable;
+
+  // Maximum allowed distance [m] between the actual ego pose and the snapped pose.
+  double max_position_error_m;
+
+  // Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose.
+  double max_yaw_error_deg;
+};
+
 struct DiffusionPlannerParams
 {
   std::string model_type;
@@ -147,10 +167,7 @@ struct DiffusionPlannerParams
   double line_string_max_step_m;
   bool use_time_interpolation;
   HistoryResamplingParams object_motion_resampling;
-  bool ego_snap_to_prev_trajectory;
-  double ego_snap_max_position_error_m;
-  double ego_snap_max_yaw_error_deg;
-  HistoryResamplingParams object_motion_resampling;
+  EgoSnapParams ego_snap_to_prev_trajectory;
   int dpm_solver_steps;
   double start_guidance_reference_distance_m;
   double start_guidance_max_scale;

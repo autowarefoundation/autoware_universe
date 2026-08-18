@@ -297,7 +297,7 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   std::optional<Eigen::Matrix4d> snapped_pose_opt;
   std::optional<double> snapped_interpolation_time_s_opt;
   if (
-    params_.ego_snap_to_prev_trajectory && last_ego_to_map_transform_.has_value() &&
+    params_.ego_snap_to_prev_trajectory.enable && last_ego_to_map_transform_.has_value() &&
     !last_agent_poses_map_.empty() && !last_agent_poses_map_[0].empty() &&
     !last_agent_poses_map_[0][0].empty()) {
     constexpr int64_t batch_idx = 0;
@@ -332,8 +332,8 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     const double yaw_error_deg = yaw_error_rad * 180.0 / M_PI;
 
     if (
-      position_error_m <= params_.ego_snap_max_position_error_m &&
-      yaw_error_deg <= params_.ego_snap_max_yaw_error_deg) {
+      position_error_m <= params_.ego_snap_to_prev_trajectory.max_position_error_m &&
+      yaw_error_deg <= params_.ego_snap_to_prev_trajectory.max_yaw_error_deg) {
       kinematic_state.pose.pose.position.x = snapped_pose(0, 3);
       kinematic_state.pose.pose.position.y = snapped_pose(1, 3);
       const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));

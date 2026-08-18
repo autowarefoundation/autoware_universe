@@ -139,11 +139,13 @@ PolylineProjection project_pose_onto_polyline(
   // (closest segment index + intra-segment ratio); position of the foot along the polyline.
   double best_interpolation_index = 0.0;
 
-  // Because the diffusion planner runs at 10Hz, we only need to consider the first few segments of
-  // the polyline for snapping.
-  const size_t max_index = 5;
+  // Because the diffusion planner runs at 10Hz and the polyline vertices are spaced by one
+  // prediction step (0.1s), the foot always lands within the first few segments. Limiting the
+  // search keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being
+  // selected as the closest segment.
+  constexpr size_t MAX_SEGMENT_COUNT = 5;
 
-  for (size_t i = 0; i + 1 <= max_index && i + 1 < polyline.size(); ++i) {
+  for (size_t i = 0; i < MAX_SEGMENT_COUNT && i + 1 < polyline.size(); ++i) {
     // Endpoints of the i-th line segment in the xy-plane.
     const Eigen::Vector2d segment_start(polyline[i](0, 3), polyline[i](1, 3));
     const Eigen::Vector2d segment_end(polyline[i + 1](0, 3), polyline[i + 1](1, 3));
@@ -160,9 +162,9 @@ PolylineProjection project_pose_onto_polyline(
     // raw_ratio == 0 -> foot at segment_start, raw_ratio == 1 -> foot at segment_end.
     // Clamping to [0, 1] keeps the foot ON the segment: if the perpendicular foot would land beyond
     // an endpoint (raw_ratio < 0 or > 1), it is pulled back to the nearest endpoint.
-    constexpr double eps = 1e-9;
+    constexpr double EPS = 1e-9;
     double ratio = 0.0;
-    if (segment_length_sq >= eps) {
+    if (segment_length_sq >= EPS) {
       const double projection = start_to_query.dot(segment_vector);
       const double raw_ratio = projection / segment_length_sq;
       ratio = std::clamp(raw_ratio, 0.0, 1.0);
