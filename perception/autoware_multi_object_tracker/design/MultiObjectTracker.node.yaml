@@ -15,40 +15,40 @@ launch:
 subscribers:
   - name: detection01/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 1
+    description: the detected objects input for channel 1
   - name: detection02/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 2
+    description: the detected objects input for channel 2
   - name: detection03/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 3
+    description: the detected objects input for channel 3
   - name: detection04/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 4
+    description: the detected objects input for channel 4
   - name: detection05/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 5
+    description: the detected objects input for channel 5
   - name: detection06/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 6
+    description: the detected objects input for channel 6
   - name: detection07/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 7
+    description: the detected objects input for channel 7
   - name: detection08/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 8
+    description: the detected objects input for channel 8
   - name: detection09/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 9
+    description: the detected objects input for channel 9
   - name: detection10/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 10
+    description: the detected objects input for channel 10
   - name: detection11/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 11
+    description: the detected objects input for channel 11
   - name: detection12/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    description: the detected objects input fo channel 12
+    description: the detected objects input for channel 12
   - name: input/odometry
     message_type: nav_msgs/msg/Odometry
     description: the odometry input for ego vehicle state estimation

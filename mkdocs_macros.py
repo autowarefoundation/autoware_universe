@@ -285,13 +285,14 @@ def format_param_files_table(param_files):
     )
 
 
-def format_node_yaml(data):
+def format_node_yaml(data, heading_level=3):
     """Render the interface and parameter sections of a node design file."""
     sections = []
+    heading = "#" * heading_level
 
     def add_section(title, body):
         if body:
-            sections.append(f"#### {title}\n\n{body}")
+            sections.append(f"{heading} {title}\n\n{body}")
 
     add_section("Subscribers", format_interface_table(data.get("subscribers")))
     add_section("Publishers", format_interface_table(data.get("publishers")))
@@ -311,17 +312,18 @@ def define_env(env):
             return format_json(data, os.path.dirname(json_schema_file_path))
 
     @env.macro
-    def node_to_markdown(node_yaml_file_path):
+    def node_to_markdown(node_yaml_file_path, heading_level=3):
         """Render all interface + parameter tables of a `*.node.yaml` file."""
         with open(node_yaml_file_path) as f:
             data = yaml.safe_load(f)
-        return format_node_yaml(data)
+        return format_node_yaml(data, heading_level)
 
     @env.macro
-    def node_interfaces_to_markdown(node_yaml_file_path):
+    def node_interfaces_to_markdown(node_yaml_file_path, heading_level=3):
         """Render only the subscriber/publisher/server/client tables."""
         with open(node_yaml_file_path) as f:
             data = yaml.safe_load(f)
+        heading = "#" * heading_level
         sections = []
         for title, key in [
             ("Subscribers", "subscribers"),
@@ -331,7 +333,7 @@ def define_env(env):
         ]:
             table = format_interface_table(data.get(key))
             if table:
-                sections.append(f"#### {title}\n\n{table}")
+                sections.append(f"{heading} {title}\n\n{table}")
         return "\n\n".join(sections)
 
     @env.macro
