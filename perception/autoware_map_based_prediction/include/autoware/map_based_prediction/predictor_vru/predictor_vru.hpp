@@ -20,6 +20,7 @@
 #include "autoware/map_based_prediction/predictor_vru/fence.hpp"
 #include "autoware/map_based_prediction/predictor_vru/history.hpp"
 #include "autoware/map_based_prediction/predictor_vru/traffic_signal.hpp"
+#include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -50,6 +51,8 @@ public:
     double max_crosswalk_user_on_road_distance{2.0};
     // Signal interaction
     bool use_crosswalk_signal{true};
+    // Per-class deceleration assumed when judging whether an object can stop before a line
+    utils::ObjectDecelerationParams object_deceleration;
     // Sub-module params
     TrafficSignalModule::Params traffic_signal;
     CrosswalkUserHistoryManager::Params history;
