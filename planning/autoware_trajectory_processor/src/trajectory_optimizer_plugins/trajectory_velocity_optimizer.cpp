@@ -25,7 +25,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void TrajectoryVelocityOptimizer::on_initialize(const TrajectoryProcessorParams & params)
@@ -196,9 +196,9 @@ void TrajectoryVelocityOptimizer::update_params(const TrajectoryProcessorParams 
   }
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer,
+  autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

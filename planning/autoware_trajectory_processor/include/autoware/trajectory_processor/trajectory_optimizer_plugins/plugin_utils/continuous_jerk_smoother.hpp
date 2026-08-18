@@ -25,7 +25,7 @@
 #include <memory>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -121,7 +121,7 @@ private:
   rclcpp::Logger logger_{rclcpp::get_logger("continuous_jerk_smoother")};
 };
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__CONTINUOUS_JERK_SMOOTHER_HPP_
