@@ -168,14 +168,15 @@ def project_point_to_ground(world, x, y):
         return None
 
     projected_heights = []
-    try:
-        for offset_x, offset_y in GROUND_PROBE_OFFSETS:
-            search_origin = carla.Location(x=x + offset_x, y=y + offset_y, z=1000.0)
+    for offset_x, offset_y in GROUND_PROBE_OFFSETS:
+        search_origin = carla.Location(x=x + offset_x, y=y + offset_y, z=1000.0)
+        try:
             labeled_point = world.ground_projection(search_origin, 10000.0)
-            if labeled_point is not None:
-                projected_heights.append(labeled_point.location.z)
-    except RuntimeError:
-        return None
+        except RuntimeError:
+            # A single probe may fail; keep the hits from the other samples.
+            continue
+        if labeled_point is not None:
+            projected_heights.append(labeled_point.location.z)
 
     if not projected_heights:
         return None
