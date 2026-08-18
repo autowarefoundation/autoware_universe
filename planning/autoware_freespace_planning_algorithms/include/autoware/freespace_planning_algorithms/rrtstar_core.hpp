@@ -154,6 +154,9 @@ private:
   const double collision_check_resolution_;
   const bool is_informed_;
   CSpace cspace_;
+
+  void updateGoalLink(
+    const NodeSharedPtr & node_new, const bool is_reached, const bool did_reconnect);
 };
 
 }  // namespace autoware::freespace_planning_algorithms::rrtstar_core
