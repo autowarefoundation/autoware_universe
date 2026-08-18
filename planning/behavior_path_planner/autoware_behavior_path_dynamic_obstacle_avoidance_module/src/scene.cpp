@@ -14,6 +14,7 @@
 
 #include "autoware/behavior_path_dynamic_obstacle_avoidance_module/scene.hpp"
 
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/map_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/object_recognition_utils/predicted_path_utils.hpp"
@@ -614,6 +615,16 @@ void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
 
     // 1.a. Check if the obstacle is labeled as pedestrians, bicycle or similar.
     if (getObjectType(predicted_object.classification.front().label) != ObjectType::UNREGULATED) {
+      continue;
+    }
+
+    // 1.a-2. Check if the object is separated from the ego path by an uncrossable boundary.
+    // The whole footprint is used so that an object is not ignored while a part of it can still
+    // reach the ego path.
+    if (
+      drivable_area_expansion::is_separated_by_uncrossable_linestring(
+        *planner_data_->route_handler->getLaneletMapPtr(), input_points.at(obj_idx).position,
+        autoware_utils::to_polygon2d(obj_pose, predicted_object.shape))) {
       continue;
     }
 
