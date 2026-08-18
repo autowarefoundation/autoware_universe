@@ -222,6 +222,14 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_max_position_error_m", 0.3);
   params_.ego_snap_max_yaw_error_deg =
     this->declare_parameter<double>("ego_snap_max_yaw_error_deg", 5.0);
+  // Read-only: the resampling and legacy paths keep incompatible history buffers, so the mode is
+  // fixed for the node's lifetime.
+  rcl_interfaces::msg::ParameterDescriptor resampling_enable_descriptor;
+  resampling_enable_descriptor.read_only = true;
+  params_.object_motion_resampling.enable = this->declare_parameter<bool>(
+    "object_motion_resampling.enable", true, resampling_enable_descriptor);
+  params_.object_motion_resampling.max_extrapolation_time =
+    this->declare_parameter<double>("object_motion_resampling.max_extrapolation_time", 0.5);
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =

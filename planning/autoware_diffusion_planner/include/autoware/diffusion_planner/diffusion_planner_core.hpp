@@ -150,6 +150,7 @@ struct DiffusionPlannerParams
   bool ego_snap_to_prev_trajectory;
   double ego_snap_max_position_error_m;
   double ego_snap_max_yaw_error_deg;
+  HistoryResamplingParams object_motion_resampling;
   int dpm_solver_steps;
   double start_guidance_reference_distance_m;
   double start_guidance_max_scale;

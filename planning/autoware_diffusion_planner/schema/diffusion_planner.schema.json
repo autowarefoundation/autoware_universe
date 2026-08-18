@@ -214,6 +214,23 @@
           "default": 5.0,
           "description": "Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose. If the difference exceeds this value the snap is skipped and the raw ego pose is kept."
         },
+        "object_motion_resampling": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": true,
+              "description": "Re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp (read-only)"
+            },
+            "max_extrapolation_time": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0,
+              "description": "Maximum extrapolation horizon [s], both forward from the newest and backward from the oldest observation"
+            }
+          },
+          "required": ["enable", "max_extrapolation_time"]
+        },
         "guidance": {
           "type": "object",
           "properties": {
