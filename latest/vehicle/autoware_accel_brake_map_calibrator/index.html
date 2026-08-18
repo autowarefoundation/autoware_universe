@@ -22863,12 +22863,12 @@
 <h2 id="how-to-calibrate">How to calibrate<a class="headerlink" href="#how-to-calibrate" title="Permanent link">#</a></h2>
 <h3 id="launch-calibrator">Launch Calibrator<a class="headerlink" href="#launch-calibrator" title="Permanent link">#</a></h3>
 <p>After launching Autoware, run the <code>autoware_accel_brake_map_calibrator</code> by the following command and then perform autonomous driving. Note: You can collect data with manual driving if it is possible to use the same vehicle interface as during autonomous driving (e.g. using a joystick).</p>
-<p><code>sh
-ros2 launch autoware_accel_brake_map_calibrator accel_brake_map_calibrator.launch.xml rviz:=true</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_accel_brake_map_calibrator<span class="w"> </span>accel_brake_map_calibrator.launch.xml<span class="w"> </span>rviz:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
 <p>Or if you want to use rosbag files, run the following commands.</p>
-<p><code>sh
-ros2 launch autoware_accel_brake_map_calibrator accel_brake_map_calibrator.launch.xml rviz:=true use_sim_time:=true
-ros2 bag play &lt;rosbag_file&gt; --clock</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_accel_brake_map_calibrator<span class="w"> </span>accel_brake_map_calibrator.launch.xml<span class="w"> </span>rviz:<span class="o">=</span><span class="nb">true</span><span class="w"> </span>use_sim_time:<span class="o">=</span><span class="nb">true</span>
+ros2<span class="w"> </span>bag<span class="w"> </span>play<span class="w"> </span>&lt;rosbag_file&gt;<span class="w"> </span>--clock
+</code></pre></div>
 <p>During the calibration with setting the parameter <code>progress_file_output</code> to true, the log file is output in [directory of <em>autoware_accel_brake_map_calibrator</em>]/config/ . You can also see accel and brake maps in [directory of <em>autoware_accel_brake_map_calibrator</em>]/config/accel_map.csv and [directory of <em>autoware_accel_brake_map_calibrator</em>]/config/brake_map.csv after calibration.</p>
 <h3 id="calibration-plugin">Calibration plugin<a class="headerlink" href="#calibration-plugin" title="Permanent link">#</a></h3>
 <p>The <code>rviz:=true</code> option displays the RViz with a calibration plugin as below.</p>
@@ -22913,8 +22913,8 @@ Diagnostic type <code>WARN</code> indicates that the current accel/brake map is 
 </tbody>
 </table>
 <p>This diagnostics status can be also checked on the following ROS topic.</p>
-<p><code>sh
-ros2 topic echo /accel_brake_map_calibrator/output/update_suggest</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>/accel_brake_map_calibrator/output/update_suggest
+</code></pre></div>
 <p>When the diagnostics type is <code>WARN</code>, <code>True</code> is published on this topic and the update of the accel/brake map is suggested.</p>
 <h3 id="evaluation-of-the-accel-brake-map-accuracy">Evaluation of the accel / brake map accuracy<a class="headerlink" href="#evaluation-of-the-accel-brake-map-accuracy" title="Permanent link">#</a></h3>
 <p>The accuracy of map is evaluated by the <strong>Root Mean Squared Error (RMSE)</strong> between the observed acceleration and predicted acceleration.</p>
@@ -22935,8 +22935,8 @@ ros2 topic echo /accel_brake_map_calibrator/output/update_suggest</code></p>
 <p>The process of calibration can be visualized as below. Since these scripts need the log output of the calibration, the <code>pedal_accel_graph_output</code> parameter must be set to true while the calibration is running for the visualization.</p>
 <h4 id="visualize-plot-of-relation-between-acceleration-and-pedal">Visualize plot of relation between acceleration and pedal<a class="headerlink" href="#visualize-plot-of-relation-between-acceleration-and-pedal" title="Permanent link">#</a></h4>
 <p>The following command shows the plot of used data in the calibration. In each plot of velocity ranges, you can see the distribution of the relationship between pedal and acceleration, and raw data points with colors according to their pitch angles.</p>
-<p><code>sh
-ros2 run autoware_accel_brake_map_calibrator view_plot.py</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_accel_brake_map_calibrator<span class="w"> </span>view_plot.py
+</code></pre></div>
 <p><img alt="sample pic" src="media/log_sample.png"></p>
 <h4 id="visualize-statistics-about-accelerationvelocitypedal-data">Visualize statistics about acceleration/velocity/pedal data<a class="headerlink" href="#visualize-statistics-about-accelerationvelocitypedal-data" title="Permanent link">#</a></h4>
 <p>The following command shows the statistics of the calibration:</p>
@@ -22946,13 +22946,13 @@ ros2 run autoware_accel_brake_map_calibrator view_plot.py</code></p>
 <li>number of data</li>
 </ul>
 <p>of all data in each map cell.</p>
-<p><code>sh
-ros2 run autoware_accel_brake_map_calibrator view_statistics.py</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_accel_brake_map_calibrator<span class="w"> </span>view_statistics.py
+</code></pre></div>
 <p><img alt="sample pic2" src="media/statistics_sample.png"></p>
 <h3 id="how-to-save-the-calibrated-accel-brake-map-anytime-you-want">How to save the calibrated accel / brake map anytime you want<a class="headerlink" href="#how-to-save-the-calibrated-accel-brake-map-anytime-you-want" title="Permanent link">#</a></h3>
 <p>You can save accel and brake map anytime with the following command.</p>
-<p><code>sh
-ros2 service call /accel_brake_map_calibrator/update_map_dir tier4_vehicle_msgs/srv/UpdateAccelBrakeMap "path: '&lt;accel/brake map directory&gt;'"</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>service<span class="w"> </span>call<span class="w"> </span>/accel_brake_map_calibrator/update_map_dir<span class="w"> </span>tier4_vehicle_msgs/srv/UpdateAccelBrakeMap<span class="w"> </span><span class="s2">"path: '&lt;accel/brake map directory&gt;'"</span>
+</code></pre></div>
 <p>You can also save accel and brake map in the default directory where Autoware reads accel_map.csv/brake_map.csv using the RViz plugin (AccelBrakeMapCalibratorButtonPanel) as following.</p>
 <ol>
 <li>
@@ -23131,10 +23131,10 @@ ros2 service call /accel_brake_map_calibrator/update_map_dir tier4_vehicle_msgs/
 <li>actuation_cmd_publisher.py</li>
 </ul>
 <p>The <code>accel/brake_tester.py</code> receives a target accel/brake command from CLI. It sends a target value to <code>actuation_cmd_publisher.py</code> which generates the <code>ActuationCmd</code>. You can run these scripts by the following commands in the different terminals, and it will be as in the screenshot below.</p>
-<p><code>bash
-ros2 run autoware_accel_brake_map_calibrator accel_tester.py
-ros2 run autoware_accel_brake_map_calibrator brake_tester.py
-ros2 run autoware_accel_brake_map_calibrator actuation_cmd_publisher.py</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_accel_brake_map_calibrator<span class="w"> </span>accel_tester.py
+ros2<span class="w"> </span>run<span class="w"> </span>autoware_accel_brake_map_calibrator<span class="w"> </span>brake_tester.py
+ros2<span class="w"> </span>run<span class="w"> </span>autoware_accel_brake_map_calibrator<span class="w"> </span>actuation_cmd_publisher.py
+</code></pre></div>
 <p><img alt="actuation_cmd_publisher_util" src="media/actuation_cmd_publisher_util.png"></p>
 <h2 id="calibration-method">Calibration Method<a class="headerlink" href="#calibration-method" title="Permanent link">#</a></h2>
 <p>Two algorithms are selectable for the acceleration map update, <a href="#update_offset_four_cell_around-1">update_offset_four_cell_around</a> and <a href="#update_offset_each_cell">update_offset_each_cell</a>. Please see the link for details.</p>

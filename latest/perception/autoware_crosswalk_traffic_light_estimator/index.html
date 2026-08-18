@@ -23028,8 +23028,7 @@
 <p>Override rules specific to some traffic lights can also be defined in the lanelet map.
 In that case, the crosswalk traffic light estimation is overridden by these rules.</p>
 <h3 id="estimate-whether-pedestrian-traffic-signals-are-flashing">Estimate whether pedestrian traffic signals are flashing<a class="headerlink" href="#estimate-whether-pedestrian-traffic-signals-are-flashing" title="Permanent link">#</a></h3>
-<p><code>plantumul
-start
+<div class="highlight"><pre><span></span><code>start
 if (the pedestrian traffic light classification result exists)then
     : update the flashing flag according to the classification result(in_signal) and last_signals
     if (the traffic light is flashing?)then(yes)
@@ -23039,7 +23038,8 @@ if (the pedestrian traffic light classification result exists)then
 if (the classification result not exists)
     : the traffic light state is the same with the estimation
  : output the current traffic light state
-end</code></p>
+end
+</code></pre></div>
 <h4 id="update-flashing-flag">Update flashing flag<a class="headerlink" href="#update-flashing-flag" title="Permanent link">#</a></h4>
 <div align="center">
   <img src="images/flashing_state.png" width="50%">
@@ -23078,10 +23078,10 @@ end</code></p>
 <p>Rules can be defined in the lanelet map to override the normal estimation.
 These rules define the value of a crosswalk traffic light based on the value of a vehicle traffic light.</p>
 <p>For example, a rule to consider the crosswalk traffic light with id X to be <code>green</code> when the vehicle traffic light with id Y is <code>red</code> can be expressed in the lanelet map as follows:</p>
-<p><code>XML
-  &lt;relation id="Y"&gt;
-    ...
-    &lt;tag k="signal_color_relation:red:green" v="X"/&gt;</code></p>
+<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="nt">&lt;relation</span><span class="w"> </span><span class="na">id=</span><span class="s">"Y"</span><span class="nt">&gt;</span>
+<span class="w">    </span>...
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"signal_color_relation:red:green"</span><span class="w"> </span><span class="na">v=</span><span class="s">"X"</span><span class="nt">/&gt;</span>
+</code></pre></div>
 <p>Colors <code>green</code>, <code>amber</code>, <code>red</code>, and <code>white</code> are currently supported.
 Multiple crosswalk ids can be listed separated by a comma and without any whitespace (e.g., <code>v="1,2,3"</code>).</p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>

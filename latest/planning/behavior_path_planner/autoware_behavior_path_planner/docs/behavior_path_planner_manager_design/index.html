@@ -23062,22 +23062,24 @@
 <p><img alt="manager_overview" src="../../image/manager/manager_overview.svg"></p>
 <h3 id="slot">Slot<a class="headerlink" href="#slot" title="Permanent link">#</a></h3>
 <p>The manager owns several containers of sub-managers, namely <em>slots</em>, that holds/runs several sub-managers and send the output to the next slot. Given the initial reference path, each slot processes the input path and the output path is processed by the next slot. The final slot output is utilized as the output of the manager. The slot passes following information</p>
-<p>```cpp
-struct SlotOutput
-{
-  BehaviorModuleOutput valid_output;</p>
-<p>// if candidate module is running, valid_output contains the planning by candidate module. In
-  // that case, downstream slots will just run aproved modules and do not try to launch new
-  // modules
-  bool is_upstream_candidate_exclusive{false};</p>
-<p>// if this slot failed, downstream slots need to refresh approved/candidate modules and just
-  // forward valid_output of this slot output
-  bool is_upstream_failed_approved{false};</p>
-<p>// if the approved module in this slot returned to isWaitingApproval, downstream slots need to
-  // refresh candidate once
-  bool is_upstream_waiting_approved{false};
-};</p>
-<p>```</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">SlotOutput</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">BehaviorModuleOutput</span><span class="w"> </span><span class="n">valid_output</span><span class="p">;</span>
+
+<span class="w">  </span><span class="c1">// if candidate module is running, valid_output contains the planning by candidate module. In</span>
+<span class="w">  </span><span class="c1">// that case, downstream slots will just run aproved modules and do not try to launch new</span>
+<span class="w">  </span><span class="c1">// modules</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">is_upstream_candidate_exclusive</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+
+<span class="w">  </span><span class="c1">// if this slot failed, downstream slots need to refresh approved/candidate modules and just</span>
+<span class="w">  </span><span class="c1">// forward valid_output of this slot output</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">is_upstream_failed_approved</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+
+<span class="w">  </span><span class="c1">// if the approved module in this slot returned to isWaitingApproval, downstream slots need to</span>
+<span class="w">  </span><span class="c1">// refresh candidate once</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">is_upstream_waiting_approved</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div>
 <h3 id="sub-managers">Sub-managers<a class="headerlink" href="#sub-managers" title="Permanent link">#</a></h3>
 <p>The sub-manager's main task is</p>
 <ul>
@@ -23093,28 +23095,28 @@ struct SlotOutput
 <figcaption>sub-managers</figcaption>
 </figure>
 <p>Sub-manager is registered on the manager with the following function.</p>
-<p><code>c++
-/**
- * @brief register managers.
- * @param manager pointer.
- */
-void registerSceneModuleManager(const SceneModuleManagerPtr &amp; manager_ptr)
-{
-  RCLCPP_INFO(logger_, "register %s module", manager_ptr-&gt;getModuleName().c_str());
-  manager_ptrs_.push_back(manager_ptr);
-  processing_time_.emplace(manager_ptr-&gt;getModuleName(), 0.0);
-}</code></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * @brief register managers.</span>
+<span class="cm"> * @param manager pointer.</span>
+<span class="cm"> */</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">registerSceneModuleManager</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">SceneModuleManagerPtr</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">manager_ptr</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">RCLCPP_INFO</span><span class="p">(</span><span class="n">logger_</span><span class="p">,</span><span class="w"> </span><span class="s">"register %s module"</span><span class="p">,</span><span class="w"> </span><span class="n">manager_ptr</span><span class="o">-&gt;</span><span class="n">getModuleName</span><span class="p">().</span><span class="n">c_str</span><span class="p">());</span>
+<span class="w">  </span><span class="n">manager_ptrs_</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">manager_ptr</span><span class="p">);</span>
+<span class="w">  </span><span class="n">processing_time_</span><span class="p">.</span><span class="n">emplace</span><span class="p">(</span><span class="n">manager_ptr</span><span class="o">-&gt;</span><span class="n">getModuleName</span><span class="p">(),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
 <p>Code is <a href="https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/planner_manager.hpp#L66-L75">here</a></p>
 <p>Sub-manager has the following parameters that are needed by the manager to manage the launched modules, and these parameters can be set for each module.</p>
-<p><code>c++
-struct ModuleConfigParameters
-{
-  bool enable_module{false};
-  bool enable_rtc{false};
-  bool enable_simultaneous_execution_as_approved_module{false};
-  bool enable_simultaneous_execution_as_candidate_module{false};
-  uint8_t priority{0};
-};</code></p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">ModuleConfigParameters</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">enable_module</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">enable_rtc</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">enable_simultaneous_execution_as_approved_module</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">enable_simultaneous_execution_as_candidate_module</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+<span class="w">  </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">priority</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div>
 <p>Code is <a href="https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/parameters.hpp#L23-L30">here</a></p>
 <table>
 <thead>
@@ -23258,71 +23260,69 @@ struct ModuleConfigParameters
 <li><strong>Any candidate modules' request are not approved. (Check in Step5)</strong></li>
 </ul>
 <p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjEiIGRhdGEtZGlhZ3JhbS10eXBlPSJBQ1RJVklUWSIgc3R5bGU9IndpZHRoOjc3OHB4O2hlaWdodDoxMDg5cHg7YmFja2dyb3VuZDojRkZGRkZGOyIgd2lkdGg9Ijc3OHB4IiBoZWlnaHQ9IjEwODlweCIgdmlld0JveD0iMCAwIDc3OCAxMDg5IiB6b29tQW5kUGFuPSJtYWduaWZ5IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyI+PD9wbGFudHVtbCAxLjIwMjYuN2JldGExMT8+PGRlZnMvPjxnIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iNSI+PHRleHQgeD0iMzEyLjAwOCIgeT0iMzIuOTk1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjE0IiB0ZXh0TGVuZ3RoPSIxNTIuOTIiIGZvbnQtd2VpZ2h0PSI3MDAiPk1hbmFnZXIgcHJvY2Vzc2VzPC90ZXh0PjwvZz48ZWxsaXBzZSBjeD0iMzczLjE0OCIgY3k9IjYyLjI5NyIgcng9IjEwIiByeT0iMTAiIGZpbGw9IiMyMjIiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48cmVjdCB4PSIyMy41MjMiIHk9IjEyNi4yOTciIHdpZHRoPSI1NTcuODA1IiBoZWlnaHQ9IjI1NS42MDIiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxwYXRoIGQ9Ik03NC4zMDYsMTI2LjI5NyBMNzQuMzA2LDEzNS41OTQgTDY0LjMwNiwxNDUuNTk0IEwyMy41MjMsMTQ1LjU5NCIgc3R5bGU9InN0cm9rZTojMDAwO3N0cm9rZS13aWR0aDoxLjU7IiBmaWxsPSJub25lIi8+PHRleHQgeD0iMjYuNTIzIiB5PSIxNDAuMjkyIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjE0IiB0ZXh0TGVuZ3RoPSI0MC43ODMiPlN0ZXAxPC90ZXh0PjxyZWN0IHg9IjI4OS41OTgiIHk9IjE2Mi41OTQiIHdpZHRoPSIxNjcuMSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMjk5LjU5OCIgeT0iMTgzLjczMiIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTQ3LjEiPmdlbmVyYXRlIHJlZmVyZW5jZSBwYXRoPC90ZXh0PjxyZWN0IHg9IjI5NC45NiIgeT0iMjE2LjU2MyIgd2lkdGg9IjE1Ni4zNzciIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjMwNC45NiIgeT0iMjM3LjcwMSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTM2LjM3NyI+c2V0IGxhdGVzdCBwbGFubmVyIGRhdGE8L3RleHQ+PHJlY3QgeD0iMTc0Ljk2OSIgeT0iMjcwLjUzMSIgd2lkdGg9IjM5Ni4zNTkiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE4NC45NjkiIHk9IjI5MS42NyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMzcuOTgiPnJ1biBhbGw8L3RleHQ+PHRleHQgeD0iMjI2Ljc2MyIgeT0iMjkxLjY3IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIxMjUuNDQzIiBmb250LXdlaWdodD0iNzAwIj5hcHByb3ZlZCBtb2R1bGVzPC90ZXh0Pjx0ZXh0IHg9IjM1Ni4wMjEiIHk9IjI5MS42NyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMjA1LjMwNyI+YW5kIGdldCBhcHByb3ZlZCBtb2R1bGVzIG91dHB1dDwvdGV4dD48cGF0aCBkPSJNMzMuNTIzLDMxNC41IEwzMy41MjMsMzY5Ljg5OCBBMCwwIDAgMCAwIDMzLjUyMywzNjkuODk4IEwyNjguMTIyLDM2OS44OTggQTAsMCAwIDAgMCAyNjguMTIyLDM2OS44OTggTDI2OC4xMjIsMzQ2LjE5OSBMMjg4LjEyMiwzNDIuMTk5IEwyNjguMTIyLDMzOC4xOTkgTDI2OC4xMjIsMzI0LjUgTDI1OC4xMjIsMzE0LjUgTDMzLjUyMywzMTQuNSBBMCwwIDAgMCAwIDMzLjUyMywzMTQuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiBmaWxsPSIjRkFGQUZBIi8+PHBhdGggZD0iTTI1OC4xMjIsMzE0LjUgTDI1OC4xMjIsMzI0LjUgTDI2OC4xMjIsMzI0LjUgTDI1OC4xMjIsMzE0LjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgZmlsbD0iI0ZBRkFGQSIvPjx0ZXh0IHg9IjM5LjUyMyIgeT0iMzMxLjU2NyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMyIgdGV4dExlbmd0aD0iMjEzLjU5OSI+cmVtb3ZlIG1vZHVsZXMgd2hvc2Ugc3RhdHVzIGlzPC90ZXh0Pjx0ZXh0IHg9IjM5LjUyMyIgeT0iMzQ2LjciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTMiIHRleHRMZW5ndGg9IjE3OC4yNjEiIGZvbnQtd2VpZ2h0PSI3MDAiPk1vZHVsZVN0YXR1czo6U1VDQ0VTUzwvdGV4dD48dGV4dCB4PSIyMjEuOTE3IiB5PSIzNDYuNyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMyIgdGV4dExlbmd0aD0iMTMuMjk4Ij5vcjwvdGV4dD48dGV4dCB4PSIzOS41MjMiIHk9IjM2MS44MzMiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTMiIHRleHRMZW5ndGg9IjE3My4xNjQiIGZvbnQtd2VpZ2h0PSI3MDAiPk1vZHVsZVN0YXR1czo6RkFJTFVSRTwvdGV4dD48cmVjdCB4PSIyODguMTIyIiB5PSIzMjUuMjE1IiB3aWR0aD0iMTcwLjA1MyIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMjk4LjEyMiIgeT0iMzQ2LjM1NCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTUwLjA1MyI+cmVtb3ZlIGV4cGlyZWQgbW9kdWxlczwvdGV4dD48cmVjdCB4PSIxNjcuODEiIHk9IjM5MS44OTgiIHdpZHRoPSI0MTAuNjc2IiBoZWlnaHQ9IjEzNi4yMzQiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxwYXRoIGQ9Ik0yMTguNTk0LDM5MS44OTggTDIxOC41OTQsNDAxLjE5NSBMMjA4LjU5NCw0MTEuMTk1IEwxNjcuODEsNDExLjE5NSIgc3R5bGU9InN0cm9rZTojMDAwO3N0cm9rZS13aWR0aDoxLjU7IiBmaWxsPSJub25lIi8+PHRleHQgeD0iMTcwLjgxIiB5PSI0MDUuODk0IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjE0IiB0ZXh0TGVuZ3RoPSI0MC43ODMiPlN0ZXAyPC90ZXh0PjxyZWN0IHg9IjE3Ny44MSIgeT0iNDI4LjE5NSIgd2lkdGg9IjM5MC42NzYiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE4Ny44MSIgeT0iNDQ5LjMzNCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMzcwLjY3NiI+c2V0IGFwcHJvdmVkIG1vZHVsZXMgb3V0cHV0IHRvIGFsbCByZWdpc3RlcmVkIHNjZW5lIG1vZHVsZXM8L3RleHQ+PHJlY3QgeD0iMTk4LjY5OSIgeT0iNDgyLjE2NCIgd2lkdGg9IjM0OC44OTgiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjIwOC42OTkiIHk9IjUwMy4zMDMiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjMyOC44OTgiPmNoZWNrIHdoaWNoIHNjZW5lIG1vZHVsZSBtYWtlcyBhIGV4ZWN1dGlvbiByZXF1ZXN0PC90ZXh0PjxyZWN0IHg9IjI4OS45NTgiIHk9IjUzOC4xMzMiIHdpZHRoPSIyOTYuMzIxIiBoZWlnaHQ9IjE0My44MzIiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxwYXRoIGQ9Ik0zNDAuNzQxLDUzOC4xMzMgTDM0MC43NDEsNTQ3LjQzIEwzMzAuNzQxLDU1Ny40MyBMMjg5Ljk1OCw1NTcuNDMiIHN0eWxlPSJzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MS41OyIgZmlsbD0ibm9uZSIvPjx0ZXh0IHg9IjI5Mi45NTgiIHk9IjU1Mi4xMjgiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTQiIHRleHRMZW5ndGg9IjQwLjc4MyI+U3RlcDM8L3RleHQ+PHBhdGggZD0iTTQwNC4xNDgsNjIyLjgzMiBMNDA0LjE0OCw2MzEuMzk4IEwzODQuMTQ4LDYzNS4zOTggTDQwNC4xNDgsNjM5LjM5OCBMNDA0LjE0OCw2NDcuOTY1IEEwLDAgMCAwIDAgNDA0LjE0OCw2NDcuOTY1IEw1NTQuMjc5LDY0Ny45NjUgQTAsMCAwIDAgMCA1NTQuMjc5LDY0Ny45NjUgTDU1NC4yNzksNjMyLjgzMiBMNTQ0LjI3OSw2MjIuODMyIEw0MDQuMTQ4LDYyMi44MzIgQTAsMCAwIDAgMCA0MDQuMTQ4LDYyMi44MzIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgZmlsbD0iI0ZBRkFGQSIvPjxwYXRoIGQ9Ik01NDQuMjc5LDYyMi44MzIgTDU0NC4yNzksNjMyLjgzMiBMNTU0LjI3OSw2MzIuODMyIEw1NDQuMjc5LDYyMi44MzIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgZmlsbD0iI0ZBRkFGQSIvPjx0ZXh0IHg9IjQxMC4xNDgiIHk9IjYzOS44OTkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTMiIHRleHRMZW5ndGg9IjEyOS4xMyI+YnJlYWsgZnJvbSB0aGUgbG9vcDwvdGV4dD48ZWxsaXBzZSBjeD0iMzczLjE0OCIgY3k9IjYzNS4zOTgiIHJ4PSIxMSIgcnk9IjExIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9IjM3My4xNDgiIGN5PSI2MzUuMzk4IiByeD0iNiIgcnk9IjYiIGZpbGw9IiMyMjIiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjMxMS45NTgsNTc0LjQzLDQzNC4zMzgsNTc0LjQzLDQ0Ni4zMzgsNTg2LjQzLDQzNC4zMzgsNTk4LjQzLDMxMS45NTgsNTk4LjQzLDI5OS45NTgsNTg2LjQzLDMxMS45NTgsNTc0LjQzIiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMzc3LjE0OCIgeT0iNjA4LjY0IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxNi44ODciPk5PPC90ZXh0Pjx0ZXh0IHg9IjMxMS45NTgiIHk9IjU5MC4yMzgiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjEyMi4zOCI+cmVxdWVzdCBtb2R1bGVzIGV4aXN0PC90ZXh0Pjx0ZXh0IHg9IjQ0Ni4zMzgiIHk9IjU4My44MzUiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjI5LjM2NCI+VFJVRTwvdGV4dD48cmVjdCB4PSIxODQuODM4IiB5PSI2OTEuOTY1IiB3aWR0aD0iMzc2LjYyMSIgaGVpZ2h0PSIxMzYuMjM0IiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48cGF0aCBkPSJNMjM1LjYyMSw2OTEuOTY1IEwyMzUuNjIxLDcwMS4yNjIgTDIyNS42MjEsNzExLjI2MiBMMTg0LjgzOCw3MTEuMjYyIiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIGZpbGw9Im5vbmUiLz48dGV4dCB4PSIxODcuODM4IiB5PSI3MDUuOTYiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTQiIHRleHRMZW5ndGg9IjQwLjc4MyI+U3RlcDQ8L3RleHQ+PHJlY3QgeD0iMTk0LjgzOCIgeT0iNzI4LjI2MiIgd2lkdGg9IjM1Ni42MjEiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjIwNC44MzgiIHk9Ijc0OS40IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIzNS42NTQiPnNlbGVjdDwvdGV4dD48dGV4dCB4PSIyNDQuMzA2IiB5PSI3NDkuNCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTYwLjQxOCIgZm9udC13ZWlnaHQ9IjcwMCI+bmV3IGNhbmRpZGF0ZSBtb2R1bGVzPC90ZXh0Pjx0ZXh0IHg9IjQwOC41MzkiIHk9Ijc0OS40IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIxMzIuOTIiPmZyb20gcmVxdWVzdCBtb2R1bGVzPC90ZXh0PjxyZWN0IHg9IjI4NC45NDkiIHk9Ijc4Mi4yMyIgd2lkdGg9IjE3Ni4zOTgiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjI5NC45NDkiIHk9IjgwMy4zNjkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjE1Ni4zOTgiPnJ1biBhbGwgY2FuZGlkYXRlIG1vZHVsZXM8L3RleHQ+PHJlY3QgeD0iMTMxLjc1NSIgeT0iODM4LjE5OSIgd2lkdGg9IjQ4Mi43ODciIGhlaWdodD0iODIuMjY2IiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48cGF0aCBkPSJNMTgyLjUzOCw4MzguMTk5IEwxODIuNTM4LDg0Ny40OTYgTDE3Mi41MzgsODU3LjQ5NiBMMTMxLjc1NSw4NTcuNDk2IiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIGZpbGw9Im5vbmUiLz48dGV4dCB4PSIxMzQuNzU1IiB5PSI4NTIuMTk0IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjE0IiB0ZXh0TGVuZ3RoPSI0MC43ODMiPlN0ZXA1PC90ZXh0PjxyZWN0IHg9IjE0MS43NTUiIHk9Ijg3NC40OTYiIHdpZHRoPSI0NjIuNzg3IiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIxNTEuNzU1IiB5PSI4OTUuNjM1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIyNzAuMjUyIj5kZWNpZGUgdGhlIHByaW9yaXR5IG9yZGVyIG9mIGV4ZWN1dGlvbiBhbW9uZzwvdGV4dD48dGV4dCB4PSI0MjUuODIxIiB5PSI4OTUuNjM1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIxNjguNzIxIiBmb250LXdlaWdodD0iNzAwIj5jYW5kaWRhdGUgbW9kdWxlcyBzdGFjazwvdGV4dD48cmVjdCB4PSIxNiIgeT0iOTMwLjQ2NSIgd2lkdGg9IjcxNS45MzciIGhlaWdodD0iMTE2LjI2NiIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PHBhdGggZD0iTTY2Ljc4Myw5MzAuNDY1IEw2Ni43ODMsOTM5Ljc2MiBMNTYuNzgzLDk0OS43NjIgTDE2LDk0OS43NjIiIHN0eWxlPSJzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MS41OyIgZmlsbD0ibm9uZSIvPjx0ZXh0IHg9IjE5IiB5PSI5NDQuNDYiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTQiIHRleHRMZW5ndGg9IjQwLjc4MyI+U3RlcDY8L3RleHQ+PHBvbHlnb24gcG9pbnRzPSIyMjkuNDksOTY2Ljc2Miw1MTYuODA2LDk2Ni43NjIsNTI4LjgwNiw5NzguNzYyLDUxNi44MDYsOTkwLjc2MiwyMjkuNDksOTkwLjc2MiwyMTcuNDksOTc4Ljc2MiwyMjkuNDksOTY2Ljc2MiIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9IjIyOS40OSIgeT0iOTgyLjU3IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIyODcuMzE2Ij5hcHByb3ZlZCBtb2R1bGUgZXhpc3RzIGluIGNhbmRpZGF0ZSBtb2R1bGVzIHN0YWNrPC90ZXh0Pjx0ZXh0IHg9IjE4OC4xMjYiIHk9Ijk3Ni4xNjciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjI5LjM2NCI+VFJVRTwvdGV4dD48dGV4dCB4PSI1MjguODA2IiB5PSI5NzYuMTY3IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxNi44ODciPk5PPC90ZXh0PjxyZWN0IHg9IjM2IiB5PSIxMDAwLjc2MiIgd2lkdGg9IjM0Mi45OCIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iNDYiIHk9IjEwMjEuOSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMzMuNTE2Ij5tb3ZlPC90ZXh0Pjx0ZXh0IHg9IjgzLjMzIiB5PSIxMDIxLjkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjExOC4zMDEiIGZvbnQtd2VpZ2h0PSI3MDAiPmFwcHJvdmVkIG1vZHVsZTwvdGV4dD48dGV4dCB4PSIyMDUuNDQ1IiB5PSIxMDIxLjkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjE2My41MzUiPnRvIGFwcHJvdmVkIG1vZHVsZXMgc3RhY2s8L3RleHQ+PHBhdGggZD0iTTU2OS44MDYsMTAwMC43NjIgTDU2OS44MDYsMTAwOS4zMjggTDU0OS44MDYsMTAxMy4zMjggTDU2OS44MDYsMTAxNy4zMjggTDU2OS44MDYsMTAyNS44OTUgQTAsMCAwIDAgMCA1NjkuODA2LDEwMjUuODk1IEw3MTkuOTM3LDEwMjUuODk1IEEwLDAgMCAwIDAgNzE5LjkzNywxMDI1Ljg5NSBMNzE5LjkzNywxMDEwLjc2MiBMNzA5LjkzNywxMDAwLjc2MiBMNTY5LjgwNiwxMDAwLjc2MiBBMCwwIDAgMCAwIDU2OS44MDYsMTAwMC43NjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgZmlsbD0iI0ZBRkFGQSIvPjxwYXRoIGQ9Ik03MDkuOTM3LDEwMDAuNzYyIEw3MDkuOTM3LDEwMTAuNzYyIEw3MTkuOTM3LDEwMTAuNzYyIEw3MDkuOTM3LDEwMDAuNzYyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIGZpbGw9IiNGQUZBRkEiLz48dGV4dCB4PSI1NzUuODA2IiB5PSIxMDE3LjgyOSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMyIgdGV4dExlbmd0aD0iMTI5LjEzIj5icmVhayBmcm9tIHRoZSBsb29wPC90ZXh0PjxlbGxpcHNlIGN4PSI1MzguODA2IiBjeT0iMTAxMy4zMjgiIHJ4PSIxMSIgcnk9IjExIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9IjUzOC44MDYiIGN5PSIxMDEzLjMyOCIgcng9IjYiIHJ5PSI2IiBmaWxsPSIjMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIzNzMuMTQ4LDkyLjI5NywzNzMuMTQ4LDkyLjI5NywzODUuMTQ4LDEwNC4yOTcsMzczLjE0OCwxMTYuMjk3LDM3My4xNDgsMTE2LjI5NywzNjEuMTQ4LDEwNC4yOTcsMzczLjE0OCw5Mi4yOTciIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzczLjE0OCIgeTE9IjE5Ni41NjMiIHgyPSIzNzMuMTQ4IiB5Mj0iMjE2LjU2MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzY5LjE0OCwyMDYuNTYzLDM3My4xNDgsMjE2LjU2MywzNzcuMTQ4LDIwNi41NjMsMzczLjE0OCwyMTAuNTYzIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzNzMuMTQ4IiB5MT0iMjUwLjUzMSIgeDI9IjM3My4xNDgiIHkyPSIyNzAuNTMxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIzNjkuMTQ4LDI2MC41MzEsMzczLjE0OCwyNzAuNTMxLDM3Ny4xNDgsMjYwLjUzMSwzNzMuMTQ4LDI2NC41MzEiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjM3My4xNDgiIHkxPSIzMDQuNSIgeDI9IjM3My4xNDgiIHkyPSIzMjUuMjE1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIzNjkuMTQ4LDMxNS4yMTUsMzczLjE0OCwzMjUuMjE1LDM3Ny4xNDgsMzE1LjIxNSwzNzMuMTQ4LDMxOS4yMTUiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjM3My4xNDgiIHkxPSI0NjIuMTY0IiB4Mj0iMzczLjE0OCIgeTI9IjQ4Mi4xNjQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjM2OS4xNDgsNDcyLjE2NCwzNzMuMTQ4LDQ4Mi4xNjQsMzc3LjE0OCw0NzIuMTY0LDM3My4xNDgsNDc2LjE2NCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzczLjE0OCIgeTE9IjM1OS4xODQiIHgyPSIzNzMuMTQ4IiB5Mj0iNDI4LjE5NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzY5LjE0OCw0MTguMTk1LDM3My4xNDgsNDI4LjE5NSwzNzcuMTQ4LDQxOC4xOTUsMzczLjE0OCw0MjIuMTk1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzNzMuMTQ4IiB5MT0iNTk4LjQzIiB4Mj0iMzczLjE0OCIgeTI9IjYyNC4zOTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjM2OS4xNDgsNjE0LjM5OCwzNzMuMTQ4LDYyNC4zOTgsMzc3LjE0OCw2MTQuMzk4LDM3My4xNDgsNjE4LjM5OCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNDQ2LjMzOCIgeTE9IjU4Ni40MyIgeDI9IjU2NC4yNzkiIHkyPSI1ODYuNDMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjU2MC4yNzksNjIyLjM5OCw1NjQuMjc5LDYzMi4zOTgsNTY4LjI3OSw2MjIuMzk4LDU2NC4yNzksNjI2LjM5OCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNTY0LjI3OSIgeTE9IjU4Ni40MyIgeDI9IjU2NC4yNzkiIHkyPSI2NjkuOTY1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjU2NC4yNzkiIHkxPSI2NjkuOTY1IiB4Mj0iMzczLjE0OCIgeTI9IjY2OS45NjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMzczLjE0OCIgeTE9IjY2OS45NjUiIHgyPSIzNzMuMTQ4IiB5Mj0iNzI4LjI2MiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzY5LjE0OCw3MTguMjYyLDM3My4xNDgsNzI4LjI2MiwzNzcuMTQ4LDcxOC4yNjIsMzczLjE0OCw3MjIuMjYyIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzNzMuMTQ4IiB5MT0iNTE2LjEzMyIgeDI9IjM3My4xNDgiIHkyPSI1NzQuNDMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjM2OS4xNDgsNTY0LjQzLDM3My4xNDgsNTc0LjQzLDM3Ny4xNDgsNTY0LjQzLDM3My4xNDgsNTY4LjQzIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzNzMuMTQ4IiB5MT0iNzYyLjIzIiB4Mj0iMzczLjE0OCIgeTI9Ijc4Mi4yMyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzY5LjE0OCw3NzIuMjMsMzczLjE0OCw3ODIuMjMsMzc3LjE0OCw3NzIuMjMsMzczLjE0OCw3NzYuMjMiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjM3My4xNDgiIHkxPSI4MTYuMTk5IiB4Mj0iMzczLjE0OCIgeTI9Ijg3NC40OTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjM2OS4xNDgsODY0LjQ5NiwzNzMuMTQ4LDg3NC40OTYsMzc3LjE0OCw4NjQuNDk2LDM3My4xNDgsODY4LjQ5NiIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjE3LjQ5IiB5MT0iOTc4Ljc2MiIgeDI9IjIwNy40OSIgeTI9Ijk3OC43NjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMjA3LjQ5IiB5MT0iOTc4Ljc2MiIgeDI9IjIwNy40OSIgeTI9IjEwMDAuNzYyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIyMDMuNDksOTkwLjc2MiwyMDcuNDksMTAwMC43NjIsMjExLjQ5LDk5MC43NjIsMjA3LjQ5LDk5NC43NjIiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjUyOC44MDYiIHkxPSI5NzguNzYyIiB4Mj0iNTM4LjgwNiIgeTI9Ijk3OC43NjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iNTM4LjgwNiIgeTE9Ijk3OC43NjIiIHgyPSI1MzguODA2IiB5Mj0iMTAwMi4zMjgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjUzNC44MDYsOTkyLjMyOCw1MzguODA2LDEwMDIuMzI4LDU0Mi44MDYsOTkyLjMyOCw1MzguODA2LDk5Ni4zMjgiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwNy40OSIgeTE9IjEwMzQuNzMiIHgyPSIyMDcuNDkiIHkyPSIxMDM5LjczIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjIwNy40OSIgeTE9IjEwMzkuNzMiIHgyPSI3NDMuOTM3IiB5Mj0iMTAzOS43MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNzM5LjkzNyw1NjguNzE1LDc0My45MzcsNTU4LjcxNSw3NDcuOTM3LDU2OC43MTUsNzQzLjkzNyw1NjQuNzE1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI3NDMuOTM3IiB5MT0iMTA0LjI5NyIgeDI9Ijc0My45MzciIHkyPSIxMDM5LjczIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9Ijc0My45MzciIHkxPSIxMDQuMjk3IiB4Mj0iMzg1LjE0OCIgeTI9IjEwNC4yOTciIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjM5NS4xNDgsMTAwLjI5NywzODUuMTQ4LDEwNC4yOTcsMzk1LjE0OCwxMDguMjk3LDM5MS4xNDgsMTA0LjI5NyIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzczLjE0OCIgeTE9IjkwOC40NjUiIHgyPSIzNzMuMTQ4IiB5Mj0iOTY2Ljc2MiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzY5LjE0OCw5NTYuNzYyLDM3My4xNDgsOTY2Ljc2MiwzNzcuMTQ4LDk1Ni43NjIsMzczLjE0OCw5NjAuNzYyIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzNzMuMTQ4IiB5MT0iMTE2LjI5NyIgeDI9IjM3My4xNDgiIHkyPSIxNjIuNTk0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIzNjkuMTQ4LDE1Mi41OTQsMzczLjE0OCwxNjIuNTk0LDM3Ny4xNDgsMTUyLjU5NCwzNzMuMTQ4LDE1Ni41OTQiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjM3My4xNDgiIHkxPSI3Mi4yOTciIHgyPSIzNzMuMTQ4IiB5Mj0iOTIuMjk3IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIzNjkuMTQ4LDgyLjI5NywzNzMuMTQ4LDkyLjI5NywzNzcuMTQ4LDgyLjI5NywzNzMuMTQ4LDg2LjI5NyIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48P3BsYW50dW1sLXNyYyBmTEREUnpEMDVCcGxodFo3bjU4RktFM1dJNFhMYktmODVBSWNFSTRFc3pzbmxTZndyLW0tYW8zNFYtVlBBVmJvVS05WU1QeHRDSkRsZDNTa1QzaGZiamVPZWNiSVI0NlNVZ1h5RzJtZ3ROai1uOHZsbEFqM1l5MWF2ODVxS1hLWXV4cDRlc0Fic0I0N3RVa1dRb0pnS1pKODZMY2ZwM2U5bGNzU3VCRXZLWjk3WWJxQ2o2OXFSLVl0QWNpNDlDc1dYMGU5bU8wd3BTcjJiSGNvRzkzQ3I3YVRmOG9pUFlyOHdXRGZ4d2FlVDJWaFZpQUFEamp4dkE4VzdJcExxZGU5S1Vvdnd0YmVIb2kwT1RVdlRDR05RajJ0Yl9IU3lRenBzeUdDNFpOU1B0OVA1U056WUFwNkJzTXZNal9VQmJTaE1IeEoxQm94LVZIdl9SMGkyV0xYRGtuR1Zvd1RVM2l1YUx5ZEpIbjdtR2Nyb3Q4S0FTWG83WG92YndRMXNHWEpQdmVwWjVnemFKYlF2Q0JxdXlRNDd4c3VrZlpvazFPVWhmZXo1bm44TzJUUnZ5R0QwaXFVN3pSQmtPOE5Ic1BWbGl4Ym9CN1JNdlRTdFIxd0lqMFJnWUhjR21GdkFGMTFrUm91UWhodHRMd19YczR2UWkyTVo5cEhzSTRObnlrRUNvLXVkUUhYcWxBMm1GVjM4V2xaQjRQc05OOG5FVnViWHhFSWhyWVRzQUpiVndjNXBjSmthMElwQU9lTnZkX082dFhubmhzMTRmcjBobW14RHhTU3FwVDlqcldtdkUwbzhrRTBuTnpWSDV4NjdyTFRWTWtTakdaVmhwdWcybmRVXzBLMD8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title=""></p>
-<p>```c++
-  while (rclcpp::ok()) {
-    /*<em>
-     * STEP1: get approved modules' output
-     </em>/
-    const auto approved_modules_output = runApprovedModules(data);</p>
-<div class="codehilite"><pre><span></span><code>/**
- * STEP2: check modules that need to be launched
- */
-const auto request_modules = getRequestModules(approved_modules_output);
+<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">rclcpp</span><span class="o">::</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * STEP1: get approved modules' output</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">approved_modules_output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">runApprovedModules</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
 
-/**
- * STEP3: if there is no module that need to be launched, return approved modules' output
- */
-if (request_modules.empty()) {
-  processing_time_.at("total_time") = stop_watch_.toc("total_time", true);
-  return approved_modules_output;
-}
+<span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * STEP2: check modules that need to be launched</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">request_modules</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getRequestModules</span><span class="p">(</span><span class="n">approved_modules_output</span><span class="p">);</span>
 
-/**
- * STEP4: if there is module that should be launched, execute the module
- */
-const auto [highest_priority_module, candidate_modules_output] =
-  runRequestModules(request_modules, data, approved_modules_output);
-if (!highest_priority_module) {
-  processing_time_.at("total_time") = stop_watch_.toc("total_time", true);
-  return approved_modules_output;
-}
+<span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * STEP3: if there is no module that need to be launched, return approved modules' output</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">request_modules</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">processing_time_</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="s">"total_time"</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stop_watch_</span><span class="p">.</span><span class="n">toc</span><span class="p">(</span><span class="s">"total_time"</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">approved_modules_output</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
 
-/**
- * STEP5: if the candidate module's modification is NOT approved yet, return the result.
- * NOTE: the result is output of the candidate module, but the output path don't contains path
- * shape modification that needs approval. On the other hand, it could include velocity profile
- * modification.
- */
-if (highest_priority_module-&gt;isWaitingApproval()) {
-  processing_time_.at("total_time") = stop_watch_.toc("total_time", true);
-  return candidate_modules_output;
-}
+<span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * STEP4: if there is module that should be launched, execute the module</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="p">[</span><span class="n">highest_priority_module</span><span class="p">,</span><span class="w"> </span><span class="n">candidate_modules_output</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">      </span><span class="n">runRequestModules</span><span class="p">(</span><span class="n">request_modules</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">approved_modules_output</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">highest_priority_module</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">processing_time_</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="s">"total_time"</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stop_watch_</span><span class="p">.</span><span class="n">toc</span><span class="p">(</span><span class="s">"total_time"</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">approved_modules_output</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
 
-/**
- * STEP6: if the candidate module is approved, push the module into approved_module_ptrs_
- */
-addApprovedModule(highest_priority_module);
-clearCandidateModules();
+<span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * STEP5: if the candidate module's modification is NOT approved yet, return the result.</span>
+<span class="cm">     * NOTE: the result is output of the candidate module, but the output path don't contains path</span>
+<span class="cm">     * shape modification that needs approval. On the other hand, it could include velocity profile</span>
+<span class="cm">     * modification.</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">highest_priority_module</span><span class="o">-&gt;</span><span class="n">isWaitingApproval</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">processing_time_</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="s">"total_time"</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stop_watch_</span><span class="p">.</span><span class="n">toc</span><span class="p">(</span><span class="s">"total_time"</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">candidate_modules_output</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * STEP6: if the candidate module is approved, push the module into approved_module_ptrs_</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="n">addApprovedModule</span><span class="p">(</span><span class="n">highest_priority_module</span><span class="p">);</span>
+<span class="w">    </span><span class="n">clearCandidateModules</span><span class="p">();</span>
+<span class="w">  </span><span class="p">}</span>
 </code></pre></div>
-
-<p>}
-```</p>
 <p>Code is <a href="https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/src/planner_manager.cpp#L66-L111">here</a></p>
 <h2 id="priority-of-execution-request">Priority of execution request<a class="headerlink" href="#priority-of-execution-request" title="Permanent link">#</a></h2>
 <p>Compare priorities parameter among sub-managers to determine the order of execution based on config. Therefore, the priority between sub-modules does <strong>NOT</strong> change at runtime.</p>
-<p><code>c++
-  /**
-   * @brief swap the modules order based on it's priority.
-   * @param modules.
-   * @details for now, the priority is decided in config file and doesn't change runtime.
-   */
-  void sortByPriority(std::vector&lt;SceneModulePtr&gt; &amp; modules) const
-  {
-    // TODO(someone) enhance this priority decision method.
-    std::sort(modules.begin(), modules.end(), [this](auto a, auto b) {
-      return getManager(a)-&gt;getPriority() &lt; getManager(b)-&gt;getPriority();
-    });
-  }</code></p>
+<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * @brief swap the modules order based on it's priority.</span>
+<span class="cm">   * @param modules.</span>
+<span class="cm">   * @details for now, the priority is decided in config file and doesn't change runtime.</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="nf">sortByPriority</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">SceneModulePtr</span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">modules</span><span class="p">)</span><span class="w"> </span><span class="k">const</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// TODO(someone) enhance this priority decision method.</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">sort</span><span class="p">(</span><span class="n">modules</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">modules</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="p">[</span><span class="k">this</span><span class="p">](</span><span class="k">auto</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">getManager</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">getPriority</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">getManager</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">getPriority</span><span class="p">();</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+</code></pre></div>
 <p>Code is <a href="https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/planner_manager.hpp#L239-L250">here</a></p>
 <p>In the future, however, we are considering having the priorities change dynamically depending on the situation in order to achieve more complex use cases.</p>
 <h2 id="how-to-decide-which-request-modules-to-run">How to decide which request modules to run?<a class="headerlink" href="#how-to-decide-which-request-modules-to-run" title="Permanent link">#</a></h2>
@@ -23576,13 +23576,13 @@ clearCandidateModules();
 <p>When the manager removes succeeded modules, the last added module's output is used as approved modules stack.</p>
 <h2 id="slot-output-propagation">Slot output propagation<a class="headerlink" href="#slot-output-propagation" title="Permanent link">#</a></h2>
 <p>As the initial solution, following <em>SlotOutput</em> is passed to the first slot.</p>
-<p><code>cpp
-  SlotOutput result_output = SlotOutput{
-    getReferencePath(data),
-    false,
-    false,
-    false,
-  };</code></p>
+<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="n">SlotOutput</span><span class="w"> </span><span class="n">result_output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SlotOutput</span><span class="p">{</span>
+<span class="w">    </span><span class="n">getReferencePath</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
+<span class="w">    </span><span class="nb">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nb">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nb">false</span><span class="p">,</span>
+<span class="w">  </span><span class="p">};</span>
+</code></pre></div>
 <p>If a slot turned out to be <code>is_upstream_failed_approved</code>, then all the subsequent slots are refreshed and have all of their approved_modules and candidate_modules cleared. The valid_output is just transferred to the end without any modification.</p>
 <p>If a slot turned out to be <code>is_upstream_waiting_approved</code>, then all the subsequent slots clear their candidate_modules once and apply their approved_modules to obtain the slot output.</p>
 <p>If a slot turned out to be <code>is_upstream_candidate_exclusive</code>, it means that a not <code>simultaneously_executable_as_candidate</code> module is running in that slot. Then all the subsequent modules just apply their approved_modules without trying to launch new candidate_modules.</p>

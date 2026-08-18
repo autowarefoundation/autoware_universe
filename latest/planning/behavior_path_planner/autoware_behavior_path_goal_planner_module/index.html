@@ -23668,8 +23668,7 @@ Objects located on the opposite side of relevant road borders from the ego vehic
 </ul>
 <p><img alt="safety_check" src="images/goal_planner-safety_check.drawio.svg"></p>
 <p>In addition, the safety check has a time hysteresis, and if the path is judged "safe" for a certain period of time(<code>keep_unsafe_time</code>), it is finally treated as "safe".</p>
-<p><code>txt
-                         ==== is_safe
+<div class="highlight"><pre><span></span><code>                         ==== is_safe
                          ---- current_is_safe
        is_safe
         ^
@@ -23680,7 +23679,8 @@ Objects located on the opposite side of relevant road borders from the ego vehic
         |  |    |   |       |           |   |  |
         |  |    |   |       |           |   |  |
         |  |    |   |       |           |   |  |
-      0 =========================-------==========--&gt; t</code></p>
+      0 =========================-------==========--&gt; t
+</code></pre></div>
 <h3 id="parameters-for-safety-check">Parameters for safety check<a class="headerlink" href="#parameters-for-safety-check" title="Permanent link">#</a></h3>
 <table>
 <thead>

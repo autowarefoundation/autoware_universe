@@ -22991,8 +22991,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#monitor-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitor Performance
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
   
 </li>
       
@@ -23022,22 +23055,22 @@
 <h2 id="mathematical-formulation">Mathematical Formulation<a class="headerlink" href="#mathematical-formulation" title="Permanent link">#</a></h2>
 <h3 id="decision-variables">Decision Variables<a class="headerlink" href="#decision-variables" title="Permanent link">#</a></h3>
 <p>The optimization operates on 2D path positions:</p>
-<p><code>text
-x = [x_0, y_0, x_1, y_1, ..., x_{N-1}, y_{N-1}]</code></p>
+<div class="highlight"><pre><span></span><code>x = [x_0, y_0, x_1, y_1, ..., x_{N-1}, y_{N-1}]
+</code></pre></div>
 <p>where N is the number of trajectory points.</p>
 <h3 id="objective-function">Objective Function<a class="headerlink" href="#objective-function" title="Permanent link">#</a></h3>
 <p>The optimizer minimizes a weighted combination of two terms:</p>
-<p><code>text
-minimize: J = J_smoothness + J_fidelity</code></p>
+<div class="highlight"><pre><span></span><code>minimize: J = J_smoothness + J_fidelity
+</code></pre></div>
 <h4 id="smoothness-term">Smoothness Term<a class="headerlink" href="#smoothness-term" title="Permanent link">#</a></h4>
 <p>Minimizes path curvature using second-order finite differences:</p>
-<p><code>text
-J_smoothness = w_smoothness * Σ ||(p_{i+1} - 2*p_i + p_{i-1})||²</code></p>
+<div class="highlight"><pre><span></span><code>J_smoothness = w_smoothness * Σ ||(p_{i+1} - 2*p_i + p_{i-1})||²
+</code></pre></div>
 <p>This term is scaled by <code>1/dt²</code> for velocity-aware smoothing.</p>
 <h4 id="fidelity-term">Fidelity Term<a class="headerlink" href="#fidelity-term" title="Permanent link">#</a></h4>
 <p>Keeps the smoothed path close to the original trajectory:</p>
-<p><code>text
-J_fidelity = Σ w_i * ||p_i - p_i^orig||²</code></p>
+<div class="highlight"><pre><span></span><code>J_fidelity = Σ w_i * ||p_i - p_i^orig||²
+</code></pre></div>
 <p>where <code>w_i</code> is the per-point fidelity weight (see Velocity-Based Fidelity section).</p>
 <h3 id="constraints">Constraints<a class="headerlink" href="#constraints" title="Permanent link">#</a></h3>
 <ul>
@@ -23053,10 +23086,10 @@ J_fidelity = Σ w_i * ||p_i - p_i^orig||²</code></p>
 </ul>
 <h3 id="sigmoid-weight-function">Sigmoid Weight Function<a class="headerlink" href="#sigmoid-weight-function" title="Permanent link">#</a></h3>
 <p>Per-point fidelity weights are computed using a sigmoid function:</p>
-<p>```text
-w_i = w_min + (w_max - w_min) * σ(k * (|v_i| - v_th))</p>
-<p>where σ(x) = 1 / (1 + exp(-x))
-```</p>
+<div class="highlight"><pre><span></span><code>w_i = w_min + (w_max - w_min) * σ(k * (|v_i| - v_th))
+
+where σ(x) = 1 / (1 + exp(-x))
+</code></pre></div>
 <p><strong>Parameters:</strong></p>
 <ul>
 <li><code>v_th</code>: Velocity threshold at sigmoid midpoint (default: 0.3 m/s)</li>
@@ -23072,15 +23105,15 @@ w_i = w_min + (w_max - w_min) * σ(k * (|v_i| - v_th))</p>
 <li>Sharpness controls how rapidly weight changes near threshold</li>
 </ul>
 <h3 id="weight-behavior">Weight Behavior<a class="headerlink" href="#weight-behavior" title="Permanent link">#</a></h3>
-<p><code>text
-weight
+<div class="highlight"><pre><span></span><code>weight
 1.0 |           _______  (high speed, preserve path)
     |          /
     |         /
 0.01|_______/            (low speed, allow smoothing)
       0    v_th      v_max
            (0.3 m/s)
-             speed</code></p>
+             speed
+</code></pre></div>
 <h2 id="stop-point-handling">Stop Point Handling<a class="headerlink" href="#stop-point-handling" title="Permanent link">#</a></h2>
 <p>When <code>TrajectoryPointFixer</code> detects a deceleration-to-stop zone, it populates the shared
 <code>SemanticSpeedTracker</code> with the range of points covering the deceleration. The QP smoother
@@ -23088,15 +23121,15 @@ uses this information in two ways:</p>
 <h3 id="hard-position-constraint">Hard Position Constraint<a class="headerlink" href="#hard-position-constraint" title="Permanent link">#</a></h3>
 <p>Each detected stop point is added as an equality constraint in the OSQP problem, pinning its
 position regardless of the smoothness weight:</p>
-<p><code>text
-p[stop_idx] = p[stop_idx]^orig    (hard constraint)</code></p>
+<div class="highlight"><pre><span></span><code>p[stop_idx] = p[stop_idx]^orig    (hard constraint)
+</code></pre></div>
 <p>This prevents the smoother from displacing the vehicle's intended stop position.</p>
 <h3 id="velocity-profile-preservation">Velocity Profile Preservation<a class="headerlink" href="#velocity-profile-preservation" title="Permanent link">#</a></h3>
 <p>After the geometric velocity recalculation and moving average, the planner's original velocity
 profile is restored for all points in detected stop approach ranges:</p>
-<p><code>text
-v[i] = input_trajectory[i].v    (for i in stop approach range)
-v[stop_idx] = 0.0               (stop forced to zero unconditionally)</code></p>
+<div class="highlight"><pre><span></span><code>v[i] = input_trajectory[i].v    (for i in stop approach range)
+v[stop_idx] = 0.0               (stop forced to zero unconditionally)
+</code></pre></div>
 <p>This ensures the downstream jerk smoother (<code>TrajectoryVelocityOptimizer</code>) receives the correct
 <code>v_ref</code> profile and can plan a kinematically feasible deceleration to zero.</p>
 <h2 id="post-processing">Post-Processing<a class="headerlink" href="#post-processing" title="Permanent link">#</a></h2>
@@ -23200,53 +23233,53 @@ v[stop_idx] = 0.0               (stop forced to zero unconditionally)</code></p>
 <h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">#</a></h2>
 <h3 id="example-1-disable-velocity-based-fidelity">Example 1: Disable Velocity-Based Fidelity<a class="headerlink" href="#example-1-disable-velocity-based-fidelity" title="Permanent link">#</a></h3>
 <p>Velocity-based fidelity is enabled by default. To disable it and use a uniform fidelity weight:</p>
-<p><code>bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity false</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity<span class="w"> </span><span class="nb">false</span>
+</code></pre></div>
 <h3 id="example-2-tune-velocity-threshold">Example 2: Tune Velocity Threshold<a class="headerlink" href="#example-2-tune-velocity-threshold" title="Permanent link">#</a></h3>
 <p>To make the transition occur at higher speeds (0.5 m/s instead of 0.3 m/s):</p>
-<p><code>bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.velocity_threshold_mps 0.5</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.velocity_threshold_mps<span class="w"> </span><span class="m">0</span>.5
+</code></pre></div>
 <h3 id="example-3-more-aggressive-low-speed-smoothing">Example 3: More Aggressive Low-Speed Smoothing<a class="headerlink" href="#example-3-more-aggressive-low-speed-smoothing" title="Permanent link">#</a></h3>
 <p>To allow even more smoothing at low speeds:</p>
-<p><code>bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.min_fidelity_weight 0.005</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.min_fidelity_weight<span class="w"> </span><span class="m">0</span>.005
+</code></pre></div>
 <h3 id="example-4-sharper-transition">Example 4: Sharper Transition<a class="headerlink" href="#example-4-sharper-transition" title="Permanent link">#</a></h3>
 <p>To make the velocity-based transition more step-like:</p>
-<p><code>bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.sigmoid_sharpness 80.0</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.sigmoid_sharpness<span class="w"> </span><span class="m">80</span>.0
+</code></pre></div>
 <h3 id="example-5-constrain-only-first-point">Example 5: Constrain Only First Point<a class="headerlink" href="#example-5-constrain-only-first-point" title="Permanent link">#</a></h3>
 <p>For maximum smoothness (only preserve initial position):</p>
-<p><code>bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_start 1</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">1</span>
+</code></pre></div>
 <h3 id="example-6-constrain-last-2-points">Example 6: Constrain Last 2 Points<a class="headerlink" href="#example-6-constrain-last-2-points" title="Permanent link">#</a></h3>
 <p>To preserve the goal state exactly:</p>
-<p><code>bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_end 2</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end<span class="w"> </span><span class="m">2</span>
+</code></pre></div>
 <h3 id="example-7-preserve-larger-initial-region">Example 7: Preserve Larger Initial Region<a class="headerlink" href="#example-7-preserve-larger-initial-region" title="Permanent link">#</a></h3>
 <p>To preserve the first 5 points (useful for very noisy planners):</p>
-<p><code>bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_start 5</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">5</span>
+</code></pre></div>
 <h2 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">#</a></h2>
 <h3 id="view-debug-logs">View Debug Logs<a class="headerlink" href="#view-debug-logs" title="Permanent link">#</a></h3>
 <p>Enable debug logging to see weight statistics and solver diagnostics:</p>
-<p><code>bash
-ros2 run autoware_trajectory_optimizer autoware_trajectory_optimizer_node --ros-args --log-level trajectory_optimizer:=debug</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_trajectory_optimizer<span class="w"> </span>autoware_trajectory_optimizer_node<span class="w"> </span>--ros-args<span class="w"> </span>--log-level<span class="w"> </span>trajectory_optimizer:<span class="o">=</span>debug
+</code></pre></div>
 <h3 id="check-parameter-values">Check Parameter Values<a class="headerlink" href="#check-parameter-values" title="Permanent link">#</a></h3>
-<p>```bash</p>
-<h1 id="check-if-velocity-based-fidelity-is-enabled">Check if velocity-based fidelity is enabled<a class="headerlink" href="#check-if-velocity-based-fidelity-is-enabled" title="Permanent link">#</a></h1>
-<p>ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity</p>
-<h1 id="check-weight-configuration">Check weight configuration<a class="headerlink" href="#check-weight-configuration" title="Permanent link">#</a></h1>
-<p>ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.min_fidelity_weight
-ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.max_fidelity_weight</p>
-<h1 id="check-constraint-configuration">Check constraint configuration<a class="headerlink" href="#check-constraint-configuration" title="Permanent link">#</a></h1>
-<p>ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_start
-ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_end
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check if velocity-based fidelity is enabled</span>
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity
+
+<span class="c1"># Check weight configuration</span>
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.min_fidelity_weight
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.max_fidelity_weight
+
+<span class="c1"># Check constraint configuration</span>
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end
+</code></pre></div>
 <h3 id="monitor-performance">Monitor Performance<a class="headerlink" href="#monitor-performance" title="Permanent link">#</a></h3>
-<p>```bash</p>
-<h1 id="view-processing-time-metrics">View processing time metrics<a class="headerlink" href="#view-processing-time-metrics" title="Permanent link">#</a></h1>
-<p>ros2 topic echo /planning/trajectory_optimizer/debug/processing_time_detail_ms
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># View processing time metrics</span>
+ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>/planning/trajectory_optimizer/debug/processing_time_detail_ms
+</code></pre></div>
 <h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
 <ol>
 <li><strong>Path deviation</strong>: Heavy smoothing can cause deviation from original path</li>

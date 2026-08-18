@@ -22920,14 +22920,14 @@
 </table>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
 <h3 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">#</a></h3>
-<p><code>bash
-ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_dummy_traffic_light_publisher<span class="w"> </span>dummy_traffic_light_publisher.launch.xml
+</code></pre></div>
 <p>To override the mode:</p>
-<p><code>bash
-ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=standalone</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_dummy_traffic_light_publisher<span class="w"> </span>dummy_traffic_light_publisher.launch.xml<span class="w"> </span>mode:<span class="o">=</span>standalone
+</code></pre></div>
 <p>To publish a fixed color for all traffic lights:</p>
-<p><code>bash
-ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=fixed fixed_color:=green</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_dummy_traffic_light_publisher<span class="w"> </span>dummy_traffic_light_publisher.launch.xml<span class="w"> </span>mode:<span class="o">=</span>fixed<span class="w"> </span>fixed_color:<span class="o">=</span>green
+</code></pre></div>
 <h2 id="design-and-extension-tactics">Design and extension tactics<a class="headerlink" href="#design-and-extension-tactics" title="Permanent link">#</a></h2>
 <p>This package separates concerns into three layers:</p>
 <table>
@@ -22964,13 +22964,13 @@ ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher
 </ul>
 <h3 id="run-node-directly">Run node directly<a class="headerlink" href="#run-node-directly" title="Permanent link">#</a></h3>
 <p>The parameters have no in-code defaults, so a parameter file must be provided (e.g. the packaged <code>config/dummy_traffic_light_publisher.param.yaml</code>):</p>
-<p><code>bash
-ros2 run autoware_dummy_traffic_light_publisher autoware_dummy_traffic_light_publisher_node --ros-args \
-  --params-file $(ros2 pkg prefix --share autoware_dummy_traffic_light_publisher)/config/dummy_traffic_light_publisher.param.yaml \
-  -p mode:=standalone \
-  -r ~/input/vector_map:=/map/vector_map \
-  -r ~/input/traffic_signals:=/simulator/input/traffic_signals \
-  -r ~/output/traffic_signals:=/perception/traffic_light_recognition/traffic_signals</code></p></div>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_dummy_traffic_light_publisher<span class="w"> </span>autoware_dummy_traffic_light_publisher_node<span class="w"> </span>--ros-args<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--params-file<span class="w"> </span><span class="k">$(</span>ros2<span class="w"> </span>pkg<span class="w"> </span>prefix<span class="w"> </span>--share<span class="w"> </span>autoware_dummy_traffic_light_publisher<span class="k">)</span>/config/dummy_traffic_light_publisher.param.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-p<span class="w"> </span>mode:<span class="o">=</span>standalone<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-r<span class="w"> </span>~/input/vector_map:<span class="o">=</span>/map/vector_map<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-r<span class="w"> </span>~/input/traffic_signals:<span class="o">=</span>/simulator/input/traffic_signals<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-r<span class="w"> </span>~/output/traffic_signals:<span class="o">=</span>/perception/traffic_light_recognition/traffic_signals
+</code></pre></div></div>
 
 
 

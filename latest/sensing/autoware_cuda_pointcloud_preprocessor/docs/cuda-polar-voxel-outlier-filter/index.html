@@ -23258,8 +23258,8 @@
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>Due to differences in floating-point arithmetic between CPUs and GPUs, the outputs of <code>autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent</code> and this filter may not be identical.</p>
 <p>Adding compiler options, such as the following, can reduce numerical discrepancies, though a slight performance impact can also be introduced, and it is still difficult to acquire complete identical results.</p>
-<p><code>CMake
-list(APPEND CUDA_NVCC_FLAGS "--fmad=false")</code></p>
+<div class="highlight"><pre><span></span><code><span class="nb">list</span><span class="p">(</span><span class="s">APPEND</span><span class="w"> </span><span class="s">CUDA_NVCC_FLAGS</span><span class="w"> </span><span class="s2">"--fmad=false"</span><span class="p">)</span>
+</code></pre></div>
 <p>To prioritize performance, these compiler options are not enabled.</p></div>
 
 

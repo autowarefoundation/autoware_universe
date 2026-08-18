@@ -22645,15 +22645,14 @@
 <div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
 <p><em>File</em>: <code>planning/autoware_trajectory_processor/README.md</code></p>
 <p><em>KeyError</em>: 'description'</p>
-<p>```
-Traceback (most recent call last):
+<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
   File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
     return md_template.render(**page_variables)
   File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
     self.environment.handle_exception()
   File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "<template>", line 102, in top-level template code
+  File "&lt;template&gt;", line 102, in top-level template code
   File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
     return format_json(data)
   File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
@@ -22664,8 +22663,8 @@ Traceback (most recent call last):
     params.extend(extract_parameter_info(v["properties"], k + "."))
   File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 52, in extract_parameter_info
     param["Description"] = v["description"]
-KeyError: 'description'</template></p>
-<p>```</p></div>
+KeyError: 'description'
+</code></pre></div></div>
 
 
 

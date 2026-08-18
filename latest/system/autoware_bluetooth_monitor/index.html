@@ -22941,14 +22941,14 @@ L2ping generates PING echo command on Bluetooth L2CAP layer, and it is able to r
 <ol>
 <li>
 <p>Assign capability to <code>l2ping_service</code> since L2ping requires <code>cap_net_raw+eip</code> capability.</p>
-<p><code>sh
- sudo setcap 'cap_net_raw+eip' ./build/bluetooth_monitor/l2ping_service</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>setcap<span class="w"> </span><span class="s1">'cap_net_raw+eip'</span><span class="w"> </span>./build/bluetooth_monitor/l2ping_service
+</code></pre></div>
 </li>
 <li>
 <p>Run <code>l2ping_service</code> and <code>bluetooth_monitor</code>.</p>
-<p><code>sh
- ./build/bluetooth_monitor/l2ping_service
- ros2 launch autoware_bluetooth_monitor bluetooth_monitor.launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>./build/bluetooth_monitor/l2ping_service
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_bluetooth_monitor<span class="w"> </span>bluetooth_monitor.launch.xml
+</code></pre></div>
 </li>
 </ol>
 <h2 id="known-limitations-and-issues">Known limitations and issues<a class="headerlink" href="#known-limitations-and-issues" title="Permanent link">#</a></h2>

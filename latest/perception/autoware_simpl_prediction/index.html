@@ -23223,12 +23223,12 @@
 <p>Now we are preparing a library to train and deploy SIMPL and other ML models featuring motion prediction tasks.</p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
 <p>Unit tests are provided and can be run with:</p>
-<p><code>shell
-colcon test --packages-select autoware_simpl
-colcon test-result --all</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_simpl
+colcon<span class="w"> </span>test-result<span class="w"> </span>--all
+</code></pre></div>
 <p>To print the test's details with while the tests are being run, use the <code>--event-handlers console_cohesion+</code> option to print the details directly to the console:</p>
-<p><code>shell
-colcon test --event-handlers console_cohesion+ --packages-select autoware_simpl</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--event-handlers<span class="w"> </span>console_cohesion+<span class="w"> </span>--packages-select<span class="w"> </span>autoware_simpl
+</code></pre></div>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <h3 id="agent-to-be-published">Agent to be Published<a class="headerlink" href="#agent-to-be-published" title="Permanent link">#</a></h3>
 <p>Note that only agents whose label is contained in <code>preprocess.labels</code> will be published.</p>

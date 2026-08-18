@@ -23060,8 +23060,8 @@
 </ul>
 <h3 id="trained-model">Trained Model<a class="headerlink" href="#trained-model" title="Permanent link">#</a></h3>
 <p>Download the <a href="https://multicorewareinc1-my.sharepoint.com/:u:/g/personal/naveen_sathiyaseelan_multicorewareinc_com/ERQSpS-BoAZGh4R4zNZhITcB58aqDW_tu9aKHLpit6aLAg?e=IZ5nZN"><code>bevformer_small.onnx</code></a> model to:</p>
-<p><code>bash
-$HOME/autoware_data/ml_models/tensorrt_bevformer</code></p>
+<div class="highlight"><pre><span></span><code><span class="nv">$HOME</span>/autoware_data/ml_models/tensorrt_bevformer
+</code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> The <strong>BEVFormer</strong> model was trained on the <strong>nuScenes</strong> dataset for 24 epochs with temporal fusion enabled.</p>
 </blockquote>
@@ -23072,57 +23072,61 @@ $HOME/autoware_data/ml_models/tensorrt_bevformer</code></p>
 </li>
 <li>
 <p>To play ROS 2 bag of nuScenes data:</p>
-<p><code>bash
- cd autoware/src
- git clone -b feature/bevformer-integration https://github.com/naveen-mcw/ros2_dataset_bridge.git
- cd ..</code></p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>autoware/src
+git<span class="w"> </span>clone<span class="w"> </span>-b<span class="w"> </span>feature/bevformer-integration<span class="w"> </span>https://github.com/naveen-mcw/ros2_dataset_bridge.git
+<span class="nb">cd</span><span class="w"> </span>..
+</code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> The <code>feature/bevformer-integration</code> branch provides required data for the BEVFormer.</p>
 </blockquote>
 <p>Download nuScenes dataset and canbus data <a href="https://www.nuscenes.org/nuscenes#">here</a>.</p>
 <p>Open and edit the launch file to set dataset paths/configs:</p>
-<p><code>bash
- nano src/ros2_dataset_bridge/launch/nuscenes_launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>nano<span class="w"> </span>src/ros2_dataset_bridge/launch/nuscenes_launch.xml
+</code></pre></div>
 <p>Update as needed:</p>
-<p><code>xml
- &lt;arg name="NUSCENES_DIR" default="&lt;nuScenes_dataset_path&gt;"/&gt;
- &lt;arg name="NUSCENES_CAN_BUS_DIR" default="&lt;can_bus_path&gt;"/&gt;
- &lt;arg name="NUSCENES_VER" default="v1.0-trainval"/&gt;
- &lt;arg name="UPDATE_FREQUENCY" default="10.0"/&gt;</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"NUSCENES_DIR"</span><span class="w"> </span><span class="na">default=</span><span class="s">"&lt;nuScenes_dataset_path&gt;"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"NUSCENES_CAN_BUS_DIR"</span><span class="w"> </span><span class="na">default=</span><span class="s">"&lt;can_bus_path&gt;"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"NUSCENES_VER"</span><span class="w"> </span><span class="na">default=</span><span class="s">"v1.0-trainval"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"UPDATE_FREQUENCY"</span><span class="w"> </span><span class="na">default=</span><span class="s">"10.0"</span><span class="nt">/&gt;</span>
+</code></pre></div>
 </li>
 <li>
 <p>Build the autoware_tensorrt_bevformer and ros2_dataset_bridge packages</p>
-<p>```bash
- # Build ros2_dataset_bridge</p>
-<p>colcon build --packages-up-to ros2_dataset_bridge</p>
-<p># Build autoware_tensorrt_bevformer</p>
-<p>colcon build --packages-up-to autoware_tensorrt_bevformer</p>
-<p>```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Build ros2_dataset_bridge</span>
+
+colcon<span class="w"> </span>build<span class="w"> </span>--packages-up-to<span class="w"> </span>ros2_dataset_bridge
+
+<span class="c1"># Build autoware_tensorrt_bevformer</span>
+
+colcon<span class="w"> </span>build<span class="w"> </span>--packages-up-to<span class="w"> </span>autoware_tensorrt_bevformer
+</code></pre></div>
 <p>Source environments:</p>
-<p><code>bash
- source install/setup.bash
- source /opt/ros/humble/setup.bash</code></p>
+<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>install/setup.bash
+<span class="nb">source</span><span class="w"> </span>/opt/ros/humble/setup.bash
+</code></pre></div>
 </li>
 <li>
 <p>Launch dataset publisher and GUI tools:</p>
-<p><code>bash
- ros2 launch ros2_dataset_bridge nuscenes_launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>ros2_dataset_bridge<span class="w"> </span>nuscenes_launch.xml
+</code></pre></div>
 <blockquote>
 <p><strong>Tip:</strong> If nuScenes boxes aren't visible in RViz, uncheck <strong>Stop</strong> in the GUI controller, then click <strong>OK</strong>.</p>
 </blockquote>
 </li>
 <li>
 <p>Launch TensorRT BEVFormer Node</p>
-<p>```bash
- # Default mode (FP16)
- ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml</p>
-<p># FP32 precision
- ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml precision:=fp32</p>
-<p># With visualization
- ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml debug_mode:=true</p>
-<p># FP32 + visualization
- ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml precision:=fp32 debug_mode:=true
- ```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Default mode (FP16)</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_tensorrt_bevformer<span class="w"> </span>bevformer.launch.xml
+
+<span class="c1"># FP32 precision</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_tensorrt_bevformer<span class="w"> </span>bevformer.launch.xml<span class="w"> </span>precision:<span class="o">=</span>fp32
+
+<span class="c1"># With visualization</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_tensorrt_bevformer<span class="w"> </span>bevformer.launch.xml<span class="w"> </span>debug_mode:<span class="o">=</span><span class="nb">true</span>
+
+<span class="c1"># FP32 + visualization</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_tensorrt_bevformer<span class="w"> </span>bevformer.launch.xml<span class="w"> </span>precision:<span class="o">=</span>fp32<span class="w"> </span>debug_mode:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
 </li>
 </ol>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">#</a></h3>

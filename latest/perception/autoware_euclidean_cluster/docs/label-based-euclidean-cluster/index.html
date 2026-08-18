@@ -8044,6 +8044,61 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#confusable-label-merge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confusable-Label Merge
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-configuration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Configuration Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known Limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#intended-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Intended Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-extensions-follow-up-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Extensions / Follow-up Works
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -23008,6 +23063,61 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#confusable-label-merge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confusable-Label Merge
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-configuration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Configuration Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known Limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#intended-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Intended Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-extensions-follow-up-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Extensions / Follow-up Works
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -23237,20 +23347,19 @@ hazards need a tighter tolerance and finer voxels than cars or trucks.</p>
 </ul>
 <p>Example: give pedestrians a tighter tolerance and finer voxels while leaving everything else on the
 global defaults.</p>
-<p>```yaml
-tolerance_m: 0.65
-voxel_leaf_size_m: 0.2</p>
-<h1 id="other-global-defaults">... other global defaults ...<a class="headerlink" href="#other-global-defaults" title="Permanent link">#</a></h1>
-<p>label_cluster_params:
-  pedestrian:
-    tolerance_m: 0.3
-    voxel_leaf_size_m: 0.1
-    min_points_per_voxel: 1
-    min_points_per_cluster: 3
-    large_cluster_voxel_count_threshold: 5
-    large_cluster_max_points_per_voxel: 30
-    max_voxels_per_cluster: 200
-```</p>
+<div class="highlight"><pre><span></span><code><span class="nt">tolerance_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+<span class="nt">voxel_leaf_size_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
+<span class="c1"># ... other global defaults ...</span>
+<span class="nt">label_cluster_params</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pedestrian</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">tolerance_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+<span class="w">    </span><span class="nt">voxel_leaf_size_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
+<span class="w">    </span><span class="nt">min_points_per_voxel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">    </span><span class="nt">min_points_per_cluster</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">    </span><span class="nt">large_cluster_voxel_count_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<span class="w">    </span><span class="nt">large_cluster_max_points_per_voxel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<span class="w">    </span><span class="nt">max_voxels_per_cluster</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
+</code></pre></div>
 <h2 id="confusable-label-merge">Confusable-Label Merge<a class="headerlink" href="#confusable-label-merge" title="Permanent link">#</a></h2>
 <p>Because each label bucket is clustered independently, a single physical object whose points carry two
 semantically confusable labels (for example a truck and its trailer, where the segmentation model
@@ -23277,12 +23386,12 @@ together.</p>
 </ul>
 <p>Example: merge <code>truck</code> and <code>trailer</code> fragments that are within 0.5 m of each other, capping the
 merged object at a 25 m diameter.</p>
-<p><code>yaml
-confusable_label_groups:
-  truck_trailer:
-    labels: ["truck", "trailer"]
-    cross_label_tolerance_m: 0.5
-    max_merged_size_m: 25.0</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">confusable_label_groups</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">truck_trailer</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"truck"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"trailer"</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">cross_label_tolerance_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
+<span class="w">    </span><span class="nt">max_merged_size_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25.0</span>
+</code></pre></div>
 <h2 id="default-configuration-notes">Default Configuration Notes<a class="headerlink" href="#default-configuration-notes" title="Permanent link">#</a></h2>
 <p>The default parameter file keeps shared clustering and shape-estimation parameters only.
 Object selection is derived from <code>PointCloudClassification</code> compatibility.</p>

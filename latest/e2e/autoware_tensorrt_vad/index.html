@@ -23056,28 +23056,28 @@
 <hr>
 <h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">#</a></h2>
 <p>Build the package with colcon:</p>
-<p><code>bash
-colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Release --packages-up-to autoware_tensorrt_vad</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build<span class="w"> </span>--symlink-install<span class="w"> </span>--cmake-args<span class="w"> </span>-DCMAKE_EXPORT_COMPILE_COMMANDS<span class="o">=</span>ON<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>--packages-up-to<span class="w"> </span>autoware_tensorrt_vad
+</code></pre></div>
 <hr>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
 <h3 id="unit-tests">Unit Tests<a class="headerlink" href="#unit-tests" title="Permanent link">#</a></h3>
 <p>Unit tests are provided and can be run with:</p>
-<p><code>bash
-colcon test --packages-select autoware_tensorrt_vad
-colcon test-result --all</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_tensorrt_vad
+colcon<span class="w"> </span>test-result<span class="w"> </span>--all
+</code></pre></div>
 <p>For verbose output:</p>
-<p><code>bash
-colcon test --packages-select autoware_tensorrt_vad --event-handlers console_cohesion+</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_tensorrt_vad<span class="w"> </span>--event-handlers<span class="w"> </span>console_cohesion+
+</code></pre></div>
 <h3 id="carla-simulator-testing">CARLA Simulator Testing<a class="headerlink" href="#carla-simulator-testing" title="Permanent link">#</a></h3>
 <p>First, setup CARLA following the <a href="https://github.com/autowarefoundation/autoware.universe/tree/main/simulator/autoware_carla_interface">autoware_carla_interface</a> instructions.</p>
 <p>Then launch the E2E VAD system:</p>
-<p><code>bash
-ros2 launch autoware_launch e2e_simulator.launch.xml \
-  map_path:=$HOME/autoware_data/maps/Town01 \
-  vehicle_model:=sample_vehicle \
-  sensor_model:=carla_sensor_kit \
-  simulator_type:=carla \
-  use_e2e_planning:=true</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_data/maps/Town01<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>sensor_model:<span class="o">=</span>carla_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>simulator_type:<span class="o">=</span>carla<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>use_e2e_planning:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
 <hr>
 <h2 id="model-setup-and-versioning">Model Setup and Versioning<a class="headerlink" href="#model-setup-and-versioning" title="Permanent link">#</a></h2>
 <h3 id="model-download">Model Download<a class="headerlink" href="#model-download" title="Permanent link">#</a></h3>
@@ -23098,18 +23098,18 @@ Models are hosted at: <a href="https://huggingface.co/AutowareFoundation/tensorr
 <li><code>vad-carla-tiny_head.onnx</code> - Temporal planning head</li>
 </ul>
 <p>If you need to manually configure the model paths, update them in <code>config/vad_carla_tiny.param.yaml</code>:</p>
-<p><code>yaml
-model_params:
-  nets:
-    backbone:
-      onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.onnx"
-      engine_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.engine"
-    head:
-      onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head.onnx"
-      engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head.engine"
-    head_no_prev:
-      onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.onnx"
-      engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.engine"</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">model_params</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">nets</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">backbone</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">onnx_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_backbone.onnx"</span>
+<span class="w">      </span><span class="nt">engine_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_backbone.engine"</span>
+<span class="w">    </span><span class="nt">head</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">onnx_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head.onnx"</span>
+<span class="w">      </span><span class="nt">engine_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head.engine"</span>
+<span class="w">    </span><span class="nt">head_no_prev</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">onnx_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head_no_prev.onnx"</span>
+<span class="w">      </span><span class="nt">engine_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head_no_prev.engine"</span>
+</code></pre></div>
 <ol>
 <li><strong>Launch the node</strong>: On first run, the node will automatically:<ul>
 <li>Build TensorRT engines from ONNX models</li>

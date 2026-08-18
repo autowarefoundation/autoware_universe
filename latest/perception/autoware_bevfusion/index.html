@@ -23464,12 +23464,12 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 </table>
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_bevfusion</code> node has a <code>build_only</code> option to build the TensorRT engine file from the specified ONNX file, after which the program exits.</p>
-<p><code>bash
-ros2 launch autoware_bevfusion bevfusion.launch.xml build_only:=true</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_bevfusion<span class="w"> </span>bevfusion.launch.xml<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
 <h3 id="the-log_level-option">The <code>log_level</code> option<a class="headerlink" href="#the-log_level-option" title="Permanent link">#</a></h3>
 <p>The default logging severity level for <code>autoware_bevfusion</code> is <code>info</code>. For debugging purposes, the developer may decrease severity level using <code>log_level</code> parameter:</p>
-<p><code>bash
-ros2 launch autoware_bevfusion bevfusion.launch.xml log_level:=debug</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_bevfusion<span class="w"> </span>bevfusion.launch.xml<span class="w"> </span>log_level:<span class="o">=</span>debug
+</code></pre></div>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>This node assumes that the input pointcloud follows the <code>PointXYZIRC</code> layout defined in <code>autoware_point_types</code>.</p>
 <h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>

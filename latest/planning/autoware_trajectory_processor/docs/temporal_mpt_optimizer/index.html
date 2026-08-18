@@ -22833,24 +22833,24 @@
 <p>States are <span class="arithmatex">\((x, y, \psi, v)\)</span>; controls are longitudinal acceleration and steering command <span class="arithmatex">\((a, \delta)\)</span>. The solver is generated at build time from <code>src/acados_mpt/generators/path_tracking_mpc_temporal.py</code>.</p>
 <h2 id="role-in-the-plugin-pipeline">Role in the plugin pipeline<a class="headerlink" href="#role-in-the-plugin-pipeline" title="Permanent link">#</a></h2>
 <p>The default trajectory optimizer pipeline runs many plugins in sequence after basic cleanup:</p>
-<p><code>yaml
-plugin_names:
-  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
-  - "autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
-  - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
-  - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
-  - "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
-  - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
-  - "autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"
-  - "autoware::trajectory_processor::plugin::TrajectoryExtender"</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryQPSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectorySplineSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryExtender"</span>
+</code></pre></div>
 <p><strong>TrajectoryTemporalMPTOptimizer</strong> is intended to replace that entire post-<code>TrajectoryPointFixer</code> chain with a single joint optimization step. When enabled, a minimal pipeline is:</p>
-<p>```yaml
-plugin_names:
-  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer"</p>
-<p>use_temporal_mpt_optimizer: true
-```</p>
+<div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer"</span>
+
+<span class="nt">use_temporal_mpt_optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
 <p>Turn off the plugins it supersedes (<code>use_qp_smoother</code>, <code>use_velocity_optimizer</code>, <code>use_eb_smoother</code>, <code>use_akima_spline_interpolation</code>, <code>use_kinematic_feasibility_enforcer</code>, <code>use_mpt_optimizer</code>, <code>use_trajectory_extender</code>) so they are not loaded in parallel.</p>
 <h3 id="what-each-replaced-plugin-contributes">What each replaced plugin contributes<a class="headerlink" href="#what-each-replaced-plugin-contributes" title="Permanent link">#</a></h3>
 <table>
@@ -23013,8 +23013,8 @@ plugin_names:
 <p><code>wheel_base</code> is read from the vehicle description (<code>vehicle_info.param.yaml</code>, loaded with the stack via <code>common_param_path</code> in <code>trajectory_optimizer.launch.xml</code>), not from this plugin YAML.</p>
 <h2 id="debug-visualization">Debug visualization<a class="headerlink" href="#debug-visualization" title="Permanent link">#</a></h2>
 <p>With <code>publish_debug_topics: true</code>, run:</p>
-<p><code>bash
-ros2 run autoware_trajectory_optimizer temporal_mpt_debug_visualizer.py</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_trajectory_optimizer<span class="w"> </span>temporal_mpt_debug_visualizer.py
+</code></pre></div>
 <p>See <code>scripts/temporal_mpt_debug_visualizer.py</code> for topic names and options.</p>
 <h2 id="comparison-with-spatial-mpt">Comparison with spatial MPT<a class="headerlink" href="#comparison-with-spatial-mpt" title="Permanent link">#</a></h2>
 <table>

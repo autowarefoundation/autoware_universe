@@ -22968,43 +22968,45 @@ a[0] = a_0
 <h2 id="3-class-structures">3. Class Structures<a class="headerlink" href="#3-class-structures" title="Permanent link">#</a></h2>
 <h3 id="31-continuousjerksmootherparams">3.1 <code>ContinuousJerkSmootherParams</code><a class="headerlink" href="#31-continuousjerksmootherparams" title="Permanent link">#</a></h3>
 <p>Configuration structure containing all tunable parameters:</p>
-<p>```cpp
-struct ContinuousJerkSmootherParams {
-  // QP optimization weights
-  double jerk_weight{10.0};                // Weight for jerk minimization
-  double over_v_weight{10000.0};           // Weight for velocity limit violation
-  double over_a_weight{5000.0};            // Weight for acceleration limit violation
-  double over_j_weight{200.0};             // Weight for jerk limit violation
-  double velocity_tracking_weight{100.0};  // Weight for tracking reference velocity
-  double accel_tracking_weight{10.0};      // Weight for tracking reference acceleration</p>
-<p>// Kinematic limits
-  double max_accel{2.0};   // Maximum acceleration [m/s²]
-  double min_decel{-3.0};  // Minimum deceleration [m/s²]
-  double max_jerk{1.5};    // Maximum jerk [m/s³]
-  double min_jerk{-1.5};   // Minimum jerk [m/s³]
-};
-```</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// QP optimization weights</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">jerk_weight</span><span class="p">{</span><span class="mf">10.0</span><span class="p">};</span><span class="w">                </span><span class="c1">// Weight for jerk minimization</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_v_weight</span><span class="p">{</span><span class="mf">10000.0</span><span class="p">};</span><span class="w">           </span><span class="c1">// Weight for velocity limit violation</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_a_weight</span><span class="p">{</span><span class="mf">5000.0</span><span class="p">};</span><span class="w">            </span><span class="c1">// Weight for acceleration limit violation</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_j_weight</span><span class="p">{</span><span class="mf">200.0</span><span class="p">};</span><span class="w">             </span><span class="c1">// Weight for jerk limit violation</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">velocity_tracking_weight</span><span class="p">{</span><span class="mf">100.0</span><span class="p">};</span><span class="w">  </span><span class="c1">// Weight for tracking reference velocity</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">accel_tracking_weight</span><span class="p">{</span><span class="mf">10.0</span><span class="p">};</span><span class="w">      </span><span class="c1">// Weight for tracking reference acceleration</span>
+
+<span class="w">  </span><span class="c1">// Kinematic limits</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">max_accel</span><span class="p">{</span><span class="mf">2.0</span><span class="p">};</span><span class="w">   </span><span class="c1">// Maximum acceleration [m/s²]</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">min_decel</span><span class="p">{</span><span class="mf">-3.0</span><span class="p">};</span><span class="w">  </span><span class="c1">// Minimum deceleration [m/s²]</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">max_jerk</span><span class="p">{</span><span class="mf">1.5</span><span class="p">};</span><span class="w">    </span><span class="c1">// Maximum jerk [m/s³]</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">min_jerk</span><span class="p">{</span><span class="mf">-1.5</span><span class="p">};</span><span class="w">   </span><span class="c1">// Minimum jerk [m/s³]</span>
+<span class="p">};</span>
+</code></pre></div>
 <h3 id="32-continuousjerksmoother-class">3.2 <code>ContinuousJerkSmoother</code> Class<a class="headerlink" href="#32-continuousjerksmoother-class" title="Permanent link">#</a></h3>
 <h4 id="321-public-interface">3.2.1 Public Interface<a class="headerlink" href="#321-public-interface" title="Permanent link">#</a></h4>
-<p>```cpp
-class ContinuousJerkSmoother {
-public:
-  // Constructor
-  explicit ContinuousJerkSmoother(const ContinuousJerkSmootherParams &amp; params);</p>
-<p>// Main smoothing function
-  bool apply(
-    const double v0,                    // Initial velocity [m/s]
-    const double a0,                    // Initial acceleration [m/s²]
-    const TrajectoryPoints &amp; input,     // Input trajectory points
-    TrajectoryPoints &amp; output,          // Output smoothed trajectory points
-    const std::vector<double> &amp; max_velocity_per_point = {}  // Per-point velocity upper bounds
-  );</double></p>
-<p>// Parameter management
-  void set_params(const ContinuousJerkSmootherParams &amp; params);
-  ContinuousJerkSmootherParams get_params() const;</p>
-<p>~ContinuousJerkSmoother() = default;
-};
-```</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ContinuousJerkSmoother</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">  </span><span class="c1">// Constructor</span>
+<span class="w">  </span><span class="k">explicit</span><span class="w"> </span><span class="n">ContinuousJerkSmoother</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">params</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Main smoothing function</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v0</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Initial velocity [m/s]</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">a0</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Initial acceleration [m/s²]</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">TrajectoryPoints</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w">     </span><span class="c1">// Input trajectory points</span>
+<span class="w">    </span><span class="n">TrajectoryPoints</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">output</span><span class="p">,</span><span class="w">          </span><span class="c1">// Output smoothed trajectory points</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">max_velocity_per_point</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">  </span><span class="c1">// Per-point velocity upper bounds</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Parameter management</span>
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="nf">set_params</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">params</span><span class="p">);</span>
+<span class="w">  </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="nf">get_params</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="p">;</span>
+
+<span class="w">  </span><span class="o">~</span><span class="n">ContinuousJerkSmoother</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div>
 <h2 id="4-implementation-details">4. Implementation Details<a class="headerlink" href="#4-implementation-details" title="Permanent link">#</a></h2>
 <h3 id="41-qp-problem-setup">4.1 QP Problem Setup<a class="headerlink" href="#41-qp-problem-setup" title="Permanent link">#</a></h3>
 <p>The optimization problem is formulated as:</p>
@@ -23022,12 +23024,12 @@ public:
 <li><span class="arithmatex">\(l\)</span>, <span class="arithmatex">\(<span class="arithmatex">\(u\)</span>\)</span> = Lower and upper bounds</li>
 </ul>
 <h3 id="42-variable-indexing">4.2 Variable Indexing<a class="headerlink" href="#42-variable-indexing" title="Permanent link">#</a></h3>
-<p><code>cpp
-IDX_B0 = 0;      // Start of b variables (velocity squared)
-IDX_A0 = N;      // Start of a variables (acceleration)
-IDX_DELTA0 = 2N; // Start of delta variables (velocity slack)
-IDX_SIGMA0 = 3N; // Start of sigma variables (acceleration slack)
-IDX_GAMMA0 = 4N; // Start of gamma variables (jerk slack)</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">IDX_B0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of b variables (velocity squared)</span>
+<span class="n">IDX_A0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of a variables (acceleration)</span>
+<span class="n">IDX_DELTA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of delta variables (velocity slack)</span>
+<span class="n">IDX_SIGMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of sigma variables (acceleration slack)</span>
+<span class="n">IDX_GAMMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of gamma variables (jerk slack)</span>
+</code></pre></div>
 <h3 id="43-error-handling">4.3 Error Handling<a class="headerlink" href="#43-error-handling" title="Permanent link">#</a></h3>
 <ul>
 <li>Returns <code>false</code> if optimization fails</li>
@@ -23036,22 +23038,25 @@ IDX_GAMMA0 = 4N; // Start of gamma variables (jerk slack)</code></p>
 <li>Provides fallback behavior for edge cases</li>
 </ul>
 <h2 id="5-usage-example">5. Usage Example<a class="headerlink" href="#5-usage-example" title="Permanent link">#</a></h2>
-<p>```cpp
-// Create smoother with default parameters
-ContinuousJerkSmootherParams params;
-params.max_accel = 2.5;
-params.min_decel = -4.0;
-params.max_jerk = 2.0;
-params.min_jerk = -2.0;</p>
-<p>ContinuousJerkSmoother smoother(params);</p>
-<p>// Apply smoothing
-double v0 = 1.0;  // Initial velocity [m/s]
-double a0 = 0.0;  // Initial acceleration [m/s²]
-TrajectoryPoints input_trajectory = ...;
-TrajectoryPoints output_trajectory;</p>
-<p>std::vector<double> max_velocities(input_trajectory.size(), 10.0);  // 10 m/s limit</double></p>
-<p>bool success = smoother.apply(v0, a0, input_trajectory, output_trajectory, max_velocities);
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Create smoother with default parameters</span>
+<span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="n">params</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">max_accel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.5</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">min_decel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-4.0</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">max_jerk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.0</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">min_jerk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-2.0</span><span class="p">;</span>
+
+<span class="n">ContinuousJerkSmoother</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="n">params</span><span class="p">);</span>
+
+<span class="c1">// Apply smoothing</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">v0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">;</span><span class="w">  </span><span class="c1">// Initial velocity [m/s]</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">a0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w">  </span><span class="c1">// Initial acceleration [m/s²]</span>
+<span class="n">TrajectoryPoints</span><span class="w"> </span><span class="n">input_trajectory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">TrajectoryPoints</span><span class="w"> </span><span class="n">output_trajectory</span><span class="p">;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">max_velocities</span><span class="p">(</span><span class="n">input_trajectory</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span><span class="w"> </span><span class="mf">10.0</span><span class="p">);</span><span class="w">  </span><span class="c1">// 10 m/s limit</span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="n">success</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">smoother</span><span class="p">.</span><span class="n">apply</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span><span class="w"> </span><span class="n">a0</span><span class="p">,</span><span class="w"> </span><span class="n">input_trajectory</span><span class="p">,</span><span class="w"> </span><span class="n">output_trajectory</span><span class="p">,</span><span class="w"> </span><span class="n">max_velocities</span><span class="p">);</span>
+</code></pre></div>
 <h2 id="6-integration-with-trajectory-optimizer">6. Integration with Trajectory Optimizer<a class="headerlink" href="#6-integration-with-trajectory-optimizer" title="Permanent link">#</a></h2>
 <p>The continuous jerk smoother is typically used within the trajectory velocity optimizer pipeline:</p>
 <ol>

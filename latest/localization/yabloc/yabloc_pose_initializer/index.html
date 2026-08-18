@@ -22744,8 +22744,8 @@
 <p>This package requires the pre-trained semantic segmentation model for runtime. This model is usually downloaded by the <a href="https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts">ansible artifacts role</a> during the installation.
 It is also possible to download it manually. Even if the model is not downloaded, initialization will still complete, but the accuracy may be compromised.</p>
 <p>The model is hosted on <a href="https://huggingface.co/AutowareFoundation/yabloc_pose_initializer/tree/v1.0">Hugging Face</a>. To download it manually with the <a href="https://huggingface.co/docs/huggingface_hub/guides/cli">hf CLI</a>:</p>
-<p><code>bash
-hf download AutowareFoundation/yabloc_pose_initializer --revision v1.0 --local-dir ~/autoware_data/ml_models/yabloc_pose_initializer</code></p>
+<div class="highlight"><pre><span></span><code>hf<span class="w"> </span>download<span class="w"> </span>AutowareFoundation/yabloc_pose_initializer<span class="w"> </span>--revision<span class="w"> </span>v1.0<span class="w"> </span>--local-dir<span class="w"> </span>~/autoware_data/ml_models/yabloc_pose_initializer
+</code></pre></div>
 <h2 id="note">Note<a class="headerlink" href="#note" title="Permanent link">#</a></h2>
 <p>This package makes use of external code. The trained files are provided by apollo. The trained files are automatically downloaded during env preparation.</p>
 <p>Original model URL</p>

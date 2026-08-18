@@ -22832,12 +22832,12 @@ The <a href="example_rule/">example_rule</a> has source code that can be used as
 <p><a href="https://drive.google.com/file/d/1ZNlkyCtwe04iKFREdeZ5xuMU_jWpwM3W/view">sample data (rosbag &amp; map)</a>
 The rosbag is simulated data created by <a href="https://tier4.github.io/AWSIM/">AWSIM</a>.
 The map is an edited version of the <a href="https://github.com/tier4/AWSIM/releases/download/v1.1.0/nishishinjuku_autoware_map.zip">original map data</a> published on the AWSIM documentation page to make it suitable for multiple pose_estimators.</p>
-<p><code>bash
-ros2 launch autoware_launch logging_simulator.launch.xml \
-  map_path:=&lt;your-map-path&gt; \
-  vehicle_model:=sample_vehicle \
-  sensor_model:=awsim_sensor_kit \
-  pose_source:=ndt_yabloc_artag_eagleye</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>logging_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>map_path:<span class="o">=</span>&lt;your-map-path&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>sensor_model:<span class="o">=</span>awsim_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>pose_source:<span class="o">=</span>ndt_yabloc_artag_eagleye
+</code></pre></div>
 <h2 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">#</a></h2>
 <details>
 <summary>Click to show details</summary>
@@ -22894,9 +22894,9 @@ For switching rule:
 <p>If it does not seems to work, users can get more information in the following ways.</p>
 <blockquote>
 <p>[!TIP]</p>
-<p><code>bash
-ros2 service call /localization/autoware_pose_estimator_arbiter/config_logger logging_demo/srv/ConfigLogger \
-  '{logger_name: localization.autoware_pose_estimator_arbiter, level: debug}'</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>service<span class="w"> </span>call<span class="w"> </span>/localization/autoware_pose_estimator_arbiter/config_logger<span class="w"> </span>logging_demo/srv/ConfigLogger<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="s1">'{logger_name: localization.autoware_pose_estimator_arbiter, level: debug}'</span>
+</code></pre></div>
 </blockquote>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
 <details>
@@ -22951,13 +22951,12 @@ The ArTag stopper relays image topics in the front side of the landmark localize
 
 The user can launch the desired pose_estimators by giving the pose_estimator names as a concatenation of underscores for the runtime argument `pose_source`.
 
-```bash
-ros2 launch autoware_launch logging_simulator.launch.xml \
-  map_path:=<your-map-path> \
-  vehicle_model:=sample_vehicle \
-  sensor_model:=awsim_sensor_kit \
-  pose_source:=ndt_yabloc_artag_eagleye
-```
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>logging_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>map_path:<span class="o">=</span>&lt;your-map-path&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>sensor_model:<span class="o">=</span>awsim_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>pose_source:<span class="o">=</span>ndt_yabloc_artag_eagleye
+</code></pre></div>
 
 Even if `pose_source` includes an unexpected string, it will be filtered appropriately.
 Please see the table below for details.
@@ -22972,7 +22971,7 @@ Please see the table below for details.
 | `pose_source:=ndt_yabloc_nan_eagleye_artag` | `["ndt","yabloc","eagleye","artag"]`                          |
 | `pose_source:=ndt_lidar-marker`             | `["ndt","lidar-marker"]`                                      |
 
-</your-map-path></details>
+</details>
 
 <h2 id="switching-rules">Switching Rules<a class="headerlink" href="#switching-rules" title="Permanent link">#</a></h2>
 <details>
