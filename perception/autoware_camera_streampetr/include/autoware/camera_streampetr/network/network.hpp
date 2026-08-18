@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__CAMERA_STREAMPETR__NETWORK__NETWORK_HPP_
 #define AUTOWARE__CAMERA_STREAMPETR__NETWORK__NETWORK_HPP_
 
-#include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>

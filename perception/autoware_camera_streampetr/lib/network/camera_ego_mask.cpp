@@ -50,11 +50,6 @@ bool trimEmpty(const std::string & s)
   return s.find_first_not_of(" \t\n\r\f\v") == std::string::npos;
 }
 
-std::array<std::uint8_t, 3> clampFillBgr(const std::array<std::uint8_t, 3> & fill)
-{
-  return fill;
-}
-
 YAML::Node parseYamlRoot(const std::string & yaml_text)
 {
   YAML::Node root = YAML::Load(yaml_text);
@@ -231,7 +226,7 @@ std::vector<std::optional<EgoMaskRoiConfig>> loadEgoMaskRoiConfigs(
     return configs;
   }
 
-  const auto fill = clampFillBgr(params.fill_bgr);
+  const auto & fill = params.fill_rgb;
 
   for (std::size_t i = 0; i < rois_number; ++i) {
     if (i >= params.roi_polygons_yaml.size()) {
@@ -244,7 +239,7 @@ std::vector<std::optional<EgoMaskRoiConfig>> loadEgoMaskRoiConfigs(
 
     EgoMaskRoiConfig cfg;
     cfg.polygons = parsePolygonsYamlFile(yaml_path);
-    cfg.fill_bgr = fill;
+    cfg.fill_rgb = fill;
     if (!cfg.polygons.empty()) {
       configs[i] = std::move(cfg);
     }

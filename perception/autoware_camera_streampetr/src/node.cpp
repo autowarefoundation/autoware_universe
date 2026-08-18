@@ -18,7 +18,6 @@
 #include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <Eigen/Dense>
-#include <image_transport/image_transport.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/convert.hpp>
 
@@ -63,7 +62,7 @@ void validateMaskPoints(const std::vector<double> & mask, const std::string & pa
 }
 
 std::vector<std::optional<EgoMaskRoiConfig>> declareCameraMaskParams(
-  rclcpp::Node & node, const std::size_t rois_number, const std::array<std::uint8_t, 3> & fill_bgr,
+  rclcpp::Node & node, const std::size_t rois_number, const std::array<std::uint8_t, 3> & fill_rgb,
   const std::vector<int64_t> & camera_mask_ids)
 {
   std::vector<std::optional<EgoMaskRoiConfig>> camera_mask_configs(kMaxCameraMaskId + 1);
@@ -81,7 +80,7 @@ std::vector<std::optional<EgoMaskRoiConfig>> declareCameraMaskParams(
 
     EgoMaskRoiConfig config;
     config.polygons.push_back(EgoMaskPolygon{mask, normalized});
-    config.fill_bgr = fill_bgr;
+    config.fill_rgb = fill_rgb;
     camera_mask_configs[camera_id] = std::move(config);
   }
 
@@ -209,6 +208,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     camera_callback_groups_.resize(rois_number_);
   }
   const bool is_compressed_image = declare_parameter<bool>("is_compressed_image");
+  const std::string image_transport_type = is_compressed_image ? "compressed" : "raw";
   camera_image_subs_.resize(rois_number_);
   for (size_t roi_i = 0; roi_i < rois_number_; ++roi_i) {
     auto sub_options = rclcpp::SubscriptionOptions();
@@ -223,12 +223,18 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
       rclcpp::SensorDataQoS{}.keep_last(1), [this, roi_i](const CameraInfo::ConstSharedPtr msg) {
         this->camera_info_callback(msg, static_cast<int>(roi_i));
       });
+
+    // Explicitly resolve the topic name so remapping applies to the base topic before
+    // image_transport appends the transport suffix, please check
+    // https://github.com/ros-perception/image_transport_plugins/issues/155
+    const std::string base_topic = this->get_node_topics_interface()->resolve_topic_name(
+      "~/input/camera" + std::to_string(roi_i) + "/image");
     camera_image_subs_.at(roi_i) = image_transport::create_subscription(
-      this, "~/input/camera" + std::to_string(roi_i) + "/image",
-      std::bind(
-        &StreamPetrNode::camera_image_callback, this, std::placeholders::_1,
-        static_cast<int>(roi_i)),
-      is_compressed_image ? "compressed" : "raw", rmw_qos_profile_sensor_data, sub_options);
+      this, base_topic,
+      [this, roi_i](const Image::ConstSharedPtr & msg) {
+        this->camera_image_callback(msg, static_cast<int>(roi_i));
+      },
+      image_transport_type, rmw_qos_profile_sensor_data, sub_options);
   }
 
   // Publishers
@@ -236,16 +242,17 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 
   EgoMaskParams ego_mask_params;
   ego_mask_params.enabled = declare_parameter<bool>("ego_mask.enabled", false);
-  const auto fill_value_bgr =
-    declare_parameter<std::vector<double>>("ego_mask.fill_value_bgr", {0.0, 0.0, 0.0});
+  // RGB order, matching the model's input channel order and the online cameras' rgb8 encoding.
+  const auto fill_value_rgb =
+    declare_parameter<std::vector<double>>("ego_mask.fill_value_rgb", {0.0, 0.0, 0.0});
   for (std::size_t i = 0; i < 3; ++i) {
-    const double v = i < fill_value_bgr.size() ? fill_value_bgr[i] : 0.0;
-    ego_mask_params.fill_bgr[i] = static_cast<std::uint8_t>(std::clamp(v, 0.0, 255.0));
+    const double v = i < fill_value_rgb.size() ? fill_value_rgb[i] : 0.0;
+    ego_mask_params.fill_rgb[i] = static_cast<std::uint8_t>(std::clamp(v, 0.0, 255.0));
   }
   const auto camera_mask_ids = declare_parameter<std::vector<int64_t>>(
     "camera_mask.camera_ids", makeDefaultCameraMaskIds(rois_number_));
   ego_mask_params.roi_mask_configs =
-    declareCameraMaskParams(*this, rois_number_, ego_mask_params.fill_bgr, camera_mask_ids);
+    declareCameraMaskParams(*this, rois_number_, ego_mask_params.fill_rgb, camera_mask_ids);
   ego_mask_params.roi_polygons_yaml = declare_parameter<std::vector<std::string>>(
     "ego_mask.roi_polygons_yaml", std::vector<std::string>());
 

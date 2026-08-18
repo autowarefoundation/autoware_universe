@@ -6,7 +6,7 @@
     anchor_camera_id: 0 # Camera id of the anchor topic. The forward pass begins once every anchor camera topic reaches.
     is_compressed_image: false # Whether the input images are compressed
     is_distorted_image: false # Whether the input images are distorted
-    ego_mask.fill_value_bgr: [0.0, 0.0, 0.0]
+    ego_mask.fill_value_rgb: [0.0, 0.0, 0.0] # RGB order, matching the model input and the rgb8 camera encoding
     camera_mask.camera_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     camera_0_mask:
       enable: false
