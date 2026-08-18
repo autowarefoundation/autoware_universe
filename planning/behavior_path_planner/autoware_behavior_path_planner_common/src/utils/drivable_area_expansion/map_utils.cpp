@@ -17,12 +17,15 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
 
 #include <boost/geometry/algorithms/distance.hpp>
+#include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
 
 #include <lanelet2_core/Attribute.h>
+#include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_core/primitives/LineString.h>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner::drivable_area_expansion
@@ -58,5 +61,51 @@ bool has_types(
   const auto subtype = ls.attributeOr(lanelet::AttributeName::Subtype, no_type);
   const auto matches_type = [&](const auto & t) { return t.matches(type, subtype); };
   return (type != no_type && std::find_if(types.begin(), types.end(), matches_type) != types.end());
+}
+
+namespace
+{
+/// @brief collect the 2d linestrings with one of the given types found in the search box
+std::vector<LineString2d> collect_linestrings(
+  const lanelet::LaneletMap & lanelet_map, const lanelet::BoundingBox2d & search_box,
+  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types)
+{
+  std::vector<LineString2d> linestrings;
+  for (const auto & ls : lanelet_map.lineStringLayer.search(search_box)) {
+    if (!has_types(ls, types)) {
+      continue;
+    }
+    LineString2d line;
+    for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
+    linestrings.push_back(std::move(line));
+  }
+  return linestrings;
+}
+}  // namespace
+
+bool is_separated_by_uncrossable_linestring(
+  const lanelet::LaneletMap & lanelet_map, const Point & from, const Polygon2d & polygon)
+{
+  // linestring types representing a physical boundary that objects cannot cross
+  static const std::vector<DrivableAreaExpansionParameters::LinestringType> types{
+    DrivableAreaExpansionParameters::LinestringType{"guard_rail"}};
+  const auto & points = polygon.outer();
+  if (points.empty()) {
+    return false;
+  }
+  // only query the linestrings whose bounding box overlaps the point and the polygon
+  lanelet::BoundingBox2d search_box(lanelet::BasicPoint2d{from.x, from.y});
+  for (const auto & p : points) {
+    search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
+  }
+  const auto linestrings = collect_linestrings(lanelet_map, search_box, types);
+  // the polygon is separated only if all of its points are separated
+  const Point2d from_point{from.x, from.y};
+  return std::all_of(points.begin(), points.end(), [&](const Point2d & p) {
+    const Segment2d line_of_sight = {from_point, p};
+    return std::any_of(linestrings.begin(), linestrings.end(), [&](const LineString2d & line) {
+      return boost::geometry::intersects(line_of_sight, line);
+    });
+  });
 }
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
