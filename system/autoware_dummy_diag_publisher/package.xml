@@ -13,6 +13,7 @@
 
   <depend>diagnostic_msgs</depend>
   <depend>fmt</depend>
+  <depend>rcl_interfaces</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
 
