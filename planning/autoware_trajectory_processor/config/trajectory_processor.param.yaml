@@ -1,16 +1,37 @@
 /**:
   ros__parameters:
+    # Complete plugin execution order: modifiers followed by optimizers.
     plugin_names:
-      - "autoware::trajectory_modifier::plugin::StopPointFixer"
-      - "autoware::trajectory_modifier::plugin::SurroundObstacleStop"
-      - "autoware::trajectory_modifier::plugin::ObstacleStop"
-      - "autoware::trajectory_modifier::plugin::TrafficLightStop"
-      - "autoware::trajectory_modifier::plugin::VelocityModifier"
+      - "autoware::trajectory_processor::plugin::StopPointFixer"
+      - "autoware::trajectory_processor::plugin::SurroundObstacleStop"
+      - "autoware::trajectory_processor::plugin::ObstacleStop"
+      - "autoware::trajectory_processor::plugin::TrafficLightStop"
+      - "autoware::trajectory_processor::plugin::VelocityModifier"
+      - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+      - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
+      - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+      - "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
+      - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+      - "autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"
+      - "autoware::trajectory_processor::plugin::TrajectoryExtender"
     use_stop_point_fixer: true
     use_obstacle_stop: true
     use_traffic_light_stop: true
     use_velocity_modifier: true
     use_surround_obstacle_stop: false
+
+    use_akima_spline_interpolation: true
+    use_eb_smoother: false
+    use_qp_smoother: true
+    use_trajectory_point_fixer: true
+    use_velocity_optimizer: true
+    use_trajectory_extender: false
+    use_kinematic_feasibility_enforcer: true
+    use_mpt_optimizer: false
+    use_temporal_mpt_optimizer: false
+
     trajectory_time_step: 0.1 # [s]
 
     # Stop Point Fixer Plugin Parameters

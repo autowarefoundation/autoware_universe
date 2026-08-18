@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void TrajectoryQPSmoother::on_initialize(const TrajectoryProcessorParams & params)
@@ -476,9 +476,9 @@ std::vector<double> TrajectoryQPSmoother::compute_velocity_based_weights(
   return weights;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother,
+  autoware::trajectory_processor::plugin::TrajectoryQPSmoother,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

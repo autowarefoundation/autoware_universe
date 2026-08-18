@@ -22,7 +22,7 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_extender_utils
+namespace autoware::trajectory_processor::plugin::trajectory_extender_utils
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -61,7 +61,7 @@ void expand_trajectory_with_ego_history(
   TrajectoryPoints & traj_points, const TrajectoryPoints & ego_history_points,
   const Odometry & current_odometry);
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_extender_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_extender_utils
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_EXTENDER_UTILS_HPP_
