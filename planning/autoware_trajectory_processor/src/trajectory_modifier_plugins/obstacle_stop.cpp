@@ -33,7 +33,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using utils::obstacle_stop::get_nearest_object_collision;
 using utils::obstacle_stop::get_nearest_pcd_collision;
@@ -528,9 +528,9 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
   debug_viz_pub_->publish(marker_array);
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::ObstacleStop,
+  autoware::trajectory_processor::plugin::ObstacleStop,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
