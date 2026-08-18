@@ -19,6 +19,8 @@
     <arg name="spawn_point_ground_snap" default="False" description="Snap the ego spawn point and RViz initial pose onto CARLA map geometry via ground_projection"/>
     <arg name="spawn_point_ground_offset_z" default="0.5" description="Z offset added above the projected ground when ground-snapping the spawn point"/>
     <arg name="initial_pose_ground_offset_z" default="1.0" description="Z offset added above the projected ground when ground-snapping the RViz initial pose"/>
+    <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
+    <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
 
     <let name="carla_map" value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"/>
 
@@ -51,6 +53,8 @@
       <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
       <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
       <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
+      <param name="map_origin_x" value="$(var map_origin_x)"/>
+      <param name="map_origin_y" value="$(var map_origin_y)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
     </node>

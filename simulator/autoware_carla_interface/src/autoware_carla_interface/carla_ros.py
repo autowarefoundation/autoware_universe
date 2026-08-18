@@ -76,6 +76,8 @@ class carla_ros2_interface(object):
             "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -465,7 +467,11 @@ class carla_ros2_interface(object):
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
-        carla_pose_transform = ros_pose_to_carla_transform(pose)
+        carla_pose_transform = ros_pose_to_carla_transform(
+            pose,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
 
         # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
         # map-frame z is meaningless here. When spawn_point_ground_snap is
@@ -519,7 +525,11 @@ class carla_ros2_interface(object):
                 return
             ego_transform = self.ego_actor.get_transform()
 
-        pose_carla.position = carla_location_to_ros_point(ego_transform.location)
+        pose_carla.position = carla_location_to_ros_point(
+            ego_transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
         pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
         out_pose_with_cov.pose.pose = pose_carla
