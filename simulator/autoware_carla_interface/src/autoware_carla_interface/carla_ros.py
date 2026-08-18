@@ -50,6 +50,7 @@ from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import carla_location_to_ros_point
 from .modules.carla_utils import carla_rotation_to_ros_quaternion
 from .modules.carla_utils import create_cloud
+from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
@@ -448,46 +449,18 @@ class carla_ros2_interface(object):
     def _project_initialpose_to_ground(self, carla_pose_transform):
         """Return the CARLA ground height under the pose, or None to skip snapping.
 
-        Returns None when spawn_point_ground_snap is disabled, when the CARLA
-        world does not expose ``ground_projection`` (older APIs), or when no
-        ground point is found, so callers fall back to the fixed z-offset.
+        Returns None when spawn_point_ground_snap is disabled, or when no ground
+        height can be found (older CARLA APIs without ``ground_projection``, or
+        no ground hit), so callers fall back to the fixed z-offset.
         """
         if not self.param_values["spawn_point_ground_snap"]:
             return None
 
-        world = CarlaDataProvider.get_world()
-        if world is None or not hasattr(world, "ground_projection"):
-            return None
-
-        sample_offsets = (
-            (0.0, 0.0),
-            (0.75, 0.0),
-            (-0.75, 0.0),
-            (0.0, 0.75),
-            (0.0, -0.75),
-            (1.5, 0.0),
-            (-1.5, 0.0),
-            (0.0, 1.5),
-            (0.0, -1.5),
+        return project_point_to_ground(
+            CarlaDataProvider.get_world(),
+            carla_pose_transform.location.x,
+            carla_pose_transform.location.y,
         )
-        projected_heights = []
-        try:
-            for offset_x, offset_y in sample_offsets:
-                search_origin = carla.Location(
-                    x=carla_pose_transform.location.x + offset_x,
-                    y=carla_pose_transform.location.y + offset_y,
-                    z=1000.0,
-                )
-                labeled_point = world.ground_projection(search_origin, 10000.0)
-                if labeled_point is not None:
-                    projected_heights.append(labeled_point.location.z)
-        except RuntimeError as exc:
-            self.logger.warning(f"Could not ground-snap initial pose: {exc}")
-            return None
-
-        if not projected_heights:
-            return None
-        return max(projected_heights)
 
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""

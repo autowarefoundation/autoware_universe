@@ -23,6 +23,7 @@ import carla
 from .carla_ros import carla_ros2_interface
 from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
+from .modules.carla_utils import project_point_to_ground
 from .modules.carla_wrapper import SensorReceivedNoData
 from .modules.carla_wrapper import SensorWrapper
 
@@ -101,52 +102,21 @@ class InitializeInterface(object):
     def _snap_spawn_point_to_ground(self, spawn_point):
         """Snap a spawn point onto the CARLA map geometry, if enabled.
 
-        When spawn_point_ground_snap is disabled, or the CARLA world does not
-        expose ``ground_projection`` (older APIs), or no ground point is found,
-        the spawn point is returned unchanged so behavior matches the fixed
-        z that the caller already set.
+        When spawn_point_ground_snap is disabled, or no ground height can be
+        found (older CARLA APIs without ``ground_projection``, or no ground
+        hit), the spawn point is returned unchanged so behavior matches the
+        fixed z that the caller already set.
         """
         if not self.spawn_point_ground_snap:
             return spawn_point
 
-        if not hasattr(self.world, "ground_projection"):
-            print(
-                "WARNING: CARLA world has no ground_projection(); "
-                "skipping spawn-point ground snapping"
-            )
-            return spawn_point
-
-        sample_offsets = (
-            (0.0, 0.0),
-            (0.75, 0.0),
-            (-0.75, 0.0),
-            (0.0, 0.75),
-            (0.0, -0.75),
-            (1.5, 0.0),
-            (-1.5, 0.0),
-            (0.0, 1.5),
-            (0.0, -1.5),
+        ground_z = project_point_to_ground(
+            self.world, spawn_point.location.x, spawn_point.location.y
         )
-        projected_heights = []
-        try:
-            for offset_x, offset_y in sample_offsets:
-                search_origin = carla.Location(
-                    x=spawn_point.location.x + offset_x,
-                    y=spawn_point.location.y + offset_y,
-                    z=1000.0,
-                )
-                labeled_point = self.world.ground_projection(search_origin, 10000.0)
-                if labeled_point is not None:
-                    projected_heights.append(labeled_point.location.z)
-        except RuntimeError as exc:
-            print(f"WARNING: Could not ground-snap CARLA spawn point: {exc}")
+        if ground_z is None:
+            print("WARNING: Could not ground-snap CARLA spawn point; keeping configured z")
             return spawn_point
 
-        if not projected_heights:
-            print("WARNING: Could not ground-snap CARLA spawn point: no ground projection found")
-            return spawn_point
-
-        ground_z = max(projected_heights)
         snapped = carla.Transform(carla.Location(), spawn_point.rotation)
         snapped.location.x = spawn_point.location.x
         snapped.location.y = spawn_point.location.y
