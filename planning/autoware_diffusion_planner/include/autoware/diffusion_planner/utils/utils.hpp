@@ -19,6 +19,7 @@
 
 #include "nav_msgs/msg/odometry.hpp"
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -92,16 +93,21 @@ struct PolylineProjection
  * foot position as (x, y) and an orientation obtained by spherically interpolating (slerp) the two
  * endpoint orientations by the projection ratio. The z component is left at 0.
  *
- * @note Only the first few segments of the polyline are searched (see MAX_SEGMENT_COUNT in the
- *       implementation); segments beyond that are never selected.
+ * @note Only the leading max_search_segment_count segments are searched; segments beyond that are
+ *       never selected, which keeps a far-away part of the polyline (e.g. the return leg of a
+ *       U-turn) from being picked as the closest segment.
  *
  * @param query_x X coordinate of the query point.
  * @param query_y Y coordinate of the query point.
  * @param polyline Sequence of poses (must contain at least two elements) forming the polyline.
+ * @param max_search_segment_count Number of leading segments to search (must be at least one).
  * @return The projected pose together with the interpolation index of the foot along the polyline.
+ * @throw std::runtime_error if the polyline has fewer than two poses, or if
+ *        max_search_segment_count is less than one.
  */
 PolylineProjection project_pose_onto_polyline(
-  double query_x, double query_y, const std::vector<Eigen::Matrix4d> & polyline);
+  double query_x, double query_y, const std::vector<Eigen::Matrix4d> & polyline,
+  int64_t max_search_segment_count);
 
 /**
  * @brief Computes the inverse of a 4x4 transformation matrix.

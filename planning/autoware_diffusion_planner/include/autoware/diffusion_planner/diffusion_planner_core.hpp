@@ -132,6 +132,11 @@ struct EgoSnapParams
 
   // Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose.
   double max_yaw_error_deg;
+
+  // Number of leading segments of the previous trajectory searched for the closest one. The
+  // planning cycle only advances the ego by ~1 segment, so a small window is enough and it keeps
+  // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
+  int64_t max_search_segment_count;
 };
 
 struct DiffusionPlannerParams

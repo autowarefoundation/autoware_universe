@@ -195,7 +195,7 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineOnVertexIsNoOp)
   const std::vector<Eigen::Matrix4d> polyline{
     make_pose(0.0, 0.0, 0.0), make_pose(1.0, 0.0, 0.0), make_pose(2.0, 0.0, 0.0)};
 
-  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(1.0, 0.0, polyline).pose;
+  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(1.0, 0.0, polyline, 5).pose;
 
   EXPECT_NEAR(projected(0, 3), 1.0, 1e-9);
   EXPECT_NEAR(projected(1, 3), 0.0, 1e-9);
@@ -207,7 +207,7 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineLateralOffset)
 {
   const std::vector<Eigen::Matrix4d> polyline{make_pose(0.0, 0.0, 0.0), make_pose(10.0, 0.0, 0.0)};
 
-  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(3.0, 2.0, polyline).pose;
+  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(3.0, 2.0, polyline, 5).pose;
 
   EXPECT_NEAR(projected(0, 3), 3.0, 1e-9);
   EXPECT_NEAR(projected(1, 3), 0.0, 1e-9);
@@ -219,7 +219,7 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineClampsToEndpoint)
 {
   const std::vector<Eigen::Matrix4d> polyline{make_pose(0.0, 0.0, 0.0), make_pose(10.0, 0.0, 0.0)};
 
-  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(15.0, 5.0, polyline).pose;
+  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(15.0, 5.0, polyline, 5).pose;
 
   EXPECT_NEAR(projected(0, 3), 10.0, 1e-9);
   EXPECT_NEAR(projected(1, 3), 0.0, 1e-9);
@@ -232,31 +232,64 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineSlerpsHeading)
   const std::vector<Eigen::Matrix4d> polyline{
     make_pose(0.0, 0.0, 0.0), make_pose(2.0, 0.0, M_PI_2)};
 
-  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(1.0, 0.0, polyline).pose;
+  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(1.0, 0.0, polyline, 5).pose;
 
   EXPECT_NEAR(projected(0, 3), 1.0, 1e-9);
   EXPECT_NEAR(projected(1, 3), 0.0, 1e-9);
   EXPECT_NEAR(yaw_of(projected), M_PI_4, 1e-9);
 }
 
-// The closest segment is selected among all segments of the polyline.
+// The closest segment is selected among the searched segments of the polyline.
 TEST_F(UtilsTest, ProjectPoseOntoPolylineSelectsClosestSegment)
 {
   const std::vector<Eigen::Matrix4d> polyline{
     make_pose(0.0, 0.0, 0.0), make_pose(1.0, 0.0, 0.0), make_pose(1.0, 5.0, M_PI_2)};
 
-  // Closest to the second (vertical) segment.
-  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(1.3, 3.0, polyline).pose;
+  // Closest to the second (vertical) segment, at ratio 3.0 / 5.0 along it.
+  const Eigen::Matrix4d projected = utils::project_pose_onto_polyline(1.3, 3.0, polyline, 5).pose;
 
   EXPECT_NEAR(projected(0, 3), 1.0, 1e-9);
   EXPECT_NEAR(projected(1, 3), 3.0, 1e-9);
-  EXPECT_NEAR(yaw_of(projected), M_PI_2, 1e-9);
+  // The heading is slerped between the segment endpoints (0 and pi/2) by that same ratio, not
+  // taken from the end vertex.
+  EXPECT_NEAR(yaw_of(projected), 0.6 * M_PI_2, 1e-9);
+}
+
+// Segments beyond max_search_segment_count are never selected, even when one of them is much
+// closer to the query point than anything inside the window.
+TEST_F(UtilsTest, ProjectPoseOntoPolylineIgnoresSegmentsBeyondSearchWindow)
+{
+  // A straight run along +x, then a vertex that comes back right next to the query point.
+  std::vector<Eigen::Matrix4d> polyline;
+  for (size_t i = 0; i < 6; ++i) {
+    polyline.push_back(make_pose(static_cast<double>(i), 0.0, 0.0));
+  }
+  polyline.push_back(make_pose(5.0, 20.0, M_PI_2));
+  polyline.push_back(make_pose(5.0, 21.0, M_PI_2));
+
+  // The query sits on the last segment, which is the 7th one and therefore outside a window of 5.
+  const auto windowed = utils::project_pose_onto_polyline(5.0, 20.5, polyline, 5);
+  EXPECT_NEAR(windowed.pose(0, 3), 5.0, 1e-9);
+  EXPECT_NEAR(windowed.pose(1, 3), 0.0, 1e-9);
+  EXPECT_NEAR(windowed.interpolation_index, 5.0, 1e-9);
+
+  // Widening the window lets the same query reach the far segment.
+  const auto full = utils::project_pose_onto_polyline(5.0, 20.5, polyline, 7);
+  EXPECT_NEAR(full.pose(0, 3), 5.0, 1e-9);
+  EXPECT_NEAR(full.pose(1, 3), 20.5, 1e-9);
+  EXPECT_NEAR(yaw_of(full.pose), M_PI_2, 1e-9);
 }
 
 TEST_F(UtilsTest, ProjectPoseOntoPolylineThrowsOnTooFewPoints)
 {
   const std::vector<Eigen::Matrix4d> polyline{make_pose(0.0, 0.0, 0.0)};
-  EXPECT_THROW(utils::project_pose_onto_polyline(0.0, 0.0, polyline), std::runtime_error);
+  EXPECT_THROW(utils::project_pose_onto_polyline(0.0, 0.0, polyline, 5), std::runtime_error);
+}
+
+TEST_F(UtilsTest, ProjectPoseOntoPolylineThrowsOnNonPositiveSearchWindow)
+{
+  const std::vector<Eigen::Matrix4d> polyline{make_pose(0.0, 0.0, 0.0), make_pose(1.0, 0.0, 0.0)};
+  EXPECT_THROW(utils::project_pose_onto_polyline(0.0, 0.0, polyline, 0), std::runtime_error);
 }
 
 }  // namespace autoware::diffusion_planner::test

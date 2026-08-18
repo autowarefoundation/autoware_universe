@@ -222,6 +222,8 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.max_position_error_m", 0.3);
   params_.ego_snap_to_prev_trajectory.max_yaw_error_deg =
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.max_yaw_error_deg", 5.0);
+  params_.ego_snap_to_prev_trajectory.max_search_segment_count =
+    this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.max_search_segment_count", 5);
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
@@ -350,6 +352,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "ego_snap_to_prev_trajectory.max_yaw_error_deg",
       temp_params.ego_snap_to_prev_trajectory.max_yaw_error_deg);
+    update_param<int64_t>(
+      parameters, "ego_snap_to_prev_trajectory.max_search_segment_count",
+      temp_params.ego_snap_to_prev_trajectory.max_search_segment_count);
     update_param<double>(
       parameters, "object_motion_resampling.max_extrapolation_time",
       temp_params.object_motion_resampling.max_extrapolation_time);

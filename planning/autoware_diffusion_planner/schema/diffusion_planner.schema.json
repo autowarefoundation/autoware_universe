@@ -218,9 +218,20 @@
               "default": 5.0,
               "minimum": 0,
               "description": "Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose. If the difference exceeds this value the snap is skipped and the raw ego pose is kept."
+            },
+            "max_search_segment_count": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "description": "Number of leading segments of the previous trajectory searched for the closest one. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected."
             }
           },
-          "required": ["enable", "max_position_error_m", "max_yaw_error_deg"]
+          "required": [
+            "enable",
+            "max_position_error_m",
+            "max_yaw_error_deg",
+            "max_search_segment_count"
+          ]
         },
         "guidance": {
           "type": "object",

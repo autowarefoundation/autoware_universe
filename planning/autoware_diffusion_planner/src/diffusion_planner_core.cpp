@@ -310,7 +310,8 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     prev_trajectory.insert(prev_trajectory.end(), prev_poses.begin(), prev_poses.end());
 
     const utils::PolylineProjection projection = utils::project_pose_onto_polyline(
-      kinematic_state.pose.pose.position.x, kinematic_state.pose.pose.position.y, prev_trajectory);
+      kinematic_state.pose.pose.position.x, kinematic_state.pose.pose.position.y, prev_trajectory,
+      params_.ego_snap_to_prev_trajectory.max_search_segment_count);
     const Eigen::Matrix4d & snapped_pose = projection.pose;
 
     // Reject the snap when the actual ego pose is too far (in position or heading) from the

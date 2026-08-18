@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -125,10 +126,14 @@ geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const do
 }
 
 PolylineProjection project_pose_onto_polyline(
-  const double query_x, const double query_y, const std::vector<Eigen::Matrix4d> & polyline)
+  const double query_x, const double query_y, const std::vector<Eigen::Matrix4d> & polyline,
+  const int64_t max_search_segment_count)
 {
   if (polyline.size() < 2) {
     throw std::runtime_error("project_pose_onto_polyline requires at least two poses");
+  }
+  if (max_search_segment_count < 1) {
+    throw std::runtime_error("project_pose_onto_polyline requires max_search_segment_count >= 1");
   }
 
   const Eigen::Vector2d query(query_x, query_y);
@@ -143,9 +148,9 @@ PolylineProjection project_pose_onto_polyline(
   // prediction step (0.1s), the foot always lands within the first few segments. Limiting the
   // search keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being
   // selected as the closest segment.
-  constexpr size_t MAX_SEGMENT_COUNT = 5;
+  const size_t segment_count = static_cast<size_t>(max_search_segment_count);
 
-  for (size_t i = 0; i < MAX_SEGMENT_COUNT && i + 1 < polyline.size(); ++i) {
+  for (size_t i = 0; i < segment_count && i + 1 < polyline.size(); ++i) {
     // Endpoints of the i-th line segment in the xy-plane.
     const Eigen::Vector2d segment_start(polyline[i](0, 3), polyline[i](1, 3));
     const Eigen::Vector2d segment_end(polyline[i + 1](0, 3), polyline[i + 1](1, 3));
