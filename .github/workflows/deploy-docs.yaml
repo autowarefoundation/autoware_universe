@@ -41,6 +41,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
+          # This job builds fork code with the secrets of the base repository.
+          # It runs only after a maintainer adds the run:deploy-docs label.
+          # Before you add the label, review the full diff.
+          allow-unsafe-pr-checkout: true
 
       - name: Deploy docs
         uses: autowarefoundation/autoware-github-actions/deploy-docs@v1
