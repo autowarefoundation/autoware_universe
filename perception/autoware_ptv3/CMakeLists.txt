@@ -187,7 +187,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       ${PROJECT_NAME}_cuda_lib
     )
 
-    ament_add_gtest(ros_utils_test
+    ament_add_ros_isolated_gtest(ros_utils_test
       test/ros_utils_test.cpp
     )
 
