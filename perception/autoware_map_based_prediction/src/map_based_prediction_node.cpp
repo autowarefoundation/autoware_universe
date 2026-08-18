@@ -54,8 +54,7 @@ const std::vector<std::pair<ObjectClassification::_label_type, std::string>> obj
 /// @brief Get the deceleration defined for a specific object class, or the base value if it was
 /// not specified.
 double get_object_deceleration(
-  autoware::agnocast_wrapper::Node & node, const std::string & ns,
-  const std::string & object_label)
+  autoware::agnocast_wrapper::Node & node, const std::string & ns, const std::string & object_label)
 {
   try {
     return get_or_declare_parameter<double>(node, ns + object_label);
