@@ -17,6 +17,7 @@
 #include "autoware/map_based_prediction/params.hpp"
 #include "autoware/map_based_prediction/utils.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 
@@ -53,7 +54,8 @@ const std::vector<std::pair<ObjectClassification::_label_type, std::string>> obj
 /// @brief Get the deceleration defined for a specific object class, or the base value if it was
 /// not specified.
 double get_object_deceleration(
-  rclcpp::Node & node, const std::string & ns, const std::string & object_label)
+  autoware::agnocast_wrapper::Node & node, const std::string & ns,
+  const std::string & object_label)
 {
   try {
     return get_or_declare_parameter<double>(node, ns + object_label);
@@ -63,7 +65,7 @@ double get_object_deceleration(
 }
 
 utils::ObjectDecelerationParams declare_object_deceleration_params(
-  rclcpp::Node & node, const std::string & ns)
+  autoware::agnocast_wrapper::Node & node, const std::string & ns)
 {
   utils::ObjectDecelerationParams params;
   for (const auto & [label, object_label] : object_label_names) {
