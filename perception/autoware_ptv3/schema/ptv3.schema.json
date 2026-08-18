@@ -254,8 +254,8 @@
         },
         "trt_precision": {
           "type": "string",
-          "description": "TensorRT inference precision.",
-          "enum": ["fp16", "fp32"]
+          "description": "How the TensorRT engines are built. \"fp16\" and \"fp32\" request a precision for a weakly typed build, letting the builder assign tensor precisions. \"strongly-typed\" takes every tensor precision from the model itself.",
+          "enum": ["fp16", "fp32", "strongly-typed"]
         },
         "cloud_capacity": {
           "type": "integer",
