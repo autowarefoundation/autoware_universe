@@ -76,8 +76,8 @@ Box2d buildPathFootprintBBox(
 {
   boost::geometry::model::multi_point<Point2d> path_footprint_points;
   for (auto i = 0UL; i <= last_idx; ++i) {
-    for (const auto & point :
-         autoware_utils_geometry::to_polygon2d(path.at(i), object_shape).outer()) {
+    const auto footprint = autoware_utils_geometry::to_polygon2d(path.at(i), object_shape);
+    for (const auto & point : footprint.outer()) {
       path_footprint_points.push_back(point);
     }
   }
