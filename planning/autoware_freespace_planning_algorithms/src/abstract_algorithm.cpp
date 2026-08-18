@@ -150,6 +150,152 @@ double AbstractPlanningAlgorithm::getDistanceToObstacle(const geometry_msgs::msg
   return getObstacleEDT(index).distance;
 }
 
+namespace
+{
+using EdtMapData = std::vector<std::pair<double, geometry_msgs::msg::Point>>;
+
+// One column of the exact one-dimensional squared distance transform.
+struct EdtColumn
+{
+  const EdtMapData & edt_map;
+  int width;
+  int height;
+  int j;
+  double resolution_m;
+};
+
+// Lower envelope of a column's parabolas: rows holds each surviving source
+// row, starts the first output row where that source takes over.
+struct EdtEnvelope
+{
+  std::vector<int> rows;
+  std::vector<int> starts;
+  int size = 0;
+};
+
+// Squared distance of the parabola rooted at source_row, evaluated at
+// output_row. The expression matches the previous implementation verbatim so
+// compiler rounding is unchanged.
+double edtSquaredValueAt(const EdtColumn & column, const int source_row, const int output_row)
+{
+  const double distance =
+    column.resolution_m * std::abs(static_cast<double>(output_row - source_row));
+  const double horizontal_distance = column.edt_map[source_row * column.width + column.j].first;
+  return horizontal_distance * horizontal_distance + distance * distance;
+}
+
+// Floating-point takeover row of the parabola rooted at row versus
+// previous_row, clamped to [0, height]. Requires a nonzero resolution.
+int edtIntersectionStart(
+  const EdtColumn & column, const std::vector<double> & source_squared, const int row,
+  const int previous_row)
+{
+  const double resolution_squared = column.resolution_m * column.resolution_m;
+  const double row_d = static_cast<double>(row);
+  const double previous_d = static_cast<double>(previous_row);
+  const double intersection =
+    (source_squared[row] - source_squared[previous_row] +
+     resolution_squared * (row_d * row_d - previous_d * previous_d)) /
+    (2.0 * resolution_squared * (row_d - previous_d));
+  if (intersection < 0.0) {
+    return 0;
+  }
+  if (intersection >= static_cast<double>(column.height - 1)) {
+    return column.height;
+  }
+  return static_cast<int>(std::floor(intersection)) + 1;
+}
+
+// Exact takeover row of the parabola rooted at row versus previous_row: the
+// floating-point intersection corrected against the exact squared values.
+int edtEnvelopeStart(
+  const EdtColumn & column, const std::vector<double> & source_squared, const int row,
+  const int previous_row)
+{
+  const double resolution_squared = column.resolution_m * column.resolution_m;
+  if (resolution_squared == 0.0) {
+    return source_squared[row] < source_squared[previous_row] ? 0 : column.height;
+  }
+  int start = edtIntersectionStart(column, source_squared, row, previous_row);
+  while (start > 0 && edtSquaredValueAt(column, row, start - 1) <
+                        edtSquaredValueAt(column, previous_row, start - 1)) {
+    --start;
+  }
+  while (start < column.height && !(edtSquaredValueAt(column, row, start) <
+                                    edtSquaredValueAt(column, previous_row, start))) {
+    ++start;
+  }
+  return start;
+}
+
+// Pop envelope entries dominated by the parabola rooted at row. Returns the
+// output row where it takes over, or 0 when it becomes the whole envelope.
+int popDominatedParabolas(
+  const EdtColumn & column, const std::vector<double> & source_squared, const int row,
+  EdtEnvelope & envelope)
+{
+  while (envelope.size > 0) {
+    const int start = edtEnvelopeStart(column, source_squared, row, envelope.rows[envelope.size - 1]);
+    if (start > envelope.starts[envelope.size - 1]) {
+      return start;
+    }
+    --envelope.size;
+  }
+  return 0;
+}
+
+// Build the lower envelope of one column.
+void buildEdtColumnEnvelope(
+  const EdtColumn & column, std::vector<double> & source_squared, EdtEnvelope & envelope)
+{
+  envelope.size = 0;
+  for (int row = 0; row < column.height; ++row) {
+    const int id = row * column.width + column.j;
+    source_squared[row] = column.edt_map[id].first * column.edt_map[id].first;
+    if (!std::isfinite(source_squared[row])) {
+      continue;
+    }
+    const int start = popDominatedParabolas(column, source_squared, row, envelope);
+    if (start >= column.height) {
+      continue;
+    }
+    envelope.rows[envelope.size] = row;
+    envelope.starts[envelope.size] = start;
+    ++envelope.size;
+  }
+}
+
+// Fill temporary_storage with one column's exact distances and source offsets.
+void fillEdtColumn(
+  const EdtColumn & column, const std::vector<double> & source_squared,
+  const EdtEnvelope & envelope, EdtMapData & temporary_storage)
+{
+  int envelope_index = 0;
+  for (int i = 0; i < column.height; ++i) {
+    double min_value = source_squared[i];
+    geometry_msgs::msg::Point rel_pos = column.edt_map[i * column.width + column.j].second;
+    if (envelope.size > 0) {
+      while (envelope_index + 1 < envelope.size && envelope.starts[envelope_index + 1] <= i) {
+        ++envelope_index;
+      }
+      const int source_row = envelope.rows[envelope_index];
+      const double distance =
+        column.resolution_m * std::abs(static_cast<double>(i - source_row));
+      const double horizontal_distance =
+        column.edt_map[source_row * column.width + column.j].first;
+      const double envelope_value = horizontal_distance * horizontal_distance + distance * distance;
+      if (!(min_value <= envelope_value)) {
+        min_value = envelope_value;
+        rel_pos.x = column.edt_map[source_row * column.width + column.j].second.x;
+        rel_pos.y = distance;
+      }
+    }
+    temporary_storage[i].first = sqrt(min_value);
+    temporary_storage[i].second = rel_pos;
+  }
+}
+}  // namespace
+
 void AbstractPlanningAlgorithm::computeEDTMap()
 {
   edt_map_.clear();
@@ -198,25 +344,15 @@ void AbstractPlanningAlgorithm::computeEDTMap()
 
   temporary_storage.clear();
   temporary_storage.resize(height);
+  std::vector<double> source_squared(height);
+  EdtEnvelope envelope;
+  envelope.rows.resize(height);
+  envelope.starts.resize(height);
   // scan columns;
   for (int j = 0; j < width; ++j) {
-    for (int i = 0; i < height; ++i) {
-      int id = indexToId(IndexXY{j, i});
-      double min_value = edt_map[id].first * edt_map[id].first;
-      geometry_msgs::msg::Point rel_pos = edt_map[id].second;
-      for (int k = 0; k < height; ++k) {
-        id = indexToId(IndexXY{j, k});
-        double dist = resolution_m * std::abs(static_cast<double>(i - k));
-        double value = edt_map[id].first * edt_map[id].first + dist * dist;
-        if (value < min_value) {
-          min_value = value;
-          rel_pos.x = edt_map[id].second.x;
-          rel_pos.y = dist;
-        }
-      }
-      temporary_storage[i].first = sqrt(min_value);
-      temporary_storage[i].second = rel_pos;
-    }
+    const EdtColumn column{edt_map, width, height, j, resolution_m};
+    buildEdtColumnEnvelope(column, source_squared, envelope);
+    fillEdtColumn(column, source_squared, envelope, temporary_storage);
     for (int i = 0; i < height; ++i) {
       edt_map[indexToId(IndexXY{j, i})] = temporary_storage[i];
     }
