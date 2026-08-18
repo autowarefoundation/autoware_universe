@@ -14,6 +14,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/map_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
@@ -1041,14 +1042,41 @@ bool isSatisfiedWithCommonCondition(
   return true;
 }
 
+/**
+ * @brief check if an uncrossable boundary (e.g. guard rail) lies between the object and the path.
+ * @param [in] object object data.
+ * @param [in] data avoidance planning data.
+ * @param [in] planner_data planner data.
+ * @return true if the object cannot reach the ego path without crossing a physical boundary.
+ * @details The whole footprint of the object is used so that an object is not ignored while a
+ * part of it can still reach the ego path.
+ */
+bool isSeparatedByUncrossableBoundary(
+  const ObjectData & object, const AvoidancePlanningData & data,
+  const std::shared_ptr<const PlannerData> & planner_data)
+{
+  const auto ref_idx =
+    autoware::motion_utils::findNearestIndex(data.reference_path.points, object.getPosition());
+  return drivable_area_expansion::is_separated_by_uncrossable_linestring(
+    *planner_data->route_handler->getLaneletMapPtr(),
+    data.reference_path.points.at(ref_idx).point.pose.position,
+    autoware_utils::to_polygon2d(object.object));
+}
+
 bool isSatisfiedWithNonVehicleCondition(
-  ObjectData & object, [[maybe_unused]] const AvoidancePlanningData & data,
+  ObjectData & object, const AvoidancePlanningData & data,
   const std::shared_ptr<const PlannerData> & planner_data,
   [[maybe_unused]] const std::shared_ptr<AvoidanceParameters> & parameters)
 {
   // avoidance module ignore pedestrian and bicycle around crosswalk
   if (isWithinCrosswalk(object, planner_data->route_handler->getOverallGraphPtr())) {
     object.info = ObjectInfo::CROSSWALK_USER;
+    return false;
+  }
+
+  // ignore objects separated from the ego path by an uncrossable boundary (e.g. guard rail)
+  if (isSeparatedByUncrossableBoundary(object, data, planner_data)) {
+    object.info = ObjectInfo::SEPARATED_BY_UNCROSSABLE_BOUNDARY;
     return false;
   }
 
@@ -2292,6 +2320,13 @@ void filterTargetObjects(
         data.other_objects.push_back(o);
         continue;
       }
+
+      if (filtering_utils::isSeparatedByUncrossableBoundary(o, data, planner_data)) {
+        o.info = ObjectInfo::SEPARATED_BY_UNCROSSABLE_BOUNDARY;
+        data.other_objects.push_back(o);
+        continue;
+      }
+
       o.avoid_margin = filtering_utils::getAvoidMargin(o, planner_data, parameters);
     } else if (filtering_utils::isVehicleTypeObject(o)) {
       // TARGET: CAR, TRUCK, BUS, TRAILER, MOTORCYCLE
