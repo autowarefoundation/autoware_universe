@@ -118,15 +118,16 @@ def extract_parameter_info(parameters, doc, base_dir, cache, namespace="", seen_
 
 def format_json(json_data, base_dir=""):
     cache = {}
-    # Prefer the definition referenced by ".../ros__parameters": a schema may declare
-    # helper sub-definitions ahead of the node definition, so picking the first
-    # definition with properties would document the wrong (helper) parameter set.
+    # Prefer the parameter set under ".../ros__parameters" (referenced or inlined):
+    # a schema may declare helper sub-definitions ahead of the node definition, so
+    # picking the first definition with properties would document the wrong
+    # (helper) parameter set.
     parameters = None
     param_doc, param_base = json_data, base_dir
     for top in json_data.get("properties", {}).values():
         top_resolved, top_doc, top_base = resolve_ref(top, json_data, base_dir, cache)
         ros_params = top_resolved.get("properties", {}).get("ros__parameters")
-        if isinstance(ros_params, dict) and "$ref" in ros_params:
+        if isinstance(ros_params, dict):
             resolved, r_doc, r_base = resolve_ref(ros_params, top_doc, top_base, cache)
             if "properties" in resolved:
                 parameters, param_doc, param_base = resolved["properties"], r_doc, r_base
@@ -279,13 +280,14 @@ def format_param_files_table(param_files):
     )
 
 
-def format_node_yaml(data):
+def format_node_yaml(data, heading_level=3):
     """Render the interface and parameter sections of a node design file."""
     sections = []
+    heading = "#" * heading_level
 
     def add_section(title, body):
         if body:
-            sections.append(f"#### {title}\n\n{body}")
+            sections.append(f"{heading} {title}\n\n{body}")
 
     add_section("Subscribers", format_interface_table(data.get("subscribers")))
     add_section("Publishers", format_interface_table(data.get("publishers")))
@@ -305,17 +307,18 @@ def define_env(env):
             return format_json(data, os.path.dirname(json_schema_file_path))
 
     @env.macro
-    def node_to_markdown(node_yaml_file_path):
+    def node_to_markdown(node_yaml_file_path, heading_level=3):
         """Render all interface + parameter tables of a `*.node.yaml` file."""
         with open(node_yaml_file_path) as f:
             data = yaml.safe_load(f)
-        return format_node_yaml(data)
+        return format_node_yaml(data, heading_level)
 
     @env.macro
-    def node_interfaces_to_markdown(node_yaml_file_path):
+    def node_interfaces_to_markdown(node_yaml_file_path, heading_level=3):
         """Render only the subscriber/publisher/server/client tables."""
         with open(node_yaml_file_path) as f:
             data = yaml.safe_load(f)
+        heading = "#" * heading_level
         sections = []
         for title, key in [
             ("Subscribers", "subscribers"),
@@ -325,7 +328,7 @@ def define_env(env):
         ]:
             table = format_interface_table(data.get(key))
             if table:
-                sections.append(f"#### {title}\n\n{table}")
+                sections.append(f"{heading} {title}\n\n{table}")
         return "\n\n".join(sections)
 
     @env.macro
