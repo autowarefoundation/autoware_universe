@@ -23093,47 +23093,60 @@
 <p>To play ros2 bag of nuScenes data
    <!-- cspell: ignore trainval -->
 </p>
-<p>```bash</p>
-<p>cd autoware/src
- git clone https://github.com/Owen-Liuyuxuan/ros2_dataset_bridge
- cd ..</p>
-<p># Open the launch file to configure dataset settings:</p>
-<p>nano src/ros2_dataset_bridge/launch/nuscenes_launch.xml</p>
-<p># Update the following lines with the correct NuScenes dataset path and set the publishing frequency to 10 Hz for optimal data streaming:</p>
-<p><arg name="NUSCENES_DIR" default="\&lt;nuscenes_dataset_path&gt;"></arg>
- <arg name="NUSCENES_VER" default="v1.0-trainval"></arg>
- <arg name="UPDATE_FREQUENCY" default="10.0"></arg></p>
-<p># Open the ros_utils script:</p>
-<p>nano src/ros2_dataset_bridge/ros2_dataset_bridge/utils/ros_util.py</p>
-<p># Modify the encoding to bgr8 at line 92:</p>
-<p>image_msg = self.cv_bridge.cv2_to_imgmsg(image, encoding="bgr8")</p>
-<p>```</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>autoware/src
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Owen-Liuyuxuan/ros2_dataset_bridge
+<span class="nb">cd</span><span class="w"> </span>..
+
+<span class="c1"># Open the launch file to configure dataset settings:</span>
+
+nano<span class="w"> </span>src/ros2_dataset_bridge/launch/nuscenes_launch.xml
+
+<span class="c1"># Update the following lines with the correct NuScenes dataset path and set the publishing frequency to 10 Hz for optimal data streaming:</span>
+
+&lt;arg<span class="w"> </span><span class="nv">name</span><span class="o">=</span><span class="s2">"NUSCENES_DIR"</span><span class="w"> </span><span class="nv">default</span><span class="o">=</span><span class="s2">"&lt;nuscenes_dataset_path&gt;"</span>/&gt;
+&lt;arg<span class="w"> </span><span class="nv">name</span><span class="o">=</span><span class="s2">"NUSCENES_VER"</span><span class="w"> </span><span class="nv">default</span><span class="o">=</span><span class="s2">"v1.0-trainval"</span>/&gt;
+&lt;arg<span class="w"> </span><span class="nv">name</span><span class="o">=</span><span class="s2">"UPDATE_FREQUENCY"</span><span class="w"> </span><span class="nv">default</span><span class="o">=</span><span class="s2">"10.0"</span>/&gt;
+
+<span class="c1"># Open the ros_utils script:</span>
+
+nano<span class="w"> </span>src/ros2_dataset_bridge/ros2_dataset_bridge/utils/ros_util.py
+
+<span class="c1"># Modify the encoding to bgr8 at line 92:</span>
+
+<span class="nv">image_msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>self.cv_bridge.cv2_to_imgmsg<span class="o">(</span>image,<span class="w"> </span><span class="nv">encoding</span><span class="o">=</span><span class="s2">"bgr8"</span><span class="o">)</span>
+</code></pre></div>
 </li>
 <li>
 <p>Build the <code>autoware_tensorrt_bevdet</code> and <code>ros2_dataset_bridge</code> packages</p>
-<p>```bash</p>
-<p># Build autoware_tensorrt_bevdet</p>
-<p>colcon build --packages-up-to autoware_tensorrt_bevdet</p>
-<p># Build ros2_dataset_bridge</p>
-<p>colcon build --packages-select=ros2_dataset_bridge</p>
-<p># Source the environment</p>
-<p>source install/setup.bash # install/setup.zsh or install/setup.sh for your own need.
- source /opt/ros/humble/setup.bash</p>
-<p>```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Build autoware_tensorrt_bevdet</span>
+
+colcon<span class="w"> </span>build<span class="w"> </span>--packages-up-to<span class="w"> </span>autoware_tensorrt_bevdet
+
+<span class="c1"># Build ros2_dataset_bridge</span>
+
+colcon<span class="w"> </span>build<span class="w"> </span>--packages-select<span class="o">=</span>ros2_dataset_bridge
+
+<span class="c1"># Source the environment</span>
+
+<span class="nb">source</span><span class="w"> </span>install/setup.bash<span class="w"> </span><span class="c1"># install/setup.zsh or install/setup.sh for your own need.</span>
+<span class="nb">source</span><span class="w"> </span>/opt/ros/humble/setup.bash
+</code></pre></div>
 </li>
 <li>
 <p>Launch <code>ros2_dataset_bridge</code> that publishes nuScenes dataset</p>
-<p>```bash</p>
-<p># Launch the data publisher, RViz, and GUI controller:</p>
-<p>ros2 launch ros2_dataset_bridge nuscenes_launch.xml</p>
-<p># Tip: If NuScenes boxes are not visible in RViz, ensure the "Stop" checkbox in the GUI controller is unchecked, then click "OK".</p>
-<p># Note: ROS bag playback is limited to 10 Hz, which constrains the BEVDet node to the same rate. However, based on callback execution time, BEVDet can run at up to 35 FPS with FP16 and 17 FPS with FP32.
- ```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Launch the data publisher, RViz, and GUI controller:</span>
+
+ros2<span class="w"> </span>launch<span class="w"> </span>ros2_dataset_bridge<span class="w"> </span>nuscenes_launch.xml
+
+<span class="c1"># Tip: If NuScenes boxes are not visible in RViz, ensure the "Stop" checkbox in the GUI controller is unchecked, then click "OK".</span>
+
+<span class="c1"># Note: ROS bag playback is limited to 10 Hz, which constrains the BEVDet node to the same rate. However, based on callback execution time, BEVDet can run at up to 35 FPS with FP16 and 17 FPS with FP32.</span>
+</code></pre></div>
 </li>
 <li>
 <p>Launch <code>tensorrt_bevdet_node</code></p>
-<p><code>bash
- ros2 launch autoware_tensorrt_bevdet tensorrt_bevdet.launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_tensorrt_bevdet<span class="w"> </span>tensorrt_bevdet.launch.xml
+</code></pre></div>
 </li>
 </ol>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">#</a></h3>

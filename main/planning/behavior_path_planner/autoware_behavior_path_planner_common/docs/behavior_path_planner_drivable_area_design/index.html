@@ -23001,23 +23001,23 @@
 <p>This section gives details of the generation of the drivable area (<code>left_bound</code> and <code>right_bound</code>).</p>
 <h3 id="drivable-lanes-generation">Drivable Lanes Generation<a class="headerlink" href="#drivable-lanes-generation" title="Permanent link">#</a></h3>
 <p>Before generating drivable areas, drivable lanes need to be sorted. Drivable Lanes are selected in each module (<code>Lane Follow</code>, <code>Avoidance</code>, <code>Lane Change</code>, <code>Goal Planner</code>, <code>Pull Out</code> and etc.), so more details about selection of drivable lanes can be found in each module's document. We use the following structure to define the drivable lanes.</p>
-<p><code>cpp
-struct DrivalbleLanes
-{
-    lanelet::ConstLanelet right_lanelet; // right most lane
-    lanelet::ConstLanelet left_lanelet; // left most lane
-    lanelet::ConstLanelets middle_lanelets; // middle lanes
-};</code></p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">DrivalbleLanes</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="n">lanelet</span><span class="o">::</span><span class="n">ConstLanelet</span><span class="w"> </span><span class="n">right_lanelet</span><span class="p">;</span><span class="w"> </span><span class="c1">// right most lane</span>
+<span class="w">    </span><span class="n">lanelet</span><span class="o">::</span><span class="n">ConstLanelet</span><span class="w"> </span><span class="n">left_lanelet</span><span class="p">;</span><span class="w"> </span><span class="c1">// left most lane</span>
+<span class="w">    </span><span class="n">lanelet</span><span class="o">::</span><span class="n">ConstLanelets</span><span class="w"> </span><span class="n">middle_lanelets</span><span class="p">;</span><span class="w"> </span><span class="c1">// middle lanes</span>
+<span class="p">};</span>
+</code></pre></div>
 <p>The image of the sorted drivable lanes is depicted in the following picture.</p>
 <p><img alt="sorted_lanes" src="../../images/drivable_area/sorted_lanes.drawio.svg"></p>
 <p>Note that, the order of drivable lanes become</p>
-<p><code>cpp
-drivable_lanes = {DrivableLane1, DrivableLanes2, DrivableLanes3, DrivableLanes4, DrivableLanes5}</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">drivable_lanes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">DrivableLane1</span><span class="p">,</span><span class="w"> </span><span class="n">DrivableLanes2</span><span class="p">,</span><span class="w"> </span><span class="n">DrivableLanes3</span><span class="p">,</span><span class="w"> </span><span class="n">DrivableLanes4</span><span class="p">,</span><span class="w"> </span><span class="n">DrivableLanes5</span><span class="p">}</span>
+</code></pre></div>
 <h3 id="drivable-area-generation">Drivable Area Generation<a class="headerlink" href="#drivable-area-generation" title="Permanent link">#</a></h3>
 <p>In this section, a drivable area is created using drivable lanes arranged in the order in which vehicles pass by. We created <code>left_bound</code> from left boundary of the leftmost lanelet and <code>right_bound</code> from right boundary of the rightmost lanelet. The image of the created drivable area will be the following blue lines. Note that the drivable area is defined in the <code>Path</code> and <code>PathWithLaneId</code> messages as</p>
-<p><code>cpp
-std::vector&lt;geometry_msgs::msg::Point&gt; left_bound;
-std::vector&lt;geometry_msgs::msg::Point&gt; right_bound;</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">geometry_msgs</span><span class="o">::</span><span class="n">msg</span><span class="o">::</span><span class="n">Point</span><span class="o">&gt;</span><span class="w"> </span><span class="n">left_bound</span><span class="p">;</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">geometry_msgs</span><span class="o">::</span><span class="n">msg</span><span class="o">::</span><span class="n">Point</span><span class="o">&gt;</span><span class="w"> </span><span class="n">right_bound</span><span class="p">;</span>
+</code></pre></div>
 <p>and each point of right bound and left bound has a position in the absolute coordinate system.</p>
 <p><img alt="drivable_lines" src="../../images/drivable_area/drivable_lines.drawio.svg"></p>
 <h3 id="drivable-area-expansion">Drivable Area Expansion<a class="headerlink" href="#drivable-area-expansion" title="Permanent link">#</a></h3>

@@ -23209,52 +23209,50 @@
 <h2 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">#</a></h2>
 <h3 id="launch-fusion-node">launch fusion node<a class="headerlink" href="#launch-fusion-node" title="Permanent link">#</a></h3>
 <p>The minimum node launch will be like the following.</p>
-<p>```xml</p>
-<!--?xml version="1.0"?-->
-<p><launch>
-<arg name="output_topic" default="~/output/occupancy_grid_map"></arg>
-<arg name="fusion_node_param_path" default="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/synchronized_grid_map_fusion_node.param.yaml"></arg></launch></p>
-<p><node name="synchronized_grid_map_fusion_node" exec="synchronized_grid_map_fusion_node" pkg="autoware_probabilistic_occupancy_grid_map" output="screen">
-  <remap from="~/output/occupancy_grid_map" to="&lt;span class=" arithmatex">\((var output_topic)"/&gt;
-  &lt;param from="\)(var fusion_node_param_path)"/&gt;
-</remap></node>
+<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version="1.0"?&gt;</span>
+<span class="nt">&lt;launch&gt;</span>
+<span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"output_topic"</span><span class="w"> </span><span class="na">default=</span><span class="s">"~/output/occupancy_grid_map"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"fusion_node_param_path"</span><span class="w"> </span><span class="na">default=</span><span class="s">"$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/synchronized_grid_map_fusion_node.param.yaml"</span><span class="nt">/&gt;</span>
 
-```</p>
+<span class="nt">&lt;node</span><span class="w"> </span><span class="na">name=</span><span class="s">"synchronized_grid_map_fusion_node"</span><span class="w"> </span><span class="na">exec=</span><span class="s">"synchronized_grid_map_fusion_node"</span><span class="w"> </span><span class="na">pkg=</span><span class="s">"autoware_probabilistic_occupancy_grid_map"</span><span class="w"> </span><span class="na">output=</span><span class="s">"screen"</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;remap</span><span class="w"> </span><span class="na">from=</span><span class="s">"~/output/occupancy_grid_map"</span><span class="w"> </span><span class="na">to=</span><span class="s">"$(var output_topic)"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;param</span><span class="w"> </span><span class="na">from=</span><span class="s">"$(var fusion_node_param_path)"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/node&gt;</span>
+<span class="nt">&lt;/launch&gt;</span>
+</code></pre></div>
 <h3 id="optional-generate-ogms-in-each-sensor-frame">(Optional) Generate OGMs in each sensor frame<a class="headerlink" href="#optional-generate-ogms-in-each-sensor-frame" title="Permanent link">#</a></h3>
 <p>You need to generate OGMs in each sensor frame before achieving grid map fusion.</p>
 <p><code>autoware_probabilistic_occupancy_grid_map</code> package supports to generate OGMs for the each from the point cloud data.</p>
 <details>
 <summary> Example launch.xml (click to expand) </summary>
 
-```xml
-<include file="$(find-pkg-share tier4_perception_launch)/launch/occupancy_grid_map/probabilistic_occupancy_grid_map.launch.xml">
-    <arg name="input/obstacle_pointcloud" value="/perception/obstacle_segmentation/single_frame/pointcloud"></arg>
-    <arg name="input/raw_pointcloud" value="/sensing/lidar/right/outlier_filtered/pointcloud_synchronized"></arg>
-    <arg name="output" value="/perception/occupancy_grid_map/right_lidar/map"></arg>
-    <arg name="map_frame" value="base_link"></arg>
-    <arg name="scan_origin" value="velodyne_right"></arg>
-    <arg name="use_intra_process" value="true"></arg>
-    <arg name="use_multithread" value="true"></arg>
-    <arg name="use_pointcloud_container" value="$(var use_pointcloud_container)"></arg>
-    <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"></arg>
-    <arg name="method" value="pointcloud_based_occupancy_grid_map"></arg>
-    <arg name="param_file" value="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/pointcloud_based_occupancy_grid_map_fusion.param.yaml"></arg>
-</include>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;include</span><span class="w"> </span><span class="na">file=</span><span class="s">"$(find-pkg-share tier4_perception_launch)/launch/occupancy_grid_map/probabilistic_occupancy_grid_map.launch.xml"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"input/obstacle_pointcloud"</span><span class="w"> </span><span class="na">value=</span><span class="s">"/perception/obstacle_segmentation/single_frame/pointcloud"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"input/raw_pointcloud"</span><span class="w"> </span><span class="na">value=</span><span class="s">"/sensing/lidar/right/outlier_filtered/pointcloud_synchronized"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"output"</span><span class="w"> </span><span class="na">value=</span><span class="s">"/perception/occupancy_grid_map/right_lidar/map"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"map_frame"</span><span class="w"> </span><span class="na">value=</span><span class="s">"base_link"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"scan_origin"</span><span class="w"> </span><span class="na">value=</span><span class="s">"velodyne_right"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"use_intra_process"</span><span class="w"> </span><span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"use_multithread"</span><span class="w"> </span><span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"use_pointcloud_container"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(var use_pointcloud_container)"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"pointcloud_container_name"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(var pointcloud_container_name)"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"method"</span><span class="w"> </span><span class="na">value=</span><span class="s">"pointcloud_based_occupancy_grid_map"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"param_file"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/pointcloud_based_occupancy_grid_map_fusion.param.yaml"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/include&gt;</span>
 
 
-The minimum parameter for the OGM generation in each frame is shown in the following table.
+The<span class="w"> </span>minimum<span class="w"> </span>parameter<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>OGM<span class="w"> </span>generation<span class="w"> </span>in<span class="w"> </span>each<span class="w"> </span>frame<span class="w"> </span>is<span class="w"> </span>shown<span class="w"> </span>in<span class="w"> </span>the<span class="w"> </span>following<span class="w"> </span>table.
 
 |Parameter|Description|
 |--|--|
-|`input/obstacle_pointcloud`| The input point cloud data for the OGM generation. This point cloud data should be the point cloud data which is segmented as the obstacle.|
-|`input/raw_pointcloud`| The input point cloud data for the OGM generation. This point cloud data should be the point cloud data which is not segmented as the obstacle. |
-|`output`| The output topic of the OGM. |
-|`map_frame`| The tf frame for the OGM center origin. |
-|`scan_origin`| The tf frame for the sensor origin. |
-|`method`| The method for the OGM generation. Currently we support `pointcloud_based_occupancy_grid_map` and `laser_scan_based_occupancy_grid_map`. The pointcloud based method is recommended. |
-|`param_file`| The parameter file for the OGM generation. See [example parameter file](config/pointcloud_based_occupancy_grid_map_for_fusion.param.yaml) |
-
-```
+|`input/obstacle_pointcloud`|<span class="w"> </span>The<span class="w"> </span>input<span class="w"> </span>point<span class="w"> </span>cloud<span class="w"> </span>data<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>OGM<span class="w"> </span>generation.<span class="w"> </span>This<span class="w"> </span>point<span class="w"> </span>cloud<span class="w"> </span>data<span class="w"> </span>should<span class="w"> </span>be<span class="w"> </span>the<span class="w"> </span>point<span class="w"> </span>cloud<span class="w"> </span>data<span class="w"> </span>which<span class="w"> </span>is<span class="w"> </span>segmented<span class="w"> </span>as<span class="w"> </span>the<span class="w"> </span>obstacle.|
+|`input/raw_pointcloud`|<span class="w"> </span>The<span class="w"> </span>input<span class="w"> </span>point<span class="w"> </span>cloud<span class="w"> </span>data<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>OGM<span class="w"> </span>generation.<span class="w"> </span>This<span class="w"> </span>point<span class="w"> </span>cloud<span class="w"> </span>data<span class="w"> </span>should<span class="w"> </span>be<span class="w"> </span>the<span class="w"> </span>point<span class="w"> </span>cloud<span class="w"> </span>data<span class="w"> </span>which<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>segmented<span class="w"> </span>as<span class="w"> </span>the<span class="w"> </span>obstacle.<span class="w"> </span>|
+|`output`|<span class="w"> </span>The<span class="w"> </span>output<span class="w"> </span>topic<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>OGM.<span class="w"> </span>|
+|`map_frame`|<span class="w"> </span>The<span class="w"> </span>tf<span class="w"> </span>frame<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>OGM<span class="w"> </span>center<span class="w"> </span>origin.<span class="w"> </span>|
+|`scan_origin`|<span class="w"> </span>The<span class="w"> </span>tf<span class="w"> </span>frame<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>sensor<span class="w"> </span>origin.<span class="w"> </span>|
+|`method`|<span class="w"> </span>The<span class="w"> </span>method<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>OGM<span class="w"> </span>generation.<span class="w"> </span>Currently<span class="w"> </span>we<span class="w"> </span>support<span class="w"> </span>`pointcloud_based_occupancy_grid_map`<span class="w"> </span>and<span class="w"> </span>`laser_scan_based_occupancy_grid_map`.<span class="w"> </span>The<span class="w"> </span>pointcloud<span class="w"> </span>based<span class="w"> </span>method<span class="w"> </span>is<span class="w"> </span>recommended.<span class="w"> </span>|
+|`param_file`|<span class="w"> </span>The<span class="w"> </span>parameter<span class="w"> </span>file<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>OGM<span class="w"> </span>generation.<span class="w"> </span>See<span class="w"> </span>[example<span class="w"> </span>parameter<span class="w"> </span>file](config/pointcloud_based_occupancy_grid_map_for_fusion.param.yaml)<span class="w"> </span>|
+</code></pre></div>
 
 </details>
 
@@ -23265,11 +23263,11 @@ Also, remember to set <code>enable_single_frame_mode</code> and <code>filter_obs
 <h3 id="run-both-ogm-generation-node-and-fusion-node">Run both OGM generation node and fusion node<a class="headerlink" href="#run-both-ogm-generation-node-and-fusion-node" title="Permanent link">#</a></h3>
 <p>We prepared the launch file to run both OGM generation node and fusion node in <a href="launch/synchronized_occupancy_grid_map_fusion.launch.xml"><code>synchronized_occupancy_grid_map_fusion.launch.xml</code></a></p>
 <p>You can include this launch file like the following.</p>
-<p><code>xml
-&lt;include file="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/synchronized_occupancy_grid_map_fusion.launch.xml"&gt;
-  &lt;arg name="output_topic" value="~/output/occupancy_grid_map"/&gt;
-  &lt;arg name="fusion_node_param_path" value="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/synchronized_grid_map_fusion_node.param.yaml"/&gt;
-&lt;/include&gt;</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;include</span><span class="w"> </span><span class="na">file=</span><span class="s">"$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/synchronized_occupancy_grid_map_fusion.launch.xml"</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"output_topic"</span><span class="w"> </span><span class="na">value=</span><span class="s">"~/output/occupancy_grid_map"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"fusion_node_param_path"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/synchronized_grid_map_fusion_node.param.yaml"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/include&gt;</span>
+</code></pre></div>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
 <ul>
 <li>[1] Dempster, A. P., Laird, N. M., &amp; Rubin, D. B. (1977). Maximum likelihood from incomplete data via the EM algorithm. Journal of the Royal Statistical Society. Series B (Methodological), 39(1), 1-38.</li>

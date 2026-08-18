@@ -22968,8 +22968,74 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#convert-pytorch-model-to-onnx-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Convert PyTorch model to ONNX model
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-error-detection-and-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Error detection and handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-performance-characterization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Performance characterization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#referencesexternal-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References/External links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Future extensions / Unimplemented parts
+      
+    </span>
+  </a>
   
 </li>
       
@@ -23613,52 +23679,51 @@ please download it from <strong><a href="https://autoware-files.s3.us-west-2.ama
 <h4 id="use-your-custom-dataset">Use Your Custom Dataset<a class="headerlink" href="#use-your-custom-dataset" title="Permanent link">#</a></h4>
 <p>To train a traffic light classifier, adopt a structured subfolder format where each
 subfolder represents a distinct class. Below is an illustrative dataset structure example;</p>
-<p>```python
-DATASET_ROOT
-    ├── TRAIN
-    │    ├── RED
-    │    │   ├── 001.png
-    │    │   ├── 002.png
-    │    │   └── ...
-    │    │
-    │    ├── GREEN
-    │    │    ├── 001.png
-    │    │    ├── 002.png
-    │    │    └──...
-    │    │
-    │    ├── YELLOW
-    │    │    ├── 001.png
-    │    │    ├── 002.png
-    │    │    └──...
-    │    └── ...
-    │
-    ├── VAL
-    │       └──...
-    │
-    │
-    └── TEST
-           └── ...</p>
-<p>```</p>
+<div class="highlight"><pre><span></span><code><span class="n">DATASET_ROOT</span>
+    <span class="err">├──</span> <span class="n">TRAIN</span>
+    <span class="err">│</span>    <span class="err">├──</span> <span class="n">RED</span>
+    <span class="err">│</span>    <span class="err">│</span>   <span class="err">├──</span> <span class="mf">001.</span><span class="n">png</span>
+    <span class="err">│</span>    <span class="err">│</span>   <span class="err">├──</span> <span class="mf">002.</span><span class="n">png</span>
+    <span class="err">│</span>    <span class="err">│</span>   <span class="err">└──</span> <span class="o">...</span>
+    <span class="err">│</span>    <span class="err">│</span>
+    <span class="err">│</span>    <span class="err">├──</span> <span class="n">GREEN</span>
+    <span class="err">│</span>    <span class="err">│</span>    <span class="err">├──</span> <span class="mf">001.</span><span class="n">png</span>
+    <span class="err">│</span>    <span class="err">│</span>    <span class="err">├──</span> <span class="mf">002.</span><span class="n">png</span>
+    <span class="err">│</span>    <span class="err">│</span>    <span class="err">└──</span><span class="o">...</span>
+    <span class="err">│</span>    <span class="err">│</span>
+    <span class="err">│</span>    <span class="err">├──</span> <span class="n">YELLOW</span>
+    <span class="err">│</span>    <span class="err">│</span>    <span class="err">├──</span> <span class="mf">001.</span><span class="n">png</span>
+    <span class="err">│</span>    <span class="err">│</span>    <span class="err">├──</span> <span class="mf">002.</span><span class="n">png</span>
+    <span class="err">│</span>    <span class="err">│</span>    <span class="err">└──</span><span class="o">...</span>
+    <span class="err">│</span>    <span class="err">└──</span> <span class="o">...</span>
+    <span class="err">│</span>
+    <span class="err">├──</span> <span class="n">VAL</span>
+    <span class="err">│</span>       <span class="err">└──</span><span class="o">...</span>
+    <span class="err">│</span>
+    <span class="err">│</span>
+    <span class="err">└──</span> <span class="n">TEST</span>
+           <span class="err">└──</span> <span class="o">...</span>
+</code></pre></div>
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h3>
 <h4 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">#</a></h4>
 <!-- cspell:ignore Miniconda -->
 
 <p><strong>Step 1.</strong> Download and install Miniconda from the <a href="https://mmpretrain.readthedocs.io/en/latest/get_started.html">official website</a>.</p>
 <p><strong>Step 2.</strong> Create a conda virtual environment and activate it</p>
-<p><code>bash
-conda create --name tl-classifier python=3.8 -y
-conda activate tl-classifier</code></p>
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>tl-classifier<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.8<span class="w"> </span>-y
+conda<span class="w"> </span>activate<span class="w"> </span>tl-classifier
+</code></pre></div>
 <p><strong>Step 3.</strong> Install PyTorch</p>
 <p>Please ensure you have PyTorch installed, compatible with CUDA 11.6, as it is a requirement for current Autoware</p>
-<p><code>bash
-conda install pytorch==1.13.1 torchvision==0.14.1 pytorch-cuda=11.6 -c pytorch -c nvidia</code></p>
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span><span class="nv">pytorch</span><span class="o">==</span><span class="m">1</span>.13.1<span class="w"> </span><span class="nv">torchvision</span><span class="o">==</span><span class="m">0</span>.14.1<span class="w"> </span>pytorch-cuda<span class="o">=</span><span class="m">11</span>.6<span class="w"> </span>-c<span class="w"> </span>pytorch<span class="w"> </span>-c<span class="w"> </span>nvidia
+</code></pre></div>
 <h4 id="install-mmlabmmpretrain">Install mmlab/mmpretrain<a class="headerlink" href="#install-mmlabmmpretrain" title="Permanent link">#</a></h4>
 <p><strong>Step 1.</strong> Install mmpretrain from source</p>
-<p><code>bash
-cd ~/
-git clone https://github.com/open-mmlab/mmpretrain.git
-cd mmpretrain
-pip install -U openmim &amp;&amp; mim install -e .</code></p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/open-mmlab/mmpretrain.git
+<span class="nb">cd</span><span class="w"> </span>mmpretrain
+pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>openmim<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>mim<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div>
 <h3 id="training">Training<a class="headerlink" href="#training" title="Permanent link">#</a></h3>
 <p>MMPretrain offers a training script that is controlled through a configuration file.
 Leveraging an inheritance design pattern, you can effortlessly tailor the training script
@@ -23668,125 +23733,137 @@ but you have the flexibility to employ alternative classification models such as
 EfficientNetV2, EfficientNetV3, ResNet, and more.</p>
 <h4 id="create-a-config-file">Create a config file<a class="headerlink" href="#create-a-config-file" title="Permanent link">#</a></h4>
 <p>Generate a configuration file for your preferred model within the <code>configs</code> folder</p>
-<p><code>bash
-touch ~/mmpretrain/configs/mobilenet_v2/mobilenet-v2_8xb32_custom.py</code></p>
+<div class="highlight"><pre><span></span><code>touch<span class="w"> </span>~/mmpretrain/configs/mobilenet_v2/mobilenet-v2_8xb32_custom.py
+</code></pre></div>
 <p>Open the configuration file in your preferred text editor and make a copy of
 the provided content. Adjust the <strong>data_root</strong> variable to match the path of your dataset.
 You are welcome to customize the configuration parameters for the model, dataset, and scheduler to
 suit your preferences</p>
-<p>```python</p>
-<h1 id="inherit-model-schedule-and-default_runtime-from-base-model">Inherit model, schedule and default_runtime from base model<a class="headerlink" href="#inherit-model-schedule-and-default_runtime-from-base-model" title="Permanent link">#</a></h1>
-<p><em>base</em> = [
-    '../<em>base</em>/models/mobilenet_v2_1x.py',
-    '../<em>base</em>/schedules/imagenet_bs256_epochstep.py',
-    '../<em>base</em>/default_runtime.py'
-]</p>
-<h1 id="set-the-number-of-classes-to-the-model">Set the number of classes to the model<a class="headerlink" href="#set-the-number-of-classes-to-the-model" title="Permanent link">#</a></h1>
-<h1 id="you-can-also-change-other-model-parameters-here">You can also change other model parameters here<a class="headerlink" href="#you-can-also-change-other-model-parameters-here" title="Permanent link">#</a></h1>
-<h1 id="for-detailed-descriptions-of-model-parameters-please-refer-to-link-below">For detailed descriptions of model parameters, please refer to link below<a class="headerlink" href="#for-detailed-descriptions-of-model-parameters-please-refer-to-link-below" title="Permanent link">#</a></h1>
-<h1 id="customize-modelhttpsmmpretrainreadthedocsioenlatestadvanced_guidesmoduleshtml">(Customize model)[https://mmpretrain.readthedocs.io/en/latest/advanced_guides/modules.html]<a class="headerlink" href="#customize-modelhttpsmmpretrainreadthedocsioenlatestadvanced_guidesmoduleshtml" title="Permanent link">#</a></h1>
-<p>model = dict(head=dict(num_classes=3, topk=(1, 3)))</p>
-<h1 id="set-max-epochs-and-validation-interval">Set max epochs and validation interval<a class="headerlink" href="#set-max-epochs-and-validation-interval" title="Permanent link">#</a></h1>
-<p>train_cfg = dict(by_epoch=True, max_epochs=50, val_interval=5)</p>
-<h1 id="set-optimizer-and-lr-scheduler">Set optimizer and lr scheduler<a class="headerlink" href="#set-optimizer-and-lr-scheduler" title="Permanent link">#</a></h1>
-<p>optim_wrapper = dict(
-    optimizer=dict(type='SGD', lr=0.001, momentum=0.9))
-param_scheduler = dict(type='StepLR', by_epoch=True, step_size=1, gamma=0.98)</p>
-<p>dataset_type = 'CustomDataset'
-data_root = "/PATH/OF/YOUR/DATASET"</p>
-<h1 id="customize-data-preprocessing-and-dataloader-pipeline-for-training-set">Customize data preprocessing and dataloader pipeline for training set<a class="headerlink" href="#customize-data-preprocessing-and-dataloader-pipeline-for-training-set" title="Permanent link">#</a></h1>
-<h1 id="these-parameters-calculated-for-the-sample-dataset">These parameters calculated for the sample dataset<a class="headerlink" href="#these-parameters-calculated-for-the-sample-dataset" title="Permanent link">#</a></h1>
-<p>data_preprocessor = dict(
-    mean=[0.2888 * 256, 0.2570 * 256, 0.2329 * 256],
-    std=[0.2106 * 256, 0.2037 * 256, 0.1864 * 256],
-    num_classes=3,
-    to_rgb=True,
-)</p>
-<h1 id="customize-data-preprocessing-and-dataloader-pipeline-for-train-set">Customize data preprocessing and dataloader pipeline for train set<a class="headerlink" href="#customize-data-preprocessing-and-dataloader-pipeline-for-train-set" title="Permanent link">#</a></h1>
-<h1 id="for-detailed-descriptions-of-data-pipeline-please-refer-to-link-below">For detailed descriptions of data pipeline, please refer to link below<a class="headerlink" href="#for-detailed-descriptions-of-data-pipeline-please-refer-to-link-below" title="Permanent link">#</a></h1>
-<h1 id="customize-data-pipelinehttpsmmpretrainreadthedocsioenlatestadvanced_guidespipelinehtml">(Customize data pipeline)[https://mmpretrain.readthedocs.io/en/latest/advanced_guides/pipeline.html]<a class="headerlink" href="#customize-data-pipelinehttpsmmpretrainreadthedocsioenlatestadvanced_guidespipelinehtml" title="Permanent link">#</a></h1>
-<p>train_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=224),
-    dict(type='RandomFlip', prob=0.5, direction='horizontal'),
-    dict(type='PackInputs'),
-]
-train_dataloader = dict(
-    dataset=dict(
-        type=dataset_type,
-        data_root=data_root,
-        ann_file='',
-        data_prefix='train',
-        with_label=True,
-        pipeline=train_pipeline,
-    ),
-    num_workers=8,
-    batch_size=32,
-    sampler=dict(type='DefaultSampler', shuffle=True)
-)</p>
-<h1 id="customize-data-preprocessing-and-dataloader-pipeline-for-test-set">Customize data preprocessing and dataloader pipeline for test set<a class="headerlink" href="#customize-data-preprocessing-and-dataloader-pipeline-for-test-set" title="Permanent link">#</a></h1>
-<p>test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=224),
-    dict(type='PackInputs'),
-]</p>
-<h1 id="customize-data-preprocessing-and-dataloader-pipeline-for-validation-set">Customize data preprocessing and dataloader pipeline for validation set<a class="headerlink" href="#customize-data-preprocessing-and-dataloader-pipeline-for-validation-set" title="Permanent link">#</a></h1>
-<p>val_cfg = dict()
-val_dataloader = dict(
-    dataset=dict(
-        type=dataset_type,
-        data_root=data_root,
-        ann_file='',
-        data_prefix='val',
-        with_label=True,
-        pipeline=test_pipeline,
-    ),
-    num_workers=8,
-    batch_size=32,
-    sampler=dict(type='DefaultSampler', shuffle=True)
-)</p>
-<p>val_evaluator = dict(topk=(1, 3,), type='Accuracy')</p>
-<p>test_dataloader = val_dataloader
-test_evaluator = val_evaluator</p>
-<p>```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Inherit model, schedule and default_runtime from base model</span>
+<span class="n">_base_</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">'../_base_/models/mobilenet_v2_1x.py'</span><span class="p">,</span>
+    <span class="s1">'../_base_/schedules/imagenet_bs256_epochstep.py'</span><span class="p">,</span>
+    <span class="s1">'../_base_/default_runtime.py'</span>
+<span class="p">]</span>
+
+<span class="c1"># Set the number of classes to the model</span>
+<span class="c1"># You can also change other model parameters here</span>
+<span class="c1"># For detailed descriptions of model parameters, please refer to link below</span>
+<span class="c1"># (Customize model)[https://mmpretrain.readthedocs.io/en/latest/advanced_guides/modules.html]</span>
+<span class="n">model</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">head</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">num_classes</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">topk</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>
+
+<span class="c1"># Set max epochs and validation interval</span>
+<span class="n">train_cfg</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">by_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_epochs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">val_interval</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># Set optimizer and lr scheduler</span>
+<span class="n">optim_wrapper</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">optimizer</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'SGD'</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">))</span>
+<span class="n">param_scheduler</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'StepLR'</span><span class="p">,</span> <span class="n">by_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">step_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.98</span><span class="p">)</span>
+
+<span class="n">dataset_type</span> <span class="o">=</span> <span class="s1">'CustomDataset'</span>
+<span class="n">data_root</span> <span class="o">=</span> <span class="s2">"/PATH/OF/YOUR/DATASET"</span>
+
+<span class="c1"># Customize data preprocessing and dataloader pipeline for training set</span>
+<span class="c1"># These parameters calculated for the sample dataset</span>
+<span class="n">data_preprocessor</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">mean</span><span class="o">=</span><span class="p">[</span><span class="mf">0.2888</span> <span class="o">*</span> <span class="mi">256</span><span class="p">,</span> <span class="mf">0.2570</span> <span class="o">*</span> <span class="mi">256</span><span class="p">,</span> <span class="mf">0.2329</span> <span class="o">*</span> <span class="mi">256</span><span class="p">],</span>
+    <span class="n">std</span><span class="o">=</span><span class="p">[</span><span class="mf">0.2106</span> <span class="o">*</span> <span class="mi">256</span><span class="p">,</span> <span class="mf">0.2037</span> <span class="o">*</span> <span class="mi">256</span><span class="p">,</span> <span class="mf">0.1864</span> <span class="o">*</span> <span class="mi">256</span><span class="p">],</span>
+    <span class="n">num_classes</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">to_rgb</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Customize data preprocessing and dataloader pipeline for train set</span>
+<span class="c1"># For detailed descriptions of data pipeline, please refer to link below</span>
+<span class="c1"># (Customize data pipeline)[https://mmpretrain.readthedocs.io/en/latest/advanced_guides/pipeline.html]</span>
+<span class="n">train_pipeline</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'LoadImageFromFile'</span><span class="p">),</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'Resize'</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">224</span><span class="p">),</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'RandomFlip'</span><span class="p">,</span> <span class="n">prob</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">'horizontal'</span><span class="p">),</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'PackInputs'</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="n">train_dataloader</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">dataset_type</span><span class="p">,</span>
+        <span class="n">data_root</span><span class="o">=</span><span class="n">data_root</span><span class="p">,</span>
+        <span class="n">ann_file</span><span class="o">=</span><span class="s1">''</span><span class="p">,</span>
+        <span class="n">data_prefix</span><span class="o">=</span><span class="s1">'train'</span><span class="p">,</span>
+        <span class="n">with_label</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">pipeline</span><span class="o">=</span><span class="n">train_pipeline</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">num_workers</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">sampler</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'DefaultSampler'</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Customize data preprocessing and dataloader pipeline for test set</span>
+<span class="n">test_pipeline</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'LoadImageFromFile'</span><span class="p">),</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'Resize'</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">224</span><span class="p">),</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'PackInputs'</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="c1"># Customize data preprocessing and dataloader pipeline for validation set</span>
+<span class="n">val_cfg</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">val_dataloader</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">dataset_type</span><span class="p">,</span>
+        <span class="n">data_root</span><span class="o">=</span><span class="n">data_root</span><span class="p">,</span>
+        <span class="n">ann_file</span><span class="o">=</span><span class="s1">''</span><span class="p">,</span>
+        <span class="n">data_prefix</span><span class="o">=</span><span class="s1">'val'</span><span class="p">,</span>
+        <span class="n">with_label</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">pipeline</span><span class="o">=</span><span class="n">test_pipeline</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">num_workers</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">sampler</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">'DefaultSampler'</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">val_evaluator</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">topk</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,),</span> <span class="nb">type</span><span class="o">=</span><span class="s1">'Accuracy'</span><span class="p">)</span>
+
+<span class="n">test_dataloader</span> <span class="o">=</span> <span class="n">val_dataloader</span>
+<span class="n">test_evaluator</span> <span class="o">=</span> <span class="n">val_evaluator</span>
+</code></pre></div>
 <h4 id="start-training">Start training<a class="headerlink" href="#start-training" title="Permanent link">#</a></h4>
-<p><code>bash
-cd ~/mmpretrain
-python tools/train.py configs/mobilenet_v2/mobilenet-v2_8xb32_custom.py</code></p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/mmpretrain
+python<span class="w"> </span>tools/train.py<span class="w"> </span>configs/mobilenet_v2/mobilenet-v2_8xb32_custom.py
+</code></pre></div>
 <p>Training logs and weights will be saved in the <code>work_dirs/mobilenet-v2_8xb32_custom</code> folder.</p>
 <h3 id="convert-pytorch-model-to-onnx-model">Convert PyTorch model to ONNX model<a class="headerlink" href="#convert-pytorch-model-to-onnx-model" title="Permanent link">#</a></h3>
 <h4 id="install-mmdeploy">Install mmdeploy<a class="headerlink" href="#install-mmdeploy" title="Permanent link">#</a></h4>
 <p>The 'mmdeploy' toolset is designed for deploying your trained model onto various target devices.
 With its capabilities, you can seamlessly convert PyTorch models into the ONNX format.</p>
-<p>```bash</p>
-<h1 id="activate-your-conda-environment">Activate your conda environment<a class="headerlink" href="#activate-your-conda-environment" title="Permanent link">#</a></h1>
-<p>conda activate tl-classifier</p>
-<h1 id="install-mmenigne-and-mmcv">Install mmenigne and mmcv<a class="headerlink" href="#install-mmenigne-and-mmcv" title="Permanent link">#</a></h1>
-<p>mim install mmengine
-mim install "mmcv&gt;=2.0.0rc2"</p>
-<h1 id="install-mmdeploy_1">Install mmdeploy<a class="headerlink" href="#install-mmdeploy_1" title="Permanent link">#</a></h1>
-<p>pip install mmdeploy==1.2.0</p>
-<h1 id="support-onnxruntime">Support onnxruntime<a class="headerlink" href="#support-onnxruntime" title="Permanent link">#</a></h1>
-<p>pip install mmdeploy-runtime==1.2.0
-pip install mmdeploy-runtime-gpu==1.2.0
-pip install onnxruntime-gpu==1.8.1</p>
-<h1 id="clone-mmdeploy-repository">Clone mmdeploy repository<a class="headerlink" href="#clone-mmdeploy-repository" title="Permanent link">#</a></h1>
-<p>cd ~/
-git clone -b main https://github.com/open-mmlab/mmdeploy.git
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Activate your conda environment</span>
+conda<span class="w"> </span>activate<span class="w"> </span>tl-classifier
+
+<span class="c1"># Install mmenigne and mmcv</span>
+mim<span class="w"> </span>install<span class="w"> </span>mmengine
+mim<span class="w"> </span>install<span class="w"> </span><span class="s2">"mmcv&gt;=2.0.0rc2"</span>
+
+<span class="c1"># Install mmdeploy</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">mmdeploy</span><span class="o">==</span><span class="m">1</span>.2.0
+
+<span class="c1"># Support onnxruntime</span>
+pip<span class="w"> </span>install<span class="w"> </span>mmdeploy-runtime<span class="o">==</span><span class="m">1</span>.2.0
+pip<span class="w"> </span>install<span class="w"> </span>mmdeploy-runtime-gpu<span class="o">==</span><span class="m">1</span>.2.0
+pip<span class="w"> </span>install<span class="w"> </span>onnxruntime-gpu<span class="o">==</span><span class="m">1</span>.8.1
+
+<span class="c1">#Clone mmdeploy repository</span>
+<span class="nb">cd</span><span class="w"> </span>~/
+git<span class="w"> </span>clone<span class="w"> </span>-b<span class="w"> </span>main<span class="w"> </span>https://github.com/open-mmlab/mmdeploy.git
+</code></pre></div>
 <h4 id="convert-pytorch-model-to-onnx-model_1">Convert PyTorch model to ONNX model<a class="headerlink" href="#convert-pytorch-model-to-onnx-model_1" title="Permanent link">#</a></h4>
-<p>```bash
-cd ~/mmdeploy</p>
-<h1 id="run-deploypy-script">Run deploy.py script<a class="headerlink" href="#run-deploypy-script" title="Permanent link">#</a></h1>
-<h1 id="deploypy-script-takes-5-main-arguments-with-these-order-config-file-path-train-config-file-path">deploy.py script takes 5 main arguments with these order; config file path, train config file path,<a class="headerlink" href="#deploypy-script-takes-5-main-arguments-with-these-order-config-file-path-train-config-file-path" title="Permanent link">#</a></h1>
-<h1 id="checkpoint-file-path-demo-image-path-and-work-directory-path">checkpoint file path, demo image path, and work directory path<a class="headerlink" href="#checkpoint-file-path-demo-image-path-and-work-directory-path" title="Permanent link">#</a></h1>
-<p>python tools/deploy.py \
-~/mmdeploy/configs/mmpretrain/classification_onnxruntime_static.py\
-~/mmpretrain/configs/mobilenet_v2/train_mobilenet_v2.py \
-~/mmpretrain/work_dirs/train_mobilenet_v2/epoch_300.pth \
-/SAMPLE/IAMGE/DIRECTORY \
---work-dir mmdeploy_model/mobilenet_v2
-```</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/mmdeploy
+
+<span class="c1"># Run deploy.py script</span>
+<span class="c1"># deploy.py script takes 5 main arguments with these order; config file path, train config file path,</span>
+<span class="c1"># checkpoint file path, demo image path, and work directory path</span>
+python<span class="w"> </span>tools/deploy.py<span class="w"> </span><span class="se">\</span>
+~/mmdeploy/configs/mmpretrain/classification_onnxruntime_static.py<span class="se">\</span>
+~/mmpretrain/configs/mobilenet_v2/train_mobilenet_v2.py<span class="w"> </span><span class="se">\</span>
+~/mmpretrain/work_dirs/train_mobilenet_v2/epoch_300.pth<span class="w"> </span><span class="se">\</span>
+/SAMPLE/IAMGE/DIRECTORY<span class="w"> </span><span class="se">\</span>
+--work-dir<span class="w"> </span>mmdeploy_model/mobilenet_v2
+</code></pre></div>
 <p>Converted ONNX model will be saved in the <code>mmdeploy/mmdeploy_model/mobilenet_v2</code> folder.</p>
 <p>After obtaining your onnx model, update parameters defined in the launch file (e.g. <code>model_file_path</code>, <code>label_file_path</code>, <code>input_h</code>, <code>input_w</code>...).
 Note that, we only support labels defined in <a href="https://github.com/tier4/tier4_autoware_msgs/blob/tier4/universe/tier4_perception_msgs/msg/traffic_light/TrafficLightElement.msg">tier4_perception_msgs::msg::TrafficLightElement</a>.</p>

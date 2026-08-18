@@ -22722,6 +22722,89 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#input-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input / Output
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Input / Output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input topics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output topics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#p65-joystick-key-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P65 Joystick Key Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ds4-joystick-key-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DS4 Joystick Key Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#xbox-joystick-key-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        XBOX Joystick Key Map
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -22747,14 +22830,15 @@
 <p><code>autoware_joy_controller</code> is the package to convert a joy msg to autoware commands (e.g. steering wheel, shift, turn signal, engage) for a vehicle.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
 <h3 id="ros-2-launch">ROS 2 launch<a class="headerlink" href="#ros-2-launch" title="Permanent link">#</a></h3>
-<p>```bash</p>
-<h1 id="with-default-config-ds4">With default config (ds4)<a class="headerlink" href="#with-default-config-ds4" title="Permanent link">#</a></h1>
-<p>ros2 launch autoware_joy_controller joy_controller.launch.xml</p>
-<h1 id="default-config-but-select-from-the-existing-parameter-files">Default config but select from the existing parameter files<a class="headerlink" href="#default-config-but-select-from-the-existing-parameter-files" title="Permanent link">#</a></h1>
-<p>ros2 launch autoware_joy_controller joy_controller_param_selection.launch.xml joy_type:=ds4 # or g29, p65, xbox</p>
-<h1 id="override-the-param-file">Override the param file<a class="headerlink" href="#override-the-param-file" title="Permanent link">#</a></h1>
-<p>ros2 launch autoware_joy_controller joy_controller.launch.xml config_file:=/path/to/your/param.yaml
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># With default config (ds4)</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_joy_controller<span class="w"> </span>joy_controller.launch.xml
+
+<span class="c1"># Default config but select from the existing parameter files</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_joy_controller<span class="w"> </span>joy_controller_param_selection.launch.xml<span class="w"> </span>joy_type:<span class="o">=</span>ds4<span class="w"> </span><span class="c1"># or g29, p65, xbox</span>
+
+<span class="c1"># Override the param file</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_joy_controller<span class="w"> </span>joy_controller.launch.xml<span class="w"> </span>config_file:<span class="o">=</span>/path/to/your/param.yaml
+</code></pre></div>
 <h2 id="input-output">Input / Output<a class="headerlink" href="#input-output" title="Permanent link">#</a></h2>
 <h3 id="input-topics">Input topics<a class="headerlink" href="#input-topics" title="Permanent link">#</a></h3>
 <table>

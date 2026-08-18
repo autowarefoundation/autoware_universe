@@ -23378,16 +23378,16 @@ Please refer to it for your parameter settings.</p>
 </table>
 <h3 id="example-configuration">Example Configuration<a class="headerlink" href="#example-configuration" title="Permanent link">#</a></h3>
 <p>The <code>iou_threshold</code> parameter should be configured as an object with thresholds for each object class:</p>
-<p><code>yaml
-iou_threshold:
-  UNKNOWN: 0.1
-  CAR: 0.65
-  TRUCK: 0.65
-  BUS: 0.65
-  TRAILER: 0.65
-  MOTORCYCLE: 0.65
-  BICYCLE: 0.65
-  PEDESTRIAN: 0.65</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">iou_threshold</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">UNKNOWN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
+<span class="w">  </span><span class="nt">CAR</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+<span class="w">  </span><span class="nt">TRUCK</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+<span class="w">  </span><span class="nt">BUS</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+<span class="w">  </span><span class="nt">TRAILER</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+<span class="w">  </span><span class="nt">MOTORCYCLE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+<span class="w">  </span><span class="nt">BICYCLE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+<span class="w">  </span><span class="nt">PEDESTRIAN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.65</span>
+</code></pre></div>
 <p>The threshold values determine the minimum IoU score required to overwrite a cluster's label with the corresponding ROI label. Different thresholds can be set for each object class to account for varying detection characteristics.</p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <!-- Write assumptions and limitations of your implementation.

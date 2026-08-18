@@ -22800,13 +22800,12 @@
 <div><h1 id="tree-tool">Tree tool<a class="headerlink" href="#tree-tool" title="Permanent link">#</a></h1>
 <p>This tool displays the graph structure of the configuration file in tree format.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
-<p><code>bash
-ros2 run autoware_diagnostic_graph_aggregator tree &lt;graph-config-path&gt;</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_aggregator<span class="w"> </span>tree<span class="w"> </span>&lt;graph-config-path&gt;
+</code></pre></div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h2>
-<p><code>bash
-ros2 run autoware_diagnostic_graph_aggregator tree '$(find-pkg-share autoware_diagnostic_graph_aggregator)/example/graph/main.yaml'</code></p>
-<p><code>txt
-===== Top-level trees ============================
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_aggregator<span class="w"> </span>tree<span class="w"> </span><span class="s1">'$(find-pkg-share autoware_diagnostic_graph_aggregator)/example/graph/main.yaml'</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>===== Top-level trees ============================
 - /autoware/modes/autonomous (and)
     - /functions/pose_estimation (and)
     - /functions/obstacle_detection (or)
@@ -22827,7 +22826,8 @@ ros2 run autoware_diagnostic_graph_aggregator tree '$(find-pkg-share autoware_di
     - /sensing/radars/front (diag)
 ===== Isolated units =============================
 - /autoware/modes/stop (ok)
-- /autoware/modes/emergency_stop (ok)</code></p></div>
+- /autoware/modes/emergency_stop (ok)
+</code></pre></div></div>
 
 
 

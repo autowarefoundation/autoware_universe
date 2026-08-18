@@ -23490,8 +23490,8 @@ Once ego stops inside the search area for at least the duration set by <code>par
 <h4 id="map-based-forced-rtc">Map-based forced RTC<a class="headerlink" href="#map-based-forced-rtc" title="Permanent link">#</a></h4>
 <p>RTC can be enabled for specific crosswalks in the lanelet map such that even if <code>enable_rtc</code> is set to <code>false</code>, approval will be required for crossing the corresponding crosswalks.
 The following attribute should be added to the crosswalk lanelet in the map file:</p>
-<p><code>xml
-&lt;tag k='rtc_approval_required_v1' v='crosswalk' /&gt;</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">'rtc_approval_required_v1'</span><span class="w"> </span><span class="na">v=</span><span class="s">'crosswalk'</span><span class="w"> </span><span class="nt">/&gt;</span>
+</code></pre></div>
 <h2 id="known-issues">Known Issues<a class="headerlink" href="#known-issues" title="Permanent link">#</a></h2>
 <ul>
 <li>The yield decision may be sometimes aggressive or conservative depending on the case.<ul>
@@ -23525,8 +23525,8 @@ The following attribute should be added to the crosswalk lanelet in the map file
 </li>
 </ul>
 <h3 id="visualization-of-time-to-collision">Visualization of Time-To-Collision<a class="headerlink" href="#visualization-of-time-to-collision" title="Permanent link">#</a></h3>
-<p><code>sh
-ros2 run autoware_behavior_velocity_crosswalk_module time_to_collision_plotter.py</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_behavior_velocity_crosswalk_module<span class="w"> </span>time_to_collision_plotter.py
+</code></pre></div>
 <p>enables you to visualize the following figure of the ego and pedestrian's time to collision.
 The label of each plot is <code>&lt;crosswalk module id&gt;-&lt;pedestrian uuid&gt;</code>.</p>
 <figure>

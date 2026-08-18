@@ -23121,48 +23121,48 @@
 <p>This is a pragmatic workaround - the bounds are just perpendicular offsets from the trajectory centerline, nothing more.</p>
 <h3 id="bound-generation">Bound Generation<a class="headerlink" href="#bound-generation" title="Permanent link">#</a></h3>
 <p>For each trajectory point, left and right bounds are created by offsetting perpendicular to the heading:</p>
-<p><code>text
-left_bound  = pose + corridor_width * [cos(yaw + π/2), sin(yaw + π/2)]
-right_bound = pose + corridor_width * [cos(yaw - π/2), sin(yaw - π/2)]</code></p>
+<div class="highlight"><pre><span></span><code>left_bound  = pose + corridor_width * [cos(yaw + π/2), sin(yaw + π/2)]
+right_bound = pose + corridor_width * [cos(yaw - π/2), sin(yaw - π/2)]
+</code></pre></div>
 <h3 id="width-calculation">Width Calculation<a class="headerlink" href="#width-calculation" title="Permanent link">#</a></h3>
 <p>When <code>enable_adaptive_width</code> is true, the corridor width is adjusted based on simple heuristics:</p>
 <h4 id="1-base-width">1. Base Width<a class="headerlink" href="#1-base-width" title="Permanent link">#</a></h4>
-<p><code>text
-corridor_width = base_corridor_width_m</code></p>
+<div class="highlight"><pre><span></span><code>corridor_width = base_corridor_width_m
+</code></pre></div>
 <h4 id="2-curvature-based-adjustment">2. Curvature-Based Adjustment<a class="headerlink" href="#2-curvature-based-adjustment" title="Permanent link">#</a></h4>
 <p>Add extra width in curves:</p>
-<p><code>text
-curvature_addition = curvature_width_factor * |κ|</code></p>
+<div class="highlight"><pre><span></span><code>curvature_addition = curvature_width_factor * |κ|
+</code></pre></div>
 <p>where <code>κ</code> is the local path curvature (computed from three consecutive points).</p>
 <h4 id="3-velocity-based-adjustment">3. Velocity-Based Adjustment<a class="headerlink" href="#3-velocity-based-adjustment" title="Permanent link">#</a></h4>
 <p>Add extra width at low speeds:</p>
-<p><code>text
-velocity_factor = max(0, (v_max - v) / v_max)
-velocity_addition = velocity_width_factor * velocity_factor</code></p>
+<div class="highlight"><pre><span></span><code>velocity_factor = max(0, (v_max - v) / v_max)
+velocity_addition = velocity_width_factor * velocity_factor
+</code></pre></div>
 <p>where <code>v_max = 15.0 m/s</code>.</p>
 <h4 id="4-final-width">4. Final Width<a class="headerlink" href="#4-final-width" title="Permanent link">#</a></h4>
-<p><code>text
-corridor_width = max(
+<div class="highlight"><pre><span></span><code>corridor_width = max(
   base_width + curvature_addition + velocity_addition,
   vehicle_width + min_clearance
-)</code></p>
+)
+</code></pre></div>
 <h3 id="curvature-calculation">Curvature Calculation<a class="headerlink" href="#curvature-calculation" title="Permanent link">#</a></h3>
 <p>Local curvature is estimated using three consecutive points:</p>
-<p><code>text
-θ_1 = atan2(y_i - y_{i-1}, x_i - x_{i-1})
+<div class="highlight"><pre><span></span><code>θ_1 = atan2(y_i - y_{i-1}, x_i - x_{i-1})
 θ_2 = atan2(y_{i+1} - y_i, x_{i+1} - x_i)
 Δθ = normalize(θ_2 - θ_1)
 arc_length = ||p_i - p_{i-1}|| + ||p_{i+1} - p_i||
-κ = Δθ / arc_length</code></p>
+κ = Δθ / arc_length
+</code></pre></div>
 <h2 id="acceleration-and-timing-recalculation">Acceleration and Timing Recalculation<a class="headerlink" href="#acceleration-and-timing-recalculation" title="Permanent link">#</a></h2>
 <p>After MPT optimization modifies trajectory positions, accelerations and time stamps must be recomputed to maintain physical consistency with the new geometry.</p>
 <h3 id="acceleration-calculation">Acceleration Calculation<a class="headerlink" href="#acceleration-calculation" title="Permanent link">#</a></h3>
 <p>Acceleration between consecutive points is computed using the kinematic equation relating velocity change to distance:</p>
-<p><code>text
-v² = v₀² + 2as</code></p>
+<div class="highlight"><pre><span></span><code>v² = v₀² + 2as
+</code></pre></div>
 <p>Solving for acceleration:</p>
-<p><code>text
-a = (v² - v₀²) / (2s)</code></p>
+<div class="highlight"><pre><span></span><code>a = (v² - v₀²) / (2s)
+</code></pre></div>
 <p>where:</p>
 <ul>
 <li><code>v₀</code> = velocity at current point</li>
@@ -23172,12 +23172,12 @@ a = (v² - v₀²) / (2s)</code></p>
 </ul>
 <h3 id="time-interval-calculation">Time Interval Calculation<a class="headerlink" href="#time-interval-calculation" title="Permanent link">#</a></h3>
 <p>Time interval between points uses kinematic motion equations. For constant acceleration motion:</p>
-<p><code>text
-s = v₀t + ½at²</code></p>
+<div class="highlight"><pre><span></span><code>s = v₀t + ½at²
+</code></pre></div>
 <p>Rearranging using <code>v = v₀ + at</code>:</p>
-<p><code>text
-v² = v₀² + 2as  →  v = √(v₀² + 2as)
-t = (v - v₀) / a</code></p>
+<div class="highlight"><pre><span></span><code>v² = v₀² + 2as  →  v = √(v₀² + 2as)
+t = (v - v₀) / a
+</code></pre></div>
 <p><strong>Special cases:</strong></p>
 <ul>
 <li><strong>Zero acceleration</strong> (<code>|a| &lt; 1e-6</code>): Uses constant velocity model <code>t = s / v</code></li>
@@ -23186,16 +23186,16 @@ t = (v - v₀) / a</code></p>
 </ul>
 <h3 id="time-from-start-propagation">Time from Start Propagation<a class="headerlink" href="#time-from-start-propagation" title="Permanent link">#</a></h3>
 <p>Starting from the first point (set to <code>t = 0</code>), time is propagated forward:</p>
-<p><code>text
-t_{i+1} = t_i + Δt_i</code></p>
+<div class="highlight"><pre><span></span><code>t_{i+1} = t_i + Δt_i
+</code></pre></div>
 <p>Time is split into ROS message format:</p>
-<p><code>cpp
-sec = floor(t)
-nanosec = (t - sec) * 1e9</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">sec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">floor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+<span class="n">nanosec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">sec</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e9</span>
+</code></pre></div>
 <h3 id="acceleration-smoothing">Acceleration Smoothing<a class="headerlink" href="#acceleration-smoothing" title="Permanent link">#</a></h3>
 <p>Raw accelerations computed from kinematic equations may exhibit high-frequency noise due to discrete sampling. A backward-looking moving average filter is applied:</p>
-<p><code>text
-a_smoothed[i] = (1/N) * Σ_{j=i-N+1}^{i} a_original[j]</code></p>
+<div class="highlight"><pre><span></span><code>a_smoothed[i] = (1/N) * Σ_{j=i-N+1}^{i} a_original[j]
+</code></pre></div>
 <p>where <code>N</code> is the window size (configurable via <code>acceleration_moving_average_window</code>).</p>
 <p><strong>Properties:</strong></p>
 <ul>
@@ -23394,17 +23394,17 @@ a_smoothed[i] = (1/N) * Σ_{j=i-N+1}^{i} a_original[j]</code></p>
 <h2 id="interaction-with-other-plugins">Interaction with Other Plugins<a class="headerlink" href="#interaction-with-other-plugins" title="Permanent link">#</a></h2>
 <h3 id="recommended-plugin-order">Recommended Plugin Order<a class="headerlink" href="#recommended-plugin-order" title="Permanent link">#</a></h3>
 <p>The MPT optimizer should run <strong>after all geometric smoothing</strong> but <strong>before velocity optimization</strong>:</p>
-<p><code>yaml
-plugin_names:
-  - TrajectoryPointFixer
-  - TrajectoryKinematicFeasibilityEnforcer
-  - TrajectoryQPSmoother
-  - TrajectoryKinematicFeasibilityEnforcer # Second pass after QP smoothing
-  - TrajectoryEBSmootherOptimizer
-  - TrajectorySplineSmoother
-  - TrajectoryMPTOptimizer # Refine geometry with bounds
-  - TrajectoryVelocityOptimizer # Optimize velocity profile
-  - TrajectoryExtender</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryPointFixer</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryKinematicFeasibilityEnforcer</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryQPSmoother</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryKinematicFeasibilityEnforcer</span><span class="w"> </span><span class="c1"># Second pass after QP smoothing</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryEBSmootherOptimizer</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectorySplineSmoother</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryMPTOptimizer</span><span class="w"> </span><span class="c1"># Refine geometry with bounds</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryVelocityOptimizer</span><span class="w"> </span><span class="c1"># Optimize velocity profile</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrajectoryExtender</span>
+</code></pre></div>
 <h3 id="compatibility-notes">Compatibility Notes<a class="headerlink" href="#compatibility-notes" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Requires non-empty bounds</strong>: MPT optimization fails if bounds are empty</li>

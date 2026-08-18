@@ -22800,18 +22800,18 @@
 <div><h1 id="converter-tool">Converter tool<a class="headerlink" href="#converter-tool" title="Permanent link">#</a></h1>
 <p>This tool converts <code>/diagnostics_graph</code> to <code>/diagnostics_array</code> so it can be read by tools such as <code>rqt_runtime_monitor</code>.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
-<p><code>bash
-ros2 run autoware_diagnostic_graph_utils converter_node</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>converter_node
+</code></pre></div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h2>
 <p>Terminal 1:</p>
-<p><code>bash
-ros2 launch diagnostic_graph_aggregator example-main.launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>diagnostic_graph_aggregator<span class="w"> </span>example-main.launch.xml
+</code></pre></div>
 <p>Terminal 2:</p>
-<p><code>bash
-ros2 run autoware_diagnostic_graph_utils converter_node</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>converter_node
+</code></pre></div>
 <p>Terminal 3:</p>
-<p><code>bash
-ros2 run rqt_runtime_monitor rqt_runtime_monitor --ros-args -r diagnostics:=diagnostics_array</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>rqt_runtime_monitor<span class="w"> </span>rqt_runtime_monitor<span class="w"> </span>--ros-args<span class="w"> </span>-r<span class="w"> </span>diagnostics:<span class="o">=</span>diagnostics_array
+</code></pre></div>
 <p><img alt="rqt_runtime_monitor" src="../images/rqt_runtime_monitor.png"></p></div>
 
 

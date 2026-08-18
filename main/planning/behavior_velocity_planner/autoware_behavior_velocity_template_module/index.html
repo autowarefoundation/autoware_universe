@@ -22816,16 +22816,16 @@
 </ul>
 <h2 id="example-usage"><code>Example Usage</code><a class="headerlink" href="#example-usage" title="Permanent link">#</a></h2>
 <p>In the following example, we take each point of the path, and multiply it by 2. Essentially duplicating the speed. Note that the velocity smoother will further modify the path speed after all the behavior velocity modules are executed.</p>
-<p>```cpp
-bool TemplateModule::modifyPathVelocity(
-  [[maybe_unused]] PathWithLaneId * path, [[maybe_unused]] StopReason * stop_reason)
-{
-  for (auto &amp; p : path-&gt;points) {
-    p.point.longitudinal_velocity_mps *= 2.0;
-  }</p>
-<p>return false;
-}
-```</p></div>
+<div class="highlight"><pre><span></span><code><span class="kt">bool</span><span class="w"> </span><span class="nf">TemplateModule::modifyPathVelocity</span><span class="p">(</span>
+<span class="w">  </span><span class="p">[[</span><span class="na">maybe_unused</span><span class="p">]]</span><span class="w"> </span><span class="n">PathWithLaneId</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="p">[[</span><span class="na">maybe_unused</span><span class="p">]]</span><span class="w"> </span><span class="n">StopReason</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">stop_reason</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">path</span><span class="o">-&gt;</span><span class="n">points</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">p</span><span class="p">.</span><span class="n">point</span><span class="p">.</span><span class="n">longitudinal_velocity_mps</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mf">2.0</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
 
 
 

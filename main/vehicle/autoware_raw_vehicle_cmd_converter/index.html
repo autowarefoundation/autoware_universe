@@ -22801,10 +22801,10 @@
 a + b \times v^2 - c \times \lvert \delta \rvert
 \]</div>
 <p>For that vehicle, the coefficients were as follows.</p>
-<p><code>yaml
-vgr_coef_a: 15.713
-vgr_coef_b: 0.053
-vgr_coef_c: 0.042</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">vgr_coef_a</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15.713</span>
+<span class="nt">vgr_coef_b</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.053</span>
+<span class="nt">vgr_coef_c</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.042</span>
+</code></pre></div>
 <p><img alt="vgr" src="figure/vgr.svg"></p>
 <p>When <code>convert_steer_cmd_method: "vgr"</code> is selected, the node receives the control command from the controller as the desired tire angle and calculates the desired steering angle to output.
 Also, when <code>convert_actuation_to_steering_status: true</code>, this node receives the <code>actuation_status</code> topic and calculates the steer tire angle from the <code>steer_wheel_angle</code> and publishes it.</p>

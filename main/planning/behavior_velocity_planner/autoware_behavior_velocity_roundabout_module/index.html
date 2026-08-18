@@ -22819,8 +22819,8 @@
 </ul>
 <p>If collision is detected, the state transits to "STOP" immediately. On the other hand, the state does not transit to "GO" unless safe judgement continues for a certain period <code>collision_detection.collision_detection_hold_time</code> to prevent the chattering of decisions.</p>
 <p>Currently, the roundabout module uses <code>motion_velocity_smoother</code> feature to precisely calculate ego velocity profile along the roundabout lane under longitudinal/lateral constraints. If the flag <code>collision_detection.velocity_profile.use_upstream</code> is true, the target velocity profile of the original path is used. Otherwise the target velocity is set to <code>collision.velocity_profile.default_velocity</code>. In the trajectory smoothing process the target velocity at/before ego trajectory points are set to ego current velocity. The smoothed trajectory is then converted to an array of (time, distance) which indicates the arrival time to each trajectory point on the path from current ego position. You can visualize this array by adding the lane id to <code>debug.ttc</code> and running</p>
-<p><code>bash
-ros2 run behavior_velocity_roundabout_module ttc.py --lane_id &lt;lane_id&gt;</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>behavior_velocity_roundabout_module<span class="w"> </span>ttc.py<span class="w"> </span>--lane_id<span class="w"> </span>&lt;lane_id&gt;
+</code></pre></div>
 <h2 id="flowchart">Flowchart<a class="headerlink" href="#flowchart" title="Permanent link">#</a></h2>
 <pre class="mermaid"><code>stateDiagram-v2
     [*] --&gt; modifyPathVelocity

@@ -17029,6 +17029,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-and-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug and Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node-separation-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node separation options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known Limits
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -23106,6 +23150,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-and-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug and Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node-separation-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node separation options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known Limits
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -23372,13 +23460,13 @@
 <h5 id="lidar_timestamp_offsets">lidar_timestamp_offsets<a class="headerlink" href="#lidar_timestamp_offsets" title="Permanent link">#</a></h5>
 <p>Since different vehicles have varied designs for LiDAR scanning, the timestamps of each LiDAR may differ. Users need to know the offsets between each LiDAR and set the values in <code>lidar_timestamp_offsets</code>.</p>
 <p>To monitor the timestamps of each LiDAR, run the following command:</p>
-<p><code>bash
-ros2 topic echo "pointcloud_topic" --field header</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"pointcloud_topic"</span><span class="w"> </span>--field<span class="w"> </span>header
+</code></pre></div>
 <p>The timestamps should increase steadily by approximately 100 ms, as per the Autoware default. You should see output like this:</p>
-<p><code>bash
-nanosec: 156260951
-nanosec: 257009560
-nanosec: 355444581</code></p>
+<div class="highlight"><pre><span></span><code>nanosec:<span class="w"> </span><span class="m">156260951</span>
+nanosec:<span class="w"> </span><span class="m">257009560</span>
+nanosec:<span class="w"> </span><span class="m">355444581</span>
+</code></pre></div>
 <p>This pattern indicates a LiDAR timestamp of 0.05.</p>
 <p>If there are three LiDARs (left, right, top), and the timestamps for the left, right, and top point clouds are <code>0.01</code>, <code>0.05</code>, and <code>0.09</code> seconds respectively, the parameters should be set as [0.0, 0.04, 0.08]. This reflects the timestamp differences between the current point cloud and the point cloud with the earliest timestamp. Note that the order of the <code>lidar_timestamp_offsets</code> corresponds to the order of the <code>input_topics</code>.</p>
 <p>The figure below demonstrates how <code>lidar_timestamp_offsets</code> works with <code>concatenate_and_time_sync_node</code>.</p>
@@ -23397,103 +23485,102 @@ nanosec: 355444581</code></p>
 If a strategy has its own configuration, it requires serialization and deserialization implementation based on the <code>StrategyConfig</code> class defined in <a href="https://github.com/autowarefoundation/autoware_universe/blob/main/sensing/autoware_pointcloud_preprocessor/include/autoware/pointcloud_preprocessor/concatenate_data/concatenation_info_manager.hpp">concatenation_info_manager.hpp</a>.</p>
 <p>Here's how to work with serialized configuration for the Advanced strategy:</p>
 <h4 id="serialization-example">Serialization Example<a class="headerlink" href="#serialization-example" title="Permanent link">#</a></h4>
-<p><code>cpp
-auto cfg = StrategyAdvancedConfig(reference_timestamp_min, reference_timestamp_max);
-ConcatenationInfoManager::set_config(cfg.serialize(), concatenation_info_msg);</code></p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span><span class="w"> </span><span class="n">cfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">StrategyAdvancedConfig</span><span class="p">(</span><span class="n">reference_timestamp_min</span><span class="p">,</span><span class="w"> </span><span class="n">reference_timestamp_max</span><span class="p">);</span>
+<span class="n">ConcatenationInfoManager</span><span class="o">::</span><span class="n">set_config</span><span class="p">(</span><span class="n">cfg</span><span class="p">.</span><span class="n">serialize</span><span class="p">(),</span><span class="w"> </span><span class="n">concatenation_info_msg</span><span class="p">);</span>
+</code></pre></div>
 <h4 id="deserialization-example">Deserialization Example<a class="headerlink" href="#deserialization-example" title="Permanent link">#</a></h4>
-<p><code>cpp
-std::vector&lt;uint8_t&gt; raw_cfg = concat_info_msg-&gt;matching_strategy_config;
-auto cfg = StrategyAdvancedConfig(raw_cfg);</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">raw_cfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">concat_info_msg</span><span class="o">-&gt;</span><span class="n">matching_strategy_config</span><span class="p">;</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">cfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">StrategyAdvancedConfig</span><span class="p">(</span><span class="n">raw_cfg</span><span class="p">);</span>
+</code></pre></div>
 <h2 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">#</a></h2>
-<p>```bash</p>
-<h1 id="the-launch-file-will-read-the-parameters-from-the-concatenate_and_time_sync_nodeparamyaml">The launch file will read the parameters from the concatenate_and_time_sync_node.param.yaml<a class="headerlink" href="#the-launch-file-will-read-the-parameters-from-the-concatenate_and_time_sync_nodeparamyaml" title="Permanent link">#</a></h1>
-<p>ros2 launch autoware_pointcloud_preprocessor concatenate_and_time_sync_node.launch.xml
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># The launch file will read the parameters from the concatenate_and_time_sync_node.param.yaml</span>
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_pointcloud_preprocessor<span class="w"> </span>concatenate_and_time_sync_node.launch.xml
+</code></pre></div>
 <h2 id="test">Test<a class="headerlink" href="#test" title="Permanent link">#</a></h2>
-<p>```bash</p>
-<h1 id="build-autoware_pointcloud_preprocessor">build autoware_pointcloud_preprocessor<a class="headerlink" href="#build-autoware_pointcloud_preprocessor" title="Permanent link">#</a></h1>
-<p>colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to autoware_pointcloud_preprocessor</p>
-<h1 id="test-autoware_pointcloud_preprocessor">test autoware_pointcloud_preprocessor<a class="headerlink" href="#test-autoware_pointcloud_preprocessor" title="Permanent link">#</a></h1>
-<p>colcon test --packages-select autoware_pointcloud_preprocessor --event-handlers console_cohesion+
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># build autoware_pointcloud_preprocessor</span>
+colcon<span class="w"> </span>build<span class="w"> </span>--symlink-install<span class="w"> </span>--cmake-args<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>--packages-up-to<span class="w"> </span>autoware_pointcloud_preprocessor
+
+<span class="c1"># test autoware_pointcloud_preprocessor</span>
+colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_pointcloud_preprocessor<span class="w"> </span>--event-handlers<span class="w"> </span>console_cohesion+
+</code></pre></div>
 <h2 id="debug-and-diagnostics">Debug and Diagnostics<a class="headerlink" href="#debug-and-diagnostics" title="Permanent link">#</a></h2>
 <p>To verify whether the node has successfully concatenated the point clouds, the user can examine rqt or the <code>/diagnostics</code> topic using the following command:</p>
-<p><code>bash
-ros2 topic echo /diagnostics</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>/diagnostics
+</code></pre></div>
 <p>Below is an example output when the point clouds are concatenated successfully:</p>
 <ul>
 <li>Each point cloud has a value of <code>True</code>.</li>
 <li>The <code>Pointcloud concatenation succeeded</code> is <code>True</code>.</li>
 <li>The <code>level</code> value is <code>\0</code>. (diagnostic_msgs::msg::DiagnosticStatus::OK)</li>
 </ul>
-<p><code>bash
-header:
-  stamp:
-    sec: 1722492015
-    nanosec: 848508777
-  frame_id: ''
+<div class="highlight"><pre><span></span><code>header:
+<span class="w">  </span>stamp:
+<span class="w">    </span>sec:<span class="w"> </span><span class="m">1722492015</span>
+<span class="w">    </span>nanosec:<span class="w"> </span><span class="m">848508777</span>
+<span class="w">  </span>frame_id:<span class="w"> </span><span class="s1">''</span>
 status:
-- level: "\0"
-  name: 'concatenate_and_time_sync_node: concat_status'
-  message: Concatenated pointcloud is published and include all topics
-  hardware_id: concatenate_data_checker
-  values:
-  - key: Concatenated pointcloud timestamp
-    value: '1718260240.159229994'
-  - key: Minimum reference timestamp
-    value: '1718260240.149230003'
-  - key: Maximum reference timestamp
-    value: '1718260240.169229984'
-  - key: Timestamp: /sensing/lidar/left/pointcloud_before_sync
-    value: '1718260240.159229994'
-  - key: Concatenated: /sensing/lidar/left/pointcloud_before_sync
-    value: 'True'
-  - key: Timestamp: /sensing/lidar/right/pointcloud_before_sync
-    value: '1718260240.194104910'
-  - key: Concatenated: /sensing/lidar/right/pointcloud_before_sync
-    value: 'True'
-  - key: Timestamp: /sensing/lidar/top/pointcloud_before_sync
-    value: '1718260240.234578133'
-  - key: Concatenated: /sensing/lidar/top/pointcloud_before_sync
-    value: 'True'
-  - key: Pointcloud concatenation succeeded
-    value: 'True'</code></p>
+-<span class="w"> </span>level:<span class="w"> </span><span class="s2">"\0"</span>
+<span class="w">  </span>name:<span class="w"> </span><span class="s1">'concatenate_and_time_sync_node: concat_status'</span>
+<span class="w">  </span>message:<span class="w"> </span>Concatenated<span class="w"> </span>pointcloud<span class="w"> </span>is<span class="w"> </span>published<span class="w"> </span>and<span class="w"> </span>include<span class="w"> </span>all<span class="w"> </span>topics
+<span class="w">  </span>hardware_id:<span class="w"> </span>concatenate_data_checker
+<span class="w">  </span>values:
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated<span class="w"> </span>pointcloud<span class="w"> </span>timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.159229994'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Minimum<span class="w"> </span>reference<span class="w"> </span>timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.149230003'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Maximum<span class="w"> </span>reference<span class="w"> </span>timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.169229984'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Timestamp:<span class="w"> </span>/sensing/lidar/left/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.159229994'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated:<span class="w"> </span>/sensing/lidar/left/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'True'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Timestamp:<span class="w"> </span>/sensing/lidar/right/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.194104910'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated:<span class="w"> </span>/sensing/lidar/right/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'True'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Timestamp:<span class="w"> </span>/sensing/lidar/top/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.234578133'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated:<span class="w"> </span>/sensing/lidar/top/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'True'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Pointcloud<span class="w"> </span>concatenation<span class="w"> </span>succeeded
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'True'</span>
+</code></pre></div>
 <p>Below is an example when point clouds fail to concatenate successfully.</p>
 <ul>
 <li>Some point clouds might have values of <code>False</code>.</li>
 <li>The <code>Pointcloud concatenation succeeded</code> is <code>False</code>.</li>
 <li>The <code>level</code> value is <code>\x02</code>. (diagnostic_msgs::msg::DiagnosticStatus::ERROR)</li>
 </ul>
-<p><code>bash
-header:
-  stamp:
-    sec: 1722492663
-    nanosec: 344942959
-  frame_id: ''
+<div class="highlight"><pre><span></span><code>header:
+<span class="w">  </span>stamp:
+<span class="w">    </span>sec:<span class="w"> </span><span class="m">1722492663</span>
+<span class="w">    </span>nanosec:<span class="w"> </span><span class="m">344942959</span>
+<span class="w">  </span>frame_id:<span class="w"> </span><span class="s1">''</span>
 status:
-- level: "\x02"
-  name: 'concatenate_and_time_sync_node: concat_status'
-  message: Concatenated pointcloud is published but miss some topics
-  hardware_id: concatenate_data_checker
-  values:
-  - key: Concatenated pointcloud timestamp
-    value: '1718260240.859827995'
-  - key: Minimum reference timestamp
-    value: '1718260240.849828005'
-  - key: Maximum reference timestamp
-    value: '1718260240.869827986'
-  - key: Timestamp: /sensing/lidar/left/pointcloud_before_sync/timestamp
-    value: '1718260240.859827995'
-  - key: Concatenated: /sensing/lidar/left/pointcloud_before_sync
-    value: 'True'
-  - key: Timestamp: /sensing/lidar/right/pointcloud_before_sync/timestamp
-    value: '1718260240.895193815'
-  - key: Concatenated: /sensing/lidar/right/pointcloud_before_sync
-    value: 'True'
-  - key: Concatenated: /sensing/lidar/top/pointcloud_before_sync
-    value: 'False'
-  - key: Pointcloud concatenation succeeded
-    value: 'False'</code></p>
+-<span class="w"> </span>level:<span class="w"> </span><span class="s2">"\x02"</span>
+<span class="w">  </span>name:<span class="w"> </span><span class="s1">'concatenate_and_time_sync_node: concat_status'</span>
+<span class="w">  </span>message:<span class="w"> </span>Concatenated<span class="w"> </span>pointcloud<span class="w"> </span>is<span class="w"> </span>published<span class="w"> </span>but<span class="w"> </span>miss<span class="w"> </span>some<span class="w"> </span>topics
+<span class="w">  </span>hardware_id:<span class="w"> </span>concatenate_data_checker
+<span class="w">  </span>values:
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated<span class="w"> </span>pointcloud<span class="w"> </span>timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.859827995'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Minimum<span class="w"> </span>reference<span class="w"> </span>timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.849828005'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Maximum<span class="w"> </span>reference<span class="w"> </span>timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.869827986'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Timestamp:<span class="w"> </span>/sensing/lidar/left/pointcloud_before_sync/timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.859827995'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated:<span class="w"> </span>/sensing/lidar/left/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'True'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Timestamp:<span class="w"> </span>/sensing/lidar/right/pointcloud_before_sync/timestamp
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'1718260240.895193815'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated:<span class="w"> </span>/sensing/lidar/right/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'True'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Concatenated:<span class="w"> </span>/sensing/lidar/top/pointcloud_before_sync
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'False'</span>
+<span class="w">  </span>-<span class="w"> </span>key:<span class="w"> </span>Pointcloud<span class="w"> </span>concatenation<span class="w"> </span>succeeded
+<span class="w">    </span>value:<span class="w"> </span><span class="s1">'False'</span>
+</code></pre></div>
 <h2 id="node-separation-options">Node separation options<a class="headerlink" href="#node-separation-options" title="Permanent link">#</a></h2>
 <p>There is also an option to separate the concatenate_and_time_sync_node into two nodes: one for <code>time synchronization</code> and another for <code>concatenate pointclouds</code> (<a href="https://github.com/autowarefoundation/autoware_universe/pull/3312">See this PR</a>).</p>
 <p>Note that the <code>concatenate_pointclouds</code> and <code>time_synchronizer_nodelet</code> are using the <a href="https://github.com/autowarefoundation/autoware_universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md">old design</a> of the concatenate node.</p>

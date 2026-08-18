@@ -10000,6 +10000,100 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#node-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-error-detection-and-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Error detection and handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-performance-characterization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Performance characterization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-referencesexternal-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) References/External links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Future extensions / Unimplemented parts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-debug" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to debug
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -23020,6 +23114,100 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#node-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-error-detection-and-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Error detection and handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-performance-characterization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Performance characterization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-referencesexternal-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) References/External links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Future extensions / Unimplemented parts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-debug" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to debug
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -23135,11 +23323,10 @@ The ray trace is done by Bresenham's line algorithm.
 <ul>
 <li>pointcloud_based_occupancy_grid_map method</li>
 </ul>
-<p>```yaml</p>
-<h1 id="downsampled-raw-and-obstacle-pointcloud">downsampled raw and obstacle pointcloud<a class="headerlink" href="#downsampled-raw-and-obstacle-pointcloud" title="Permanent link">#</a></h1>
-<p>/perception/occupancy_grid_map/obstacle/downsample/pointcloud
-/perception/occupancy_grid_map/raw/downsample/pointcloud
-```</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># downsampled raw and obstacle pointcloud</span>
+<span class="l l-Scalar l-Scalar-Plain">/perception/occupancy_grid_map/obstacle/downsample/pointcloud</span>
+<span class="l l-Scalar l-Scalar-Plain">/perception/occupancy_grid_map/raw/downsample/pointcloud</span>
+</code></pre></div>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <h3 id="node-parameters">Node Parameters<a class="headerlink" href="#node-parameters" title="Permanent link">#</a></h3>
 <table>
@@ -23220,8 +23407,8 @@ The ray trace is done by Bresenham's line algorithm.
 </ul>
 <h2 id="how-to-debug">How to debug<a class="headerlink" href="#how-to-debug" title="Permanent link">#</a></h2>
 <p>If <code>grid_map_type</code> is "OccupancyGridMapProjectiveBlindSpot" and <code>pub_debug_grid</code> is <code>true</code>, it is possible to check the each process of grid map generation by running</p>
-<p><code>shell
-ros2 launch autoware_probabilistic_occupancy_grid_map debug.launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_probabilistic_occupancy_grid_map<span class="w"> </span>debug.launch.xml
+</code></pre></div>
 <p>and visualizing the following occupancy grid map topics (which are listed in config/grid_map_param.yaml):</p>
 <ul>
 <li><code>/perception/occupancy_grid_map/grid_1st_step</code>: <code>FREE</code> cells are filled</li>

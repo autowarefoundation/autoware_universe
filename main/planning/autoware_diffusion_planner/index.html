@@ -22832,18 +22832,18 @@
 <h2 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">#</a></h2>
 <h3 id="1-prerequisites">(1) Prerequisites<a class="headerlink" href="#1-prerequisites" title="Permanent link">#</a></h3>
 <p>Make sure that the directory specified in <code>planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml</code> points to the correct model version and contains the required model weight and parameter files.</p>
-<p><code>bash
-$ ls ~/autoware_data/ml_models/diffusion_planner/v4.0/
-diffusion_planner.onnx diffusion_planner.param.json</code></p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>ls<span class="w"> </span>~/autoware_data/ml_models/diffusion_planner/v4.0/
+diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
+</code></pre></div>
 <p>This can be downloaded by following <a href="https://github.com/autowarefoundation/autoware/blob/main/ansible/roles/artifacts/README.md#download-artifacts">Download artifacts</a>.</p>
 <h3 id="2-launch-the-planning-simulator">(2) Launch the planning simulator<a class="headerlink" href="#2-launch-the-planning-simulator" title="Permanent link">#</a></h3>
 <p>Pass <code>planning_setting:=diffusion_planner</code> to switch the planning stack from the rule-based scenario planner to the diffusion planner. This argument automatically swaps the trajectory generator, the planning validator input topic, and the diagnostics graph, so no additional launch-file edits are required.</p>
-<p><code>bash
-ros2 launch autoware_launch planning_simulator.launch.xml \
-  map_path:=/path/to/your/map \
-  vehicle_model:=sample_vehicle \
-  sensor_model:=sample_sensor_kit \
-  planning_setting:=diffusion_planner</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>planning_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>map_path:<span class="o">=</span>/path/to/your/map<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>sensor_model:<span class="o">=</span>sample_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>planning_setting:<span class="o">=</span>diffusion_planner
+</code></pre></div>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
 <ul>
 <li>
@@ -23268,9 +23268,9 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
 <hr>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
 <p>Unit tests are provided and can be run with:</p>
-<p><code>bash
-colcon test --packages-select autoware_diffusion_planner
-colcon test-result --all</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_diffusion_planner
+colcon<span class="w"> </span>test-result<span class="w"> </span>--all
+</code></pre></div>
 <hr>
 <h2 id="onnx-model-and-versioning">ONNX Model and Versioning<a class="headerlink" href="#onnx-model-and-versioning" title="Permanent link">#</a></h2>
 <p>The Diffusion Planner relies on an ONNX model for inference.

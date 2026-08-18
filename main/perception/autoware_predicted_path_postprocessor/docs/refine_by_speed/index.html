@@ -23119,32 +23119,32 @@
 </ol>
 <h2 id="algorithm">Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">#</a></h2>
 <p>The processor implements the following algorithm:</p>
-<p>```pseudocode
-ALGORITHM: RefineBySpeed</p>
-<p>INPUT: (mutable)object, speed_threshold</p>
-<p>BEGIN
+<div class="highlight"><pre><span></span><code>ALGORITHM: RefineBySpeed
+
+INPUT: (mutable)object, speed_threshold
+
+BEGIN
     // Only process slow objects
     IF object.speed &gt; speed_threshold THEN
         RETURN
-    END IF</p>
-<div class="codehilite"><pre><span></span><code>// Modify each predicted mode
-FOR EACH mode IN object.predicted_paths DO
-    // Build distance array along original path
-    original_distances = [0, d1, d2, d3, ...]  // cumulative distances
-    original_positions = [p0, p1, p2, p3, ...]  // original waypoints
-    // Calculate new distances based on actual speed
-    FOR EACH i, waypoint in ENUMERATE(waypoints:=mode.path, i:=1) DO
-        new_distance = object.speed × i × time_step
-        // Interpolate to find a new position along original path shape
-        new_position = INTERPOLATE(original_distances, original_positions, new_distance)
-        waypoints[i].position = new_position
-        waypoints[i].orientation = AZIMUTH_BETWEEN(waypoints[i-1], waypoints[i])
-    END FOR
-END FOR
-</code></pre></div>
+    END IF
 
-<p>END
-```</p>
+    // Modify each predicted mode
+    FOR EACH mode IN object.predicted_paths DO
+        // Build distance array along original path
+        original_distances = [0, d1, d2, d3, ...]  // cumulative distances
+        original_positions = [p0, p1, p2, p3, ...]  // original waypoints
+        // Calculate new distances based on actual speed
+        FOR EACH i, waypoint in ENUMERATE(waypoints:=mode.path, i:=1) DO
+            new_distance = object.speed × i × time_step
+            // Interpolate to find a new position along original path shape
+            new_position = INTERPOLATE(original_distances, original_positions, new_distance)
+            waypoints[i].position = new_position
+            waypoints[i].orientation = AZIMUTH_BETWEEN(waypoints[i-1], waypoints[i])
+        END FOR
+    END FOR
+END
+</code></pre></div>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <table>
 <thead>
@@ -23203,13 +23203,13 @@ END FOR
 </ul>
 <h2 id="configuration-example">Configuration Example<a class="headerlink" href="#configuration-example" title="Permanent link">#</a></h2>
 <p>It should generally be placed early in the pipeline to ensure that subsequent processors work with refined, physically consistent trajectories.</p>
-<p><code>yaml
-/**:
-  ros__parameters:
-    processors: ["refine_by_speed"]
-    refine_by_speed:
-      speed_threshold: 1.0 # Process objects moving slower than 1.0 m/s
-      interpolation: "linear" # Interpolation method. Options: "linear", "spline", "spline_by_akima"</code></p></div>
+<div class="highlight"><pre><span></span><code><span class="nt">/**</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ros__parameters</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">processors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"refine_by_speed"</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">refine_by_speed</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">speed_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span><span class="w"> </span><span class="c1"># Process objects moving slower than 1.0 m/s</span>
+<span class="w">      </span><span class="nt">interpolation</span><span class="p">:</span><span class="w"> </span><span class="s">"linear"</span><span class="w"> </span><span class="c1"># Interpolation method. Options: "linear", "spline", "spline_by_akima"</span>
+</code></pre></div></div>
 
 
 

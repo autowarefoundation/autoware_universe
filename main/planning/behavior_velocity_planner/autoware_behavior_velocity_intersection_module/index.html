@@ -23401,8 +23401,8 @@
 </ul>
 <p>If collision is detected, the state transits to "STOP" immediately. On the other hand, the state does not transit to "GO" unless safe judgement continues for a certain period <code>collision_detection.collision_detection_hold_time</code> to prevent the chattering of decisions.</p>
 <p>Currently, the intersection module uses <code>motion_velocity_smoother</code> feature to precisely calculate ego velocity profile along the intersection lane under longitudinal/lateral constraints. If the flag <code>collision_detection.velocity_profile.use_upstream</code> is true, the target velocity profile of the original path is used. Otherwise the target velocity is set to <code>collision.velocity_profile.default_velocity</code>. In the trajectory smoothing process the target velocity at/before ego trajectory points are set to ego current velocity. The smoothed trajectory is then converted to an array of (time, distance) which indicates the arrival time to each trajectory point on the path from current ego position. You can visualize this array by adding the lane id to <code>debug.ttc</code> and running</p>
-<p><code>bash
-ros2 run behavior_velocity_intersection_module ttc.py --lane_id &lt;lane_id&gt;</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>behavior_velocity_intersection_module<span class="w"> </span>ttc.py<span class="w"> </span>--lane_id<span class="w"> </span>&lt;lane_id&gt;
+</code></pre></div>
 <p><img alt="ego ttc profile" src="docs/ttc.gif"></p>
 <h3 id="about-use_upstream_velocity-flag">about use_upstream_velocity flag<a class="headerlink" href="#about-use_upstream_velocity-flag" title="Permanent link">#</a></h3>
 <p>There are some use cases where ego should check collision before entering the intersection considering the temporal stop by walkway/crosswalk module around the exit of the intersection, because their stop position can be inside the intersection and it could bother upcoming vehicles. By setting the flag <code>collision_detection.velocity_profile.use_upstream</code> to true and running the walkway/crosswalk module prior to this module, ego velocity profile is calculated considering their velocity and stop positions.</p>
@@ -23428,8 +23428,8 @@ ros2 run behavior_velocity_intersection_module ttc.py --lane_id &lt;lane_id&gt;<
 <h3 id="map-based-forced-rtc">Map-based forced RTC<a class="headerlink" href="#map-based-forced-rtc" title="Permanent link">#</a></h3>
 <p>RTC can be enabled for specific intersection lanelets such that even if approval is not required by default, it will be required before crossing the corresponding intersection lanelets.
 The following attribute should be added to the lanelet in intersection in the map file:</p>
-<p><code>xml
-&lt;tag k='rtc_approval_required_v1' v='intersection' /&gt;</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">'rtc_approval_required_v1'</span><span class="w"> </span><span class="na">v=</span><span class="s">'intersection'</span><span class="w"> </span><span class="nt">/&gt;</span>
+</code></pre></div>
 <p>The value can be set to <code>intersection</code>, <code>intersection_occlusion</code>, or <code>intersection,intersection_occlusion</code>, to adjust which modules will require approvals.</p>
 <h2 id="traffic-signal-specific-behavior">Traffic signal specific behavior<a class="headerlink" href="#traffic-signal-specific-behavior" title="Permanent link">#</a></h2>
 <h3 id="collision-detection_1">Collision detection<a class="headerlink" href="#collision-detection_1" title="Permanent link">#</a></h3>
@@ -23811,13 +23811,13 @@ The following attribute should be added to the lanelet in intersection in the ma
 <p>For these reasons, <code>occlusion.enable</code> is false by default.</p>
 <h4 id="on-real-vehicle-in-end-to-end-simulator">on real vehicle / in end-to-end simulator<a class="headerlink" href="#on-real-vehicle-in-end-to-end-simulator" title="Permanent link">#</a></h4>
 <p>On real vehicle or in end-to-end simulator like <a href="https://tier4.github.io/AWSIM/">AWSIM</a> the following pointcloud_based_occupancy_grid_map configuration is highly recommended:</p>
-<p>```yaml
-scan_origin_frame: "velodyne_top"</p>
-<p>grid_map_type: "OccupancyGridMapProjectiveBlindSpot"
-OccupancyGridMapProjectiveBlindSpot:
-  projection_dz_threshold: 0.01 # [m] for avoiding null division
-  obstacle_separation_threshold: 1.0 # [m] fill the interval between obstacles with unknown for this length
-```</p>
+<div class="highlight"><pre><span></span><code><span class="nt">scan_origin_frame</span><span class="p">:</span><span class="w"> </span><span class="s">"velodyne_top"</span>
+
+<span class="nt">grid_map_type</span><span class="p">:</span><span class="w"> </span><span class="s">"OccupancyGridMapProjectiveBlindSpot"</span>
+<span class="nt">OccupancyGridMapProjectiveBlindSpot</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">projection_dz_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span><span class="w"> </span><span class="c1"># [m] for avoiding null division</span>
+<span class="w">  </span><span class="nt">obstacle_separation_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span><span class="w"> </span><span class="c1"># [m] fill the interval between obstacles with unknown for this length</span>
+</code></pre></div>
 <p>You should set the top lidar link as the <code>scan_origin_frame</code>. In the example it is <code>velodyne_top</code>. The method <code>OccupancyGridMapProjectiveBlindSpot</code> estimates the FOV by running projective ray-tracing from <code>scan_origin</code> to obstacle or up to the ground and filling the cells on the "shadow" of the object as UNKNOWN.</p>
 <h2 id="flowchart">Flowchart<a class="headerlink" href="#flowchart" title="Permanent link">#</a></h2>
 <p>WIP</p>

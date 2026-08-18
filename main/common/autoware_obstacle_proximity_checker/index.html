@@ -22786,8 +22786,8 @@ The minimum distance is computed between ego vehicle footprint and:</p>
 </ul>
 <h3 id="obstacle-detection">Obstacle detection<a class="headerlink" href="#obstacle-detection" title="Permanent link">#</a></h3>
 <p>An obstacle is considered nearby when:</p>
-<p><code>text
-nearest_distance &lt; contact_distance_threshold</code></p>
+<div class="highlight"><pre><span></span><code>nearest_distance &lt; contact_distance_threshold
+</code></pre></div>
 <p><code>contact_distance_threshold</code> is provided by the caller on each <code>check()</code> call.
 This allows callers to implement distance hysteresis (for example, a tight threshold when entering stop and a wider threshold when clearing stop).</p>
 <p>The library does <strong>not</strong> manage:</p>

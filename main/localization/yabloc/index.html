@@ -22775,12 +22775,12 @@ YabLoc enables users localize vehicles that are not equipped with LiDAR and in e
 <p>When launching autoware, if you set <code>pose_source:=yabloc</code> as an argument, YabLoc will be launched instead of NDT.
 By default, <code>pose_source</code> is <code>ndt</code>.</p>
 <p>A sample command to run YabLoc is as follows</p>
-<p><code>shell
-ros2 launch autoware_launch logging_simulator.launch.xml \
-  map_path:=$HOME/autoware_data/maps/sample-map-rosbag\
-  vehicle_model:=sample_vehicle \
-  sensor_model:=sample_sensor_kit \
-  pose_source:=yabloc</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>logging_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_data/maps/sample-map-rosbag<span class="se">\</span>
+<span class="w">  </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>sensor_model:<span class="o">=</span>sample_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>pose_source:<span class="o">=</span>yabloc
+</code></pre></div>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
 <p><img alt="node_diagram" src="docs/yabloc_architecture.drawio.svg"></p>
 <h2 id="principle">Principle<a class="headerlink" href="#principle" title="Permanent link">#</a></h2>

@@ -22930,10 +22930,10 @@
 </ul>
 <h2 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">#</a></h2>
 <p>Use colcon build and launch in the same way as other packages.</p>
-<p><code>sh
-colcon build
-source install/setup.bash
-ros2 launch autoware_system_monitor system_monitor.launch.xml</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build
+<span class="nb">source</span><span class="w"> </span>install/setup.bash
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_system_monitor<span class="w"> </span>system_monitor.launch.xml
+</code></pre></div>
 <p>CPU and GPU monitoring method differs depending on platform.<br>
 CMake automatically chooses source to be built according to build environment.<br>
 If you build this package on intel platform, CPU monitor and GPU monitor which run on intel platform are built.</p>
@@ -23226,30 +23226,30 @@ If you build this package on intel platform, CPU monitor and GPU monitor which r
 <ol>
 <li>
 <p>Create a user to run 'msr_reader'.</p>
-<p><code>sh
- sudo adduser &lt;username&gt;</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>adduser<span class="w"> </span>&lt;username&gt;
+</code></pre></div>
 </li>
 <li>
 <p>Load kernel module 'msr' into your target system.<br>
    The path '/dev/cpu/CPUNUM/msr' appears.</p>
-<p><code>sh
- sudo modprobe msr</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>modprobe<span class="w"> </span>msr
+</code></pre></div>
 </li>
 <li>
 <p>Allow user to access MSR with read-only privilege using the Access Control List (ACL).</p>
-<p><code>sh
- sudo setfacl -m u:&lt;username&gt;:r /dev/cpu/*/msr</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>setfacl<span class="w"> </span>-m<span class="w"> </span>u:&lt;username&gt;:r<span class="w"> </span>/dev/cpu/*/msr
+</code></pre></div>
 </li>
 <li>
 <p>Assign capability to 'msr_reader' since msr kernel module requires rawio capability.</p>
-<p><code>sh
- sudo setcap cap_sys_rawio=ep install/system_monitor/lib/system_monitor/msr_reader</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>setcap<span class="w"> </span><span class="nv">cap_sys_rawio</span><span class="o">=</span>ep<span class="w"> </span>install/system_monitor/lib/system_monitor/msr_reader
+</code></pre></div>
 </li>
 <li>
 <p>Run 'msr_reader' as the user you created, and run system_monitor as a generic user.</p>
-<p><code>sh
- su &lt;username&gt;
- install/system_monitor/lib/system_monitor/msr_reader</code></p>
+<div class="highlight"><pre><span></span><code>su<span class="w"> </span>&lt;username&gt;
+install/system_monitor/lib/system_monitor/msr_reader
+</code></pre></div>
 </li>
 </ol>
 <h3 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">#</a></h3>
@@ -23266,24 +23266,24 @@ As with the CPU monitor, this package provides an approach to minimize security 
 <ol>
 <li>
 <p>Create a user to run 'hdd_reader'.</p>
-<p><code>sh
- sudo adduser &lt;username&gt;</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>adduser<span class="w"> </span>&lt;username&gt;
+</code></pre></div>
 </li>
 <li>
 <p>Add user to the disk group.</p>
-<p><code>sh
- sudo usermod -a -G disk &lt;username&gt;</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>usermod<span class="w"> </span>-a<span class="w"> </span>-G<span class="w"> </span>disk<span class="w"> </span>&lt;username&gt;
+</code></pre></div>
 </li>
 <li>
 <p>Assign capabilities to 'hdd_reader' since SCSI kernel module requires rawio capability to send ATA PASS-THROUGH (12) command and NVMe kernel module requires admin capability to send Admin Command.</p>
-<p><code>sh
- sudo setcap 'cap_sys_rawio=ep cap_sys_admin=ep' install/system_monitor/lib/system_monitor/hdd_reader</code></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>setcap<span class="w"> </span><span class="s1">'cap_sys_rawio=ep cap_sys_admin=ep'</span><span class="w"> </span>install/system_monitor/lib/system_monitor/hdd_reader
+</code></pre></div>
 </li>
 <li>
 <p>Run 'hdd_reader' as the user you created, and run system_monitor as a generic user.</p>
-<p><code>sh
- su &lt;username&gt;
- install/system_monitor/lib/system_monitor/hdd_reader</code></p>
+<div class="highlight"><pre><span></span><code>su<span class="w"> </span>&lt;username&gt;
+install/system_monitor/lib/system_monitor/hdd_reader
+</code></pre></div>
 </li>
 </ol>
 <h3 id="see-also_1">See also<a class="headerlink" href="#see-also_1" title="Permanent link">#</a></h3>
@@ -23299,12 +23299,12 @@ However, the return value of sensors varies depending on the chipset, so it is n
 It is also necessary to set the voltage for warning and error.
 For example, if you want a warning when the voltage is less than 2.9V and an error when it is less than 2.7V.
 The execution result of sensors on the chipset nct6106 is as follows, and "in7:" is the voltage of the CMOS battery.</p>
-<p>```txt
-$ sensors
+<div class="highlight"><pre><span></span><code>$ sensors
 pch_cannonlake-virtual-0
 Adapter: Virtual device
-temp1:        +42.0°C</p>
-<p>nct6106-isa-0a10
+temp1:        +42.0°C
+
+nct6106-isa-0a10
 Adapter: ISA adapter
 in0:           728.00 mV (min =  +0.00 V, max =  +1.74 V)
 in1:             1.01 V  (min =  +0.00 V, max =  +2.04 V)
@@ -23317,40 +23317,40 @@ in7:             3.06 V  (min =  +0.00 V, max =  +4.08 V)
 in8:             2.10 V  (min =  +0.00 V, max =  +4.08 V)
 fan1:          2789 RPM  (min =    0 RPM)
 fan2:             0 RPM  (min =    0 RPM)
-```</p>
+</code></pre></div>
 <p>The setting value of voltage_monitor.param.yaml is as follows.</p>
-<p><code>yaml
-/**:
-  ros__parameters:
-    cmos_battery_warn: 2.90
-    cmos_battery_error: 2.70
-    cmos_battery_label: "in7:"</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">/**</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ros__parameters</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">cmos_battery_warn</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.90</span>
+<span class="w">    </span><span class="nt">cmos_battery_error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.70</span>
+<span class="w">    </span><span class="nt">cmos_battery_label</span><span class="p">:</span><span class="w"> </span><span class="s">"in7:"</span>
+</code></pre></div>
 <p>The above values of 2.7V and 2.90V are hypothetical. Depending on the motherboard and chipset, the value may vary. However, if the voltage of the lithium battery drops below 2.7V, it is recommended to replace it.
 In the above example, the message output to the topic /diagnostics is as follows.
 If the voltage &lt; 2.9V then:</p>
-<p><code>txt
-  name: /autoware/system/resource_monitoring/voltage/cmos_battery
+<div class="highlight"><pre><span></span><code>  name: /autoware/system/resource_monitoring/voltage/cmos_battery
   message: Warning
   hardware_id: ''
   values:
   - key: 'voltage_monitor: CMOS Battery Status'
-    value: Low Battery</code></p>
+    value: Low Battery
+</code></pre></div>
 <p>If the voltage &lt; 2.7V then:</p>
-<p><code>txt
-  name: /autoware/system/resource_monitoring/voltage/cmos_battery
+<div class="highlight"><pre><span></span><code>  name: /autoware/system/resource_monitoring/voltage/cmos_battery
   message: Warning
   hardware_id: ''
   values:
   - key: 'voltage_monitor: CMOS Battery Status'
-    value: Battery Died</code></p>
+    value: Battery Died
+</code></pre></div>
 <p>If neither, then:</p>
-<p><code>txt
-  name: /autoware/system/resource_monitoring/voltage/cmos_battery
+<div class="highlight"><pre><span></span><code>  name: /autoware/system/resource_monitoring/voltage/cmos_battery
   message: OK
   hardware_id: ''
   values:
   - key: 'voltage_monitor: CMOS Battery Status'
-    value: OK</code></p>
+    value: OK
+</code></pre></div>
 <p>If the CMOS battery voltage drops less than voltage_error or voltage_warn,It will be a warning.
 If the battery runs out, the RTC will stop working when the power is turned off. However, since the vehicle can run, it is not an error. The vehicle will stop when an error occurs, but there is no need to stop immediately.
 It can be determined by the value of "Low Battery" or "Battery Died".</p>

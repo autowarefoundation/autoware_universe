@@ -22854,8 +22854,8 @@
 
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">#</a></h2>
 <p>It's recommended to install these in a virtual environment.</p>
-<p><code>bash
-pip3 install numba==0.58.1 GPy</code></p>
+<div class="highlight"><pre><span></span><code>pip3<span class="w"> </span>install<span class="w"> </span><span class="nv">numba</span><span class="o">==</span><span class="m">0</span>.58.1<span class="w"> </span>GPy
+</code></pre></div>
 <h2 id="provided-features">Provided features<a class="headerlink" href="#provided-features" title="Permanent link">#</a></h2>
 <p>This package provides smart MPC logic for path-following control as well as mechanisms for learning and evaluation. These features are described below.</p>
 <h3 id="trajectory-following-control-based-on-ilqrmppi">Trajectory following control based on iLQR/MPPI<a class="headerlink" href="#trajectory-following-control-based-on-ilqrmppi" title="Permanent link">#</a></h3>
@@ -22866,19 +22866,19 @@ In "mppi_ilqr" mode, the initial value of iLQR is given by the MPPI solution.</p
 With the default settings, the performance of "mppi" mode is limited due to an insufficient number of samples. This issue is being addressed with ongoing work to introduce GPU support.</p>
 </blockquote>
 <p>To perform a simulation, run the following command:</p>
-<p><code>bash
-ros2 launch autoware_launch planning_simulator.launch.xml map_path:=$HOME/autoware_data/maps/sample-map-planning vehicle_model:=sample_vehicle sensor_model:=sample_sensor_kit trajectory_follower_mode:=smart_mpc_trajectory_follower</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>planning_simulator.launch.xml<span class="w"> </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_data/maps/sample-map-planning<span class="w"> </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span>sensor_model:<span class="o">=</span>sample_sensor_kit<span class="w"> </span>trajectory_follower_mode:<span class="o">=</span>smart_mpc_trajectory_follower
+</code></pre></div>
 <blockquote>
 <p>[!NOTE]
 When running with the nominal model set in <a href="./autoware_smart_mpc_trajectory_follower/param/nominal_param.yaml">nominal_param.yaml</a>, set <code>trained_model_parameter:control_application:use_trained_model</code> to <code>false</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/trained_model_param.yaml">trained_model_param.yaml</a>. To run using the trained model, set <code>trained_model_parameter:control_application:use_trained_model</code> to <code>true</code>, but the trained model must have been generated according to the following procedure.</p>
 </blockquote>
 <h3 id="training-of-model-and-reflection-in-control">Training of model and reflection in control<a class="headerlink" href="#training-of-model-and-reflection-in-control" title="Permanent link">#</a></h3>
 <p>To obtain training data, start autoware, perform a drive, and record rosbag data with the following commands.</p>
-<p><code>bash
-ros2 bag record /localization/kinematic_state /localization/acceleration /vehicle/status/steering_status /control/command/control_cmd /control/trajectory_follower/control_cmd /control/trajectory_follower/lane_departure_checker_node/debug/deviation/lateral /control/trajectory_follower/lane_departure_checker_node/debug/deviation/yaw /system/operation_mode/state /vehicle/status/control_mode /sensing/imu/imu_data /debug_mpc_x_des /debug_mpc_y_des /debug_mpc_v_des /debug_mpc_yaw_des /debug_mpc_acc_des /debug_mpc_steer_des /debug_mpc_X_des_converted /debug_mpc_x_current /debug_mpc_error_prediction /debug_mpc_max_trajectory_err /debug_mpc_emergency_stop_mode /debug_mpc_goal_stop_mode /debug_mpc_total_ctrl_time /debug_mpc_calc_u_opt_time</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>bag<span class="w"> </span>record<span class="w"> </span>/localization/kinematic_state<span class="w"> </span>/localization/acceleration<span class="w"> </span>/vehicle/status/steering_status<span class="w"> </span>/control/command/control_cmd<span class="w"> </span>/control/trajectory_follower/control_cmd<span class="w"> </span>/control/trajectory_follower/lane_departure_checker_node/debug/deviation/lateral<span class="w"> </span>/control/trajectory_follower/lane_departure_checker_node/debug/deviation/yaw<span class="w"> </span>/system/operation_mode/state<span class="w"> </span>/vehicle/status/control_mode<span class="w"> </span>/sensing/imu/imu_data<span class="w"> </span>/debug_mpc_x_des<span class="w"> </span>/debug_mpc_y_des<span class="w"> </span>/debug_mpc_v_des<span class="w"> </span>/debug_mpc_yaw_des<span class="w"> </span>/debug_mpc_acc_des<span class="w"> </span>/debug_mpc_steer_des<span class="w"> </span>/debug_mpc_X_des_converted<span class="w"> </span>/debug_mpc_x_current<span class="w"> </span>/debug_mpc_error_prediction<span class="w"> </span>/debug_mpc_max_trajectory_err<span class="w"> </span>/debug_mpc_emergency_stop_mode<span class="w"> </span>/debug_mpc_goal_stop_mode<span class="w"> </span>/debug_mpc_total_ctrl_time<span class="w"> </span>/debug_mpc_calc_u_opt_time
+</code></pre></div>
 <p>Move <a href="./autoware_smart_mpc_trajectory_follower/training_and_data_check/rosbag2.bash">rosbag2.bash</a> to the rosbag directory recorded above and execute the following command on the directory</p>
-<p><code>bash
-bash rosbag2.bash</code></p>
+<div class="highlight"><pre><span></span><code>bash<span class="w"> </span>rosbag2.bash
+</code></pre></div>
 <p>This converts rosbag data into CSV format for training models.</p>
 <blockquote>
 <p>[!NOTE]
@@ -22886,47 +22886,47 @@ Note that a large number of terminals are automatically opened at runtime, but t
 From the time you begin this process until all terminals are closed, autoware should not be running.</p>
 </blockquote>
 <p>Instead, the same result can be obtained by executing the following command in a python environment:</p>
-<p><code>python
-from autoware_smart_mpc_trajectory_follower.training_and_data_check import train_drive_NN_model
-model_trainer = train_drive_NN_model.train_drive_NN_model()
-model_trainer.transform_rosbag_to_csv(rosbag_dir)</code></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">autoware_smart_mpc_trajectory_follower.training_and_data_check</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_drive_NN_model</span>
+<span class="n">model_trainer</span> <span class="o">=</span> <span class="n">train_drive_NN_model</span><span class="o">.</span><span class="n">train_drive_NN_model</span><span class="p">()</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">transform_rosbag_to_csv</span><span class="p">(</span><span class="n">rosbag_dir</span><span class="p">)</span>
+</code></pre></div>
 <p>Here, <code>rosbag_dir</code> represents the rosbag directory.
 At this time, all CSV files in <code>rosbag_dir</code> are automatically deleted first.</p>
 <p>We move on to an explanation of how the model is trained.
 If <code>trained_model_parameter:memory_for_training:use_memory_for_training</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/trained_model_param.yaml">trained_model_param.yaml</a> is set to <code>true</code>, training is performed on models that include LSTM, and if it is set to <code>false</code>, training is performed on models that do not include LSTM.
 When using LSTM, cell states and hidden states are updated based on historical time series data and reflected in the prediction.</p>
 <p>The paths of the rosbag directories used for training and validation, <code>dir_0</code>, <code>dir_1</code>, <code>dir_2</code>,..., <code>dir_val_0</code>, <code>dir_val_1</code>, <code>dir_val_2</code>,... and the directory <code>save_dir</code> where you save the models, the model can be saved in the python environment as follows:</p>
-<p><code>python
-from autoware_smart_mpc_trajectory_follower.training_and_data_check import train_drive_NN_model
-model_trainer = train_drive_NN_model.train_drive_NN_model()
-model_trainer.add_data_from_csv(dir_0, add_mode="as_train")
-model_trainer.add_data_from_csv(dir_1, add_mode="as_train")
-model_trainer.add_data_from_csv(dir_2, add_mode="as_train")
-...
-model_trainer.add_data_from_csv(dir_val_0, add_mode="as_val")
-model_trainer.add_data_from_csv(dir_val_1, add_mode="as_val")
-model_trainer.add_data_from_csv(dir_val_2, add_mode="as_val")
-...
-model_trainer.get_trained_model()
-model_trainer.save_models(save_dir)</code></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">autoware_smart_mpc_trajectory_follower.training_and_data_check</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_drive_NN_model</span>
+<span class="n">model_trainer</span> <span class="o">=</span> <span class="n">train_drive_NN_model</span><span class="o">.</span><span class="n">train_drive_NN_model</span><span class="p">()</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">add_data_from_csv</span><span class="p">(</span><span class="n">dir_0</span><span class="p">,</span> <span class="n">add_mode</span><span class="o">=</span><span class="s2">"as_train"</span><span class="p">)</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">add_data_from_csv</span><span class="p">(</span><span class="n">dir_1</span><span class="p">,</span> <span class="n">add_mode</span><span class="o">=</span><span class="s2">"as_train"</span><span class="p">)</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">add_data_from_csv</span><span class="p">(</span><span class="n">dir_2</span><span class="p">,</span> <span class="n">add_mode</span><span class="o">=</span><span class="s2">"as_train"</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">add_data_from_csv</span><span class="p">(</span><span class="n">dir_val_0</span><span class="p">,</span> <span class="n">add_mode</span><span class="o">=</span><span class="s2">"as_val"</span><span class="p">)</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">add_data_from_csv</span><span class="p">(</span><span class="n">dir_val_1</span><span class="p">,</span> <span class="n">add_mode</span><span class="o">=</span><span class="s2">"as_val"</span><span class="p">)</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">add_data_from_csv</span><span class="p">(</span><span class="n">dir_val_2</span><span class="p">,</span> <span class="n">add_mode</span><span class="o">=</span><span class="s2">"as_val"</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">get_trained_model</span><span class="p">()</span>
+<span class="n">model_trainer</span><span class="o">.</span><span class="n">save_models</span><span class="p">(</span><span class="n">save_dir</span><span class="p">)</span>
+</code></pre></div>
 <p>If <code>add_mode</code> is not specified or validation data is not added, the training data is split to be used for training and validation.</p>
 <p>After performing the polynomial regression, the NN can be trained on the residuals as follows:</p>
-<p><code>python
-model_trainer.get_trained_model(use_polynomial_reg=True)</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">model_trainer</span><span class="o">.</span><span class="n">get_trained_model</span><span class="p">(</span><span class="n">use_polynomial_reg</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
 <blockquote>
 <p>[!NOTE]
 In the default setting, regression is performed by several preselected polynomials.
 When <code>use_selected_polynomial=False</code> is set as the argument of get_trained_model, the <code>deg</code> argument allows setting the maximum degree of the polynomial to be used.</p>
 </blockquote>
 <p>If only polynomial regression is performed and no NN model is used, run the following command:</p>
-<p><code>python
-model_trainer.get_trained_model(use_polynomial_reg=True,force_NN_model_to_zero=True)</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">model_trainer</span><span class="o">.</span><span class="n">get_trained_model</span><span class="p">(</span><span class="n">use_polynomial_reg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">force_NN_model_to_zero</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
 <p>Move <code>model_for_test_drive.pth</code> and <code>polynomial_reg_info.npz</code> saved in <code>save_dir</code> to the home directory and set <code>trained_model_parameter:control_application:use_trained_model</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/trained_model_param.yaml">trained_model_param.yaml</a> to <code>true</code> to reflect the trained model in the control.</p>
 <h3 id="performance-evaluation">Performance evaluation<a class="headerlink" href="#performance-evaluation" title="Permanent link">#</a></h3>
 <p>Here, as an example, we describe the verification of the adaptive performance when the wheel base of the sample_vehicle is 2.79 m, but an incorrect value of 2.0 m is given to the controller side.
 To give the controller 2.0 m as the wheel base, set the value of <code>nominal_parameter:vehicle_info:wheel_base</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/nominal_param.yaml">nominal_param.yaml</a> to 2.0, and run the following command:</p>
-<p><code>bash
-python3 -m smart_mpc_trajectory_follower.clear_pycache</code></p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>-m<span class="w"> </span>smart_mpc_trajectory_follower.clear_pycache
+</code></pre></div>
 <h4 id="test-on-autoware">Test on autoware<a class="headerlink" href="#test-on-autoware" title="Permanent link">#</a></h4>
 <p>To perform a control test on autoware with the nominal model before training, make sure that <code>trained_model_parameter:control_application:use_trained_model</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/trained_model_param.yaml">trained_model_param.yaml</a> is <code>false</code> and launch autoware in the manner described in "Trajectory following control based on iLQR/MPPI". This time, the following route will be used for the test:</p>
 <p><img src="images/test_route.png" width="712pix"></p>
@@ -22940,9 +22940,9 @@ Although the data used for training is small, for the sake of simplicity, we wil
 <p>To control using the trained model obtained here, set <code>trained_model_parameter:control_application:use_trained_model</code> to <code>true</code>, start autoware in the same way, and drive the same route recording rosbag.
 After the driving is complete, convert the rosbag file to CSV format using the method described in "Training of model and reflection in control".
 A plot of the lateral deviation is obtained by running the <code>lateral_error_visualize</code> function in <code>control/autoware_smart_mpc_trajectory_follower/autoware_smart_mpc_trajectory_follower/training_and_data_check/data_checker.ipynb</code> for the nominal and training model rosbag files <code>rosbag_nominal</code> and <code>rosbag_trained</code>, respectively, as follows:</p>
-<p><code>python
-lateral_error_visualize(dir_name=rosbag_nominal,ylim=[-1.2,1.2])
-lateral_error_visualize(dir_name=rosbag_trained,ylim=[-1.2,1.2])</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">lateral_error_visualize</span><span class="p">(</span><span class="n">dir_name</span><span class="o">=</span><span class="n">rosbag_nominal</span><span class="p">,</span><span class="n">ylim</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">1.2</span><span class="p">,</span><span class="mf">1.2</span><span class="p">])</span>
+<span class="n">lateral_error_visualize</span><span class="p">(</span><span class="n">dir_name</span><span class="o">=</span><span class="n">rosbag_trained</span><span class="p">,</span><span class="n">ylim</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">1.2</span><span class="p">,</span><span class="mf">1.2</span><span class="p">])</span>
+</code></pre></div>
 <p>The following results were obtained.</p>
 <div style="display: flex; justify-content: center; align-items: center;">
     <img src="images/lateral_error_nominal_model.png">
@@ -22951,11 +22951,11 @@ lateral_error_visualize(dir_name=rosbag_trained,ylim=[-1.2,1.2])</code></p>
 
 <h4 id="test-on-python-simulator">Test on python simulator<a class="headerlink" href="#test-on-python-simulator" title="Permanent link">#</a></h4>
 <p>First, to give wheel base 2.79 m in the python simulator, create the following file and save it in <code>control/autoware_smart_mpc_trajectory_follower/autoware_smart_mpc_trajectory_follower/python_simulator</code> with the name <code>sim_setting.json</code>:</p>
-<p><code>json
-{ "wheel_base": 2.79 }</code></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"wheel_base"</span><span class="p">:</span><span class="w"> </span><span class="mf">2.79</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
 <p>Next, after moving to <code>control/autoware_smart_mpc_trajectory_follower/autoware_smart_mpc_trajectory_follower/python_simulator</code>, run the following commands to test the slalom driving on the python simulator with the nominal control:</p>
-<p><code>bash
-python3 run_python_simulator.py nominal_test</code></p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>run_python_simulator.py<span class="w"> </span>nominal_test
+</code></pre></div>
 <p>The result of the driving is stored in <code>test_python_nominal_sim</code>.</p>
 <p>The following results were obtained.</p>
 <p style="text-align: center;">
@@ -22965,8 +22965,8 @@ python3 run_python_simulator.py nominal_test</code></p>
 <p>The center of the upper row represents the lateral deviation.</p>
 <p>Run the following commands to perform training using figure eight driving data under the control of pure pursuit.</p>
 <p>To perform training using a figure eight driving and driving based on the obtained model, run the following commands:</p>
-<p><code>bash
-python3 run_python_simulator.py</code></p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>run_python_simulator.py
+</code></pre></div>
 <p>The result of the driving is stored in <code>test_python_trined_sim</code>.</p>
 <p>When <code>trained_model_parameter:memory_for_training:use_memory_for_training</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/trained_model_param.yaml">trained_model_param.yaml</a> is set to <code>true</code>, the following results were obtained.</p>
 <p style="text-align: center;">
@@ -22982,11 +22982,11 @@ python3 run_python_simulator.py</code></p>
 However, the difference in driving with and without LSTM is not very apparent.</p>
 <p>To see the difference, for example, we can experiment with parameters such as steer_time_delay.</p>
 <p>First, to restore nominal model settings to default values, set the value of <code>nominal_parameter:vehicle_info:wheel_base</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/nominal_param.yaml">nominal_param.yaml</a> to 2.79, and run the following command:</p>
-<p><code>bash
-python3 -m smart_mpc_trajectory_follower.clear_pycache</code></p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>-m<span class="w"> </span>smart_mpc_trajectory_follower.clear_pycache
+</code></pre></div>
 <p>Next, modify <code>sim_setting.json</code> as follows:</p>
-<p><code>json
-{ "steer_time_delay": 1.01 }</code></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"steer_time_delay"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.01</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
 <p>In this way, an experiment is performed when <code>steer_time_delay</code> is set to 1.01 sec.</p>
 <p>The result of the driving using the nominal model is as follows:</p>
 <p style="text-align: center;">
@@ -23087,8 +23087,8 @@ python3 -m smart_mpc_trajectory_follower.clear_pycache</code></p>
 </tbody>
 </table>
 <p>For example, to give the simulation side 0.01 [rad] of steer bias and 0.001 [rad] of steer dead band, edit the <code>sim_setting.json</code> as follows.</p>
-<p><code>json
-{ "steer_bias": 0.01, "steer_dead_band": 0.001 }</code></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"steer_bias"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="nt">"steer_dead_band"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.001</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
 <h5 id="vehicle_type_0">vehicle_type_0<a class="headerlink" href="#vehicle_type_0" title="Permanent link">#</a></h5>
 <p>This vehicle type matches the default vehicle type used in the control.</p>
 <table>
@@ -23272,12 +23272,12 @@ python3 -m smart_mpc_trajectory_follower.clear_pycache</code></p>
 <h4 id="auto-test-on-python-simulator">Auto test on python simulator<a class="headerlink" href="#auto-test-on-python-simulator" title="Permanent link">#</a></h4>
 <p>Here, we describe a method for testing adaptive performance by giving the simulation side a predefined range of model parameters while the control side is given constant model parameters.</p>
 <p>To run a driving experiment within the parameter change range set in <a href="./autoware_smart_mpc_trajectory_follower/python_simulator/run_sim.py">run_sim.py</a>, for example, move to <code>control/autoware_smart_mpc_trajectory_follower/autoware_smart_mpc_trajectory_follower/python_simulator</code> and run the following command:</p>
-<p><code>bash
-python3 run_sim.py --param_name steer_bias</code></p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>run_sim.py<span class="w"> </span>--param_name<span class="w"> </span>steer_bias
+</code></pre></div>
 <p>Here we described the experimental procedure for steer bias, and the same method can be used for other parameters.</p>
 <p>To run the test for all parameters except limits at once, run the following command:</p>
-<p><code>bash
-python3 run_auto_test.py</code></p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>run_auto_test.py
+</code></pre></div>
 <p>The results are stored in the <code>auto_test</code> directory.
 After the executions were completed, the following results were obtained by running <a href="./autoware_smart_mpc_trajectory_follower/python_simulator/plot_auto_test_result.ipynb">plot_auto_test_result.ipynb</a>:</p>
 <p style="text-align: center;">
@@ -23343,8 +23343,8 @@ When <code>run_sim.py</code> is run, the <code>use_trained_model_diff</code> set
 <h2 id="change-of-nominal-parameters-and-their-reloading">Change of nominal parameters and their reloading<a class="headerlink" href="#change-of-nominal-parameters-and-their-reloading" title="Permanent link">#</a></h2>
 <p>The nominal parameters of vehicle model can be changed by editing the file <a href="./autoware_smart_mpc_trajectory_follower/param/nominal_param.yaml">nominal_param.yaml</a>.
 After changing the nominal parameters, the cache must be deleted by running the following command:</p>
-<p><code>bash
-python3 -m smart_mpc_trajectory_follower.clear_pycache</code></p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>-m<span class="w"> </span>smart_mpc_trajectory_follower.clear_pycache
+</code></pre></div>
 <p>The nominal parameters include the following:</p>
 <table>
 <thead>
@@ -23385,8 +23385,8 @@ python3 -m smart_mpc_trajectory_follower.clear_pycache</code></p>
 <h2 id="change-of-control-parameters-and-their-reloading">Change of control parameters and their reloading<a class="headerlink" href="#change-of-control-parameters-and-their-reloading" title="Permanent link">#</a></h2>
 <p>The control parameters can be changed by editing files <a href="./autoware_smart_mpc_trajectory_follower/param/mpc_param.yaml">mpc_param.yaml</a> and <a href="./autoware_smart_mpc_trajectory_follower/param/trained_model_param.yaml">trained_model_param.yaml</a>.
 Although it is possible to reflect parameter changes by restarting autoware, the following command allows us to do so without leaving autoware running:</p>
-<p><code>bash
-ros2 topic pub /pympc_reload_mpc_param_trigger std_msgs/msg/String "data: ''" --once</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>topic<span class="w"> </span>pub<span class="w"> </span>/pympc_reload_mpc_param_trigger<span class="w"> </span>std_msgs/msg/String<span class="w"> </span><span class="s2">"data: ''"</span><span class="w"> </span>--once
+</code></pre></div>
 <p>The main parameters among the control parameters are as follows.</p>
 <h3 id="mpc_paramyaml"><code>mpc_param.yaml</code><a class="headerlink" href="#mpc_paramyaml" title="Permanent link">#</a></h3>
 <table>
@@ -23495,8 +23495,8 @@ ros2 topic pub /pympc_reload_mpc_param_trigger std_msgs/msg/String "data: ''" --
 <h2 id="request-to-release-the-slow-stop-mode">Request to release the slow stop mode<a class="headerlink" href="#request-to-release-the-slow-stop-mode" title="Permanent link">#</a></h2>
 <p>If the predicted trajectory deviates too far from the target trajectory, the system enters a slow stop mode and the vehicle stops moving.
 To cancel the slow stop mode and make the vehicle ready to run again, run the following command:</p>
-<p><code>bash
-ros2 topic pub /pympc_stop_mode_reset_request std_msgs/msg/String "data: ''" --once</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>topic<span class="w"> </span>pub<span class="w"> </span>/pympc_stop_mode_reset_request<span class="w"> </span>std_msgs/msg/String<span class="w"> </span><span class="s2">"data: ''"</span><span class="w"> </span>--once
+</code></pre></div>
 <h2 id="limitation">Limitation<a class="headerlink" href="#limitation" title="Permanent link">#</a></h2>
 <ul>
 <li>May not be able to start when initial position/posture is far from the target.</li>

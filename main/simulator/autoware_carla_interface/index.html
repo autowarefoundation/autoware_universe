@@ -22883,39 +22883,39 @@ This ros package enables communication between Autoware and CARLA for autonomous
 </li>
 <li>
 <p>Create <code>$HOME/autoware_data/maps/Town01/map_projector_info.yaml</code> with:</p>
-<p><code>yaml
- projector_type: Local</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">projector_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Local</span>
+</code></pre></div>
 </li>
 </ol>
 <h3 id="build">Build<a class="headerlink" href="#build" title="Permanent link">#</a></h3>
-<p><code>bash
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release</code></p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build<span class="w"> </span>--symlink-install<span class="w"> </span>--cmake-args<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release
+</code></pre></div>
 <h3 id="run">Run<a class="headerlink" href="#run" title="Permanent link">#</a></h3>
 <ol>
 <li>
 <p>Run carla, change map, spawn object if you need
    <!--- cspell:ignore prefernvidia -->
 </p>
-<p><code>bash
- cd CARLA
- ./CarlaUE4.sh -prefernvidia -quality-level=Low -RenderOffScreen</code></p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>CARLA
+./CarlaUE4.sh<span class="w"> </span>-prefernvidia<span class="w"> </span>-quality-level<span class="o">=</span>Low<span class="w"> </span>-RenderOffScreen
+</code></pre></div>
 </li>
 <li>
 <p>Run Autoware with CARLA</p>
-<p><code>bash
- ros2 launch autoware_launch e2e_simulator.launch.xml \
-     map_path:=$HOME/autoware_data/maps/Town01 \
-     vehicle_model:=sample_vehicle \
-     sensor_model:=carla_sensor_kit \
-     simulator_type:=carla</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_data/maps/Town01<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>sensor_model:<span class="o">=</span>carla_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>simulator_type:<span class="o">=</span>carla
+</code></pre></div>
 <p>For E2E planning with VAD:</p>
-<p><code>bash
- ros2 launch autoware_launch e2e_simulator.launch.xml \
-     map_path:=$HOME/autoware_data/maps/Town01 \
-     vehicle_model:=sample_vehicle \
-     sensor_model:=carla_sensor_kit \
-     simulator_type:=carla \
-     use_e2e_planning:=true</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_data/maps/Town01<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>sensor_model:<span class="o">=</span>carla_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>simulator_type:<span class="o">=</span>carla<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>use_e2e_planning:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
 </li>
 <li>
 <p>Set initial pose (Init by GNSS)</p>
@@ -22937,15 +22937,14 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release</code></p
 <p><img alt="Multi-Camera View in RViz" src="docs/images/rviz_multi_camera_view.png"></p>
 <p>The combined view shows all 6 cameras with labels: FL (Front-Left), F (Front), FR (Front-Right), BL (Back-Left), B (Back), BR (Back-Right).</p>
 <p><strong>Note:</strong> If you don't need the multi-camera combiner (to save CPU resources), you can comment out the following line in <code>launch/autoware_carla_interface.launch.xml</code>:</p>
-<p>```xml</p>
-<!-- Multi-camera combiner for RViz visualization -->
-<!-- <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/> -->
-<p>```</p>
+<div class="highlight"><pre><span></span><code><span class="cm">&lt;!-- Multi-camera combiner for RViz visualization --&gt;</span>
+<span class="cm">&lt;!-- &lt;node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/&gt; --&gt;</span>
+</code></pre></div>
 <h3 id="following-the-ego-vehicle-with-the-carla-spectator-camera">Following the Ego Vehicle with the CARLA Spectator Camera<a class="headerlink" href="#following-the-ego-vehicle-with-the-carla-spectator-camera" title="Permanent link">#</a></h3>
 <p>The <code>spectator_follow</code> script locks the CARLA spectator (free) camera to the ego vehicle, so the in-simulator view chases the car automatically instead of having to pan manually. It connects to the running CARLA server, looks up the ego actor by its <code>role_name</code>, and updates the spectator transform at a fixed rate.</p>
 <p>Run it in a separate terminal while CARLA and the Autoware bridge are running:</p>
-<p><code>bash
-ros2 run autoware_carla_interface spectator_follow</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_carla_interface<span class="w"> </span>spectator_follow
+</code></pre></div>
 <p>Common options (all optional):</p>
 <table>
 <thead>
@@ -22994,8 +22993,8 @@ ros2 run autoware_carla_interface spectator_follow</code></p>
 </tbody>
 </table>
 <p>For a top-down view directly above the ego vehicle:</p>
-<p><code>bash
-ros2 run autoware_carla_interface spectator_follow --distance 0 --height 30 --pitch -90</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_carla_interface<span class="w"> </span>spectator_follow<span class="w"> </span>--distance<span class="w"> </span><span class="m">0</span><span class="w"> </span>--height<span class="w"> </span><span class="m">30</span><span class="w"> </span>--pitch<span class="w"> </span>-90
+</code></pre></div>
 <p>Press <code>Ctrl+C</code> to stop the script. It will keep retrying if the ego actor is not yet spawned, and re-acquire it if it is removed and respawned.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>The <code>InitializeInterface</code> class is key to setting up both the CARLA world and the ego vehicle. It fetches configuration parameters through the <code>autoware_carla_interface.launch.xml</code>.</p>
@@ -23104,15 +23103,15 @@ ros2 run autoware_carla_interface spectator_follow --distance 0 --height 30 --pi
 <h4 id="1-sensor-kit-calibration-from-autoware-sensor-kit">1. Sensor Kit Calibration (from Autoware sensor kit)<a class="headerlink" href="#1-sensor-kit-calibration-from-autoware-sensor-kit" title="Permanent link">#</a></h4>
 <p>Located in <code>&lt;sensor_kit_name&gt;_description/config/sensor_kit_calibration.yaml</code></p>
 <p>Defines sensor positions and orientations relative to <code>base_link</code> (rear axle center). Example:</p>
-<p><code>yaml
-sensor_kit_base_link:
-  CAM_FRONT/camera_link:
-    x: 2.225
-    y: 0.000
-    z: 1.600
-    roll: 0.000
-    pitch: 0.000
-    yaw: 0.000 # Angles in radians</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">sensor_kit_base_link</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">CAM_FRONT/camera_link</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.225</span>
+<span class="w">    </span><span class="nt">y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span>
+<span class="w">    </span><span class="nt">z</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.600</span>
+<span class="w">    </span><span class="nt">roll</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span>
+<span class="w">    </span><span class="nt">pitch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span>
+<span class="w">    </span><span class="nt">yaw</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span><span class="w"> </span><span class="c1"># Angles in radians</span>
+</code></pre></div>
 <h4 id="2-sensor-mapping-carla-specific">2. Sensor Mapping (CARLA-specific)<a class="headerlink" href="#2-sensor-mapping-carla-specific" title="Permanent link">#</a></h4>
 <p>Located in <code>config/sensor_mapping.yaml</code></p>
 <p>Maps Autoware sensors to CARLA sensor types and parameters. Key sections:</p>
@@ -23123,22 +23122,22 @@ sensor_kit_base_link:
 <li><code>vehicle_config</code> (optional): Vehicle parameters like wheelbase</li>
 </ul>
 <p>Example sensor mapping:</p>
-<p><code>yaml
-sensor_mappings:
-  CAM_FRONT/camera_link:
-    carla_type: sensor.camera.rgb
-    id: CAM_FRONT
-    ros_config:
-      frame_id: CAM_FRONT/camera_optical_link
-      topic_image: /sensing/camera/CAM_FRONT/image_raw
-      topic_info: /sensing/camera/CAM_FRONT/camera_info
-      frequency_hz: 11
-      qos_profile: reliable
-      image_encoding: bgra8
-    parameters:
-      image_size_x: 1600
-      image_size_y: 900
-      fov: 70.0</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">sensor_mappings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">CAM_FRONT/camera_link</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">carla_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sensor.camera.rgb</span>
+<span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CAM_FRONT</span>
+<span class="w">    </span><span class="nt">ros_config</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">frame_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CAM_FRONT/camera_optical_link</span>
+<span class="w">      </span><span class="nt">topic_image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/sensing/camera/CAM_FRONT/image_raw</span>
+<span class="w">      </span><span class="nt">topic_info</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/sensing/camera/CAM_FRONT/camera_info</span>
+<span class="w">      </span><span class="nt">frequency_hz</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">11</span>
+<span class="w">      </span><span class="nt">qos_profile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">reliable</span>
+<span class="w">      </span><span class="nt">image_encoding</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bgra8</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">image_size_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1600</span>
+<span class="w">      </span><span class="nt">image_size_y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">900</span>
+<span class="w">      </span><span class="nt">fov</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">70.0</span>
+</code></pre></div>
 <p><code>image_encoding</code> applies to cameras and accepts <code>bgra8</code> (default, what CARLA
 renders) or <code>mono8</code>. Publishing <code>mono8</code> converts once in the bridge and sends a
 quarter of the bytes, which is worth it when every consumer of that camera
@@ -23152,21 +23151,21 @@ sees a measurement no hardware produces: a localisation or odometry stack scored
 against a perfect gyro reports an accuracy it will not reach on a vehicle.</p>
 <p>Set any of the CARLA noise attributes under the sensor's <code>parameters</code> to get a
 sensor that behaves like hardware:</p>
-<p><code>yaml
-sensor_mappings:
-  imu_link:
-    carla_type: sensor.other.imu
-    id: imu
-    ros_config:
-      frame_id: tamagawa/imu_link
-      topic: /sensing/imu/imu_data
-      frequency_hz: 50
-    parameters:
-      noise_gyro_stddev_x: 0.001
-      noise_gyro_stddev_y: 0.001
-      noise_gyro_stddev_z: 0.001
-      noise_gyro_bias_x: 0.0005
-      noise_accel_stddev_x: 0.01</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">sensor_mappings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">imu_link</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">carla_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sensor.other.imu</span>
+<span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">imu</span>
+<span class="w">    </span><span class="nt">ros_config</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">frame_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tamagawa/imu_link</span>
+<span class="w">      </span><span class="nt">topic</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/sensing/imu/imu_data</span>
+<span class="w">      </span><span class="nt">frequency_hz</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">noise_gyro_stddev_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.001</span>
+<span class="w">      </span><span class="nt">noise_gyro_stddev_y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.001</span>
+<span class="w">      </span><span class="nt">noise_gyro_stddev_z</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.001</span>
+<span class="w">      </span><span class="nt">noise_gyro_bias_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0005</span>
+<span class="w">      </span><span class="nt">noise_accel_stddev_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+</code></pre></div>
 <p>Recognised names are <code>noise_accel_stddev_{x,y,z}</code>, <code>noise_gyro_stddev_{x,y,z}</code>
 and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,lon}_stddev</code> and
 <code>noise_{alt,lat,lon}_bias</code> for the GNSS. Anything left out stays at zero.</p>
@@ -23179,44 +23178,44 @@ and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,l
 </ul>
 <p>When enabled via <code>use_light_weight_sensor_mapping:=True</code>, the launch file also skips the <code>image_transport</code> republish nodes for the disabled cameras and the <code>multi_camera_combiner</code> node automatically.</p>
 <p>Example usage:</p>
-<p><code>bash
-ros2 launch autoware_launch e2e_simulator.launch.xml \
-    map_path:=$HOME/autoware_map/Town01 \
-    vehicle_model:=sample_vehicle \
-    sensor_model:=carla_sensor_kit \
-    simulator_type:=carla \
-    use_light_weight_sensor_mapping:=True</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_map/Town01<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>sensor_model:<span class="o">=</span>carla_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>simulator_type:<span class="o">=</span>carla<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>use_light_weight_sensor_mapping:<span class="o">=</span>True
+</code></pre></div>
 <p>Note that with this configuration, features that depend on the surround cameras (such as the multi-camera RViz view) are unavailable.</p>
 <h3 id="world-loading">World Loading<a class="headerlink" href="#world-loading" title="Permanent link">#</a></h3>
 <p>The <code>carla_ros.py</code> sets up the CARLA world:</p>
 <ol>
 <li>
 <p><strong>Client Connection</strong>:</p>
-<p><code>python
- client = carla.Client(self.local_host, self.port)
- client.set_timeout(self.timeout)</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">carla</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+<span class="n">client</span><span class="o">.</span><span class="n">set_timeout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
+</code></pre></div>
 </li>
 <li>
 <p><strong>Load the Map</strong>:</p>
 <p>Map loaded in CARLA world with map according to <code>carla_map</code> parameter.</p>
-<p><code>python
- client.load_world(self.map_name)
- self.world = client.get_world()</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">client</span><span class="o">.</span><span class="n">load_world</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">map_name</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">world</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_world</span><span class="p">()</span>
+</code></pre></div>
 </li>
 <li>
 <p><strong>Spawn Ego Vehicle</strong>:</p>
 <p>Vehicle are spawn according to <code>vehicle_type</code>, <code>spawn_point</code>, and <code>agent_role_name</code> parameter.</p>
-<p><code>python
- spawn_point = carla.Transform()
- point_items = self.spawn_point.split(",")
- if len(point_items) == 6:
-    spawn_point.location.x = float(point_items[0])
-    spawn_point.location.y = float(point_items[1])
-    spawn_point.location.z = float(point_items[2]) + 2
-    spawn_point.rotation.roll = float(point_items[3])
-    spawn_point.rotation.pitch = float(point_items[4])
-    spawn_point.rotation.yaw = float(point_items[5])
- CarlaDataProvider.request_new_actor(self.vehicle_type, spawn_point, self.agent_role_name)</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">spawn_point</span> <span class="o">=</span> <span class="n">carla</span><span class="o">.</span><span class="n">Transform</span><span class="p">()</span>
+<span class="n">point_items</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spawn_point</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)</span>
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">point_items</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
+   <span class="n">spawn_point</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">point_items</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+   <span class="n">spawn_point</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">point_items</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+   <span class="n">spawn_point</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">point_items</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">+</span> <span class="mi">2</span>
+   <span class="n">spawn_point</span><span class="o">.</span><span class="n">rotation</span><span class="o">.</span><span class="n">roll</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">point_items</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+   <span class="n">spawn_point</span><span class="o">.</span><span class="n">rotation</span><span class="o">.</span><span class="n">pitch</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">point_items</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+   <span class="n">spawn_point</span><span class="o">.</span><span class="n">rotation</span><span class="o">.</span><span class="n">yaw</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">point_items</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+<span class="n">CarlaDataProvider</span><span class="o">.</span><span class="n">request_new_actor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vehicle_type</span><span class="p">,</span> <span class="n">spawn_point</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">agent_role_name</span><span class="p">)</span>
+</code></pre></div>
 </li>
 </ol>
 <h2 id="traffic-light-recognition">Traffic Light Recognition<a class="headerlink" href="#traffic-light-recognition" title="Permanent link">#</a></h2>

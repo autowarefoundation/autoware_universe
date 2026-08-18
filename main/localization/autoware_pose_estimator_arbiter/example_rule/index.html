@@ -22755,51 +22755,53 @@ The height of the area is meaningless; it judges if the projection of its self-p
 <p><img src="../media/pose_estimator_area_in_vector_map.png" alt="drawing" width="600"></p>
 <p>A sample pose_estimator_area is shown below. The values provided below are placeholders.
 To be correctly read, the area should have the type "pose_estimator_specify" and the subtype should be one of ndt, yabloc, eagleye, or artag.</p>
-<p>```xml
-  <node id="1" lat="35.8xxxxx" lon="139.6xxxxx">
-    <tag k="mgrs_code" v="54SUE000000"></tag>
-    <tag k="local_x" v="10.0"></tag>
-    <tag k="local_y" v="10.0"></tag>
-    <tag k="ele" v="1.0"></tag>
-  </node>
-  <node id="2" lat="35.8xxxxx" lon="139.6xxxxx">
-    <tag k="mgrs_code" v="54SUE000000"></tag>
-    <tag k="local_x" v="10.0"></tag>
-    <tag k="local_y" v="20.0"></tag>
-    <tag k="ele" v="1.0"></tag>
-  </node>
-  <node id="3" lat="35.8xxxxx" lon="139.6xxxxx">
-    <tag k="mgrs_code" v="54SUE000000"></tag>
-    <tag k="local_x" v="20.0"></tag>
-    <tag k="local_y" v="20.0"></tag>
-    <tag k="ele" v="1.0"></tag>
-  </node>
-  <node id="4" lat="35.8xxxxx" lon="139.6xxxxx">
-    <tag k="mgrs_code" v="54SUE000000"></tag>
-    <tag k="local_x" v="10.0"></tag>
-    <tag k="local_y" v="20.0"></tag>
-    <tag k="ele" v="1.0"></tag>
-  </node></p>
-<p>...</p>
-<p><way id="5">
-    <nd ref="1"></nd>
-    <nd ref="2"></nd>
-    <nd ref="3"></nd>
-    <nd ref="4"></nd>
-    <tag k="type" v="pose_estimator_specify"></tag>
-    <tag k="subtype" v="eagleye"></tag>
-    <tag k="area" v="yes"></tag>
-  </way></p>
-<p><way id="6">
-    <nd ref="7"></nd>
-    <nd ref="8"></nd>
-    <nd ref="9"></nd>
-    <nd ref="10"></nd>
-    <tag k="type" v="pose_estimator_specify"></tag>
-    <tag k="subtype" v="yabloc"></tag>
-    <tag k="area" v="yes"></tag>
-  </way></p>
-<p>```</p></div>
+<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="nt">&lt;node</span><span class="w"> </span><span class="na">id=</span><span class="s">"1"</span><span class="w"> </span><span class="na">lat=</span><span class="s">"35.8xxxxx"</span><span class="w"> </span><span class="na">lon=</span><span class="s">"139.6xxxxx"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"mgrs_code"</span><span class="w"> </span><span class="na">v=</span><span class="s">"54SUE000000"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_x"</span><span class="w"> </span><span class="na">v=</span><span class="s">"10.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_y"</span><span class="w"> </span><span class="na">v=</span><span class="s">"10.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"ele"</span><span class="w"> </span><span class="na">v=</span><span class="s">"1.0"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/node&gt;</span>
+<span class="w">  </span><span class="nt">&lt;node</span><span class="w"> </span><span class="na">id=</span><span class="s">"2"</span><span class="w"> </span><span class="na">lat=</span><span class="s">"35.8xxxxx"</span><span class="w"> </span><span class="na">lon=</span><span class="s">"139.6xxxxx"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"mgrs_code"</span><span class="w"> </span><span class="na">v=</span><span class="s">"54SUE000000"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_x"</span><span class="w"> </span><span class="na">v=</span><span class="s">"10.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_y"</span><span class="w"> </span><span class="na">v=</span><span class="s">"20.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"ele"</span><span class="w"> </span><span class="na">v=</span><span class="s">"1.0"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/node&gt;</span>
+<span class="w">  </span><span class="nt">&lt;node</span><span class="w"> </span><span class="na">id=</span><span class="s">"3"</span><span class="w"> </span><span class="na">lat=</span><span class="s">"35.8xxxxx"</span><span class="w"> </span><span class="na">lon=</span><span class="s">"139.6xxxxx"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"mgrs_code"</span><span class="w"> </span><span class="na">v=</span><span class="s">"54SUE000000"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_x"</span><span class="w"> </span><span class="na">v=</span><span class="s">"20.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_y"</span><span class="w"> </span><span class="na">v=</span><span class="s">"20.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"ele"</span><span class="w"> </span><span class="na">v=</span><span class="s">"1.0"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/node&gt;</span>
+<span class="w">  </span><span class="nt">&lt;node</span><span class="w"> </span><span class="na">id=</span><span class="s">"4"</span><span class="w"> </span><span class="na">lat=</span><span class="s">"35.8xxxxx"</span><span class="w"> </span><span class="na">lon=</span><span class="s">"139.6xxxxx"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"mgrs_code"</span><span class="w"> </span><span class="na">v=</span><span class="s">"54SUE000000"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_x"</span><span class="w"> </span><span class="na">v=</span><span class="s">"10.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"local_y"</span><span class="w"> </span><span class="na">v=</span><span class="s">"20.0"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"ele"</span><span class="w"> </span><span class="na">v=</span><span class="s">"1.0"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/node&gt;</span>
+
+...
+
+<span class="w">  </span><span class="nt">&lt;way</span><span class="w"> </span><span class="na">id=</span><span class="s">"5"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"1"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"2"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"3"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"4"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"type"</span><span class="w"> </span><span class="na">v=</span><span class="s">"pose_estimator_specify"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"subtype"</span><span class="w"> </span><span class="na">v=</span><span class="s">"eagleye"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"area"</span><span class="w"> </span><span class="na">v=</span><span class="s">"yes"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/way&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;way</span><span class="w"> </span><span class="na">id=</span><span class="s">"6"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"7"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"8"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"9"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;nd</span><span class="w"> </span><span class="na">ref=</span><span class="s">"10"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"type"</span><span class="w"> </span><span class="na">v=</span><span class="s">"pose_estimator_specify"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"subtype"</span><span class="w"> </span><span class="na">v=</span><span class="s">"yabloc"</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"area"</span><span class="w"> </span><span class="na">v=</span><span class="s">"yes"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/way&gt;</span>
+</code></pre></div></div>
 
 
 

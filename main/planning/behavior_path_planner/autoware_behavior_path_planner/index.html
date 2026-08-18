@@ -23265,8 +23265,8 @@
 <p>Click <a href="https://github.com/autowarefoundation/autoware_launch/blob/main/autoware_launch/config/planning/preset/default_preset.yaml">here</a> to view the <code>default_preset.yaml</code>.</p>
 </div>
 <p>The <code>behavior_path_planner.launch.xml</code> file references the settings defined in <code>default_preset.yaml</code> to apply the configurations when the Behavior Path Planner's node is running. For instance, the parameter <code>static_obstacle_avoidance.enable_module</code> in the following segment corresponds to launch_static_obstacle_avoidance_module from <code>default_preset.yaml</code>:</p>
-<p><code>xml
-&lt;param name="static_obstacle_avoidance.enable_module" value="$(var launch_static_obstacle_avoidance_module)"/&gt;</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;param</span><span class="w"> </span><span class="na">name=</span><span class="s">"static_obstacle_avoidance.enable_module"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(var launch_static_obstacle_avoidance_module)"</span><span class="nt">/&gt;</span>
+</code></pre></div>
 <p>Therefore, to enable or disable a module, simply set the corresponding module in <code>default_preset.yaml</code> to <code>true</code> or <code>false</code>. These changes will be applied upon the next launch of Autoware.</p>
 <h2 id="generating-path">Generating Path<a class="headerlink" href="#generating-path" title="Permanent link">#</a></h2>
 <p>A sophisticated methodology is used for path generation, particularly focusing on maneuvers like lane changes and avoidance. At the core of this design is the smooth lateral shifting of the reference path, achieved through a constant-jerk profile. This approach ensures a consistent rate of change in acceleration, facilitating smooth transitions and minimizing abrupt changes in lateral dynamics, crucial for passenger comfort and safety.</p>
@@ -23345,8 +23345,7 @@
 </div>
 <h2 id="parameters-and-configuration">Parameters and Configuration<a class="headerlink" href="#parameters-and-configuration" title="Permanent link">#</a></h2>
 <p>The <a href="https://github.com/autowarefoundation/autoware_launch/tree/main/autoware_launch/config/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner">configuration files</a> are organized in a hierarchical directory structure for ease of navigation and management. Each subdirectory contains specific configuration files relevant to its module. The root directory holds general configuration files that apply to the overall behavior of the planner. The following is an overview of the directory structure with the respective configuration files.</p>
-<p><code>text
-behavior_path_planner
+<div class="highlight"><pre><span></span><code>behavior_path_planner
 ├── behavior_path_planner.param.yaml
 ├── drivable_area_expansion.param.yaml
 ├── scene_module_manager.param.yaml
@@ -23363,17 +23362,18 @@ behavior_path_planner
 ├── side_shift
 │   └── side_shift.param.yaml
 └── start_planner
-    └── start_planner.param.yaml</code></p>
+    └── start_planner.param.yaml
+</code></pre></div>
 <p>Similarly, the <a href="https://github.com/autowarefoundation/autoware_launch/tree/main/autoware_launch/config/planning/scenario_planning/common">common</a> directory contains configuration files that are used across various modules, providing shared parameters and settings essential for the functioning of the Behavior Path Planner:</p>
-<p><code>text
-common
+<div class="highlight"><pre><span></span><code>common
 ├── common.param.yaml
 ├── costmap_generator.param.yaml
-└── nearest_search.param.yaml</code></p>
+└── nearest_search.param.yaml
+</code></pre></div>
 <p>The <a href="https://github.com/autowarefoundation/autoware_launch/tree/main/autoware_launch/config/planning/preset">preset</a> directory contains the configurations for managing the operational state of various modules. It includes the default_preset.yaml file, which specifically caters to enabling and disabling modules within the system.</p>
-<p><code>text
-preset
-└── default_preset.yaml</code></p>
+<div class="highlight"><pre><span></span><code>preset
+└── default_preset.yaml
+</code></pre></div>
 <h2 id="limitations-future-work">Limitations &amp; Future Work<a class="headerlink" href="#limitations-future-work" title="Permanent link">#</a></h2>
 <ol>
 <li>The Goal Planner module cannot be simultaneously executed together with other modules.</li>

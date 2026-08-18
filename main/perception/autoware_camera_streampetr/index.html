@@ -22966,8 +22966,7 @@
 <p>This package implements a TensorRT powered inference node for StreamPETR [1]. This is the first camera-only 3D object detection node in autoware.</p>
 <p>This node has been optimized for multi-camera systems where the camera topics are published in a sequential manner, not all at once. The node takes
 advantage of this by preprocessing (resize, crop, normalize) the images and storing them appropriately on GPU, so that delay due to preprocessing can be minimized.</p>
-<p>```pgsql</p>
-<p>Topic for image_i arrived                                     -------------------------
+<div class="highlight"><pre><span></span><code>Topic for image_i arrived                                     -------------------------
   |                                                                                   |
   |                                                                                   |
   |                                                                                   |
@@ -22990,13 +22989,13 @@ Preprocess image (scale &amp; crop ROI &amp; normalize)                         
 Store in GPU memory binding location for model input                                  |
   |                                                          -------------------------|
   v                                                                                   |
-Is image the <code>anchor_image</code>?                                                          |
+Is image the `anchor_image`?                                                          |
   |                \                                                                  |
   |                 \                                                                 |
 No                  Yes                                                               |
   |                  |                                                                |
   v                  v                                                                | If multithreading is on
-(Wait)     Are all images synced within <code>max_time_difference</code>?                        | image Updates are temporarily frozen
+(Wait)     Are all images synced within `max_time_difference`?                        | image Updates are temporarily frozen
                       |                           \                                   | until this part completes.
                       |                            \                                  |
                     Yes                             No                                |
@@ -23008,8 +23007,8 @@ No                  Yes                                                         
          Postprocess (NMS + ROS2 format)                                              |
                       |                                                               |
                       v                                                               |
-             Publish predictions                             -------------------------|</p>
-<p>```</p>
+             Publish predictions                             -------------------------|
+</code></pre></div>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -23023,8 +23022,8 @@ No                  Yes                                                         
 <tbody>
 <tr>
 <td><code>~/input/camera*/image</code></td>
-<td><code>sensor_msgs::msg::Image</code> or <code>sensor_msgs::msg::CompressedImage</code></td>
-<td>Input image topics (supports both compressed and uncompressed).</td>
+<td><code>sensor_msgs::msg::Image</code></td>
+<td>Input image topics, subscribed via <code>image_transport</code> (<code>raw</code> or <code>compressed</code> transport, selected by <code>is_compressed_image</code>).</td>
 </tr>
 <tr>
 <td><code>~/input/camera*/camera_info</code></td>
@@ -23128,7 +23127,7 @@ No                  Yes                                                         
 <p>Masking the area of the ego vehicle in order to reduce FP caused by reflection. Configure via <strong>launch</strong> or <code>camera_streampetr.param.yaml</code>, not <code>tensorrt_stream_petr.param.yaml</code> (model/post-process only).</p>
 <ul>
 <li><code>ego_mask.enabled</code>: Enable masking (default: <code>false</code>)</li>
-<li><code>ego_mask.fill_value_bgr</code>: BGR fill inside polygons, 0–255 (default: <code>[0, 0, 0]</code>)</li>
+<li><code>ego_mask.fill_value_rgb</code>: RGB fill inside polygons, 0–255 (default: <code>[0, 0, 0]</code>)</li>
 <li><code>ego_mask.roi_polygons_yaml</code>: One YAML path per model ROI index; empty string disables that ROI.</li>
 </ul>
 <p>Example polygon files: <code>config/camera9_polygons.yaml</code>, <code>config/camera10_polygons.yaml</code>.</p>
@@ -23137,7 +23136,7 @@ No                  Yes                                                         
 <ul>
 <li><code>max_camera_time_diff</code>: Maximum allowed time difference between cameras (seconds)</li>
 <li><code>rois_number</code>: Number of camera ROIs/cameras (default: 6)</li>
-<li><code>is_compressed_image</code>: Whether input images are compressed</li>
+<li><code>is_compressed_image</code>: Whether to subscribe with the <code>compressed</code> image transport instead of <code>raw</code></li>
 <li><code>is_distorted_image</code>: Whether input images are distorted</li>
 <li><code>multithreading</code>: Whether to use multithreading for handling image callbacks</li>
 <li><code>anchor_camera_id</code>: ID of the anchor camera for synchronization (default: 0)</li>
@@ -23146,12 +23145,12 @@ No                  Yes                                                         
 </ul>
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_camera_streampetr</code> node has a <code>build_only</code> option to build the TensorRT engine files from the specified ONNX files, after which the program exits.</p>
-<p><code>bash
-ros2 launch autoware_camera_streampetr tensorrt_stream_petr.launch.xml build_only:=true</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_camera_streampetr<span class="w"> </span>tensorrt_stream_petr.launch.xml<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
 <h3 id="the-log_level-option">The <code>log_level</code> option<a class="headerlink" href="#the-log_level-option" title="Permanent link">#</a></h3>
 <p>The default logging severity level for <code>autoware_camera_streampetr</code> is <code>info</code>. For debugging purposes, the developer may decrease severity level using <code>log_level</code> parameter:</p>
-<p><code>bash
-ros2 launch autoware_camera_streampetr tensorrt_stream_petr.launch.xml log_level:=debug</code></p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_camera_streampetr<span class="w"> </span>tensorrt_stream_petr.launch.xml<span class="w"> </span>log_level:<span class="o">=</span>debug
+</code></pre></div>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>This node is camera-only and does not require pointcloud input. It assumes:</p>
 <ul>

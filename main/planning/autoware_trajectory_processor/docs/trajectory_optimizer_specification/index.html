@@ -22826,15 +22826,15 @@ the QP solver will silently compute wrong velocities and accelerations.</p>
 <h2 id="how-velocity-and-acceleration-are-computed">How Velocity and Acceleration Are Computed<a class="headerlink" href="#how-velocity-and-acceleration-are-computed" title="Permanent link">#</a></h2>
 <p>After the QP smoother adjusts point positions, the output kinematics are derived as follows:</p>
 <p><strong>Velocity</strong> (second pass, <code>post_process_trajectory</code>):</p>
-<p><code>text
-v[i] = || p[i] - p[i-1] || / dt        (for i &gt;= 1)
-v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)</code></p>
+<div class="highlight"><pre><span></span><code>v[i] = || p[i] - p[i-1] || / dt        (for i &gt;= 1)
+v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)
+</code></pre></div>
 <p>A 3-point moving average is then applied starting at index 0, which overwrites v[0] with
 <code>(v_input[0] + v_geom[1] + v_geom[2]) / 3</code>. v[0] is therefore not purely preserved - it is
 blended with the geometric velocities of the next two points.</p>
 <p><strong>Acceleration</strong> (fourth pass, <code>recalculate_longitudinal_acceleration</code>):</p>
-<p><code>text
-a[i] = (v[i+1] - v[i]) / dt</code></p>
+<div class="highlight"><pre><span></span><code>a[i] = (v[i+1] - v[i]) / dt
+</code></pre></div>
 <p>The last point gets <code>0.0</code> (explicitly zeroed).</p>
 <p><strong>Consequences:</strong></p>
 <ul>
@@ -22852,8 +22852,7 @@ a[i] = (v[i+1] - v[i]) / dt</code></p>
 <h3 id="default-pipeline">Default Pipeline<a class="headerlink" href="#default-pipeline" title="Permanent link">#</a></h3>
 <p>The full <code>plugin_names</code> list (from <code>config/trajectory_optimizer.param.yaml</code>) and each plugin's
 enabled state:</p>
-<p><code>text
-TrajectoryPointFixer                      [ON]
+<div class="highlight"><pre><span></span><code>TrajectoryPointFixer                      [ON]
 TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- first pass, before QP
 TrajectoryQPSmoother                      [ON]
 TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- second pass, after QP
@@ -22861,7 +22860,8 @@ TrajectoryEBSmootherOptimizer             [OFF]
 TrajectorySplineSmoother                  [ON]
 TrajectoryMPTOptimizer                    [OFF]
 TrajectoryVelocityOptimizer               [ON]
-TrajectoryExtender                        [OFF]</code></p>
+TrajectoryExtender                        [OFF]
+</code></pre></div>
 <p>Note that <code>TrajectoryKinematicFeasibilityEnforcer</code> is listed twice in <code>plugin_names</code> and runs
 both before and after the QP smoother. Each pass is a separate plugin instance operating
 independently.</p>
@@ -22889,8 +22889,8 @@ geometric clusters exist.</p>
 <h4 id="trajectorykinematicfeasibilityenforcer-enabled-runs-twice">TrajectoryKinematicFeasibilityEnforcer (enabled, runs twice)<a class="headerlink" href="#trajectorykinematicfeasibilityenforcer-enabled-runs-twice" title="Permanent link">#</a></h4>
 <p>Forward-propagating filter that clamps heading changes at each trajectory segment to respect
 Ackermann steering geometry and a maximum yaw rate limit. At each step:</p>
-<p><code>text
-delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)</code></p>
+<div class="highlight"><pre><span></span><code>delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)
+</code></pre></div>
 <p>where <code>kappa_max = tan(delta_max) / L</code>, <code>s</code> is the segment arc length, and <code>avg_dt</code> is a single
 average time step computed from all <code>time_from_start</code> deltas in the input trajectory (fallback:
 0.1 s). The same <code>avg_dt</code> is used for every segment - per-segment dt is not recomputed from
@@ -23029,8 +23029,8 @@ output. Each output point corresponds directly to an input point. Deviations are
 bounded by the fidelity weight.</p>
 <p>Arc-length resampling also has a concrete technical incompatibility with the QP smoother. The
 curvature penalty term:</p>
-<p><code>text
-J_smooth = weight_smoothness / dt^2 * sum || p[i+1] - 2*p[i] + p[i-1] ||^2</code></p>
+<div class="highlight"><pre><span></span><code>J_smooth = weight_smoothness / dt^2 * sum || p[i+1] - 2*p[i] + p[i-1] ||^2
+</code></pre></div>
 <p>is a second-order finite difference approximation of acceleration, valid only when consecutive
 points are separated by a constant time interval <code>dt</code>. After arc-length resampling, points are
 separated by a constant spatial interval <code>ds</code> instead. The QP smoother has no way to detect
@@ -23045,8 +23045,8 @@ Any plugin that arc-length resamples before the QP smoother has no place in this
 <h2 id="orientation-handling">Orientation Handling<a class="headerlink" href="#orientation-handling" title="Permanent link">#</a></h2>
 <p>Orientations are not optimized directly by any plugin. They are recomputed from path geometry
 after position changes:</p>
-<p><code>text
-yaw[i] = atan2(y[i+1] - y[i], x[i+1] - x[i])</code></p>
+<div class="highlight"><pre><span></span><code>yaw[i] = atan2(y[i+1] - y[i], x[i+1] - x[i])
+</code></pre></div>
 <p>Both the QP smoother and the spline smoother offer <code>preserve_input_trajectory_orientation</code>, which
 copies orientations from the original input via nearest-neighbor matching instead of computing
 them from the smoothed geometry. This option is <strong>disabled by default in both plugins</strong>, so

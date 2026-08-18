@@ -22781,6 +22781,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -22849,30 +22860,30 @@ the container.</p>
 </table>
 <h2 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">#</a></h2>
 <p>Add it as a composable node in your launch file:</p>
-<p>```xml</p>
-<p><launch>
-<br>
-<group>
-    <push-ros-namespace namespace="your_namespace"></push-ros-namespace>
-    ...
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;launch&gt;</span>
+<span class="w">  </span><span class="nt">&lt;group&gt;</span>
+<span class="w">    </span><span class="nt">&lt;push-ros-namespace</span><span class="w"> </span><span class="na">namespace=</span><span class="s">"your_namespace"</span><span class="nt">/&gt;</span>
+<span class="w">    </span>...
 
-    <load_composable_node target="$(var container_name)">
-      <composable_node pkg="autoware_component_monitor" plugin="autoware::component_monitor::ComponentMonitor" name="component_monitor">
-        <param from="$(find-pkg-share autoware_component_monitor)/config/component_monitor.param.yaml">
-      </composable_node>
-    </load_composable_node>
+<span class="w">    </span><span class="nt">&lt;load_composable_node</span><span class="w"> </span><span class="na">target=</span><span class="s">"$(var container_name)"</span><span class="nt">&gt;</span>
+<span class="w">      </span><span class="nt">&lt;composable_node</span><span class="w"> </span><span class="na">pkg=</span><span class="s">"autoware_component_monitor"</span>
+<span class="w">                       </span><span class="na">plugin=</span><span class="s">"autoware::component_monitor::ComponentMonitor"</span>
+<span class="w">                       </span><span class="na">name=</span><span class="s">"component_monitor"</span><span class="nt">&gt;</span>
+<span class="w">        </span><span class="nt">&lt;param</span><span class="w"> </span><span class="na">from=</span><span class="s">"$(find-pkg-share autoware_component_monitor)/config/component_monitor.param.yaml"</span><span class="nt">/&gt;</span>
+<span class="w">      </span><span class="nt">&lt;/composable_node&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/load_composable_node&gt;</span>
 
-    ...
-  </group></launch></p>
-<p>
-```</p>
+<span class="w">    </span>...
+<span class="w">  </span><span class="nt">&lt;/group&gt;</span>
+<span class="nt">&lt;/launch&gt;</span>
+</code></pre></div>
 <h3 id="quick-testing">Quick testing<a class="headerlink" href="#quick-testing" title="Permanent link">#</a></h3>
 <p>You can test the package by running the following command:</p>
-<p>```bash
-ros2 component load <container_name> autoware_component_monitor autoware::component_monitor::ComponentMonitor -p publish_rate:=10.0 --node-namespace <namespace></namespace></container_name></p>
-<h1 id="example-usage">Example usage<a class="headerlink" href="#example-usage" title="Permanent link">#</a></h1>
-<p>ros2 component load /pointcloud_container autoware_component_monitor autoware::component_monitor::ComponentMonitor -p publish_rate:=10.0 --node-namespace /pointcloud_container
-```</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>component<span class="w"> </span>load<span class="w"> </span>&lt;container_name&gt;<span class="w"> </span>autoware_component_monitor<span class="w"> </span>autoware::component_monitor::ComponentMonitor<span class="w"> </span>-p<span class="w"> </span>publish_rate:<span class="o">=</span><span class="m">10</span>.0<span class="w"> </span>--node-namespace<span class="w"> </span>&lt;namespace&gt;
+
+<span class="c1"># Example usage</span>
+ros2<span class="w"> </span>component<span class="w"> </span>load<span class="w"> </span>/pointcloud_container<span class="w"> </span>autoware_component_monitor<span class="w"> </span>autoware::component_monitor::ComponentMonitor<span class="w"> </span>-p<span class="w"> </span>publish_rate:<span class="o">=</span><span class="m">10</span>.0<span class="w"> </span>--node-namespace<span class="w"> </span>/pointcloud_container
+</code></pre></div>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">#</a></h2>
 <p>The package uses the <code>top</code> command under the hood.
 <code>top -b -n 1 -E k -p PID</code> command is run at 10 Hz to get the system usage of the process.</p>
@@ -22884,17 +22895,15 @@ ros2 component load <container_name> autoware_component_monitor autoware::compon
 <li><code>-E k</code> changes the memory unit in the summary section to KiB.</li>
 </ul>
 <p>Here is a sample output:</p>
-<p>```text
-top - 13:57:26 up  3:14,  1 user,  load average: 1,09, 1,10, 1,04
+<div class="highlight"><pre><span></span><code>top - 13:57:26 up  3:14,  1 user,  load average: 1,09, 1,10, 1,04
 Tasks:   1 total,   0 running,   1 sleeping,   0 stopped,   0 zombie
 %Cpu(s):  0,0 us,  0,8 sy,  0,0 ni, 99,2 id,  0,0 wa,  0,0 hi,  0,0 si,  0,0 st
 KiB Mem : 65532208 total, 35117428 free, 17669824 used, 12744956 buff/cache
-KiB Swap: 39062524 total, 39062524 free,        0 used. 45520816 avail Mem</p>
-<div class="codehilite"><pre><span></span><code>PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
-</code></pre></div>
+KiB Swap: 39062524 total, 39062524 free,        0 used. 45520816 avail Mem
 
-<p>3352 meb       20   0 2905940   1,2g  39292 S   0,0   2,0  23:24.01 awesome
-```</p>
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   3352 meb       20   0 2905940   1,2g  39292 S   0,0   2,0  23:24.01 awesome
+</code></pre></div>
 <p>We get 5th, 8th fields from the last line, which are RES, %CPU respectively.</p></div>
 
 

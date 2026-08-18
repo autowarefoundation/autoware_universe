@@ -23301,22 +23301,20 @@ This is to avoid redundant decompression within Autoware.</p>
 Some nodes requires `/tf_static` from `/base_link` to the frame_id of `/sensing/camera/traffic_light/image_raw/compressed` (e.g. `/traffic_light_left_camera/camera_optical_link`).
 You can verify that the tf_static is correct with the following command.
 
-```shell
-ros2 run tf2_ros tf2_echo base_link traffic_light_left_camera/camera_optical_link
-```
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>tf2_ros<span class="w"> </span>tf2_echo<span class="w"> </span>base_link<span class="w"> </span>traffic_light_left_camera/camera_optical_link
+</code></pre></div>
 
 If the wrong `/tf_static` are broadcasted due to using a prototype vehicle, not having accurate calibration data, or some other unavoidable reason, it is useful to give the frame_id in `override_camera_frame_id`.
 If you give it a non-empty string, `/image_processing/undistort_node` will rewrite the frame_id in camera_info.
 For example, you can give a different tf_static as follows.
 
-```shell
-ros2 launch yabloc_launch sample_launch.xml override_camera_frame_id:=fake_camera_optical_link
-ros2 run tf2_ros static_transform_publisher \
-  --frame-id base_link \
-  --child-frame-id fake_camera_optical_link \
-  --roll -1.57 \
-  --yaw -1.570
-```
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>yabloc_launch<span class="w"> </span>sample_launch.xml<span class="w"> </span>override_camera_frame_id:<span class="o">=</span>fake_camera_optical_link
+ros2<span class="w"> </span>run<span class="w"> </span>tf2_ros<span class="w"> </span>static_transform_publisher<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--frame-id<span class="w"> </span>base_link<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--child-frame-id<span class="w"> </span>fake_camera_optical_link<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--roll<span class="w"> </span>-1.57<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--yaw<span class="w"> </span>-1.570
+</code></pre></div>
 
 </div></details>
 
