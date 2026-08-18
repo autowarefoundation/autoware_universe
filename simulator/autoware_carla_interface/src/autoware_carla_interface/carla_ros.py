@@ -708,6 +708,11 @@ class carla_ros2_interface(object):
                 return  # Skip if vehicle not initialized yet
 
             steer_curve = self.physics_control.steering_curve
+            # numpy.interp requires the sample x-coordinates to be increasing.
+            # CARLA 0.10 can return the steering-curve points out of order,
+            # so sort by x before interpolating. On 0.9.x the curve is already
+            # sorted, making this a no-op.
+            steer_curve = sorted(steer_curve, key=lambda v: v.x)
             current_vel = self.ego_actor.get_velocity()
             max_steer_ratio = numpy.interp(
                 abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
