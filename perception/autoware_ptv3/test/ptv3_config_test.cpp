@@ -94,9 +94,10 @@ TEST(PTv3ConfigTest, BuildsClassificationLutInClassNameOrder)
 {
   using autoware::point_types::PointCloudClassification;
 
+  // Keep the remap order different from class_names to verify that the LUT follows class_names.
   const auto config = makeSegmentationConfig(
     {"car", "traffic_cone", "drivable_flat"},
-    {{"car", "CAR"}, {"traffic_cone", "HAZARD"}, {"drivable_flat", "FLAT_SURFACE"}});
+    {{"drivable_flat", "FLAT_SURFACE"}, {"car", "CAR"}, {"traffic_cone", "HAZARD"}});
 
   ASSERT_EQ(config.class_id_to_classification_.size(), 3U);
   EXPECT_EQ(
