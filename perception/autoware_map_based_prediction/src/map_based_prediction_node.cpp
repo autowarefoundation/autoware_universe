@@ -51,24 +51,15 @@ const std::vector<std::pair<ObjectClassification::_label_type, std::string>> obj
   {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
   {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
 
-/// @brief Get the deceleration defined for a specific object class, or the base value if it was
-/// not specified.
-double get_object_deceleration(
-  autoware::agnocast_wrapper::Node & node, const std::string & ns, const std::string & object_label)
-{
-  try {
-    return get_or_declare_parameter<double>(node, ns + object_label);
-  } catch (const std::exception &) {
-    return get_or_declare_parameter<double>(node, ns + "base");
-  }
-}
-
+/// @brief Declare the deceleration of every object class, defaulting to the base value for the
+/// classes the parameter file does not list.
 utils::ObjectDecelerationParams declare_object_deceleration_params(
   autoware::agnocast_wrapper::Node & node, const std::string & ns)
 {
+  const double base = get_or_declare_parameter<double>(node, ns + "base");
   utils::ObjectDecelerationParams params;
   for (const auto & [label, object_label] : object_label_names) {
-    params.per_label.emplace(label, get_object_deceleration(node, ns, object_label));
+    params.per_label.emplace(label, node.declare_parameter<double>(ns + object_label, base));
   }
   return params;
 }
