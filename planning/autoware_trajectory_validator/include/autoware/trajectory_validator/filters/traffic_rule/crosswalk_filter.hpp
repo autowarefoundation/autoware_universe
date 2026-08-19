@@ -25,6 +25,7 @@
 #include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
+#include <array>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -57,14 +58,18 @@ struct TargetCrosswalk
   CrosswalkOnTrajectory crosswalk_info;
   lanelet::BasicPolygon2d crosswalk_polygon;
   lanelet::BasicPolygons2d detection_areas;
+  /// Sidewalk-side entry edges (left↔right at each end of the crosswalk lanelet).
+  std::array<lanelet::BasicSegment2d, 2> entry_edges;
   bool is_crossing{false};
 
   TargetCrosswalk(
     const CrosswalkOnTrajectory & crosswalk_info, const lanelet::BasicPolygon2d & crosswalk_polygon,
-    const lanelet::BasicPolygons2d & detection_areas, const bool is_crossing)
+    const lanelet::BasicPolygons2d & detection_areas,
+    const std::array<lanelet::BasicSegment2d, 2> & entry_edges, const bool is_crossing)
   : crosswalk_info(crosswalk_info),
     crosswalk_polygon(crosswalk_polygon),
     detection_areas(detection_areas),
+    entry_edges(entry_edges),
     is_crossing(is_crossing)
   {
   }

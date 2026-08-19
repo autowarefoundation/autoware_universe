@@ -16,11 +16,13 @@
 
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_perception_msgs/msg/predicted_path.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 
 #include <gtest/gtest.h>
@@ -30,8 +32,10 @@
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 using autoware::trajectory_validator::FilterContext;
@@ -39,13 +43,19 @@ using autoware::trajectory_validator::plugin::traffic_rule::CrosswalkFilter;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_perception_msgs::msg::PredictedPath;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils_geometry::create_quaternion_from_yaw;
 
 namespace
 {
 constexpr double k_stop_line_x = 10.0;
 constexpr double k_far_stop_line_x = 150.0;
 constexpr double k_stop_duration = 1.0;
+// South sidewalk detection end-cap (see create_and_set_map_with_crosswalk).
+constexpr double k_south_detection_y = -7.0;
+// Object-frame forward speed used for toward/away gates.
+constexpr float k_object_speed = 1.0f;
 }  // namespace
 
 class CrosswalkFilterTest : public ::testing::Test
@@ -173,13 +183,15 @@ protected:
     context_.route = route;
   }
 
-  static PredictedObject make_pedestrian(const double x, const double y)
+  static PredictedObject make_pedestrian(
+    const double x, const double y, const double yaw = 0.0, const float twist_x = 0.0f)
   {
     PredictedObject obj;
     obj.object_id = autoware_utils_uuid::generate_uuid();
     obj.kinematics.initial_pose_with_covariance.pose.position.x = x;
     obj.kinematics.initial_pose_with_covariance.pose.position.y = y;
-    obj.kinematics.initial_pose_with_covariance.pose.orientation.w = 1.0;
+    obj.kinematics.initial_pose_with_covariance.pose.orientation = create_quaternion_from_yaw(yaw);
+    obj.kinematics.initial_twist_with_covariance.twist.linear.x = twist_x;
     obj.shape.type = autoware_perception_msgs::msg::Shape::CYLINDER;
     obj.shape.dimensions.x = 0.5;
     obj.shape.dimensions.y = 0.5;
@@ -189,6 +201,22 @@ protected:
     obj.classification.front().probability = 1.0f;
     obj.existence_probability = 1.0f;
     return obj;
+  }
+
+  static PredictedPath make_predicted_path(
+    const std::vector<std::pair<double, double>> & xy_points, const float confidence)
+  {
+    PredictedPath path;
+    path.confidence = confidence;
+    path.time_step = rclcpp::Duration::from_seconds(0.1);
+    for (const auto & [x, y] : xy_points) {
+      geometry_msgs::msg::Pose pose;
+      pose.position.x = x;
+      pose.position.y = y;
+      pose.orientation.w = 1.0;
+      path.path.push_back(pose);
+    }
+    return path;
   }
 
   void set_pedestrians(const std::vector<PredictedObject> & pedestrians)
@@ -351,4 +379,100 @@ TEST_F(CrosswalkFilterTest, NewTargetObjectExtendsStopDuration)
   set_pedestrians({first_object, second_object});
   expect_feasibility(
     traj, true, "should become feasible after waiting stop_duration for the newer object");
+}
+
+TEST_F(CrosswalkFilterTest, MovingAwayWithoutPredictedPathIsIgnored)
+{
+  create_and_set_map_with_crosswalk(k_stop_line_x);
+  set_odometry(5.0f, node_->now());
+
+  // South detection area: facing -Y (away from the crosswalk entry).
+  set_pedestrians({make_pedestrian(k_stop_line_x, k_south_detection_y, -M_PI_2, k_object_speed)});
+
+  expect_feasibility(
+    create_trajectory(0.0, 80.0, 5.0f), true,
+    "object moving away from the crosswalk with no predicted path should not be a target");
+}
+
+TEST_F(CrosswalkFilterTest, MovingTowardWithoutPredictedPathIsTarget)
+{
+  create_and_set_map_with_crosswalk(k_stop_line_x);
+  set_odometry(5.0f, node_->now());
+
+  // South detection area: facing +Y (toward the crosswalk entry).
+  set_pedestrians({make_pedestrian(k_stop_line_x, k_south_detection_y, M_PI_2, k_object_speed)});
+
+  expect_feasibility(
+    create_trajectory(0.0, 80.0, 5.0f), false,
+    "object moving toward the crosswalk with no predicted path should be a target");
+}
+
+TEST_F(CrosswalkFilterTest, HighConfidencePathThroughCrosswalkIsTarget)
+{
+  create_and_set_map_with_crosswalk(k_stop_line_x);
+  set_odometry(5.0f, node_->now());
+
+  // Velocity points away, but a high-confidence path crosses the crosswalk polygon.
+  auto obj = make_pedestrian(k_stop_line_x, k_south_detection_y, -M_PI_2, k_object_speed);
+  obj.kinematics.predicted_paths.push_back(make_predicted_path(
+    {{k_stop_line_x, k_south_detection_y}, {k_stop_line_x, 0.0}, {k_stop_line_x, 3.0}}, 0.9f));
+  set_pedestrians({obj});
+
+  expect_feasibility(
+    create_trajectory(0.0, 80.0, 5.0f), false,
+    "high-confidence predicted path through the crosswalk should keep the object as a target");
+}
+
+TEST_F(CrosswalkFilterTest, HighConfidencePathAwayFromCrosswalkIsIgnored)
+{
+  create_and_set_map_with_crosswalk(k_stop_line_x);
+  set_odometry(5.0f, node_->now());
+
+  // Still inside the detection area, but the predicted path never enters the crosswalk.
+  auto obj = make_pedestrian(k_stop_line_x, k_south_detection_y, M_PI_2, k_object_speed);
+  obj.kinematics.predicted_paths.push_back(make_predicted_path(
+    {{k_stop_line_x, k_south_detection_y}, {k_stop_line_x, -9.0}, {k_stop_line_x, -12.0}}, 0.9f));
+  set_pedestrians({obj});
+
+  expect_feasibility(
+    create_trajectory(0.0, 80.0, 5.0f), true,
+    "high-confidence predicted path that misses the crosswalk should not be a target");
+}
+
+TEST_F(CrosswalkFilterTest, LowConfidencePathsFallBackToVelocityGate)
+{
+  create_and_set_map_with_crosswalk(k_stop_line_x);
+  set_odometry(5.0f, node_->now());
+
+  // Path would go through the crosswalk, but confidence is below the gate threshold.
+  auto away_obj = make_pedestrian(k_stop_line_x, k_south_detection_y, -M_PI_2, k_object_speed);
+  away_obj.kinematics.predicted_paths.push_back(
+    make_predicted_path({{k_stop_line_x, k_south_detection_y}, {k_stop_line_x, 0.0}}, 0.2f));
+  set_pedestrians({away_obj});
+
+  expect_feasibility(
+    create_trajectory(0.0, 80.0, 5.0f), true,
+    "low-confidence paths should fall back to velocity; moving away is ignored");
+
+  auto toward_obj = make_pedestrian(k_stop_line_x, k_south_detection_y, M_PI_2, k_object_speed);
+  toward_obj.kinematics.predicted_paths.push_back(
+    make_predicted_path({{k_stop_line_x, k_south_detection_y}, {k_stop_line_x, 0.0}}, 0.2f));
+  set_pedestrians({toward_obj});
+
+  expect_feasibility(
+    create_trajectory(0.0, 80.0, 5.0f), false,
+    "low-confidence paths should fall back to velocity; moving toward is a target");
+}
+
+TEST_F(CrosswalkFilterTest, StoppedObjectInDetectionAreaIsTarget)
+{
+  create_and_set_map_with_crosswalk(k_stop_line_x);
+  set_odometry(5.0f, node_->now());
+
+  // Explicitly stopped; no predicted paths.
+  set_pedestrians({make_pedestrian(k_stop_line_x, k_south_detection_y, 0.0, 0.0f)});
+
+  expect_feasibility(
+    create_trajectory(0.0, 80.0, 5.0f), false,
+    "stopped object in the detection area should remain a target");
 }

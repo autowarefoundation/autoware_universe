@@ -33,8 +33,10 @@
 
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Polygon.h>
+#include <tf2/utils.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
 #include <limits>
@@ -47,7 +49,9 @@
 
 namespace
 {
+using autoware::trajectory_validator::plugin::traffic_rule::TargetCrosswalk;
 using autoware_perception_msgs::msg::ObjectClassification;
+using autoware_perception_msgs::msg::PredictedObject;
 using autoware_utils_geometry::Line2d;
 
 ObjectClassification::_label_type to_classification_label(const std::string & label_str)
@@ -200,6 +204,97 @@ std::vector<CrosswalkOnTrajectory> filter_crosswalks_intersecting_trajectory(
   }
 
   return crosswalks_on_trajectory;
+}
+
+lanelet::BasicPoint2d closest_point_on_segment(
+  const lanelet::BasicPoint2d & point, const lanelet::BasicSegment2d & segment)
+{
+  const auto & p1 = segment.first;
+  const auto & p2 = segment.second;
+  const auto dir = p2 - p1;
+  const double length_sq = dir.squaredNorm();
+  if (length_sq < 1e-12) {
+    return p1;
+  }
+  const double t = std::clamp((point - p1).dot(dir) / length_sq, 0.0, 1.0);
+  return p1 + t * dir;
+}
+
+/// @brief Sidewalk-side entry edges of the crosswalk (left↔right at each end of the lanelet).
+std::array<lanelet::BasicSegment2d, 2> get_crosswalk_entry_edges(
+  const lanelet::CrosswalkConstPtr & crosswalk)
+{
+  const auto & crosswalk_lanelet = crosswalk->crosswalkLanelet();
+  const auto left = crosswalk_lanelet.leftBound2d();
+  const auto right = crosswalk_lanelet.rightBound2d();
+  return {
+    lanelet::BasicSegment2d{left.front().basicPoint2d(), right.front().basicPoint2d()},
+    lanelet::BasicSegment2d{left.back().basicPoint2d(), right.back().basicPoint2d()}};
+}
+
+/// @brief Closest point on either stored crosswalk entry edge to @p point.
+lanelet::BasicPoint2d closest_point_on_crosswalk_entries(
+  const lanelet::BasicPoint2d & point, const std::array<lanelet::BasicSegment2d, 2> & entry_edges)
+{
+  auto closest = closest_point_on_segment(point, entry_edges.front());
+  double min_dist_sq = (closest - point).squaredNorm();
+  for (size_t i = 1; i < entry_edges.size(); ++i) {
+    const auto candidate = closest_point_on_segment(point, entry_edges[i]);
+    const double dist_sq = (candidate - point).squaredNorm();
+    if (dist_sq < min_dist_sq) {
+      min_dist_sq = dist_sq;
+      closest = candidate;
+    }
+  }
+  return closest;
+}
+
+bool is_target_object(const PredictedObject & obj, const TargetCrosswalk & cw)
+{
+  // check if the object is inside the detection areas
+  auto is_inside_detection_areas = [&]() {
+    const auto & obj_position = obj.kinematics.initial_pose_with_covariance.pose.position;
+    lanelet::BasicPoint2d obj_point(obj_position.x, obj_position.y);
+    return std::any_of(
+      cw.detection_areas.begin(), cw.detection_areas.end(),
+      [&](const auto & area) { return lanelet::geometry::distance2d(area, obj_point) < 1e-3; });
+  }();
+  if (!is_inside_detection_areas) return false;
+
+  // check if the object has a high confidence path through the crosswalk
+  static constexpr double confidence_threshold = 0.5;
+  auto has_high_confidence_path = std::any_of(
+    obj.kinematics.predicted_paths.begin(), obj.kinematics.predicted_paths.end(),
+    [&](const auto & path) { return path.confidence >= confidence_threshold; });
+
+  if (has_high_confidence_path) {
+    for (const auto & path : obj.kinematics.predicted_paths) {
+      if (path.confidence < confidence_threshold) continue;
+      for (const auto & p : path.path) {
+        const auto p_point = lanelet::BasicPoint2d(p.position.x, p.position.y);
+        if (!boost::geometry::disjoint(cw.crosswalk_polygon, p_point)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // static objects are always target objects
+  const auto obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
+  if (std::abs(obj_speed) < 0.1) return true;
+
+  // check if the object is moving toward the crosswalk
+  const auto & pose = obj.kinematics.initial_pose_with_covariance.pose;
+  const auto & twist = obj.kinematics.initial_twist_with_covariance.twist.linear;
+  const lanelet::BasicPoint2d obj_pos(pose.position.x, pose.position.y);
+
+  const Eigen::Rotation2Dd obj_rot(tf2::getYaw(pose.orientation));
+  const auto obj_vel_vector = obj_rot * Eigen::Vector2d(twist.x, twist.y);
+
+  const auto closest_entry_point = closest_point_on_crosswalk_entries(obj_pos, cw.entry_edges);
+  const auto to_entry = closest_entry_point - obj_pos;
+  return obj_vel_vector.dot(to_entry) > 0.0;
 }
 
 }  // namespace
@@ -358,7 +453,7 @@ std::vector<TargetCrosswalk> CrosswalkFilter::get_target_crosswalks(
     target_crosswalks.emplace_back(
       cw, crosswalk_polygon,
       get_detection_areas(cw.crosswalk, params_.lon_detection_margin, params_.lat_detection_margin),
-      is_crossing);
+      get_crosswalk_entry_edges(cw.crosswalk), is_crossing);
   }
 
   return target_crosswalks;
@@ -435,20 +530,10 @@ void CrosswalkFilter::update_target_objects(
       cw_objects.end());
   };
 
-  auto is_inside_detection_areas =
-    [&](const PredictedObject & obj, const lanelet::BasicPolygons2d & detection_areas) {
-      const auto obj_position = obj.kinematics.initial_pose_with_covariance.pose.position;
-      lanelet::BasicPoint2d obj_point(obj_position.x, obj_position.y);
-      return std::any_of(detection_areas.begin(), detection_areas.end(), [&](const auto & area) {
-        return lanelet::geometry::distance2d(area, obj_point) < 1e-3;
-      });
-    };
-
   for (const auto & cw : target_crosswalks) {
-    auto detection_areas = cw.detection_areas;
     bool is_ego_stopped_at_cw = is_stopped_at_crosswalk(cw);
     for (const auto & object : objects) {
-      if (!is_inside_detection_areas(object, detection_areas)) continue;
+      if (!is_target_object(object, cw)) continue;
       update_object(object, cw.crosswalk_info.crosswalk->id(), is_ego_stopped_at_cw);
     }
     clear_old_objects(cw.crosswalk_info.crosswalk->id());
