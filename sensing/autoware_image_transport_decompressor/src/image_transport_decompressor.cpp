@@ -75,7 +75,8 @@ DecompressResult decompress(
   // Copy message header
   cv_image.header = compressed_image.header;
 
-  // Decode color/mono image
+  // Decode the image. cv::IMREAD_COLOR makes it 8-bit with three channels in BGR order, whatever
+  // the depth and the channel count of the compressed stream are.
   try {
     cv_image.image = cv::imdecode(cv::Mat(compressed_image.data), cv::IMREAD_COLOR);
 
@@ -83,19 +84,7 @@ DecompressResult decompress(
     const size_t split_pos = compressed_image.format.find(';');
     if (split_pos == std::string::npos) {
       // Older version of compressed_image_transport does not signal image format
-      switch (cv_image.image.channels()) {
-        case 1:
-          cv_image.encoding = sensor_msgs::image_encodings::MONO8;
-          break;
-        case 3:
-          cv_image.encoding = sensor_msgs::image_encodings::BGR8;
-          break;
-        default:
-          result.severity = Severity::Error;
-          result.message =
-            "Unsupported number of channels: " + std::to_string(cv_image.image.channels());
-          break;
-      }
+      cv_image.encoding = sensor_msgs::image_encodings::BGR8;
     } else {
       std::string image_encoding;
       if (requested_encoding == std::string("rgb8")) {
@@ -120,38 +109,38 @@ DecompressResult decompress(
           if (
             (image_encoding == sensor_msgs::image_encodings::RGB8) ||
             (image_encoding == sensor_msgs::image_encodings::RGB16)) {
-            cv::cvtColor(cv_image.image, cv_image.image, CV_BGR2RGB);
+            cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_BGR2RGB);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
             (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-            cv::cvtColor(cv_image.image, cv_image.image, CV_BGR2RGBA);
+            cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_BGR2RGBA);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
             (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-            cv::cvtColor(cv_image.image, cv_image.image, CV_BGR2BGRA);
+            cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_BGR2BGRA);
           }
         } else {
           // if necessary convert colors from rgb to bgr
           if (
             (image_encoding == sensor_msgs::image_encodings::BGR8) ||
             (image_encoding == sensor_msgs::image_encodings::BGR16)) {
-            cv::cvtColor(cv_image.image, cv_image.image, CV_RGB2BGR);
+            cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_RGB2BGR);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
             (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-            cv::cvtColor(cv_image.image, cv_image.image, CV_RGB2BGRA);
+            cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_RGB2BGRA);
           }
 
           if (
             (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
             (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-            cv::cvtColor(cv_image.image, cv_image.image, CV_RGB2RGBA);
+            cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_RGB2RGBA);
           }
         }
       }
