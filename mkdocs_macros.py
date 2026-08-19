@@ -15,6 +15,11 @@ def format_param_type(param_type):
         return param_type
 
 
+def format_param_name(param_name):
+    # Names carry no space or hyphen: mark the separators as line-break opportunities.
+    return param_name.replace(".", ".<wbr>").replace("_", "_<wbr>")
+
+
 def format_param_range(param):
     list_of_range = []
     if "enum" in param.keys():
@@ -106,7 +111,7 @@ def extract_parameter_info(parameters, doc, base_dir, cache, namespace="", seen_
             )
         else:
             param = {}
-            param["Name"] = namespace + k
+            param["Name"] = format_param_name(namespace + k)
             param["Type"] = format_param_type(resolved.get("type", "N/A"))
             param["Description"] = resolved.get("description", "")
             param["Default"] = resolved.get("default", "")
