@@ -46,11 +46,11 @@ Note that these parameters are associated with ONNX file, predefined during the 
 
 These are given by the launch file and are not part of any parameter file.
 
-| Name          | Type   | Default Value       | Description                                                                            |
-| ------------- | ------ | ------------------- | -------------------------------------------------------------------------------------- |
-| `model_path`  | string | `""`                | directory containing the model artifacts; relative manifest entries resolve against it |
-| `build_only`  | bool   | `false`             | shutdown the node after TensorRT engine file is built                                  |
-| `logger_name` | string | `lidar_centerpoint` | logger name used for the node logs and debug topics                                    |
+| Name          | Type   | Default Value                             | Description                                                                            |
+| ------------- | ------ | ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `model_path`  | string | `$(var data_path)/lidar_centerpoint/base` | directory containing the model artifacts; relative manifest entries resolve against it |
+| `build_only`  | bool   | `false`                                   | shutdown the node after TensorRT engine file is built                                  |
+| `logger_name` | string | `lidar_centerpoint`                       | logger name used for the node logs and debug topics                                    |
 
 ### The `build_only` option
 
@@ -83,7 +83,7 @@ lidar_centerpoint/
 
 Every variant folder contains the same file set: `pts_voxel_encoder.onnx`, `pts_backbone_neck_head.onnx`, `ml_package.param.yaml` and `detection_class_remapper.param.yaml`. TensorRT engine files are built locally into the variant folder on first launch (or via `build_only:=true`).
 
-`ml_package.param.yaml` declares the bundle version. The node reads major version 4 from minor version 1 upward and aborts otherwise, so a version error means the bundle has to be refreshed with the ansible artifacts role of the [autoware](https://github.com/autowarefoundation/autoware) repository.
+`ml_package.param.yaml` declares the bundle version. The node reads major version 4 from minor version 1 upward and aborts otherwise, so a version error means the bundle has to be refreshed with the ansible artifacts role of the [autoware](https://github.com/autowarefoundation/autoware) repository. A minor bump can add manifest entries the node requires.
 
 `Centerpoint` was trained in `nuScenes` (~28k lidar frames) [8] and TIER IV's internal database (~11k lidar frames) for 60 epochs.
 `Centerpoint tiny` was trained in `Argoverse 2` (~110k lidar frames) [9] and TIER IV's internal database (~11k lidar frames) for 20 epochs.
@@ -255,7 +255,7 @@ python projects/AutowareCenterPoint/centerpoint_onnx_converter.py --cfg projects
 #### Create the ml_package file for the custom model
 
 Rename the exported ONNX files to `pts_voxel_encoder.onnx` and `pts_backbone_neck_head.onnx`, and create a **ml_package.param.yaml** next to them. Set the model parameters like
-point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file.
+point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file. The [ML Model Parameters](#ml-model-parameters) table lists every entry with its default; `version` has to be declared as well, or the node aborts at startup.
 
 #### Launch the lidar_centerpoint node
 

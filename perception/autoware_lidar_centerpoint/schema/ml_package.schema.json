@@ -8,7 +8,7 @@
       "properties": {
         "version": {
           "type": "string",
-          "description": "Model bundle version. The node reads major version 4 from minor version 1 upward.",
+          "description": "Model bundle version. The node reads major version 4 from minor version 1 upward; a minor bump may add manifest entries the node requires.",
           "default": "v4.1",
           "pattern": "^v?[0-9]+\\.[0-9]+$"
         },
@@ -75,12 +75,12 @@
             },
             "point_cloud_range": {
               "type": "array",
-              "description": "An array of distance ranges of each class, this must have same length with `class_names`.",
+              "description": "The range of the point cloud in [min_x, min_y, min_z, max_x, max_y, max_z] order. [m]",
               "default": [-76.8, -76.8, -4.0, 76.8, 76.8, 6.0]
             },
             "voxel_size": {
               "type": "array",
-              "description": "An array of voxel grid sizes for PointPainting, this must have same length with `paint_class_names`.",
+              "description": "The size of a voxel in [x, y, z] order. [m]",
               "default": [0.32, 0.32, 10.0]
             },
             "downsample_factor": {

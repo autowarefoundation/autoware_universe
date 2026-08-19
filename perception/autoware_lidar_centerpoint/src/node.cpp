@@ -38,7 +38,10 @@ namespace autoware::lidar_centerpoint
 LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_options)
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
-  check_ml_package_version(this->declare_parameter<std::string>("version", ""));
+  // weight file entries are file names relative to model_path; absolute paths pass through
+  const std::filesystem::path model_path(this->declare_parameter<std::string>("model_path", ""));
+  check_ml_package_version(
+    this->declare_parameter<std::string>("version", ""), model_path.string());
 
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
@@ -48,8 +51,6 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<int>("densification_params.num_past_frames");
   const std::string trt_precision = this->declare_parameter<std::string>("trt_precision");
   const std::size_t cloud_capacity = this->declare_parameter<std::int64_t>("cloud_capacity");
-  // weight file entries are file names relative to model_path; absolute paths pass through
-  const std::filesystem::path model_path(this->declare_parameter<std::string>("model_path", ""));
   const auto resolve_path = [&model_path](const std::string & file) {
     const std::filesystem::path path(file);
     return path.is_absolute() ? path.string() : (model_path / path).string();

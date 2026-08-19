@@ -31,6 +31,11 @@ std::string supported_range()
          "role of the autoware repository.";
 }
 
+std::string manifest_subject(const std::string & model_path)
+{
+  return model_path.empty() ? "The model manifest" : "The model manifest in '" + model_path + "'";
+}
+
 bool parse_version(const std::string & version, int & major, int & minor)
 {
   const std::string digits =
@@ -54,12 +59,13 @@ bool parse_version(const std::string & version, int & major, int & minor)
 }
 }  // namespace
 
-void check_ml_package_version(const std::string & version)
+void check_ml_package_version(const std::string & version, const std::string & model_path)
 {
+  const std::string subject = manifest_subject(model_path);
+
   if (version.empty()) {
     throw std::invalid_argument(
-      "The model manifest declares no version, so it predates the manifest layout this node "
-      "requires. " +
+      subject + " declares no version, so it predates the manifest layout this node requires. " +
       supported_range());
   }
 
@@ -67,13 +73,14 @@ void check_ml_package_version(const std::string & version)
   int minor = 0;
   if (!parse_version(version, major, minor)) {
     throw std::invalid_argument(
-      "The model manifest version '" + version + "' is not of the form '<major>.<minor>'. " +
-      supported_range());
+      subject + " declares version '" + version +
+      "', which is not of the form '<major>.<minor>'. " + supported_range());
   }
 
   if (major != SUPPORTED_ML_PACKAGE_MAJOR_VERSION || minor < MINIMUM_ML_PACKAGE_MINOR_VERSION) {
     throw std::invalid_argument(
-      "The model bundle version '" + version + "' is not supported. " + supported_range());
+      subject + " declares version '" + version + "', which is not supported. " +
+      supported_range());
   }
 }
 

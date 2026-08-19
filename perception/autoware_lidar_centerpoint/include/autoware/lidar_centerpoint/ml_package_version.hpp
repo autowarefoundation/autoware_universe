@@ -25,8 +25,9 @@ constexpr int SUPPORTED_ML_PACKAGE_MAJOR_VERSION = 4;
 constexpr int MINIMUM_ML_PACKAGE_MINOR_VERSION = 1;
 
 // Accepts "<major>.<minor>" with an optional leading "v"; throws std::invalid_argument when the
-// version is unreadable, of another major version, or below the minimum minor version.
-void check_ml_package_version(const std::string & version);
+// version is unreadable, of another major version, or below the minimum minor version. model_path
+// names the bundle in the message, and may be empty.
+void check_ml_package_version(const std::string & version, const std::string & model_path);
 
 }  // namespace autoware::lidar_centerpoint
 
