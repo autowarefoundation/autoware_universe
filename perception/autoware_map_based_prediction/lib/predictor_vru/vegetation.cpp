@@ -95,16 +95,30 @@ std::optional<size_t> findVegetationCrossingIndex(
 
   const size_t last_idx = path.size() - 1;
   const auto path_bbox = buildPathFootprintBBox(path, object_shape, last_idx);
+  const auto initial_footprint = autoware_utils_geometry::to_polygon2d(path.front(), object_shape);
 
+  std::vector<Polygon2d> candidate_polygons;
   for (const auto & vegetation_polygon : vegetation_polygons) {
     const auto vegetation_polygon_2d = toPolygon2d(vegetation_polygon);
     if (!boost::geometry::intersects(path_bbox, vegetation_polygon_2d)) {
       continue;
     }
-    for (auto i = 0UL; i + 1 <= last_idx; ++i) {
-      const auto swept_polygon =
-        convexPolygonCoveringSegmentFootprints(path.at(i), path.at(i + 1), object_shape);
-      if (boost::geometry::intersects(swept_polygon, vegetation_polygon_2d)) {
+    // Object already overlapping vegetation: its path leaves the area, so no crossing is reported.
+    if (boost::geometry::intersects(initial_footprint, vegetation_polygon_2d)) {
+      return std::nullopt;
+    }
+    candidate_polygons.push_back(vegetation_polygon_2d);
+  }
+  if (candidate_polygons.empty()) {
+    return std::nullopt;
+  }
+
+  // Segment loop outermost so the crossing closest to the object is the one reported.
+  for (auto i = 0UL; i + 1 <= last_idx; ++i) {
+    const auto swept_polygon =
+      convexPolygonCoveringSegmentFootprints(path.at(i), path.at(i + 1), object_shape);
+    for (const auto & candidate_polygon : candidate_polygons) {
+      if (boost::geometry::intersects(swept_polygon, candidate_polygon)) {
         return i;
       }
     }
