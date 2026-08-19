@@ -267,6 +267,7 @@
                 "base": {
                   "type": "number",
                   "default": -3.0,
+                  "maximum": 0,
                   "description": "deceleration [m/ss] applied to classes without an entry of their own"
                 },
                 "unknown": {
