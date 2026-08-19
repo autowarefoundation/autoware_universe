@@ -18,7 +18,6 @@
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/object_classification.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 
 #include <boost/geometry.hpp>
 
