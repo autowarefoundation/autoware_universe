@@ -204,7 +204,7 @@
           "properties": {
             "enable": {
               "type": "boolean",
-              "default": true,
+              "default": false,
               "description": "Whether to snap the ego pose onto the previous planning trajectory. When enabled, the ego pose is replaced by the foot of the perpendicular to the closest segment of the previous planning trajectory (planning start pose + previous prediction)."
             },
             "max_position_error_m": {

@@ -217,7 +217,7 @@ void DiffusionPlanner::set_up_params()
   params_.object_motion_resampling.max_extrapolation_time =
     this->declare_parameter<double>("object_motion_resampling.max_extrapolation_time", 0.5);
   params_.ego_snap_to_prev_trajectory.enable =
-    this->declare_parameter<bool>("ego_snap_to_prev_trajectory.enable", true);
+    this->declare_parameter<bool>("ego_snap_to_prev_trajectory.enable", false);
   params_.ego_snap_to_prev_trajectory.max_position_error_m =
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.max_position_error_m", 0.3);
   params_.ego_snap_to_prev_trajectory.max_yaw_error_deg =
