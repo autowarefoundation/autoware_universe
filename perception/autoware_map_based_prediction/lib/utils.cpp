@@ -14,21 +14,27 @@
 
 #include "autoware/map_based_prediction/utils.hpp"
 
+#include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <tf2/utils.hpp>
 
+#include <boost/geometry/geometry.hpp>
+
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <limits>
 #include <memory>
@@ -242,6 +248,98 @@ PredictedObject convertToPredictedObject(const TrackedObject & tracked_object)
   predicted_object.existence_probability = tracked_object.existence_probability;
 
   return predicted_object;
+}
+
+namespace
+{
+// Convex hull of the original body box and the footprint, both in the object-local frame, then
+// re-expressed about the recentered box origin. The hull always yields a single convex ring, so it
+// fits geometry_msgs::Polygon and covers both shapes regardless of whether they overlap.
+geometry_msgs::msg::Polygon mergeFootprintWithBox(
+  const geometry_msgs::msg::Polygon & footprint, const double half_length, const double half_width,
+  const Eigen::Vector2d & center_offset)
+{
+  namespace bg = boost::geometry;
+  using autoware_utils::Point2d;
+  using autoware_utils::Polygon2d;
+
+  // Collect the body-box corners and the footprint vertices, then take their convex hull.
+  Polygon2d points;
+  bg::append(points.outer(), Point2d(half_length, half_width));
+  bg::append(points.outer(), Point2d(-half_length, half_width));
+  bg::append(points.outer(), Point2d(-half_length, -half_width));
+  bg::append(points.outer(), Point2d(half_length, -half_width));
+  for (const auto & point : footprint.points) {
+    bg::append(points.outer(), Point2d(point.x, point.y));
+  }
+
+  Polygon2d single;
+  bg::convex_hull(points, single);
+
+  geometry_msgs::msg::Polygon output;
+  if (single.outer().empty()) return output;
+
+  // Drop the duplicated closing vertex that boost keeps on the ring.
+  const auto & ring = single.outer();
+  size_t count = ring.size();
+  if (count > 1 && bg::equals(ring.front(), ring.back())) --count;
+
+  output.points.reserve(count);
+  for (size_t i = 0; i < count; ++i) {
+    geometry_msgs::msg::Point32 point;
+    point.x = static_cast<float>(ring[i].x() - center_offset.x());
+    point.y = static_cast<float>(ring[i].y() - center_offset.y());
+    point.z = 0.0F;
+    output.points.push_back(point);
+  }
+
+  return output;
+}
+}  // namespace
+
+void expandShapeToFootprintAndRecenter(PredictedObject & object)
+{
+  // grow a bounding-box shape to cover its footprint and recenter the predicted paths
+  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) return;
+  const auto & footprint = object.shape.footprint.points;
+  if (footprint.empty()) return;
+
+  // Axis-aligned bounds of the footprint in the object-local frame.
+  double min_x = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::lowest();
+  double min_y = std::numeric_limits<double>::max();
+  double max_y = std::numeric_limits<double>::lowest();
+  for (const auto & point : footprint) {
+    min_x = std::min(min_x, static_cast<double>(point.x));
+    max_x = std::max(max_x, static_cast<double>(point.x));
+    min_y = std::min(min_y, static_cast<double>(point.y));
+    max_y = std::max(max_y, static_cast<double>(point.y));
+  }
+
+  // Union of the body box (centered at the local origin) and the footprint bounds.
+  const double half_length = object.shape.dimensions.x / 2.0;
+  const double half_width = object.shape.dimensions.y / 2.0;
+  const double lo_x = std::min(-half_length, min_x);
+  const double hi_x = std::max(half_length, max_x);
+  const double lo_y = std::min(-half_width, min_y);
+  const double hi_y = std::max(half_width, max_y);
+
+  const Eigen::Vector2d center_offset((lo_x + hi_x) / 2.0, (lo_y + hi_y) / 2.0);
+  constexpr double eps = 1e-3;
+  if (std::abs(center_offset.x()) < eps && std::abs(center_offset.y()) < eps) return;
+
+  object.shape.dimensions.x = hi_x - lo_x;
+  object.shape.dimensions.y = hi_y - lo_y;
+
+  // Merge the footprint with the original bounding box and re-express it about the new box center.
+  object.shape.footprint =
+    mergeFootprintWithBox(object.shape.footprint, half_length, half_width, center_offset);
+
+  // Move the t=0 box center and every predicted-path point onto the expanded box center.
+  shiftPoseReference(object.kinematics.initial_pose_with_covariance.pose, center_offset);
+  for (auto & predicted_path : object.kinematics.predicted_paths) {
+    shiftPathReference(predicted_path, center_offset);
+  }
 }
 
 double calculateLocalLikelihood(
