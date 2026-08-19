@@ -331,6 +331,26 @@ CrosswalkFilter::result_t CrosswalkFilter::is_feasible(
     return tl::make_unexpected("Route is not available in the context.");
   }
 
+  const auto current_time = rclcpp::Time(context.odometry->header.stamp);
+  if (!last_frame_time_ || *last_frame_time_ != current_time) {
+    stopping_distance_ = StoppingDistance{};
+    last_frame_time_ = current_time;
+  }
+
+  if (!stopping_distance_.nominal) {
+    stopping_distance_.nominal = autoware::motion_utils::calculate_stop_distance(
+      context.odometry->twist.twist.linear.x, context.acceleration->accel.accel.linear.x,
+      params_.stopping_params.nominal_decel, params_.stopping_params.nominal_jerk,
+      params_.stopping_params.delay_response_time);
+  }
+
+  if (!stopping_distance_.minimum) {
+    stopping_distance_.minimum = autoware::motion_utils::calculate_stop_distance(
+      context.odometry->twist.twist.linear.x, context.acceleration->accel.accel.linear.x,
+      params_.stopping_params.decel_limit, params_.stopping_params.jerk_limit,
+      params_.stopping_params.delay_response_time);
+  }
+
   const auto target_crosswalks = get_target_crosswalks(candidate_trajectory.points, context);
 
   std::vector<MetricReport> metrics;
@@ -340,10 +360,12 @@ CrosswalkFilter::result_t CrosswalkFilter::is_feasible(
 
   std::unordered_set<lanelet::Id> obstructing_crosswalk_ids;
   SafetyFactorArray safety_factors;
+  double arc_length_to_stop_line = std::numeric_limits<double>::max();
   const bool feasible =
     std::none_of(target_crosswalks.begin(), target_crosswalks.end(), [&](const auto & cw) {
       if (!is_obstructing_crosswalk(candidate_trajectory.points, cw, safety_factors)) return false;
       obstructing_crosswalk_ids.insert(cw.crosswalk_info.crosswalk->id());
+      arc_length_to_stop_line = cw.crosswalk_info.arc_length_to_stop_line_m;
       return true;
     });
 
@@ -352,7 +374,7 @@ CrosswalkFilter::result_t CrosswalkFilter::is_feasible(
     context.odometry->header.stamp, context.odometry->pose.pose.position.z);
 
   RiskLevel risk_level;
-  risk_level.level = feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
+  risk_level.level = feasible ? RiskLevel::SAFE : get_risk_level(arc_length_to_stop_line);
   metrics.push_back(
     autoware_trajectory_validator::build<MetricReport>()
       .validator_name(get_name())
@@ -382,6 +404,31 @@ CrosswalkFilter::result_t CrosswalkFilter::is_feasible(
   return ValidationResult{feasible, std::move(metrics), std::move(planning_factors)};
 }
 
+RiskLevel::_level_type CrosswalkFilter::get_risk_level(const double arc_length_to_stop_line) const
+{
+  const auto ego_front_to_stop_line =
+    arc_length_to_stop_line - vehicle_info_ptr_->max_longitudinal_offset_m;
+
+  if (ego_front_to_stop_line <= params_.arrived_distance_threshold) {
+    return RiskLevel::DANGER;
+  }
+
+  static constexpr double tolerance = 0.1;
+  if (
+    stopping_distance_.nominal &&
+    ego_front_to_stop_line > (*stopping_distance_.nominal - tolerance)) {
+    return RiskLevel::LOW_CAUTION;
+  }
+
+  if (
+    stopping_distance_.minimum &&
+    ego_front_to_stop_line > (*stopping_distance_.minimum - tolerance)) {
+    return RiskLevel::HIGH_CAUTION;
+  }
+
+  return RiskLevel::DANGER;
+}
+
 std::vector<TargetCrosswalk> CrosswalkFilter::get_target_crosswalks(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
@@ -394,15 +441,10 @@ std::vector<TargetCrosswalk> CrosswalkFilter::get_target_crosswalks(
 
   if (crosswalks_on_route.empty()) return target_crosswalks;
 
-  const double current_vel = context.odometry->twist.twist.linear.x;
-  const double current_acc = context.acceleration->accel.accel.linear.x;
-  const auto decel_limit = 1.0;
-  const auto jerk_limit = 1.0;
-
-  auto stop_distance = autoware::motion_utils::calculate_stop_distance(
-    current_vel, current_acc, decel_limit, jerk_limit);
-  const auto lookahead_distance_m = stop_distance
-                                      ? *stop_distance + params_.arrived_distance_threshold
+  const auto front_offset_m =
+    vehicle_info_ptr_->max_longitudinal_offset_m + params_.arrived_distance_threshold;
+  const auto lookahead_distance_m = stopping_distance_.nominal
+                                      ? *stopping_distance_.nominal + front_offset_m
                                       : std::numeric_limits<double>::max();
 
   lanelet::BasicLineString2d trajectory_ls;

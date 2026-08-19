@@ -147,6 +147,14 @@ private:
   std::unordered_map<lanelet::Id, TargetObjects> crosswalk_objects_map_;
   std::unordered_set<ObjectClassification::_label_type> object_types_;
 
+  struct StoppingDistance
+  {
+    std::optional<double> nominal;
+    std::optional<double> minimum;
+  } stopping_distance_;
+
+  std::optional<rclcpp::Time> last_frame_time_;
+
   TargetCrosswalks get_target_crosswalks(
     const TrajectoryPoints & traj_points, const FilterContext & context);
 
@@ -156,6 +164,8 @@ private:
   bool is_obstructing_crosswalk(
     const TrajectoryPoints & traj_points, const TargetCrosswalk & target_crosswalk,
     SafetyFactorArray & safety_factors) const;
+
+  RiskLevel::_level_type get_risk_level(const double arc_length_to_stop_line) const;
 
   void update_debug_data(
     const TrajectoryPoints & traj_points, const TargetCrosswalks & target_crosswalks,
