@@ -16,6 +16,7 @@
     <arg name="fixed_delta_seconds" default="0.05" description="Time step for CARLA, FPS=1/value"/>
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
+    <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
     <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
     <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
 
@@ -58,6 +59,7 @@
       <param name="vehicle_type" value="$(var vehicle_type)"/>
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
+      <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>
       <param name="map_origin_y" value="$(var map_origin_y)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
