@@ -97,57 +97,58 @@ class InitializeInterface(object):
             randomize = True
         return spawn_point, randomize
 
+    def _reload_world(self, client):
+        """Reload the world via client.load_world(), tolerating non-connection failures."""
+        print(f"Loading CARLA world '{self.carla_map}' with client.load_world()", flush=True)
+        try:
+            client.load_world(self.carla_map)
+            print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+        except RuntimeError as exc:
+            if "Connection refused" in str(exc):
+                raise
+            print(
+                "WARNING: client.load_world() raised while loading "
+                f"'{self.carla_map}'; continuing with current world: {exc}",
+                flush=True,
+            )
+
+    def _current_world_map(self, client):
+        """Return the current world's map name, or None if it cannot be determined."""
+        try:
+            return client.get_world().get_map().name.split("/")[-1]
+        except RuntimeError:
+            return None
+
+    def _load_world_if_different(self, client):
+        """Try load_world_if_different(); return True on success, False to fall back."""
+        if not hasattr(client, "load_world_if_different"):
+            return False
+        try:
+            print(
+                f"Loading CARLA world '{self.carla_map}' with load_world_if_different()",
+                flush=True,
+            )
+            client.load_world_if_different(self.carla_map)
+            print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
+            return True
+        except RuntimeError as exc:
+            print(
+                "WARNING: load_world_if_different failed; falling back to load_world "
+                f"for '{self.carla_map}': {exc}"
+            )
+            return False
+
     def _load_carla_world(self, client):
         """Load the requested map while supporting CARLA Python API version differences."""
         if self.force_load_world:
-            print(f"Loading CARLA world '{self.carla_map}' with client.load_world()", flush=True)
-            try:
-                client.load_world(self.carla_map)
-                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
-            except RuntimeError as exc:
-                if "Connection refused" in str(exc):
-                    raise
-                print(
-                    "WARNING: client.load_world() raised while loading "
-                    f"'{self.carla_map}'; continuing with current world: {exc}",
-                    flush=True,
-                )
+            self._reload_world(client)
             return
 
-        if hasattr(client, "load_world_if_different"):
-            try:
-                print(
-                    f"Loading CARLA world '{self.carla_map}' with load_world_if_different()",
-                    flush=True,
-                )
-                client.load_world_if_different(self.carla_map)
-                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
-                return
-            except RuntimeError as exc:
-                print(
-                    "WARNING: load_world_if_different failed; falling back to load_world "
-                    f"for '{self.carla_map}': {exc}"
-                )
+        if self._load_world_if_different(client):
+            return
 
-        current_map = None
-        try:
-            current_map = client.get_world().get_map().name.split("/")[-1]
-        except RuntimeError:
-            pass
-
-        if current_map != self.carla_map:
-            print(f"Loading CARLA world '{self.carla_map}' with client.load_world()", flush=True)
-            try:
-                client.load_world(self.carla_map)
-                print(f"Loaded CARLA world '{self.carla_map}'", flush=True)
-            except RuntimeError as exc:
-                if "Connection refused" in str(exc):
-                    raise
-                print(
-                    "WARNING: client.load_world() raised while loading "
-                    f"'{self.carla_map}'; continuing with current world: {exc}",
-                    flush=True,
-                )
+        if self._current_world_map(client) != self.carla_map:
+            self._reload_world(client)
 
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
