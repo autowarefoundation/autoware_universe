@@ -61,7 +61,7 @@ public:
     bool object_within_road, const CrosswalkSignalRedFn & is_crosswalk_signal_red) const;
 
 private:
-  lanelet::LaneletMapUPtr road_boundary_layer_{nullptr};
+  lanelet::LaneletMapConstUPtr road_boundary_layer_{nullptr};
   // Crosswalk / walkway lanelets. A boundary crossing that falls inside one of these is treated as
   // a legitimate crosswalk crossing and is not cut.
   lanelet::LaneletMapConstUPtr crosswalk_layer_{nullptr};
