@@ -39,6 +39,7 @@
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/float64.hpp>
 #include <std_srvs/srv/set_bool.hpp>
@@ -165,6 +166,15 @@ private:
   void publish_first_traffic_light_on_route(const FrameContext & frame_context) const;
 
   /**
+   * @brief Publish the ego pose snapped onto the previous trajectory and the interpolation time
+   *        used to compute it. Does nothing when the frame did not snap the ego pose.
+   * @param frame_context Context of the current frame.
+   * @param timestamp Timestamp of the current frame.
+   */
+  void publish_snapped_pose(
+    const FrameContext & frame_context, const rclcpp::Time & timestamp) const;
+
+  /**
    * @brief Publish planning factors (stop/slowdown) derived from the trajectory.
    * @param trajectory The planned trajectory.
    */
@@ -227,6 +237,9 @@ private:
   rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_{nullptr};
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr
     pub_traffic_signal_{nullptr};
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_snapped_pose_{nullptr};
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    pub_snap_interpolation_time_{nullptr};
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_inference_time_{nullptr};
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr pub_denoising_steps_{nullptr};
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr
