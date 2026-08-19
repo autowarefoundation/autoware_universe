@@ -43,35 +43,31 @@ void drawRoiOnImage(
 namespace autoware::image_projection_based_fusion
 {
 Debugger::Debugger(
-  rclcpp::Node * node_ptr, const std::size_t image_num, const std::size_t image_buffer_size,
-  std::vector<std::string> input_camera_topics)
+  autoware::agnocast_wrapper::Node * node_ptr, const std::size_t image_num,
+  const std::size_t image_buffer_size, std::vector<std::string> input_camera_topics)
 : input_camera_topics_{input_camera_topics}
 {
   image_buffers_.resize(image_num);
   image_buffer_size_ = image_buffer_size;
   for (std::size_t img_i = 0; img_i < image_num; ++img_i) {
-    auto sub = image_transport::create_subscription(
-      node_ptr, input_camera_topics.at(img_i),
-      std::bind(&Debugger::imageCallback, this, std::placeholders::_1, img_i), "raw",
-      rmw_qos_profile_sensor_data);
-    image_subs_.push_back(sub);
+    // Plain Image pub/sub instead of image_transport, which needs a real rclcpp::Node and so
+    // cannot run under an AgnocastOnly executor. Compressed transports are therefore not
+    // offered on these debug topics.
+    image_subs_.push_back(node_ptr->create_subscription<sensor_msgs::msg::Image>(
+      input_camera_topics.at(img_i), rclcpp::SensorDataQoS(),
+      [this, img_i](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Image) msg) {
+        imageCallback(msg, img_i);
+      }));
 
-    std::vector<std::string> node_params = {"format", "jpeg_quality", "png_level"};
-    for (const auto & param : node_params) {
-      if (node_ptr->has_parameter(param)) {
-        node_ptr->undeclare_parameter(param);
-      }
-    }
-
-    auto pub =
-      image_transport::create_publisher(node_ptr, "~/debug/image_raw" + std::to_string(img_i));
-    image_pubs_.push_back(pub);
+    image_pubs_.push_back(node_ptr->create_publisher<sensor_msgs::msg::Image>(
+      "~/debug/image_raw" + std::to_string(img_i), rclcpp::SensorDataQoS()));
     image_buffers_.at(img_i).set_capacity(image_buffer_size_);
   }
 }
 
 void Debugger::imageCallback(
-  const sensor_msgs::msg::Image::ConstSharedPtr input_image_msg, const std::size_t image_id)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Image) input_image_msg,
+  const std::size_t image_id)
 {
   image_buffers_.at(image_id).push_front(input_image_msg);
 }
@@ -86,9 +82,8 @@ void Debugger::clear()
 
 void Debugger::publishImage(const std::size_t image_id, const rclcpp::Time & stamp)
 {
-  const boost::circular_buffer<sensor_msgs::msg::Image::ConstSharedPtr> & image_buffer =
-    image_buffers_.at(image_id);
-  const image_transport::Publisher & image_pub = image_pubs_.at(image_id);
+  const auto & image_buffer = image_buffers_.at(image_id);
+  const auto & image_pub = image_pubs_.at(image_id);
   const bool draw_iou_score =
     max_iou_for_image_rois_.size() > 0 && max_iou_for_image_rois_.size() == image_rois_.size();
 
@@ -97,7 +92,7 @@ void Debugger::publishImage(const std::size_t image_id, const rclcpp::Time & sta
       continue;
     }
 
-    auto cv_ptr = cv_bridge::toCvCopy(image_buffer.at(i), image_buffer.at(i)->encoding);
+    auto cv_ptr = cv_bridge::toCvCopy(*image_buffer.at(i), image_buffer.at(i)->encoding);
     // draw obstacle points
     for (const auto & point : obstacle_points_) {
       cv::circle(
@@ -153,7 +148,7 @@ void Debugger::publishImage(const std::size_t image_id, const rclcpp::Time & sta
       }
     }
 
-    image_pub.publish(cv_ptr->toImageMsg());
+    image_pub->publish(*cv_ptr->toImageMsg());
     break;
   }
 }

@@ -27,11 +27,12 @@
   <depend>autoware_pointcloud_preprocessor</depend>
   <depend>autoware_sensing_msgs</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_diagnostics</depend>
   <depend>cv_bridge</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>image_geometry</depend>
-  <depend>image_transport</depend>
   <depend>message_filters</depend>
   <depend>perception_utils</depend>
   <depend>rclcpp</depend>
