@@ -225,7 +225,7 @@ For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthed
 
 The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
 is what reproducing a run wants. It also means anything consuming those sensors
-sees a measurement no hardware produces: a localisation or odometry stack scored
+sees a measurement no hardware produces: a localization or odometry stack scored
 against a perfect gyro reports an accuracy it will not reach on a vehicle.
 
 Set any of the CARLA noise attributes under the sensor's `parameters` to get a
@@ -248,7 +248,7 @@ sensor_mappings:
       noise_accel_stddev_x: 0.01
 ```
 
-Recognised names are `noise_accel_stddev_{x,y,z}`, `noise_gyro_stddev_{x,y,z}`
+Recognized names are `noise_accel_stddev_{x,y,z}`, `noise_gyro_stddev_{x,y,z}`
 and `noise_gyro_bias_{x,y,z}` for the IMU, and `noise_{alt,lat,lon}_stddev` and
 `noise_{alt,lat,lon}_bias` for the GNSS. Anything left out stays at zero.
 
