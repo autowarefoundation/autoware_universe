@@ -71,6 +71,7 @@ class carla_ros2_interface(object):
             "vehicle_type": (rclpy.Parameter.Type.STRING, None),
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
+            "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
