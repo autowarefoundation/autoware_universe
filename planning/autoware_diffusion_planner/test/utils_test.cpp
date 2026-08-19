@@ -227,7 +227,7 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineClampsToEndpoint)
 
 // The heading is slerp-interpolated between the endpoints of the closest segment. Projecting the
 // midpoint of a segment whose endpoints face 0 and pi/2 yields a heading of pi/4.
-TEST_F(UtilsTest, ProjectPoseOntoPolylineSlerpsHeading)
+TEST_F(UtilsTest, ProjectPoseOntoPolylineInterpolatesHeading)
 {
   const std::vector<Eigen::Matrix4d> polyline{
     make_pose(0.0, 0.0, 0.0), make_pose(2.0, 0.0, M_PI_2)};
@@ -250,8 +250,8 @@ TEST_F(UtilsTest, ProjectPoseOntoPolylineSelectsClosestSegment)
 
   EXPECT_NEAR(projected(0, 3), 1.0, 1e-9);
   EXPECT_NEAR(projected(1, 3), 3.0, 1e-9);
-  // The heading is slerped between the segment endpoints (0 and pi/2) by that same ratio, not
-  // taken from the end vertex.
+  // The heading is slerp-interpolated between the segment endpoints (0 and pi/2) by that same
+  // ratio, not taken from the end vertex.
   EXPECT_NEAR(yaw_of(projected), 0.6 * M_PI_2, 1e-9);
 }
 
