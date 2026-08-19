@@ -86,14 +86,13 @@ Box2d buildPathFootprintBBox(
 
 std::optional<size_t> findVegetationCrossingIndex(
   const PredictedPath & predicted_path, const autoware_perception_msgs::msg::Shape & object_shape,
-  const lanelet::ConstPolygons3d & vegetation_polygons)
+  const lanelet::ConstPolygons3d & vegetation_polygons, const size_t last_idx)
 {
   const auto & path = predicted_path.path;
   if (path.size() < 2 || vegetation_polygons.empty()) {
     return std::nullopt;
   }
 
-  const size_t last_idx = path.size() - 1;
   const auto path_bbox = buildPathFootprintBBox(path, object_shape, last_idx);
   const auto initial_footprint = autoware_utils_geometry::to_polygon2d(path.front(), object_shape);
 
@@ -131,26 +130,12 @@ bool doesPathCrossVegetation(
   const autoware_perception_msgs::msg::Shape & object_shape,
   const lanelet::ConstPolygons3d & vegetation_polygons)
 {
-  if (vegetation_polygons.empty() || predicted_path.path.size() < 2) {
+  if (predicted_path.path.size() < 2) {
     return false;
   }
   const size_t last_idx = std::min(predicted_path.arrival_index, predicted_path.path.size() - 1);
-  const auto path_bbox = buildPathFootprintBBox(predicted_path.path, object_shape, last_idx);
-
-  for (const auto & vegetation_polygon : vegetation_polygons) {
-    const auto vegetation_polygon_2d = toPolygon2d(vegetation_polygon);
-    if (!boost::geometry::intersects(path_bbox, vegetation_polygon_2d)) {
-      continue;
-    }
-    for (auto i = 0UL; i + 1 <= last_idx; ++i) {
-      const auto swept_polygon = convexPolygonCoveringSegmentFootprints(
-        predicted_path.path.at(i), predicted_path.path.at(i + 1), object_shape);
-      if (boost::geometry::intersects(swept_polygon, vegetation_polygon_2d)) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return findVegetationCrossingIndex(predicted_path, object_shape, vegetation_polygons, last_idx)
+    .has_value();
 }
 }  // namespace
 
@@ -209,8 +194,8 @@ PredictedPath VegetationModule::cutPathsCrossingVegetation(
   }
   const auto candidates =
     vegetation_layer_->polygonLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
-  const std::optional<size_t> crossing_index =
-    findVegetationCrossingIndex(predicted_path, object_shape, candidates);
+  const std::optional<size_t> crossing_index = findVegetationCrossingIndex(
+    predicted_path, object_shape, candidates, predicted_path.path.size() - 1);
   if (crossing_index) {
     cut_path.path.resize(std::min(*crossing_index + 1, cut_path.path.size()));
   }
