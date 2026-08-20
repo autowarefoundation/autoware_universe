@@ -59,7 +59,10 @@
 #include <cv_bridge/cv_bridge.h>
 #endif
 
+#include <algorithm>
+#include <array>
 #include <string>
+#include <utility>
 
 namespace autoware::image_preprocessor::image_transport_decompressor
 {
@@ -110,57 +113,44 @@ sensor_msgs::msg::Image decompress(
   return output;
 }
 
+// Conversion that undoes the color transformation the sender applied, per encoding to publish
+// under. There are two tables because the conversion depends on the channel order the sender
+// compressed in. An encoding absent from a table, "mono8" or "yuv422" for instance, needs no
+// conversion.
+using ColorConversions = std::array<std::pair<const char *, cv::ColorConversionCodes>, 6>;
+
+constexpr ColorConversions conversions_from_bgr{
+  {{sensor_msgs::image_encodings::RGB8, cv::COLOR_BGR2RGB},
+   {sensor_msgs::image_encodings::RGB16, cv::COLOR_BGR2RGB},
+   {sensor_msgs::image_encodings::RGBA8, cv::COLOR_BGR2RGBA},
+   {sensor_msgs::image_encodings::RGBA16, cv::COLOR_BGR2RGBA},
+   {sensor_msgs::image_encodings::BGRA8, cv::COLOR_BGR2BGRA},
+   {sensor_msgs::image_encodings::BGRA16, cv::COLOR_BGR2BGRA}}};
+
+constexpr ColorConversions conversions_from_rgb{
+  {{sensor_msgs::image_encodings::BGR8, cv::COLOR_RGB2BGR},
+   {sensor_msgs::image_encodings::BGR16, cv::COLOR_RGB2BGR},
+   {sensor_msgs::image_encodings::BGRA8, cv::COLOR_RGB2BGRA},
+   {sensor_msgs::image_encodings::BGRA16, cv::COLOR_RGB2BGRA},
+   {sensor_msgs::image_encodings::RGBA8, cv::COLOR_RGB2RGBA},
+   {sensor_msgs::image_encodings::RGBA16, cv::COLOR_RGB2RGBA}}};
+
 // Undo the color transformation the sender applied before compressing, so that the channels end up
 // in the order cv_image.encoding promises. @p compressed_encoding is the part of the format field
 // from the ';' onwards, which names the order the sender compressed in.
 void revert_color_transformation(
   cv_bridge::CvImage & cv_image, const std::string & compressed_encoding)
 {
-  const std::string & image_encoding = cv_image.encoding;
-  if (!sensor_msgs::image_encodings::isColor(image_encoding)) {
-    return;
-  }
+  const bool compressed_bgr_image = compressed_encoding.find("compressed bgr") != std::string::npos;
+  const ColorConversions & conversions =
+    compressed_bgr_image ? conversions_from_bgr : conversions_from_rgb;
 
-  bool compressed_bgr_image = (compressed_encoding.find("compressed bgr") != std::string::npos);
+  const auto conversion = std::find_if(
+    conversions.begin(), conversions.end(),
+    [&cv_image](const auto & entry) { return cv_image.encoding == entry.first; });
 
-  if (compressed_bgr_image) {
-    // if necessary convert colors from bgr to rgb
-    if (
-      (image_encoding == sensor_msgs::image_encodings::RGB8) ||
-      (image_encoding == sensor_msgs::image_encodings::RGB16)) {
-      cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_BGR2RGB);
-    }
-
-    if (
-      (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
-      (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-      cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_BGR2RGBA);
-    }
-
-    if (
-      (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
-      (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-      cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_BGR2BGRA);
-    }
-  } else {
-    // if necessary convert colors from rgb to bgr
-    if (
-      (image_encoding == sensor_msgs::image_encodings::BGR8) ||
-      (image_encoding == sensor_msgs::image_encodings::BGR16)) {
-      cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_RGB2BGR);
-    }
-
-    if (
-      (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
-      (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-      cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_RGB2BGRA);
-    }
-
-    if (
-      (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
-      (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-      cv::cvtColor(cv_image.image, cv_image.image, cv::COLOR_RGB2RGBA);
-    }
+  if (conversion != conversions.end()) {
+    cv::cvtColor(cv_image.image, cv_image.image, conversion->second);
   }
 }
 
