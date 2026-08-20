@@ -25,9 +25,9 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
-#include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/algorithms/overlaps.hpp>
 #include <boost/geometry/algorithms/union.hpp>
+#include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
 
 #include <algorithm>
