@@ -18,8 +18,10 @@
 
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_deprecated_boundary_departure_checker</depend>
+  <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_utils</depend>
+  <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
@@ -28,8 +30,12 @@
   <depend>autoware_route_handler</depend>
   <depend>autoware_test_utils</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_math</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>lanelet2_core</depend>
+  <depend>libboost-dev</depend>
   <depend>nav_msgs</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>pluginlib</depend>
@@ -40,6 +46,7 @@
   <depend>tier4_metric_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
 

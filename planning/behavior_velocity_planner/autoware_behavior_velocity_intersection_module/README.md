@@ -419,19 +419,18 @@ entity TargetObject {
 
 ### common
 
-| Parameter                                    | Type   | Description                                                                      |
-| -------------------------------------------- | ------ | -------------------------------------------------------------------------------- |
-| `.attention_area_length`                     | double | [m] range for object detection                                                   |
-| `.attention_area_margin`                     | double | [m] margin for expanding attention area width                                    |
-| `.attention_area_angle_threshold`            | double | [rad] threshold of angle difference between the detected object and lane         |
-| `.use_intersection_area`                     | bool   | [-] flag to use intersection_area for collision detection                        |
-| `.default_stopline_margin`                   | double | [m] margin before_stop_line                                                      |
-| `.pass_judge_line_margin`                    | double | [m] additional margin for pass_judge_line position from first_attention_stopline |
-| `.stopline_overshoot_margin`                 | double | [m] margin for the overshoot from stopline                                       |
-| `.max_accel`                                 | double | [m/ss] max acceleration for stop                                                 |
-| `.max_jerk`                                  | double | [m/sss] max jerk for stop                                                        |
-| `.delay_response_time`                       | double | [s] action delay before stop                                                     |
-| `.enable_pass_judge_before_default_stopline` | bool   | [-] flag not to stop before default_stopline even if ego is over pass_judge_line |
+| Parameter                         | Type   | Description                                                                      |
+| --------------------------------- | ------ | -------------------------------------------------------------------------------- |
+| `.attention_area_length`          | double | [m] range for object detection                                                   |
+| `.attention_area_margin`          | double | [m] margin for expanding attention area width                                    |
+| `.attention_area_angle_threshold` | double | [rad] threshold of angle difference between the detected object and lane         |
+| `.use_intersection_area`          | bool   | [-] flag to use intersection_area for collision detection                        |
+| `.default_stopline_margin`        | double | [m] margin before_stop_line                                                      |
+| `.pass_judge_line_margin`         | double | [m] additional margin for pass_judge_line position from first_attention_stopline |
+| `.stopline_overshoot_margin`      | double | [m] margin for the overshoot from stopline                                       |
+| `.max_accel`                      | double | [m/ss] max acceleration for stop                                                 |
+| `.max_jerk`                       | double | [m/sss] max jerk for stop                                                        |
+| `.delay_response_time`            | double | [s] action delay before stop                                                     |
 
 ### stuck_vehicle/yield_stuck
 

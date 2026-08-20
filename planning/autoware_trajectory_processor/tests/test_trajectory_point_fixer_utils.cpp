@@ -21,21 +21,21 @@
 #include <limits>
 #include <vector>
 
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::
   calculate_cluster_reference_yaw;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::
   compute_cluster_arc_lengths;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::
   create_ego_point_from_odometry;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::
   get_close_proximity_clusters;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::normalize_values;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::normalize_values;
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::
   remove_close_proximity_points;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::remove_invalid_points;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::remove_invalid_points;
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::
   resample_close_proximity_points;
-using autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils::resample_single_cluster;
+using autoware::trajectory_processor::plugin::trajectory_point_fixer_utils::resample_single_cluster;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using nav_msgs::msg::Odometry;
 using trajectory_optimizer_test_utils::create_odometry;

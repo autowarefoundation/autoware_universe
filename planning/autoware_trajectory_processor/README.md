@@ -1,8 +1,8 @@
 # Autoware Trajectory Processor
 
-## Autoware Trajectory Optimizer
+## Unified Node and Pipeline
 
-The `autoware_trajectory_optimizer` package generates smooth and feasible trajectories for autonomous vehicles using a plugin-based optimization pipeline. It takes candidate trajectories as input and applies a sequence of optimization plugins to produce smooth, drivable trajectories with proper velocity and acceleration profiles.
+The `autoware_trajectory_processor` package runs safety modifiers and trajectory optimizers in one ordered plugin pipeline. It takes candidate trajectories as input, applies modifier plugins first and optimizer plugins second by default, and publishes both the processed candidates and the first candidate as the selected trajectory.
 
 ### Features
 
@@ -19,7 +19,7 @@ The `autoware_trajectory_optimizer` package generates smooth and feasible trajec
 
 ## Architecture
 
-The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from `TrajectoryProcessorPluginBase` and is loaded via the ROS 2 pluginlib system.
+The package uses one `TrajectoryProcessor` ROS 2 component. Plugins are dynamically loaded at startup, inherit from `TrajectoryProcessorPluginBase`, and execute in the exact order configured by `plugin_names`.
 
 ### Plugin Loading and Execution
 
@@ -27,13 +27,16 @@ Plugins are loaded based on the `plugin_names` parameter, which defines both whi
 
 ```yaml
 plugin_names:
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::StopPointFixer"
+  - "autoware::trajectory_processor::plugin::ObstacleStop"
+  - "autoware::trajectory_processor::plugin::VelocityModifier"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryExtender"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
 ```
 
 ### Available Plugins
@@ -96,7 +99,7 @@ The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory 
 
 ### Parameters
 
-{{ json_to_markdown("planning/autoware_trajectory_processor/schema/trajectory_optimizer.schema.json") }}
+{{ json_to_markdown("planning/autoware_trajectory_processor/schema/trajectory_processor.schema.json") }}
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 
@@ -108,15 +111,15 @@ Parameters can be set via YAML configuration files in the `config/` directory.
 
 #### Configuring Plugin Order
 
-To change plugin execution order, modify the `plugin_names` array in `config/trajectory_optimizer.param.yaml`:
+To change plugin execution order, modify the `plugin_names` array in `config/trajectory_processor.param.yaml`:
 
 ```yaml
 # Example: Run spline smoother before velocity optimizer
 plugin_names:
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
 ```
 
 ##### CRITICAL: QP Smoother Ordering Constraint
@@ -132,9 +135,9 @@ The QP solver requires constant time intervals (Δt = 0.1s) between points. Thes
 
 Note: Plugin order changes require node restart. Runtime enable/disable is controlled by activation flags.
 
-## Autoware Trajectory Modifier
+## Modifier Plugins
 
-The `autoware_trajectory_modifier` package provides a plugin-based architecture for post-processing trajectory points to improve trajectory quality and ensure vehicle safety. It takes candidate trajectories and applies various modification algorithms to enhance their feasibility and safety characteristics.
+Modifier plugins run in the same node and ordered pipeline as optimizer plugins. They post-process candidate trajectories to improve safety before the optimizer stage smooths and validates the result.
 
 ### Features
 
@@ -145,7 +148,7 @@ The `autoware_trajectory_modifier` package provides a plugin-based architecture 
 
 ### Architecture
 
-The trajectory modifier and optimizer share a plugin-based system where different processing algorithms can be implemented as plugins. Each plugin inherits from `TrajectoryProcessorPluginBase`.
+Modifier and optimizer algorithms use the same plugin interface. Each plugin inherits from `TrajectoryProcessorPluginBase`.
 
 #### Plugin Interface
 
@@ -196,7 +199,7 @@ This package depends on the following packages:
 
 ### Parameters
 
-{{ json_to_markdown("planning/autoware_trajectory_processor/schema/trajectory_modifier.schema.json") }}
+See the unified parameter schema above and `config/trajectory_processor.param.yaml`.
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 

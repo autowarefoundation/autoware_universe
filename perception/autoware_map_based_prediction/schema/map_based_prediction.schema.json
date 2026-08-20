@@ -257,6 +257,76 @@
           "default": 0.5,
           "description": "Standard deviation for lateral position of objects "
         },
+        "behavior_model": {
+          "type": "object",
+          "properties": {
+            "object_deceleration": {
+              "type": "object",
+              "description": "deceleration [m/ss] assumed for each object class when judging whether the object can stop before a line it is predicted to cross. Only base is required; a class without an entry of its own uses the base value.",
+              "properties": {
+                "base": {
+                  "type": "number",
+                  "default": -3.0,
+                  "maximum": 0,
+                  "description": "deceleration [m/ss] applied to classes without an entry of their own"
+                },
+                "unknown": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for unknown"
+                },
+                "car": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for car"
+                },
+                "truck": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for truck"
+                },
+                "bus": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for bus"
+                },
+                "trailer": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for trailer"
+                },
+                "motorcycle": {
+                  "type": "number",
+                  "default": -2.0,
+                  "description": "deceleration [m/ss] for motorcycle"
+                },
+                "bicycle": {
+                  "type": "number",
+                  "default": -1.0,
+                  "description": "deceleration [m/ss] for bicycle"
+                },
+                "pedestrian": {
+                  "type": "number",
+                  "default": -0.5,
+                  "description": "deceleration [m/ss] for pedestrian"
+                },
+                "animal": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for animal"
+                },
+                "hazard": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for hazard"
+                },
+                "over_drivable": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for over_drivable"
+                },
+                "under_drivable": {
+                  "type": "number",
+                  "description": "deceleration [m/ss] for under_drivable"
+                }
+              },
+              "required": ["base"]
+            }
+          },
+          "required": ["object_deceleration"]
+        },
         "publish_processing_time": {
           "type": "boolean",
           "default": false
@@ -305,6 +375,7 @@
         "no_crossing_intention_duration",
         "lane_change_detection",
         "reference_path_resolution",
+        "behavior_model",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_debug_markers",

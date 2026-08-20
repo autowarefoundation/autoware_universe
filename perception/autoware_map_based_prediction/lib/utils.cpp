@@ -29,6 +29,7 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <deque>
 #include <limits>
 #include <memory>
@@ -539,6 +540,25 @@ double lateral_distance_to_lanelet_bounds(
     distance = std::min(distance, bound_distance);
   }
   return distance;
+}
+
+double ObjectDecelerationParams::get(const uint8_t label) const
+{
+  const auto itr = per_label.find(label);
+  return itr != per_label.end() ? itr->second : 0.0;
+}
+
+double distance_to_stop_with_deceleration(const double speed, const double deceleration)
+{
+  if (speed <= 0.0) {
+    return 0.0;
+  }
+
+  if (deceleration >= 0.0) {
+    return std::numeric_limits<double>::infinity();
+  }
+
+  return (speed * speed) / (2.0 * -deceleration);
 }
 
 }  // namespace utils
