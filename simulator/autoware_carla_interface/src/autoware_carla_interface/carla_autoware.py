@@ -101,6 +101,7 @@ class InitializeInterface(object):
         try:
             return self.world.get_map().get_spawn_points()
         except RuntimeError as error:
+            # cspell:ignore mapless
             # Mapless CARLA levels (no parseable OpenDRIVE metadata) expose no map.
             print(f"WARNING: Map spawn points are unavailable (mapless level?): {error}")
             return []
