@@ -243,11 +243,7 @@ void AbstractPlanningAlgorithm::computeCollisionIndexes(
   const auto base_pose = index2pose(costmap_, base_index, planner_common_param_.theta_size);
   const auto base_theta = tf2::getYaw(base_pose.orientation);
 
-  // base_theta is loop-invariant -> compute sin/cos once instead of per point. Also,
-  // pose_local's orientation is never set here and index.theta is discarded below (only
-  // index.x/index.y are kept), so pose2index's getYaw/discretizeAngle (atan2 + fmod) is dead
-  // work; compute the x/y indices directly with the same std::round(.../resolution) pose2index
-  // uses, so the result is identical without paying for the discarded heading.
+  // Skip unused heading discretization and cache loop-invariant trigonometric values.
   const double cos_theta = std::cos(base_theta);
   const double sin_theta = std::sin(base_theta);
   const auto addIndex2d = [&](
