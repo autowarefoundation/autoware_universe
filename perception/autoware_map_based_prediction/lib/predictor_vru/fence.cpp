@@ -95,7 +95,6 @@ PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_p
   for (const auto & candidate : candidates) {
     if (doesPathCrossFence(predicted_path_ls, candidate)) {
       crossed_fences.push_back(candidate);
-      break;
     }
   }
   if (crossed_fences.empty()) {
@@ -118,10 +117,7 @@ PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_p
     return predicted_path;
   }
   auto trimmed_path = predicted_path;
-  trimmed_path.path.clear();
-  for (unsigned i = 0; i <= closest_cross_index.value(); ++i) {
-    trimmed_path.path.push_back(path.at(i));
-  }
+  trimmed_path.path.resize(closest_cross_index.value() + 1);
   return trimmed_path;
 }
 
