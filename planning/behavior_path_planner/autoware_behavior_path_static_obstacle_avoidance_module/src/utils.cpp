@@ -1043,33 +1043,63 @@ bool isSatisfiedWithCommonCondition(
 }
 
 /**
- * @brief check if an uncrossable boundary (e.g. guard rail) lies between the object and the path.
- * @param [in] object object data.
+ * @brief extract the uncrossable boundary segments (e.g. guard rails) around the ego path.
+ * @param [in] objects objects to be filtered.
  * @param [in] data avoidance planning data.
  * @param [in] planner_data planner data.
  * @param [in] parameters avoidance parameters.
- * @return true if the object cannot reach the ego path without crossing a physical boundary.
- * @details The whole footprint of the object is used so that an object is not ignored while a
- * part of it can still reach the ego path. An empty uncrossable_linestring_types disables the
- * check.
+ * @return the uncrossable segments stored in a rtree.
+ * @details The segments are extracted once per planning cycle and then queried for each object.
+ * An empty uncrossable_linestring_types disables the check by returning an empty rtree.
  */
-bool isSeparatedByUncrossableBoundary(
-  const ObjectData & object, const AvoidancePlanningData & data,
+drivable_area_expansion::SegmentRtree extractUncrossableSegments(
+  const ObjectDataArray & objects, const AvoidancePlanningData & data,
   const std::shared_ptr<const PlannerData> & planner_data,
   const std::shared_ptr<AvoidanceParameters> & parameters)
 {
+  if (parameters->uncrossable_linestring_types.empty() || data.reference_path.points.empty()) {
+    return {};
+  }
+  // the box must cover every line of sight, i.e. the ego path and the footprint of every object
+  lanelet::BoundingBox2d search_box;
+  for (const auto & p : data.reference_path.points) {
+    search_box.extend(lanelet::BasicPoint2d{p.point.pose.position.x, p.point.pose.position.y});
+  }
+  for (const auto & object : objects) {
+    for (const auto & p : autoware_utils::to_polygon2d(object.object).outer()) {
+      search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
+    }
+  }
+  return drivable_area_expansion::extract_uncrossable_segments(
+    *planner_data->route_handler->getLaneletMapPtr(), search_box,
+    parameters->uncrossable_linestring_types);
+}
+
+/**
+ * @brief check if an uncrossable boundary (e.g. guard rail) lies between the object and the path.
+ * @param [in] object object data.
+ * @param [in] data avoidance planning data.
+ * @param [in] uncrossable_segments segments extracted once per planning cycle.
+ * @return true if the object cannot reach the ego path without crossing a physical boundary.
+ * @details The whole footprint of the object is used so that an object is not ignored while a
+ * part of it can still reach the ego path. Empty segments disable the check.
+ */
+bool isSeparatedByUncrossableBoundary(
+  const ObjectData & object, const AvoidancePlanningData & data,
+  const drivable_area_expansion::SegmentRtree & uncrossable_segments)
+{
   const auto ref_idx =
     autoware::motion_utils::findNearestIndex(data.reference_path.points, object.getPosition());
-  return drivable_area_expansion::is_separated_by_uncrossable_linestring(
-    *planner_data->route_handler->getLaneletMapPtr(),
-    data.reference_path.points.at(ref_idx).point.pose.position,
-    autoware_utils::to_polygon2d(object.object), parameters->uncrossable_linestring_types);
+  return drivable_area_expansion::is_separated_by_uncrossable_segments(
+    uncrossable_segments, data.reference_path.points.at(ref_idx).point.pose.position,
+    autoware_utils::to_polygon2d(object.object));
 }
 
 bool isSatisfiedWithNonVehicleCondition(
   ObjectData & object, const AvoidancePlanningData & data,
   const std::shared_ptr<const PlannerData> & planner_data,
-  [[maybe_unused]] const std::shared_ptr<AvoidanceParameters> & parameters)
+  const std::shared_ptr<AvoidanceParameters> & parameters,
+  const drivable_area_expansion::SegmentRtree & uncrossable_segments)
 {
   // avoidance module ignore pedestrian and bicycle around crosswalk
   if (isWithinCrosswalk(object, planner_data->route_handler->getOverallGraphPtr())) {
@@ -1078,7 +1108,7 @@ bool isSatisfiedWithNonVehicleCondition(
   }
 
   // ignore objects separated from the ego path by an uncrossable boundary (e.g. guard rail)
-  if (isSeparatedByUncrossableBoundary(object, data, planner_data, parameters)) {
+  if (isSeparatedByUncrossableBoundary(object, data, uncrossable_segments)) {
     object.info = ObjectInfo::SEPARATED_BY_UNCROSSABLE_BOUNDARY;
     return false;
   }
@@ -2300,6 +2330,9 @@ void filterTargetObjects(
           data.reference_path_rough.points, ego_idx, data.reference_path_rough.points.size() - 1)
       : std::numeric_limits<double>::max();
 
+  const auto uncrossable_segments =
+    filtering_utils::extractUncrossableSegments(objects, data, planner_data, parameters);
+
   for (auto & o : objects) {
     if (!filtering_utils::isSatisfiedWithCommonCondition(
           o, data.reference_path_rough, forward_detection_range, to_goal_distance,
@@ -2324,7 +2357,7 @@ void filterTargetObjects(
         continue;
       }
 
-      if (filtering_utils::isSeparatedByUncrossableBoundary(o, data, planner_data, parameters)) {
+      if (filtering_utils::isSeparatedByUncrossableBoundary(o, data, uncrossable_segments)) {
         o.info = ObjectInfo::SEPARATED_BY_UNCROSSABLE_BOUNDARY;
         data.other_objects.push_back(o);
         continue;
@@ -2369,7 +2402,8 @@ void filterTargetObjects(
         continue;
       }
 
-      if (!filtering_utils::isSatisfiedWithNonVehicleCondition(o, data, planner_data, parameters)) {
+      if (!filtering_utils::isSatisfiedWithNonVehicleCondition(
+            o, data, planner_data, parameters, uncrossable_segments)) {
         data.other_objects.push_back(o);
         continue;
       }
