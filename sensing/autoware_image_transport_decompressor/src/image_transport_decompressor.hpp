@@ -18,27 +18,18 @@
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
-#include <optional>
 #include <string>
 
 namespace autoware::image_preprocessor::image_transport_decompressor
 {
 
-/// @brief Severity of DecompressResult::message.
-enum class Severity { Ok, Warn, Error };
-
-/// @brief Outcome of decompress(). The caller decides whether/how to report message; severity is Ok
-/// exactly when message is empty. image is set independently of severity.
-struct DecompressResult
-{
-  std::optional<sensor_msgs::msg::Image> image;
-  Severity severity{Severity::Ok};
-  std::string message;
-};
-
-/// @brief Decompress @p compressed_image, copying its header into the result's image. "rgb8" and
-/// "bgr8" force that encoding; any other requested value keeps the encoding the format field names.
-DecompressResult decompress(
+/// @brief Decompress @p compressed_image, copying its header into the returned image. "rgb8" and
+/// "bgr8" force that encoding, any other requested one keeps the encoding the format field names.
+/// @throws cv::Exception when the payload cannot be decoded. A sensor sits at the far end of a
+/// physical link, so a corrupted payload is an expected event rather than a defect of this function,
+/// and the caller owns the policy for it: a node is expected to report the frame and carry on, while
+/// a caller that only wires components together may let it propagate.
+sensor_msgs::msg::Image decompress(
   const sensor_msgs::msg::CompressedImage & compressed_image,
   const std::string & requested_encoding);
 
