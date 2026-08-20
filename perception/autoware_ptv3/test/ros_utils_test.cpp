@@ -68,7 +68,7 @@ TEST(RosUtilsTest, ConvertsUnknownBoxLabelWithoutTwist)
   EXPECT_FALSE(object.kinematics.has_twist);
 }
 
-class ClassificationRemapTest : public ::testing::Test
+class ClassificationMappingTest : public ::testing::Test
 {
 protected:
   static void SetUpTestSuite() { rclcpp::init(0, nullptr); }
@@ -78,44 +78,44 @@ protected:
   {
     rclcpp::NodeOptions options;
     options.parameter_overrides(overrides);
-    return std::make_shared<rclcpp::Node>("class_remap_test_node", options);
+    return std::make_shared<rclcpp::Node>("class_mapping_test_node", options);
   }
 };
 
-TEST_F(ClassificationRemapTest, ResolvesRemapKeyedByClassName)
+TEST_F(ClassificationMappingTest, ResolvesMappingKeyedByClassName)
 {
   const auto node = makeNode(
-    {{"segmentation3d.class_remap.car", "CAR"},
-     {"segmentation3d.class_remap.traffic_cone", "HAZARD"}});
+    {{"segmentation3d.class_mapping.car", "CAR"},
+     {"segmentation3d.class_mapping.traffic_cone", "HAZARD"}});
 
-  const auto class_remaps =
-    declare_class_remap(*node, {"car", "traffic_cone"}, rcl_interfaces::msg::ParameterDescriptor{});
+  const auto class_mapping = declare_class_mapping(
+    *node, {"car", "traffic_cone"}, rcl_interfaces::msg::ParameterDescriptor{});
 
-  ASSERT_EQ(class_remaps.size(), 2U);
-  EXPECT_EQ(class_remaps.at("car"), "CAR");
-  EXPECT_EQ(class_remaps.at("traffic_cone"), "HAZARD");
+  ASSERT_EQ(class_mapping.size(), 2U);
+  EXPECT_EQ(class_mapping.at("car"), "CAR");
+  EXPECT_EQ(class_mapping.at("traffic_cone"), "HAZARD");
 }
 
-TEST_F(ClassificationRemapTest, SkipsRemapEntriesNotInClassNames)
+TEST_F(ClassificationMappingTest, SkipsMappingEntriesNotInClassNames)
 {
   const auto node = makeNode(
-    {{"segmentation3d.class_remap.car", "CAR"},
-     {"segmentation3d.class_remap.vegetation", "VEGETATION"}});
+    {{"segmentation3d.class_mapping.car", "CAR"},
+     {"segmentation3d.class_mapping.vegetation", "VEGETATION"}});
 
-  const auto class_remaps =
-    declare_class_remap(*node, {"car"}, rcl_interfaces::msg::ParameterDescriptor{});
+  const auto class_mapping =
+    declare_class_mapping(*node, {"car"}, rcl_interfaces::msg::ParameterDescriptor{});
 
-  ASSERT_EQ(class_remaps.size(), 1U);
-  EXPECT_EQ(class_remaps.at("car"), "CAR");
-  EXPECT_EQ(class_remaps.count("vegetation"), 0U);
+  ASSERT_EQ(class_mapping.size(), 1U);
+  EXPECT_EQ(class_mapping.at("car"), "CAR");
+  EXPECT_EQ(class_mapping.count("vegetation"), 0U);
 }
 
-TEST_F(ClassificationRemapTest, ThrowsWhenClassIsNotMapped)
+TEST_F(ClassificationMappingTest, ThrowsWhenClassIsNotMapped)
 {
-  const auto node = makeNode({{"segmentation3d.class_remap.car", "CAR"}});
+  const auto node = makeNode({{"segmentation3d.class_mapping.car", "CAR"}});
 
   EXPECT_THROW(
-    declare_class_remap(*node, {"car", "truck"}, rcl_interfaces::msg::ParameterDescriptor{}),
+    declare_class_mapping(*node, {"car", "truck"}, rcl_interfaces::msg::ParameterDescriptor{}),
     std::runtime_error);
 }
 

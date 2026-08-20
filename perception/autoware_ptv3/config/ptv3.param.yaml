@@ -17,7 +17,7 @@
       workspace_size: 8589934592  # 8 GiB
       source_reconstruction: "full"
       # Mapping from segmentation3d.class_names to autoware::point_types::PointCloudClassification.
-      class_remap:
+      class_mapping:
         car: CAR
         truck: TRUCK
         bus: BUS

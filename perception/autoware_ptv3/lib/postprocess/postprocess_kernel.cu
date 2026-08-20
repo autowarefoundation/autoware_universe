@@ -294,7 +294,7 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
     color_map_d_.get(), config_.colors_rgb_.data(), config_.colors_rgb_.size() * sizeof(float),
     cudaMemcpyHostToDevice, stream_);
 
-  // The LUT is resolved from segmentation3d.class_remap when PTv3Config is built.
+  // The LUT is resolved from segmentation3d.class_mapping when PTv3Config is built.
   class_id_to_classification_d_ =
     autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.class_id_to_classification_.size());
   cudaMemcpyAsync(

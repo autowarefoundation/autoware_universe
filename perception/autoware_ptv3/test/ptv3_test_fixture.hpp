@@ -46,7 +46,7 @@ struct PTv3ConfigParams
   std::vector<float> point_cloud_range = {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F};
   std::vector<float> voxel_size = {1.0F, 1.0F, 1.0F};
   std::vector<std::string> segmentation_class_names = {"noise", "car"};
-  std::unordered_map<std::string, std::string> segmentation_class_remaps = {
+  std::unordered_map<std::string, std::string> segmentation_class_mapping = {
     {"noise", "NOISE"}, {"car", "CAR"}};
   std::vector<std::string> serialization_orders = {"z", "z-trans"};
   std::vector<std::int64_t> pooling_strides = {2, 2};
@@ -72,7 +72,7 @@ inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
   return PTv3Config(
     params.use_seg3d_head, params.use_det3d_head, params.plugins_path, params.cloud_capacity,
     params.voxels_num, params.point_cloud_range, params.voxel_size, params.segmentation_class_names,
-    params.segmentation_class_remaps, params.serialization_orders, params.pooling_strides,
+    params.segmentation_class_mapping, params.serialization_orders, params.pooling_strides,
     params.enc_channels, params.palette, params.filter_classes, params.filter_output_format,
     params.filter_apply_to_segmentation, params.source_reconstruction, params.dec_depths,
     params.detection_class_names, params.bbox_voxel_size, params.distance_bin_upper_limits,

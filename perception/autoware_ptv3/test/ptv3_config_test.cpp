@@ -43,15 +43,15 @@ PTv3Config makeDetectionConfig(
     true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
 }
 
-// Segmentation-only config exercising segmentation3d.class_remap resolution.
+// Segmentation-only config exercising segmentation3d.class_mapping resolution.
 PTv3Config makeSegmentationConfig(
   const std::vector<std::string> & segmentation_class_names,
-  const std::unordered_map<std::string, std::string> & segmentation_class_remaps)
+  const std::unordered_map<std::string, std::string> & segmentation_class_mapping)
 {
   std::vector<std::int64_t> palette(segmentation_class_names.size() * 3, 0);
   return PTv3Config(
     true, false, "", 8, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F}, {1.0F, 1.0F, 1.0F},
-    segmentation_class_names, segmentation_class_remaps, {"z", "z-trans"}, {2, 2}, {8, 16, 32},
+    segmentation_class_names, segmentation_class_mapping, {"z", "z-trans"}, {2, 2}, {8, 16, 32},
     palette, {}, "xyzi", false, "partial", {0, 0});
 }
 
@@ -94,7 +94,7 @@ TEST(PTv3ConfigTest, BuildsClassificationLutInClassNameOrder)
 {
   using autoware::point_types::PointCloudClassification;
 
-  // Keep the remap order different from class_names to verify that the LUT follows class_names.
+  // Keep the mapping order different from class_names to verify that the LUT follows class_names.
   const auto config = makeSegmentationConfig(
     {"car", "traffic_cone", "drivable_flat"},
     {{"drivable_flat", "FLAT_SURFACE"}, {"car", "CAR"}, {"traffic_cone", "HAZARD"}});
@@ -111,7 +111,7 @@ TEST(PTv3ConfigTest, BuildsClassificationLutInClassNameOrder)
     static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE));
 }
 
-TEST(PTv3ConfigTest, HonorsClassificationRemapOverride)
+TEST(PTv3ConfigTest, HonorsClassificationMappingOverride)
 {
   using autoware::point_types::PointCloudClassification;
 
@@ -145,16 +145,16 @@ TEST(PTv3ConfigTest, RejectsUnknownClassificationName)
   EXPECT_THROW(makeSegmentationConfig({"car"}, {{"car", "UNKNOWN"}}), std::invalid_argument);
 }
 
-TEST(PTv3ConfigTest, RejectsClassNameMissingFromRemap)
+TEST(PTv3ConfigTest, RejectsClassNameMissingFromMapping)
 {
   EXPECT_THROW(makeSegmentationConfig({"car", "truck"}, {{"car", "CAR"}}), std::runtime_error);
 }
 
-TEST(PTv3ConfigTest, IgnoresRemapEntriesForClassesTheModelDoesNotOutput)
+TEST(PTv3ConfigTest, IgnoresMappingEntriesForClassesTheModelDoesNotOutput)
 {
   using autoware::point_types::PointCloudClassification;
 
-  // The remap may cover more classes than class_names, e.g. one param file shared across model
+  // The mapping may cover more classes than class_names, e.g. one param file shared across model
   // variants that output different class subsets.
   const auto config = makeSegmentationConfig(
     {"car"}, {{"car", "CAR"}, {"truck", "TRUCK"}, {"vegetation", "VEGETATION"}});

@@ -47,7 +47,7 @@ public:
     const std::int64_t cloud_capacity, const std::vector<std::int64_t> & voxels_num,
     const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size,
     const std::vector<std::string> & segmentation_class_names = {},
-    const std::unordered_map<std::string, std::string> & segmentation_class_remaps = {},
+    const std::unordered_map<std::string, std::string> & segmentation_class_mapping = {},
     const std::vector<std::string> & serialization_orders = {},
     const std::vector<std::int64_t> & pooling_strides = {},
     const std::vector<std::int64_t> & enc_channels = {},
@@ -121,7 +121,7 @@ public:
       segmentation_class_names_ = segmentation_class_names;
       colors_rgb_ = make_palette(segmentation_class_names_, palette);
       class_id_to_classification_ =
-        make_class_id_to_classification(segmentation_class_names_, segmentation_class_remaps);
+        make_class_id_to_classification(segmentation_class_names_, segmentation_class_mapping);
       for (auto & class_name : segmentation_class_names_) {
         std::transform(
           class_name.begin(), class_name.end(), class_name.begin(),
@@ -285,24 +285,24 @@ public:
    * @brief Build the lookup table from model class id (index into class_names) to
    * PointCloudClassification.
    * @details The model output label index is determined by the class_names order, so the table is
-   * built by looking each class name up in class_remaps. Entries in class_remaps whose key is not
+   * built by looking each class name up in class_mapping. Entries in class_mapping whose key is not
    * in class_names are ignored, so the map may cover more classes than the loaded model outputs.
    * @param class_names Segmentation class names, indexed by model output label.
-   * @param class_remaps Class name to PointCloudClassification name.
+   * @param class_mapping Class name to PointCloudClassification name.
    * @return Lookup table with one entry per class name.
-   * @throws std::runtime_error If a class name has no entry in class_remaps.
+   * @throws std::runtime_error If a class name has no entry in class_mapping.
    * @throws std::invalid_argument If a mapped value is not a PointCloudClassification name.
    */
   static std::vector<std::uint8_t> make_class_id_to_classification(
     const std::vector<std::string> & class_names,
-    const std::unordered_map<std::string, std::string> & class_remaps)
+    const std::unordered_map<std::string, std::string> & class_mapping)
   {
     std::vector<std::uint8_t> lut;
     lut.reserve(class_names.size());
     for (const auto & class_name : class_names) {
-      const auto it = class_remaps.find(class_name);
-      if (it == class_remaps.end()) {
-        throw std::runtime_error("class_remaps has no entry for class name '" + class_name + "'.");
+      const auto it = class_mapping.find(class_name);
+      if (it == class_mapping.end()) {
+        throw std::runtime_error("class_mapping has no entry for class name '" + class_name + "'.");
       }
       lut.push_back(
         static_cast<std::uint8_t>(autoware::point_types::to_pointcloud_classification(it->second)));
