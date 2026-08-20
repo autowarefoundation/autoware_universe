@@ -85,10 +85,10 @@ private:
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg) const;
   std::unique_ptr<Tensor> process_distorted_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
-    ImageProcessingParams & params);
+    ImageProcessingParams & params, const bool swap_rb);
   std::unique_ptr<Tensor> process_regular_image(
     const Image::ConstSharedPtr & input_camera_image_msg, const ImageProcessingParams & params,
-    const int camera_id);
+    const int camera_id, const bool swap_rb);
   void update_metadata_and_timing(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
     const std::chrono::high_resolution_clock::time_point & start_time);
@@ -100,6 +100,12 @@ private:
     const int camera_id, const std::vector<std::uint8_t> & raster, const int width,
     const int height);
 
+  // Entrance check for every incoming frame: validates the encoding (rgb8/bgr8, reporting via
+  // swap_rb whether the buffer needs a BGR -> RGB conversion right after upload) and the buffer
+  // geometry.
+  bool validate_image_message(
+    const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg, bool & swap_rb);
+
   const size_t rois_number_;
   const int image_height_;
   const int image_width_;
@@ -109,6 +115,7 @@ private:
   const bool is_distorted_image_;
 
   rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
   std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
   std::shared_ptr<Tensor> image_input_;
   std::shared_ptr<Tensor> image_input_mean_;
