@@ -297,7 +297,7 @@ struct AvoidanceParameters
   double unstable_classification_time{0.0};
 
   // Objects separated from the ego path by one of these linestring types are ignored.
-  // An empty list disables the check.
+  // Use ["NONE"] in the parameter file to leave this empty and disable the check.
   std::vector<drivable_area_expansion::DrivableAreaExpansionParameters::LinestringType>
     uncrossable_linestring_types{};
 

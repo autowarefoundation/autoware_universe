@@ -1050,7 +1050,7 @@ bool isSatisfiedWithCommonCondition(
  * @param [in] parameters avoidance parameters.
  * @return the uncrossable segments stored in a rtree.
  * @details The segments are extracted once per planning cycle and then queried for each object.
- * An empty uncrossable_linestring_types disables the check by returning an empty rtree.
+ * No segment is extracted when no uncrossable linestring type is configured.
  */
 drivable_area_expansion::SegmentRtree extractUncrossableSegments(
   const ObjectDataArray & objects, const AvoidancePlanningData & data,
