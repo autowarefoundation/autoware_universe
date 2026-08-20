@@ -61,6 +61,7 @@
 
 #include <algorithm>
 #include <array>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -80,11 +81,16 @@ sensor_msgs::msg::Image decompress(
 
   // Decode the image. cv::IMREAD_COLOR makes it 8-bit with three channels in BGR order, whatever
   // the depth and the channel count of the compressed stream are.
-  cv_image.image = cv::imdecode(cv::Mat(compressed_image.data), cv::IMREAD_COLOR);
+  try {
+    cv_image.image = cv::imdecode(cv::Mat(compressed_image.data), cv::IMREAD_COLOR);
+  } catch (const cv::Exception & e) {
+    // Reported the same way as the empty image below, keeping the decoder's own message.
+    throw std::runtime_error(e.what());
+  }
   if (cv_image.image.empty()) {
-    // cv::imdecode reports an undecodable payload by returning an empty image instead of throwing,
-    // so raise it here to leave the caller a single way to observe a failure.
-    CV_Error(cv::Error::StsParseError, "the compressed image could not be decoded");
+    // cv::imdecode throws on an empty payload, but reports one it cannot make sense of by returning
+    // an empty image, so raise that second case here.
+    throw std::runtime_error("the compressed image could not be decoded");
   }
 
   // Assign image encoding string

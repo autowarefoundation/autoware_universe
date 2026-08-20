@@ -16,8 +16,7 @@
 
 #include "image_transport_decompressor.hpp"
 
-#include <opencv2/core.hpp>
-
+#include <exception>
 #include <memory>
 #include <string>
 #include <utility>
@@ -42,7 +41,7 @@ void ImageTransportDecompressor::onCompressedImage(
     auto raw_image_msg =
       image_transport_decompressor::decompress(*input_compressed_image_msg, encoding_);
     raw_image_pub_->publish(std::make_unique<sensor_msgs::msg::Image>(std::move(raw_image_msg)));
-  } catch (const cv::Exception & e) {
+  } catch (const std::exception & e) {
     RCLCPP_ERROR(get_logger(), "%s", e.what());
   }
 }
