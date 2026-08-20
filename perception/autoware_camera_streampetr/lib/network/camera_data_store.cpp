@@ -89,7 +89,7 @@ static CameraMatrices create_camera_matrices(
   return matrices;
 }
 
-static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
+static void update_intrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 {
   Eigen::Matrix3f K;
   K << K_4x4[0], K_4x4[1], K_4x4[2], K_4x4[4], K_4x4[5], K_4x4[6], K_4x4[8], K_4x4[9], K_4x4[10];
@@ -117,7 +117,8 @@ CameraDataStore::CameraDataStore(
   preprocess_time_ms_(0.0f),
   is_distorted_image_(is_distorted_image),
   logger_(node->get_logger()),
-  clock_(node->get_clock())
+  clock_(node->get_clock()),
+  input_rejected_(rois_number)
 {
   image_input_ = std::make_shared<Tensor>(
     "image_input", nvinfer1::Dims{5, {1, rois_number, 3, image_height, image_width}},
@@ -148,7 +149,7 @@ CameraDataStore::CameraDataStore(
   undistort_map_y_gpu_.resize(rois_number, nullptr);
   undistortion_maps_computed_.resize(rois_number, false);
 
-  ego_mask_roi_configs_ = loadEgoMaskRoiConfigs(ego_mask_params, rois_number_);
+  ego_mask_roi_configs_ = load_ego_mask_roi_configs(ego_mask_params, rois_number_);
   ego_mask_gpu_.resize(rois_number_, nullptr);
   ego_mask_width_.resize(rois_number_, 0);
   ego_mask_height_.resize(rois_number_, 0);
@@ -214,7 +215,7 @@ void CameraDataStore::update_camera_image(
   }
 
   // Launch CUDA kernel for resizing and ROI extraction
-  auto err = resizeAndExtractRoi_launch(
+  auto err = resize_and_extract_roi_launch(
     static_cast<std::uint8_t *>(image_input_tensor->ptr), static_cast<float *>(image_input_->ptr),
     params.camera_offset, params.original_height, params.original_width, params.newH, params.newW,
     image_height_, image_width_, params.start_y, params.start_x,
@@ -223,7 +224,7 @@ void CameraDataStore::update_camera_image(
 
   if (err != cudaSuccess) {
     RCLCPP_ERROR(
-      logger_, "resizeAndExtractRoi_launch failed with error: %s", cudaGetErrorString(err));
+      logger_, "resize_and_extract_roi_launch failed with error: %s", cudaGetErrorString(err));
   }
 
   // Update metadata and timing
@@ -255,6 +256,7 @@ bool CameraDataStore::validate_image_message(
       "Camera %d publishes unsupported encoding '%s'. Only 'rgb8' and 'bgr8' can be fed to the "
       "model; dropping frames from this camera.",
       camera_id, encoding.c_str());
+    input_rejected_[camera_id] = true;
     return false;
   }
 
@@ -274,9 +276,11 @@ bool CameraDataStore::validate_image_message(
       "step %zu and %zu bytes is required; dropping frames from this camera.",
       camera_id, input_camera_image_msg->width, input_camera_image_msg->height, encoding.c_str(),
       input_camera_image_msg->step, input_camera_image_msg->data.size(), row_bytes, expected_size);
+    input_rejected_[camera_id] = true;
     return false;
   }
 
+  input_rejected_[camera_id] = false;
   return true;
 }
 
@@ -344,12 +348,12 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
   // Convert to RGB immediately after the upload so every later stage (remap, ego mask, resize)
   // sees the model's channel order regardless of the source encoding.
   if (swap_rb) {
-    auto err_convert = convertBGRToRGB_launch(
+    auto err_convert = convert_bgr_to_rgb_launch(
       static_cast<std::uint8_t *>(input_tensor->ptr), original_height, original_width,
       streams_[camera_id]);
     if (err_convert != cudaSuccess) {
       RCLCPP_ERROR(
-        logger_, "convertBGRToRGB_launch failed for camera %d: %s", camera_id,
+        logger_, "convert_bgr_to_rgb_launch failed for camera %d: %s", camera_id,
         cudaGetErrorString(err_convert));
       return nullptr;
     }
@@ -378,13 +382,13 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
 
   if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
     const auto & cfg = ego_mask_roi_configs_[camera_id].value();
-    auto err_mask = applyEgoMask_launch(
+    auto err_mask = apply_ego_mask_launch(
       static_cast<std::uint8_t *>(image_input_tensor->ptr),
       static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), original_height,
       original_width, cfg.fill_rgb[0], cfg.fill_rgb[1], cfg.fill_rgb[2], streams_[camera_id]);
     if (err_mask != cudaSuccess) {
       RCLCPP_ERROR(
-        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        logger_, "apply_ego_mask_launch failed for camera %d: %s", camera_id,
         cudaGetErrorString(err_mask));
       return nullptr;
     }
@@ -407,12 +411,12 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
   // Convert to RGB immediately after the upload so every later stage (ego mask, resize) sees the
   // model's channel order regardless of the source encoding.
   if (swap_rb) {
-    auto err_convert = convertBGRToRGB_launch(
+    auto err_convert = convert_bgr_to_rgb_launch(
       static_cast<std::uint8_t *>(image_input_tensor->ptr), params.original_height,
       params.original_width, streams_.at(camera_id));
     if (err_convert != cudaSuccess) {
       RCLCPP_ERROR(
-        logger_, "convertBGRToRGB_launch failed for camera %d: %s", camera_id,
+        logger_, "convert_bgr_to_rgb_launch failed for camera %d: %s", camera_id,
         cudaGetErrorString(err_convert));
       return nullptr;
     }
@@ -420,14 +424,14 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
 
   if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
     const auto & cfg = ego_mask_roi_configs_[camera_id].value();
-    auto err_mask = applyEgoMask_launch(
+    auto err_mask = apply_ego_mask_launch(
       static_cast<std::uint8_t *>(image_input_tensor->ptr),
       static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), params.original_height,
       params.original_width, cfg.fill_rgb[0], cfg.fill_rgb[1], cfg.fill_rgb[2],
       streams_.at(camera_id));
     if (err_mask != cudaSuccess) {
       RCLCPP_ERROR(
-        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        logger_, "apply_ego_mask_launch failed for camera %d: %s", camera_id,
         cudaGetErrorString(err_mask));
       return nullptr;
     }
@@ -445,8 +449,7 @@ void CameraDataStore::update_metadata_and_timing(
   camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
 
   auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  preprocess_time_ms_ = duration.count();
+  preprocess_time_ms_ = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 }
 
 void CameraDataStore::update_camera_info(
@@ -488,7 +491,8 @@ void CameraDataStore::build_ego_mask_gpu(const int camera_id, const int width, c
     return;
   }
 
-  const auto raster = buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
+  const auto raster =
+    build_ego_mask_raster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
   if (raster.size() == 0) {
     RCLCPP_WARN(logger_, "Empty ego mask raster for camera %d", camera_id);
     return;
@@ -534,6 +538,18 @@ bool CameraDataStore::check_if_all_camera_image_received() const
     }
   }
   return true;
+}
+
+std::vector<CameraDataStore::CameraStatus> CameraDataStore::get_camera_status() const
+{
+  std::vector<CameraStatus> status(rois_number_);
+  for (size_t camera_id = 0; camera_id < rois_number_; ++camera_id) {
+    status[camera_id].camera_info_received = static_cast<bool>(camera_info_list_[camera_id]);
+    status[camera_id].image_received = camera_image_timestamp_[camera_id] >= 0;
+    status[camera_id].input_rejected = input_rejected_[camera_id];
+    status[camera_id].last_image_timestamp = camera_image_timestamp_[camera_id];
+  }
+  return status;
 }
 
 float CameraDataStore::check_if_all_images_synced() const
@@ -609,7 +625,7 @@ std::vector<float> CameraDataStore::get_camera_info_vector() const
 
     Eigen::Matrix3f transform_mat = T * S;
 
-    updateIntrinsics(K_4x4.data(), transform_mat);
+    update_intrinsics(K_4x4.data(), transform_mat);
 
     intrinsics_all.insert(intrinsics_all.end(), K_4x4.begin(), K_4x4.end());
   }

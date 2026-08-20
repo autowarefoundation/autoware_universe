@@ -23,6 +23,7 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <memory>
@@ -42,6 +43,17 @@ class CameraDataStore
   using Tensor = cuda::Tensor;
 
 public:
+  // Per-camera health snapshot for diagnostics.
+  struct CameraStatus
+  {
+    bool camera_info_received{false};
+    bool image_received{false};
+    // Sticky until a valid frame arrives.
+    bool input_rejected{false};
+    // Header stamp of the newest accepted frame, in epoch seconds; -1.0 until the first frame.
+    double last_image_timestamp{-1.0};
+  };
+
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
     const int anchor_camera_id, const bool is_distorted_image,
@@ -54,6 +66,7 @@ public:
   bool check_if_all_camera_image_received() const;
   bool check_if_all_camera_info_received() const;
   float check_if_all_images_synced() const;
+  std::vector<CameraStatus> get_camera_status() const;
   float get_preprocess_time_ms() const;
   std::vector<float> get_camera_info_vector() const;
   std::shared_ptr<cuda::Tensor> get_image_input() const;
@@ -116,6 +129,8 @@ private:
 
   rclcpp::Logger logger_;
   rclcpp::Clock::SharedPtr clock_;
+  // Written by camera callback threads, read by the node thread, hence atomic.
+  std::vector<std::atomic<bool>> input_rejected_;
   std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
   std::shared_ptr<Tensor> image_input_;
   std::shared_ptr<Tensor> image_input_mean_;

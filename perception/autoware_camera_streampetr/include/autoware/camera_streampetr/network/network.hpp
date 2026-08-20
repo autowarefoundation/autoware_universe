@@ -80,7 +80,7 @@ public:
 
   using TrtCommon::TrtCommon;
   virtual ~SubNetwork() = default;
-  bool setBindings(const rclcpp::Logger & logger)
+  bool set_bindings(const rclcpp::Logger & logger)
   {
     for (int n = 0; n < getNbIOTensors(); n++) {
       std::string name = getIOTensorName(n);
@@ -126,11 +126,11 @@ public:
     cudaEventDestroy(end_event_);
   }
 
-  void MarkBegin(cudaStream_t stream) { cudaEventRecord(begin_event_, stream); }
+  void mark_begin(cudaStream_t stream) { cudaEventRecord(begin_event_, stream); }
 
-  void MarkEnd(cudaStream_t stream) { cudaEventRecord(end_event_, stream); }
+  void mark_end(cudaStream_t stream) { cudaEventRecord(end_event_, stream); }
 
-  float Elapsed()
+  float elapsed()
   {
     float elapsed_ms;
     cudaEventElapsedTime(&elapsed_ms, begin_event_, end_event_);
@@ -190,16 +190,26 @@ struct InferenceInputs
   float stamp;
 };
 
+// GPU execution time of each subnetwork, measured with CUDA events.
+struct SubNetworkTimings
+{
+  float backbone_ms{0.0f};
+  float ptshead_ms{0.0f};
+  float pos_embed_ms{0.0f};
+};
+
 class StreamPetrNetwork
 {
 public:
   explicit StreamPetrNetwork(const NetworkConfig & config);
 
   ~StreamPetrNetwork();
-  void inference_detector(
-    const InferenceInputs & inputs,
-    std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects,
-    std::vector<float> & forward_time_ms);
+
+  // Runs the model only; returns with the stream synchronized.
+  void inference_detector(const InferenceInputs & inputs, SubNetworkTimings & subnetwork_timings);
+
+  // Reads only the head's output bindings, so the camera store may be unfrozen before calling.
+  void postprocess(std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects);
 
   void wipe_memory();
 
@@ -207,18 +217,16 @@ private:
   autoware_perception_msgs::msg::DetectedObject bbox_to_ros_msg(const Box3D & bbox);
 
   // Helper methods for constructor
-  void initializeNetworks();
-  void setupEngines();
-  void setupBindings();
-  void initializeMemoryAndProfiling();
-  void configureNMSIfNeeded();
+  void initialize_networks();
+  void setup_engines();
+  void setup_bindings();
+  void initialize_memory_and_profiling();
+  void configure_nms_if_needed();
 
   // Helper methods for inference_detector
-  void initializePositionEmbedding(const InferenceInputs & inputs);
-  void executeBackbone(const InferenceInputs & inputs);
-  void executePtsHead(const InferenceInputs & inputs);
-  void executePostprocessing(
-    std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects);
+  void initialize_position_embedding(const InferenceInputs & inputs);
+  void execute_backbone(const InferenceInputs & inputs);
+  void execute_pts_head(const InferenceInputs & inputs);
 
   NetworkConfig config_;
   std::shared_ptr<Logger> logger_;
@@ -230,7 +238,6 @@ private:
   std::unique_ptr<Duration> dur_backbone_;
   std::unique_ptr<Duration> dur_ptshead_;
   std::unique_ptr<Duration> dur_pos_embed_;
-  std::unique_ptr<Duration> dur_postprocess_;
 
   std::unique_ptr<PostprocessCuda> postprocess_cuda_;
   NonMaximumSuppression iou_bev_nms_;

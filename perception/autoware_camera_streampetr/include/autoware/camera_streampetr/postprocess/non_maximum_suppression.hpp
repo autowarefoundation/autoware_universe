@@ -35,14 +35,14 @@ struct NMSParams
 class NonMaximumSuppression
 {
 public:
-  void setParameters(const NMSParams &);
+  void set_parameters(const NMSParams &);
 
   void apply(const std::vector<DetectedObject> &, std::vector<DetectedObject> &);
 
 private:
-  bool isTargetPairObject(const DetectedObject &, const DetectedObject &);
+  bool is_target_pair_object(const DetectedObject &, const DetectedObject &);
 
-  Eigen::MatrixXd generateIoUMatrix(const std::vector<DetectedObject> &);
+  Eigen::MatrixXd generate_iou_matrix(const std::vector<DetectedObject> &);
 
   NMSParams params_{};
 

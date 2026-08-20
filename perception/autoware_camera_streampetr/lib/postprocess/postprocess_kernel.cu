@@ -54,7 +54,7 @@ __device__ inline float sigmoid(float x)
     return 1.0f / (1.0f + expf(-x));
 }
 
-__global__ void generateBoxes3D_kernel(
+__global__ void generate_boxes3d_kernel(
   const float * __restrict__ cls_output, const float * __restrict__ box_output,
   const int num_proposals, const int num_classes, const float * __restrict__ yaw_norm_thresholds,
   const float * __restrict__ score_thresholds, const float * __restrict__ detection_range,
@@ -139,14 +139,14 @@ PostprocessCuda::PostprocessCuda(const PostProcessingConfig & config, cudaStream
 }
 
 // cspell: ignore divup
-cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
+cudaError_t PostprocessCuda::generate_detected_boxes3d_launch(
   const float * cls_output, const float * box_output, std::vector<Box3D> & det_boxes3d,
   cudaStream_t stream)
 {
   dim3 threads = {THREADS_PER_BLOCK};
   dim3 blocks = {divup(config_.num_proposals_, threads.x)};
 
-  generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
+  generate_boxes3d_kernel<<<blocks, threads, 0, stream>>>(
     cls_output, box_output, config_.num_proposals_, config_.num_classes_,
     yaw_norm_thresholds_d_.get(), score_thresholds_d_.get(), detection_range_d_.get(),
     boxes3d_d_.get());
@@ -177,7 +177,7 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   if (config_.circle_nms_dist_threshold_ > 0.0) {
     thrust::device_vector<bool> final_keep_mask_d(num_det_boxes3d);
     const auto num_final_det_boxes3d =
-      circleNMS(det_boxes3d_d, config_.circle_nms_dist_threshold_, final_keep_mask_d, stream);
+      circle_nms(det_boxes3d_d, config_.circle_nms_dist_threshold_, final_keep_mask_d, stream);
     thrust::device_vector<Box3D> final_det_boxes3d_d(num_final_det_boxes3d);
     thrust::copy_if(
       thrust::device, det_boxes3d_d.begin(), det_boxes3d_d.end(), final_keep_mask_d.begin(),
