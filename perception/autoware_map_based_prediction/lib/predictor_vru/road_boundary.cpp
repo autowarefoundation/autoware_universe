@@ -75,14 +75,12 @@ bool segment_has_cuttable_crossing(
   const RoadBoundaryModule::CrosswalkPolygonMap & crosswalk_polygons,
   const RoadBoundaryModule::CrosswalkSignalRedFn & is_crosswalk_signal_red)
 {
-  if (!boost::geometry::intersects(path_segment, boundary_2d)) {
-    return false;
-  }
   lanelet::BasicPoints2d intersections;
   boost::geometry::intersection(path_segment, boundary_2d, intersections);
-  // Fall back to cutting when the intersection points cannot be resolved (e.g. collinear overlap).
+  // No points either for a disjoint segment or for a collinear overlap that cannot be resolved
+  // into points; the latter falls back to cutting.
   if (intersections.empty()) {
-    return true;
+    return boost::geometry::intersects(path_segment, boundary_2d);
   }
   for (const auto & intersection : intersections) {
     const auto crosswalk = find_crosswalk_at_point(crosswalk_layer, crosswalk_polygons, intersection);
