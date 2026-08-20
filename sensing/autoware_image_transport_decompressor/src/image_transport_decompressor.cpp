@@ -101,8 +101,7 @@ sensor_msgs::msg::Image decompress(
 
     if (sensor_msgs::image_encodings::isColor(image_encoding)) {
       std::string compressed_encoding = compressed_image.format.substr(split_pos);
-      bool compressed_bgr_image =
-        (compressed_encoding.find("compressed bgr") != std::string::npos);
+      bool compressed_bgr_image = (compressed_encoding.find("compressed bgr") != std::string::npos);
 
       // Revert color transformation
       if (compressed_bgr_image) {
