@@ -84,13 +84,12 @@ std::vector<LineString2d> collect_linestrings(
 }  // namespace
 
 bool is_separated_by_uncrossable_linestring(
-  const lanelet::LaneletMap & lanelet_map, const Point & from, const Polygon2d & polygon)
+  const lanelet::LaneletMap & lanelet_map, const Point & from, const Polygon2d & polygon,
+  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types)
 {
-  // linestring types representing a physical boundary that objects cannot cross
-  static const std::vector<DrivableAreaExpansionParameters::LinestringType> types{
-    DrivableAreaExpansionParameters::LinestringType{"guard_rail"}};
   const auto & points = polygon.outer();
-  if (points.empty()) {
+  // without any uncrossable type, no object can be separated
+  if (types.empty() || points.empty()) {
     return false;
   }
   // only query the linestrings whose bounding box overlaps the point and the polygon

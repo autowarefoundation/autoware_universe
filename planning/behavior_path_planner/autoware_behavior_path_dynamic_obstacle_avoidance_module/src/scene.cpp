@@ -624,7 +624,8 @@ void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
     if (
       drivable_area_expansion::is_separated_by_uncrossable_linestring(
         *planner_data_->route_handler->getLaneletMapPtr(), input_points.at(obj_idx).position,
-        autoware_utils::to_polygon2d(obj_pose, predicted_object.shape))) {
+        autoware_utils::to_polygon2d(obj_pose, predicted_object.shape),
+        parameters_->uncrossable_linestring_types)) {
       continue;
     }
 

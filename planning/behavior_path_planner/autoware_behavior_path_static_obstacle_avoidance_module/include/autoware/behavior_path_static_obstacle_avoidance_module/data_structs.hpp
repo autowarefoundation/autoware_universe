@@ -16,6 +16,7 @@
 #define AUTOWARE__BEHAVIOR_PATH_STATIC_OBSTACLE_AVOIDANCE_MODULE__DATA_STRUCTS_HPP_
 
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/type_alias.hpp"
@@ -294,6 +295,11 @@ struct AvoidanceParameters
   double object_last_seen_threshold{0.0};
 
   double unstable_classification_time{0.0};
+
+  // Objects separated from the ego path by one of these linestring types are ignored.
+  // An empty list disables the check.
+  std::vector<drivable_area_expansion::DrivableAreaExpansionParameters::LinestringType>
+    uncrossable_linestring_types{};
 
   // The avoidance path generation is performed when the shift distance of the
   // avoidance points is greater than this threshold.
