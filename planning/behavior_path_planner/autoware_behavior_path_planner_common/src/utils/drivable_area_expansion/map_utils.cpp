@@ -16,6 +16,8 @@
 
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
 
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/index/predicates.hpp>
@@ -90,27 +92,54 @@ SegmentRtree extract_uncrossable_segments(
 }
 
 bool is_separated_by_uncrossable_segments(
-  const SegmentRtree & uncrossable_segments, const Point & from, const Polygon2d & polygon)
+  const SegmentRtree & uncrossable_segments, const Point & from, const PredictedObject & object)
 {
-  const auto & points = polygon.outer();
+  const auto footprint = autoware_utils::to_polygon2d(object);
+  const auto & points = footprint.outer();
   // without any uncrossable segment, no object can be separated
   if (uncrossable_segments.empty() || points.empty()) {
     return false;
   }
-  // the polygon is separated only if all of its points are separated
+  const auto is_blocked = [&](const Segment2d & segment) {
+    return uncrossable_segments.qbegin(boost::geometry::index::intersects(segment)) !=
+           uncrossable_segments.qend();
+  };
   const Point2d from_point{from.x, from.y};
-  const auto is_footprint_separated =
-    std::all_of(points.begin(), points.end(), [&](const Point2d & p) {
-      const Segment2d line_of_sight = {from_point, p};
-      return uncrossable_segments.qbegin(boost::geometry::index::intersects(line_of_sight)) !=
-             uncrossable_segments.qend();
-    });
+  // the object can reach the given point if any point of its footprint is in line of sight
+  const auto is_footprint_separated = std::all_of(
+    points.begin(), points.end(),
+    [&](const Point2d & p) { return is_blocked(Segment2d{from_point, p}); });
   if (!is_footprint_separated) {
     return false;
   }
-  // a polygon overlapping the boundary may already be on the other side of it
-  return uncrossable_segments.qbegin(boost::geometry::index::intersects(polygon)) ==
-         uncrossable_segments.qend();
+  // an object overlapping the boundary may already be on the other side of it
+  if (
+    uncrossable_segments.qbegin(boost::geometry::index::intersects(footprint)) !=
+    uncrossable_segments.qend()) {
+    return false;
+  }
+  // the object may still reach the given point by following its predicted path around the boundary
+  // or through one of its gaps. the path is cut where it crosses the boundary since the object is
+  // assumed to stop there
+  const auto & predicted_paths = object.kinematics.predicted_paths;
+  const auto most_likely_path = std::max_element(
+    predicted_paths.begin(), predicted_paths.end(),
+    [](const auto & p1, const auto & p2) { return p1.confidence < p2.confidence; });
+  if (most_likely_path == predicted_paths.end()) {
+    return true;
+  }
+  const auto & initial_position = object.kinematics.initial_pose_with_covariance.pose.position;
+  Point2d prev_point{initial_position.x, initial_position.y};
+  for (const auto & pose : most_likely_path->path) {
+    const Point2d point{pose.position.x, pose.position.y};
+    if (is_blocked(Segment2d{prev_point, point})) {
+      break;  // the object cannot cross the boundary and stops there
+    }
+    if (!is_blocked(Segment2d{from_point, point})) {
+      return false;  // the object can reach a pose with a clear line of sight to the given point
+    }
+    prev_point = point;
+  }
+  return true;
 }
-
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion

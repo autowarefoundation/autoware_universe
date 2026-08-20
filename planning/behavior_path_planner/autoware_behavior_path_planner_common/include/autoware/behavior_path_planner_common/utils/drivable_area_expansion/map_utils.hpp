@@ -55,19 +55,24 @@ SegmentRtree extract_uncrossable_segments(
   const lanelet::LaneletMap & lanelet_map, const lanelet::BoundingBox2d & search_box,
   const std::vector<DrivableAreaExpansionParameters::LinestringType> & types);
 
-/// @brief Determine if a polygon is separated from a point by uncrossable segments
-/// @details The polygon is separated only if all of its points are separated, so that an object is
-/// not ignored while a part of it can still reach the given point, and if it does not overlap the
-/// boundary, so that an object standing on the boundary, and thus possibly already on the other
-/// side of it, is not ignored either.
+/// @brief Determine if an object cannot reach a point without crossing an uncrossable segment
+/// @details The object is separated only if all of the following hold.
+/// - Every point of its footprint is separated from @p from, so that an object is not ignored
+///   while a part of it can still reach the given point.
+/// - Its footprint does not overlap the boundary, so that an object standing on the boundary, and
+///   thus possibly already on the other side of it, is not ignored.
+/// - Its most likely predicted path never reaches a pose with a clear line of sight to @p from.
+///   The path is cut where it crosses the boundary, assuming the object stops there. A path going
+///   around the boundary or through one of its gaps is never cut and thus keeps the object.
+/// Note that the check is done against a single point, so an object that can only reach the given
+/// point through a far away gap of the boundary may still be reported as separated.
 /// If @p uncrossable_segments is empty, the check is disabled and false is always returned.
 /// @param[in] uncrossable_segments uncrossable segments prepared once per planning cycle
 /// @param[in] from point to check against (e.g. a point on the ego path)
-/// @param[in] polygon polygon to check (e.g. the footprint of an object)
-/// @return true if every point of the polygon is separated from the given point
+/// @param[in] object object to check
+/// @return true if the object cannot reach the given point without crossing the boundary
 bool is_separated_by_uncrossable_segments(
-  const SegmentRtree & uncrossable_segments, const Point & from, const Polygon2d & polygon);
-
+  const SegmentRtree & uncrossable_segments, const Point & from, const PredictedObject & object);
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__MAP_UTILS_HPP_

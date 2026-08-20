@@ -1081,8 +1081,9 @@ drivable_area_expansion::SegmentRtree extractUncrossableSegments(
  * @param [in] data avoidance planning data.
  * @param [in] uncrossable_segments segments extracted once per planning cycle.
  * @return true if the object cannot reach the ego path without crossing a physical boundary.
- * @details The whole footprint of the object is used so that an object is not ignored while a
- * part of it can still reach the ego path. Empty segments disable the check.
+ * @details The object is ignored only if its whole footprint is separated from the ego path, its
+ * footprint does not overlap the boundary, and its most likely predicted path does not reach the
+ * ego path without crossing the boundary. Empty segments disable the check.
  */
 bool isSeparatedByUncrossableBoundary(
   const ObjectData & object, const AvoidancePlanningData & data,
@@ -1092,7 +1093,7 @@ bool isSeparatedByUncrossableBoundary(
     autoware::motion_utils::findNearestIndex(data.reference_path.points, object.getPosition());
   return drivable_area_expansion::is_separated_by_uncrossable_segments(
     uncrossable_segments, data.reference_path.points.at(ref_idx).point.pose.position,
-    autoware_utils::to_polygon2d(object.object));
+    object.object);
 }
 
 bool isSatisfiedWithNonVehicleCondition(

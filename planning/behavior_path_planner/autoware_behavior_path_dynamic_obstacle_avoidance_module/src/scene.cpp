@@ -643,12 +643,11 @@ void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
     }
 
     // 1.a-2. Check if the object is separated from the ego path by an uncrossable boundary.
-    // The whole footprint is used so that an object is not ignored while a part of it can still
-    // reach the ego path.
+    // The whole footprint and the most likely predicted path are used so that an object is not
+    // ignored while it can still reach the ego path.
     if (
       drivable_area_expansion::is_separated_by_uncrossable_segments(
-        uncrossable_segments, input_points.at(obj_idx).position,
-        autoware_utils::to_polygon2d(obj_pose, predicted_object.shape))) {
+        uncrossable_segments, input_points.at(obj_idx).position, predicted_object)) {
       continue;
     }
 
