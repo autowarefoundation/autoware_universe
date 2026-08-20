@@ -24,7 +24,7 @@ namespace autoware::camera_streampetr
 {
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
-void NonMaximumSuppression::setParameters(const NMSParams & params)
+void NonMaximumSuppression::set_parameters(const NMSParams & params)
 {
   assert(params.search_distance_2d_ >= 0.0);
   assert(params.iou_threshold_ >= 0.0 && params.iou_threshold_ <= 1.0);
@@ -33,7 +33,7 @@ void NonMaximumSuppression::setParameters(const NMSParams & params)
   search_distance_2d_sq_ = params.search_distance_2d_ * params.search_distance_2d_;
 }
 
-bool NonMaximumSuppression::isTargetPairObject(
+bool NonMaximumSuppression::is_target_pair_object(
   const DetectedObject & object1, const DetectedObject & object2)
 {
   const auto label1 =
@@ -55,7 +55,7 @@ bool NonMaximumSuppression::isTargetPairObject(
   return sqr_dist_2d <= search_distance_2d_sq_;
 }
 
-Eigen::MatrixXd NonMaximumSuppression::generateIoUMatrix(
+Eigen::MatrixXd NonMaximumSuppression::generate_iou_matrix(
   const std::vector<DetectedObject> & input_objects)
 {
   // NOTE: row = target objects to be suppressed, col = source objects to be compared
@@ -65,7 +65,7 @@ Eigen::MatrixXd NonMaximumSuppression::generateIoUMatrix(
     for (std::size_t source_i = 0; source_i < target_i; ++source_i) {
       const auto & target_obj = input_objects.at(target_i);
       const auto & source_obj = input_objects.at(source_i);
-      if (!isTargetPairObject(target_obj, source_obj)) {
+      if (!is_target_pair_object(target_obj, source_obj)) {
         continue;
       }
 
@@ -85,7 +85,7 @@ Eigen::MatrixXd NonMaximumSuppression::generateIoUMatrix(
 void NonMaximumSuppression::apply(
   const std::vector<DetectedObject> & input_objects, std::vector<DetectedObject> & output_objects)
 {
-  Eigen::MatrixXd iou_matrix = generateIoUMatrix(input_objects);
+  Eigen::MatrixXd iou_matrix = generate_iou_matrix(input_objects);
 
   output_objects.reserve(input_objects.size());
   for (std::size_t i = 0; i < input_objects.size(); ++i) {

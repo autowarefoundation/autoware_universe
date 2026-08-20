@@ -20,7 +20,7 @@
 
 #include <memory>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void StopPointFixer::on_initialize(const TrajectoryProcessorParams & params)
@@ -101,9 +101,9 @@ ProcessingResult StopPointFixer::process(
   return ProcessingResult::Modified;
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::StopPointFixer,
+  autoware::trajectory_processor::plugin::StopPointFixer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
