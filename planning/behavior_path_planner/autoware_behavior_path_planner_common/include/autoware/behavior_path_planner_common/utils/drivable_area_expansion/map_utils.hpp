@@ -19,6 +19,7 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/types.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/primitives/BoundingBox.h>
 
 #include <vector>
 
@@ -40,6 +41,30 @@ SegmentRtree extract_uncrossable_segments(
 bool has_types(
   const lanelet::ConstLineString3d & ls,
   const std::vector<DrivableAreaExpansionParameters::LinestringType> & types);
+
+/// @brief Extract the segments of the uncrossable linestrings overlapping the search box
+/// @details Only the segments overlapping the box are kept, so that a linestring much longer than
+/// the box does not inflate the resulting rtree. The segments are meant to be extracted once per
+/// planning cycle and then queried for each object.
+/// If @p types is empty, no segment is extracted and the returned rtree is empty.
+/// @param[in] lanelet_map lanelet map
+/// @param[in] search_box box covering the points to check (e.g. the ego path and the objects)
+/// @param[in] types linestring types representing a physical boundary that objects cannot cross
+/// @return the uncrossable segments stored in a rtree
+SegmentRtree extract_uncrossable_segments(
+  const lanelet::LaneletMap & lanelet_map, const lanelet::BoundingBox2d & search_box,
+  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types);
+
+/// @brief Determine if a polygon is separated from a point by uncrossable segments
+/// @details The polygon is separated only if all of its points are separated, so that an object is
+/// not ignored while a part of it can still reach the given point.
+/// If @p uncrossable_segments is empty, the check is disabled and false is always returned.
+/// @param[in] uncrossable_segments uncrossable segments prepared once per planning cycle
+/// @param[in] from point to check against (e.g. a point on the ego path)
+/// @param[in] polygon polygon to check (e.g. the footprint of an object)
+/// @return true if every point of the polygon is separated from the given point
+bool is_separated_by_uncrossable_segments(
+  const SegmentRtree & uncrossable_segments, const Point & from, const Polygon2d & polygon);
 
 /// @brief Determine if a polygon is separated from a point by an uncrossable linestring
 /// @details The polygon is separated only if all of its points are separated, so that an object is
