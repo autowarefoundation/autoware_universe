@@ -23,7 +23,9 @@
 #include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
+#include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
+#include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/algorithms/overlaps.hpp>
 #include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
@@ -574,39 +576,13 @@ bool checkSafetyWithIntegralPredictedPolygon(
 
 namespace
 {
-struct Aabb
-{
-  double min_x;
-  double min_y;
-  double max_x;
-  double max_y;
-};
-
-Aabb aabb_of(const Polygon2d & polygon)
-{
-  Aabb aabb{
-    std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
-    std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest()};
-  for (const auto & point : polygon.outer()) {
-    aabb.min_x = std::min(aabb.min_x, point.x());
-    aabb.min_y = std::min(aabb.min_y, point.y());
-    aabb.max_x = std::max(aabb.max_x, point.x());
-    aabb.max_y = std::max(aabb.max_y, point.y());
-  }
-  return aabb;
-}
-
-bool aabb_disjoint(const Aabb & a, const Aabb & b)
-{
-  return a.max_x < b.min_x || b.max_x < a.min_x || a.max_y < b.min_y || b.max_y < a.min_y;
-}
-
 bool intersects_with_broad_phase(const Polygon2d & a, const Polygon2d & b)
 {
-  if (aabb_disjoint(aabb_of(a), aabb_of(b))) {
-    return false;
-  }
-  return boost::geometry::intersects(a, b);
+  bg::model::box<Point2d> a_box;
+  bg::model::box<Point2d> b_box;
+  bg::envelope(a, a_box);
+  bg::envelope(b, b_box);
+  return bg::intersects(a_box, b_box) && bg::intersects(a, b);
 }
 }  // namespace
 
