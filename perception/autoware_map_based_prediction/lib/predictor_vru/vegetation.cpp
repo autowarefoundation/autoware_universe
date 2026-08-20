@@ -17,10 +17,9 @@
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <autoware_perception_msgs/msg/shape.hpp>
-
-#include <rclcpp/logging.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -110,8 +109,7 @@ std::optional<size_t> findVegetationCrossingIndex(
   }
 
   const double footprint_radius = footprintRadius(object_shape);
-  const bool is_cylinder =
-    object_shape.type == autoware_perception_msgs::msg::Shape::CYLINDER;
+  const bool is_cylinder = object_shape.type == autoware_perception_msgs::msg::Shape::CYLINDER;
   // The swept footprint of a cylinder is the centerline buffered by its radius, so distance
   // tests against the centerline are exact; other shapes use them as a conservative gate.
   const auto initial_footprint =
@@ -124,10 +122,9 @@ std::optional<size_t> findVegetationCrossingIndex(
     }
     // Object already overlapping vegetation: its path leaves the area, so no crossing is reported.
     const bool initially_overlapping =
-      is_cylinder
-        ? boost::geometry::distance(predicted_path_ls.front(), *vegetation_polygon) <=
-            footprint_radius
-        : boost::geometry::intersects(initial_footprint, *vegetation_polygon);
+      is_cylinder ? boost::geometry::distance(predicted_path_ls.front(), *vegetation_polygon) <=
+                      footprint_radius
+                  : boost::geometry::intersects(initial_footprint, *vegetation_polygon);
     if (initially_overlapping) {
       return std::nullopt;
     }
@@ -229,19 +226,11 @@ std::vector<const Polygon2d *> VegetationModule::lookupCachedPolygons(
 
 bool VegetationModule::doesPathCrossAnyVegetationBeforeCrosswalk(
   const PredictedPathWithArrivalIndex & predicted_path,
+  const lanelet::BasicLineString2d & predicted_path_ls,
   const autoware_perception_msgs::msg::Shape & object_shape) const
 {
-  if (!vegetation_layer_) {
+  if (!vegetation_layer_ || predicted_path_ls.empty()) {
     return false;
-  }
-  if (predicted_path.path.empty()) {
-    return false;
-  }
-  lanelet::BasicLineString2d predicted_path_ls;
-  const size_t last_idx = std::min(predicted_path.arrival_index, predicted_path.path.size() - 1);
-  for (auto i = 0UL; i <= last_idx; ++i) {
-    const auto & pt = predicted_path.path.at(i);
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
   }
   const auto candidates =
     vegetation_layer_->polygonLayer.search(searchBox(predicted_path_ls, object_shape));
@@ -250,7 +239,7 @@ bool VegetationModule::doesPathCrossAnyVegetationBeforeCrosswalk(
 }
 
 PredictedPath VegetationModule::cutPathsCrossingVegetation(
-  const PredictedPath & predicted_path,
+  const PredictedPath & predicted_path, const lanelet::BasicLineString2d & predicted_path_ls,
   const autoware_perception_msgs::msg::Shape & object_shape) const
 {
   PredictedPath cut_path = predicted_path;
@@ -258,10 +247,6 @@ PredictedPath VegetationModule::cutPathsCrossingVegetation(
     return cut_path;
   }
 
-  lanelet::BasicLineString2d predicted_path_ls;
-  for (const auto & pt : predicted_path.path) {
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
-  }
   const auto candidates =
     vegetation_layer_->polygonLayer.search(searchBox(predicted_path_ls, object_shape));
   const std::optional<size_t> crossing_index = findVegetationCrossingIndex(

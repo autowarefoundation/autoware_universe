@@ -83,7 +83,8 @@ bool segment_has_cuttable_crossing(
     return boost::geometry::intersects(path_segment, boundary_2d);
   }
   for (const auto & intersection : intersections) {
-    const auto crosswalk = find_crosswalk_at_point(crosswalk_layer, crosswalk_polygons, intersection);
+    const auto crosswalk =
+      find_crosswalk_at_point(crosswalk_layer, crosswalk_polygons, intersection);
     const bool exempt = crosswalk.has_value() && !is_crosswalk_signal_red(crosswalk.value());
     if (!exempt) {
       return true;
@@ -103,11 +104,7 @@ std::optional<size_t> find_road_boundary_crossing_index(
     return std::nullopt;
   }
 
-  lanelet::BasicLineString2d predicted_path_ls;
-  predicted_path_ls.reserve(path.size());
-  for (const auto & pt : path) {
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
-  }
+  const auto predicted_path_ls = utils::to_linestring_2d(path, path.size() - 1);
 
   const auto candidates =
     road_boundary_layer.lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));

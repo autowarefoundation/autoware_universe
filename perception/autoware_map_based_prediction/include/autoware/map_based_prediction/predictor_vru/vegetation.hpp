@@ -38,12 +38,15 @@ public:
 
   void buildFromMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
 
+  /// @p predicted_path_ls holds the path positions up to the crosswalk arrival index.
   [[nodiscard]] bool doesPathCrossAnyVegetationBeforeCrosswalk(
     const PredictedPathWithArrivalIndex & predicted_path,
+    const lanelet::BasicLineString2d & predicted_path_ls,
     const autoware_perception_msgs::msg::Shape & object_shape) const;
 
+  /// @p predicted_path_ls holds all path positions of @p predicted_path.
   [[nodiscard]] PredictedPath cutPathsCrossingVegetation(
-    const PredictedPath & predicted_path,
+    const PredictedPath & predicted_path, const lanelet::BasicLineString2d & predicted_path_ls,
     const autoware_perception_msgs::msg::Shape & object_shape) const;
 
 private:
