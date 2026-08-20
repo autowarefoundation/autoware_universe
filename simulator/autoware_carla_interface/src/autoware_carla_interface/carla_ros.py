@@ -76,6 +76,7 @@ class carla_ros2_interface(object):
             "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
@@ -747,6 +748,11 @@ class carla_ros2_interface(object):
                 return  # Skip if vehicle not initialized yet
 
             steer_curve = self.physics_control.steering_curve
+            # numpy.interp requires the sample x-coordinates to be increasing.
+            # CARLA 0.10 can return the steering-curve points out of order,
+            # so sort by x before interpolating. On 0.9.x the curve is already
+            # sorted, making this a no-op.
+            steer_curve = sorted(steer_curve, key=lambda v: v.x)
             current_vel = self.ego_actor.get_velocity()
             max_steer_ratio = numpy.interp(
                 abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
