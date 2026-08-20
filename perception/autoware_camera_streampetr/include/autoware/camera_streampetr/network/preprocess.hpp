@@ -20,9 +20,10 @@
 namespace autoware::camera_streampetr
 {
 // In-place BGR -> RGB conversion of a densely packed HWC uint8 image.
-cudaError_t convertBGRToRGB_launch(std::uint8_t * img, int height, int width, cudaStream_t stream);
+cudaError_t convert_bgr_to_rgb_launch(
+  std::uint8_t * img, int height, int width, cudaStream_t stream);
 
-cudaError_t resizeAndExtractRoi_launch(
+cudaError_t resize_and_extract_roi_launch(
   const std::uint8_t * input_img, float * output_img,
   int camera_offset,                // Camera offset in the input image
   int H, int W,                     // Original image dimensions

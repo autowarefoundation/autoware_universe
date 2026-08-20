@@ -38,7 +38,7 @@
 namespace autoware::camera_streampetr
 {
 // In-place BGR -> RGB conversion: each thread swaps bytes 0 and 2 of one packed HWC pixel.
-__global__ void convertBGRToRGB_kernel(std::uint8_t * __restrict__ img, int num_pixels)
+__global__ void convert_bgr_to_rgb_kernel(std::uint8_t * __restrict__ img, int num_pixels)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= num_pixels) return;
@@ -49,13 +49,14 @@ __global__ void convertBGRToRGB_kernel(std::uint8_t * __restrict__ img, int num_
   pixel[2] = b;
 }
 
-cudaError_t convertBGRToRGB_launch(std::uint8_t * img, int height, int width, cudaStream_t stream)
+cudaError_t convert_bgr_to_rgb_launch(
+  std::uint8_t * img, int height, int width, cudaStream_t stream)
 {
   const int num_pixels = height * width;
   const int threads = 256;
   const int blocks = divup(num_pixels, threads);
 
-  convertBGRToRGB_kernel<<<blocks, threads, 0, stream>>>(img, num_pixels);
+  convert_bgr_to_rgb_kernel<<<blocks, threads, 0, stream>>>(img, num_pixels);
 
   return cudaGetLastError();
 }
@@ -68,8 +69,8 @@ cudaError_t convertBGRToRGB_launch(std::uint8_t * img, int height, int width, cu
 // (Anti-aliasing). For upscaling, it acts as standard bilinear interpolation.
 //
 // The input buffer is always RGB here: a BGR source has already been converted in place right
-// after the host-to-device copy (see convertBGRToRGB_launch).
-__global__ void resizeAndExtractRoi_kernel(
+// after the host-to-device copy (see convert_bgr_to_rgb_launch).
+__global__ void resize_and_extract_roi_kernel(
   const std::uint8_t * __restrict__ input_img, float * __restrict__ output_img,
   int camera_offset,                 // Offset in output buffer (for multi-camera batching)
   int in_h, int in_w,                // Input dimensions
@@ -174,7 +175,7 @@ __global__ void resizeAndExtractRoi_kernel(
   output_img[camera_offset + (2 * area + out_idx)] = (sum_c2 - mean[2]) / std[2];
 }
 
-cudaError_t resizeAndExtractRoi_launch(
+cudaError_t resize_and_extract_roi_launch(
   const std::uint8_t * input_img, float * output_img,
   int camera_offset,         // Camera offset in the input image
   int H, int W,              // Original image dimensions
@@ -188,7 +189,7 @@ cudaError_t resizeAndExtractRoi_launch(
   dim3 blocks(divup(W3, threads.x), divup(H3, threads.y));
 
   // Launch the kernel
-  resizeAndExtractRoi_kernel<<<blocks, threads, 0, stream>>>(
+  resize_and_extract_roi_kernel<<<blocks, threads, 0, stream>>>(
     input_img, output_img, camera_offset, H, W, H2, W2, H3, W3, y_start, x_start, channel_wise_mean,
     channel_wise_std);
 
