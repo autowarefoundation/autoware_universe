@@ -22829,6 +22829,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -23064,7 +23075,7 @@ No                  Yes                                                         
 <tr>
 <td><code>latency/inference</code></td>
 <td><code>autoware_internal_debug_msgs::msg::Float64Stamped</code></td>
-<td>Total inference time (ms).</td>
+<td>Model forward pass (ms), stream-synchronized before returning.</td>
 <td>22.13</td>
 </tr>
 <tr>
@@ -23086,9 +23097,9 @@ No                  Yes                                                         
 <td>0.40</td>
 </tr>
 <tr>
-<td><code>latency/inference/postprocess</code></td>
+<td><code>latency/postprocess</code></td>
 <td><code>autoware_internal_debug_msgs::msg::Float64Stamped</code></td>
-<td>nms + filtering + converting network predictions to autoware format (ms).</td>
+<td>bbox decode + nms + converting network predictions to autoware format (ms); disjoint from <code>latency/inference</code>.</td>
 <td>0.40</td>
 </tr>
 <tr>
@@ -23099,6 +23110,150 @@ No                  Yes                                                         
 </tr>
 </tbody>
 </table>
+<p>All <code>latency/*</code> topics are published only when <code>debug_mode</code> is enabled.</p>
+<h3 id="diagnostics">Diagnostics<a class="headerlink" href="#diagnostics" title="Permanent link">#</a></h3>
+<p>Published on <code>/diagnostics</code> regardless of <code>debug_mode</code>. Both statuses are tasks of one
+timer-driven updater (period <code>diagnostics.validation_callback_interval_ms</code>, hardware_id = the
+node name), so they keep reporting when the cameras or the inference stop — precisely the
+conditions they exist for — and always arrive in the same <code>/diagnostics</code> message. One status per
+failure mode, so a diagnostic graph can route input trouble and processing-time trouble to
+different paths.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>camera_status</code></td>
+<td>Per-camera input availability, staleness and validity</td>
+</tr>
+<tr>
+<td><code>processing_time_status</code></td>
+<td>Per-cycle processing-time watchdog</td>
+</tr>
+</tbody>
+</table>
+<p><code>camera_status</code> reports three key/values per camera — the resolved input <code>cameraN/topic</code> (the
+model input index and the physical camera differ on every deployment), <code>cameraN/image_age_ms</code>
+(node clock minus newest header stamp; <code>n/a</code> until the first frame) and <code>cameraN/state</code>, which
+collapses the camera into one state, most-specific-cause first:</p>
+<table>
+<thead>
+<tr>
+<th><code>cameraN/state</code></th>
+<th>Meaning</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rejected</code></td>
+<td>Newest frame dropped by the input validation</td>
+<td><code>ERROR</code></td>
+</tr>
+<tr>
+<td><code>waiting_camera_info</code></td>
+<td>No <code>camera_info</code> yet (normal during start-up)</td>
+<td><code>WARN</code></td>
+</tr>
+<tr>
+<td><code>waiting_image</code></td>
+<td>No first frame yet (normal during start-up)</td>
+<td><code>WARN</code></td>
+</tr>
+<tr>
+<td><code>stale</code></td>
+<td>Used to publish; newest frame older than <code>max_image_age_ms</code></td>
+<td><code>ERROR</code></td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>Healthy</td>
+<td><code>OK</code></td>
+</tr>
+</tbody>
+</table>
+<p>plus summary key/values:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_cameras</code></td>
+<td>Expected camera count (<code>rois_number</code>)</td>
+</tr>
+<tr>
+<td><code>num_waiting</code> / <code>num_stale</code> / <code>num_rejected</code></td>
+<td>State counts; the summary level falls out of these</td>
+</tr>
+<tr>
+<td><code>oldest_image_camera_id</code> / <code>oldest_image_age_ms</code></td>
+<td>The camera that has gone longest without a new frame</td>
+</tr>
+<tr>
+<td><code>max_inter_camera_time_diff_ms</code></td>
+<td>Subscriber-side stamp spread between cameras (<code>n/a</code> while cameras are missing)</td>
+</tr>
+</tbody>
+</table>
+<p>Timestamps and ages are formatted as fixed-point strings (never scientific notation), like the
+pointcloud concatenation node's diagnostics.</p>
+<p>The summary level is the worst camera state; additionally an inter-camera stamp spread above
+<code>max_camera_time_diff</code> raises a <code>WARN</code> (prediction cycles are being skipped by the sync check).
+<code>rejected</code> and <code>stale</code> are <code>ERROR</code> rather than <code>WARN</code> because neither recovers until the
+publisher is fixed: a rejected camera publishes an encoding other than <code>rgb8</code>/<code>bgr8</code>, or a buffer
+that is not densely packed, and those frames never reach the model.</p>
+<p><code>processing_time_status</code> reports <code>WARN</code> once a cycle exceeds
+<code>diagnostics.max_allowed_processing_time_ms</code>, escalating to <code>ERROR</code> if it stays over budget for
+longer than <code>diagnostics.max_acceptable_consecutive_delay_ms</code>. It reports "waiting" until the
+first inference completes, and carries a per-stage breakdown of the measured cycle —
+<code>preprocess_time_ms</code>, <code>inference_time_ms</code> and <code>postprocess_time_ms</code>, mirroring the
+<code>latency/preprocess</code>, <code>latency/inference</code> and <code>latency/postprocess</code> debug topics — so an
+over-budget <code>processing_time_ms</code> can be localized without enabling <code>debug_mode</code>.</p>
+<p><code>inference_time_ms</code> (the model forward pass) and <code>postprocess_time_ms</code> (bbox decode and NMS)
+are disjoint stages. <code>preprocess_time_ms</code> however is the cost of a single image rather than the
+sum over the cameras, and the total is started from the anchor camera's callback, so
+preprocessing done in the other cameras' callbacks falls outside it — the stages do not add up
+to <code>processing_time_ms</code>; compare <code>preprocess_time_ms</code> against its own history instead.</p>
+<p>The newest published detection is reported under both clocks, because <code>processing_time_ms</code> only
+covers the work done inside the node:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>last_frame_timestamp</code></td>
+<td>Header stamp the detections were computed for (the sensing instant)</td>
+</tr>
+<tr>
+<td><code>last_published_timestamp</code></td>
+<td>Node-clock instant at which they left the node</td>
+</tr>
+<tr>
+<td><code>output_latency_ms</code></td>
+<td>The difference: end-to-end latency, including the camera transport and the decode queue ahead of the node</td>
+</tr>
+<tr>
+<td><code>time_since_last_publish_ms</code></td>
+<td>Age of <code>last_published_timestamp</code>, i.e. how long since the node last produced objects</td>
+</tr>
+</tbody>
+</table>
+<p>These are observational only — the level is still decided by the processing-time thresholds
+alone. Comparing a node clock against a header stamp requires both to share a time base, so a
+rosbag replay has to publish <code>/clock</code> and the node has to run with <code>use_sim_time</code> for
+<code>output_latency_ms</code> and <code>time_since_last_publish_ms</code> to be meaningful.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <h3 id="streampetr-node">StreamPETR node<a class="headerlink" href="#streampetr-node" title="Permanent link">#</a></h3>
 <p>The <code>autoware_camera_streampetr</code> node has various parameters for configuration:</p>
@@ -23142,6 +23297,10 @@ No                  Yes                                                         
 <li><code>anchor_camera_id</code>: ID of the anchor camera for synchronization (default: 0)</li>
 <li><code>debug_mode</code>: Enable debug mode for timing measurements</li>
 <li><code>build_only</code>: Build TensorRT engines and exit without running inference</li>
+<li><code>diagnostics.max_allowed_processing_time_ms</code>: Per-cycle processing-time budget; exceeding it raises a <code>WARN</code> (default: 200.0)</li>
+<li><code>diagnostics.max_acceptable_consecutive_delay_ms</code>: How long the processing time may stay over budget before the <code>WARN</code> escalates to an <code>ERROR</code> (default: 1000.0)</li>
+<li><code>diagnostics.max_image_age_ms</code>: A camera whose newest frame is older than this is reported as stalled at <code>ERROR</code> level (default: 300.0)</li>
+<li><code>diagnostics.validation_callback_interval_ms</code>: Interval of the diagnostic callbacks (default: 100.0)</li>
 </ul>
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_camera_streampetr</code> node has a <code>build_only</code> option to build the TensorRT engine files from the specified ONNX files, after which the program exits.</p>
