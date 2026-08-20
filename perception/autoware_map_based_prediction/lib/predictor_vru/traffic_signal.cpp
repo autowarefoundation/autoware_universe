@@ -72,6 +72,16 @@ std::optional<lanelet::Id> TrafficSignalModule::getSignalId(
   return traffic_light_reg_elems.front()->id();
 }
 
+bool TrafficSignalModule::isRedSignal(const lanelet::ConstLanelet & way_lanelet) const
+{
+  const auto signal_id = getSignalId(way_lanelet);
+  if (!signal_id) {
+    return false;
+  }
+  const auto elem_opt = getSignalElement(signal_id.value());
+  return elem_opt.has_value() && elem_opt.value().color == TrafficLightElement::RED;
+}
+
 bool TrafficSignalModule::calcIntentionToCross(
   const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
   const lanelet::Id & signal_id)
