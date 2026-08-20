@@ -593,7 +593,7 @@ drivable_area_expansion::SegmentRtree DynamicObstacleAvoidanceModule::extractUnc
   const std::vector<PredictedObject> & objects) const
 {
   if (parameters_->uncrossable_linestring_types.empty() || ego_path_points.empty()) {
-    return {};
+    return drivable_area_expansion::SegmentRtree{};
   }
   // the box must cover every line of sight, i.e. the ego path and the footprint of every object
   lanelet::BoundingBox2d search_box;
@@ -602,7 +602,8 @@ drivable_area_expansion::SegmentRtree DynamicObstacleAvoidanceModule::extractUnc
   }
   for (const auto & object : objects) {
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
-    for (const auto & p : autoware_utils::to_polygon2d(obj_pose, object.shape).outer()) {
+    const auto footprint = autoware_utils::to_polygon2d(obj_pose, object.shape);
+    for (const auto & p : footprint.outer()) {
       search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
     }
   }

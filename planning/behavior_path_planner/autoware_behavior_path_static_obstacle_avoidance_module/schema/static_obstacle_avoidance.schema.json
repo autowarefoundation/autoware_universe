@@ -697,7 +697,7 @@
             "uncrossable_linestring_types": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Objects separated from the ego path by one of these linestring types are ignored. Use ["NONE"] to disable the check. The format \"type.subtype\" is also supported.",
+              "description": "Objects separated from the ego path by one of these linestring types are ignored. Use [\"NONE\"] to disable the check. The format \"type.subtype\" is also supported.",
               "default": ["guard_rail"]
             },
             "detection_area": {

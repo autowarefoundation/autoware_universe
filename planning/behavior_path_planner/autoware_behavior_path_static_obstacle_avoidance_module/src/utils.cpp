@@ -1058,7 +1058,7 @@ drivable_area_expansion::SegmentRtree extractUncrossableSegments(
   const std::shared_ptr<AvoidanceParameters> & parameters)
 {
   if (parameters->uncrossable_linestring_types.empty() || data.reference_path.points.empty()) {
-    return {};
+    return drivable_area_expansion::SegmentRtree{};
   }
   // the box must cover every line of sight, i.e. the ego path and the footprint of every object
   lanelet::BoundingBox2d search_box;
@@ -1066,7 +1066,8 @@ drivable_area_expansion::SegmentRtree extractUncrossableSegments(
     search_box.extend(lanelet::BasicPoint2d{p.point.pose.position.x, p.point.pose.position.y});
   }
   for (const auto & object : objects) {
-    for (const auto & p : autoware_utils::to_polygon2d(object.object).outer()) {
+    const auto footprint = autoware_utils::to_polygon2d(object.object);
+    for (const auto & p : footprint.outer()) {
       search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
     }
   }

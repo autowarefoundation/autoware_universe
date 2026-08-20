@@ -70,7 +70,7 @@ SegmentRtree extract_uncrossable_segments(
   const std::vector<DrivableAreaExpansionParameters::LinestringType> & types)
 {
   if (types.empty()) {
-    return {};
+    return SegmentRtree{};
   }
   const autoware_utils::Box2d box{
     {search_box.min().x(), search_box.min().y()}, {search_box.max().x(), search_box.max().y()}};
