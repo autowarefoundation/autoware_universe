@@ -26,6 +26,7 @@
 
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -87,7 +88,7 @@ private:
   std::shared_ptr<MPTOptimizer> mpt_optimizer_ptr_;
 
   // Debug visualization
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_markers_pub_;
+  PublisherHandle<visualization_msgs::msg::MarkerArray> debug_markers_pub_;
 
   // Vehicle information
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;

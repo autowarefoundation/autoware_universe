@@ -21,11 +21,17 @@
 
 #include <Eigen/Core>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
+
+namespace autoware::agnocast_wrapper
+{
+class Node;
+}  // namespace autoware::agnocast_wrapper
 
 namespace autoware::path_smoother
 {
@@ -35,6 +41,10 @@ public:
   EBPathSmoother(
     rclcpp::Node * node, const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
     const CommonParam & common_param, const std::shared_ptr<TimeKeeper> time_keeper_ptr);
+  EBPathSmoother(
+    autoware::agnocast_wrapper::Node * node, const bool enable_debug_info,
+    const EgoNearestParam ego_nearest_param, const CommonParam & common_param,
+    const std::shared_ptr<TimeKeeper> time_keeper_ptr);
 
   std::vector<TrajectoryPoint> smoothTrajectory(
     const std::vector<TrajectoryPoint> & traj_points, const geometry_msgs::msg::Pose & ego_pose);
@@ -55,7 +65,8 @@ private:
     };
 
     EBParam() = default;
-    explicit EBParam(rclcpp::Node * node);
+    template <typename NodeT>
+    explicit EBParam(NodeT * node);
     void onParam(const std::vector<rclcpp::Parameter> & parameters);
 
     // option
@@ -106,8 +117,11 @@ private:
   rclcpp::Clock clock_;
 
   // publisher
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_eb_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_eb_fixed_traj_pub_;
+  std::function<void(const Trajectory &)> debug_eb_traj_pub_;
+  std::function<void(const Trajectory &)> debug_eb_fixed_traj_pub_;
+
+  template <typename NodeT>
+  void setUpPublishers(NodeT * node);
 
   std::unique_ptr<autoware::osqp_interface::OSQPInterface> osqp_solver_ptr_;
   std::shared_ptr<std::vector<TrajectoryPoint>> prev_eb_traj_points_ptr_{nullptr};
