@@ -588,6 +588,29 @@ void DynamicObstacleAvoidanceModule::registerRegulatedObjects(
   }
 }
 
+drivable_area_expansion::SegmentRtree DynamicObstacleAvoidanceModule::extractUncrossableSegments(
+  const std::vector<geometry_msgs::msg::Pose> & ego_path_points,
+  const std::vector<PredictedObject> & objects) const
+{
+  if (parameters_->uncrossable_linestring_types.empty() || ego_path_points.empty()) {
+    return {};
+  }
+  // the box must cover every line of sight, i.e. the ego path and the footprint of every object
+  lanelet::BoundingBox2d search_box;
+  for (const auto & p : ego_path_points) {
+    search_box.extend(lanelet::BasicPoint2d{p.position.x, p.position.y});
+  }
+  for (const auto & object : objects) {
+    const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
+    for (const auto & p : autoware_utils::to_polygon2d(obj_pose, object.shape).outer()) {
+      search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
+    }
+  }
+  return drivable_area_expansion::extract_uncrossable_segments(
+    *planner_data_->route_handler->getLaneletMapPtr(), search_box,
+    parameters_->uncrossable_linestring_types);
+}
+
 void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
   const std::vector<DynamicAvoidanceObject> & prev_objects)
 {
@@ -596,6 +619,7 @@ void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
   const auto input_path = getPreviousModuleOutput().path;
   const auto input_points = toGeometryPoints(input_path.points);  // for efficient computation
   const auto & predicted_objects = planner_data_->dynamic_object->objects;
+  const auto uncrossable_segments = extractUncrossableSegments(input_points, predicted_objects);
 
   for (const auto & predicted_object : predicted_objects) {
     const auto obj_uuid = autoware_utils::to_hex_string(predicted_object.object_id);
@@ -622,10 +646,9 @@ void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
     // The whole footprint is used so that an object is not ignored while a part of it can still
     // reach the ego path.
     if (
-      drivable_area_expansion::is_separated_by_uncrossable_linestring(
-        *planner_data_->route_handler->getLaneletMapPtr(), input_points.at(obj_idx).position,
-        autoware_utils::to_polygon2d(obj_pose, predicted_object.shape),
-        parameters_->uncrossable_linestring_types)) {
+      drivable_area_expansion::is_separated_by_uncrossable_segments(
+        uncrossable_segments, input_points.at(obj_idx).position,
+        autoware_utils::to_polygon2d(obj_pose, predicted_object.shape))) {
       continue;
     }
 

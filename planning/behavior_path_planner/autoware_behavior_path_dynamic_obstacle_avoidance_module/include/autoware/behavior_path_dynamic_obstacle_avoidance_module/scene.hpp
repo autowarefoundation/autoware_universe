@@ -17,6 +17,7 @@
 
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/types.hpp"
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -399,6 +400,9 @@ private:
   ObjectType getObjectType(const uint8_t label) const;
   void registerRegulatedObjects(const std::vector<DynamicAvoidanceObject> & prev_objects);
   void registerUnregulatedObjects(const std::vector<DynamicAvoidanceObject> & prev_objects);
+  drivable_area_expansion::SegmentRtree extractUncrossableSegments(
+    const std::vector<geometry_msgs::msg::Pose> & ego_path_points,
+    const std::vector<PredictedObject> & objects) const;
   void determineWhetherToAvoidAgainstRegulatedObjects(
     const std::vector<DynamicAvoidanceObject> & prev_objects);
   void determineWhetherToAvoidAgainstUnregulatedObjects(

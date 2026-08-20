@@ -66,18 +66,6 @@ SegmentRtree extract_uncrossable_segments(
 bool is_separated_by_uncrossable_segments(
   const SegmentRtree & uncrossable_segments, const Point & from, const Polygon2d & polygon);
 
-/// @brief Determine if a polygon is separated from a point by an uncrossable linestring
-/// @details The polygon is separated only if all of its points are separated, so that an object is
-/// not ignored while a part of it can still reach the given point.
-/// If @p types is empty, the check is disabled and false is always returned.
-/// @param[in] lanelet_map lanelet map
-/// @param[in] from point to check against (e.g. a point on the ego path)
-/// @param[in] polygon polygon to check (e.g. the footprint of an object)
-/// @param[in] types linestring types representing a physical boundary that objects cannot cross
-/// @return true if every point of the polygon is separated from the given point
-bool is_separated_by_uncrossable_linestring(
-  const lanelet::LaneletMap & lanelet_map, const Point & from, const Polygon2d & polygon,
-  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types);
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__MAP_UTILS_HPP_

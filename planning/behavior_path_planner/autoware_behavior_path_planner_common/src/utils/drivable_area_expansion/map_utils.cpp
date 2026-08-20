@@ -26,7 +26,6 @@
 #include <lanelet2_core/primitives/LineString.h>
 
 #include <algorithm>
-#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner::drivable_area_expansion
@@ -107,48 +106,4 @@ bool is_separated_by_uncrossable_segments(
   });
 }
 
-namespace
-{
-/// @brief collect the 2d linestrings with one of the given types found in the search box
-std::vector<LineString2d> collect_linestrings(
-  const lanelet::LaneletMap & lanelet_map, const lanelet::BoundingBox2d & search_box,
-  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types)
-{
-  std::vector<LineString2d> linestrings;
-  for (const auto & ls : lanelet_map.lineStringLayer.search(search_box)) {
-    if (!has_types(ls, types)) {
-      continue;
-    }
-    LineString2d line;
-    for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
-    linestrings.push_back(std::move(line));
-  }
-  return linestrings;
-}
-}  // namespace
-
-bool is_separated_by_uncrossable_linestring(
-  const lanelet::LaneletMap & lanelet_map, const Point & from, const Polygon2d & polygon,
-  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types)
-{
-  const auto & points = polygon.outer();
-  // without any uncrossable type, no object can be separated
-  if (types.empty() || points.empty()) {
-    return false;
-  }
-  // only query the linestrings whose bounding box overlaps the point and the polygon
-  lanelet::BoundingBox2d search_box(lanelet::BasicPoint2d{from.x, from.y});
-  for (const auto & p : points) {
-    search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
-  }
-  const auto linestrings = collect_linestrings(lanelet_map, search_box, types);
-  // the polygon is separated only if all of its points are separated
-  const Point2d from_point{from.x, from.y};
-  return std::all_of(points.begin(), points.end(), [&](const Point2d & p) {
-    const Segment2d line_of_sight = {from_point, p};
-    return std::any_of(linestrings.begin(), linestrings.end(), [&](const LineString2d & line) {
-      return boost::geometry::intersects(line_of_sight, line);
-    });
-  });
-}
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
