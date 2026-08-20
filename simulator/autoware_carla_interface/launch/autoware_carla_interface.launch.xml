@@ -16,12 +16,24 @@
     <arg name="fixed_delta_seconds" default="0.05" description="Time step for CARLA, FPS=1/value"/>
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
+    <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
     <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
     <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
 
-    <let name="carla_map" value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"/>
+    <arg
+      name="carla_map"
+      default=""
+      description="Explicit CARLA map/level name. When non-empty it overrides the name derived from map_path; useful for CARLA levels whose name differs from the Autoware map directory"
+    />
 
-    <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map)'"/>
+    <let name="carla_map_resolved" value="$(var carla_map)" if="$(eval &quot;'$(var carla_map)'.strip() != ''&quot;)"/>
+    <let
+      name="carla_map_resolved"
+      value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"
+      unless="$(eval &quot;'$(var carla_map)'.strip() != ''&quot;)"
+    />
+
+    <log message="[CARLA Interface] Map Path: '$(var map_path)', carla_map override: '$(var carla_map)' -> Loading CARLA Map: '$(var carla_map_resolved)'"/>
 
     <!-- Sensor Configuration -->
     <arg
@@ -41,12 +53,13 @@
       <param name="timeout" value="$(var timeout)"/>
       <param name="sync_mode" value="$(var sync_mode)"/>
       <param name="fixed_delta_seconds" value="$(var fixed_delta_seconds)"/>
-      <param name="carla_map" value="$(var carla_map)"/>
+      <param name="carla_map" value="$(var carla_map_resolved)"/>
       <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name)"/>
       <param name="spawn_point" value="$(var spawn_point)"/>
       <param name="vehicle_type" value="$(var vehicle_type)"/>
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
+      <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>
       <param name="map_origin_y" value="$(var map_origin_y)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>

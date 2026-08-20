@@ -10,7 +10,7 @@ include_directories(
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/image_transport_decompressor.cpp
+  src/image_transport_decompressor_node.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -21,6 +21,17 @@ rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_preprocessor::ImageTransportDecompressor"
   EXECUTABLE image_transport_decompressor_node
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_ros REQUIRED)
+
+  ament_add_ros_isolated_gtest(test_image_transport_decompressor_node
+    test/test_image_transport_decompressor_node.cpp
+  )
+  target_link_libraries(test_image_transport_decompressor_node
+    ${PROJECT_NAME}
+  )
+endif()
 
 ament_auto_package(INSTALL_TO_SHARE
   launch
