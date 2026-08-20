@@ -17,12 +17,15 @@
 
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
 
+#include <autoware_utils_geometry/boost_geometry.hpp>
+
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::map_based_prediction
@@ -44,7 +47,13 @@ public:
     const autoware_perception_msgs::msg::Shape & object_shape) const;
 
 private:
+  [[nodiscard]] std::vector<const autoware_utils_geometry::Polygon2d *> lookupCachedPolygons(
+    const lanelet::ConstPolygons3d & candidates) const;
+
+  // Non-null only when the map holds at least one valid vegetation polygon.
   lanelet::LaneletMapConstUPtr vegetation_layer_{nullptr};
+  // Boost polygons converted once at map load, keyed by the id of the layer entry.
+  std::unordered_map<lanelet::Id, autoware_utils_geometry::Polygon2d> polygons_2d_;
 };
 
 }  // namespace autoware::map_based_prediction
