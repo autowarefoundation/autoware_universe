@@ -57,7 +57,9 @@ SegmentRtree extract_uncrossable_segments(
 
 /// @brief Determine if a polygon is separated from a point by uncrossable segments
 /// @details The polygon is separated only if all of its points are separated, so that an object is
-/// not ignored while a part of it can still reach the given point.
+/// not ignored while a part of it can still reach the given point, and if it does not overlap the
+/// boundary, so that an object standing on the boundary, and thus possibly already on the other
+/// side of it, is not ignored either.
 /// If @p uncrossable_segments is empty, the check is disabled and false is always returned.
 /// @param[in] uncrossable_segments uncrossable segments prepared once per planning cycle
 /// @param[in] from point to check against (e.g. a point on the ego path)

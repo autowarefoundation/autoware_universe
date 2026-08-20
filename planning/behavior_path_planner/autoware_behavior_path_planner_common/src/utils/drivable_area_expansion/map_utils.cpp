@@ -99,11 +99,18 @@ bool is_separated_by_uncrossable_segments(
   }
   // the polygon is separated only if all of its points are separated
   const Point2d from_point{from.x, from.y};
-  return std::all_of(points.begin(), points.end(), [&](const Point2d & p) {
-    const Segment2d line_of_sight = {from_point, p};
-    return uncrossable_segments.qbegin(boost::geometry::index::intersects(line_of_sight)) !=
-           uncrossable_segments.qend();
-  });
+  const auto is_footprint_separated =
+    std::all_of(points.begin(), points.end(), [&](const Point2d & p) {
+      const Segment2d line_of_sight = {from_point, p};
+      return uncrossable_segments.qbegin(boost::geometry::index::intersects(line_of_sight)) !=
+             uncrossable_segments.qend();
+    });
+  if (!is_footprint_separated) {
+    return false;
+  }
+  // a polygon overlapping the boundary may already be on the other side of it
+  return uncrossable_segments.qbegin(boost::geometry::index::intersects(polygon)) ==
+         uncrossable_segments.qend();
 }
 
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
