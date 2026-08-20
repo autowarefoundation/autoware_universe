@@ -17,6 +17,7 @@
         pedestrian: true
 
         # Objects separated from the ego path by one of these linestring types are ignored.
+        # Use ["NONE"] to disable the check.
         uncrossable_linestring_types: ["guard_rail"] # [-]
 
         max_obstacle_vel: 100.0 # [m/s]

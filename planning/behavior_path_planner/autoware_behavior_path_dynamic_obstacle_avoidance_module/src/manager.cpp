@@ -61,10 +61,9 @@ void DynamicObstacleAvoidanceModuleManager::init(rclcpp::Node * node)
     p.avoid_motorcycle = node->declare_parameter<bool>(ns + "motorcycle");
     p.avoid_pedestrian = node->declare_parameter<bool>(ns + "pedestrian");
     // an empty default keeps the check disabled when the parameter is not given
-    for (const auto & type : node->declare_parameter<std::vector<std::string>>(
-           ns + "uncrossable_linestring_types", std::vector<std::string>{})) {
-      p.uncrossable_linestring_types.emplace_back(type);
-    }
+    p.uncrossable_linestring_types = drivable_area_expansion::to_linestring_types(
+      node->declare_parameter<std::vector<std::string>>(
+        ns + "uncrossable_linestring_types", std::vector<std::string>{}));
     p.max_obstacle_vel = node->declare_parameter<double>(ns + "max_obstacle_vel");
     p.min_obstacle_vel = node->declare_parameter<double>(ns + "min_obstacle_vel");
     p.successive_num_to_entry_dynamic_avoidance_condition =
@@ -183,10 +182,8 @@ void DynamicObstacleAvoidanceModuleManager::updateModuleParams(
     if (
       update_param<std::vector<std::string>>(
         parameters, ns + "uncrossable_linestring_types", uncrossable_linestring_types)) {
-      p->uncrossable_linestring_types.clear();
-      for (const auto & type : uncrossable_linestring_types) {
-        p->uncrossable_linestring_types.emplace_back(type);
-      }
+      p->uncrossable_linestring_types =
+        drivable_area_expansion::to_linestring_types(uncrossable_linestring_types);
     }
 
     update_param<double>(parameters, ns + "max_obstacle_vel", p->max_obstacle_vel);

@@ -131,9 +131,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
         ? node->get_parameter(uncrossable_types_param).as_string_array()
         : node->declare_parameter<std::vector<std::string>>(
             uncrossable_types_param, std::vector<std::string>{});
-    for (const auto & type : raw_uncrossable_types) {
-      p.uncrossable_linestring_types.emplace_back(type);
-    }
+    p.uncrossable_linestring_types =
+      drivable_area_expansion::to_linestring_types(raw_uncrossable_types);
   }
 
   {
