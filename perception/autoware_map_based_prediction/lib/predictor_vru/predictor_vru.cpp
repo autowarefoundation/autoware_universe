@@ -149,6 +149,7 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   crosswalks_.insert(crosswalks_.end(), walkways.begin(), walkways.end());
 
   fence_module_.buildFromMap(lanelet_map_ptr_);
+  vegetation_module_.buildFromMap(lanelet_map_ptr_);
   road_boundary_module_.build_from_map(lanelet_map_ptr_);
 }
 
@@ -243,8 +244,11 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       mutable_object, params_.prediction_time_horizon);
     predicted_path.confidence = 1.0;
 
+    const PredictedPath predicted_path_cut_with_fences =
+      fence_module_.cutPathBeforeFences(predicted_path);
     predicted_object.kinematics.predicted_paths.push_back(
-      fence_module_.cutPathBeforeFences(predicted_path));
+      vegetation_module_.cutPathsCrossingVegetation(
+        predicted_path_cut_with_fences, mutable_object.shape));
   }
 
   boost::optional<lanelet::ConstLanelet> crossing_crosswalk{boost::none};
@@ -387,6 +391,11 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       continue;
     }
     if (fence_module_.doesPathCrossAnyFenceBeforeCrosswalk(predicted_path)) {
+      continue;
+    }
+    if (
+      vegetation_module_.doesPathCrossAnyVegetationBeforeCrosswalk(
+        predicted_path, mutable_object.shape)) {
       continue;
     }
     predicted_object.kinematics.predicted_paths.push_back(predicted_path);

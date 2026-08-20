@@ -21,6 +21,7 @@
 #include "autoware/map_based_prediction/predictor_vru/history.hpp"
 #include "autoware/map_based_prediction/predictor_vru/road_boundary.hpp"
 #include "autoware/map_based_prediction/predictor_vru/traffic_signal.hpp"
+#include "autoware/map_based_prediction/predictor_vru/vegetation.hpp"
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
@@ -109,6 +110,7 @@ private:
 
   // Sub-modules
   FenceModule fence_module_;
+  VegetationModule vegetation_module_;
   RoadBoundaryModule road_boundary_module_;
   TrafficSignalModule traffic_signal_module_;
   CrosswalkUserHistoryManager history_manager_;
