@@ -22816,259 +22816,259 @@ In other words, the output trajectory doesn't include both forward and backward 
 </thead>
 <tbody>
 <tr>
-<td>planning_algorithm</td>
+<td>planning_<wbr>algorithm</wbr></td>
 <td>string</td>
 <td>Planning algorithm to use, options: astar, rrtstar.</td>
 <td>astar</td>
 <td>['astar', 'rrtstar']</td>
 </tr>
 <tr>
-<td>waypoints_velocity</td>
+<td>waypoints_<wbr>velocity</wbr></td>
 <td>float</td>
 <td>velocity in output trajectory (currently, only constant velocity is supported.</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>update_rate</td>
+<td>update_<wbr>rate</wbr></td>
 <td>float</td>
 <td>timer's update rate</td>
 <td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_arrived_distance_m</td>
+<td>th_<wbr>arrived_<wbr>distance_<wbr>m</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for considering the vehicle has arrived at its goal.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_stopped_time_sec</td>
+<td>th_<wbr>stopped_<wbr>time_<wbr>sec</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time threshold for considering the vehicle as stopped.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_stopped_velocity_mps</td>
+<td>th_<wbr>stopped_<wbr>velocity_<wbr>mps</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold for considering the vehicle as stopped.</td>
 <td>0.01</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_course_out_distance_m</td>
+<td>th_<wbr>course_<wbr>out_<wbr>distance_<wbr>m</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold distance for considering the vehicle has deviated from its course.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_obstacle_time_sec</td>
+<td>th_<wbr>obstacle_<wbr>time_<wbr>sec</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time threshold for checking obstacles along the trajectory.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>vehicle_shape_margin_m</td>
+<td>vehicle_<wbr>shape_<wbr>margin_<wbr>m</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Margin around the vehicle shape for planning.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan_when_obstacle_found</td>
+<td>replan_<wbr>when_<wbr>obstacle_<wbr>found</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Replan path when an obstacle is found.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan_when_course_out</td>
+<td>replan_<wbr>when_<wbr>course_<wbr>out</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Replan path when the vehicle deviates from its course.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>time_limit</td>
+<td>time_<wbr>limit</wbr></td>
 <td>float</td>
 <td>Time limit for the planner.</td>
 <td>30000.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_turning_ratio</td>
+<td>max_<wbr>turning_<wbr>ratio</wbr></wbr></td>
 <td>float</td>
 <td>Maximum turning ratio, relative to the actual turning limit of the vehicle.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>turning_steps</td>
+<td>turning_<wbr>steps</wbr></td>
 <td>float</td>
 <td>Number of steps for turning.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>theta_size</td>
+<td>theta_<wbr>size</wbr></td>
 <td>float</td>
 <td>Number of discretized angles for search.</td>
 <td>144</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>angle_goal_range</td>
+<td>angle_<wbr>goal_<wbr>range</wbr></wbr></td>
 <td>float</td>
 <td>Range of acceptable angles at the goal.</td>
 <td>6.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_goal_range</td>
+<td>lateral_<wbr>goal_<wbr>range</wbr></wbr></td>
 <td>float</td>
 <td>Lateral range of acceptable goal positions.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal_goal_range</td>
+<td>longitudinal_<wbr>goal_<wbr>range</wbr></wbr></td>
 <td>float</td>
 <td>Longitudinal range of acceptable goal positions.</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>curve_weight</td>
+<td>curve_<wbr>weight</wbr></td>
 <td>float</td>
 <td>Weight for curves in the cost function.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>reverse_weight</td>
+<td>reverse_<wbr>weight</wbr></td>
 <td>float</td>
 <td>Weight for reverse movement in the cost function.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>direction_change_weight</td>
+<td>direction_<wbr>change_<wbr>weight</wbr></wbr></td>
 <td>float</td>
 <td>Weight for direction changes in the cost function.</td>
 <td>1.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_threshold</td>
+<td>obstacle_<wbr>threshold</wbr></td>
 <td>float</td>
 <td>Threshold for considering an obstacle in the costmap.</td>
 <td>100</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.search_method</td>
+<td>astar.<wbr>search_<wbr>method</wbr></wbr></td>
 <td>string</td>
 <td>Search method to use, options: forward, backward.</td>
 <td>forward</td>
 <td>['forward', 'backward']</td>
 </tr>
 <tr>
-<td>astar.only_behind_solutions</td>
+<td>astar.<wbr>only_<wbr>behind_<wbr>solutions</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Consider only solutions behind the vehicle.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.use_back</td>
+<td>astar.<wbr>use_<wbr>back</wbr></wbr></td>
 <td>boolean</td>
 <td>Allow reverse motion in A* search.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.adapt_expansion_distance</td>
+<td>astar.<wbr>adapt_<wbr>expansion_<wbr>distance</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Allow varying A* expansion distance based on space configuration.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.expansion_distance</td>
+<td>astar.<wbr>expansion_<wbr>distance</wbr></wbr></td>
 <td>float</td>
 <td>Distance for expanding nodes in A* search.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.near_goal_distance</td>
+<td>astar.<wbr>near_<wbr>goal_<wbr>distance</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold to consider near goal.</td>
 <td>4.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.distance_heuristic_weight</td>
+<td>astar.<wbr>distance_<wbr>heuristic_<wbr>weight</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for the distance heuristic in A* search.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.smoothness_weight</td>
+<td>astar.<wbr>smoothness_<wbr>weight</wbr></wbr></td>
 <td>float</td>
 <td>Weight for the smoothness (change in curvature) in A* search.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.obstacle_distance_weight</td>
+<td>astar.<wbr>obstacle_<wbr>distance_<wbr>weight</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for distance to obstacle in A* search.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>astar.goal_lat_distance_weight</td>
+<td>astar.<wbr>goal_<wbr>lat_<wbr>distance_<wbr>weight</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for lateral distance from original goal.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>rrtstar.enable_update</td>
+<td>rrtstar.<wbr>enable_<wbr>update</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable updates in RRT*.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>rrtstar.use_informed_sampling</td>
+<td>rrtstar.<wbr>use_<wbr>informed_<wbr>sampling</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Use informed sampling in RRT*.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>rrtstar.max_planning_time</td>
+<td>rrtstar.<wbr>max_<wbr>planning_<wbr>time</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum planning time for RRT*.</td>
 <td>150.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>rrtstar.neighbor_radius</td>
+<td>rrtstar.<wbr>neighbor_<wbr>radius</wbr></wbr></td>
 <td>float</td>
 <td>Radius for neighboring nodes in RRT*.</td>
 <td>8.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>rrtstar.margin</td>
+<td>rrtstar.<wbr>margin</wbr></td>
 <td>float</td>
 <td>Margin for RRT* sampling.</td>
 <td>0.1</td>

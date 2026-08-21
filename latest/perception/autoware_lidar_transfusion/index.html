@@ -23094,77 +23094,77 @@
 </thead>
 <tbody>
 <tr>
-<td>trt_precision</td>
+<td>trt_<wbr>precision</wbr></td>
 <td>string</td>
 <td>A precision of TensorRT engine.</td>
 <td>fp16</td>
 <td>['fp16', 'fp32']</td>
 </tr>
 <tr>
-<td>cloud_capacity</td>
+<td>cloud_<wbr>capacity</wbr></td>
 <td>integer</td>
 <td>Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).</td>
 <td>2000000</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>onnx_path</td>
+<td>onnx_<wbr>path</wbr></td>
 <td>string</td>
 <td>A path to ONNX model file.</td>
 <td>$(var model_path)/transfusion.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>engine_path</td>
+<td>engine_<wbr>path</wbr></td>
 <td>string</td>
 <td>A path to TensorRT engine file.</td>
 <td>$(var model_path)/transfusion.engine</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>densification_num_past_frames</td>
+<td>densification_<wbr>num_<wbr>past_<wbr>frames</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>A number of past frames to be considered as same input frame.</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>densification_world_frame_id</td>
+<td>densification_<wbr>world_<wbr>frame_<wbr>id</wbr></wbr></wbr></td>
 <td>string</td>
 <td>A name of frame id where world coordinates system is defined with respect to.</td>
 <td>map</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>circle_nms_dist_threshold</td>
+<td>circle_<wbr>nms_<wbr>dist_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>A distance threshold between detections in NMS.</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>iou_nms_search_distance_2d</td>
+<td>iou_<wbr>nms_<wbr>search_<wbr>distance_<wbr>2d</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>A maximum distance value to search the nearest objects.</td>
 <td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>iou_nms_threshold</td>
+<td>iou_<wbr>nms_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>A threshold value of NMS using IoU score.</td>
 <td>0.1</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>yaw_norm_thresholds</td>
+<td>yaw_<wbr>norm_<wbr>thresholds</wbr></wbr></td>
 <td>array</td>
 <td>A thresholds array of direction vectors norm, all of objects with vector norm less than this threshold are ignored.</td>
 <td>[0.3, 0.3, 0.3, 0.3, 0.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>score_threshold</td>
+<td>score_<wbr>threshold</wbr></td>
 <td>float</td>
 <td>A threshold value of confidence score, all of objects with score less than this threshold are ignored.</td>
 <td>0.2</td>
@@ -23185,35 +23185,35 @@
 </thead>
 <tbody>
 <tr>
-<td>class_names</td>
+<td>class_<wbr>names</wbr></td>
 <td>array</td>
 <td>An array of class names will be predicted.</td>
 <td>['CAR', 'TRUCK', 'BUS', 'BICYCLE', 'PEDESTRIAN']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>voxels_num</td>
+<td>voxels_<wbr>num</wbr></td>
 <td>array</td>
 <td>A maximum number of voxels [min, opt, max].</td>
 <td>[5000, 30000, 60000]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>point_cloud_range</td>
+<td>point_<wbr>cloud_<wbr>range</wbr></wbr></td>
 <td>array</td>
 <td>An array of distance ranges of each class.</td>
 <td>[-76.8, -76.8, -3.0, 76.8, 76.8, 5.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>voxel_size</td>
+<td>voxel_<wbr>size</wbr></td>
 <td>array</td>
 <td>Voxels size [x, y, z].</td>
 <td>[0.3, 0.3, 8.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>num_proposals</td>
+<td>num_<wbr>proposals</wbr></td>
 <td>integer</td>
 <td>Number of proposals at TransHead.</td>
 <td>500</td>
@@ -23234,21 +23234,21 @@
 </thead>
 <tbody>
 <tr>
-<td>allow_remapping_by_area_matrix</td>
+<td>allow_<wbr>remapping_<wbr>by_<wbr>area_<wbr>matrix</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Whether to allow remapping of classes. The order of 8x8 matrix classes comes from ObjectClassification msg.</td>
 <td>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_area_matrix</td>
+<td>min_<wbr>area_<wbr>matrix</wbr></wbr></td>
 <td>array</td>
 <td>Minimum area for specific class to consider class remapping.</td>
 <td>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.1, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_area_matrix</td>
+<td>max_<wbr>area_<wbr>matrix</wbr></wbr></td>
 <td>array</td>
 <td>Maximum area for specific class to consider class remapping.</td>
 <td>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</td>
@@ -23351,7 +23351,7 @@ Example:
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Macro Rendering Error">
+          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--prev" aria-label="Previous: autoware_lidar_frnet">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23361,7 +23361,7 @@ Example:
                 Previous
               </span>
               <div class="md-ellipsis">
-                Macro Rendering Error
+                autoware_lidar_frnet
               </div>
             </div>
           </a>

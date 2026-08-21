@@ -22838,847 +22838,847 @@
 </thead>
 <tbody>
 <tr>
-<td>planning_frequency_hz</td>
+<td>planning_<wbr>frequency_<wbr>hz</wbr></wbr></td>
 <td>float</td>
 <td>Planning loop frequency [Hz]</td>
 <td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>plugin_names</td>
+<td>plugin_<wbr>names</wbr></td>
 <td>array</td>
 <td>List of plugins to load</td>
 <td>['autoware::minimum_rule_based_planner::plugin::ObstacleStop', 'autoware::minimum_rule_based_planner::plugin::SurroundObstacleStop']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>path_length.backward</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>length.<wbr>backward</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Path length behind ego [m]</td>
 <td>5.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>path_length.forward</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>length.<wbr>forward</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Path length ahead of ego [m]</td>
 <td>300.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>smooth_goal_connection.search_radius_range</td>
+<td>path_<wbr>planning.<wbr>smooth_<wbr>goal_<wbr>connection.<wbr>search_<wbr>radius_<wbr>range</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Search radius for goal connection [m]</td>
 <td>7.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>smooth_goal_connection.pre_goal_offset</td>
+<td>path_<wbr>planning.<wbr>smooth_<wbr>goal_<wbr>connection.<wbr>pre_<wbr>goal_<wbr>offset</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Offset before goal for smooth connection [m]</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>ego_nearest_lanelet.dist_threshold</td>
+<td>path_<wbr>planning.<wbr>ego_<wbr>nearest_<wbr>lanelet.<wbr>dist_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for ego nearest lanelet [m]</td>
 <td>3.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>ego_nearest_lanelet.yaw_threshold</td>
+<td>path_<wbr>planning.<wbr>ego_<wbr>nearest_<wbr>lanelet.<wbr>yaw_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw threshold for ego nearest lanelet [rad]</td>
 <td>0.174533</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>path_shift.enable</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>shift.<wbr>enable</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable path shifting to ego pose</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>path_shift.minimum_shift_length</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>shift.<wbr>minimum_<wbr>shift_<wbr>length</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral offset threshold to trigger shift [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>path_shift.minimum_shift_yaw</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>shift.<wbr>minimum_<wbr>shift_<wbr>yaw</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw deviation threshold to trigger shift [rad]</td>
 <td>0.349</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>path_shift.minimum_shift_distance</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>shift.<wbr>minimum_<wbr>shift_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Floor for shift distance [m]</td>
 <td>5.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>path_shift.min_speed_for_curvature</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>shift.<wbr>min_<wbr>speed_<wbr>for_<wbr>curvature</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lower bound on speed for curvature computation [m/s]</td>
 <td>2.77</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>path_shift.lateral_accel_limit</td>
+<td>path_<wbr>planning.<wbr>path_<wbr>shift.<wbr>lateral_<wbr>accel_<wbr>limit</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral acceleration limit for shift [m/s^2]</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>waypoint_group.separation_threshold</td>
+<td>path_<wbr>planning.<wbr>waypoint_<wbr>group.<wbr>separation_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max distance between waypoints in same group [m]</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>waypoint_group.interval_margin_ratio</td>
+<td>path_<wbr>planning.<wbr>waypoint_<wbr>group.<wbr>interval_<wbr>margin_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>IRatio to expand group interval by lateral distance</td>
 <td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>output.delta_arc_length</td>
+<td>path_<wbr>planning.<wbr>output.<wbr>delta_<wbr>arc_<wbr>length</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Resampling interval for path-to-trajectory conversion [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.enable</td>
+<td>obstacle_<wbr>stop.<wbr>enable</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable obstacle stop [m]</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.use_objects</td>
+<td>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable object detection [m]</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.use_pointcloud</td>
+<td>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable pointcloud detection [m]</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.enable_stop_for_objects</td>
+<td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>objects</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stop for objects</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.enable_stop_for_pointcloud</td>
+<td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stop for pointcloud</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.stop_margin</td>
+<td>obstacle_<wbr>stop.<wbr>stop_<wbr>margin</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Stop margin [m]</td>
 <td>6.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.nominal_stopping_decel</td>
+<td>obstacle_<wbr>stop.<wbr>nominal_<wbr>stopping_<wbr>decel</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Nominal stopping deceleration [m/s^2]</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.maximum_stopping_decel</td>
+<td>obstacle_<wbr>stop.<wbr>maximum_<wbr>stopping_<wbr>decel</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum stopping deceleration [m/s^2]</td>
 <td>4.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.stopping_jerk</td>
+<td>obstacle_<wbr>stop.<wbr>stopping_<wbr>jerk</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Stopping jerk [m/s^3]</td>
 <td>3.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.on_time_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>on_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>On time buffer [s]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.off_time_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>off_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Off time buffer [s]</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.lateral_margin</td>
+<td>obstacle_<wbr>stop.<wbr>lateral_<wbr>margin</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral margin [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.arrived_distance_threshold</td>
+<td>obstacle_<wbr>stop.<wbr>arrived_<wbr>distance_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold to check if the ego vehicle has arrived at the stop point [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>objects.object_types</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Object types</td>
 <td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian', 'hazard']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>objects.max_velocity_th</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>max_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max velocity threshold [m/s]</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>objects.stopped_velocity_th</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>stopped_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold for target object to be considered as stopped [m/s]</td>
 <td>0.25</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>objects.max_lateral_velocity_th</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>max_<wbr>lateral_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum lateral velocity threshold for target object [m/s]</td>
 <td>1.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>objects.safety_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>safety_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Safety buffer to expand object shape [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>pointcloud.height_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>height_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Height buffer [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>pointcloud.min_height</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>min_<wbr>height</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Min height [m]</td>
 <td>0.2</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>pointcloud.detection_range</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>detection_<wbr>range</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Detection range [m]</td>
 <td>100.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>voxel_grid_filter.x</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>x</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>X [m]</td>
 <td>0.2</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>voxel_grid_filter.y</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>y</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Y [m]</td>
 <td>0.2</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>voxel_grid_filter.z</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>z</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Z [m]</td>
 <td>0.2</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>voxel_grid_filter.min_size</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Min size</td>
 <td>3</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>clustering.tolerance</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>tolerance</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Tolerance [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>clustering.min_height</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Min height [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>clustering.min_size</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Min size</td>
 <td>10</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>clustering.max_size</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>max_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max size</td>
 <td>10000</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>rss_params.enable</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>enable</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable RSS-based stop logic</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>object_decel.car</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for car type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>object_decel.truck</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for truck type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>object_decel.bus</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for bus type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>object_decel.trailer</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for trailer type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>object_decel.motorcycle</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for motorcycle type objects [m/s^2]</td>
 <td>3.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>object_decel.bicycle</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for bicycle type objects [m/s^2]</td>
 <td>5.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>object_decel.pedestrian</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for pedestrian type objects [m/s^2]</td>
 <td>5.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>rss_params.ego_decel</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>ego_<wbr>decel</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for ego vehicle used in RSS calculation [m/s^2]</td>
 <td>4.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>rss_params.reaction_time</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>reaction_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Reaction time used in RSS calculation [s]</td>
 <td>0.2</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>rss_params.safety_margin</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>safety_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Safety margin used in RSS calculation [m]</td>
 <td>2.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>rss_params.lookahead_horizon</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>lookahead_<wbr>horizon</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lookahead horizon used in RSS calculation [s]</td>
 <td>1.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.enable</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>enable</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable surround obstacle stop</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.use_objects</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of objects for surround obstacle stop</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.use_pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of pointcloud for surround obstacle stop</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.object_types</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Types of objects to consider for surround obstacle stop</td>
 <td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian', 'hazard', 'animal', 'unknown']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>front_distance_th.car</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for car [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.truck</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for truck [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.bus</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for bus [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.trailer</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for trailer [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.motorcycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for motorcycle [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.bicycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for bicycle [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.pedestrian</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for pedestrian [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.hazard</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>hazard</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for hazard [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.animal</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>animal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for animal [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.unknown</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for unknown [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>front_distance_th.pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Front surround check distance for pointcloud [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.car</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for car [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.truck</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for truck [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.bus</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for bus [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.trailer</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for trailer [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.motorcycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for motorcycle [m]</td>
 <td>1.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.bicycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for bicycle [m]</td>
 <td>1.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.pedestrian</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for pedestrian [m]</td>
 <td>1.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.hazard</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>hazard</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for hazard [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.animal</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>animal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for animal [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.unknown</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for unknown [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>side_distance_th.pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Side surround check distance for pointcloud [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.car</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for car [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.truck</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for truck [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.bus</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for bus [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.trailer</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for trailer [m]</td>
 <td>0.0</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.motorcycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for motorcycle [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.bicycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for bicycle [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.pedestrian</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for pedestrian [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.hazard</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>hazard</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for hazard [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.animal</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>animal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for animal [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.unknown</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for unknown [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>back_distance_th.pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Back surround check distance for pointcloud [m]</td>
 <td>0.5</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.hysteresis_distance</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>hysteresis_<wbr>distance</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance hysteresis threshold for clearing surround stop [m]</td>
 <td>0.1</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.hysteresis_time</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>hysteresis_<wbr>time</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time hysteresis threshold for clearing surround stop [s]</td>
 <td>0.2</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.ego_stopped_vel_th</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>ego_<wbr>stopped_<wbr>vel_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold below which ego vehicle is considered stopped [m/s]</td>
 <td>0.1</td>
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
-<td>velocity_smoother.nearest_dist_threshold_m</td>
+<td>velocity_<wbr>smoother.<wbr>nearest_<wbr>dist_<wbr>threshold_<wbr>m</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Nearest distance threshold [m]</td>
 <td>1.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>velocity_smoother.nearest_yaw_threshold_deg</td>
+<td>velocity_<wbr>smoother.<wbr>nearest_<wbr>yaw_<wbr>threshold_<wbr>deg</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Nearest yaw threshold [deg]</td>
 <td>60.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>velocity_smoother.target_pull_out_speed_mps</td>
+<td>velocity_<wbr>smoother.<wbr>target_<wbr>pull_<wbr>out_<wbr>speed_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Target pull out speed [m/s]</td>
 <td>0.25</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>velocity_smoother.target_pull_out_acc_mps2</td>
+<td>velocity_<wbr>smoother.<wbr>target_<wbr>pull_<wbr>out_<wbr>acc_<wbr>mps2</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Target pull out acceleration [m/s^2]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>velocity_smoother.max_speed_mps</td>
+<td>velocity_<wbr>smoother.<wbr>max_<wbr>speed_<wbr>mps</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max speed [m/s]</td>
 <td>13.88</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>velocity_smoother.max_lateral_accel_mps2</td>
+<td>velocity_<wbr>smoother.<wbr>max_<wbr>lateral_<wbr>accel_<wbr>mps2</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max lateral acceleration [m/s^2]</td>
 <td>1.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>velocity_smoother.set_engage_speed</td>
+<td>velocity_<wbr>smoother.<wbr>set_<wbr>engage_<wbr>speed</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Set engage speed at start</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>velocity_smoother.limit_speed</td>
+<td>velocity_<wbr>smoother.<wbr>limit_<wbr>speed</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Apply max speed limit</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>velocity_smoother.limit_lateral_acceleration</td>
+<td>velocity_<wbr>smoother.<wbr>limit_<wbr>lateral_<wbr>acceleration</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Apply max lateral acceleration limit</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>velocity_smoother.smooth_velocities</td>
+<td>velocity_<wbr>smoother.<wbr>smooth_<wbr>velocities</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Apply jerk-filtered velocity smoothing</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>velocity_smoother.stop_dist_to_prohibit_engage</td>
+<td>velocity_<wbr>smoother.<wbr>stop_<wbr>dist_<wbr>to_<wbr>prohibit_<wbr>engage</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Stop distance to prohibit engage [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>post_resample.max_trajectory_length</td>
+<td>post_<wbr>resample.<wbr>max_<wbr>trajectory_<wbr>length</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max trajectory length for post-optimization resampling [m]</td>
 <td>300.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>post_resample.min_trajectory_length</td>
+<td>post_<wbr>resample.<wbr>min_<wbr>trajectory_<wbr>length</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum trajectory length for post-optimization resampling [m]</td>
 <td>30.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>post_resample.resample_time</td>
+<td>post_<wbr>resample.<wbr>resample_<wbr>time</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Resample total time [s]</td>
 <td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>post_resample.dense_resample_dt</td>
+<td>post_<wbr>resample.<wbr>dense_<wbr>resample_<wbr>dt</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Dense sampling time interval [s]</td>
 <td>0.1</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>post_resample.dense_min_interval_distance</td>
+<td>post_<wbr>resample.<wbr>dense_<wbr>min_<wbr>interval_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Dense sampling min interval [m]</td>
 <td>0.1</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>post_resample.sparse_resample_dt</td>
+<td>post_<wbr>resample.<wbr>sparse_<wbr>resample_<wbr>dt</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Sparse sampling time interval [s]</td>
 <td>0.1</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>post_resample.sparse_min_interval_distance</td>
+<td>post_<wbr>resample.<wbr>sparse_<wbr>min_<wbr>interval_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Sparse sampling min interval [m]</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>debug.enable_path</td>
+<td>debug.<wbr>enable_<wbr>path</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable path debugging</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_shifted_trajectory</td>
+<td>debug.<wbr>enable_<wbr>shifted_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable shifted trajectory debugging</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_optimizer_trajectory</td>
+<td>debug.<wbr>enable_<wbr>optimizer_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable optimizer trajectory debugging</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_modifier_trajectory</td>
+<td>debug.<wbr>enable_<wbr>modifier_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable modifier trajectory debugging</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_output_trajectory</td>
+<td>debug.<wbr>enable_<wbr>output_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable output trajectory debugging</td>
 <td>True</td>

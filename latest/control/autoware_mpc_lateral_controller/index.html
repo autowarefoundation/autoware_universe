@@ -22976,28 +22976,28 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>traj_resample_dist</td>
+<td>traj_<wbr>resample_<wbr>dist</wbr></wbr></td>
 <td>float</td>
 <td>distance of waypoints in resampling [m]</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_steer_prediction</td>
+<td>use_<wbr>steer_<wbr>prediction</wbr></wbr></td>
 <td>boolean</td>
 <td>flag for using steer prediction (do not use steer measurement)</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_delayed_initial_state</td>
+<td>use_<wbr>delayed_<wbr>initial_<wbr>state</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>flag to use x0_delayed as initial state for predicted trajectory</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_reference_mode</td>
+<td>trajectory_<wbr>reference_<wbr>mode</wbr></wbr></td>
 <td>string</td>
 <td>trajectory tracking mode: "spatial" (indexes the trajectory by distance) or "temporal" (uses the trajectory's time_from_start directly). Normally set once at the <code>autoware_trajectory_follower_node</code> level; declared here as well only as a fallback default for standalone use of this node.</td>
 <td>spatial</td>
@@ -23018,28 +23018,28 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>enable_path_smoothing</td>
+<td>enable_<wbr>path_<wbr>smoothing</wbr></wbr></td>
 <td>boolean</td>
 <td>path smoothing flag. This should be true when uses path resampling to reduce resampling noise.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>path_filter_moving_ave_num</td>
+<td>path_<wbr>filter_<wbr>moving_<wbr>ave_<wbr>num</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>number of data points moving average filter for path smoothing</td>
 <td>25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>curvature_smoothing_num_traj</td>
+<td>curvature_<wbr>smoothing_<wbr>num_<wbr>traj</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>index distance of points used in curvature calculation for trajectory: p(i-num), p(i), p(i+num). Larger num makes less noisy values.</td>
 <td>15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>curvature_smoothing_num_ref_steer</td>
+<td>curvature_<wbr>smoothing_<wbr>num_<wbr>ref_<wbr>steer</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>index distance of points used in curvature calculation for reference steering command: p(i-num), p(i), p(i+num). Larger num makes less noisy values.</td>
 <td>15</td>
@@ -23060,7 +23060,7 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>extend_trajectory_for_end_yaw_control</td>
+<td>extend_<wbr>trajectory_<wbr>for_<wbr>end_<wbr>yaw_<wbr>control</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>trajectory extending flag for end yaw control</td>
 <td>True</td>
@@ -23081,182 +23081,182 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>qp_solver_type</td>
+<td>qp_<wbr>solver_<wbr>type</wbr></wbr></td>
 <td>string</td>
 <td>QP solver option. described below in detail.</td>
 <td>osqp</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_prediction_horizon</td>
+<td>mpc_<wbr>prediction_<wbr>horizon</wbr></wbr></td>
 <td>integer</td>
 <td>total prediction step for MPC</td>
 <td>50</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_prediction_dt</td>
+<td>mpc_<wbr>prediction_<wbr>dt</wbr></wbr></td>
 <td>float</td>
 <td>prediction period for one step [s]</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_lat_error</td>
+<td>mpc_<wbr>weight_<wbr>lat_<wbr>error</wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for lateral error</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_heading_error</td>
+<td>mpc_<wbr>weight_<wbr>heading_<wbr>error</wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for heading error</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_heading_error_squared_vel</td>
+<td>mpc_<wbr>weight_<wbr>heading_<wbr>error_<wbr>squared_<wbr>vel</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for heading error * velocity</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_steering_input</td>
+<td>mpc_<wbr>weight_<wbr>steering_<wbr>input</wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for steering error (steer command - reference steer)</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_steering_input_squared_vel</td>
+<td>mpc_<wbr>weight_<wbr>steering_<wbr>input_<wbr>squared_<wbr>vel</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for steering error (steer command - reference steer) * velocity</td>
 <td>0.25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_lat_jerk</td>
+<td>mpc_<wbr>weight_<wbr>lat_<wbr>jerk</wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for lateral jerk (steer(i) - steer(i-1)) * velocity</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_steer_rate</td>
+<td>mpc_<wbr>weight_<wbr>steer_<wbr>rate</wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for steering rate [rad/s]</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_steer_acc</td>
+<td>mpc_<wbr>weight_<wbr>steer_<wbr>acc</wbr></wbr></wbr></td>
 <td>float</td>
 <td>weight for derivatives of the steering rate [rad/ss]</td>
 <td>1e-06</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_lat_error</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>lat_<wbr>error</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for lateral error</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_heading_error</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>heading_<wbr>error</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for heading error</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_heading_error_squared_vel</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>heading_<wbr>error_<wbr>squared_<wbr>vel</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for heading error * velocity</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_steering_input</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>steering_<wbr>input</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for steering error (steer command - reference steer)</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_steering_input_squared_vel</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>steering_<wbr>input_<wbr>squared_<wbr>vel</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for steering error (steer command - reference steer) * velocity</td>
 <td>0.25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_lat_jerk</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>lat_<wbr>jerk</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for lateral jerk (steer(i) - steer(i-1)) * velocity</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_steer_rate</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>steer_<wbr>rate</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for steering rate [rad/s]</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_weight_steer_acc</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>weight_<wbr>steer_<wbr>acc</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[used in a low curvature trajectory] weight for derivatives of the steering rate [rad/ss]</td>
 <td>1e-06</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_low_curvature_thresh_curvature</td>
+<td>mpc_<wbr>low_<wbr>curvature_<wbr>thresh_<wbr>curvature</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>threshold of curvature to use 'low_curvature' parameter</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_terminal_lat_error</td>
+<td>mpc_<wbr>weight_<wbr>terminal_<wbr>lat_<wbr>error</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>terminal lateral error weight in matrix Q to improve mpc stability</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_weight_terminal_heading_error</td>
+<td>mpc_<wbr>weight_<wbr>terminal_<wbr>heading_<wbr>error</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>terminal heading error weight in matrix Q to improve mpc stability</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_zero_ff_steer_deg</td>
+<td>mpc_<wbr>zero_<wbr>ff_<wbr>steer_<wbr>deg</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>threshold that feed-forward angle becomes zero</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_acceleration_limit</td>
+<td>mpc_<wbr>acceleration_<wbr>limit</wbr></wbr></td>
 <td>float</td>
 <td>limit on the vehicle's acceleration</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_velocity_time_constant</td>
+<td>mpc_<wbr>velocity_<wbr>time_<wbr>constant</wbr></wbr></wbr></td>
 <td>float</td>
 <td>time constant used for velocity smoothing</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_min_prediction_length</td>
+<td>mpc_<wbr>min_<wbr>prediction_<wbr>length</wbr></wbr></wbr></td>
 <td>float</td>
 <td>minimum prediction length</td>
 <td>5.0</td>
@@ -23277,49 +23277,49 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>vehicle_model_type</td>
+<td>vehicle_<wbr>model_<wbr>type</wbr></wbr></td>
 <td>string</td>
 <td>vehicle model type for mpc prediction</td>
 <td>kinematics</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>input_delay</td>
+<td>input_<wbr>delay</wbr></td>
 <td>float</td>
 <td>steering input delay time for delay compensation</td>
 <td>0.24</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>vehicle_model_steer_tau</td>
+<td>vehicle_<wbr>model_<wbr>steer_<wbr>tau</wbr></wbr></wbr></td>
 <td>float</td>
 <td>steering dynamics time constant (1d approximation) [s]</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_rate_lim_dps_list_by_curvature</td>
+<td>steer_<wbr>rate_<wbr>lim_<wbr>dps_<wbr>list_<wbr>by_<wbr>curvature</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>steering angle rate limit list depending on curvature [deg/s]</td>
 <td>[40.0, 50.0, 60.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>curvature_list_for_steer_rate_lim</td>
+<td>curvature_<wbr>list_<wbr>for_<wbr>steer_<wbr>rate_<wbr>lim</wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>curvature list for steering angle rate limit interpolation in ascending order [/m]</td>
 <td>[0.001, 0.002, 0.01]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_rate_lim_dps_list_by_velocity</td>
+<td>steer_<wbr>rate_<wbr>lim_<wbr>dps_<wbr>list_<wbr>by_<wbr>velocity</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>steering angle rate limit list depending on velocity [deg/s]</td>
 <td>[60.0, 50.0, 40.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>velocity_list_for_steer_rate_lim</td>
+<td>velocity_<wbr>list_<wbr>for_<wbr>steer_<wbr>rate_<wbr>lim</wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>velocity list for steering angle rate limit interpolation in ascending order [m/s]</td>
 <td>[10.0, 15.0, 20.0]</td>
@@ -23340,14 +23340,14 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>steering_lpf_cutoff_hz</td>
+<td>steering_<wbr>lpf_<wbr>cutoff_<wbr>hz</wbr></wbr></wbr></td>
 <td>float</td>
 <td>cutoff frequency of lowpass filter for steering output command [hz]</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>error_deriv_lpf_cutoff_hz</td>
+<td>error_<wbr>deriv_<wbr>lpf_<wbr>cutoff_<wbr>hz</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>cutoff frequency of lowpass filter for error derivative [Hz]</td>
 <td>5</td>
@@ -23368,49 +23368,49 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>stop_state_entry_ego_speed</td>
+<td>stop_<wbr>state_<wbr>entry_<wbr>ego_<wbr>speed</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>threshold value of the ego vehicle speed used to the stop state entry condition</td>
 <td>0.001</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>stop_state_entry_target_speed</td>
+<td>stop_<wbr>state_<wbr>entry_<wbr>target_<wbr>speed</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>threshold value of the target speed used to the stop state entry condition</td>
 <td>0.001</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>converged_steer_rad</td>
+<td>converged_<wbr>steer_<wbr>rad</wbr></wbr></td>
 <td>float</td>
 <td>threshold value of the steer convergence</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>keep_steer_control_until_converged</td>
+<td>keep_<wbr>steer_<wbr>control_<wbr>until_<wbr>converged</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>keep steer control until steer is converged</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>new_traj_duration_time</td>
+<td>new_<wbr>traj_<wbr>duration_<wbr>time</wbr></wbr></wbr></td>
 <td>float</td>
 <td>threshold value of the time to be considered as new trajectory</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>new_traj_end_dist</td>
+<td>new_<wbr>traj_<wbr>end_<wbr>dist</wbr></wbr></wbr></td>
 <td>float</td>
 <td>threshold value of the distance between trajectory ends to be considered as new trajectory</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mpc_converged_threshold_rps</td>
+<td>mpc_<wbr>converged_<wbr>threshold_<wbr>rps</wbr></wbr></wbr></td>
 <td>float</td>
 <td>threshold value to be sure output of the optimization is converged, it is used in stopped state</td>
 <td>0.01</td>
@@ -23433,14 +23433,14 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>enable_auto_steering_offset_removal</td>
+<td>enable_<wbr>auto_<wbr>steering_<wbr>offset_<wbr>removal</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Estimate the steering offset and apply compensation</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_offset_filter_cutoff_hz</td>
+<td>steer_<wbr>offset_<wbr>filter_<wbr>cutoff_<wbr>hz</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Cutoff frequency of lowpass filter for steering offset [Hz]</td>
 <td>0.5</td>
@@ -23461,42 +23461,42 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>cg_to_front_m</td>
+<td>cg_<wbr>to_<wbr>front_<wbr>m</wbr></wbr></wbr></td>
 <td>float</td>
 <td>distance from baselink to the front axle [m]</td>
 <td>1.228</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>cg_to_rear_m</td>
+<td>cg_<wbr>to_<wbr>rear_<wbr>m</wbr></wbr></wbr></td>
 <td>float</td>
 <td>distance from baselink to the rear axle [m]</td>
 <td>1.5618</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mass_fl</td>
+<td>mass_<wbr>fl</wbr></td>
 <td>float</td>
 <td>mass applied to front left tire [kg]</td>
 <td>600</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mass_fr</td>
+<td>mass_<wbr>fr</wbr></td>
 <td>float</td>
 <td>mass applied to front right tire [kg]</td>
 <td>600</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mass_rl</td>
+<td>mass_<wbr>rl</wbr></td>
 <td>float</td>
 <td>mass applied to rear left tire [kg]</td>
 <td>600</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>mass_rr</td>
+<td>mass_<wbr>rr</wbr></td>
 <td>float</td>
 <td>mass applied to rear right tire [kg]</td>
 <td>600</td>
@@ -23531,7 +23531,7 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 </thead>
 <tbody>
 <tr>
-<td>debug_publish_predicted_trajectory</td>
+<td>debug_<wbr>publish_<wbr>predicted_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>publish debug predicted trajectory in Frenet coordinate</td>
 <td>False</td>

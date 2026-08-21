@@ -23045,84 +23045,84 @@ Finally, the algorithm calculates the visibility score by counting the number of
 </thead>
 <tbody>
 <tr>
-<td>distance_ratio</td>
+<td>distance_<wbr>ratio</wbr></td>
 <td>float</td>
 <td>distance_ratio</td>
 <td>1.03</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>object_length_threshold</td>
+<td>object_<wbr>length_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>object_length_threshold</td>
 <td>0.05</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_rings_num</td>
+<td>max_<wbr>rings_<wbr>num</wbr></wbr></td>
 <td>integer</td>
 <td>max_rings_num</td>
 <td>128</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>max_points_num_per_ring</td>
+<td>max_<wbr>points_<wbr>num_<wbr>per_<wbr>ring</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Set this value large enough such that HFoV / resolution &lt; max_points_num_per_ring</td>
 <td>4000</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>publish_outlier_pointcloud</td>
+<td>publish_<wbr>outlier_<wbr>pointcloud</wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to publish outlier pointcloud and visibility score. Due to performance concerns, please set to false during experiments.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_azimuth_deg</td>
+<td>min_<wbr>azimuth_<wbr>deg</wbr></wbr></td>
 <td>float</td>
 <td>The left limit of azimuth for visibility score calculation</td>
 <td>0.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_azimuth_deg</td>
+<td>max_<wbr>azimuth_<wbr>deg</wbr></wbr></td>
 <td>float</td>
 <td>The right limit of azimuth for visibility score calculation</td>
 <td>360.0</td>
 <td>≥0.0<br>≤360.0</td>
 </tr>
 <tr>
-<td>max_distance</td>
+<td>max_<wbr>distance</wbr></td>
 <td>float</td>
 <td>The limit distance for visibility score calculation</td>
 <td>12.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>vertical_bins</td>
+<td>vertical_<wbr>bins</wbr></td>
 <td>integer</td>
 <td>The number of vertical bin for visibility histogram</td>
 <td>128</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>horizontal_bins</td>
+<td>horizontal_<wbr>bins</wbr></td>
 <td>integer</td>
 <td>The number of horizontal bin for visibility histogram</td>
 <td>36</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>noise_threshold</td>
+<td>noise_<wbr>threshold</wbr></td>
 <td>integer</td>
 <td>The threshold value for distinguishing noise from valid points in the frequency image</td>
 <td>2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>processing_time_threshold_sec</td>
+<td>processing_<wbr>time_<wbr>threshold_<wbr>sec</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.</td>
 <td>0.01</td>

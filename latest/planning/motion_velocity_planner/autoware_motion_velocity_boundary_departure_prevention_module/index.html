@@ -23270,448 +23270,448 @@ v_{\text{cmd}} = \max\left(v_{\text{target}},\, v_1 + a_{\text{brake}}\,t_a\righ
 </thead>
 <tbody>
 <tr>
-<td>boundary_types_to_detect</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>boundary_<wbr>types_<wbr>to_<wbr>detect</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Linestring boundary tags to be treated as uncrossable.</td>
 <td>['road_border']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_max_lateral_query_num</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>max_<wbr>lateral_<wbr>query_<wbr>num</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of nearest boundaries to search from each ego side segment.</td>
 <td>5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_point_merge_distance_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>point_<wbr>merge_<wbr>distance_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold to merge nearby points [m].</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_pt_shift.dist_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>pt_<wbr>shift.<wbr>dist_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold to discard points on shifted paths [m].</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_pt_shift.angle_deg</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>pt_<wbr>shift.<wbr>angle_<wbr>deg</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Angle threshold to discard points on shifted paths [deg].</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_pt_shift.goal_dist_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>pt_<wbr>shift.<wbr>goal_<wbr>dist_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum goal shift distance to trigger module reset [m].</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_cutoff_time_s.predicted_path</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>cutoff_<wbr>time_<wbr>s.<wbr>predicted_<wbr>path</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Cutoff time to consider from predicted path [s].</td>
 <td>3.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_cutoff_time_s.near_boundary</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>cutoff_<wbr>time_<wbr>s.<wbr>near_<wbr>boundary</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Cutoff time to consider departure point as near boundary type [s].</td>
 <td>3.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_cutoff_time_s.departure</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>th_<wbr>cutoff_<wbr>time_<wbr>s.<wbr>departure</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Cutoff time to consider departure point as critical departure type, anything more than is considered approaching departure [s].</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>on_time_buffer_s.near_boundary</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>on_<wbr>time_<wbr>buffer_<wbr>s.<wbr>near_<wbr>boundary</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Continuous detection time threshold to insert departure point into departure interval. [s]</td>
 <td>0.15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>on_time_buffer_s.critical_departure</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>on_<wbr>time_<wbr>buffer_<wbr>s.<wbr>critical_<wbr>departure</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Continuous detection time required to accept new critical departure point. [s]</td>
 <td>0.15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>off_time_buffer_s.near_boundary</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>off_<wbr>time_<wbr>buffer_<wbr>s.<wbr>near_<wbr>boundary</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Continuous detection time threshold to reset departure interval. [s]</td>
 <td>0.15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>off_time_buffer_s.critical_departure</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>off_<wbr>time_<wbr>buffer_<wbr>s.<wbr>critical_<wbr>departure</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Continuous detection time threshold to reset critical departure. [s]</td>
 <td>0.15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>normal.enable</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>normal.<wbr>enable</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable basic footprint margin expansion without any condition.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>footprint_envelop.lon_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>normal.<wbr>footprint_<wbr>envelop.<wbr>lon_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Longitudinal margin added to footprint [m].</td>
 <td>0.25</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>footprint_envelop.lat_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>normal.<wbr>footprint_<wbr>envelop.<wbr>lat_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral margin added to footprint [m].</td>
 <td>0.25</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>localization.enable</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>localization.<wbr>enable</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable additional margin to handle localization uncertainty.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>footprint_envelop.lon_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>localization.<wbr>footprint_<wbr>envelop.<wbr>lon_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Longitudinal margin added to footprint [m].</td>
 <td>0.25</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>footprint_envelop.lat_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>localization.<wbr>footprint_<wbr>envelop.<wbr>lat_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral margin added to footprint [m].</td>
 <td>0.25</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>longitudinal.enable</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>longitudinal.<wbr>enable</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable velocity-based dynamic longitudinal margin adjustment</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lon_tracking.scale</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>longitudinal.<wbr>lon_<wbr>tracking.<wbr>scale</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Scale factor for margin based on velocity.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lon_tracking.extra_margin_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>longitudinal.<wbr>lon_<wbr>tracking.<wbr>extra_<wbr>margin_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Extra margin added on top of velocity-based margin [m].</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_accelerated.enable</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>accelerated.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable footprint obtained from re-simulating the steering of the predicted trajectory</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_accelerated.steering_rate_velocities_mps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>accelerated.<wbr>steering_<wbr>rate_<wbr>velocities_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>velocities [m/s] used as keys for the steering rate limits mapping.</td>
 <td>[0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_accelerated.steering_rate_limits_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>accelerated.<wbr>steering_<wbr>rate_<wbr>limits_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>steering rate limits [rad/s] mapped from the velocities</td>
 <td>[3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_accelerated.delay_s</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>accelerated.<wbr>delay_<wbr>s</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] delay to apply to the re-simulated steering</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_accelerated.offset_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>accelerated.<wbr>offset_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[rad/s] extra steering rate to add to the original steering profile</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_accelerated.factor</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>accelerated.<wbr>factor</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[-] factor to apply to the original steering profile</td>
 <td>1.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_stuck.enable</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>stuck.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable footprint obtained from re-simulating the steering of the predicted trajectory</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_stuck.steering_rate_velocities_mps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>stuck.<wbr>steering_<wbr>rate_<wbr>velocities_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>velocities [m/s] used as keys for the steering rate limits mapping.</td>
 <td>[0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_stuck.steering_rate_limits_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>stuck.<wbr>steering_<wbr>rate_<wbr>limits_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>steering rate limits [rad/s] mapped from the velocities</td>
 <td>[3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_stuck.delay_s</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>stuck.<wbr>delay_<wbr>s</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] delay to apply to the re-simulated steering</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_stuck.offset_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>stuck.<wbr>offset_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[rad/s] extra steering rate to add to the original steering profile</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_stuck.factor</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>stuck.<wbr>factor</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[-] factor to apply to the original steering profile</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_left.enable</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>left.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable footprint obtained from re-simulating the steering of the predicted trajectory</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_left.steering_rate_velocities_mps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>left.<wbr>steering_<wbr>rate_<wbr>velocities_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>velocities [m/s] used as keys for the steering rate limits mapping.</td>
 <td>[0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_left.steering_rate_limits_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>left.<wbr>steering_<wbr>rate_<wbr>limits_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>steering rate limits [rad/s] mapped from the velocities</td>
 <td>[3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_left.delay_s</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>left.<wbr>delay_<wbr>s</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] delay to apply to the re-simulated steering</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_left.offset_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>left.<wbr>offset_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[rad/s] extra steering rate to add to the original steering profile</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_left.factor</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>left.<wbr>factor</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[-] factor to apply to the original steering profile</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_right.enable</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>right.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable footprint obtained from re-simulating the steering of the predicted trajectory</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_right.steering_rate_velocities_mps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>right.<wbr>steering_<wbr>rate_<wbr>velocities_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>velocities [m/s] used as keys for the steering rate limits mapping.</td>
 <td>[0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_right.steering_rate_limits_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>right.<wbr>steering_<wbr>rate_<wbr>limits_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>steering rate limits [rad/s] mapped from the velocities</td>
 <td>[3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_right.delay_s</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>right.<wbr>delay_<wbr>s</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] delay to apply to the re-simulated steering</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_right.offset_rps</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>right.<wbr>offset_<wbr>rps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[rad/s] extra steering rate to add to the original steering profile</td>
 <td>-0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steering_sudden_right.factor</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>abnormality.<wbr>steering_<wbr>sudden_<wbr>right.<wbr>factor</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[-] factor to apply to the original steering profile</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>diagnostic.near_boundary</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>diagnostic.<wbr>near_<wbr>boundary</wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Diagnostic level when vehicle is near a boundary (0:OK,1:WARN,2:ERROR).</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>diagnostic.approaching_departure</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>diagnostic.<wbr>approaching_<wbr>departure</wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Diagnostic level when vehicle is moving toward a boundary (0:OK,1:WARN,2:ERROR).</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>diagnostic.critical_departure</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>diagnostic.<wbr>critical_<wbr>departure</wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Diagnostic level when vehicle is likely to leave the boundary (0:OK,1:WARN,2:ERROR).</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>enable.slow_down_near_boundary</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>enable.<wbr>slow_<wbr>down_<wbr>near_<wbr>boundary</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable speed reduction when near boundary.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>enable.slow_down_before_departure</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>enable.<wbr>slow_<wbr>down_<wbr>before_<wbr>departure</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable speed reduction just before departure.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>enable.stop_before_departure</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>enable.<wbr>stop_<wbr>before_<wbr>departure</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable speed reduction if near departure.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_vel_kmph.min</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>vel_<wbr>kmph.<wbr>min</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum speed for the slow down logic [km/h].</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_vel_kmph.max</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>vel_<wbr>kmph.<wbr>max</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum speed to consider for interpolating deceleration [km/h].</td>
 <td>30.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_acc_mps2.min</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>acc_<wbr>mps2.<wbr>min</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Comfortable deceleration when slowing down [m/s²].</td>
 <td>-1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_acc_mps2.max</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>acc_<wbr>mps2.<wbr>max</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Hardest deceleration allowed when slowing down [m/s²].</td>
 <td>-2.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_jerk_mps3.min</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>jerk_<wbr>mps3.<wbr>min</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum jerk value applied during slowdown interpolation [m/s³].</td>
 <td>-1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_jerk_mps3.max</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>jerk_<wbr>mps3.<wbr>max</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum jerk value applied during slowdown interpolation [m/s³].</td>
 <td>-1.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_trigger.brake_delay_s</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>brake_<wbr>delay_<wbr>s</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time delay before deceleration starts after triggering slowdown [s].</td>
 <td>1.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>th_trigger.dist_error_m</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>dist_<wbr>error_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Allowed stopping error distance from the desired stopping point [m].</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>left.min</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>dist_<wbr>to_<wbr>boundary_<wbr>m.<wbr>left.<wbr>min</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Closest lateral distance from the boundary used for velocity and jerk interpolation [m].</td>
 <td>0.01</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>left.max</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>dist_<wbr>to_<wbr>boundary_<wbr>m.<wbr>left.<wbr>max</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Furthest lateral distance from the boundary used for velocity and jerk interpolation [m].</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>right.min</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>dist_<wbr>to_<wbr>boundary_<wbr>m.<wbr>right.<wbr>min</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Closest lateral distance from the boundary used for velocity and jerk interpolation [m].</td>
 <td>0.01</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>right.max</td>
+<td>boundary_<wbr>departure_<wbr>prevention.<wbr>slow_<wbr>down_<wbr>behavior.<wbr>th_<wbr>trigger.<wbr>th_<wbr>dist_<wbr>to_<wbr>boundary_<wbr>m.<wbr>right.<wbr>max</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Furthest lateral distance from the boundary used for velocity and jerk interpolation [m].</td>
 <td>0.5</td>

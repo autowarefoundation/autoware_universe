@@ -23023,231 +23023,231 @@
 </thead>
 <tbody>
 <tr>
-<td>radial_resolution_m</td>
+<td>radial_<wbr>resolution_<wbr>m</wbr></wbr></td>
 <td>float</td>
 <td>The resolution in radial direction [m].</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>azimuth_resolution_rad</td>
+<td>azimuth_<wbr>resolution_<wbr>rad</wbr></wbr></td>
 <td>float</td>
 <td>The resolution in azimuth direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole azimuth range.</td>
 <td>0.0175</td>
 <td>≥0<br>≤6.283185307179586</td>
 </tr>
 <tr>
-<td>elevation_resolution_rad</td>
+<td>elevation_<wbr>resolution_<wbr>rad</wbr></wbr></td>
 <td>float</td>
 <td>The resolution in elevation direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole elevation range.</td>
 <td>0.0175</td>
 <td>≥0<br>≤6.283185307179586</td>
 </tr>
 <tr>
-<td>voxel_points_threshold</td>
+<td>voxel_<wbr>points_<wbr>threshold</wbr></wbr></td>
 <td>integer</td>
 <td>The minimum number of points required per voxel.</td>
 <td>2</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>min_radius_m</td>
+<td>min_<wbr>radius_<wbr>m</wbr></wbr></td>
 <td>float</td>
 <td>The minimum radius to consider [m].</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>max_radius_m</td>
+<td>max_<wbr>radius_<wbr>m</wbr></wbr></td>
 <td>float</td>
 <td>The maximum radius to consider [m].</td>
 <td>300.0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>intensity_threshold</td>
+<td>intensity_<wbr>threshold</wbr></td>
 <td>integer</td>
 <td>The maximum intensity threshold for secondary returns (primary returns are not affected).</td>
 <td>2</td>
 <td>≥0<br>≤255</td>
 </tr>
 <tr>
-<td>visibility_estimation_max_range_m</td>
+<td>visibility_<wbr>estimation_<wbr>max_<wbr>range_<wbr>m</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The maximum range to consider for visibility estimation [m] (limits visibility calculations to reliable sensor range).</td>
 <td>20.0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>visibility_estimation_min_azimuth_rad</td>
+<td>visibility_<wbr>estimation_<wbr>min_<wbr>azimuth_<wbr>rad</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
 <td>0.0</td>
 <td>≥0.0<br>≤6.28</td>
 </tr>
 <tr>
-<td>visibility_estimation_max_azimuth_rad</td>
+<td>visibility_<wbr>estimation_<wbr>max_<wbr>azimuth_<wbr>rad</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
 <td>6.28</td>
 <td>≥0.0<br>≤6.28</td>
 </tr>
 <tr>
-<td>visibility_estimation_min_elevation_rad</td>
+<td>visibility_<wbr>estimation_<wbr>min_<wbr>elevation_<wbr>rad</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
 <td>-1.57</td>
 <td>≥-1.57<br>≤1.57</td>
 </tr>
 <tr>
-<td>visibility_estimation_max_elevation_rad</td>
+<td>visibility_<wbr>estimation_<wbr>max_<wbr>elevation_<wbr>rad</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
 <td>1.57</td>
 <td>≥-1.57<br>≤1.57</td>
 </tr>
 <tr>
-<td>use_return_type_classification</td>
+<td>use_<wbr>return_<wbr>type_<wbr>classification</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to use return type classification (if false, all returns are processed).</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter_secondary_returns</td>
+<td>filter_<wbr>secondary_<wbr>returns</wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to filter secondary returns (if true, only primary returns are kept).</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>secondary_noise_threshold</td>
+<td>secondary_<wbr>noise_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>Threshold for classifying primary vs secondary returns.</td>
 <td>4</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>low_visibility_entropy_threshold</td>
+<td>low_<wbr>visibility_<wbr>entropy_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum normalized geometric entropy for low-visibility candidate voxels.</td>
 <td>0.0</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>low_visibility_anisotropy_threshold</td>
+<td>low_<wbr>visibility_<wbr>anisotropy_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum geometric anisotropy for low-visibility candidate voxels.</td>
 <td>1.0</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>low_visibility_average_intensity_threshold</td>
+<td>low_<wbr>visibility_<wbr>average_<wbr>intensity_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum voxel average intensity for low-visibility candidate voxels.</td>
 <td>255.0</td>
 <td>≥0<br>≤255</td>
 </tr>
 <tr>
-<td>low_visibility_sparse_voxel_point_count_threshold</td>
+<td>low_<wbr>visibility_<wbr>sparse_<wbr>voxel_<wbr>point_<wbr>count_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Maximum point count threshold for sparse low-visibility candidate voxels.</td>
 <td>10</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>low_visibility_sparse_voxel_secondary_return_ratio_threshold</td>
+<td>low_<wbr>visibility_<wbr>sparse_<wbr>voxel_<wbr>secondary_<wbr>return_<wbr>ratio_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum secondary return ratio for sparse low-visibility candidate voxels.</td>
 <td>0.2</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>visibility_estimation_max_secondary_voxel_count</td>
+<td>visibility_<wbr>estimation_<wbr>max_<wbr>secondary_<wbr>voxel_<wbr>count</wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Maximum secondary voxel count for visibility estimation calculations.</td>
 <td>500</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>primary_return_types</td>
+<td>primary_<wbr>return_<wbr>types</wbr></wbr></td>
 <td>array</td>
 <td>List of return type values considered as primary returns (all others are secondary).</td>
 <td>[1, 6, 8, 10]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>visibility_estimation_only</td>
+<td>visibility_<wbr>estimation_<wbr>only</wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to run filter for visibility estimation only without populating the main output point cloud (for monitoring/diagnostic purposes only). Debug point cloud topics are still controlled by their own publish_* parameters.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>publish_noise_cloud</td>
+<td>publish_<wbr>noise_<wbr>cloud</wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to create, generate, and publish the noise point cloud for debugging. Can be toggled at runtime.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>publish_low_visibility_voxels</td>
+<td>publish_<wbr>low_<wbr>visibility_<wbr>voxels</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to create and publish points in selected low-visibility voxels for debugging. Can be toggled at runtime.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter_ratio_error_threshold</td>
+<td>filter_<wbr>ratio_<wbr>error_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>The filter ratio threshold for error diagnostics (ratio of output/input points).</td>
 <td>0.5</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>filter_ratio_warn_threshold</td>
+<td>filter_<wbr>ratio_<wbr>warn_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>The filter ratio threshold for warning diagnostics (ratio of output/input points).</td>
 <td>0.7</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>visibility_error_threshold</td>
+<td>visibility_<wbr>error_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>The visibility threshold for error diagnostics.</td>
 <td>0.8</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>visibility_warn_threshold</td>
+<td>visibility_<wbr>warn_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>The visibility threshold for warning diagnostics.</td>
 <td>0.9</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>publish_area_marker</td>
+<td>publish_<wbr>area_<wbr>marker</wbr></wbr></td>
 <td>boolean</td>
 <td>Publish a marker to visualize region used for visibility estimation</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>num_frames_hysteresis_transition</td>
+<td>num_<wbr>frames_<wbr>hysteresis_<wbr>transition</wbr></wbr></wbr></td>
 <td>float</td>
 <td>The number of frames to be required to transition judgement</td>
 <td>1</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>immediate_report_error</td>
+<td>immediate_<wbr>report_<wbr>error</wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to report error state immediately if a single frame categorized as error</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>immediate_relax_state</td>
+<td>immediate_<wbr>relax_<wbr>state</wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to relax state if observed state is better than the current one</td>
 <td>false</td>

@@ -23181,7 +23181,7 @@ The information of the models is listed here:</p>
 </thead>
 <tbody>
 <tr>
-<td>approximate_sync</td>
+<td>approximate_<wbr>sync</wbr></td>
 <td>boolean</td>
 <td>Enable or disable approximate synchronization.</td>
 <td>False</td>
@@ -23209,154 +23209,154 @@ The information of the models is listed here:</p>
 <td>N/A</td>
 </tr>
 <tr>
-<td>over_exposure_threshold</td>
+<td>over_<wbr>exposure_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>If the intensity get grater than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much higher, the node only overwrites in the over exposure situations. Therefore, If you wouldn't like to use this feature set this value to <code>1.0</code>. The value can be <code>[0.0, 1.0]</code>. The confidence of overwritten signal is set to <code>0.0</code>.</td>
 <td>0.85</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>under_exposure_threshold</td>
+<td>under_<wbr>exposure_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>If the intensity get lesser than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much lesser, the node only overwrites in the under exposure situations. Therefore, If you wouldn't like to use this feature set this value to <code>-1.0</code>. The confidence of overwritten signal is set to <code>0.0</code>.</td>
 <td>-0.83</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>score_threshold</td>
+<td>score_<wbr>threshold</wbr></td>
 <td>float</td>
 <td>Minimum detection score for LampRecognizer/CNN outputs (objectness * class probability where applicable).</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>nms_threshold</td>
+<td>nms_<wbr>threshold</wbr></td>
 <td>float</td>
 <td>IoU threshold for non-maximum suppression after decoding detections (LampRecognizer).</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_batch_size</td>
+<td>max_<wbr>batch_<wbr>size</wbr></wbr></td>
 <td>integer</td>
 <td>Maximum batch size for TensorRT inference (CNN / LampRecognizer).</td>
 <td>64</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>classifier_type</td>
+<td>classifier_<wbr>type</wbr></td>
 <td>integer</td>
 <td>Type of classifier used. {0: hsv_filter (rule-based), 1: cnn (single-crop), 2: LampRecognizer (cnn per lamp).</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light_type</td>
+<td>traffic_<wbr>light_<wbr>type</wbr></wbr></td>
 <td>integer</td>
 <td>Type of traffic light to classify. {0: car, 1: pedestrian}.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.num_anchors</td>
+<td>regression_<wbr>arch.<wbr>num_<wbr>anchors</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of anchor boxes per grid cell for LampRecognizer decode (must match model). Nested under regression_arch in YAML.</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.chans_per_anchor</td>
+<td>regression_<wbr>arch.<wbr>chans_<wbr>per_<wbr>anchor</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Output channels per anchor for LampRecognizer (full head width before grid flatten).</td>
 <td>16</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.x_index</td>
+<td>regression_<wbr>arch.<wbr>x_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox x (within each anchor slice) for LampRecognizer.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.y_index</td>
+<td>regression_<wbr>arch.<wbr>y_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox y (within each anchor slice) for LampRecognizer.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.w_index</td>
+<td>regression_<wbr>arch.<wbr>w_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox w (within each anchor slice) for LampRecognizer.</td>
 <td>2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.h_index</td>
+<td>regression_<wbr>arch.<wbr>h_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox h (within each anchor slice) for LampRecognizer.</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.obj_index</td>
+<td>regression_<wbr>arch.<wbr>obj_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of objectness for LampRecognizer.</td>
 <td>4</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.color_start</td>
+<td>regression_<wbr>arch.<wbr>color_<wbr>start</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>First channel index of color logits (length regression_arch.num_colors) for LampRecognizer.</td>
 <td>5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.type_start</td>
+<td>regression_<wbr>arch.<wbr>type_<wbr>start</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>First channel index of shape/type logits (length regression_arch.num_types) for LampRecognizer.</td>
 <td>8</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.num_types</td>
+<td>regression_<wbr>arch.<wbr>num_<wbr>types</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of shape/type classes for LampRecognizer.</td>
 <td>6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.num_colors</td>
+<td>regression_<wbr>arch.<wbr>num_<wbr>colors</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of color classes for LampRecognizer.</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.cos_index</td>
+<td>regression_<wbr>arch.<wbr>cos_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of cos(angle) for LampRecognizer.</td>
 <td>14</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.sin_index</td>
+<td>regression_<wbr>arch.<wbr>sin_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of sin(angle) for LampRecognizer.</td>
 <td>15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.scale_x_y</td>
+<td>regression_<wbr>arch.<wbr>scale_<wbr>x_<wbr>y</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>YOLO-style center decode scale for x/y (with offset derived as 0.5*(scale-1)).</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.anchors</td>
+<td>regression_<wbr>arch.<wbr>anchors</wbr></wbr></td>
 <td>array</td>
 <td>Anchor widths and heights interleaved [w0,h0,w1,h1,...]; length must be 2*regression_arch.num_anchors.</td>
 <td>[7.0, 7.0, 14.0, 14.0, 42.0, 42.0]</td>
@@ -23377,7 +23377,7 @@ The information of the models is listed here:</p>
 </thead>
 <tbody>
 <tr>
-<td>approximate_sync</td>
+<td>approximate_<wbr>sync</wbr></td>
 <td>boolean</td>
 <td>Enable or disable approximate synchronization.</td>
 <td>False</td>
@@ -23405,154 +23405,154 @@ The information of the models is listed here:</p>
 <td>N/A</td>
 </tr>
 <tr>
-<td>over_exposure_threshold</td>
+<td>over_<wbr>exposure_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>If the intensity get grater than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much higher, the node only overwrites in the over exposure situations. Therefore, If you wouldn't like to use this feature set this value to <code>1.0</code>. The value can be <code>[0.0, 1.0]</code>. The confidence of overwritten signal is set to <code>0.0</code>.</td>
 <td>0.85</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>under_exposure_threshold</td>
+<td>under_<wbr>exposure_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>If the intensity get lesser than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much lesser, the node only overwrites in the under exposure situations. Therefore, If you wouldn't like to use this feature set this value to <code>-1.0</code>. The confidence of overwritten signal is set to <code>0.0</code>.</td>
 <td>-0.83</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>score_threshold</td>
+<td>score_<wbr>threshold</wbr></td>
 <td>float</td>
 <td>Minimum detection score for LampRecognizer/CNN outputs (objectness * class probability where applicable).</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>nms_threshold</td>
+<td>nms_<wbr>threshold</wbr></td>
 <td>float</td>
 <td>IoU threshold for non-maximum suppression after decoding detections (LampRecognizer).</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_batch_size</td>
+<td>max_<wbr>batch_<wbr>size</wbr></wbr></td>
 <td>integer</td>
 <td>Maximum batch size for TensorRT inference (CNN / LampRecognizer).</td>
 <td>64</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>classifier_type</td>
+<td>classifier_<wbr>type</wbr></td>
 <td>integer</td>
 <td>Type of classifier used. {0: hsv_filter (rule-based), 1: cnn (single-crop), 2: LampRecognizer (cnn per lamp).</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light_type</td>
+<td>traffic_<wbr>light_<wbr>type</wbr></wbr></td>
 <td>integer</td>
 <td>Type of traffic light to classify. {0: car, 1: pedestrian}.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.num_anchors</td>
+<td>regression_<wbr>arch.<wbr>num_<wbr>anchors</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of anchor boxes per grid cell for LampRecognizer decode (must match model). Nested under regression_arch in YAML.</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.chans_per_anchor</td>
+<td>regression_<wbr>arch.<wbr>chans_<wbr>per_<wbr>anchor</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Output channels per anchor for LampRecognizer (full head width before grid flatten).</td>
 <td>16</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.x_index</td>
+<td>regression_<wbr>arch.<wbr>x_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox x (within each anchor slice) for LampRecognizer.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.y_index</td>
+<td>regression_<wbr>arch.<wbr>y_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox y (within each anchor slice) for LampRecognizer.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.w_index</td>
+<td>regression_<wbr>arch.<wbr>w_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox w (within each anchor slice) for LampRecognizer.</td>
 <td>2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.h_index</td>
+<td>regression_<wbr>arch.<wbr>h_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of bbox h (within each anchor slice) for LampRecognizer.</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.obj_index</td>
+<td>regression_<wbr>arch.<wbr>obj_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of objectness for LampRecognizer.</td>
 <td>4</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.color_start</td>
+<td>regression_<wbr>arch.<wbr>color_<wbr>start</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>First channel index of color logits (length regression_arch.num_colors) for LampRecognizer.</td>
 <td>5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.type_start</td>
+<td>regression_<wbr>arch.<wbr>type_<wbr>start</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>First channel index of shape/type logits (length regression_arch.num_types) for LampRecognizer.</td>
 <td>8</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.num_types</td>
+<td>regression_<wbr>arch.<wbr>num_<wbr>types</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of shape/type classes for LampRecognizer.</td>
 <td>6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.num_colors</td>
+<td>regression_<wbr>arch.<wbr>num_<wbr>colors</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of color classes for LampRecognizer.</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.cos_index</td>
+<td>regression_<wbr>arch.<wbr>cos_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of cos(angle) for LampRecognizer.</td>
 <td>14</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.sin_index</td>
+<td>regression_<wbr>arch.<wbr>sin_<wbr>index</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Channel index of sin(angle) for LampRecognizer.</td>
 <td>15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.scale_x_y</td>
+<td>regression_<wbr>arch.<wbr>scale_<wbr>x_<wbr>y</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>YOLO-style center decode scale for x/y (with offset derived as 0.5*(scale-1)).</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>regression_arch.anchors</td>
+<td>regression_<wbr>arch.<wbr>anchors</wbr></wbr></td>
 <td>array</td>
 <td>Anchor widths and heights interleaved [w0,h0,w1,h1,...]; length must be 2*regression_arch.num_anchors.</td>
 <td>[7.0, 7.0, 14.0, 14.0, 42.0, 42.0]</td>
