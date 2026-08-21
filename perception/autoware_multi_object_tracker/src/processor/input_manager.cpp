@@ -49,6 +49,13 @@ InputStream::InputStream(
 void InputStream::push(
   const types::DynamicObjectList & objects, const types::AssociationResult & association)
 {
+  push(objects, association, clock_->now());
+}
+
+void InputStream::push(
+  const types::DynamicObjectList & objects, const types::AssociationResult & association,
+  const rclcpp::Time & now)
+{
   // Move the objects_with_uncertainty to the objects queue
   objects_que_.push_back(types::ObjectsWithAssociation{objects, association});
   while (objects_que_.size() > que_size_) {
@@ -56,7 +63,6 @@ void InputStream::push(
   }
 
   // update the timing statistics
-  rclcpp::Time now = clock_->now();
   rclcpp::Time objects_time(objects.header.stamp);
   updateTimingStatus(now, objects_time);
 
@@ -265,13 +271,20 @@ void InputManager::push(
   const size_t channel_index, const types::DynamicObjectList & objects,
   const types::AssociationResult & association)
 {
+  push(channel_index, objects, association, clock_->now());
+}
+
+void InputManager::push(
+  const size_t channel_index, const types::DynamicObjectList & objects,
+  const types::AssociationResult & association, const rclcpp::Time & now)
+{
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(
       logger_, "InputManager::push Invalid channel index: %lu, input_streams_ size: %lu",
       channel_index, input_streams_.size());
     return;
   }
-  input_streams_.at(channel_index)->push(objects, association);
+  input_streams_.at(channel_index)->push(objects, association, now);
 }
 
 std::optional<types::DynamicObjectList> InputManager::processMessage(
@@ -332,39 +345,88 @@ void InputManager::getObjectTimeInterval(
   }
 }
 
-void InputManager::optimizeTimings()
+bool InputManager::isStreamFresh(const InputStream & input_stream, const rclcpp::Time & now) const
 {
-  double max_latency_mean = 0.0;
-  uint selected_stream_idx = 0;
-  double selected_stream_latency_std = 0.1;
-  double selected_stream_interval = 0.1;
-  double selected_stream_interval_std = 0.01;
+  if (!input_stream.isTimeInitialized()) {
+    return false;
+  }
 
-  {
-    // ANALYSIS: Get the streams statistics
-    // select the stream that has the maximum latency
-    double latency_mean, latency_var, interval_mean, interval_var;
-    for (const auto & input_stream : input_streams_) {
-      if (!input_stream->isTimeInitialized()) continue;
-      input_stream->getTimeStatistics(latency_mean, latency_var, interval_mean, interval_var);
-      if (latency_mean > max_latency_mean) {
-        max_latency_mean = latency_mean;
-        selected_stream_idx = input_stream->getIndex();
-        selected_stream_latency_std = std::sqrt(latency_var);
-        selected_stream_interval = interval_mean;
-        selected_stream_interval_std = std::sqrt(interval_var);
-      }
+  double latency_mean, latency_var, interval_mean, interval_var;
+  input_stream.getTimeStatistics(latency_mean, latency_var, interval_mean, interval_var);
+
+  // The timeout is capped by the margin, so that a rate-dropped channel, which has a gradually
+  // increasing interval, is not relaxed into the 'fresh' condition by its own statistics.
+  // A channel slower than 'freshness_margin * 2.0' interval is always treated as not fresh.
+  constexpr double freshness_margin = 0.2;  // [s]
+  const double expected_interval = interval_mean > 1e-3 ? interval_mean : target_stream_interval_;
+  const double freshness_timeout = std::min(expected_interval, freshness_margin) + freshness_margin;
+
+  const double elapsed = (now - input_stream.getLatestMessageTime()).seconds();
+  return 0.0 <= elapsed && elapsed <= freshness_timeout;
+}
+
+void InputManager::optimizeChannelTimings(const rclcpp::Time & now)
+{
+  // ANALYSIS: Get the streams statistics
+  // select the fresh stream that has the maximum latency
+  double latency_mean, latency_var, interval_mean, interval_var;
+  bool is_candidate_found = false;
+  uint candidate_stream_idx = target_stream_idx_;
+  double candidate_latency_mean = -1.0;
+  for (const auto & input_stream : input_streams_) {
+    if (!isStreamFresh(*input_stream, now)) continue;
+    input_stream->getTimeStatistics(latency_mean, latency_var, interval_mean, interval_var);
+    if (!is_candidate_found || latency_mean > candidate_latency_mean) {
+      is_candidate_found = true;
+      candidate_stream_idx = input_stream->getIndex();
+      candidate_latency_mean = latency_mean;
     }
   }
 
-  // Set the target stream index, which has the maximum latency
+  if (!is_candidate_found) {
+    // no fresh stream is available, keep the current target stream
+    return;
+  }
+
+  // DECISION: Set the target stream index, which has the maximum latency
   // trigger will be called next time
-  // if no stream is initialized, the target stream index will be 0 and wait for the initialization
-  target_stream_idx_ = selected_stream_idx;
-  target_stream_latency_ = max_latency_mean;
-  target_stream_latency_std_ = selected_stream_latency_std;
-  target_stream_interval_ = selected_stream_interval;
-  target_stream_interval_std_ = selected_stream_interval_std;
+  const auto & current_target_stream = input_streams_.at(target_stream_idx_);
+  if (!isStreamFresh(*current_target_stream, now)) {
+    // the current target stream is stale, fail over to the fresh candidate immediately
+    target_stream_idx_ = candidate_stream_idx;
+  } else if (candidate_stream_idx != target_stream_idx_) {
+    // both streams are fresh: switch only if the candidate is clearly slower than the current
+    // target, to avoid frequent flipping between streams of similar latency
+    constexpr double latency_hysteresis = 0.03;  // [s]
+    double target_latency_mean, target_latency_var, target_interval_mean, target_interval_var;
+    current_target_stream->getTimeStatistics(
+      target_latency_mean, target_latency_var, target_interval_mean, target_interval_var);
+    if (candidate_latency_mean > target_latency_mean + latency_hysteresis) {
+      target_stream_idx_ = candidate_stream_idx;
+    }
+  }
+
+  // UPDATE: Refresh the timing statistics of the target stream
+  input_streams_.at(target_stream_idx_)
+    ->getTimeStatistics(latency_mean, latency_var, interval_mean, interval_var);
+
+  // Shift the target latency gradually when it increases, because an increase moves the batch
+  // window backward in time. A backward jump exports objects older than the tracker time, which
+  // makes the trackers stale. The increase rate is much slower than the elapsed time, so the
+  // batch window end (now - target_stream_latency_) keeps moving forward.
+  constexpr double max_latency_increase_rate = 0.2;  // [s/s]
+  const double elapsed = last_optimization_time_
+                           ? std::clamp((now - *last_optimization_time_).seconds(), 0.0, 1.0)
+                           : 0.0;
+  target_stream_latency_ =
+    latency_mean > target_stream_latency_
+      ? std::min(latency_mean, target_stream_latency_ + max_latency_increase_rate * elapsed)
+      : latency_mean;  // a decrease is applied immediately, it moves the window forward
+  last_optimization_time_ = now;
+
+  target_stream_latency_std_ = std::sqrt(latency_var);
+  target_stream_interval_ = interval_mean;
+  target_stream_interval_std_ = std::sqrt(interval_var);
 }
 
 bool InputManager::getObjects(
@@ -382,11 +444,6 @@ bool InputManager::getObjects(
   rclcpp::Time object_latest_time;
   rclcpp::Time object_earliest_time;
   getObjectTimeInterval(now, object_latest_time, object_earliest_time);
-
-  // Optimize the target stream, latency, and its band
-  // The result will be used for the next time, so the optimization is after getting the time
-  // interval
-  optimizeTimings();
 
   // Get objects from all input streams
   // adds up to the objects vector for efficient processing
