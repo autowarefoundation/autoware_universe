@@ -97,13 +97,29 @@ class InitializeInterface(object):
             randomize = True
         return spawn_point, randomize
 
+    def _get_map_spawn_points(self):
+        """Return the map spawn points, or an empty list if the map is unavailable."""
+        try:
+            return self.world.get_map().get_spawn_points()
+        except RuntimeError as error:
+            # cspell:ignore mapless
+            # Mapless CARLA levels (no parseable OpenDRIVE metadata) expose no map.
+            print(f"WARNING: Map spawn points are unavailable (mapless level?): {error}")
+            return []
+
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
+        spawn_points_tm = self._get_map_spawn_points()
+        if not spawn_points_tm:
+            # No spawn points means there is nowhere to place NPC traffic; skip it
+            # so mapless levels can still start with use_traffic_manager enabled.
+            print("WARNING: Skipping traffic-manager NPC setup; no map spawn points available.")
+            return
+
         traffic_manager = client.get_trafficmanager()  # cspell:ignore trafficmanager
         traffic_manager.set_synchronous_mode(True)
         traffic_manager.set_random_device_seed(0)
         random.seed(0)
-        spawn_points_tm = self.world.get_map().get_spawn_points()
         for i, spawn_point in enumerate(spawn_points_tm):
             self.world.debug.draw_string(spawn_point.location, str(i), life_time=10)
         models = [
