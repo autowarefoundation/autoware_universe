@@ -70,13 +70,7 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
 
   // set vehicle_info
   {
-    const auto vehicle_info =
-      autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
-    vehicle_shape_.length = vehicle_info.vehicle_length_m;
-    vehicle_shape_.width = vehicle_info.vehicle_width_m;
-    vehicle_shape_.base_length = vehicle_info.wheel_base_m;
-    vehicle_shape_.max_steering = vehicle_info.max_steer_angle_rad;
-    vehicle_shape_.base2back = vehicle_info.rear_overhang_m;
+    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
   }
 
   // Planning
@@ -438,12 +432,11 @@ TransformStamped FreespacePlannerNode::getTransform(
 void FreespacePlannerNode::initializePlanningAlgorithm()
 {
   // Extend robot shape
-  autoware::freespace_planning_algorithms::VehicleShape extended_vehicle_shape = vehicle_shape_;
+  vehicle_info_utils::VehicleInfo extended_vehicle_info = vehicle_info_;
   const double margin = node_param_.vehicle_shape_margin_m;
-  extended_vehicle_shape.length += margin;
-  extended_vehicle_shape.width += margin;
-  extended_vehicle_shape.base2back += margin / 2;
-  extended_vehicle_shape.setMinMaxDimension();
+  extended_vehicle_info.vehicle_length_m += margin;
+  extended_vehicle_info.vehicle_width_m += margin;
+  extended_vehicle_info.rear_overhang_m += margin / 2;
 
   const auto planner_common_param = getPlannerCommonParam();
 
@@ -451,9 +444,9 @@ void FreespacePlannerNode::initializePlanningAlgorithm()
 
   // initialize specified algorithm
   if (algo_name == "astar") {
-    algo_ = std::make_unique<AstarSearch>(planner_common_param, extended_vehicle_shape, *this);
+    algo_ = std::make_unique<AstarSearch>(planner_common_param, extended_vehicle_info, *this);
   } else if (algo_name == "rrtstar") {
-    algo_ = std::make_unique<RRTStar>(planner_common_param, extended_vehicle_shape, *this);
+    algo_ = std::make_unique<RRTStar>(planner_common_param, extended_vehicle_info, *this);
   } else {
     throw std::runtime_error("No such algorithm named " + algo_name + " exists.");
   }

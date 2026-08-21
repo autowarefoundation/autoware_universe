@@ -69,7 +69,6 @@ using autoware::freespace_planning_algorithms::AstarSearch;
 using autoware::freespace_planning_algorithms::PlannerCommonParam;
 using autoware::freespace_planning_algorithms::RRTStar;
 using autoware::freespace_planning_algorithms::RRTStarParam;
-using autoware::freespace_planning_algorithms::VehicleShape;
 using autoware_internal_planning_msgs::msg::Scenario;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
@@ -124,7 +123,7 @@ private:
 
   // params
   NodeParam node_param_;
-  VehicleShape vehicle_shape_;
+  vehicle_info_utils::VehicleInfo vehicle_info_;
 
   // variables
   std::unique_ptr<AbstractPlanningAlgorithm> algo_;
