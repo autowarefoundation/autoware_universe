@@ -1,4 +1,6 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="input_operation_mode_availability" default="/system/operation_mode/availability"/>
   <!-- To be replaced by ControlCommand -->
   <arg name="input_odometry" default="/localization/kinematic_state"/>
@@ -22,6 +24,7 @@
 
   <!-- mrm_handler -->
   <node pkg="autoware_mrm_handler" exec="autoware_mrm_handler_node" name="mrm_handler" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/operation_mode_availability" to="$(var input_operation_mode_availability)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/control_mode" to="$(var input_control_mode)"/>
