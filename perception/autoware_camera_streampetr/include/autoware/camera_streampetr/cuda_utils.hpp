@@ -67,7 +67,7 @@ using nvinfer1::DataType;
 using nvinfer1::Dims;
 using nvinfer1::TensorIOMode;
 
-inline unsigned int getElementSize(DataType t)
+inline unsigned int get_element_size(DataType t)
 {
   switch (t) {
     case DataType::kINT32:
@@ -105,10 +105,10 @@ struct Tensor
         volume *= dim.d[i];
       }
     }
-    cudaMalloc(&ptr, volume * getElementSize(dtype));
+    cudaMalloc(&ptr, volume * get_element_size(dtype));
   }
 
-  int32_t nbytes() const { return volume * getElementSize(dtype); }
+  int32_t nbytes() const { return volume * get_element_size(dtype); }
 
   ~Tensor()
   {
@@ -135,7 +135,7 @@ struct Tensor
       return;
     }
 
-    std::size_t dsize = volume * getElementSize(dtype);
+    std::size_t dsize = volume * get_element_size(dtype);
     cudaMemcpy(ptr, data.data(), dsize, cudaMemcpyHostToDevice);
   }
 
@@ -239,16 +239,16 @@ struct Tensor
     header << "), }";
 
     // Pad header to 16 bytes alignment
-    std::string headerStr = header.str();
-    int32_t headerLen = 10 + headerStr.length();
-    int32_t padding = 16 - ((headerLen + 1) % 16);
-    headerStr.append(padding, ' ');
-    headerStr += '\n';
+    std::string header_str = header.str();
+    int32_t header_len = 10 + header_str.length();
+    int32_t padding = 16 - ((header_len + 1) % 16);
+    header_str.append(padding, ' ');
+    header_str += '\n';
 
     // Write header length and header
-    uint16_t headerSize = headerStr.length();
-    writer_stream.write(reinterpret_cast<char *>(&headerSize), sizeof(uint16_t));
-    writer_stream.write(headerStr.c_str(), headerSize);
+    uint16_t header_size = header_str.length();
+    writer_stream.write(reinterpret_cast<char *>(&header_size), sizeof(uint16_t));
+    writer_stream.write(header_str.c_str(), header_size);
 
     // Write data
     writer_stream.write(
