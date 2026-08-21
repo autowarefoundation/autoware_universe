@@ -43,6 +43,7 @@
 
 #include <memory>
 #include <mutex>
+#include <vector>
 
 #if ENABLE_GPU
 #include "classifier/cnn_classifier.hpp"
@@ -57,11 +58,11 @@
 
 namespace autoware::traffic_light
 {
-class TrafficLightClassifierNodelet : public rclcpp::Node
+class TrafficLightClassifierNode : public rclcpp::Node
 {
 public:
-  explicit TrafficLightClassifierNodelet(const rclcpp::NodeOptions & options);
-  void imageRoiCallback(
+  explicit TrafficLightClassifierNode(const rclcpp::NodeOptions & options);
+  void image_roi_callback(
     const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
     const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_rois_msg);
 
@@ -73,9 +74,11 @@ public:
   };
 
 private:
-  void connectCb();
+  // Applies HSV threshold parameter updates to the color backend at runtime (dynamic reconfigure).
+  // Registered only for the HSV backend; drives color_classifier_'s get_config / set_config.
+  rcl_interfaces::msg::SetParametersResult on_set_parameters_callback(
+    const std::vector<rclcpp::Parameter> & parameters);
 
-  rclcpp::TimerBase::SharedPtr timer_;
   image_transport::SubscriberFilter image_sub_;
   message_filters::Subscriber<tier4_perception_msgs::msg::TrafficLightRoiArray> roi_sub_;
   typedef message_filters::sync_policies::ExactTime<
@@ -91,7 +94,12 @@ private:
   bool is_approximate_sync_;
   rclcpp::Publisher<tier4_perception_msgs::msg::TrafficLightArray>::SharedPtr
     traffic_signal_array_pub_;
+  image_transport::Publisher debug_image_pub_;
   std::unique_ptr<TrafficLightClassifier> classifier_;
+  // Non-null only for the HSV backend, so on_set_parameters_callback can drive its dynamic
+  // reconfigure.
+  std::shared_ptr<ColorClassifier> color_classifier_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   std::unique_ptr<autoware_utils::DiagnosticsInterface>
     diagnostics_interface_ptr_;  //!< Diagnostic handler.

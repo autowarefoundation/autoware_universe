@@ -73,7 +73,8 @@ ObjectsCallback::ObjectsCallback(autoware::agnocast_wrapper::Node * node, NodeSt
 : state_(state), transform_listener_(node)
 {
   sub_traffic_signals_ =
-    node->create_polling_subscriber<TrafficLightGroupArray>("/traffic_signals", rclcpp::QoS{1});
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<TrafficLightGroupArray>(
+      node, "/traffic_signals", rclcpp::QoS{1});
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
@@ -96,7 +97,7 @@ void ObjectsCallback::setDiagnostics(Diagnostics * diagnostics)
 }
 
 void ObjectsCallback::trafficSignalsCallback(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg)
+  const std::shared_ptr<const TrafficLightGroupArray> & msg)
 {
   state_.predictor_vru->setTrafficSignal(*msg);
 }
@@ -192,12 +193,13 @@ void ObjectsCallback::objectsCallback(
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
+  const auto output_stamp = output.header.stamp;
   publish(std::move(output_msg), debug_markers);
 
   const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
   const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
 
-  if (diagnostics_) diagnostics_->update(output.header.stamp, processing_time_ms, cyclic_time_ms);
+  if (diagnostics_) diagnostics_->update(output_stamp, processing_time_ms, cyclic_time_ms);
 }
 
 void ObjectsCallback::publish(

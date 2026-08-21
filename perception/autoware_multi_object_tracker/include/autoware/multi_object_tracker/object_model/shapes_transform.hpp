@@ -39,9 +39,9 @@ geometry_msgs::msg::Polygon transformFootprint(
   const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
   const geometry_msgs::msg::Pose & dst_pose);
 
-// Compute the polygon union of two footprints already expressed in the same local frame.
-// Returns the exterior ring of the union polygon, or the convex hull of all vertices when
-// the inputs are disjoint.
+// Merge two footprints already expressed in the same local frame by taking the convex hull of
+// all their vertices. Returns the exterior ring of the hull, which covers both footprints whether
+// they overlap or are disjoint.
 geometry_msgs::msg::Polygon unionFootprints(
   const geometry_msgs::msg::Polygon & a, const geometry_msgs::msg::Polygon & b);
 

@@ -52,9 +52,6 @@
           "description": "Minimum semantic probability required for a point to be used.",
           "default": 0.3
         },
-        "class_names": {
-          "$ref": "#/definitions/class_names"
-        },
         "use_shape_estimation_corrector": {
           "type": "boolean",
           "description": "Enable the shape estimation corrector.",
@@ -107,7 +104,6 @@
         "large_cluster_max_points_per_voxel",
         "max_voxels_per_cluster",
         "min_probability",
-        "class_names",
         "use_shape_estimation_corrector",
         "use_shape_estimation_filter",
         "use_boost_bbox_optimizer",
@@ -129,26 +125,6 @@
         "max_voxels_per_cluster": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
-    },
-    "class_names": {
-      "type": "object",
-      "description": "Ordered mapping from input semantic class name to clustering target label. YAML declaration order is treated as class_id order.",
-      "additionalProperties": {
-        "type": "string",
-        "enum": [
-          "ignore",
-          "unknown",
-          "car",
-          "truck",
-          "bus",
-          "trailer",
-          "motorcycle",
-          "bicycle",
-          "pedestrian",
-          "animal",
-          "hazard"
-        ]
-      }
     },
     "confusable_label_groups": {
       "type": "object",

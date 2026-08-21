@@ -43,9 +43,10 @@ TrajectoryValidatorReport TrajectoryValidator::process(
     uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
   }
 
-  for (const auto & trajectory : input_trajectories.candidate_trajectories) {
+  for (const auto & candidate_trajectory : input_trajectories.candidate_trajectories) {
     EvaluationTable table;
-    const auto hex_generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+    const auto hex_generator_id =
+      autoware_utils_uuid::to_hex_string(candidate_trajectory.generator_id);
     table.generator_id = hex_generator_id;
 
     std::vector<autoware_trajectory_validator::msg::MetricReport> combined_metrics;
@@ -56,7 +57,7 @@ TrajectoryValidatorReport TrajectoryValidator::process(
       evaluation.is_shadow_mode = plugin->is_shadow_mode();
 
       stop_watch.tic(evaluation.plugin_name);
-      const auto res = plugin->is_feasible(trajectory.points, context);
+      const auto res = plugin->is_feasible(candidate_trajectory, context);
 
       if (!res) {
         evaluation.is_feasible = false;
@@ -78,7 +79,7 @@ TrajectoryValidatorReport TrajectoryValidator::process(
     report.evaluation_tables.push_back(table);
 
     if (table.all_acceptable()) {
-      report.valid_trajectories.candidate_trajectories.push_back(trajectory);
+      report.valid_trajectories.candidate_trajectories.push_back(candidate_trajectory);
     }
 
     const bool all_feasible = table.all_feasible();
@@ -89,9 +90,9 @@ TrajectoryValidatorReport TrajectoryValidator::process(
     RiskLevel risk_level;
     risk_level.level = all_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
     report.validation_reports.push_back(
-      autoware_trajectory_validator::build<ValidationReport>()
-        .trajectory_stamp(trajectory.header.stamp)
-        .generator_id(trajectory.generator_id)
+      autoware_trajectory_validator::build<autoware_trajectory_validator::msg::ValidationReport>()
+        .trajectory_stamp(candidate_trajectory.header.stamp)
+        .generator_id(candidate_trajectory.generator_id)
         .generator_name(uuid_to_name.at(hex_generator_id))
         .risk(risk_level)
         .metrics(std::move(combined_metrics)));

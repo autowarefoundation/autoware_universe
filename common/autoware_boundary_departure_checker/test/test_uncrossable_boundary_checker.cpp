@@ -106,7 +106,8 @@ TEST(UncrossableBoundaryCheckerTest, TestCheckDepartureEmptyTrajectory)
 
   // Act:
   auto checker = create_default_checker();
-  auto result = checker.update_departure_status(empty_traj, ego_state);
+  HysteresisState state;
+  auto result = checker.update_departure_status(empty_traj, ego_state, state);
 
   // Assert:
   EXPECT_TRUE(result.status == DepartureType::NONE);
@@ -121,7 +122,8 @@ TEST(UncrossableBoundaryCheckerTest, TestCheckDepartureZeroVelocity)
 
   // Act:
   auto checker = create_default_checker();
-  auto result = checker.update_departure_status(traj, ego_state);
+  HysteresisState state;
+  auto result = checker.update_departure_status(traj, ego_state, state);
 
   // Assert:
   EXPECT_TRUE(result.status == DepartureType::NONE);
@@ -166,7 +168,8 @@ TEST(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 
   // Act:
   auto checker = create_default_checker();
-  auto res1 = checker.update_departure_status(traj_safe, state_safe);
+  HysteresisState state;
+  auto res1 = checker.update_departure_status(traj_safe, state_safe, state);
 
   // Assert:
   EXPECT_TRUE(res1.status == DepartureType::NONE) << "Should be NONE when far from boundary.";
@@ -179,15 +182,15 @@ TEST(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
   auto state_danger = create_ego_state(traj_danger, test_velocity, 0.1);
 
   // Act:
-  auto res2 = checker.update_departure_status(traj_danger, state_danger);
+  auto res2 = checker.update_departure_status(traj_danger, state_danger, state);
 
   // Assert:
   EXPECT_TRUE(res2.status == DepartureType::NONE) << "Should be NONE due to ON time buffer.";
 
   // STEP 3: Wait for ON buffer to expire. Time increases by 0.2 seconds.
   // Act:
-  auto res3 =
-    checker.update_departure_status(traj_danger, create_ego_state(traj_danger, test_velocity, 0.2));
+  auto res3 = checker.update_departure_status(
+    traj_danger, create_ego_state(traj_danger, test_velocity, 0.2), state);
 
   // Assert:
   EXPECT_TRUE(res3.status == DepartureType::CRITICAL)
@@ -195,8 +198,8 @@ TEST(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 
   // STEP 4: Instantly teleport back to Safe Trajectory
   // Act:
-  auto res4 =
-    checker.update_departure_status(traj_safe, create_ego_state(traj_safe, test_velocity, 0.3));
+  auto res4 = checker.update_departure_status(
+    traj_safe, create_ego_state(traj_safe, test_velocity, 0.3), state);
 
   // Assert:
   EXPECT_TRUE(res4.status == DepartureType::CRITICAL)
@@ -204,11 +207,56 @@ TEST(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 
   // STEP 5: Wait for OFF buffer to expire (Safety is continuous)
   // Act:
-  auto res5 =
-    checker.update_departure_status(traj_safe, create_ego_state(traj_safe, test_velocity, 0.6));
+  auto res5 = checker.update_departure_status(
+    traj_safe, create_ego_state(traj_safe, test_velocity, 0.6), state);
 
   // Assert:
   EXPECT_TRUE(res5.status == DepartureType::NONE)
     << "Should return to NONE after OFF buffer expires.";
+}
+
+// clang-format off
+/**
+ * TestIndependentHysteresisStates:
+ *
+ * Verifies that two hysteresis states evaluated by the SAME checker do not contaminate each
+ * other. This mirrors the validator evaluating multiple candidate trajectories (one per
+ * generator) in a single frame: a CRITICAL verdict held in one state's OFF-buffer must not
+ * leak into another state evaluated for a safe trajectory at the same time.
+ */
+// clang-format on
+TEST(UncrossableBoundaryCheckerTest, TestIndependentHysteresisStates)
+{
+  // Arrange:
+  double safe_y = -2.5;
+  double danger_yaw = 0.2;
+  double test_velocity = 10.0;
+
+  auto traj_safe = create_trajectory(0.0, safe_y, test_velocity, 0.0);
+  auto traj_danger = create_trajectory(0.0, safe_y, test_velocity, danger_yaw);
+
+  auto checker = create_default_checker();
+
+  // Drive state_a to CRITICAL: safe baseline, then continuous danger until ON buffer expires.
+  HysteresisState state_a;
+  checker.update_departure_status(
+    traj_safe, create_ego_state(traj_safe, test_velocity, 0.0), state_a);
+  checker.update_departure_status(
+    traj_danger, create_ego_state(traj_danger, test_velocity, 0.1), state_a);
+  auto res_a = checker.update_departure_status(
+    traj_danger, create_ego_state(traj_danger, test_velocity, 0.2), state_a);
+
+  // Assert state_a is CRITICAL.
+  EXPECT_TRUE(res_a.status == DepartureType::CRITICAL)
+    << "state_a should be CRITICAL after the ON buffer expires.";
+
+  // Act: evaluate a SAFE trajectory against a fresh, independent state_b at the same time.
+  HysteresisState state_b;
+  auto res_b = checker.update_departure_status(
+    traj_safe, create_ego_state(traj_safe, test_velocity, 0.2), state_b);
+
+  // Assert: state_b is unaffected by state_a's critical history.
+  EXPECT_TRUE(res_b.status == DepartureType::NONE)
+    << "Independent state_b must stay NONE and not inherit state_a's CRITICAL holdover.";
 }
 }  // namespace autoware::boundary_departure_checker

@@ -16,6 +16,7 @@ if(BUILD_TESTING)
     test/test_pid.cpp
     test/test_smooth_stop.cpp
     test/test_longitudinal_controller_utils.cpp
+    test/test_pid_longitudinal_controller.cpp
   )
   set(TEST_LONGITUDINAL_CONTROLLER_EXE test_longitudinal_controller)
   ament_add_ros_isolated_gtest(${TEST_LONGITUDINAL_CONTROLLER_EXE} ${TEST_LON_SOURCES})

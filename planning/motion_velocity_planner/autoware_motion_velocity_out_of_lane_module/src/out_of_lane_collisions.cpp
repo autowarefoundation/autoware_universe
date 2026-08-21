@@ -97,8 +97,9 @@ lanelet::Ids get_predicted_path_lanelet_ids(
     route_handler.getLaneletMapPtr()->laneletLayer.search({ls.back(), ls.back()});
   lanelet::Ids final_ids;
   for (const auto & final_candidate : final_candidates) {
-    if (lanelet::geometry::within(
-          ls.back(), route_handler.getLaneletsFromId(final_candidate.id()).polygon2d())) {
+    if (
+      lanelet::geometry::within(
+        ls.back(), route_handler.getLaneletsFromId(final_candidate.id()).polygon2d())) {
       final_ids.push_back(final_candidate.id());
     }
   }
@@ -107,8 +108,9 @@ lanelet::Ids get_predicted_path_lanelet_ids(
     route_handler.getLaneletMapPtr()->laneletLayer.search({ls.front(), ls.front()});
   lanelet::Ids initial_ids;
   for (const auto & initial_candidate : initial_candidates) {
-    if (lanelet::geometry::within(
-          ls.front(), route_handler.getLaneletsFromId(initial_candidate.id()).polygon2d())) {
+    if (
+      lanelet::geometry::within(
+        ls.front(), route_handler.getLaneletsFromId(initial_candidate.id()).polygon2d())) {
       initial_ids.push_back(initial_candidate.id());
     }
   }

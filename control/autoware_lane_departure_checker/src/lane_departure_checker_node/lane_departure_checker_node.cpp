@@ -27,6 +27,7 @@
 
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -56,12 +57,12 @@ std::array<geometry_msgs::msg::Point, 3> triangle2points(
 std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
   const lanelet::LaneletMapPtr & lanelet_map,
   const lanelet::routing::RoutingGraphPtr & routing_graph,
-  const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr & route_ptr,
-  const double vehicle_length, const bool allow_area)
+  const autoware_planning_msgs::msg::LaneletRoute & route, const double vehicle_length,
+  const bool allow_area)
 {
   std::map<lanelet::Id, lanelet::ConstLanelet> route_lanelets;
 
-  bool is_route_valid = lanelet::utils::route::isRouteValid(*route_ptr, lanelet_map, allow_area);
+  bool is_route_valid = lanelet::utils::route::isRouteValid(route, lanelet_map, allow_area);
   if (!is_route_valid) {
     return route_lanelets;
   }
@@ -70,7 +71,7 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
   {
     const auto extension_length = 2 * vehicle_length;
 
-    for (const auto & primitive : route_ptr->segments.front().primitives) {
+    for (const auto & primitive : route.segments.front().primitives) {
       if (primitive.primitive_type == "area") {
         continue;
       }
@@ -85,7 +86,7 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
     }
   }
 
-  for (const auto & route_section : route_ptr->segments) {
+  for (const auto & route_section : route.segments) {
     for (const auto & primitive : route_section.primitives) {
       if (primitive.primitive_type == "area") {
         continue;
@@ -99,7 +100,7 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
   {
     const auto extension_length = 2 * vehicle_length;
 
-    for (const auto & primitive : route_ptr->segments.back().primitives) {
+    for (const auto & primitive : route.segments.back().primitives) {
       if (primitive.primitive_type == "area") {
         continue;
       }
@@ -152,6 +153,8 @@ LaneDepartureCheckerNode::LaneDepartureCheckerNode(const rclcpp::NodeOptions & o
   boundary_departure_checker_ = std::make_unique<BoundaryDepartureChecker>(param_, vehicle_info);
 
   // Publisher
+  processing_diag_publisher_ = this->create_publisher<diagnostic_msgs::msg::DiagnosticStatus>(
+    "~/debug/processing_time_ms_diag", 1);
   processing_time_publisher_ =
     this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/debug/processing_time_ms", 1);
@@ -164,7 +167,7 @@ LaneDepartureCheckerNode::LaneDepartureCheckerNode(const rclcpp::NodeOptions & o
 
   // Timer
   const auto period_ns = rclcpp::Rate(node_param_.update_rate).period();
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), period_ns, std::bind(&LaneDepartureCheckerNode::onTimer, this));
 }
 
@@ -246,14 +249,14 @@ void LaneDepartureCheckerNode::onTimer()
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
   stop_watch.tic("Total");
 
-  current_odom_ = sub_odom_.take_data();
-  route_ = sub_route_.take_data();
-  reference_trajectory_ = sub_reference_trajectory_.take_data();
-  predicted_trajectory_ = sub_predicted_trajectory_.take_data();
-  operation_mode_ = sub_operation_mode_.take_data();
-  control_mode_ = sub_control_mode_.take_data();
+  current_odom_ = sub_odom_->take_data();
+  route_ = sub_route_->take_data();
+  reference_trajectory_ = sub_reference_trajectory_->take_data();
+  predicted_trajectory_ = sub_predicted_trajectory_->take_data();
+  operation_mode_ = sub_operation_mode_->take_data();
+  control_mode_ = sub_control_mode_->take_data();
 
-  const auto lanelet_map_bin_msg = sub_lanelet_map_bin_.take_data();
+  const auto lanelet_map_bin_msg = sub_lanelet_map_bin_->take_data();
   if (lanelet_map_bin_msg) {
     lanelet_map_ = autoware::experimental::lanelet2_utils::remove_const(
       autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*lanelet_map_bin_msg));
@@ -285,11 +288,11 @@ void LaneDepartureCheckerNode::onTimer()
   processing_time_map["Node: checkData"] = stop_watch.toc(true);
 
   // In order to wait for both of map and route will be ready, write this not in callback but here
-  if (last_route_ != route_ && !route_->segments.empty()) {
+  if (last_route_.get() != route_.get() && !route_->segments.empty()) {
     std::map<lanelet::Id, lanelet::ConstLanelet>::iterator itr;
 
     auto map_route_lanelets_ = getRouteLanelets(
-      lanelet_map_, routing_graph_, route_, vehicle_length_m_, node_param_.allow_area);
+      lanelet_map_, routing_graph_, *route_, vehicle_length_m_, node_param_.allow_area);
 
     lanelet::ConstLanelets shared_lanelets_tmp;
 
@@ -311,13 +314,16 @@ void LaneDepartureCheckerNode::onTimer()
   }
   processing_time_map["Node: getRouteLanelets"] = stop_watch.toc(true);
 
-  input_.current_odom = current_odom_;
+  input_.current_odom =
+    current_odom_ ? std::make_shared<nav_msgs::msg::Odometry>(*current_odom_) : nullptr;
   input_.lanelet_map = lanelet_map_;
-  input_.route = route_;
+  input_.route = route_ ? std::make_shared<LaneletRoute>(*route_) : nullptr;
   input_.route_lanelets = route_lanelets_;
   input_.shoulder_lanelets = shoulder_lanelets_;
-  input_.reference_trajectory = reference_trajectory_;
-  input_.predicted_trajectory = predicted_trajectory_;
+  input_.reference_trajectory =
+    reference_trajectory_ ? std::make_shared<Trajectory>(*reference_trajectory_) : nullptr;
+  input_.predicted_trajectory =
+    predicted_trajectory_ ? std::make_shared<Trajectory>(*predicted_trajectory_) : nullptr;
   input_.boundary_types_to_detect = node_param_.boundary_types_to_detect;
   processing_time_map["Node: setInputData"] = stop_watch.toc(true);
 
@@ -337,11 +343,27 @@ void LaneDepartureCheckerNode::onTimer()
   }
 
   processing_time_map["Total"] = stop_watch.toc("Total");
-  processing_diag_publisher_.publish(processing_time_map);
-  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
-  processing_time_msg.stamp = get_clock()->now();
-  processing_time_msg.data = processing_time_map["Total"];
-  processing_time_publisher_->publish(processing_time_msg);
+  publishProcessingTimeDiag(processing_time_map);
+  auto processing_time_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(processing_time_publisher_);
+  processing_time_msg->stamp = get_clock()->now();
+  processing_time_msg->data = processing_time_map["Total"];
+  processing_time_publisher_->publish(std::move(processing_time_msg));
+}
+
+void LaneDepartureCheckerNode::publishProcessingTimeDiag(
+  const std::map<std::string, double> & processing_time_map)
+{
+  auto status_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(processing_diag_publisher_);
+  for (const auto & m : processing_time_map) {
+    diagnostic_msgs::msg::KeyValue key_value;
+    key_value.key = m.first;
+    std::ostringstream oss;
+    oss.precision(3);
+    oss << std::fixed << m.second;
+    key_value.value = oss.str();
+    status_msg->values.push_back(key_value);
+  }
+  processing_diag_publisher_->publish(std::move(status_msg));
 }
 
 rcl_interfaces::msg::SetParametersResult LaneDepartureCheckerNode::onParameter(
