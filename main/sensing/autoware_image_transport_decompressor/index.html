@@ -22860,13 +22860,76 @@
 <tr>
 <td>encoding</td>
 <td>string</td>
-<td>The image encoding to use for the decompressed image</td>
+<td>The encoding to publish. Use <code>rgb8</code> or <code>bgr8</code>. Any other value publishes the encoding the sender named, which may not match the payload; see Assumptions / Known limits.</td>
 <td>default</td>
 <td>N/A</td>
 </tr>
 </tbody>
 </table>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
+<p>The supported case is an 8-bit RGB or BGR camera with <code>encoding</code> set to <code>rgb8</code> or <code>bgr8</code>. Anything
+else still decodes and publishes, but the result is wrong in one of two ways, because the decode
+always yields 8-bit BGR with three channels whatever the camera sent.</p>
+<ul>
+<li><strong>Another camera, with <code>encoding: rgb8</code> or <code>bgr8</code>.</strong> The message is well formed, so no consumer
+  complains, but the pixels are no longer what the camera measured.</li>
+<li><strong>Any other <code>encoding</code>.</strong> The published <code>encoding</code> is the one the sender named, and the payload no
+  longer matches it. <code>cv_bridge</code> throws on the 16-bit encodings and misreads the rest in silence.</li>
+</ul>
+<p>Specifically:</p>
+<table>
+<thead>
+<tr>
+<th>Camera image</th>
+<th><code>encoding: rgb8</code> or <code>bgr8</code></th>
+<th>any other <code>encoding</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rgb8</code>, <code>bgr8</code></td>
+<td>as sent</td>
+<td>as sent</td>
+</tr>
+<tr>
+<td><code>rgba8</code>, <code>bgra8</code></td>
+<td>alpha dropped</td>
+<td>alpha replaced by 255</td>
+</tr>
+<tr>
+<td><code>mono8</code></td>
+<td>one channel copied into three</td>
+<td><strong>three channels named <code>mono8</code></strong></td>
+</tr>
+<tr>
+<td><code>mono16</code></td>
+<td>upper 8 bits, copied into three</td>
+<td><strong>three channels named <code>mono16</code></strong></td>
+</tr>
+<tr>
+<td><code>rgb16</code>, <code>bgr16</code></td>
+<td>upper 8 bits</td>
+<td><strong>8-bit samples named 16-bit</strong></td>
+</tr>
+<tr>
+<td><code>rgba16</code>, <code>bgra16</code></td>
+<td>upper 8 bits, alpha dropped</td>
+<td><strong>8-bit samples named 16-bit</strong></td>
+</tr>
+<tr>
+<td><code>bayer_rggb8</code></td>
+<td>pattern copied, no color recovered</td>
+<td><strong>three channels named as a Bayer</strong></td>
+</tr>
+<tr>
+<td><code>yuv422</code></td>
+<td>as sent</td>
+<td><strong>BGR pixels named <code>yuv422</code></strong></td>
+</tr>
+</tbody>
+</table>
+<p>The bold cells are the second case: the payload does not have the encoding it is published under.</p>
+<p>An undecodable payload is dropped and reported with <code>RCLCPP_ERROR</code>.</p>
 <h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
 <h2 id="optional-performance-characterization">(Optional) Performance characterization<a class="headerlink" href="#optional-performance-characterization" title="Permanent link">#</a></h2>
 <h2 id="optional-referencesexternal-links">(Optional) References/External links<a class="headerlink" href="#optional-referencesexternal-links" title="Permanent link">#</a></h2>
