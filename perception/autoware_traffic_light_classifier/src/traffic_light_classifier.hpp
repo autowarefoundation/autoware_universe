@@ -19,6 +19,7 @@
 
 #include <opencv2/core/core.hpp>
 
+#include <sensor_msgs/msg/image.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
@@ -37,8 +38,7 @@ class TrafficLightClassifier
 public:
   struct Result
   {
-    // Classification output. The header is intentionally left unset: the node stamps
-    // it from the input image before publishing.
+    // Classification output, stamped with the input image's header.
     tier4_perception_msgs::msg::TrafficLightArray signals;
     bool detected_over_exposure = false;
     bool detected_under_exposure = false;
@@ -51,17 +51,19 @@ public:
     std::shared_ptr<ClassifierInterface> classifier, uint8_t classify_traffic_light_type,
     double over_exposure_threshold, double under_exposure_threshold);
 
-  // Pure orchestration over an already-decoded RGB image and its ROIs: filter ROIs by type,
-  // crop and classify the valid ones, append undetected (zero-sized) ROIs as UNKNOWN, and
-  // overwrite over/under-exposed slots with UNKNOWN. Returns std::nullopt when the classifier
+  // Returns an empty, header-stamped Result without decoding the image when `rois` is empty.
+  // Otherwise decodes the ROS image message, then filters ROIs by type, crops and classifies
+  // the valid ones, appends undetected (zero-sized) ROIs as UNKNOWN, and overwrites
+  // over/under-exposed slots with UNKNOWN. Returns std::nullopt when decoding or the classifier
   // backend fails, so the caller can skip publishing.
   std::optional<Result> classify(
-    const cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoiArray & rois) const;
+    const sensor_msgs::msg::Image & image_msg,
+    const tier4_perception_msgs::msg::TrafficLightRoiArray & rois) const;
 
-  // Composite debug view for the most recent classify() call, built from its returned
-  // roi_images. Empty when there is nothing to render. Off the hot path: the node calls this
-  // only when a debug consumer is attached.
-  cv::Mat make_debug_image(const std::vector<cv::Mat> & roi_images) const;
+  // Composite debug view for a classify() result, built from its roi_images and stamped with
+  // its signals' header. Returns nullptr when there is nothing to render. Off the hot path: the
+  // node calls this only when a debug consumer is attached.
+  sensor_msgs::msg::Image::ConstSharedPtr make_debug_image(const Result & result) const;
 
 private:
   std::shared_ptr<ClassifierInterface> classifier_;

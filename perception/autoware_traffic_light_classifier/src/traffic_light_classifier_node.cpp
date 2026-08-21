@@ -16,7 +16,6 @@
 #include "classifier_params.hpp"
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
-#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
 #include <memory>
 #include <string>
@@ -124,31 +123,19 @@ void TrafficLightClassifierNode::image_roi_callback(
   if (!classifier_) {
     return;
   }
-  tier4_perception_msgs::msg::TrafficLightArray output_msg;
-  if (input_rois_msg->rois.empty()) {
-    output_msg.header = input_image_msg->header;
-    traffic_signal_array_pub_->publish(output_msg);
-    return;
-  }
-
-  cv_bridge::CvImagePtr cv_ptr;
-  try {
-    cv_ptr = cv_bridge::toCvCopy(input_image_msg, sensor_msgs::image_encodings::RGB8);
-  } catch (cv_bridge::Exception & e) {
-    RCLCPP_ERROR(
-      this->get_logger(), "Could not convert from '%s' to 'rgb8'.",
-      input_image_msg->encoding.c_str());
-  }
-
-  auto result = classifier_->classify(cv_ptr->image, *input_rois_msg);
+  auto result = classifier_->classify(*input_image_msg, *input_rois_msg);
   if (!result) {
     RCLCPP_ERROR(this->get_logger(), "failed classify image, abort callback");
     return;
   }
 
-  output_msg = std::move(result->signals);
-  output_msg.header = input_image_msg->header;
-  traffic_signal_array_pub_->publish(output_msg);
+  traffic_signal_array_pub_->publish(result->signals);
+
+  // No rois means classify took its empty-input short-circuit: nothing was classified,
+  // so there is nothing to report diagnostics or a debug view for.
+  if (input_rois_msg->rois.empty()) {
+    return;
+  }
 
   // publish diagnostics
   diagnostics_interface_ptr_->clear();
@@ -162,15 +149,13 @@ void TrafficLightClassifierNode::image_roi_callback(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
       "Detected out-of-range exposure in ROI. Corresponding ROI was overwritten with UNKNOWN.");
   }
-  diagnostics_interface_ptr_->publish(output_msg.header.stamp);
+  diagnostics_interface_ptr_->publish(result->signals.header.stamp);
 
   // Publish the debug view last, and only when a consumer is attached (building it is a cold path),
   // so a debug-rendering failure cannot skip the primary signal output or diagnostics above.
   if (debug_image_pub_.getNumSubscribers() > 0) {
-    const cv::Mat debug_image = classifier_->make_debug_image(result->roi_images);
-    if (!debug_image.empty()) {
-      const auto debug_image_msg =
-        cv_bridge::CvImage(std_msgs::msg::Header(), "rgb8", debug_image).toImageMsg();
+    const auto debug_image_msg = classifier_->make_debug_image(*result);
+    if (debug_image_msg) {
       debug_image_pub_.publish(debug_image_msg);
     }
   }
