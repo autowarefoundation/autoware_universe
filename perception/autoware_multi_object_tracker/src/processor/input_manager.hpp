@@ -101,6 +101,7 @@ public:
 
   void setTriggerFunction(std::function<void(size_t)> func_trigger);
   size_t getTargetChannelIdx() const { return target_stream_idx_; }
+  double getTargetStreamLatency() const { return target_stream_latency_; }
   std::optional<types::DynamicObjectList> processMessage(
     const size_t channel_index,
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
@@ -132,6 +133,7 @@ private:
   double target_stream_latency_std_{0.04};   // [s]
   double target_stream_interval_{0.1};       // [s]
   double target_stream_interval_std_{0.02};  // [s]
+  std::optional<rclcpp::Time> last_optimization_time_;
 
 private:
   void getObjectTimeInterval(

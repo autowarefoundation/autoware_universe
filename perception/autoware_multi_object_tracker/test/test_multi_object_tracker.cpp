@@ -560,8 +560,7 @@ rclcpp::Time initializeLatencyStatistics(autoware::multi_object_tracker::InputMa
     now = advanceTime(now, kMeasurementInterval);
   }
 
-  autoware::multi_object_tracker::types::ObjectsWithAssociationList objects;
-  manager.getObjects(now, objects);
+  manager.optimizeChannelTimings(now);
   return now;
 }
 
@@ -624,6 +623,120 @@ TEST(InputManagerTargetSelection, BatchWindowAdvancesWithFreshStreamAfterTargetD
   manager.getObjects(now, objects);
 
   EXPECT_TRUE(hasMeasurementAtOrAfter(objects, kLowLatencyChannel, latest_fresh_measurement));
+}
+
+TEST(InputManagerTargetSelection, KeepsTargetWithinLatencyHysteresis)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+
+  // both channels have the same latency, so the first one is selected as the target
+  rclcpp::Time now(kTestStartSec, 0, RCL_ROS_TIME);
+  for (size_t i = 0; i < 20; ++i) {
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.30);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.30);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+  }
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  // a latency difference smaller than the hysteresis must not flip the target stream
+  for (size_t i = 0; i < 30; ++i) {
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.30);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.32);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+  }
+  EXPECT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  // a latency difference larger than the hysteresis switches the target stream
+  for (size_t i = 0; i < 100; ++i) {
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.30);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.60);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+  }
+  EXPECT_EQ(manager.getTargetChannelIdx(), kLowLatencyChannel);
+}
+
+TEST(InputManagerTargetSelection, ShiftsTargetLatencyGraduallyOnIncrease)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+  rclcpp::Time now = initializeLatencyStatistics(manager);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  // the target latency must not jump to the target stream latency at once, otherwise the batch
+  // window moves backward in time
+  constexpr double max_latency_increase_rate = 0.2;  // [s/s]
+  const double max_latency_step = max_latency_increase_rate * kMeasurementInterval;
+  double previous_latency = manager.getTargetStreamLatency();
+  for (size_t i = 0; i < 20; ++i) {
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.5);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.05);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+
+    const double latency = manager.getTargetStreamLatency();
+    EXPECT_GE(latency, previous_latency);
+    EXPECT_LE(latency - previous_latency, max_latency_step + 1e-6);
+    previous_latency = latency;
+  }
+
+  // it converges to the latency of the target stream
+  EXPECT_NEAR(manager.getTargetStreamLatency(), 0.5, 1e-2);
+}
+
+TEST(InputManagerTargetSelection, AppliesTargetLatencyDecreaseImmediately)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+  rclcpp::Time now = initializeLatencyStatistics(manager);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  for (size_t i = 0; i < 20; ++i) {
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.5);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.05);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+  }
+  ASSERT_NEAR(manager.getTargetStreamLatency(), 0.5, 1e-2);
+
+  // on a failover to a fresh low latency stream, the batch window recovers without a delay
+  now = advanceTime(now, kStaleElapsedTime);
+  pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.05);
+  manager.optimizeChannelTimings(now);
+
+  EXPECT_EQ(manager.getTargetChannelIdx(), kLowLatencyChannel);
+  EXPECT_NEAR(manager.getTargetStreamLatency(), 0.05, 1e-2);
+}
+
+TEST(InputManagerTargetSelection, TreatsRateDroppedStreamAsStale)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+  rclcpp::Time now = initializeLatencyStatistics(manager);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  // the target stream gradually drops its rate, which grows its interval statistics
+  double interval = kMeasurementInterval;
+  for (size_t i = 0; i < 60; ++i) {
+    constexpr double interval_growth_rate = 1.02;
+    interval *= interval_growth_rate;
+    now = advanceTime(now, interval);
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.5);
+  }
+  manager.optimizeChannelTimings(now);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  // the freshness timeout must not be relaxed by the grown interval statistics
+  for (size_t i = 0; i < 5; ++i) {
+    now = advanceTime(now, kMeasurementInterval);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.05);
+  }
+  manager.optimizeChannelTimings(now);
+
+  EXPECT_EQ(manager.getTargetChannelIdx(), kLowLatencyChannel);
 }
 
 TEST_F(MultiObjectTrackerTest, DISABLED_PerformanceVsCarCount)
