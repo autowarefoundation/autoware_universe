@@ -39,6 +39,7 @@ private:
 
   void on_timer_init();
   void on_timer_main();
+  void on_diag(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   pluginlib::ClassLoader<Plugin> loader_;
   std::unique_ptr<ManagerInit> init_;

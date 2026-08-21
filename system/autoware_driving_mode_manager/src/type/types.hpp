@@ -19,6 +19,8 @@
 
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace autoware::driving_mode_manager
 {
@@ -83,6 +85,15 @@ struct GateStatus
 {
   GateStatusItem status;
   GateStatusItem expect;
+};
+
+struct DebugStatus
+{
+  RequestModes request;
+  bool initializing;
+  bool transitioning;
+  std::string task;
+  std::unordered_set<AutowareMode> unavailable_modes;
 };
 
 struct DebugFlags

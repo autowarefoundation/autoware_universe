@@ -19,6 +19,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace autoware::driving_mode_manager
 {
@@ -52,9 +53,6 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
   sub_driving_mode_continuable_ = node->create_subscription<DrivingModeFlagMsg>(
     "~/system/driving_mode/continuable", rclcpp::QoS(10),
     std::bind(&RosInterface::on_driving_mode_continuable, this, _1));
-  sub_driving_mode_sync_ = node->create_subscription<DrivingModeFlagMsg>(
-    "~/system/driving_mode/sync", rclcpp::QoS(10),
-    std::bind(&RosInterface::on_driving_mode_sync, this, _1));
   sub_driving_mode_mrm_state_ = node->create_subscription<DrivingModeMrmStateMsg>(
     "~/system/driving_mode/mrm_state", rclcpp::QoS(10),
     std::bind(&RosInterface::on_driving_mode_mrm_state, this, _1));
@@ -80,10 +78,9 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
   srv_mrm_request_ = node->create_service<ChangeMrmRequestSrv>(
     "~/system/change_mrm_request", std::bind(&RosInterface::on_change_mrm_request, this, _1, _2));
 
+  pub_diagnostics_ = node->create_publisher<DiagnosticArrayMsg>("~/diagnostics", rclcpp::QoS(1));
   pub_driving_mode_request_ =
     node->create_publisher<DrivingModeRequestMsg>("~/system/driving_mode/request", rclcpp::QoS(1));
-  pub_driving_mode_sync_ =
-    node->create_publisher<DrivingModeFlagMsg>("~/system/driving_mode/sync", rclcpp::QoS(1));
   pub_driving_mode_info_ = node->create_publisher<DrivingModeInfoMsg>(
     "~/system/driving_mode/info", rclcpp::QoS(1).transient_local());
 
@@ -191,19 +188,6 @@ void RosInterface::publish_mrm_state(const MrmState & state)
   pub_mrm_state_->publish(msg);
 }
 
-void RosInterface::publish_driving_mode_sync(const AutowareModeSet & modes)
-{
-  DrivingModeFlagMsg msg;
-  msg.stamp = now();
-  for (const auto & mode : modes) {
-    tier4_system_msgs::msg::DrivingModeFlagItem item;
-    item.mode = mode.id;
-    item.flag = true;
-    msg.items.push_back(item);
-  }
-  pub_driving_mode_sync_->publish(msg);
-}
-
 void RosInterface::publish_driving_mode_info(const ModeInfo & info)
 {
   DrivingModeInfoMsg msg;
@@ -215,6 +199,18 @@ void RosInterface::publish_driving_mode_info(const ModeInfo & info)
     msg.items.push_back(item);
   }
   pub_driving_mode_info_->publish(msg);
+}
+
+void RosInterface::publish_diagnostics(bool ok, const std::string & message)
+{
+  using diagnostic_msgs::msg::DiagnosticStatus;
+  DiagnosticArrayMsg msg;
+  msg.header.stamp = now();
+  msg.status.resize(1);
+  msg.status[0].name = std::string(node_->get_name()) + ": ready";
+  msg.status[0].level = ok ? DiagnosticStatus::OK : DiagnosticStatus::ERROR;
+  msg.status[0].message = message;
+  pub_diagnostics_->publish(msg);
 }
 
 void RosInterface::publish_debug_flags(const DebugFlags & flags)
@@ -233,8 +229,14 @@ void RosInterface::publish_debug_flags(const DebugFlags & flags)
   pub_debug_mode_flag_->publish(msg);
 }
 
-void RosInterface::publish_debug_request(const RequestModes & request)
+void RosInterface::publish_debug_request(const DebugStatus & status)
 {
+  const auto vectorize = [](const auto & modes) {
+    std::vector<uint32_t> result;
+    for (const auto & mode : modes) result.push_back(mode.id);
+    return result;
+  };
+  const auto & request = status.request;
   DebugModeRequestMsg msg;
   msg.stamp = now();
   msg.operation_mode = request.operation_mode.id;
@@ -242,6 +244,9 @@ void RosInterface::publish_debug_request(const RequestModes & request)
   msg.mrm_strategy = static_cast<std::underlying_type_t<MrmStrategy>>(request.mrm_strategy);
   msg.mrm_behavior = request.mrm_behavior.id;
   msg.autoware_mode = request.autoware_mode.id;
+  msg.initializing = status.initializing;
+  msg.transitioning = status.transitioning;
+  msg.unavailable_modes = vectorize(status.unavailable_modes);
   pub_debug_mode_request_->publish(msg);
 }
 
@@ -270,13 +275,6 @@ void RosInterface::on_driving_mode_continuable(const DrivingModeFlagMsg & msg)
 {
   for (const auto & item : msg.items) {
     logic_->on_continuable_flag(AutowareMode{item.mode}, item.flag);
-  }
-}
-
-void RosInterface::on_driving_mode_sync(const DrivingModeFlagMsg & msg)
-{
-  for (const auto & item : msg.items) {
-    logic_->on_driving_mode_sync(AutowareMode{item.mode}, item.flag);
   }
 }
 

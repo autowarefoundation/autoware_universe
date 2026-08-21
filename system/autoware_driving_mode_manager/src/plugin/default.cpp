@@ -33,6 +33,11 @@ constexpr auto LocalCommand = CommandSource{13};
 constexpr auto RemoteCommand = CommandSource{14};
 constexpr auto EmergencyStopCommand = CommandSource{21};
 
+AutowareMode DefaultPlugin::decide()
+{
+  return StopMode;
+}
+
 AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareModeSet & available)
 {
   std::vector<AutowareMode> candidates;

@@ -56,4 +56,4 @@ if(BUILD_TESTING)
 endif()
 
 pluginlib_export_plugin_description_file(autoware_driving_mode_manager plugins.xml)
-ament_auto_package(INSTALL_TO_SHARE config launch)
+ament_auto_package(USE_SCOPED_HEADER_INSTALL_DIR INSTALL_TO_SHARE config launch)

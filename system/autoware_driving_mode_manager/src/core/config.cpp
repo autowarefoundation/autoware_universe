@@ -122,9 +122,11 @@ DrivingModeConfig::Flags DrivingModeConfig::ignore_flags(const AutowareMode & au
   return autoware_modes_.at(autoware_mode).ignore_flags;
 }
 
-AutowareMode DrivingModeConfig::to_autoware_mode(const OperationMode & operation_mode) const
+std::optional<AutowareMode> DrivingModeConfig::to_autoware_mode(
+  const OperationMode & operation_mode) const
 {
-  return operation_to_autoware_.at(operation_mode);
+  const auto iter = operation_to_autoware_.find(operation_mode);
+  return iter == operation_to_autoware_.end() ? std::nullopt : std::optional(iter->second);
 }
 
 std::optional<AutowareMode> DrivingModeConfig::to_autoware_mode(
@@ -134,9 +136,11 @@ std::optional<AutowareMode> DrivingModeConfig::to_autoware_mode(
   return iter == mrm_to_autoware_.end() ? std::nullopt : std::optional(iter->second);
 }
 
-OperationMode DrivingModeConfig::to_operation_mode(const AutowareMode & autoware_mode) const
+std::optional<OperationMode> DrivingModeConfig::to_operation_mode(
+  const AutowareMode & autoware_mode) const
 {
-  return autoware_modes_.at(autoware_mode).operation_mode.value();
+  const auto iter = autoware_modes_.find(autoware_mode);
+  return iter == autoware_modes_.end() ? std::nullopt : iter->second.operation_mode;
 }
 
 std::optional<MrmBehavior> DrivingModeConfig::to_mrm_behavior(

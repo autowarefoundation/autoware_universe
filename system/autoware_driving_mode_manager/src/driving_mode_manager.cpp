@@ -30,6 +30,7 @@ DrivingModeManager::DrivingModeManager(const rclcpp::NodeOptions & options)
 {
   rate_ = declare_parameter<double>("rate");
   diag_.setHardwareID("none");
+  diag_.add("ready", this, &DrivingModeManager::on_diag);
 
   const auto plugin_name = declare_parameter<std::string>("plugin");
   if (!loader_.isClassAvailable(plugin_name)) {
@@ -58,6 +59,15 @@ void DrivingModeManager::on_timer_init()
 void DrivingModeManager::on_timer_main()
 {
   main_->update();
+}
+
+void DrivingModeManager::on_diag(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  if (main_) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "");
+  }
 }
 
 }  // namespace autoware::driving_mode_manager

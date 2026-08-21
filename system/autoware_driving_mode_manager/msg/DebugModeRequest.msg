@@ -15,3 +15,12 @@ uint32 mrm_behavior
 
 # Target mode returned by the decision logic. (required)
 uint32 autoware_mode
+
+# Transitioning to initial mode. (required)
+bool initializing
+
+# Transitioning to target mode. (required)
+bool transitioning
+
+# Modes that failed to transition. (required)
+uint32[] unavailable_modes

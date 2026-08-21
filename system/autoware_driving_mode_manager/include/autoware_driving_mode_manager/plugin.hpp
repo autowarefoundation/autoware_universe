@@ -25,6 +25,7 @@ class Plugin
 {
 public:
   virtual ~Plugin() = default;
+  virtual AutowareMode decide() = 0;
   virtual AutowareMode decide(const RequestModes & modes, const AutowareModeSet & available) = 0;
   virtual void setup(DrivingModeConfigInterface & config) const = 0;
 };

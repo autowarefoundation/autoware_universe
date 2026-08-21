@@ -1,27 +1,47 @@
 <launch>
   <arg name="config" default="$(find-pkg-share autoware_driving_mode_manager)/config/driving_mode_manager.param.yaml"/>
+  <arg name="change_operation_mode_srv" default="/system/operation_mode/change_operation_mode"/>
+  <arg name="change_autoware_control_srv" default="/system/operation_mode/change_autoware_control"/>
+  <arg name="operation_mode_state_topic" default="/system/operation_mode/state"/>
+  <arg name="mrm_state_topic" default="/system/fail_safe/mrm_state"/>
+  <arg name="driving_mode_request_topic" default="/system/driving_mode/request"/>
+  <arg name="driving_mode_info_topic" default="/system/driving_mode/info"/>
+  <arg name="driving_mode_available_topic" default="/system/driving_mode/available"/>
+  <arg name="driving_mode_active_topic" default="/system/driving_mode/active"/>
+  <arg name="driving_mode_stable_topic" default="/system/driving_mode/stable"/>
+  <arg name="driving_mode_continuable_topic" default="/system/driving_mode/continuable"/>
+  <arg name="driving_mode_mrm_state_topic" default="/system/driving_mode/mrm_state"/>
+  <arg name="trajectory_source_status_topic" default="/control/trajectory_gate/source/status"/>
+  <arg name="trajectory_source_change_cli" default="/control/trajectory_gate/source/change"/>
+  <arg name="command_source_status_topic" default="/control/control_command_gate/source/status"/>
+  <arg name="command_source_change_cli" default="/control/control_command_gate/source/change"/>
+  <arg name="command_filter_status_topic" default="/control/control_command_gate/filter/status"/>
+  <arg name="command_filter_change_cli" default="/control/control_command_gate/filter/change"/>
+  <arg name="vehicle_control_mode_report_topic" default="/vehicle/status/control_mode"/>
+  <arg name="vehicle_control_mode_command_cli" default="/control/control_mode_request"/>
+  <arg name="diagnostics_topic" default="/diagnostics"/>
 
   <node pkg="autoware_driving_mode_manager" exec="driving_mode_manager_node">
     <param from="$(var config)"/>
-    <remap from="~/system/change_operation_mode" to="/system/operation_mode/change_operation_mode"/>
-    <remap from="~/system/change_autoware_control" to="/system/operation_mode/change_autoware_control"/>
-    <remap from="~/system/operation_mode_state" to="/system/operation_mode/state"/>
-    <remap from="~/system/mrm_state" to="/system/fail_safe/mrm_state"/>
-    <remap from="~/system/driving_mode/request" to="/system/driving_mode/request"/>
-    <remap from="~/system/driving_mode/info" to="/system/driving_mode/info"/>
-    <remap from="~/system/driving_mode/available" to="/system/driving_mode/available"/>
-    <remap from="~/system/driving_mode/active" to="/system/driving_mode/active"/>
-    <remap from="~/system/driving_mode/stable" to="/system/driving_mode/stable"/>
-    <remap from="~/system/driving_mode/continuable" to="/system/driving_mode/continuable"/>
-    <remap from="~/system/driving_mode/sync" to="/system/driving_mode/sync"/>
-    <remap from="~/system/driving_mode/mrm_state" to="/system/driving_mode/mrm_state"/>
-    <remap from="~/trajectory/source/status" to="/control/trajectory_gate/source/status"/>
-    <remap from="~/trajectory/source/change" to="/control/trajectory_gate/source/change"/>
-    <remap from="~/command/source/status" to="/control/control_command_gate/source/status"/>
-    <remap from="~/command/source/change" to="/control/control_command_gate/source/change"/>
-    <remap from="~/command/filter/status" to="/control/control_command_gate/filter/status"/>
-    <remap from="~/command/filter/change" to="/control/control_command_gate/filter/change"/>
-    <remap from="~/vehicle/control_mode/report" to="/vehicle/status/control_mode"/>
-    <remap from="~/vehicle/control_mode/command" to="/control/control_mode_request"/>
+    <remap from="~/system/change_operation_mode" to="$(var change_operation_mode_srv)"/>
+    <remap from="~/system/change_autoware_control" to="$(var change_autoware_control_srv)"/>
+    <remap from="~/system/operation_mode_state" to="$(var operation_mode_state_topic)"/>
+    <remap from="~/system/mrm_state" to="$(var mrm_state_topic)"/>
+    <remap from="~/system/driving_mode/request" to="$(var driving_mode_request_topic)"/>
+    <remap from="~/system/driving_mode/info" to="$(var driving_mode_info_topic)"/>
+    <remap from="~/system/driving_mode/available" to="$(var driving_mode_available_topic)"/>
+    <remap from="~/system/driving_mode/active" to="$(var driving_mode_active_topic)"/>
+    <remap from="~/system/driving_mode/stable" to="$(var driving_mode_stable_topic)"/>
+    <remap from="~/system/driving_mode/continuable" to="$(var driving_mode_continuable_topic)"/>
+    <remap from="~/system/driving_mode/mrm_state" to="$(var driving_mode_mrm_state_topic)"/>
+    <remap from="~/trajectory/source/status" to="$(var trajectory_source_status_topic)"/>
+    <remap from="~/trajectory/source/change" to="$(var trajectory_source_change_cli)"/>
+    <remap from="~/command/source/status" to="$(var command_source_status_topic)"/>
+    <remap from="~/command/source/change" to="$(var command_source_change_cli)"/>
+    <remap from="~/command/filter/status" to="$(var command_filter_status_topic)"/>
+    <remap from="~/command/filter/change" to="$(var command_filter_change_cli)"/>
+    <remap from="~/vehicle/control_mode/report" to="$(var vehicle_control_mode_report_topic)"/>
+    <remap from="~/vehicle/control_mode/command" to="$(var vehicle_control_mode_command_cli)"/>
+    <remap from="~/diagnostics" to="$(var diagnostics_topic)"/>
   </node>
 </launch>

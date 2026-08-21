@@ -47,9 +47,9 @@ public:
   bool exists(const AutowareMode & autoware_mode) const;
   Gates gates(const AutowareMode & autoware_mode) const;
   Flags ignore_flags(const AutowareMode & autoware_mode) const;
-  AutowareMode to_autoware_mode(const OperationMode & operation_mode) const;
+  std::optional<AutowareMode> to_autoware_mode(const OperationMode & operation_mode) const;
   std::optional<AutowareMode> to_autoware_mode(const MrmBehavior & mrm_behavior) const;
-  OperationMode to_operation_mode(const AutowareMode & autoware_mode) const;
+  std::optional<OperationMode> to_operation_mode(const AutowareMode & autoware_mode) const;
   std::optional<MrmBehavior> to_mrm_behavior(const AutowareMode & autoware_mode) const;
   uint16_t priority(const AutowareMode & autoware_mode) const;
 
