@@ -9,6 +9,12 @@
     max_points_per_voxel: 10
     use_intensity: false
 
+    # Set true ONLY with a sparse engine exported with the 4 down-sample
+    # GetIndicePairsImplicitGemm nodes removed (trainStation/DDS removal). The runtime then
+    # precomputes those rulebooks from the voxel coords and binds them. See
+    # BEVFusion_spconv_DDS_optimization.md.
+    sparse_remove_trainstation: false
+
     d_bound: [1.0, 166.2, 1.4]
     x_bound: [-122.4, 122.4, 0.68]
     y_bound: [-122.4, 122.4, 0.68]
