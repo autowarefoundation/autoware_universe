@@ -1075,9 +1075,12 @@ class carla_ros2_interface(object):
         elif sensor_type == "sensor.lidar.ray_cast":
             self._submit_worker_sensor(key, self.lidar, data)
         elif sensor_type == "sensor.other.gnss":
-            # Skip GNSS pose when splatsim provides localization directly
-            if not self.render_with_splatsim:
-                self.pose()
+            # Publish the GT GNSS pose in splatsim mode too: the E2E planning
+            # infrastructure (carla_state_publisher) synthesizes
+            # /localization/kinematic_state and the map->base_link TF from it,
+            # and without this pose there is no ego localization at all when
+            # the Autoware localization stack is disabled.
+            self.pose()
         elif sensor_type == "sensor.other.imu":
             self.imu(data[1])
         else:
