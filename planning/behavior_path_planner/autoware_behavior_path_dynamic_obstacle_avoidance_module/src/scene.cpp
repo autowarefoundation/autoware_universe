@@ -14,6 +14,7 @@
 
 #include "autoware/behavior_path_dynamic_obstacle_avoidance_module/scene.hpp"
 
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/map_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/object_recognition_utils/predicted_path_utils.hpp"
@@ -587,6 +588,30 @@ void DynamicObstacleAvoidanceModule::registerRegulatedObjects(
   }
 }
 
+drivable_area_expansion::SegmentRtree DynamicObstacleAvoidanceModule::extractUncrossableSegments(
+  const std::vector<geometry_msgs::msg::Pose> & ego_path_points,
+  const std::vector<PredictedObject> & objects) const
+{
+  if (parameters_->uncrossable_linestring_types.empty() || ego_path_points.empty()) {
+    return drivable_area_expansion::SegmentRtree{};
+  }
+  // the box must cover every line of sight, i.e. the ego path and the footprint of every object
+  lanelet::BoundingBox2d search_box;
+  for (const auto & p : ego_path_points) {
+    search_box.extend(lanelet::BasicPoint2d{p.position.x, p.position.y});
+  }
+  for (const auto & object : objects) {
+    const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
+    const auto footprint = autoware_utils::to_polygon2d(obj_pose, object.shape);
+    for (const auto & p : footprint.outer()) {
+      search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
+    }
+  }
+  return drivable_area_expansion::extract_uncrossable_segments(
+    *planner_data_->route_handler->getLaneletMapPtr(), search_box,
+    parameters_->uncrossable_linestring_types);
+}
+
 void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
   const std::vector<DynamicAvoidanceObject> & prev_objects)
 {
@@ -595,6 +620,7 @@ void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
   const auto input_path = getPreviousModuleOutput().path;
   const auto input_points = toGeometryPoints(input_path.points);  // for efficient computation
   const auto & predicted_objects = planner_data_->dynamic_object->objects;
+  const auto uncrossable_segments = extractUncrossableSegments(input_points, predicted_objects);
 
   for (const auto & predicted_object : predicted_objects) {
     const auto obj_uuid = autoware_utils::to_hex_string(predicted_object.object_id);
@@ -614,6 +640,15 @@ void DynamicObstacleAvoidanceModule::registerUnregulatedObjects(
 
     // 1.a. Check if the obstacle is labeled as pedestrians, bicycle or similar.
     if (getObjectType(predicted_object.classification.front().label) != ObjectType::UNREGULATED) {
+      continue;
+    }
+
+    // 1.a-2. Check if the object is separated from the ego path by an uncrossable boundary.
+    // The whole footprint and the most likely predicted path are used so that an object is not
+    // ignored while it can still reach the ego path.
+    if (
+      drivable_area_expansion::is_separated_by_uncrossable_segments(
+        uncrossable_segments, input_points.at(obj_idx).position, predicted_object)) {
       continue;
     }
 
