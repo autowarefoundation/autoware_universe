@@ -60,13 +60,15 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-autoware::pointcloud_preprocessor::Filter::Filter(
+template <typename NodeT>
+autoware::pointcloud_preprocessor::FilterBase<NodeT>::FilterBase(
   const std::string & filter_name, const rclcpp::NodeOptions & options)
-: Node(filter_name, options), filter_field_name_(filter_name)
+: NodeT(filter_name, options), filter_field_name_(filter_name)
 {
   // Set parameters (moved from NodeletLazy onInit)
   {
@@ -91,9 +93,14 @@ autoware::pointcloud_preprocessor::Filter::Filter(
 
   // Set publisher
   {
-    rclcpp::PublisherOptions pub_options;
+    // kIsAgnocastNode is exactly "NodeT::create_publisher takes agnocast options", so this
+    // picks rclcpp::PublisherOptions for a plain node and for the wrapper node in a build
+    // without USE_AGNOCAST_ENABLED.
+    using PublisherOptionsT =
+      std::conditional_t<kIsAgnocastNode, AUTOWARE_PUBLISHER_OPTIONS, rclcpp::PublisherOptions>;
+    PublisherOptionsT pub_options;
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
-    pub_output_ = this->create_publisher<PointCloud2>(
+    pub_output_ = this->template create_publisher<PointCloud2>(
       "output", rclcpp::SensorDataQoS().keep_last(max_queue_size_), pub_options);
   }
 
@@ -104,37 +111,55 @@ autoware::pointcloud_preprocessor::Filter::Filter(
 
   // Set parameter service callback
   set_param_res_filter_ = this->add_on_set_parameters_callback(
-    std::bind(&Filter::filter_param_callback, this, std::placeholders::_1));
+    std::bind(&FilterBase::filter_param_callback, this, std::placeholders::_1));
 
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ =
+    std::make_unique<autoware_utils::BasicPublishedTimePublisher<NodeT>>(this);
   RCLCPP_DEBUG(this->get_logger(), "[Filter Constructor] successfully created.");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void autoware::pointcloud_preprocessor::Filter::setup_tf()
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::setup_tf()
 {
   managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void autoware::pointcloud_preprocessor::Filter::subscribe()
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::subscribe()
 {
   std::string filter_name = "";
   subscribe(filter_name);
 }
 
-template <template <typename...> class Policy, typename Callback>
-auto autoware::pointcloud_preprocessor::Filter::make_sync(Callback callback)
-  -> std::shared_ptr<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>>
+template <typename NodeT>
+template <
+  template <typename...> class Policy, template <typename...> class AgnocastPolicy,
+  typename Callback>
+auto autoware::pointcloud_preprocessor::FilterBase<NodeT>::make_sync(Callback callback)
+  -> std::shared_ptr<SyncPolicy<Policy, AgnocastPolicy>>
 {
-  auto sync = std::make_shared<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>>(
-    max_queue_size_);
-  sync->connectInput(sub_input_filter_, sub_indices_filter_);
-  sync->registerCallback(std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
-  return sync;
+  // The wrapper Synchronizer takes its subscribers through the constructor rather than
+  // connectInput(); the callback itself is the same on both paths, since the wrapper delivers
+  // plain PointCloud2::ConstSharedPtr / PointIndices::ConstSharedPtr.
+  if constexpr (kIsAgnocastNode) {
+    auto sync = std::make_shared<SyncPolicy<Policy, AgnocastPolicy>>(
+      AgnocastPolicy<PointCloud2, PointIndices>(max_queue_size_), sub_input_filter_,
+      sub_indices_filter_);
+    sync->registerCallback(callback, this);
+    return sync;
+  } else {
+    auto sync = std::make_shared<SyncPolicy<Policy, AgnocastPolicy>>(max_queue_size_);
+    sync->connectInput(sub_input_filter_, sub_indices_filter_);
+    sync->registerCallback(std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
+    return sync;
+  }
 }
 
-void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & filter_name)
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::subscribe(
+  const std::string & filter_name)
 {
   // TODO(sykwer): Change the corresponding node to subscribe to `faster_input_indices_callback`
   // each time a child class supports the faster version.
@@ -143,8 +168,8 @@ void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & fi
     "CropBoxFilter", "RingOutlierFilter", "VoxelGridDownsampleFilter", "ScanGroundFilter",
     "PointCloudDensifier"};
   auto callback = supported_nodes.find(filter_name) != supported_nodes.end()
-                    ? &Filter::faster_input_indices_callback
-                    : &Filter::input_indices_callback;
+                    ? &FilterBase::faster_input_indices_callback
+                    : &FilterBase::input_indices_callback;
 
   if (use_indices_) {
     // Subscribe to the input using a filter
@@ -154,22 +179,26 @@ void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & fi
       this, "indices", rclcpp::SensorDataQoS().keep_last(max_queue_size_).get_rmw_qos_profile());
 
     if (approximate_sync_) {
-      sync_input_indices_a_ = make_sync<sync_policies::ApproximateTime>(callback);
+      sync_input_indices_a_ =
+        make_sync<sync_policies::ApproximateTime, agnocast_mf::sync_policies::ApproximateTime>(
+          callback);
     } else {
-      sync_input_indices_e_ = make_sync<sync_policies::ExactTime>(callback);
+      sync_input_indices_e_ =
+        make_sync<sync_policies::ExactTime, agnocast_mf::sync_policies::ExactTime>(callback);
     }
   } else {
     // Subscribe in an old fashion to input only (no filters)
     // CAN'T use auto-type here.
-    std::function<void(const PointCloud2ConstPtr msg)> cb =
+    std::function<void(const PointCloud2ConstPtr)> cb =
       std::bind(callback, this, std::placeholders::_1, PointIndicesConstPtr());
-    sub_input_ = this->create_subscription<PointCloud2>(
+    sub_input_ = this->template create_subscription<PointCloud2>(
       "input", rclcpp::SensorDataQoS().keep_last(max_queue_size_), cb);
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void autoware::pointcloud_preprocessor::Filter::unsubscribe()
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::unsubscribe()
 {
   if (use_indices_) {
     sub_input_filter_.unsubscribe();
@@ -187,10 +216,23 @@ void autoware::pointcloud_preprocessor::Filter::unsubscribe()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO(sykwer): Temporary Implementation: Delete this function definition when all the filter nodes
 // conform to new API.
-void autoware::pointcloud_preprocessor::Filter::compute_publish(
+template <typename NodeT>
+typename autoware::pointcloud_preprocessor::FilterBase<NodeT>::OutputMessagePtr
+autoware::pointcloud_preprocessor::FilterBase<NodeT>::allocate_output_message()
+{
+  if constexpr (kIsAgnocastNode) {
+    // Loaned from pub_output_'s shm queue; publish() below moves it out without copying.
+    return ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_output_);
+  } else {
+    return std::make_unique<PointCloud2>();
+  }
+}
+
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::compute_publish(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices)
 {
-  auto output = std::make_unique<PointCloud2>();
+  auto output = allocate_output_message();
 
   // Call the virtual method in the child
   filter(input, indices, *output);
@@ -206,8 +248,9 @@ void autoware::pointcloud_preprocessor::Filter::compute_publish(
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+template <typename NodeT>
 rcl_interfaces::msg::SetParametersResult
-autoware::pointcloud_preprocessor::Filter::filter_param_callback(
+autoware::pointcloud_preprocessor::FilterBase<NodeT>::filter_param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);
@@ -230,7 +273,8 @@ autoware::pointcloud_preprocessor::Filter::filter_param_callback(
 //////////////////////////////////////////////////////////////////////////////////////////////
 // TODO(sykwer): Temporary Implementation: Delete this function definition when all the filter nodes
 // conform to new API.
-void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::input_indices_callback(
   const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices)
 {
   if (!is_valid(cloud, this->get_logger(), *this->get_clock())) {
@@ -291,7 +335,8 @@ void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
 }
 
 // Returns false in error cases
-bool autoware::pointcloud_preprocessor::Filter::calculate_transform_matrix(
+template <typename NodeT>
+bool autoware::pointcloud_preprocessor::FilterBase<NodeT>::calculate_transform_matrix(
   const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & from,
   TransformInfo & transform_info /*output*/)
 {
@@ -314,7 +359,8 @@ bool autoware::pointcloud_preprocessor::Filter::calculate_transform_matrix(
   return true;
 }
 
-bool autoware::pointcloud_preprocessor::Filter::transform_pointcloud(
+template <typename NodeT>
+bool autoware::pointcloud_preprocessor::FilterBase<NodeT>::transform_pointcloud(
   const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & in,
   sensor_msgs::msg::PointCloud2 & out)
 {
@@ -323,7 +369,9 @@ bool autoware::pointcloud_preprocessor::Filter::transform_pointcloud(
     this->get_logger());
 }
 
-std::optional<Eigen::Matrix4f> autoware::pointcloud_preprocessor::Filter::lookup_transform_matrix(
+template <typename NodeT>
+std::optional<Eigen::Matrix4f>
+autoware::pointcloud_preprocessor::FilterBase<NodeT>::lookup_transform_matrix(
   const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & stamp)
 {
   return managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
@@ -331,8 +379,9 @@ std::optional<Eigen::Matrix4f> autoware::pointcloud_preprocessor::Filter::lookup
 }
 
 // Returns false in error cases
-bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
-  std::unique_ptr<PointCloud2> & output)
+template <typename NodeT>
+bool autoware::pointcloud_preprocessor::FilterBase<NodeT>::convert_output_costly(
+  OutputMessagePtr & output)
 {
   // In terms of performance, we should avoid using pcl_ros library function,
   // but this code path isn't reached in the main use case of Autoware, so it's left as is for now.
@@ -342,7 +391,7 @@ bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
       output->header.frame_id.c_str(), tf_output_frame_.c_str());
 
     // Convert the cloud into the different frame
-    auto cloud_transformed = std::make_unique<PointCloud2>();
+    auto cloud_transformed = allocate_output_message();
 
     if (!transform_pointcloud(tf_output_frame_, *output, *cloud_transformed)) {
       RCLCPP_ERROR(
@@ -362,7 +411,7 @@ bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
       this->get_logger(), "[convert_output_costly] Transforming output dataset from %s back to %s.",
       output->header.frame_id.c_str(), tf_input_orig_frame_.c_str());
 
-    auto cloud_transformed = std::make_unique<PointCloud2>();
+    auto cloud_transformed = allocate_output_message();
 
     if (!transform_pointcloud(tf_input_orig_frame_, *output, *cloud_transformed)) {
       return false;
@@ -377,7 +426,8 @@ bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
 // TODO(sykwer): Temporary Implementation: Rename this function to `input_indices_callback()` when
 // all the filter nodes conform to new API. Then delete the old `input_indices_callback()` defined
 // above.
-void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::faster_input_indices_callback(
   const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices)
 {
   if (
@@ -445,7 +495,7 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
     vindices.reset(new std::vector<int>(indices->indices));
   }
 
-  auto output = std::make_unique<PointCloud2>();
+  auto output = allocate_output_message();
 
   // TODO(sykwer): Change to `filter()` call after when the filter nodes conform to new API.
   faster_filter(cloud, vindices, *output, transform_info);
@@ -460,7 +510,8 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
 // TODO(sykwer): Temporary Implementation: Remove this interface when all the filter nodes conform
 // to new API. It's not a pure virtual function so that a child class does not have to implement
 // this function.
-void autoware::pointcloud_preprocessor::Filter::faster_filter(
+template <typename NodeT>
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::faster_filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
   const TransformInfo & transform_info)
 {
@@ -469,3 +520,6 @@ void autoware::pointcloud_preprocessor::Filter::faster_filter(
   (void)output;
   (void)transform_info;
 }
+
+template class autoware::pointcloud_preprocessor::FilterBase<rclcpp::Node>;
+template class autoware::pointcloud_preprocessor::FilterBase<autoware::agnocast_wrapper::Node>;
