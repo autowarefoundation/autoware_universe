@@ -39,7 +39,7 @@ protected:
   {
     // Setup test data
     input_topics_ = {"/topic1", "/topic2", "/topic3"};
-    strategy_name_ = "advanced";
+    strategy_ = autoware::pointcloud_preprocessor::MatchingStrategyType::advanced;
 
     // Create test header
     test_header_.frame_id = "base_link";
@@ -83,7 +83,7 @@ protected:
   }
 
   std::vector<std::string> input_topics_;
-  std::string strategy_name_;
+  autoware::pointcloud_preprocessor::MatchingStrategyType strategy_{};
   sensor_msgs::msg::PointCloud2 test_cloud_1_;
   sensor_msgs::msg::PointCloud2 test_cloud_2_;
   sensor_msgs::msg::PointCloud2 test_cloud_3_;
@@ -92,7 +92,7 @@ protected:
 
 TEST_F(ConcatenationInfoTest, ConstructorAndGetConcatInfoBase)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
 
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
@@ -116,14 +116,15 @@ TEST_F(ConcatenationInfoTest, ConstructorAndGetConcatInfoBase)
 
 TEST_F(ConcatenationInfoTest, InvalidMatchingStrategy)
 {
+  // Strategy names are validated once, at the string boundary; past it only the enum circulates.
   EXPECT_THROW(
-    ConcatenationInfoManager concatenation_info_manager("invalid_strategy", input_topics_),
+    autoware::pointcloud_preprocessor::parse_matching_strategy("invalid_strategy"),
     std::invalid_argument);
 }
 
 TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloud)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   // Apply point cloud to first topic
@@ -167,7 +168,7 @@ TEST_F(ConcatenationInfoTest, SuccessWithEmptyPointCloud)
   test_cloud_4.header = test_header_;
 
   // Apply point clouds
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   concatenation_info_manager.update_source_from_point_cloud(
@@ -193,7 +194,7 @@ TEST_F(ConcatenationInfoTest, SuccessWithEmptyPointCloud)
 
 TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloudNonOkStatus)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   // Apply point cloud with ERROR status
@@ -212,7 +213,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloudNonOkStatus)
 
 TEST_F(ConcatenationInfoTest, ApplySourceWithHeader)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   concatenation_info_manager.update_source_from_header(
@@ -229,7 +230,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithHeader)
 
 TEST_F(ConcatenationInfoTest, ApplySourceWithStatus)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   concatenation_info_manager.update_source_from_status(
@@ -243,7 +244,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithStatus)
 
 TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudConfig)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   // Create AdvancedStrategy config with test timestamps
@@ -280,7 +281,7 @@ TEST_F(ConcatenationInfoTest, StrategyAdvancedConfigInvalidSerializedData)
 
 TEST_F(ConcatenationInfoTest, ApplySourceWithNonExistentTopic)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   EXPECT_THROW(
@@ -293,7 +294,8 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithNonExistentTopic)
 
 TEST_F(ConcatenationInfoTest, NaiveStrategy)
 {
-  ConcatenationInfoManager concatenation_info_manager("naive", input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(
+    autoware::pointcloud_preprocessor::MatchingStrategyType::naive, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   EXPECT_EQ(
@@ -303,7 +305,7 @@ TEST_F(ConcatenationInfoTest, NaiveStrategy)
 
 TEST_F(ConcatenationInfoTest, MultiplePointCloudIndexing)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   // Apply cloud 1
@@ -347,7 +349,7 @@ TEST_F(ConcatenationInfoTest, MultiplePointCloudIndexing)
 TEST_F(ConcatenationInfoTest, EmptyInputTopics)
 {
   std::vector<std::string> empty_topics;
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, empty_topics);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, empty_topics);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   EXPECT_EQ(concatenated_point_cloud_info_msg.source_info.size(), 0u);
@@ -355,7 +357,7 @@ TEST_F(ConcatenationInfoTest, EmptyInputTopics)
 
 TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultCheckSuccess)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   // Create concatenated cloud for the result
@@ -401,7 +403,7 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultCheckSuccess)
 
 TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultWithMixedStatus)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   // Add one cloud with STATUS_OK
@@ -435,7 +437,7 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultWithMixedStatus)
 
 TEST_F(ConcatenationInfoTest, ApplySourceTwiceThrows)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
 
   // Apply first cloud successfully
@@ -453,7 +455,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceTwiceThrows)
 
 TEST_F(ConcatenationInfoTest, TwoIterationsOfSettingCloudInfo)
 {
-  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);
+  ConcatenationInfoManager concatenation_info_manager(strategy_, input_topics_);
 
   // First iteration - apply only partial clouds (invalid result)
   auto concatenated_point_cloud_info_msg_1 = concatenation_info_manager.reset_and_get_base_info();
