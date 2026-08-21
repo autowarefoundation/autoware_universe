@@ -139,6 +139,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       test/ptv3_config_test.cpp
     )
     target_include_directories(ptv3_config_test PRIVATE include)
+    ament_target_dependencies(ptv3_config_test autoware_point_types)
 
     ament_add_gtest(serialized_pooling_metadata_test
       test/serialized_pooling_metadata_test.cpp
@@ -186,7 +187,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       ${PROJECT_NAME}_cuda_lib
     )
 
-    ament_add_gtest(ros_utils_test
+    ament_add_ros_isolated_gtest(ros_utils_test
       test/ros_utils_test.cpp
     )
 
