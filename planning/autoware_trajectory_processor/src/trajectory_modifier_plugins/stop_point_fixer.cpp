@@ -68,8 +68,8 @@ bool StopPointFixer::is_trajectory_modification_required(
     return false;
   }
 
-  if (utils::is_ego_vehicle_moving(
-        input.current_odometry->twist.twist, params_.velocity_threshold)) {
+  if (
+    utils::is_ego_vehicle_moving(input.current_odometry->twist.twist, params_.velocity_threshold)) {
     return false;
   }
 

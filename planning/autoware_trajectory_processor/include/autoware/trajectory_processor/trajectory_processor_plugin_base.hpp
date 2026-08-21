@@ -82,8 +82,9 @@ public:
   }
 
   PlanningFactorAdapter(autoware::agnocast_wrapper::Node * node, const std::string & name)
-  : agnocast_impl_(std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
-                     autoware::agnocast_wrapper::Node>>(node, name))
+  : agnocast_impl_(
+      std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+        autoware::agnocast_wrapper::Node>>(node, name))
   {
   }
 
