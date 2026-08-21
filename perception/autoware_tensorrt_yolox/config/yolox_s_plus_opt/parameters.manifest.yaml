@@ -1,0 +1,4 @@
+# Manifest for the yolox_s_plus_opt configuration bundle.
+# Loads every param file listed below in order. Later files override earlier ones.
+config_files:
+  - detector.param.yaml
