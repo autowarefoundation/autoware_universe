@@ -57,7 +57,7 @@ class SplatSimCameraConfig:
     """Tunable parameters for a :class:`SplatSimRGBCamera`."""
 
     tileset_path: str
-    splatsim_image: str = "ghcr.io/tier4/splatsim:latest-sm{arch}"
+    splatsim_image: str = "splatsim:latest"
     grpc_port: int = 50051
     use_sh: bool = True
     # Distance-adaptive LoD Gaussian filtering (server-side); see

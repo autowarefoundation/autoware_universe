@@ -43,8 +43,8 @@
     <arg name="splatsim_tileset_path" default="" description="Host path to the 3DGS scene (.usdz containing scene.json with world.ecef_anchor); required only when render_with_splatsim:=true"/>
     <arg
       name="splatsim_image"
-      default="ghcr.io/tier4/splatsim:latest-sm{arch}"
-      description="Docker image for splatsim (pulled from GHCR; '{arch}' is auto-resolved to the host GPU compute capability, e.g. sm86/sm89/sm120)"
+      default="splatsim:latest"
+      description="Docker image for splatsim. Defaults to a local image (never pulled). A registry-qualified image (e.g. ghcr.io/tier4/splatsim:latest-sm{arch}) is pulled only when missing locally; '{arch}' is auto-resolved to the host GPU compute capability, e.g. sm86/sm89/sm120"
     />
     <arg name="splatsim_grpc_port" default="50051"/>
     <arg name="splatsim_use_sh" default="true"/>

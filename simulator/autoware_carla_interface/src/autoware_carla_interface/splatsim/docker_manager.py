@@ -216,15 +216,24 @@ class SplatSimDockerManager:
         return volumes
 
     def _pull_registry_image(self) -> None:
-        """Best-effort pull of a registry-qualified image to refresh the tag.
+        """Pull a registry-qualified image only when it is not available locally.
 
-        For an image such as ``ghcr.io/tier4/splatsim:latest-sm89`` the newest
-        GHCR build is pulled instead of a stale local tag. Bare local tags (e.g.
-        ``splatsim:latest``) are left untouched; a failed pull falls back to the
+        Bare local tags (e.g. ``splatsim:latest``) are never pulled, so a
+        locally built image can be referenced without any registry access.
+        A registry-qualified image (e.g. ``ghcr.io/tier4/splatsim:latest-sm89``)
+        that already exists locally is used as-is; set ``SPLATSIM_ALWAYS_PULL=1``
+        to force a refresh from the registry. A failed pull falls back to the
         local image.
         """
         if "/" not in self._image:
             return
+        if not os.environ.get("SPLATSIM_ALWAYS_PULL"):
+            try:
+                self._client.images.get(self._image)
+                _log(f"Using local image {self._image} (set SPLATSIM_ALWAYS_PULL=1 to refresh)")
+                return
+            except docker.errors.ImageNotFound:
+                pass
         repo, _, tag = self._image.rpartition(":")
         if not repo:
             repo, tag = self._image, "latest"
