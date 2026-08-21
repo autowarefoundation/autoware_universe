@@ -14,7 +14,7 @@
 
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EXTENDER_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EXTENDER_HPP_
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -26,35 +26,31 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
-struct TrajectoryExtenderParams
-{
-  double nearest_dist_threshold_m{1.5};
-  double nearest_yaw_threshold_deg{60.0};
-  double backward_trajectory_extension_m{5.0};
-};
-
-class TrajectoryExtender : public TrajectoryOptimizerPluginBase
+class TrajectoryExtender : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectoryExtender() = default;
   ~TrajectoryExtender() = default;
-  void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    TrajectoryOptimizerData & data) override;
-  void set_up_params() override;
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
+
+protected:
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   Trajectory past_ego_state_trajectory_;
-  TrajectoryExtenderParams extender_params_;
+  trajectory_processor_params::Params::TrajectoryExtender extender_params_;
 };
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EXTENDER_HPP_

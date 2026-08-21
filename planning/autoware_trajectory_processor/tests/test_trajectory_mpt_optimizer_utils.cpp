@@ -20,16 +20,16 @@
 #include <cmath>
 #include <vector>
 
-using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils::
   calculate_acceleration_from_velocity_and_distance;
-using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils::
   calculate_corridor_width;
-using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils::
   calculate_curvature_at_point;
-using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils::
   calculate_time_interval;
-using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::generate_bounds;
-using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils::generate_bounds;
+using autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils::
   recalculate_trajectory_dynamics;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using trajectory_optimizer_test_utils::create_point;

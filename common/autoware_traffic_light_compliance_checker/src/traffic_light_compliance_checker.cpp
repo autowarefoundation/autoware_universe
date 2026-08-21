@@ -285,7 +285,9 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
     input.current_velocity, input.current_acceleration,
     params_.checked_trajectory_length.deceleration_limit,
     params_.checked_trajectory_length.jerk_limit, params_.delay_response_time);
-  const auto max_trajectory_length = ego_stopping_distance.value_or(0.0);
+  // add the stop_overshoot_margin to not skip points beyond the stop line but within the margin
+  const auto max_trajectory_length =
+    ego_stopping_distance.value_or(0.0) + params_.stop_overshoot_margin;
   auto length = 0.0;
   auto backward_length = 0.0;
   std::optional<lanelet::BasicPoint2d> stop_point;
@@ -305,12 +307,11 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
     trajectory.push_back(p);
     trajectory_ls.emplace_back(lanelet_p);
 
-    // skip points beyond the first stop, or skip once we reach the maximum length
-    if (p.longitudinal_velocity_mps <= 1e-6) {
+    // search for a stop point beyond the current ego position
+    if (length > 0.0 && p.longitudinal_velocity_mps <= params_.ego_stopped_velocity_threshold) {
       stop_point = trajectory_ls.back();
       break;
     }
-
     if (length > max_trajectory_length) break;
   }
 
@@ -345,6 +346,20 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
             backward_length);
     result.violations.insert(
       result.violations.end(), amber_light_violations.begin(), amber_light_violations.end());
+  }
+
+  if (ego_stopping_distance.has_value() && params_.allow_if_cannot_stop_distance > 0.0) {
+    result.violations.erase(
+      std::remove_if(
+        result.violations.begin(), result.violations.end(),
+        [&](const auto & violation) {
+          const auto distance_from_ego_front = violation.arc_length_to_cross_point -
+                                               backward_length -
+                                               vehicle_info_.max_longitudinal_offset_m;
+          return distance_from_ego_front < params_.allow_if_cannot_stop_distance &&
+                 distance_from_ego_front < *ego_stopping_distance - params_.stop_overshoot_margin;
+        }),
+      result.violations.end());
   }
 
   return result;

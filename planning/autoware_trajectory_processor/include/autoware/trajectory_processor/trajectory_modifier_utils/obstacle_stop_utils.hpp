@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_
 
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/time.hpp>
@@ -47,7 +48,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
@@ -288,8 +289,10 @@ struct ObjectFilter
         [&](const auto & object) {
           if (object.kinematics.initial_twist_with_covariance.twist.linear.x > max_velocity_th_)
             return true;
-          const auto & label = object.classification.empty() ? ObjectClassification::UNKNOWN
-                                                             : object.classification.front().label;
+          const auto label =
+            object.classification.empty()
+              ? ObjectClassification::UNKNOWN
+              : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
           if (classification_to_object_type.count(label) == 0) return true;
           return object_types_.count(classification_to_object_type.at(label)) == 0;
         }),
@@ -510,6 +513,6 @@ private:
   boost::uuids::random_generator id_generator_;
 };
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_

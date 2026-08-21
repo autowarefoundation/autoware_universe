@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
 
 void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points)
@@ -214,8 +214,9 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 
   PointCloud::Ptr pointcloud_in_polygon(new PointCloud);
   for (const auto & point : *pointcloud) {
-    if (boost::geometry::within(
-          autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
+    if (
+      boost::geometry::within(
+        autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
       pointcloud_in_polygon->push_back(point);
     }
   }
@@ -364,8 +365,11 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   auto is_safe = [&](
                    const auto & object, const double obj_arc_length, const double obj_lon_vel,
                    const double ego_arc_length, const double ego_vel) -> std::pair<bool, bool> {
-    if (object.classification.empty()) return {false, false};
-    const auto obj_type = classification_to_object_type.at(object.classification.front().label);
+    const auto label =
+      object.classification.empty()
+        ? ObjectClassification::UNKNOWN
+        : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    const auto obj_type = classification_to_object_type.at(label);
     if (!object_decel_map.count(obj_type)) return {false, false};
     const auto obj_decel = object_decel_map.at(obj_type);
     if (obj_lon_vel < stopped_vel_th) return {false, false};
@@ -573,9 +577,12 @@ void ObstacleTracker::update_objects(
     for (const auto & [uuid, existing_object] : persistent_objects_map_) {
       const auto existing_obj_label = existing_object.object.classification.empty()
                                         ? ObjectClassification::UNKNOWN
-                                        : existing_object.object.classification.front().label;
-      const auto obj_label = object.classification.empty() ? ObjectClassification::UNKNOWN
-                                                           : object.classification.front().label;
+                                        : autoware::object_recognition_utils::getHighestProbLabel(
+                                            existing_object.object.classification);
+      const auto obj_label =
+        object.classification.empty()
+          ? ObjectClassification::UNKNOWN
+          : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
       if (existing_obj_label != obj_label) continue;
       const auto distance = autoware_utils::calc_distance2d(
         object.kinematics.initial_pose_with_covariance.pose.position,
@@ -664,4 +671,4 @@ void ObstacleTracker::update_points(
   }
 }
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop

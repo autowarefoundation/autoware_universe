@@ -45,6 +45,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace
@@ -75,32 +77,39 @@ const cv::Scalar gray(100, 100, 100);
 const cv::Scalar red(255, 0, 0);
 const cv::Scalar blue(0, 0, 255);
 
-// A backend stand-in for ClassifierInterface. It records what classify() hands
-// it and, on success, stamps every pre-populated signal slot with one element
-// of a fixed color -- mirroring the real backends' contract (one element per
-// image, id/type left as classify() set them). The behavior knobs are public so
-// each test can configure failure or a distinctive color before calling.
+// A backend stand-in for ClassifierInterface. It records the images handed to classify() and,
+// on success, returns one signal per image carrying a single element of a fixed color (id/type
+// left unset for the wrapper to associate), mirroring the real backends' contract. The behavior
+// knobs are public so each test can configure failure or a distinctive color before calling.
 class FakeClassifier : public tl::ClassifierInterface
 {
 public:
   bool succeed = true;
   uint8_t element_color = TrafficLightElement::GREEN;
   float element_confidence = 0.9f;
+  // Test knob: extra signals to return beyond the one-per-image contract, so a test can
+  // verify the wrapper rejects a backend that breaks it.
+  size_t extra_signals = 0;
 
   int call_count = 0;
   std::vector<cv::Mat> received_images;
+  // Recorded by make_debug_image so a test can confirm the wrapper forwards roi_images here.
+  mutable std::vector<cv::Mat> debug_images_received;
 
-  bool getTrafficSignals(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override
+  std::optional<tier4_perception_msgs::msg::TrafficLightArray> classify(
+    const std::vector<cv::Mat> & images) override
   {
     ++call_count;
     for (const auto & image : images) {
       received_images.push_back(image.clone());
     }
     if (!succeed) {
-      return false;
+      return std::nullopt;
     }
+
+    tier4_perception_msgs::msg::TrafficLightArray traffic_signals;
+    traffic_signals.signals.resize(images.size() + extra_signals);
+
     for (auto & signal : traffic_signals.signals) {
       TrafficLightElement element;
       element.color = element_color;
@@ -108,7 +117,14 @@ public:
       element.confidence = element_confidence;
       signal.elements.push_back(element);
     }
-    return true;
+    return traffic_signals;
+  }
+
+  cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const override
+  {
+    debug_images_received = images;
+    // The row count encodes the batch size so callers can verify what was forwarded.
+    return cv::Mat(static_cast<int>(images.size()), 1, CV_8UC3, cv::Scalar(0, 0, 0));
   }
 };
 
@@ -196,6 +212,61 @@ protected:
 
   std::shared_ptr<FakeClassifier> fake_classifier_;
 };
+
+// --------------------------------------------------------------------------
+// roi_images is the *classified subset* -- the valid, target-type ROIs in
+// classification order -- NOT the input ROIs and NOT the post-processed output
+// signals (which also carry appended-UNKNOWN slots). make_debug_image forwards
+// exactly that subset to the backend. This 1:1 alignment between roi_images[i]
+// and the backend's per-image view is what lets the node render debug crops
+// correctly; if roi_images were ever set to the final signals, debug labels and
+// crops would silently fall out of sync.
+// --------------------------------------------------------------------------
+TEST_F(TrafficLightClassifierTest, RoiImagesAreClassifiedSubsetForwardedToDebug)
+{
+  // Arrange: three ROIs of which only one is classified --
+  //   id=1 valid car      -> classified (the sole entry in roi_images)
+  //   id=2 zero-sized car  -> appended to signals as UNKNOWN, NOT in roi_images
+  //   id=3 pedestrian type -> dropped entirely (in neither)
+  auto classifier = make_classifier(no_over_threshold, no_under_threshold);
+  const auto image = make_solid_image(gray);
+  TrafficLightRoiArray rois;
+  rois.rois.push_back(make_valid_roi(/*id=*/1));
+  rois.rois.push_back(make_zero_sized_roi(/*id=*/2));
+  rois.rois.push_back(make_roi(/*id=*/3, pedestrian_type, 0, 0, 16, 16));
+
+  // Act
+  const auto result = classifier.classify(image, rois);
+  ASSERT_TRUE(result.has_value());
+  classifier.make_debug_image(result->roi_images);
+
+  // Assert: roi_images holds only the 1 classified ROI -- distinct from both the 3
+  // inputs and the 2 output signals (classified + appended-UNKNOWN) -- and that same
+  // subset is exactly what make_debug_image hands the backend.
+  EXPECT_EQ(result->roi_images.size(), 1u);
+  EXPECT_EQ(result->signals.signals.size(), 2u);
+  EXPECT_EQ(fake_classifier_->debug_images_received.size(), 1u);
+}
+
+// The wrapper zips traffic_light_id / type onto the backend's signals by index, so it relies on
+// the ClassifierInterface contract of one signal per input image. If a backend breaks that
+// contract (here, by returning an extra signal), classify() returns nullopt rather than reading
+// past the parallel ROI metadata -- guarding the index-based association loop.
+TEST_F(TrafficLightClassifierTest, RejectsBackendSignalCountMismatch)
+{
+  // Arrange -- one valid ROI, but the backend is rigged to return one more signal than images.
+  auto classifier = make_classifier(no_over_threshold, no_under_threshold);
+  fake_classifier_->extra_signals = 1;
+  const auto image = make_solid_image(gray);
+  TrafficLightRoiArray rois;
+  rois.rois.push_back(make_valid_roi(/*id=*/1));
+
+  // Act
+  const auto result = classifier.classify(image, rois);
+
+  // Assert
+  EXPECT_FALSE(result.has_value());
+}
 
 // --------------------------------------------------------------------------
 // No ROIs -> empty result, no exposure flags, and the backend is never invoked

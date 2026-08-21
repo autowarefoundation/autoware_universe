@@ -23,14 +23,13 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
-void TrajectorySplineSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+ProcessingResult TrajectorySplineSmoother::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
-  if (!params.use_akima_spline_interpolation) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
   trajectory_spline_smoother_utils::apply_spline(
     traj_points, spline_params_.interpolation_resolution_m,
@@ -40,46 +39,25 @@ void TrajectorySplineSmoother::optimize_trajectory(
   // and the current vehicle position. This is necessary to ensure that the time_from_start values
   // are consistent with the new trajectory. For now, we will use the motion_utils function.
   autoware::motion_utils::calculate_time_from_start(
-    traj_points, data.current_odometry.pose.pose.position);
+    traj_points, data.current_odometry->pose.pose.position);
+  return ProcessingResult::Modified;
 }
 
-void TrajectorySplineSmoother::set_up_params()
+void TrajectorySplineSmoother::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-
-  spline_params_.interpolation_resolution_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_spline_smoother.interpolation_resolution_m");
-  spline_params_.max_distance_discrepancy_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_spline_smoother.max_distance_discrepancy_m");
-  spline_params_.preserve_input_trajectory_orientation = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_spline_smoother.preserve_input_trajectory_orientation");
+  enabled_ = params.use_akima_spline_interpolation;
+  spline_params_ = params.trajectory_spline_smoother;
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectorySplineSmoother::update_params(const TrajectoryProcessorParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param(
-    parameters, "trajectory_spline_smoother.interpolation_resolution_m",
-    spline_params_.interpolation_resolution_m);
-  update_param(
-    parameters, "trajectory_spline_smoother.max_distance_discrepancy_m",
-    spline_params_.max_distance_discrepancy_m);
-  update_param(
-    parameters, "trajectory_spline_smoother.preserve_input_trajectory_orientation",
-    spline_params_.preserve_input_trajectory_orientation);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  enabled_ = params.use_akima_spline_interpolation;
+  spline_params_ = params.trajectory_spline_smoother;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectorySplineSmoother,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

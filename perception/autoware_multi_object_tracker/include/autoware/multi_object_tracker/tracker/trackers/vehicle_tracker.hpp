@@ -19,6 +19,7 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/vehicle_shape_model.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/update/orientation_sign_belief.hpp"
 #include "autoware/multi_object_tracker/tracker/update/vehicle_update_strategy.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -45,6 +46,13 @@ private:
 
   // Interval [s] since the last measurement update.
   double time_since_correction_{0.0};
+
+  // Accumulated heading-sign evidence from raw detection yaws.
+  OrientationSignBelief sign_belief_;
+
+  // Belief-driven 180° flip on the fused posterior: yaw votes decide the sign at low speed and
+  // the instantaneous velocity sign decides above the par speed.
+  void evaluateSignFlip(const rclcpp::Time & time);
 
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
@@ -83,6 +91,12 @@ public:
     geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
   rclcpp::Time getStateTime() const override { return motion_model_.getLastPredictionTime(); }
 
+  // Heading state, sign-belief confidence, and 180° state flip; composite trackers use these
+  // for heading-sign consensus across their layers.
+  double getYawState() const { return motion_model_.getYawState(); }
+  double signBeliefConfidence() const { return sign_belief_.confidence(); }
+  void flipOrientationSign();
+
   ShapeModelBase & getShapeModel() override { return shape_model_; }
   const ShapeModelBase & getShapeModel() const override { return shape_model_; }
   void assembleShapeTo(types::DynamicObject & output, bool to_publish) const override;
@@ -97,6 +111,12 @@ public:
   {
     if (!trust_extension) return UpdatePath::CONDITIONED;
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
+
+  // Vehicle boxes coast on partial updates; staleness on full measurements is meaningful.
+  double getElapsedTimeFromFullMeasurement(const rclcpp::Time & current_time) const override
+  {
+    return elapsedSinceLastFullMeasurement(current_time);
   }
 };
 

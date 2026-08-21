@@ -15,12 +15,15 @@
 #ifndef AUTOWARE__COLLISION_DETECTOR__NODE_HPP_
 #define AUTOWARE__COLLISION_DETECTOR__NODE_HPP_
 
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <rclcpp/subscription.hpp>
 #include <tf2/utils.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -31,9 +34,6 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <boost/optional.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 #include <string>
@@ -50,7 +50,7 @@ using autoware_perception_msgs::msg::Shape;
 
 using Obstacle = std::pair<double /* distance */, geometry_msgs::msg::Point>;
 
-class CollisionDetectorNode : public rclcpp::Node
+class CollisionDetectorNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit CollisionDetectorNode(const rclcpp::NodeOptions & node_options);
@@ -120,31 +120,39 @@ private:
     double duration_sec) const;
 
   // ros
-  mutable tf2_ros::Buffer tf_buffer_{get_clock()};
-  mutable tf2_ros::TransformListener tf_listener_{tf_buffer_};
+  mutable autoware::agnocast_wrapper::Buffer tf_buffer_{get_clock()};
+  mutable autoware::agnocast_wrapper::TransformListener tf_listener_{tf_buffer_, *this};
   rclcpp::TimerBase::SharedPtr timer_;
 
   // publisher and subscriber
-  autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry> sub_odometry_{
-    this, "~/input/odometry"};
-  autoware_utils::InterProcessPollingSubscriber<sensor_msgs::msg::PointCloud2> sub_pointcloud_{
-    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
-  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> sub_dynamic_objects_{
-    this, "~/input/objects"};
-  autoware_utils::InterProcessPollingSubscriber<autoware_adapi_v1_msgs::msg::OperationModeState>
-    sub_operation_mode_{this, "/api/operation_mode/state", rclcpp::QoS{1}.transient_local()};
-  std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> pub_debug_ =
-    create_publisher<visualization_msgs::msg::MarkerArray>("~/debug_markers", 1);
+  autoware::agnocast_wrapper::polling::PollingSubscriber<nav_msgs::msg::Odometry>::SharedPtr
+    sub_odometry_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<nav_msgs::msg::Odometry>(
+        this, "~/input/odometry");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<sensor_msgs::msg::PointCloud2>::SharedPtr
+    sub_pointcloud_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<sensor_msgs::msg::PointCloud2>(
+        this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos());
+  autoware::agnocast_wrapper::polling::PollingSubscriber<PredictedObjects>::SharedPtr
+    sub_dynamic_objects_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<PredictedObjects>(
+        this, "~/input/objects");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<OperationModeState>::SharedPtr
+    sub_operation_mode_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<OperationModeState>(
+        this, "/api/operation_mode/state", rclcpp::QoS{1}.transient_local());
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray)
+  pub_debug_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/debug_markers", 1);
 
   // parameter
   NodeParam node_param_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
   // data
-  nav_msgs::msg::Odometry::ConstSharedPtr odometry_ptr_;
-  sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_ptr_;
-  PredictedObjects::ConstSharedPtr object_ptr_;
-  OperationModeState::ConstSharedPtr operation_mode_ptr_;
+  std::shared_ptr<const nav_msgs::msg::Odometry> odometry_ptr_;
+  std::shared_ptr<const sensor_msgs::msg::PointCloud2> pointcloud_ptr_;
+  std::shared_ptr<const PredictedObjects> object_ptr_;
+  std::shared_ptr<const OperationModeState> operation_mode_ptr_;
   std::optional<rclcpp::Time> start_of_consecutive_collision_stamp_;
   std::optional<rclcpp::Time> most_recent_collision_stamp_;
   bool is_error_diag_ = false;
@@ -153,9 +161,9 @@ private:
   std::vector<TimestampedObject> ignored_objects_;
 
   // Diagnostic Updater
-  diagnostic_updater::Updater updater_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater updater_;
 
-  std::unique_ptr<autoware::motion_utils::VehicleStopChecker> vehicle_stop_checker_;
+  std::unique_ptr<autoware::motion_utils::VehicleStopCheckerBase> vehicle_stop_checker_;
 };
 }  // namespace autoware::collision_detector
 

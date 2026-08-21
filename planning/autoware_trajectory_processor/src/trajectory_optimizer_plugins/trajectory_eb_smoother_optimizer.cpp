@@ -23,26 +23,27 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
-void TrajectoryEBSmootherOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryEBSmootherOptimizer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
-  if (!params.use_eb_smoother) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
   utils::smooth_trajectory_with_elastic_band(
-    traj_points, data.current_odometry, eb_path_smoother_ptr_);
+    traj_points, *data.current_odometry, eb_path_smoother_ptr_);
 
   autoware::motion_utils::calculate_time_from_start(
-    traj_points, data.current_odometry.pose.pose.position);
+    traj_points, data.current_odometry->pose.pose.position);
+  return ProcessingResult::Modified;
 }
 
-void TrajectoryEBSmootherOptimizer::set_up_params()
+void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
   auto node_ptr = get_node_ptr();
+  enabled_ = params.use_eb_smoother;
   ego_nearest_param_ = EgoNearestParam(node_ptr);
   common_param_ = CommonParam(node_ptr);
   smoother_time_keeper_ptr_ = std::make_shared<SmootherTimekeeper>();
@@ -52,30 +53,15 @@ void TrajectoryEBSmootherOptimizer::set_up_params()
   eb_path_smoother_ptr_->resetPreviousData();
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryEBSmootherOptimizer::on_parameter(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryEBSmootherOptimizer::update_params(const TrajectoryProcessorParams & params)
 {
-  {  // parameters for ego nearest search
-    ego_nearest_param_.onParam(parameters);
-
-    // parameters for trajectory
-    common_param_.onParam(parameters);
-
-    // parameters for core algorithms
-    eb_path_smoother_ptr_->onParam(parameters);
-    eb_path_smoother_ptr_->initialize(false, common_param_);
-    eb_path_smoother_ptr_->resetPreviousData();
-  }
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  enabled_ = params.use_eb_smoother;
+  // TODO(Maxime): support parameter updates of internal objects
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
