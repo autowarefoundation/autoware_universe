@@ -332,7 +332,7 @@ if(BUILD_TESTING)
   # target_link_libraries(test_gpu_monitor ${GPU_LIBRARY} ${LIBRARIES})
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )

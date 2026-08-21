@@ -30,4 +30,4 @@ rclcpp_components_register_node(${PROJECT_NAME}_tools
   EXECUTABLE logging_node
 )
 
-ament_auto_package(INSTALL_TO_SHARE launch)
+autoware_ament_auto_package(INSTALL_TO_SHARE launch)
