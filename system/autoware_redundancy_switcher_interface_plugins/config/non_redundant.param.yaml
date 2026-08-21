@@ -1,0 +1,4 @@
+# Non-redundant (single-ECU) configuration.
+/**:
+  ros__parameters:
+    switcher_plugin: "autoware::redundancy_switcher::NonRedundantSwitcherAdapter"
