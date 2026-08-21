@@ -138,3 +138,46 @@ def ros_pose_to_carla_transform(ros_pose, origin_x=0.0, origin_y=0.0):
         ),
         ros_quaternion_to_carla_rotation(ros_pose.orientation),
     )
+
+
+# Cross-shaped neighborhood (dx, dy in meters) sampled when snapping to ground.
+GROUND_PROBE_OFFSETS = (
+    (0.0, 0.0),
+    (0.75, 0.0),
+    (-0.75, 0.0),
+    (0.0, 0.75),
+    (0.0, -0.75),
+    (1.5, 0.0),
+    (-1.5, 0.0),
+    (0.0, 1.5),
+    (0.0, -1.5),
+)
+
+
+def project_point_to_ground(world, x, y):
+    """Return the highest CARLA ground height near (x, y), or None.
+
+    Samples the ``GROUND_PROBE_OFFSETS`` cross-shaped neighborhood with
+    ``world.ground_projection`` and returns the maximum ground z. Sampling
+    several points and taking the highest hit keeps the result on the road
+    surface instead of dropping into a mesh gap or gutter seam. Returns None
+    when the world lacks ``ground_projection`` (older CARLA APIs) or no ground
+    point is found, so callers can fall back to a fixed z-offset.
+    """
+    if world is None or not hasattr(world, "ground_projection"):
+        return None
+
+    projected_heights = []
+    for offset_x, offset_y in GROUND_PROBE_OFFSETS:
+        search_origin = carla.Location(x=x + offset_x, y=y + offset_y, z=1000.0)
+        try:
+            labeled_point = world.ground_projection(search_origin, 10000.0)
+        except RuntimeError:
+            # A single probe may fail; keep the hits from the other samples.
+            continue
+        if labeled_point is not None:
+            projected_heights.append(labeled_point.location.z)
+
+    if not projected_heights:
+        return None
+    return max(projected_heights)
