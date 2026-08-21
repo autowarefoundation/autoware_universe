@@ -36,7 +36,6 @@
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_debug_msgs/msg/float32_stamped.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
@@ -67,7 +66,6 @@ using autoware_planning_msgs::msg::Trajectory;
 using autoware_system_msgs::msg::AutowareState;
 using autoware_vehicle_msgs::msg::VelocityReport;
 using nav_msgs::msg::Odometry;
-using sensor_msgs::msg::Imu;
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 using autoware::vehicle_info_utils::VehicleInfo;
@@ -340,8 +338,14 @@ public:
   autoware::agnocast_wrapper::polling::PollingSubscriber<VelocityReport>::SharedPtr sub_velocity_ =
     autoware::agnocast_wrapper::polling::create_polling_subscriber<VelocityReport>(
       this, "~/input/velocity");
-  autoware::agnocast_wrapper::polling::PollingSubscriber<Imu>::SharedPtr sub_imu_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<Imu>(this, "~/input/imu");
+  // The yaw rate that drives the sensor-side ego path is derived from the localization-fused twist
+  // of /localization/kinematic_state, which is already expressed in base_link and therefore needs
+  // no TF step. The polling policy is Latest, so take_data() re-delivers the last received sample
+  // forever. The legacy imu_* parameter names and the "IMU path" terminology are kept for backward
+  // compatibility.
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_kinematic_state_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
+      this, "~/input/kinematic_state");
   autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr
     sub_predicted_traj_ =
       autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
@@ -371,12 +375,6 @@ public:
    * @param input_msg Shared pointer to the point cloud message
    */
   void onPointCloud(const std::shared_ptr<const PointCloud2> & input_msg);
-
-  /**
-   * @brief Callback for IMU messages
-   * @param input_msg Shared pointer to the IMU message
-   */
-  void onImu(const std::shared_ptr<const Imu> & input_msg);
 
   /**
    * @brief Timer callback function
@@ -582,6 +580,8 @@ public:
   double voxel_grid_z_;
   double min_generated_imu_path_length_;
   double max_generated_imu_path_length_;
+  // IMU-path yaw-source staleness watchdog [s]; a stale twist reads as unavailable, not as motion
+  double kinematic_state_timeout_sec_;
   double expand_width_;
   double longitudinal_offset_margin_;
   double t_response_;

@@ -20,6 +20,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
 #include <tf2/LinearMath/Transform.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/detail/shape__struct.hpp>
 #include <geometry_msgs/msg/detail/point__struct.hpp>
@@ -28,6 +29,10 @@
 #include <gtest/gtest.h>
 #include <pcl/memory.h>
 
+#include <array>
+#include <chrono>
+#include <cmath>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <thread>
@@ -52,17 +57,13 @@ Header get_header(const char * const frame_id, rclcpp::Time t)
   return header;
 };
 
-Imu make_imu_message(
-  const Header & header, const double ax, const double ay, const double yaw,
-  const double angular_velocity_z)
+Odometry make_odometry_message(const Header & header, const double angular_velocity_z)
 {
-  Imu imu_msg;
-  imu_msg.header = header;
-  imu_msg.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
-  imu_msg.angular_velocity.z = angular_velocity_z;
-  imu_msg.linear_acceleration.x = ax;
-  imu_msg.linear_acceleration.y = ay;
-  return imu_msg;
+  Odometry odom_msg;
+  odom_msg.header = header;
+  odom_msg.child_frame_id = "base_link";
+  odom_msg.twist.twist.angular.z = angular_velocity_z;
+  return odom_msg;
 };
 
 VelocityReport make_velocity_report_msg(
@@ -105,12 +106,15 @@ PubSubNode::PubSubNode(const rclcpp::NodeOptions & node_options)
   rclcpp::QoS qos{1};
   qos.transient_local();
 
-  pub_imu_ = create_publisher<Imu>("~/input/imu", qos);
-  pub_point_cloud_ = create_publisher<PointCloud2>("~/input/pointcloud", qos);
-  pub_velocity_ = create_publisher<VelocityReport>("~/input/velocity", qos);
-  pub_predicted_traj_ = create_publisher<Trajectory>("~/input/predicted_trajectory", qos);
-  pub_predicted_objects_ = create_publisher<PredictedObjects>("~/input/objects", qos);
-  pub_autoware_state_ = create_publisher<AutowareState>("autoware/state", qos);
+  // Publish on the AEB node's fully-qualified input topics (its node name is "AEB") so that the
+  // node's polling subscribers actually receive these messages; a relative "~/input/..." name would
+  // resolve into this publisher node's own namespace and never reach the AEB node.
+  pub_kinematic_state_ = create_publisher<Odometry>("/AEB/input/kinematic_state", qos);
+  pub_point_cloud_ = create_publisher<PointCloud2>("/AEB/input/pointcloud", qos);
+  pub_velocity_ = create_publisher<VelocityReport>("/AEB/input/velocity", qos);
+  pub_predicted_traj_ = create_publisher<Trajectory>("/AEB/input/predicted_trajectory", qos);
+  pub_predicted_objects_ = create_publisher<PredictedObjects>("/AEB/input/objects", qos);
+  pub_autoware_state_ = create_publisher<AutowareState>("/autoware/state", qos);
 }
 
 TEST_F(TestAEB, checkCollision)
@@ -420,6 +424,264 @@ TEST_F(TestAEB, TestCropPointCloud)
   aeb_node_->cropPointCloudWithEgoFootprintPath(footprint, filtered_objects);
   // Check if the point outside the path was excluded
   ASSERT_TRUE(filtered_objects->points.size() == 2 * n_points);
+}
+
+// Repeatedly publish then pump both executors, giving the AEB node's polling subscribers time to
+// discover the publishers and receive the (transient-local) samples before fetchLatestData reads.
+// AEB derives from autoware::agnocast_wrapper::Node, which is not an rclcpp::Node, so it is pumped
+// through its node base interface.
+void deliver(
+  const rclcpp::Node::SharedPtr & pub_node, const std::shared_ptr<AEB> & sub_node,
+  const std::function<void()> & publish_fn, const int iterations = 40)
+{
+  for (int i = 0; i < iterations; ++i) {
+    publish_fn();
+    rclcpp::spin_some(pub_node);
+    rclcpp::spin_some(sub_node->get_node_base_interface());
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+}
+
+// Pin generateEgoPath(v, w) against an INDEPENDENT closed-form bicycle-model recurrence written
+// directly in this test (never calling the SUT and never reading its output back). The stop
+// condition is constrained to the time horizon alone so the pose count is deterministic.
+TEST_F(TestAEB, imuPathBicycleModelOracle)
+{
+  aeb_node_->limit_imu_path_length_ = false;
+  aeb_node_->limit_imu_path_lat_dev_ = false;
+  aeb_node_->min_generated_imu_path_length_ = 0.0;
+  aeb_node_->imu_prediction_time_interval_ = 0.1;
+  aeb_node_->imu_prediction_time_horizon_ = 0.5;
+  constexpr double dt = 0.1;
+
+  // Independent recurrence: position advances with the PREVIOUS yaw, then yaw integrates. The loop
+  // breaks once t exceeds the horizon (0.5 s), matching the node's break-before-push ordering.
+  const auto expected_poses = [&](const double v, const double w) {
+    std::vector<std::array<double, 3>> poses;  // {x, y, yaw}
+    poses.push_back({0.0, 0.0, 0.0});
+    double x = 0.0, y = 0.0, yaw = 0.0, t = 0.0;
+    while (true) {
+      const double next_x = x + v * std::cos(yaw) * dt;
+      const double next_y = y + v * std::sin(yaw) * dt;
+      const double next_yaw = yaw + w * dt;
+      t += dt;
+      if (t > 0.5) break;
+      x = next_x;
+      y = next_y;
+      yaw = next_yaw;
+      poses.push_back({x, y, yaw});
+    }
+    return poses;
+  };
+
+  // Turning case.
+  {
+    constexpr double v = 1.0;
+    constexpr double w = 0.2;
+    const auto path = aeb_node_->generateEgoPath(v, w);
+    const auto oracle = expected_poses(v, w);
+    ASSERT_EQ(path.size(), 6u);
+    ASSERT_EQ(path.size(), oracle.size());
+    // Anchor the first integrated pose with pure numeric literals.
+    EXPECT_NEAR(path.at(1).position.x, 0.1, 1e-9);
+    EXPECT_NEAR(path.at(1).position.y, 0.0, 1e-9);
+    EXPECT_NEAR(tf2::getYaw(path.at(1).orientation), 0.02, 1e-9);
+    for (size_t i = 0; i < path.size(); ++i) {
+      EXPECT_NEAR(path.at(i).position.x, oracle.at(i).at(0), 1e-9);
+      EXPECT_NEAR(path.at(i).position.y, oracle.at(i).at(1), 1e-9);
+      EXPECT_NEAR(tf2::getYaw(path.at(i).orientation), oracle.at(i).at(2), 1e-9);
+    }
+  }
+
+  // Degenerate straight-line case (w = 0): pure-literal oracle, y and yaw stay zero.
+  {
+    const auto path = aeb_node_->generateEgoPath(1.0, 0.0);
+    ASSERT_EQ(path.size(), 6u);
+    const std::array<double, 6> expected_x{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+    for (size_t i = 0; i < path.size(); ++i) {
+      EXPECT_NEAR(path.at(i).position.x, expected_x.at(i), 1e-9);
+      EXPECT_NEAR(path.at(i).position.y, 0.0, 1e-12);
+      EXPECT_NEAR(tf2::getYaw(path.at(i).orientation), 0.0, 1e-12);
+    }
+  }
+}
+
+// The yaw rate must be copied verbatim from the published kinematic_state twist into
+// angular_velocity_ptr_->z (a direct field copy, so exact equality is the correct oracle).
+TEST_F(TestAEB, kinematicStateYawRatePlumbing)
+{
+  aeb_node_->check_autoware_state_ = false;
+  aeb_node_->use_pointcloud_data_ = false;
+  aeb_node_->use_predicted_object_data_ = true;  // satisfies the object-detection-method gate
+  aeb_node_->use_predicted_trajectory_ = false;  // isolate the IMU (kinematic_state) path
+  aeb_node_->use_imu_path_ = true;
+
+  constexpr double yaw_rate = -0.1234;
+  const auto publish = [&]() {
+    const auto header = get_header("base_link", pub_sub_node_->now());
+    pub_sub_node_->pub_velocity_->publish(make_velocity_report_msg(header, 0.0, 3.0, 0.0));
+    pub_sub_node_->pub_predicted_objects_->publish(PredictedObjects{});
+    pub_sub_node_->pub_kinematic_state_->publish(make_odometry_message(header, yaw_rate));
+  };
+  deliver(pub_sub_node_, aeb_node_, publish);
+
+  ASSERT_TRUE(aeb_node_->fetchLatestData());
+  ASSERT_NE(aeb_node_->angular_velocity_ptr_, nullptr);
+  ASSERT_DOUBLE_EQ(aeb_node_->angular_velocity_ptr_->z, yaw_rate);
+}
+
+// Intake guard: with the IMU path enabled and no other path, a missing kinematic_state makes
+// fetchLatestData fail; supplying kinematic_state flips it to succeed (positive control).
+TEST_F(TestAEB, missingKinematicStateTripsImuPathGuard)
+{
+  aeb_node_->check_autoware_state_ = false;
+  aeb_node_->use_pointcloud_data_ = false;
+  aeb_node_->use_predicted_object_data_ = true;
+  aeb_node_->use_predicted_trajectory_ = false;
+  aeb_node_->use_imu_path_ = true;
+
+  const auto publish_without_kinematic_state = [&]() {
+    const auto header = get_header("base_link", pub_sub_node_->now());
+    pub_sub_node_->pub_velocity_->publish(make_velocity_report_msg(header, 0.0, 3.0, 0.0));
+    pub_sub_node_->pub_predicted_objects_->publish(PredictedObjects{});
+  };
+  deliver(pub_sub_node_, aeb_node_, publish_without_kinematic_state);
+  EXPECT_FALSE(aeb_node_->fetchLatestData());
+
+  const auto publish_with_kinematic_state = [&]() {
+    const auto header = get_header("base_link", pub_sub_node_->now());
+    pub_sub_node_->pub_velocity_->publish(make_velocity_report_msg(header, 0.0, 3.0, 0.0));
+    pub_sub_node_->pub_predicted_objects_->publish(PredictedObjects{});
+    pub_sub_node_->pub_kinematic_state_->publish(make_odometry_message(header, 0.05));
+  };
+  deliver(pub_sub_node_, aeb_node_, publish_with_kinematic_state);
+  EXPECT_TRUE(aeb_node_->fetchLatestData());
+}
+
+// With use_imu_path=false, the kinematic_state subscription must not be consulted at all: the path
+// comes solely from the predicted trajectory and angular_velocity_ptr_ stays null.
+TEST_F(TestAEB, useImuPathFalseIgnoresKinematicState)
+{
+  aeb_node_->check_autoware_state_ = false;
+  aeb_node_->use_pointcloud_data_ = false;
+  aeb_node_->use_predicted_object_data_ = true;
+  aeb_node_->use_predicted_trajectory_ = true;
+  aeb_node_->use_imu_path_ = false;
+
+  const auto publish = [&]() {
+    const auto header = get_header("base_link", pub_sub_node_->now());
+    pub_sub_node_->pub_velocity_->publish(make_velocity_report_msg(header, 0.0, 3.0, 0.0));
+    pub_sub_node_->pub_predicted_objects_->publish(PredictedObjects{});
+    pub_sub_node_->pub_predicted_traj_->publish(Trajectory{});
+    // kinematic_state deliberately withheld.
+  };
+  deliver(pub_sub_node_, aeb_node_, publish);
+
+  ASSERT_TRUE(aeb_node_->fetchLatestData());
+  EXPECT_EQ(aeb_node_->angular_velocity_ptr_, nullptr);
+}
+
+// The kinematic_state yaw source (topic ~/input/kinematic_state) has no producer-side heartbeat
+// guarantee, and the Latest polling subscriber returns the last Odometry forever, so a frozen or
+// diverged localization would feed a stale yaw rate into the integrated ego-path prediction
+// indefinitely. A kinematic_state older than kinematic_state_timeout_sec_ must make the IMU-path
+// yaw source read as UNAVAILABLE (angular_velocity_ptr_ reset to null so the IMU path is skipped),
+// never as a usable estimate and never degraded to a zero-yaw straight-line estimate. Independent
+// oracle: the age is hand-set through the Odometry header stamp and compared against the pinned
+// package default; a second (predicted-trajectory) path is supplied so fetchLatestData can still
+// succeed and the assertion isolates the yaw source alone.
+TEST_F(TestAEB, kinematicStateStalenessWatchdog)
+{
+  // Pin the shipped default so it cannot change silently. This is an initial conservative value,
+  // NOT one calibrated against measured on-vehicle jitter -- see the PR description.
+  ASSERT_DOUBLE_EQ(aeb_node_->kinematic_state_timeout_sec_, 0.5);
+  aeb_node_->check_autoware_state_ = false;
+  aeb_node_->use_pointcloud_data_ = false;
+  aeb_node_->use_predicted_object_data_ = true;  // satisfies the object-detection-method gate
+  aeb_node_->use_predicted_trajectory_ = true;   // yaw-independent second path -> fetch can succeed
+  aeb_node_->use_imu_path_ = true;
+
+  constexpr double yaw_rate = 0.05;
+
+  // Fresh kinematic_state (stamp = publish time): age ~0 < 0.5 s -> yaw source accepted and
+  // angular_velocity_ptr_ is populated with the published yaw rate.
+  const auto publish_fresh = [&]() {
+    const auto header = get_header("base_link", pub_sub_node_->now());
+    pub_sub_node_->pub_velocity_->publish(make_velocity_report_msg(header, 0.0, 3.0, 0.0));
+    pub_sub_node_->pub_predicted_objects_->publish(PredictedObjects{});
+    pub_sub_node_->pub_predicted_traj_->publish(Trajectory{});
+    pub_sub_node_->pub_kinematic_state_->publish(make_odometry_message(header, yaw_rate));
+  };
+  deliver(pub_sub_node_, aeb_node_, publish_fresh);
+  ASSERT_TRUE(aeb_node_->fetchLatestData());
+  ASSERT_NE(aeb_node_->angular_velocity_ptr_, nullptr);
+  ASSERT_DOUBLE_EQ(aeb_node_->angular_velocity_ptr_->z, yaw_rate);
+
+  // Stale kinematic_state (stamp = 5 s in the past): age 5 s > 0.5 s -> the watchdog must trip; the
+  // yaw source is treated as unavailable so angular_velocity_ptr_ is reset to null and the IMU path
+  // is skipped this cycle. fetchLatestData still SUCCEEDS because the predicted trajectory supplies
+  // a second, yaw-independent path -> a stale twist is never integrated into the ego-path
+  // prediction.
+  const auto publish_stale = [&]() {
+    const auto header = get_header("base_link", pub_sub_node_->now());
+    pub_sub_node_->pub_velocity_->publish(make_velocity_report_msg(header, 0.0, 3.0, 0.0));
+    pub_sub_node_->pub_predicted_objects_->publish(PredictedObjects{});
+    pub_sub_node_->pub_predicted_traj_->publish(Trajectory{});
+    const auto stale_stamp =
+      rclcpp::Time(pub_sub_node_->now()) - rclcpp::Duration::from_seconds(5.0);
+    const auto stale_header = get_header("base_link", stale_stamp);
+    pub_sub_node_->pub_kinematic_state_->publish(make_odometry_message(stale_header, yaw_rate));
+  };
+  deliver(pub_sub_node_, aeb_node_, publish_stale);
+  EXPECT_TRUE(aeb_node_->fetchLatestData());
+  EXPECT_EQ(aeb_node_->angular_velocity_ptr_, nullptr);  // stale yaw must NOT feed prediction
+}
+
+// A stamp AHEAD of the node clock must read as unusable too. The watchdog computes a SIGNED age, so
+// a one-sided (age > timeout) test would see a negative age here and accept a frozen future-stamped
+// twist forever (ECU clock skew, or a faulty producer) -- the same fail-open class the watchdog
+// exists to close. This test discriminates the symmetric +/- tolerance from both a one-sided check
+// and from an over-strict "reject any negative age", which would trip on ordinary clock jitter:
+//   - stamp 5.0 s in the FUTURE, far outside the 0.5 s tolerance -> must be rejected;
+//   - stamp 0.2 s in the future, inside the tolerance            -> must still be accepted.
+// Independent oracle: both offsets are hand-set on the Odometry header and compared against the
+// pinned package default, and a predicted-trajectory path is supplied so fetchLatestData still
+// succeeds and each assertion isolates the yaw source alone.
+TEST_F(TestAEB, futureStampedKinematicStateTripsWatchdog)
+{
+  ASSERT_DOUBLE_EQ(aeb_node_->kinematic_state_timeout_sec_, 0.5);
+  aeb_node_->check_autoware_state_ = false;
+  aeb_node_->use_pointcloud_data_ = false;
+  aeb_node_->use_predicted_object_data_ = true;
+  aeb_node_->use_predicted_trajectory_ = true;  // yaw-independent second path -> fetch can succeed
+  aeb_node_->use_imu_path_ = true;
+
+  constexpr double yaw_rate = 0.05;
+
+  const auto publish_with_stamp_offset = [&](const double offset_sec) {
+    return [&, offset_sec]() {
+      const auto header = get_header("base_link", pub_sub_node_->now());
+      pub_sub_node_->pub_velocity_->publish(make_velocity_report_msg(header, 0.0, 3.0, 0.0));
+      pub_sub_node_->pub_predicted_objects_->publish(PredictedObjects{});
+      pub_sub_node_->pub_predicted_traj_->publish(Trajectory{});
+      const auto shifted_stamp =
+        rclcpp::Time(pub_sub_node_->now()) + rclcpp::Duration::from_seconds(offset_sec);
+      const auto shifted_header = get_header("base_link", shifted_stamp);
+      pub_sub_node_->pub_kinematic_state_->publish(make_odometry_message(shifted_header, yaw_rate));
+    };
+  };
+
+  // Far-future stamp: |age| = 5 s > 0.5 s -> yaw source unavailable, IMU path skipped.
+  deliver(pub_sub_node_, aeb_node_, publish_with_stamp_offset(5.0));
+  EXPECT_TRUE(aeb_node_->fetchLatestData());
+  EXPECT_EQ(aeb_node_->angular_velocity_ptr_, nullptr);  // future yaw must NOT feed prediction
+
+  // Slightly-future stamp within tolerance: still accepted, so healthy clock jitter does not
+  // spuriously disable the IMU path.
+  deliver(pub_sub_node_, aeb_node_, publish_with_stamp_offset(0.2));
+  ASSERT_TRUE(aeb_node_->fetchLatestData());
+  ASSERT_NE(aeb_node_->angular_velocity_ptr_, nullptr);
+  EXPECT_DOUBLE_EQ(aeb_node_->angular_velocity_ptr_->z, yaw_rate);
 }
 
 }  // namespace autoware::motion::control::autonomous_emergency_braking::test
