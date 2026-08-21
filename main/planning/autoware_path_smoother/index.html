@@ -22719,175 +22719,175 @@
 </thead>
 <tbody>
 <tr>
-<td>common.output_delta_arc_length</td>
+<td>common.<wbr>output_<wbr>delta_<wbr>arc_<wbr>length</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Delta arc length for output trajectory [m].</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>common.output_backward_traj_length</td>
+<td>common.<wbr>output_<wbr>backward_<wbr>traj_<wbr>length</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Backward length for backward trajectory from base_link [m].</td>
 <td>5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>option.enable_warm_start</td>
+<td>elastic_<wbr>band.<wbr>option.<wbr>enable_<wbr>warm_<wbr>start</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable warm start for elastic band optimization.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>option.enable_optimization_validation</td>
+<td>elastic_<wbr>band.<wbr>option.<wbr>enable_<wbr>optimization_<wbr>validation</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable optimization validation.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>common.num_points</td>
+<td>elastic_<wbr>band.<wbr>common.<wbr>num_<wbr>points</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of points for optimization.</td>
 <td>100</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>common.delta_arc_length</td>
+<td>elastic_<wbr>band.<wbr>common.<wbr>delta_<wbr>arc_<wbr>length</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Delta arc length for optimization [m].</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>clearance.num_joint_points</td>
+<td>elastic_<wbr>band.<wbr>clearance.<wbr>num_<wbr>joint_<wbr>points</wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of joint points (joint means connecting fixing and smoothing).</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>clearance.clearance_for_fix</td>
+<td>elastic_<wbr>band.<wbr>clearance.<wbr>clearance_<wbr>for_<wbr>fix</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum optimizing range when applying fixing.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>clearance.clearance_for_joint</td>
+<td>elastic_<wbr>band.<wbr>clearance.<wbr>clearance_<wbr>for_<wbr>joint</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum optimizing range when applying jointing.</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>clearance.clearance_for_smooth</td>
+<td>elastic_<wbr>band.<wbr>clearance.<wbr>clearance_<wbr>for_<wbr>smooth</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum optimizing range when applying smoothing.</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>weight.smooth_weight</td>
+<td>elastic_<wbr>band.<wbr>weight.<wbr>smooth_<wbr>weight</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for smoothing.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>weight.lat_error_weight</td>
+<td>elastic_<wbr>band.<wbr>weight.<wbr>lat_<wbr>error_<wbr>weight</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for lateral error.</td>
 <td>0.001</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>qp.max_iteration</td>
+<td>elastic_<wbr>band.<wbr>qp.<wbr>max_<wbr>iteration</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Maximum iteration when solving QP.</td>
 <td>10000</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>qp.eps_abs</td>
+<td>elastic_<wbr>band.<wbr>qp.<wbr>eps_<wbr>abs</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Absolute epsilon when solving OSQP.</td>
 <td>1e-07</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>qp.eps_rel</td>
+<td>elastic_<wbr>band.<wbr>qp.<wbr>eps_<wbr>rel</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Relative epsilon when solving OSQP.</td>
 <td>1e-07</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>validation.max_error</td>
+<td>elastic_<wbr>band.<wbr>validation.<wbr>max_<wbr>error</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum error for validation [m].</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>ego_nearest_dist_threshold</td>
+<td>ego_<wbr>nearest_<wbr>dist_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for nearest ego search [m].</td>
 <td>3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>ego_nearest_yaw_threshold</td>
+<td>ego_<wbr>nearest_<wbr>yaw_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw threshold for nearest ego search [rad].</td>
 <td>1.046</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan.enable</td>
+<td>replan.<wbr>enable</wbr></td>
 <td>boolean</td>
 <td>If true, only perform smoothing when the input changes significantly.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan.max_path_shape_around_ego_lat_dist</td>
+<td>replan.<wbr>max_<wbr>path_<wbr>shape_<wbr>around_<wbr>ego_<wbr>lat_<wbr>dist</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold of path shape change around ego [m].</td>
 <td>2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan.max_path_shape_forward_lon_dist</td>
+<td>replan.<wbr>max_<wbr>path_<wbr>shape_<wbr>forward_<wbr>lon_<wbr>dist</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Forward point to check lateral distance difference [m].</td>
 <td>100</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan.max_path_shape_forward_lat_dist</td>
+<td>replan.<wbr>max_<wbr>path_<wbr>shape_<wbr>forward_<wbr>lat_<wbr>dist</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold of path shape change around forward point [m].</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan.max_ego_moving_dist</td>
+<td>replan.<wbr>max_<wbr>ego_<wbr>moving_<wbr>dist</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold of ego's moving distance for replan [m].</td>
 <td>5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan.max_goal_moving_dist</td>
+<td>replan.<wbr>max_<wbr>goal_<wbr>moving_<wbr>dist</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold of goal's moving distance for replan [m].</td>
 <td>15</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>replan.max_delta_time_sec</td>
+<td>replan.<wbr>max_<wbr>delta_<wbr>time_<wbr>sec</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold of delta time for replan [second].</td>
 <td>0</td>

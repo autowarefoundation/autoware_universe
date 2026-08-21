@@ -25,7 +25,7 @@
     
     
       
-        <title>Macro Rendering Error - Autoware Universe Documentation</title>
+        <title>autoware_lidar_centerpoint - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#autoware_lidar_centerpoint" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Macro Rendering Error
+              autoware_lidar_centerpoint
             
           </span>
         </div>
@@ -22767,6 +22767,318 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inner-workings / Algorithms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs / Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ml-model-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ML Model Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#detection-class-remapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Class Remapper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#launch-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-build_only-option" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The build_only option
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trained-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trained Models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#training-centerpoint-model-and-deploying-to-the-autoware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training CenterPoint Model and Deploying to the Autoware
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Training CenterPoint Model and Deploying to the Autoware">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preparing-nuscenes-dataset-for-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preparing NuScenes dataset for training
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-centerpoint-with-nuscenes-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training CenterPoint with NuScenes Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deploying-centerpoint-model-to-autoware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploying CenterPoint model to Autoware
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changelog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changelog
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-error-detection-and-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Error detection and handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-performance-characterization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Performance characterization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#referencesexternal-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References/External links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Future extensions / Unimplemented parts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acknowledgment-deepenais-3d-annotation-tools-contribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acknowledgment: deepen.ai's 3D Annotation Tools Contribution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#legal-notice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legal Notice
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -22785,25 +23097,603 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>perception/autoware_lidar_centerpoint/README.md</code></p>
-<p><em>KeyError</em>: 'default'</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.10.21/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.10.21/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.10.21/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 35, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
-    return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
-    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 53, in extract_parameter_info
-    param["Default"] = v["default"]
-KeyError: 'default'
-</code></pre></div></div>
+<div><h1 id="autoware_lidar_centerpoint">autoware_lidar_centerpoint<a class="headerlink" href="#autoware_lidar_centerpoint" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p>autoware_lidar_centerpoint is a package for detecting dynamic 3D objects.</p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<p>In this implementation, CenterPoint [1] uses a PointPillars-based [2] network to inference with TensorRT.</p>
+<p>We trained the models using <a href="https://github.com/open-mmlab/mmdetection3d">https://github.com/open-mmlab/mmdetection3d</a>.</p>
+<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
+<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/input/pointcloud</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>input pointcloud</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/output/objects</code></td>
+<td><code>autoware_perception_msgs::msg::DetectedObjects</code></td>
+<td>detected objects</td>
+</tr>
+<tr>
+<td><code>debug/cyclic_time_ms</code></td>
+<td><code>autoware_internal_debug_msgs::msg::Float64Stamped</code></td>
+<td>cyclic time (msg)</td>
+</tr>
+<tr>
+<td><code>debug/processing_time_ms</code></td>
+<td><code>autoware_internal_debug_msgs::msg::Float64Stamped</code></td>
+<td>processing time (ms)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<h3 id="ml-model-parameters">ML Model Parameters<a class="headerlink" href="#ml-model-parameters" title="Permanent link">#</a></h3>
+<p>Note that these parameters are associated with ONNX file, predefined during the training phase. Be careful to change ONNX file as well when changing this parameter. Also, whenever you update the ONNX file, do NOT forget to check these values.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>version</td>
+<td>string</td>
+<td>Model bundle version. The node reads major version 4 from minor version 1 upward; a minor bump may add manifest entries the node requires.</td>
+<td>v4.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>encoder_<wbr>onnx_<wbr>path</wbr></wbr></td>
+<td>string</td>
+<td>VoxelFeatureEncoder ONNX file, relative to model_path (absolute paths allowed).</td>
+<td>pts_voxel_encoder.onnx</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>encoder_<wbr>engine_<wbr>path</wbr></wbr></td>
+<td>string</td>
+<td>VoxelFeatureEncoder TensorRT Engine file, relative to model_path (absolute paths allowed).</td>
+<td>pts_voxel_encoder.engine</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>head_<wbr>onnx_<wbr>path</wbr></wbr></td>
+<td>string</td>
+<td>DetectionHead ONNX file, relative to model_path (absolute paths allowed).</td>
+<td>pts_backbone_neck_head.onnx</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>head_<wbr>engine_<wbr>path</wbr></wbr></td>
+<td>string</td>
+<td>DetectionHead TensorRT Engine file, relative to model_path (absolute paths allowed).</td>
+<td>pts_backbone_neck_head.engine</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>class_<wbr>remapper_<wbr>param_<wbr>path</wbr></wbr></wbr></td>
+<td>string</td>
+<td>Class remapper parameter file, relative to model_path (absolute paths allowed).</td>
+<td>detection_class_remapper.param.yaml</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trt_<wbr>precision</wbr></td>
+<td>string</td>
+<td>TensorRT inference precision.</td>
+<td>fp16</td>
+<td>['fp32', 'fp16']</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>class_<wbr>names</wbr></wbr></wbr></td>
+<td>array</td>
+<td>An array of class names will be predicted.</td>
+<td>['CAR', 'TRUCK', 'BUS', 'BICYCLE', 'PEDESTRIAN']</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>has_<wbr>twist</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Indicates whether the model outputs twist value.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>point_<wbr>feature_<wbr>size</wbr></wbr></wbr></wbr></td>
+<td>integer</td>
+<td>A number of channels of point feature layer.</td>
+<td>4</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>has_<wbr>variance</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Indicates whether the model outputs variance value.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>max_<wbr>voxel_<wbr>size</wbr></wbr></wbr></wbr></td>
+<td>integer</td>
+<td>A maximum size of voxel grid.</td>
+<td>40000</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>point_<wbr>cloud_<wbr>range</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>The range of the point cloud in [min_x, min_y, min_z, max_x, max_y, max_z] order. [m]</td>
+<td>[-76.8, -76.8, -4.0, 76.8, 76.8, 6.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>voxel_<wbr>size</wbr></wbr></wbr></td>
+<td>array</td>
+<td>The size of a voxel in [x, y, z] order. [m]</td>
+<td>[0.32, 0.32, 10.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>downsample_<wbr>factor</wbr></wbr></wbr></td>
+<td>integer</td>
+<td>A scale factor of downsampling points</td>
+<td>1</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>encoder_<wbr>in_<wbr>feature_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
+<td>integer</td>
+<td>A size of encoder input feature channels.</td>
+<td>9</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>yaw_<wbr>norm_<wbr>thresholds</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>A minimum norm of the predicted yaw vector per class, in the order of <code>class_names</code>. Objects below the threshold are discarded.</td>
+<td>[0.3, 0.3, 0.3, 0.3, 0.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>distance_<wbr>bin_<wbr>upper_<wbr>limits</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>An array of upper bounds of each distance bin.</td>
+<td>[50.0, 90.0, 121.0, 200.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>CAR</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>A minimum confidence score for CAR in each distance bin.</td>
+<td>[0.35, 0.35, 0.35, 0.35]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>TRUCK</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>A minimum confidence score for TRUCK in each distance bin.</td>
+<td>[0.35, 0.35, 0.35, 0.35]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>BUS</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>A minimum confidence score for BUS in each distance bin.</td>
+<td>[0.35, 0.35, 0.35, 0.35]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>BICYCLE</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>A minimum confidence score for BICYCLE in each distance bin.</td>
+<td>[0.35, 0.35, 0.35, 0.35]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>PEDESTRIAN</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>A minimum confidence score for PEDESTRIAN in each distance bin.</td>
+<td>[0.35, 0.35, 0.35, 0.35]</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cloud_<wbr>capacity</wbr></td>
+<td>integer</td>
+<td>Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).</td>
+<td>2000000</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>post_<wbr>process_<wbr>params.<wbr>circle_<wbr>nms_<wbr>dist_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A distance threshold of circle NMS.</td>
+<td>0.5</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>post_<wbr>process_<wbr>params.<wbr>iou_<wbr>nms_<wbr>search_<wbr>distance_<wbr>2d</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A maximum distance value to search the nearest objects.</td>
+<td>10.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>post_<wbr>process_<wbr>params.<wbr>iou_<wbr>nms_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A threshold value of NMS using IoU score.</td>
+<td>0.1</td>
+<td>≥0.0<br>≤1.0</td>
+</tr>
+<tr>
+<td>densification_<wbr>params.<wbr>world_<wbr>frame_<wbr>id</wbr></wbr></wbr></wbr></td>
+<td>string</td>
+<td>A name of frame id where world coordinates system is defined with respect to.</td>
+<td>map</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>densification_<wbr>params.<wbr>num_<wbr>past_<wbr>frames</wbr></wbr></wbr></wbr></td>
+<td>integer</td>
+<td>A number of past frames to be considered as same input frame.</td>
+<td>1</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>diagnostics.<wbr>max_<wbr>allowed_<wbr>processing_<wbr>time_<wbr>ms</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A threshold value for the allowed processing time. If the processing time exceeds this value, it will be considered a warning state. [ms]</td>
+<td>200.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>diagnostics.<wbr>max_<wbr>acceptable_<wbr>consecutive_<wbr>delay_<wbr>ms</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A threshold value for the error state. If the duration since the last processing timestamp, which ended within max_allowed_processing_time_ms, exceeds this value, it will be considered an error state. [ms]</td>
+<td>1000.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>diagnostics.<wbr>validation_<wbr>callback_<wbr>interval_<wbr>ms</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>An interval value for a timer callback that checks whether the current state meets the max_acceptable_consecutive_delay_ms condition. [ms]</td>
+<td>100.0</td>
+<td>≥1.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="detection-class-remapper">Detection Class Remapper<a class="headerlink" href="#detection-class-remapper" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allow_<wbr>remapping_<wbr>by_<wbr>area_<wbr>matrix</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Whether to allow remapping of classes. Row is the original class, column is the class to remap to. The order of the 8x8 matrix classes comes from ObjectClassification msg.</td>
+<td>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_<wbr>area_<wbr>matrix</wbr></wbr></td>
+<td>array</td>
+<td>Minimum area for specific class to consider class remapping. [m^2]</td>
+<td>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.1, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>max_<wbr>area_<wbr>matrix</wbr></wbr></td>
+<td>array</td>
+<td>Maximum area for specific class to consider class remapping. [m^2]</td>
+<td>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h3 id="launch-parameters">Launch Parameters<a class="headerlink" href="#launch-parameters" title="Permanent link">#</a></h3>
+<p>These are given by the launch file and are not part of any parameter file.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model_path</code></td>
+<td>string</td>
+<td><code>$(var data_path)/lidar_centerpoint/base</code></td>
+<td>directory containing the model artifacts; relative manifest entries resolve against it</td>
+</tr>
+<tr>
+<td><code>build_only</code></td>
+<td>bool</td>
+<td><code>false</code></td>
+<td>shutdown the node after TensorRT engine file is built</td>
+</tr>
+<tr>
+<td><code>logger_name</code></td>
+<td>string</td>
+<td><code>lidar_centerpoint</code></td>
+<td>logger name used for the node logs and debug topics</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
+<p>The <code>autoware_lidar_centerpoint</code> node has <code>build_only</code> option to build the TensorRT engine file from the ONNX file.
+Although it is preferred to move all the ROS parameters in <code>.param.yaml</code> file in Autoware Universe, the <code>build_only</code> option is not moved to the <code>.param.yaml</code> file for now, because it may be used as a flag to execute the build as a pre-task. You can execute with the following command:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_path:<span class="o">=</span>/home/autoware/autoware_data/ml_models/lidar_centerpoint/base<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<p><code>model_path</code> points at the variant folder (<code>base</code>/<code>tiny</code>/<code>sigma</code>/<code>short_range</code>) of the model bundle; the engine files are written there.</p>
+<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
+<ul>
+<li>The <code>object.existence_probability</code> is stored the value of classification confidence of a DNN, not probability.</li>
+</ul>
+<h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>
+<p>Trained models are hosted on Hugging Face at <a href="https://huggingface.co/AutowareFoundation/lidar_centerpoint">AutowareFoundation/lidar_centerpoint</a> and downloaded to <code>~/autoware_data/ml_models/lidar_centerpoint/</code> by the ansible artifacts role (pinned to tag <code>v4.1</code>).</p>
+<p>The bundle holds one self-contained folder per variant; the perception launcher (<code>lidar_dnn_detector.launch.xml</code>) selects the folder from the model name, and <code>lidar_centerpoint.launch.xml</code> takes the folder directly as <code>model_path</code>:</p>
+<div class="highlight"><pre><span></span><code>lidar_centerpoint/
+├── base/         # model_name: centerpoint
+├── tiny/         # model_name: centerpoint_tiny
+├── sigma/        # model_name: centerpoint_sigma
+└── short_range/  # model_name: centerpoint_short_range
+</code></pre></div>
+<p>Every variant folder contains the same file set: <code>pts_voxel_encoder.onnx</code>, <code>pts_backbone_neck_head.onnx</code>, <code>ml_package.param.yaml</code> and <code>detection_class_remapper.param.yaml</code>. TensorRT engine files are built locally into the variant folder on first launch (or via <code>build_only:=true</code>).</p>
+<p><code>ml_package.param.yaml</code> declares the bundle version. The node reads major version 4 from minor version 1 upward and aborts otherwise, so a version error means the bundle has to be refreshed with the ansible artifacts role of the <a href="https://github.com/autowarefoundation/autoware">autoware</a> repository. A minor bump can add manifest entries the node requires.</p>
+<p><code>Centerpoint</code> was trained in <code>nuScenes</code> (~28k lidar frames) [8] and TIER IV's internal database (~11k lidar frames) for 60 epochs.
+<code>Centerpoint tiny</code> was trained in <code>Argoverse 2</code> (~110k lidar frames) [9] and TIER IV's internal database (~11k lidar frames) for 20 epochs.</p>
+<h2 id="training-centerpoint-model-and-deploying-to-the-autoware">Training CenterPoint Model and Deploying to the Autoware<a class="headerlink" href="#training-centerpoint-model-and-deploying-to-the-autoware" title="Permanent link">#</a></h2>
+<h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h3>
+<p>This guide provides instructions on training a CenterPoint model using the <strong>mmdetection3d</strong> repository
+and seamlessly deploying it within Autoware.</p>
+<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h3>
+<h4 id="install-prerequisites">Install prerequisites<a class="headerlink" href="#install-prerequisites" title="Permanent link">#</a></h4>
+<p><strong>Step 1.</strong> Download and install Miniconda from the <a href="https://mmpretrain.readthedocs.io/en/latest/get_started.html">official website</a>.</p>
+<p><strong>Step 2.</strong> Create a conda virtual environment and activate it</p>
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>train-centerpoint<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.8<span class="w"> </span>-y
+conda<span class="w"> </span>activate<span class="w"> </span>train-centerpoint
+</code></pre></div>
+<p><strong>Step 3.</strong> Install PyTorch</p>
+<p>Please ensure you have PyTorch installed, and compatible with CUDA 11.6, as it is a requirement for current Autoware.</p>
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span><span class="nv">pytorch</span><span class="o">==</span><span class="m">1</span>.13.1<span class="w"> </span><span class="nv">torchvision</span><span class="o">==</span><span class="m">0</span>.14.1<span class="w"> </span>pytorch-cuda<span class="o">=</span><span class="m">11</span>.6<span class="w"> </span>-c<span class="w"> </span>pytorch<span class="w"> </span>-c<span class="w"> </span>nvidia
+</code></pre></div>
+<h4 id="install-mmdetection3d">Install mmdetection3d<a class="headerlink" href="#install-mmdetection3d" title="Permanent link">#</a></h4>
+<p><strong>Step 1.</strong> Install MMEngine, MMCV, and MMDetection using MIM</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>openmim
+mim<span class="w"> </span>install<span class="w"> </span>mmengine
+mim<span class="w"> </span>install<span class="w"> </span><span class="s1">'mmcv&gt;=2.0.0rc4'</span>
+mim<span class="w"> </span>install<span class="w"> </span><span class="s1">'mmdet&gt;=3.0.0rc5, &lt;3.3.0'</span>
+</code></pre></div>
+<p><strong>Step 2.</strong> Install mmdetection3d forked repository</p>
+<p>Introduced several valuable enhancements in our fork of the mmdetection3d repository.
+Notably, we've made the PointPillar z voxel feature input optional to maintain compatibility with the original paper.
+In addition, we've integrated a PyTorch to ONNX converter and a T4 format reader for added functionality.</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/autowarefoundation/mmdetection3d.git
+<span class="nb">cd</span><span class="w"> </span>mmdetection3d
+pip<span class="w"> </span>install<span class="w"> </span>-v<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div>
+<h4 id="use-training-repository-with-docker">Use Training Repository with Docker<a class="headerlink" href="#use-training-repository-with-docker" title="Permanent link">#</a></h4>
+<p>Alternatively, you can use Docker to run the mmdetection3d repository. We provide a Dockerfile to build a Docker image with the mmdetection3d repository and its dependencies.</p>
+<p>Clone fork of the mmdetection3d repository</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/autowarefoundation/mmdetection3d.git
+</code></pre></div>
+<p>Build the Docker image by running the following command:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>mmdetection3d
+docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>mmdetection3d<span class="w"> </span>-f<span class="w"> </span>docker/Dockerfile<span class="w"> </span>.
+</code></pre></div>
+<p>Run the Docker container:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>--shm-size<span class="o">=</span>8g<span class="w"> </span>-it<span class="w"> </span>-v<span class="w"> </span><span class="o">{</span>DATA_DIR<span class="o">}</span>:/mmdetection3d/data<span class="w"> </span>mmdetection3d
+</code></pre></div>
+<h3 id="preparing-nuscenes-dataset-for-training">Preparing NuScenes dataset for training<a class="headerlink" href="#preparing-nuscenes-dataset-for-training" title="Permanent link">#</a></h3>
+<p><strong>Step 1.</strong> Download the NuScenes dataset from the <a href="https://www.nuscenes.org/download">official website</a> and extract the dataset to a folder of your choice.</p>
+<p><strong>Note:</strong> The NuScenes dataset is large and requires significant disk space. Ensure you have enough storage available before proceeding.</p>
+<p><strong>Step 2.</strong> Create a symbolic link to the dataset folder</p>
+<div class="highlight"><pre><span></span><code>ln<span class="w"> </span>-s<span class="w"> </span>/path/to/nuscenes/dataset/<span class="w"> </span>/path/to/mmdetection3d/data/nuscenes/
+</code></pre></div>
+<p><strong>Step 3.</strong> Prepare the NuScenes data by running:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>mmdetection3d
+python<span class="w"> </span>tools/create_data.py<span class="w"> </span>nuscenes<span class="w"> </span>--root-path<span class="w"> </span>./data/nuscenes<span class="w"> </span>--out-dir<span class="w"> </span>./data/nuscenes<span class="w"> </span>--extra-tag<span class="w"> </span>nuscenes
+</code></pre></div>
+<h3 id="training-centerpoint-with-nuscenes-dataset">Training CenterPoint with NuScenes Dataset<a class="headerlink" href="#training-centerpoint-with-nuscenes-dataset" title="Permanent link">#</a></h3>
+<h4 id="prepare-the-config-file">Prepare the config file<a class="headerlink" href="#prepare-the-config-file" title="Permanent link">#</a></h4>
+<p>The configuration file that illustrates how to train the CenterPoint model with the NuScenes dataset is
+located at <code>mmdetection3d/projects/AutowareCenterPoint/configs</code>. This configuration file is a derived version of
+<a href="https://github.com/autowarefoundation/mmdetection3d/blob/5c0613be29bd2e51771ec5e046d89ba3089887c7/configs/centerpoint/centerpoint_pillar02_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py">this centerpoint configuration file</a>
+from mmdetection3D.
+In this custom configuration, the <strong>use_voxel_center_z parameter</strong> is set as <strong>False</strong> to deactivate the z coordinate of the voxel center,
+aligning with the original paper's specifications and making the model compatible with Autoware. Additionally, the filter size is set as <strong>[32, 32]</strong>.</p>
+<p>The CenterPoint model can be tailored to your specific requirements by modifying various parameters within the configuration file.
+This includes adjustments related to preprocessing operations, training, testing, model architecture, dataset, optimizer, learning rate scheduler, and more.</p>
+<h4 id="start-training">Start training<a class="headerlink" href="#start-training" title="Permanent link">#</a></h4>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>tools/train.py<span class="w"> </span>projects/AutowareCenterPoint/configs/centerpoint_custom.py<span class="w"> </span>--work-dir<span class="w"> </span>./work_dirs/centerpoint_custom
+</code></pre></div>
+<h4 id="evaluation-of-the-trained-model">Evaluation of the trained model<a class="headerlink" href="#evaluation-of-the-trained-model" title="Permanent link">#</a></h4>
+<p>For evaluation purposes, we have included a sample dataset captured from the vehicle which consists of the following LiDAR sensors:
+1 x Velodyne VLS128, 4 x Velodyne VLP16, and 1 x Robosense RS Bpearl. This dataset comprises 600 LiDAR frames and encompasses 5 distinct classes, 6905 cars, 3951 pedestrians,
+75 cyclists, 162 buses, and 326 trucks 3D annotation. In the sample dataset, frames are annotated as 2 frames for each second. You can employ this dataset for a wide range of purposes,
+including training, evaluation, and fine-tuning of models. It is organized in the T4 format.</p>
+<h5 id="download-the-sample-dataset">Download the sample dataset<a class="headerlink" href="#download-the-sample-dataset" title="Permanent link">#</a></h5>
+<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>https://autoware-files.s3.us-west-2.amazonaws.com/dataset/lidar_detection_sample_dataset.tar.gz
+<span class="c1">#Extract the dataset to a folder of your choice</span>
+tar<span class="w"> </span>-xvf<span class="w"> </span>lidar_detection_sample_dataset.tar.gz
+<span class="c1">#Create a symbolic link to the dataset folder</span>
+ln<span class="w"> </span>-s<span class="w"> </span>/PATH/TO/DATASET/<span class="w"> </span>/PATH/TO/mmdetection3d/data/tier4_dataset/
+</code></pre></div>
+<h5 id="prepare-dataset-and-evaluate-trained-model">Prepare dataset and evaluate trained model<a class="headerlink" href="#prepare-dataset-and-evaluate-trained-model" title="Permanent link">#</a></h5>
+<p>Create <code>.pkl</code> files for training, evaluation, and testing.</p>
+<p>The dataset was formatted according to T4Dataset specifications, with 'sample_dataset' designated as one of its versions.</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>tools/create_data.py<span class="w"> </span>T4Dataset<span class="w"> </span>--root-path<span class="w"> </span>data/sample_dataset/<span class="w"> </span>--out-dir<span class="w"> </span>data/sample_dataset/<span class="w"> </span>--extra-tag<span class="w"> </span>T4Dataset<span class="w"> </span>--version<span class="w"> </span>sample_dataset<span class="w"> </span>--annotation-hz<span class="w"> </span><span class="m">2</span>
+</code></pre></div>
+<p>Run evaluation</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>tools/test.py<span class="w"> </span>projects/AutowareCenterPoint/configs/centerpoint_custom_test.py<span class="w"> </span>/PATH/OF/THE/CHECKPOINT<span class="w">  </span>--task<span class="w"> </span>lidar_det
+</code></pre></div>
+<p>Evaluation results could be relatively low because of the e to variations in sensor modalities between the sample dataset
+and the training dataset. The model's training parameters are originally tailored to the NuScenes dataset, which employs a single lidar
+sensor positioned atop the vehicle. In contrast, the provided sample dataset comprises concatenated point clouds positioned at
+the base link location of the vehicle.</p>
+<h3 id="deploying-centerpoint-model-to-autoware">Deploying CenterPoint model to Autoware<a class="headerlink" href="#deploying-centerpoint-model-to-autoware" title="Permanent link">#</a></h3>
+<h4 id="convert-centerpoint-pytorch-model-to-onnx-format">Convert CenterPoint PyTorch model to ONNX Format<a class="headerlink" href="#convert-centerpoint-pytorch-model-to-onnx-format" title="Permanent link">#</a></h4>
+<p>The autoware_lidar_centerpoint implementation requires two ONNX models as input the voxel encoder and the backbone-neck-head of the CenterPoint model, other aspects of the network,
+such as preprocessing operations, are implemented externally. Under the fork of the mmdetection3d repository,
+we have included a script that converts the CenterPoint model to Autoware compatible ONNX format.
+You can find it in <code>mmdetection3d/projects/AutowareCenterPoint</code> file.</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>projects/AutowareCenterPoint/centerpoint_onnx_converter.py<span class="w"> </span>--cfg<span class="w"> </span>projects/AutowareCenterPoint/configs/centerpoint_custom.py<span class="w"> </span>--ckpt<span class="w"> </span>work_dirs/centerpoint_custom/YOUR_BEST_MODEL.pth<span class="w"> </span>--work-dir<span class="w"> </span>./work_dirs/onnx_models
+</code></pre></div>
+<h4 id="create-the-ml_package-file-for-the-custom-model">Create the ml_package file for the custom model<a class="headerlink" href="#create-the-ml_package-file-for-the-custom-model" title="Permanent link">#</a></h4>
+<p>Rename the exported ONNX files to <code>pts_voxel_encoder.onnx</code> and <code>pts_backbone_neck_head.onnx</code>, and create a <strong>ml_package.param.yaml</strong> next to them. Set the model parameters like
+point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file. The <a href="#ml-model-parameters">ML Model Parameters</a> table lists every entry with its default; <code>version</code> has to be declared as well, or the node aborts at startup.</p>
+<h4 id="launch-the-lidar_centerpoint-node">Launch the lidar_centerpoint node<a class="headerlink" href="#launch-the-lidar_centerpoint-node" title="Permanent link">#</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/YOUR/AUTOWARE/PATH/Autoware
+<span class="nb">source</span><span class="w"> </span>install/setup.bash
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_path:<span class="o">=</span>/PATH/TO/MODEL_FOLDER/
+</code></pre></div>
+<p><code>model_path</code> is used as given: the directory must contain the ONNX files, <code>ml_package.param.yaml</code> and <code>detection_class_remapper.param.yaml</code>.</p>
+<h4 id="launch-the-lidar_short_range_centerpoint-node">Launch the lidar_short_range_centerpoint node<a class="headerlink" href="#launch-the-lidar_short_range_centerpoint-node" title="Permanent link">#</a></h4>
+<p>It also provides short_range detections using CenterPoint, served from the <code>short_range/</code> folder of the model bundle:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/YOUR/AUTOWARE/PATH/Autoware
+<span class="nb">source</span><span class="w"> </span>install/setup.bash
+ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_data/ml_models/lidar_centerpoint/short_range
+</code></pre></div>
+<h3 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h3>
+<h4 id="v41-202608">v4.1 (2026/08)<a class="headerlink" href="#v41-202608" title="Permanent link">#</a></h4>
+<p><code>ml_package.param.yaml</code> gained <code>version</code> and <code>model_params.yaw_norm_thresholds</code>, the latter moved out of <code>centerpoint_common.param.yaml</code> because it is indexed by the predicted class. <code>deploy_metadata.yaml</code> is gone. Bundles of <code>v4.0</code> and earlier are rejected at startup.</p>
+<h4 id="v40-202607">v4.0 (2026/07)<a class="headerlink" href="#v40-202607" title="Permanent link">#</a></h4>
+<p>The model bundle moved to per-variant folders (<code>base</code>/<code>tiny</code>/<code>sigma</code>/<code>short_range</code>) with uniform file names, hosted on <a href="https://huggingface.co/AutowareFoundation/lidar_centerpoint/tree/v4.0">Hugging Face</a>. <code>sigma</code> and <code>short_range</code> weights are published for the first time. Earlier revisions remain available as tags on the same repository (<code>v3.0</code> = flat layout). The <code>v1</code> and <code>v0</code> files below are not distributed any more.</p>
+<h4 id="v1-20220706">v1 (2022/07/06)<a class="headerlink" href="#v1-20220706" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Files</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>centerpoint</code></td>
+<td><code>pts_voxel_encoder</code> <br> <code>pts_backbone_neck_head</code></td>
+<td>There is a single change due to the limitation in the implementation of this package. <code>num_filters=[32, 32]</code> of <code>PillarFeatureNet</code></td>
+</tr>
+<tr>
+<td><code>centerpoint_tiny</code></td>
+<td><code>pts_voxel_encoder</code> <br> <code>pts_backbone_neck_head</code></td>
+<td>The same model as <code>default</code> of <code>v0</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>These changes are compared with <a href="https://github.com/tianweiy/CenterPoint/blob/v0.2/configs/waymo/pp/waymo_centerpoint_pp_two_pfn_stride1_3x.py">this configuration</a>.</p>
+<h4 id="v0-20211203">v0 (2021/12/03)<a class="headerlink" href="#v0-20211203" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Files</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>default</code></td>
+<td><code>pts_voxel_encoder</code> <br> <code>pts_backbone_neck_head</code></td>
+<td>There are two changes from the original CenterPoint architecture. <code>num_filters=[32]</code> of <code>PillarFeatureNet</code> and <code>ds_layer_strides=[2, 2, 2]</code> of <code>RPN</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
+<!-- Write how to detect errors and how to recover from them.
+
+Example:
+  This package can handle up to 20 obstacles. If more obstacles found, this node will give up and raise diagnostic errors.
+-->
+
+<h2 id="optional-performance-characterization">(Optional) Performance characterization<a class="headerlink" href="#optional-performance-characterization" title="Permanent link">#</a></h2>
+<!-- Write performance information like complexity. If it wouldn't be the bottleneck, not necessary.
+
+Example:
+  ### Complexity
+
+  This algorithm is O(N).
+
+  ### Processing time
+
+  ...
+-->
+
+<h2 id="referencesexternal-links">References/External links<a class="headerlink" href="#referencesexternal-links" title="Permanent link">#</a></h2>
+<p>[1] Yin, Tianwei, Xingyi Zhou, and Philipp Krähenbühl. "Center-based 3d object detection and tracking." arXiv preprint arXiv:2006.11275 (2020).</p>
+<p>[2] Lang, Alex H., et al. "PointPillars: Fast encoders for object detection from point clouds." Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. 2019.</p>
+<p>[3] <a href="https://github.com/tianweiy/CenterPoint">https://github.com/tianweiy/CenterPoint</a></p>
+<p>[4] <a href="https://github.com/open-mmlab/mmdetection3d">https://github.com/open-mmlab/mmdetection3d</a></p>
+<p>[5] <a href="https://github.com/open-mmlab/OpenPCDet">https://github.com/open-mmlab/OpenPCDet</a></p>
+<p>[6] <a href="https://github.com/yukkysaito/autoware_perception">https://github.com/yukkysaito/autoware_perception</a></p>
+<p>[7] <a href="https://github.com/NVIDIA-AI-IOT/CUDA-PointPillars">https://github.com/NVIDIA-AI-IOT/CUDA-PointPillars</a></p>
+<p>[8] <a href="https://www.nuscenes.org/nuscenes">https://www.nuscenes.org/nuscenes</a></p>
+<p>[9] <a href="https://www.argoverse.org/av2.html">https://www.argoverse.org/av2.html</a></p>
+<h2 id="optional-future-extensions-unimplemented-parts">(Optional) Future extensions / Unimplemented parts<a class="headerlink" href="#optional-future-extensions-unimplemented-parts" title="Permanent link">#</a></h2>
+<!-- Write future extensions of this package.
+
+Example:
+  Currently, this package can't handle the chattering obstacles well. We plan to add some probabilistic filters in the perception layer to improve it.
+  Also, there are some parameters that should be global(e.g. vehicle size, max steering, etc.). These will be refactored and defined as global parameters so that we can share the same parameters between different nodes.
+-->
+
+<h2 id="acknowledgment-deepenais-3d-annotation-tools-contribution">Acknowledgment: deepen.ai's 3D Annotation Tools Contribution<a class="headerlink" href="#acknowledgment-deepenais-3d-annotation-tools-contribution" title="Permanent link">#</a></h2>
+<p>Special thanks to <a href="https://www.deepen.ai/">Deepen AI</a> for providing their 3D Annotation tools, which have been instrumental in creating our sample dataset.</p>
+<h2 id="legal-notice">Legal Notice<a class="headerlink" href="#legal-notice" title="Permanent link">#</a></h2>
+<p><em>The nuScenes dataset is released publicly for non-commercial use under the Creative
+Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License.
+Additional Terms of Use can be found at <a href="https://www.nuscenes.org/terms-of-use">https://www.nuscenes.org/terms-of-use</a>.
+To inquire about a commercial license please contact <a href="mailto:nuscenes@motional.com">nuscenes@motional.com</a>.</em></p></div>
 
 
 
@@ -22856,13 +23746,13 @@ KeyError: 'default'
         
         
           
-          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--next" aria-label="Next: Macro Rendering Error">
+          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_lidar_frnet">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Macro Rendering Error
+                autoware_lidar_frnet
               </div>
             </div>
             <div class="md-footer__button md-icon">

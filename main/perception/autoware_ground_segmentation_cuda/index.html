@@ -22847,119 +22847,119 @@
 </thead>
 <tbody>
 <tr>
-<td>global_slope_max_angle_deg</td>
+<td>global_<wbr>slope_<wbr>max_<wbr>angle_<wbr>deg</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum global ground slope angle [deg]. Larger values reduce false negatives on steep roads but can increase false positives (classifying objects as ground).</td>
 <td>10</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>local_slope_max_angle_deg</td>
+<td>local_<wbr>slope_<wbr>max_<wbr>angle_<wbr>deg</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum local slope angle [deg] between adjacent points (used for fine discrimination of small objects or ramps).</td>
 <td>13</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>non_ground_height_threshold</td>
+<td>non_<wbr>ground_<wbr>height_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Absolute vertical distance threshold [m] above estimated ground line to classify a point as non-ground.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>grid_size_m</td>
+<td>grid_<wbr>size_<wbr>m</wbr></wbr></td>
 <td>float</td>
 <td>Radial cell size in polar grid [m]; larger values smooth ground estimation but may miss small objects.</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>gnd_cell_buffer_size</td>
+<td>gnd_<wbr>cell_<wbr>buffer_<wbr>size</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of previous ground cells used to estimate local ground slope.</td>
 <td>4</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>detection_range_z_max</td>
+<td>detection_<wbr>range_<wbr>z_<wbr>max</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum Z height (above base_link) considered in classification [m].</td>
 <td>2.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>center_pcl_shift</td>
+<td>center_<wbr>pcl_<wbr>shift</wbr></wbr></td>
 <td>float</td>
 <td>X-axis offset [m] applied to additional LiDAR point clouds relative to vehicle reference (positive forward).</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>sector_angle_deg</td>
+<td>sector_<wbr>angle_<wbr>deg</wbr></wbr></td>
 <td>float</td>
 <td>Angular width of each polar sector [deg].</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_recheck_ground_cluster</td>
+<td>use_<wbr>recheck_<wbr>ground_<wbr>cluster</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable secondary pass to re-evaluate ground clusters (may reduce false ground on elevated points).</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>recheck_start_distance</td>
+<td>recheck_<wbr>start_<wbr>distance</wbr></wbr></td>
 <td>float</td>
 <td>Minimum radial distance [m] at which ground cluster recheck logic begins.</td>
 <td>20</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>use_lowest_point</td>
+<td>use_<wbr>lowest_<wbr>point</wbr></wbr></td>
 <td>boolean</td>
 <td>Use lowest point in cell as reference during ground recheck (otherwise median-like selection).</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_x</td>
+<td>min_<wbr>x</wbr></td>
 <td>float</td>
 <td>Minimum X range relative to base_link [m] included in processing.</td>
 <td>-100</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_x</td>
+<td>max_<wbr>x</wbr></td>
 <td>float</td>
 <td>Maximum X (forward) range relative to base_link [m] included in processing.</td>
 <td>150</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_y</td>
+<td>min_<wbr>y</wbr></td>
 <td>float</td>
 <td>Minimum Y range relative to base_link [m] included in processing.</td>
 <td>-70</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_y</td>
+<td>max_<wbr>y</wbr></td>
 <td>float</td>
 <td>Maximum Y range relative to base_link [m] included in processing.</td>
 <td>70</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_z</td>
+<td>min_<wbr>z</wbr></td>
 <td>float</td>
 <td>Minimum Z range relative to base_link [m] included in processing.</td>
 <td>-2.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_z</td>
+<td>max_<wbr>z</wbr></td>
 <td>float</td>
 <td>Maximum Z range relative to base_link [m] included in processing.</td>
 <td>2.5</td>

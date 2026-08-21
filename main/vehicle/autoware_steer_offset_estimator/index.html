@@ -23035,140 +23035,140 @@ When calibration is triggered the node will update the persistent YAML file (if 
 </thead>
 <tbody>
 <tr>
-<td>initial_covariance</td>
+<td>initial_<wbr>covariance</wbr></td>
 <td>float</td>
 <td>steer offset is larger than tolerance</td>
 <td>1000.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>update_hz</td>
+<td>update_<wbr>hz</wbr></td>
 <td>float</td>
 <td>update hz of steer data</td>
 <td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>initial_offset</td>
+<td>initial_<wbr>offset</wbr></td>
 <td>float</td>
 <td>initial steer offset value</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>process_noise_covariance</td>
+<td>process_<wbr>noise_<wbr>covariance</wbr></wbr></td>
 <td>float</td>
 <td>process noise covariance for Kalman filter</td>
 <td>5e-8</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>measurement_noise_covariance</td>
+<td>measurement_<wbr>noise_<wbr>covariance</wbr></wbr></td>
 <td>float</td>
 <td>measurement noise covariance for Kalman filter</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>denominator_floor</td>
+<td>denominator_<wbr>floor</wbr></td>
 <td>float</td>
 <td>minimum value for denominator to avoid numerical issues</td>
 <td>1.0e-12</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>covariance_floor</td>
+<td>covariance_<wbr>floor</wbr></td>
 <td>float</td>
 <td>minimum value for covariance to avoid numerical issues</td>
 <td>1.0e-12</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>min_velocity</td>
+<td>min_<wbr>velocity</wbr></td>
 <td>float</td>
 <td>velocity below this value is not used</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_steer</td>
+<td>max_<wbr>steer</wbr></td>
 <td>float</td>
 <td>offset estimation is skipped if steering is above this value</td>
 <td>0.02</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_steer_rate</td>
+<td>max_<wbr>steer_<wbr>rate</wbr></wbr></td>
 <td>float</td>
 <td>offset estimation is skipped if steering rate is above this value</td>
 <td>0.01</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_ang_velocity</td>
+<td>max_<wbr>ang_<wbr>velocity</wbr></wbr></td>
 <td>float</td>
 <td>offset estimation is skipped if angular velocity is above this value</td>
 <td>0.02</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_steer_buffer</td>
+<td>max_<wbr>steer_<wbr>buffer</wbr></wbr></td>
 <td>float</td>
 <td>duration to keep steering values in the buffer</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_pose_lag</td>
+<td>max_<wbr>pose_<wbr>lag</wbr></wbr></td>
 <td>float</td>
 <td>max valid age of previous pose which can be used for twist calculation</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>calibration.mode</td>
+<td>calibration.<wbr>mode</wbr></td>
 <td>string</td>
 <td>offset calibration mode</td>
 <td>off</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>calibration.update_offset_th</td>
+<td>calibration.<wbr>update_<wbr>offset_<wbr>th</wbr></wbr></wbr></td>
 <td>float</td>
 <td>error threshold for offset calibration</td>
 <td>0.001</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>calibration.covariance_th</td>
+<td>calibration.<wbr>covariance_<wbr>th</wbr></wbr></td>
 <td>float</td>
 <td>covariance threshold for offset calibration</td>
 <td>0.0015</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>calibration.min_steady_duration</td>
+<td>calibration.<wbr>min_<wbr>steady_<wbr>duration</wbr></wbr></wbr></td>
 <td>float</td>
 <td>min duration of continuous estimation data for offset calibration</td>
 <td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>calibration.max_offset_limit</td>
+<td>calibration.<wbr>max_<wbr>offset_<wbr>limit</wbr></wbr></wbr></td>
 <td>float</td>
 <td>max offset limit for offset calibration</td>
 <td>0.05</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>calibration.min_update_interval</td>
+<td>calibration.<wbr>min_<wbr>update_<wbr>interval</wbr></wbr></wbr></td>
 <td>float</td>
 <td>min interval between offset calibration updates</td>
 <td>100.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>calibration.warning_offset_th</td>
+<td>calibration.<wbr>warning_<wbr>offset_<wbr>th</wbr></wbr></wbr></td>
 <td>float</td>
 <td>offset threshold to trigger a warning</td>
 <td>0.005</td>

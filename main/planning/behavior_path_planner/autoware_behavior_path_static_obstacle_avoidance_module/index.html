@@ -23917,1435 +23917,1435 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 </thead>
 <tbody>
 <tr>
-<td>resample_interval_for_planning</td>
+<td>avoidance.<wbr>resample_<wbr>interval_<wbr>for_<wbr>planning</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Path resample interval for avoidance planning path.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>resample_interval_for_output</td>
+<td>avoidance.<wbr>resample_<wbr>interval_<wbr>for_<wbr>output</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Path resample interval for output path. Too short interval increases computational cost for latter modules.</td>
 <td>4.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>path_generation_method</td>
+<td>avoidance.<wbr>path_<wbr>generation_<wbr>method</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Path generation method.</td>
 <td>shift_line_base</td>
 <td>['shift_line_base', 'optimization_base', 'both']</td>
 </tr>
 <tr>
-<td>use_lane_type</td>
+<td>avoidance.<wbr>use_<wbr>lane_<wbr>type</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Drivable lane configuration.</td>
 <td>opposite_direction_lane</td>
 <td>['current_lane', 'same_direction_lane', 'opposite_direction_lane']</td>
 </tr>
 <tr>
-<td>use_hatched_road_markings</td>
+<td>avoidance.<wbr>use_<wbr>hatched_<wbr>road_<wbr>markings</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Extend drivable to hatched road marking area.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_intersection_areas</td>
+<td>avoidance.<wbr>use_<wbr>intersection_<wbr>areas</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Extend drivable to intersection area.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_freespace_areas</td>
+<td>avoidance.<wbr>use_<wbr>freespace_<wbr>areas</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Extend drivable to freespace area.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>car.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>car.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>car.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>car.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>car.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>car.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>car.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>truck.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>truck.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>truck.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>truck.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>truck.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>truck.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>truck.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bus.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>bus.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bus.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bus.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bus.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bus.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bus.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trailer.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>trailer.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trailer.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trailer.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trailer.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trailer.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>trailer.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>unknown.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>unknown.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>unknown.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>-0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>-0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>unknown.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>unknown.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>unknown.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>unknown.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>motorcycle.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>motorcycle.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>motorcycle.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>motorcycle.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>motorcycle.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>motorcycle.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>motorcycle.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bicycle.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>bicycle.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bicycle.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bicycle.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bicycle.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>bicycle.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>bicycle.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>pedestrian.th_moving_speed</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>th_<wbr>moving_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects with speed greater than this will be judged as moving ones.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>pedestrian.th_moving_time</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>th_<wbr>moving_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Objects keep moving longer duration than this will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>pedestrian.longitudinal_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Creates an additional longitudinal gap that will prevent the vehicle from getting to near to the obstacle.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.soft_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>lateral_<wbr>margin.<wbr>soft_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral_margin.hard_margin_for_parked_vehicle</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>lateral_<wbr>margin.<wbr>hard_<wbr>margin_<wbr>for_<wbr>parked_<wbr>vehicle</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral distance between ego and avoidance targets.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>pedestrian.envelope_buffer_margin</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>envelope_<wbr>buffer_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The buffer between raw boundary box of detected objects and enveloped polygon that is used for avoidance path generation.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>pedestrian.max_expand_ratio</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>max_<wbr>expand_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied envelope_buffer_margin according to the distance between the ego and object.</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>pedestrian.th_error_eclipse_long_radius</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>pedestrian.<wbr>th_<wbr>error_<wbr>eclipse_<wbr>long_<wbr>radius</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This value will be applied to judge whether the eclipse error is to large</td>
 <td>0.6</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_object.lower_distance_for_polygon_expansion</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>lower_<wbr>distance_<wbr>for_<wbr>polygon_<wbr>expansion</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the distance between the ego and object is less than this, the expand ratio will be zero.</td>
 <td>30.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_object.upper_distance_for_polygon_expansion</td>
+<td>avoidance.<wbr>target_<wbr>object.<wbr>upper_<wbr>distance_<wbr>for_<wbr>polygon_<wbr>expansion</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the distance between the ego and object is larger than this, the expand ratio will be max_expand_ratio.</td>
 <td>100.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.car</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>car</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for CAR.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.truck</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>truck</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for TRUCK.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.bus</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>bus</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for BUS.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.trailer</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for TRAILER.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.unknown</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for UNKNOWN.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.bicycle</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for BICYCLE.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.motorcycle</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for MOTORCYCLE.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.pedestrian</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>target_<wbr>type.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable avoidance maneuver for PEDESTRIAN.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_filtering.object_check_goal_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>object_<wbr>check_<wbr>goal_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the distance between object and goal position is less than this parameter, the module do not return center line.</td>
 <td>20.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_filtering.object_check_return_pose_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>object_<wbr>check_<wbr>return_<wbr>pose_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the distance between object and return position is less than this parameter, the module do not return center line.</td>
 <td>20.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_filtering.max_compensation_time</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>max_<wbr>compensation_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>For the compensation of the detection lost. The object is registered once it is observed as an avoidance target. When the detection loses, the timer will start and the object will be un-registered when the time exceeds this limit.</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_filtering.unstable_classification_time</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>unstable_<wbr>classification_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the object is classified as UNKNOWN type for less than unstable_classification_time seconds, it is probably not an unknown type.</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>detection_area.static</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>detection_<wbr>area.<wbr>static</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>If true, the detection area longitudinal range is calculated based on current ego speed.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>detection_area.min_forward_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>detection_<wbr>area.<wbr>min_<wbr>forward_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum forward distance to search the avoidance target.</td>
 <td>50.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>detection_area.max_forward_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>detection_<wbr>area.<wbr>max_<wbr>forward_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum forward distance to search the avoidance target.</td>
 <td>150.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>detection_area.backward_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>detection_<wbr>area.<wbr>backward_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Backward distance to search the avoidance target.</td>
 <td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>merging_vehicle.th_overhang_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>merging_<wbr>vehicle.<wbr>th_<wbr>overhang_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold to ignore merging/deviating vehicle to/from ego driving lane. The distance represents how the object polygon overlaps ego lane, and it's calculated from polygon overhang point and lane centerline. If the distance is more than this param, the module never avoid the object. (Basically, the ego stops behind of it.)</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>parked_vehicle.th_offset_from_centerline</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>parked_<wbr>vehicle.<wbr>th_<wbr>offset_<wbr>from_<wbr>centerline</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Vehicles around the center line within this distance will be excluded from avoidance target.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>parked_vehicle.th_shiftable_ratio</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>parked_<wbr>vehicle.<wbr>th_<wbr>shiftable_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Vehicles around the center line within this distance will be excluded from avoidance target.</td>
 <td>0.8</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>parked_vehicle.min_road_shoulder_width</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>parked_<wbr>vehicle.<wbr>min_<wbr>road_<wbr>shoulder_<wbr>width</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Width considered as a road shoulder if the lane does not have a road shoulder target.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>avoidance_for_ambiguous_vehicle.policy</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>policy</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Ego behavior policy for ambiguous vehicle.</td>
 <td>true</td>
 <td>['auto', 'manual', 'ignore']</td>
 </tr>
 <tr>
-<td>avoidance_for_ambiguous_vehicle.closest_distance_to_wait_and_see</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>closest_<wbr>distance_<wbr>to_<wbr>wait_<wbr>and_<wbr>see</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Start avoidance maneuver after the distance to ambiguous vehicle is less than this param.</td>
 <td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>condition.th_stopped_time</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>condition.<wbr>th_<wbr>stopped_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Never avoid object whose stopped time is less than this param.</td>
 <td>3.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>condition.th_moving_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>condition.<wbr>th_<wbr>moving_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Never avoid object which moves more than this param.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light.front_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>ignore_<wbr>area.<wbr>traffic_<wbr>light.<wbr>front_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the distance between traffic light and vehicle is less than this parameter, this module will ignore it.</td>
 <td>100.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>crosswalk.front_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>ignore_<wbr>area.<wbr>crosswalk.<wbr>front_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the front distance between crosswalk and vehicle is less than this parameter, this module will ignore it.</td>
 <td>30.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>crosswalk.behind_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>ignore_<wbr>area.<wbr>crosswalk.<wbr>behind_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the back distance between crosswalk and vehicle is less than this parameter, this module will ignore it.</td>
 <td>30.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>wait_and_see.target_behaviors</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>wait_<wbr>and_<wbr>see.<wbr>target_<wbr>behaviors</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>This module doesn't avoid these behaviors vehicle until it gets closer than threshold.</td>
 <td>['MERGING', 'DEVIATING']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>wait_and_see.th_closest_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>wait_<wbr>and_<wbr>see.<wbr>th_<wbr>closest_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold to check whether the ego gets close enough the ambiguous vehicle.</td>
 <td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>avoidance_for_parking_violation_vehicle.policy</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>parking_<wbr>violation_<wbr>vehicle.<wbr>policy</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Ego behavior policy for parking violation vehicle.</td>
 <td>ignore</td>
 <td>['auto', 'manual', 'ignore']</td>
 </tr>
 <tr>
-<td>condition.th_road_border_distance</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>parking_<wbr>violation_<wbr>vehicle.<wbr>condition.<wbr>th_<wbr>road_<wbr>border_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold from road border to determine parking violation.</td>
 <td>0.8</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>avoidance_for_adjacent_lane_stop_vehicle.policy</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>adjacent_<wbr>lane_<wbr>stop_<wbr>vehicle.<wbr>policy</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Ego behavior policy for adjacent lane stop vehicle.</td>
 <td>auto</td>
 <td>['auto', 'manual', 'ignore']</td>
 </tr>
 <tr>
-<td>avoidance_for_close_vehicle.policy</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>close_<wbr>vehicle.<wbr>policy</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Ego behavior policy for close vehicle (stopped ego with insufficient avoidance distance). 'auto': avoid automatically in RTC AUTO mode. 'manual': generate candidate path and wait for operator approval. 'ignore': never avoid.</td>
 <td>ignore</td>
 <td>['auto', 'manual', 'ignore']</td>
 </tr>
 <tr>
-<td>intersection.yaw_deviation</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>intersection.<wbr>yaw_<wbr>deviation</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw deviation threshold param to judge if the object is not merging or deviating vehicle.</td>
 <td>0.349</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>condition.th_stopped_time</td>
+<td>avoidance.<wbr>target_<wbr>filtering.<wbr>freespace.<wbr>condition.<wbr>th_<wbr>stopped_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This module delays avoidance maneuver to see vehicle behavior in freespace.</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.car</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>car</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for CAR.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.truck</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>truck</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for TRUCK.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.bus</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>bus</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for BUS.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.trailer</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for TRAILER.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.unknown</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for UNKNOWN.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.bicycle</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for BICYCLE.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.motorcycle</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for MOTORCYCLE.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>target_type.pedestrian</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>target_<wbr>type.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable safety_check for PEDESTRIAN.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.enable</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>enable</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable to use safety check feature.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.check_current_lane</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>check_<wbr>current_<wbr>lane</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Check objects on current driving lane.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.check_shift_side_lane</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>check_<wbr>shift_<wbr>side_<wbr>lane</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Check objects on shift side lane.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.check_other_side_lane</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>check_<wbr>other_<wbr>side_<wbr>lane</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Check objects on other side lane.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.check_unavoidable_object</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>check_<wbr>unavoidable_<wbr>object</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Check collision between ego and unavoidable objects.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.check_other_object</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>check_<wbr>other_<wbr>object</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Check collision between ego and non avoidance target objects.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.check_all_predicted_path</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>check_<wbr>all_<wbr>predicted_<wbr>path</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Check all prediction path of safety check target objects.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.safety_check_backward_distance</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>safety_<wbr>check_<wbr>backward_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Backward distance to search the dynamic objects.</td>
 <td>100.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.hysteresis_factor_expand_rate</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>hysteresis_<wbr>factor_<wbr>expand_<wbr>rate</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Hysteresis factor that be used for chattering prevention.</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.hysteresis_factor_safe_count</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>hysteresis_<wbr>factor_<wbr>safe_<wbr>count</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Hysteresis count that be used for chattering prevention.</td>
 <td>10</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.collision_check_yaw_diff_threshold</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>collision_<wbr>check_<wbr>yaw_<wbr>diff_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max yaw difference between ego and object when doing collision check</td>
 <td>3.1416</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.min_velocity</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>min_<wbr>velocity</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum velocity of the ego vehicle's predicted path.</td>
 <td>1.38</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.max_velocity</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>max_<wbr>velocity</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum velocity of the ego vehicle's predicted path.</td>
 <td>50.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.time_resolution</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>time_<wbr>resolution</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time resolution for the ego vehicle's predicted path.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.time_horizon_for_front_object</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>time_<wbr>horizon_<wbr>for_<wbr>front_<wbr>object</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time horizon for predicting front objects.</td>
 <td>3.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.time_horizon_for_rear_object</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>time_<wbr>horizon_<wbr>for_<wbr>rear_<wbr>object</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time horizon for predicting rear objects.</td>
 <td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.delay_until_departure</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>delay_<wbr>until_<wbr>departure</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Delay until the ego vehicle departs.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.extended_polygon_policy</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>extended_<wbr>polygon_<wbr>policy</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>See https://github.com/autowarefoundation/autoware_universe/pull/6336.</td>
 <td>along_path</td>
 <td>['rectangle', 'along_path']</td>
 </tr>
 <tr>
-<td>safety_check.expected_front_deceleration</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>expected_<wbr>front_<wbr>deceleration</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The front object's maximum deceleration when the front vehicle perform sudden braking.</td>
 <td>-1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.expected_rear_deceleration</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>expected_<wbr>rear_<wbr>deceleration</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The rear object's maximum deceleration when the rear vehicle perform sudden braking.</td>
 <td>-1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.rear_vehicle_reaction_time</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>rear_<wbr>vehicle_<wbr>reaction_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The reaction time of the rear vehicle driver which starts from the driver noticing the sudden braking of the front vehicle until the driver step on the brake.</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.rear_vehicle_safety_time_margin</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>rear_<wbr>vehicle_<wbr>safety_<wbr>time_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The time buffer for the rear vehicle to come into complete stop when its driver perform sudden braking.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.lateral_distance_max_threshold</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>lateral_<wbr>distance_<wbr>max_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The lateral distance threshold that is used to determine whether lateral distance between two object is enough and whether lane change is safe.</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.longitudinal_distance_min_threshold</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>longitudinal_<wbr>distance_<wbr>min_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The longitudinal distance threshold that is used to determine whether longitudinal distance between two object is enough and whether lane change is safe.</td>
 <td>3.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>safety_check.longitudinal_velocity_delta_time</td>
+<td>avoidance.<wbr>safety_<wbr>check.<wbr>longitudinal_<wbr>velocity_<wbr>delta_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.th_avoid_execution</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>th_<wbr>avoid_<wbr>execution</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The lateral distance deviation threshold between the current path and suggested avoidance point to execute avoidance.</td>
 <td>0.09</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.th_small_shift_length</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>th_<wbr>small_<wbr>shift_<wbr>length</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The shift lines whose lateral offset is less than this will be applied with other ones.</td>
 <td>0.101</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.soft_drivable_bound_margin</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>soft_<wbr>drivable_<wbr>bound_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Keep distance to drivable bound.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.hard_drivable_bound_margin</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>hard_<wbr>drivable_<wbr>bound_<wbr>margin</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Keep distance to drivable bound.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.max_right_shift_length</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>max_<wbr>right_<wbr>shift_<wbr>length</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum shift length for right direction</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.max_left_shift_length</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>max_<wbr>left_<wbr>shift_<wbr>length</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum shift length for left direction.</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.max_deviation_from_lane</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>max_<wbr>deviation_<wbr>from_<wbr>lane</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Use in validation phase to check if the avoidance path is in drivable area.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.ratio_for_return_shift_approval</td>
+<td>avoidance.<wbr>avoidance.<wbr>lateral.<wbr>ratio_<wbr>for_<wbr>return_<wbr>shift_<wbr>approval</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>This parameter is added to allow waiting for the return of shift approval until the occlusion behind the avoid target is clear.</td>
 <td>0.5</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>longitudinal.min_prepare_time</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>min_<wbr>prepare_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Avoidance shift starts from point ahead of this time x ego speed at least.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.max_prepare_time</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>max_<wbr>prepare_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Avoidance shift starts from point ahead of this time x ego speed if possible.</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.min_prepare_distance</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>min_<wbr>prepare_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum prepare distance.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.min_slow_down_speed</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>min_<wbr>slow_<wbr>down_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum slow speed for avoidance prepare section.</td>
 <td>1.38</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.buf_slow_down_speed</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>buf_<wbr>slow_<wbr>down_<wbr>speed</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Buffer for controller tracking error. Basically, vehicle always cannot follow velocity profile precisely. Therefore, the module inserts lower speed than target speed that satisfies conditions to avoid object within accel/jerk constraints so that the avoidance path always can be output even if the current speed is a little bit higher than target speed.</td>
 <td>0.56</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.nominal_avoidance_speed</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>nominal_<wbr>avoidance_<wbr>speed</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Nominal avoidance speed.</td>
 <td>8.33</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.consider_front_overhang</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>consider_<wbr>front_<wbr>overhang</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to consider vehicle front overhang in shift line generation logic.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.consider_rear_overhang</td>
+<td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>consider_<wbr>rear_<wbr>overhang</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to consider vehicle rear overhang in shift line generation logic.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>goal.enable</td>
+<td>avoidance.<wbr>avoidance.<wbr>return_<wbr>dead_<wbr>line.<wbr>goal.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Insert stop point in order to return original lane before reaching goal.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>goal.buffer</td>
+<td>avoidance.<wbr>avoidance.<wbr>return_<wbr>dead_<wbr>line.<wbr>goal.<wbr>buffer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Buffer distance to return original lane before reaching goal.</td>
 <td>3.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light.enable</td>
+<td>avoidance.<wbr>avoidance.<wbr>return_<wbr>dead_<wbr>line.<wbr>traffic_<wbr>light.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Insert stop point in order to return original lane before reaching traffic light.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light.buffer</td>
+<td>avoidance.<wbr>avoidance.<wbr>return_<wbr>dead_<wbr>line.<wbr>traffic_<wbr>light.<wbr>buffer</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Buffer distance to return original lane before reaching traffic light.</td>
 <td>3.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>stop.max_distance</td>
+<td>avoidance.<wbr>stop.<wbr>max_<wbr>distance</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum stop distance in the situation where avoidance maneuver is not approved or in yield maneuver.</td>
 <td>20.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>stop.stop_buffer</td>
+<td>avoidance.<wbr>stop.<wbr>stop_<wbr>buffer</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Buffer distance in the situation where avoidance maneuver is not approved or in yield maneuver.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>yield.enable</td>
+<td>avoidance.<wbr>yield.<wbr>enable</wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable yield maneuver.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>yield.enable_during_shifting</td>
+<td>avoidance.<wbr>yield.<wbr>enable_<wbr>during_<wbr>shifting</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable yield maneuver during shifting.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>cancel.enable</td>
+<td>avoidance.<wbr>cancel.<wbr>enable</wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable cancel maneuver.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>force.duration_time</td>
+<td>avoidance.<wbr>cancel.<wbr>force.<wbr>duration_<wbr>time</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>force deactivate duration time</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>policy.detection_reliability</td>
+<td>avoidance.<wbr>policy.<wbr>detection_<wbr>reliability</wbr></wbr></wbr></td>
 <td>string</td>
 <td>policy for module behavior. select 'reliable' or 'not_enough'. 'reliable': this module fully trusts the perception results and makes all decisions automatically.  'not_enough': because the perception results are not fully reliable, the system waits for the operator's judgment in situations where long-range perception is required.</td>
 <td>reliable</td>
 <td>['reliable', 'not_enough']</td>
 </tr>
 <tr>
-<td>policy.make_approval_request</td>
+<td>avoidance.<wbr>policy.<wbr>make_<wbr>approval_<wbr>request</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>policy for rtc request. select <code>per_shift_line</code> or <code>per_avoidance_maneuver</code>. <code>per_shift_line</code>: request approval for each shift line. <code>per_avoidance_maneuver</code>: request approval for avoidance maneuver (avoid + return).</td>
 <td>per_shift_line</td>
 <td>['per_shift_line', 'per_avoidance_maneuver']</td>
 </tr>
 <tr>
-<td>policy.deceleration</td>
+<td>avoidance.<wbr>policy.<wbr>deceleration</wbr></wbr></td>
 <td>string</td>
 <td>policy for vehicle slow down behavior. select <code>best_effort</code> or <code>reliable</code>. <code>best_effort</code>: slow down deceleration &amp; jerk are limited by constraints but there is a possibility that the vehicle can't stop in front of the vehicle. <code>reliable</code>: insert stop or slow down point with ignoring decel/jerk constraints. make it possible to increase chance to avoid but uncomfortable deceleration maybe happen.</td>
 <td>best_effort</td>
 <td>['reliable', 'best_effort']</td>
 </tr>
 <tr>
-<td>policy.lateral_margin</td>
+<td>avoidance.<wbr>policy.<wbr>lateral_<wbr>margin</wbr></wbr></wbr></td>
 <td>string</td>
 <td>policy for voidance lateral margin. select <code>best_effort</code> or <code>reliable</code>. <code>best_effort</code>: output avoidance path with shorten lateral margin when there is no enough longitudinal margin to avoid. <code>reliable</code>: module output avoidance path with safe (rtc cooperate) state only when the vehicle can avoid with expected lateral margin.</td>
 <td>best_effort</td>
 <td>['reliable', 'best_effort']</td>
 </tr>
 <tr>
-<td>policy.use_shorten_margin_immediately</td>
+<td>avoidance.<wbr>policy.<wbr>use_<wbr>shorten_<wbr>margin_<wbr>immediately</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, module doesn't wait deceleration and outputs avoidance path by best effort margin.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>policy.candidate_path_turn_signal</td>
+<td>avoidance.<wbr>policy.<wbr>candidate_<wbr>path_<wbr>turn_<wbr>signal</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>policy for turn signal output during planWaitingApproval (candidate path). 'none': never output turn signal for candidate paths. 'stopped_candidate': output turn signal only when the vehicle is stopped and a candidate path exists (default behavior). 'all_candidate': always output turn signal whenever a candidate path exists. 'stop_on_approval': no turn signal during candidate phase; after approval, hold a stop point and turn signal for turn_signal_on_approval_hold_duration seconds before proceeding with avoidance.</td>
 <td>none</td>
 <td>['none', 'stopped_candidate', 'all_candidate', 'stop_on_approval']</td>
 </tr>
 <tr>
-<td>policy.turn_signal_on_approval_hold_duration</td>
+<td>avoidance.<wbr>policy.<wbr>turn_<wbr>signal_<wbr>on_<wbr>approval_<wbr>hold_<wbr>duration</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>duration [s] to hold stop and turn signal after approval (used by 'stop_on_approval' policy)</td>
 <td>3.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>lateral.velocity</td>
+<td>avoidance.<wbr>constraints.<wbr>lateral.<wbr>velocity</wbr></wbr></wbr></td>
 <td>array</td>
 <td>Velocity array to decide current lateral accel/jerk limit.</td>
 <td>[1.0, 1.38, 11.1]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.max_accel_values</td>
+<td>avoidance.<wbr>constraints.<wbr>lateral.<wbr>max_<wbr>accel_<wbr>values</wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Avoidance path gets sharp up to this accel limit when there is not enough distance from ego.</td>
 <td>[0.5, 0.5, 0.5]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_jerk_values.avoid</td>
+<td>avoidance.<wbr>constraints.<wbr>lateral.<wbr>min_<wbr>jerk_<wbr>values.<wbr>avoid</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Minimum lateral jerk constraint when laterally shifting to avoid an obstacle.</td>
 <td>[0.2, 0.2, 0.2]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_jerk_values.return</td>
+<td>avoidance.<wbr>constraints.<wbr>lateral.<wbr>min_<wbr>jerk_<wbr>values.<wbr>return</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Minimum lateral jerk constraint when laterally shifting to return to the original lane.</td>
 <td>[0.2, 0.2, 0.2]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>lateral.max_jerk_values</td>
+<td>avoidance.<wbr>constraints.<wbr>lateral.<wbr>max_<wbr>jerk_<wbr>values</wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Avoidance path gets sharp up to this jerk limit when there is not enough distance from ego.</td>
 <td>[1.0, 1.0, 1.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.nominal_deceleration</td>
+<td>avoidance.<wbr>constraints.<wbr>longitudinal.<wbr>nominal_<wbr>deceleration</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Nominal deceleration limit.</td>
 <td>-1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.nominal_jerk</td>
+<td>avoidance.<wbr>constraints.<wbr>longitudinal.<wbr>nominal_<wbr>jerk</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Nominal jerk limit.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.max_deceleration</td>
+<td>avoidance.<wbr>constraints.<wbr>longitudinal.<wbr>max_<wbr>deceleration</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max deceleration limit.</td>
 <td>-1.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.max_jerk</td>
+<td>avoidance.<wbr>constraints.<wbr>longitudinal.<wbr>max_<wbr>jerk</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max jerk limit.</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.max_acceleration</td>
+<td>avoidance.<wbr>constraints.<wbr>longitudinal.<wbr>max_<wbr>acceleration</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum acceleration during avoidance.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>longitudinal.min_velocity_to_limit_max_acceleration</td>
+<td>avoidance.<wbr>constraints.<wbr>longitudinal.<wbr>min_<wbr>velocity_<wbr>to_<wbr>limit_<wbr>max_<wbr>acceleration</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the ego speed is faster than this param, the module applies acceleration limit <code>max_acceleration</code>.</td>
 <td>2.78</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trim.quantize_size</td>
+<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>quantize_<wbr>size</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral shift length quantize size.</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trim.th_similar_grad_1</td>
+<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_<wbr>1</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral shift length threshold to merge similar gradient shift lines.</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trim.th_similar_grad_2</td>
+<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_<wbr>2</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral shift length threshold to merge similar gradient shift lines.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trim.th_similar_grad_3</td>
+<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_<wbr>3</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral shift length threshold to merge similar gradient shift lines.</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_other_objects_marker</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>other_<wbr>objects_<wbr>marker</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish other objects marker.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_other_objects_info</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>other_<wbr>objects_<wbr>info</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish other objects detail information.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_detection_area_marker</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>detection_<wbr>area_<wbr>marker</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish detection area.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_drivable_bound_marker</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>drivable_<wbr>bound_<wbr>marker</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish drivable area boundary.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_safety_check_marker</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>safety_<wbr>check_<wbr>marker</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish safety check information.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_shift_line_marker</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>shift_<wbr>line_<wbr>marker</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish shift line information.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_lane_marker</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>lane_<wbr>marker</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish lane information.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug.enable_misc_marker</td>
+<td>avoidance.<wbr>debug.<wbr>enable_<wbr>misc_<wbr>marker</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish misc markers.</td>
 <td>false</td>
