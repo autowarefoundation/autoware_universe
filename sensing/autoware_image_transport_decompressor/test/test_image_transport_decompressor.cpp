@@ -322,6 +322,19 @@ TEST_F(ImageTransportDecompressorEdgeCaseTest, ThrowsForUndecodableData)
   EXPECT_THROW(decompress(message, "default"), std::runtime_error);
 }
 
+// A message with no payload at all reaches the caller the same way, although the decoder reports it
+// by throwing rather than by returning an empty image.
+TEST_F(ImageTransportDecompressorEdgeCaseTest, ThrowsForAnEmptyPayload)
+{
+  // Arrange
+  sensor_msgs::msg::CompressedImage message;
+  message.header.frame_id = "camera";
+  message.format = "bgr8; png compressed bgr8";
+
+  // Act & Assert
+  EXPECT_THROW(decompress(message, "bgr8"), std::runtime_error);
+}
+
 // KNOWN DEFECT: cv_bridge rejects the 16-bit message, so every consumer using it fails per frame.
 TEST_F(ImageTransportDecompressorEdgeCaseTest, MalformedSixteenBitOutputIsRejectedByCvBridge)
 {
