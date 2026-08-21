@@ -45,10 +45,13 @@ struct DefaultPlannerParameters
 class DefaultPlanner : public mission_planner_universe::PlannerPlugin
 {
 public:
-  DefaultPlanner() : vehicle_info_(), is_graph_ready_(false), param_(), node_(nullptr) {}
+  DefaultPlanner() : vehicle_info_(), is_graph_ready_(false), param_() {}
 
-  void initialize(rclcpp::Node * node) override;
-  void initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg) override;
+  // Keep the node-based convenience overload of the base class visible.
+  using mission_planner_universe::PlannerPlugin::initialize;
+
+  void initialize(const Context & context) override;
+  void set_map(const LaneletMapBin & map) override;
   [[nodiscard]] bool ready() const override;
   LaneletRoute plan(const RoutePoints & points) override;
   void updateRoute(const PlannerPlugin::LaneletRoute & route) override;
@@ -71,12 +74,7 @@ protected:
 
   DefaultPlannerParameters param_;
 
-  rclcpp::Node * node_;
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr map_subscriber_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr pub_goal_footprint_marker_;
-
-  void initialize_common(rclcpp::Node * node);
-  void map_callback(const LaneletMapBin::ConstSharedPtr msg);
+  Context context_;
 
   /**
    * @brief check if the goal_footprint is within the lanelets closest to the goal plus the
