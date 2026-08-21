@@ -607,7 +607,8 @@ void ProcessMonitor::fillTaskInfo(
   info.virtualImage = to7DigitString(virtual_image_size_kb);
   info.residentSize = to6DigitString(resident_size_kb);
   info.sharedMemSize = to6DigitString(shared_mem_size_kb);
-  info.processStatus = raw_p->stat_info.state;
+  info.processStatus =
+    raw_p->stat_info.state == '\0' ? std::string{} : std::string(1, raw_p->stat_info.state);
   double cpuUsage = raw_p->diff_info.cpu_usage;
   info.cpuUsage = formatCpuUsage(cpuUsage, uptime_delta_sec, clock_tick_);
   info.memoryUsage = formatMemoryUsage(resident_size_kb, mem_total_kb_);
