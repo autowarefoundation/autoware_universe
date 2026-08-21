@@ -14,6 +14,7 @@
 
 #include "autoware/tensorrt_plugins/get_indices_pairs_plugin.hpp"
 
+#include "autoware/scalar_ops/fill_scalar.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
 
 #include <NvInferRuntime.h>
@@ -229,12 +230,17 @@ std::int32_t GetIndicesPairsPlugin::getOutputShapes(
 }
 
 std::int32_t GetIndicesPairsPlugin::enqueue(
-  PluginTensorDesc const * input_desc, [[maybe_unused]] PluginTensorDesc const * output_desc,
+  PluginTensorDesc const * input_desc, PluginTensorDesc const * output_desc,
   void const * const * inputs, void * const * outputs, [[maybe_unused]] void * workspace,
   cudaStream_t stream) noexcept
 {
   using SpconvOps = spconvlib::spconv::csrc::sparse::all::SpconvOps;
   using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
+
+  if (isStreamCapturing(stream)) {
+    warnOnceStreamCaptureUnsupported(kGET_INDICES_PAIRS_PLUGIN_NAME, stream_capture_warned_);
+    return zeroPluginOutputs(output_desc, getNbOutputs(), outputs, stream) == cudaSuccess ? 0 : -1;
+  }
 
   const bool is_subm = params_.subm;
   const int num_act_in = input_desc[0].dims.d[0];
@@ -291,12 +297,10 @@ std::int32_t GetIndicesPairsPlugin::enqueue(
 
   std::int32_t * num_act_out_data = static_cast<std::int32_t *>(outputs[3]);
 
-  cudaError_t const status = cudaMemcpyAsync(
-    num_act_out_data, &num_act_out_real, sizeof(std::int32_t), cudaMemcpyHostToDevice, stream);
-
-  cudaStreamSynchronize(stream);
-
-  return status;
+  // Publish the count with a kernel rather than a host-to-device copy: the source is a stack
+  // variable, so a pageable copy would be rejected while TensorRT captures the stream to time
+  // tactics during engine build. The launch is stream-ordered, so no synchronization is needed.
+  return fill_scalar_int32(num_act_out_data, num_act_out_real, stream);
 }
 
 std::int32_t GetIndicesPairsPlugin::onShapeChange(
