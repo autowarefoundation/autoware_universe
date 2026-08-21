@@ -14,6 +14,7 @@
 
 #include "component_monitor_node.hpp"
 
+#include "top_memory_parser.hpp"
 #include "unit_conversions.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -145,31 +146,7 @@ ComponentMonitor::VecVecStr ComponentMonitor::parse_lines_into_words(
 
 std::uint64_t ComponentMonitor::parse_memory_res(const std::string & mem_res)
 {
-  // example 1: 12.3g
-  // example 2: 123 (without suffix, just bytes)
-  // NOLINTNEXTLINE(readability/casting)
-  static const std::unordered_map<char, std::function<std::uint64_t(double)>> unit_map{
-    {'k', unit_conversions::kib_to_bytes<double>}, {'m', unit_conversions::mib_to_bytes<double>},
-    {'g', unit_conversions::gib_to_bytes<double>}, {'t', unit_conversions::tib_to_bytes<double>},
-    {'p', unit_conversions::pib_to_bytes<double>}, {'e', unit_conversions::eib_to_bytes<double>}};
-
-  if (std::isdigit(mem_res.back())) {
-    return std::stoull(mem_res);  // Handle plain bytes without any suffix
-  }
-
-  // Extract the numeric part and the unit suffix
-  double value = std::stod(mem_res.substr(0, mem_res.size() - 1));
-  char suffix = mem_res.back();
-
-  // Find the appropriate function from the map
-  auto it = unit_map.find(suffix);
-  if (it != unit_map.end()) {
-    const auto & conversion_function = it->second;
-    return conversion_function(value);
-  }
-
-  // Throw an exception or handle the error as needed if the suffix is not recognized
-  throw std::runtime_error("Unsupported unit suffix: " + std::string(1, suffix));
+  return parse_top_res_to_bytes(mem_res);
 }
 
 }  // namespace autoware::component_monitor
