@@ -193,9 +193,12 @@ void SteerOffsetEstimatorNode::publish_data(const SteerOffsetEstimationUpdated &
   pub_float(pub_steer_offset_covariance_, result.covariance);
 
   if (is_publish_update()) {
-    pub_float(pub_steer_offset_update_, latest_reliable_result_->offset);
-    last_offset_update_ = latest_reliable_result_->offset;
-    log_offset_update(latest_reliable_result_.value());
+    // is_publish_update() ensures latest_reliable_result_ is available.
+    const auto latest_reliable_result =
+      latest_reliable_result_.value_or(SteerOffsetEstimationUpdated{});
+    pub_float(pub_steer_offset_update_, latest_reliable_result.offset);
+    last_offset_update_ = latest_reliable_result.offset;
+    log_offset_update(latest_reliable_result);
   }
 
   autoware_internal_debug_msgs::msg::StringStamped debug_info;
