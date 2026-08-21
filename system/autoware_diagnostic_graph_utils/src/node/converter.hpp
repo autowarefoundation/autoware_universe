@@ -17,6 +17,7 @@
 
 #include "autoware/diagnostic_graph_utils/subscription.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
@@ -25,7 +26,7 @@
 namespace autoware::diagnostic_graph_utils
 {
 
-class ConverterNode : public rclcpp::Node
+class ConverterNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ConverterNode(const rclcpp::NodeOptions & options);
@@ -34,7 +35,7 @@ private:
   using DiagnosticArray = diagnostic_msgs::msg::DiagnosticArray;
   using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
   void on_update(DiagGraph::ConstSharedPtr graph);
-  rclcpp::Publisher<DiagnosticArray>::SharedPtr pub_array_;
+  AUTOWARE_PUBLISHER_PTR(DiagnosticArray) pub_array_;
   DiagGraphSubscription sub_graph_;
 };
 

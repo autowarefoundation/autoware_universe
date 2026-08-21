@@ -20,6 +20,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::diagnostic_graph_utils
@@ -40,7 +41,8 @@ LoggingNode::LoggingNode(const rclcpp::NodeOptions & options) : Node("logging", 
     create_publisher<StringStamped>("~/debug/error_graph_text", rclcpp::QoS(1));
 
   const auto period = rclcpp::Rate(declare_parameter<double>("show_rate")).period();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
+  timer_ =
+    autoware::agnocast_wrapper::create_timer(this, get_clock(), period, [this]() { on_timer(); });
 }
 
 void LoggingNode::on_create(DiagGraph::ConstSharedPtr graph)
@@ -74,10 +76,10 @@ void LoggingNode::on_timer()
     }
 
     // publish debug topic
-    StringStamped error_graph_message;
-    error_graph_message.stamp = now();
-    error_graph_message.data = error_graph_text;
-    pub_error_graph_text_->publish(error_graph_message);
+    auto error_graph_message = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_error_graph_text_);
+    error_graph_message->stamp = now();
+    error_graph_message->data = error_graph_text;
+    pub_error_graph_text_->publish(std::move(error_graph_message));
 
     // update previous value
     prev_error_graph_text_ = error_graph_text;
@@ -85,9 +87,9 @@ void LoggingNode::on_timer()
     const std::string error_graph_text{""};
 
     // publish debug topic
-    StringStamped error_graph_message;
-    error_graph_message.stamp = now();
-    pub_error_graph_text_->publish(error_graph_message);
+    auto error_graph_message = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_error_graph_text_);
+    error_graph_message->stamp = now();
+    pub_error_graph_text_->publish(std::move(error_graph_message));
 
     // show on terminal
     if (enable_terminal_log_ && error_graph_text != prev_error_graph_text_) {
