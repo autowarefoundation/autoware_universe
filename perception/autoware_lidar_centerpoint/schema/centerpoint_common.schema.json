@@ -34,11 +34,6 @@
               "default": 0.1,
               "minimum": 0.0,
               "maximum": 1.0
-            },
-            "yaw_norm_thresholds": {
-              "type": "array",
-              "description": "An array of distance threshold values of norm of yaw [rad].",
-              "default": [0.3, 0.3, 0.3, 0.3, 0.0]
             }
           }
         },
