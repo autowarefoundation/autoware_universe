@@ -34,9 +34,9 @@ class PlanningValidatorManager
 public:
   PlanningValidatorManager();
   void load_plugin(
-    rclcpp::Node & node, const std::string & name,
+    autoware::agnocast_wrapper::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context);
-  void unload_plugin(rclcpp::Node & node, const std::string & name);
+  void unload_plugin(autoware::agnocast_wrapper::Node & node, const std::string & name);
   void validate();
 
 private:

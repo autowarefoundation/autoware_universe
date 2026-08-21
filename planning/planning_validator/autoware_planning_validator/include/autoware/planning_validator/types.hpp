@@ -19,6 +19,9 @@
 #include "autoware/planning_validator/utils.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <autoware/route_handler/route_handler.hpp>
@@ -31,9 +34,6 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 #include <string>
@@ -173,17 +173,19 @@ struct PlanningValidatorData
 
 struct PlanningValidatorContext
 {
-  explicit PlanningValidatorContext(rclcpp::Node * node)
+  explicit PlanningValidatorContext(autoware::agnocast_wrapper::Node * node)
   : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
     tf_buffer{node->get_clock()},
-    tf_listener{tf_buffer},
+    tf_listener{tf_buffer, *node},
     clock{node->get_clock()}
   {
     debug_pose_publisher = std::make_shared<PlanningValidatorDebugMarkerPublisher>(node);
     data = std::make_shared<PlanningValidatorData>();
     validation_status = std::make_shared<PlanningValidatorStatus>();
-    diag_updater = std::make_shared<Updater>(node);
-    vehicle_stop_checker_ = std::make_shared<autoware::motion_utils::VehicleStopChecker>(node);
+    diag_updater = std::make_shared<autoware::agnocast_wrapper::diagnostic_updater::Updater>(node);
+    constexpr double vehicle_velocity_buffer_time_sec = 10.0;
+    vehicle_stop_checker_ = std::make_shared<autoware::motion_utils::VehicleStopCheckerBase>(
+      node, vehicle_velocity_buffer_time_sec);
     init_validation_status();
   }
 
@@ -192,13 +194,13 @@ struct PlanningValidatorContext
   PlanningValidatorParams params;
 
   std::shared_ptr<PlanningValidatorDebugMarkerPublisher> debug_pose_publisher = nullptr;
-  std::shared_ptr<Updater> diag_updater = nullptr;
+  std::shared_ptr<autoware::agnocast_wrapper::diagnostic_updater::Updater> diag_updater = nullptr;
   std::shared_ptr<PlanningValidatorData> data = nullptr;
   std::shared_ptr<PlanningValidatorStatus> validation_status = nullptr;
-  std::shared_ptr<autoware::motion_utils::VehicleStopChecker> vehicle_stop_checker_ = nullptr;
+  std::shared_ptr<autoware::motion_utils::VehicleStopCheckerBase> vehicle_stop_checker_ = nullptr;
 
-  tf2_ros::Buffer tf_buffer;
-  tf2_ros::TransformListener tf_listener;
+  autoware::agnocast_wrapper::Buffer tf_buffer;
+  autoware::agnocast_wrapper::TransformListener tf_listener;
   rclcpp::Clock::SharedPtr clock{};
 
   auto get_traffic_signal(const int64_t group_id) -> std::optional<std::vector<TrafficLightElement>>
