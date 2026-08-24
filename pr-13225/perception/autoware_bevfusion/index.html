@@ -23093,7 +23093,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>plugins_<wbr>path</wbr></td>
 <td>string</td>
 <td>A path to the TensorRT plugins.</td>
-<td>$(find-pkg-share autoware_bevfusion)/plugins/libautoware_tensorrt_plugins.so</td>
+<td>$(find-pkg-share autoware_<wbr>bevfusion)/<wbr>plugins/<wbr>libautoware_<wbr>tensorrt_<wbr>plugins.<wbr>so</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23114,28 +23114,28 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>onnx_<wbr>path</wbr></td>
 <td>string</td>
 <td>A path to ONNX model file.</td>
-<td>$(var model_path)/bevfusion_camera_lidar.onnx</td>
+<td>$(var model_<wbr>path)/<wbr>bevfusion_<wbr>camera_<wbr>lidar.<wbr>onnx</wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>engine_<wbr>path</wbr></td>
 <td>string</td>
 <td>A path to TensorRT engine file.</td>
-<td>$(var model_path)/bevfusion_camera_lidar.engine</td>
+<td>$(var model_<wbr>path)/<wbr>bevfusion_<wbr>camera_<wbr>lidar.<wbr>engine</wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>image_<wbr>backbone_<wbr>onnx_<wbr>path</wbr></wbr></wbr></td>
 <td>string</td>
 <td>A path to ONNX model file for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.</td>
-<td>$(var model_path)/bevfusion_image_backbone.onnx</td>
+<td>$(var model_<wbr>path)/<wbr>bevfusion_<wbr>image_<wbr>backbone.<wbr>onnx</wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>image_<wbr>backbone_<wbr>engine_<wbr>path</wbr></wbr></wbr></td>
 <td>string</td>
 <td>A path to TensorRT engine file for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.</td>
-<td>$(var model_path)/bevfusion_image_backbone.engine</td>
+<td>$(var model_<wbr>path)/<wbr>bevfusion_<wbr>image_<wbr>backbone.<wbr>engine</wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23163,7 +23163,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>run_<wbr>image_<wbr>undistortion</wbr></wbr></td>
 <td>boolean</td>
 <td>A flag to run image undistortion.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23174,7 +23174,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>iou_<wbr>nms_<wbr>search_<wbr>distance_<wbr>2d</wbr></wbr></wbr></wbr></td>
+<td>iou_<wbr>nms_<wbr>search_<wbr>distance_2d</wbr></wbr></wbr></td>
 <td>float</td>
 <td>A maximum distance value to search the nearest objects.</td>
 <td>10.0</td>
@@ -23268,7 +23268,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>class_<wbr>names</wbr></td>
 <td>array</td>
 <td>Predicted classes' names.</td>
-<td>['CAR', 'TRUCK', 'BUS', 'BICYCLE', 'PEDESTRIAN', 'TRAFFIC_CONE', 'BARRIER']</td>
+<td>["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN", "TRAFFIC_<wbr>CONE", "BARRIER"]</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23422,7 +23422,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>use_<wbr>intensity</wbr></td>
 <td>boolean</td>
 <td>Whether to use intensity feature in point cloud processing.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 </tbody>

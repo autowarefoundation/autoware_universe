@@ -22960,42 +22960,42 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>plugin_<wbr>names</wbr></td>
 <td>array</td>
 <td>Ordered list of modifier and optimizer plugin class names</td>
-<td>['autoware::trajectory_processor::plugin::StopPointFixer', 'autoware::trajectory_processor::plugin::SurroundObstacleStop', 'autoware::trajectory_processor::plugin::ObstacleStop', 'autoware::trajectory_processor::plugin::TrafficLightStop', 'autoware::trajectory_processor::plugin::VelocityModifier', 'autoware::trajectory_processor::plugin::TrajectoryPointFixer', 'autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer', 'autoware::trajectory_processor::plugin::TrajectoryQPSmoother', 'autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer', 'autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer', 'autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer', 'autoware::trajectory_processor::plugin::TrajectorySplineSmoother', 'autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer', 'autoware::trajectory_processor::plugin::TrajectoryExtender']</td>
+<td>["autoware::trajectory_<wbr>processor::plugin::StopPointFixer", "autoware::trajectory_<wbr>processor::plugin::SurroundObstacleStop", "autoware::trajectory_<wbr>processor::plugin::ObstacleStop", "autoware::trajectory_<wbr>processor::plugin::TrafficLightStop", "autoware::trajectory_<wbr>processor::plugin::VelocityModifier", "autoware::trajectory_<wbr>processor::plugin::TrajectoryPointFixer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryKinematicFeasibilityEnforcer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryQPSmoother", "autoware::trajectory_<wbr>processor::plugin::TrajectoryKinematicFeasibilityEnforcer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryVelocityOptimizer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryEBSmootherOptimizer", "autoware::trajectory_<wbr>processor::plugin::TrajectorySplineSmoother", "autoware::trajectory_<wbr>processor::plugin::TrajectoryMPTOptimizer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryExtender"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>stop_<wbr>point_<wbr>fixer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the stop point fixer modifier plugin</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>obstacle_<wbr>stop</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the obstacle stop modifier plugin</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>surround_<wbr>obstacle_<wbr>stop</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the surround obstacle stop modifier plugin</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>traffic_<wbr>light_<wbr>stop</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the traffic light stop modifier plugin</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>velocity_<wbr>modifier</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the velocity modifier plugin</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23009,14 +23009,14 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>stop_<wbr>point_<wbr>fixer.<wbr>force_<wbr>stop_<wbr>long_<wbr>stopped_<wbr>trajectories</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Force zero velocity trajectory for trajectories with long stops</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>stop_<wbr>point_<wbr>fixer.<wbr>force_<wbr>stop_<wbr>close_<wbr>stopped_<wbr>trajectories</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Force zero velocity trajectory for trajectories with stops close to ego</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23072,28 +23072,28 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of objects for obstacle stop</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of pointcloud for obstacle stop</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>objects</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when object is detected as obstacle</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when pointcloud is detected as obstacle</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23163,7 +23163,7 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>obstacle_<wbr>stop.<wbr>objects.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Object types to consider for obstacle stop</td>
-<td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian', 'hazard']</td>
+<td>["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23268,7 +23268,7 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>enable</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable RSS safety check</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23359,21 +23359,21 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of objects for surround obstacle stop</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of pointcloud for surround obstacle stop</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>surround_<wbr>obstacle_<wbr>stop.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Types of objects to consider for surround obstacle stop</td>
-<td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian']</td>
+<td>["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23639,28 +23639,28 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>traffic_<wbr>light_<wbr>stop.<wbr>stop_<wbr>for_<wbr>red_<wbr>light</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when red light is detected</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>stop_<wbr>for_<wbr>amber_<wbr>light</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when amber light is detected</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>treat_<wbr>amber_<wbr>light_<wbr>as_<wbr>red</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Treat amber light as red light</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>treat_<wbr>unknown_<wbr>light_<wbr>as_<wbr>red</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Treat unknown light as red light</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23730,63 +23730,63 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>use_<wbr>akima_<wbr>spline_<wbr>interpolation</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable Akima spline interpolation for trajectory smoothing</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>eb_<wbr>smoother</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable Elastic Band smoother for trajectory smoothing</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>qp_<wbr>smoother</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable QP-based trajectory smoothing with explicit jerk constraints</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>trajectory_<wbr>point_<wbr>fixer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Remove repeated or invalid points, or points that go against the general trajectory direction</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>trajectory_<wbr>extender</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable trajectory extender to extend trajectory backward using ego pose history</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>velocity_<wbr>optimizer</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable velocity profile optimization with jerk filtering and constraint enforcement</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>kinematic_<wbr>feasibility_<wbr>enforcer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>mpt_<wbr>optimizer</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>temporal_<wbr>mpt_<wbr>optimizer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable Temporal MPT optimizer plugin (acados-based kinematic bicycle MPC for combined geometry and velocity optimization)</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23828,14 +23828,14 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>point_<wbr>fixer.<wbr>remove_<wbr>close_<wbr>points</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable removal of close proximity points</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>point_<wbr>fixer.<wbr>resample_<wbr>close_<wbr>points</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable resampling of close proximity points</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23884,7 +23884,7 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>enable_<wbr>adaptive_<wbr>width</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable adaptive corridor width based on curvature and velocity. When true, corridor widens in curves and at low speeds.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23912,14 +23912,14 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>reset_<wbr>previous_<wbr>data_<wbr>each_<wbr>iteration</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Reset MPT's previous optimization data each cycle. Should be true for diffusion planner (new trajectories each cycle), false for incremental planners.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>enable_<wbr>debug_<wbr>info</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable debug visualization markers for bounds and reference trajectory.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23975,35 +23975,35 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>enable_<wbr>debug_<wbr>info</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable debug logging for temporal MPT solver failures.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>publish_<wbr>debug_<wbr>topics</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish temporal MPT input, output, status, and control debug topics.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>write_<wbr>replay_<wbr>fixture</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Write replay fixture files when temporal MPT solving fails.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>replay_<wbr>fixture_<wbr>directory</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Directory used for temporal MPT replay fixture files.</td>
-<td>~/.ros/autoware_temporal_mpt_replay</td>
+<td>~/<wbr>.<wbr>ros/<wbr>autoware_<wbr>temporal_<wbr>mpt_<wbr>replay</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>log_<wbr>replay_<wbr>fixture_<wbr>to_<wbr>console</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Log temporal MPT replay fixture contents to console when solving fails.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24045,7 +24045,7 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>spline_<wbr>smoother.<wbr>preserve_<wbr>input_<wbr>trajectory_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Copy orientations from input trajectory to spline output</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24094,14 +24094,14 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>qp_<wbr>smoother.<wbr>osqp_<wbr>verbose</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable OSQP verbose solver output</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>qp_<wbr>smoother.<wbr>preserve_<wbr>input_<wbr>trajectory_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Copy orientations from input trajectory to smoothed output</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24115,7 +24115,7 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>qp_<wbr>smoother.<wbr>use_<wbr>velocity_<wbr>based_<wbr>fidelity</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable velocity-dependent fidelity weighting (lower fidelity at low speeds)</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24206,28 +24206,28 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>set_<wbr>engage_<wbr>speed</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Set minimum speed during engage</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>limit_<wbr>speed</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable speed limiting</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>limit_<wbr>lateral_<wbr>acceleration</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable lateral acceleration limiting</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>smooth_<wbr>velocities</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable jerk-filtered velocity smoothing</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24290,14 +24290,14 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>option.<wbr>enable_<wbr>warm_<wbr>start</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable warm start for optimization</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>option.<wbr>enable_<wbr>optimization_<wbr>validation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable optimization validation</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>

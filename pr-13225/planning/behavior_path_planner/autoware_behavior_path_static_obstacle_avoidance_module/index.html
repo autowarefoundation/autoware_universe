@@ -23934,14 +23934,14 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>avoidance.<wbr>path_<wbr>generation_<wbr>method</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Path generation method.</td>
-<td>shift_line_base</td>
+<td>shift_<wbr>line_<wbr>base</wbr></wbr></td>
 <td>['shift_line_base', 'optimization_base', 'both']</td>
 </tr>
 <tr>
 <td>avoidance.<wbr>use_<wbr>lane_<wbr>type</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Drivable lane configuration.</td>
-<td>opposite_direction_lane</td>
+<td>opposite_<wbr>direction_<wbr>lane</wbr></wbr></td>
 <td>['current_lane', 'same_direction_lane', 'opposite_direction_lane']</td>
 </tr>
 <tr>
@@ -24676,7 +24676,7 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>avoidance.<wbr>target_<wbr>filtering.<wbr>avoidance_<wbr>for_<wbr>ambiguous_<wbr>vehicle.<wbr>wait_<wbr>and_<wbr>see.<wbr>target_<wbr>behaviors</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>This module doesn't avoid these behaviors vehicle until it gets closer than threshold.</td>
-<td>['MERGING', 'DEVIATING']</td>
+<td>["MERGING", "DEVIATING"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24907,7 +24907,7 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>avoidance.<wbr>safety_<wbr>check.<wbr>extended_<wbr>polygon_<wbr>policy</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>See https://github.com/autowarefoundation/autoware_universe/pull/6336.</td>
-<td>along_path</td>
+<td>along_<wbr>path</wbr></td>
 <td>['rectangle', 'along_path']</td>
 </tr>
 <tr>
@@ -25061,14 +25061,14 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>consider_<wbr>front_<wbr>overhang</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to consider vehicle front overhang in shift line generation logic.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>avoidance.<wbr>avoidance.<wbr>longitudinal.<wbr>consider_<wbr>rear_<wbr>overhang</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to consider vehicle rear overhang in shift line generation logic.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -25152,21 +25152,21 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>avoidance.<wbr>policy.<wbr>make_<wbr>approval_<wbr>request</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>policy for rtc request. select <code>per_shift_line</code> or <code>per_avoidance_maneuver</code>. <code>per_shift_line</code>: request approval for each shift line. <code>per_avoidance_maneuver</code>: request approval for avoidance maneuver (avoid + return).</td>
-<td>per_shift_line</td>
+<td>per_<wbr>shift_<wbr>line</wbr></wbr></td>
 <td>['per_shift_line', 'per_avoidance_maneuver']</td>
 </tr>
 <tr>
 <td>avoidance.<wbr>policy.<wbr>deceleration</wbr></wbr></td>
 <td>string</td>
 <td>policy for vehicle slow down behavior. select <code>best_effort</code> or <code>reliable</code>. <code>best_effort</code>: slow down deceleration &amp; jerk are limited by constraints but there is a possibility that the vehicle can't stop in front of the vehicle. <code>reliable</code>: insert stop or slow down point with ignoring decel/jerk constraints. make it possible to increase chance to avoid but uncomfortable deceleration maybe happen.</td>
-<td>best_effort</td>
+<td>best_<wbr>effort</wbr></td>
 <td>['reliable', 'best_effort']</td>
 </tr>
 <tr>
 <td>avoidance.<wbr>policy.<wbr>lateral_<wbr>margin</wbr></wbr></wbr></td>
 <td>string</td>
 <td>policy for voidance lateral margin. select <code>best_effort</code> or <code>reliable</code>. <code>best_effort</code>: output avoidance path with shorten lateral margin when there is no enough longitudinal margin to avoid. <code>reliable</code>: module output avoidance path with safe (rtc cooperate) state only when the vehicle can avoid with expected lateral margin.</td>
-<td>best_effort</td>
+<td>best_<wbr>effort</wbr></td>
 <td>['reliable', 'best_effort']</td>
 </tr>
 <tr>
@@ -25275,21 +25275,21 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>N/A</td>
 </tr>
 <tr>
-<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_<wbr>1</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_1</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral shift length threshold to merge similar gradient shift lines.</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_<wbr>2</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_2</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral shift length threshold to merge similar gradient shift lines.</td>
 <td>0.2</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_<wbr>3</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>avoidance.<wbr>shift_<wbr>line_<wbr>pipeline.<wbr>trim.<wbr>th_<wbr>similar_<wbr>grad_3</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral shift length threshold to merge similar gradient shift lines.</td>
 <td>0.5</td>
