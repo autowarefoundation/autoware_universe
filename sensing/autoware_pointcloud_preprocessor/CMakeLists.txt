@@ -347,17 +347,17 @@ if(BUILD_TESTING)
     test/blockage_diag/test_blockage_diag.cpp
   )
 
+  ament_add_gtest(test_polar_voxel_noise_filter_node
+    test/test_polar_voxel_noise_filter_node.cpp
+  )
+  target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
+
   # The node logic itself is sufficiently covered by running these tests with ENABLE_AGNOCAST=0.
   if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
     ament_add_gtest(test_polar_voxel_outlier_filter_node
       test/test_polar_voxel_outlier_filter_node.cpp
     )
     target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
-
-    ament_add_gtest(test_polar_voxel_noise_filter_node
-      test/test_polar_voxel_noise_filter_node.cpp
-    )
-    target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
 
     ament_add_gtest(test_blockage_diag_node
       test/blockage_diag/test_blockage_diag_node.cpp
