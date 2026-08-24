@@ -146,10 +146,13 @@ const auto selected_row = ranking.selected_index;
 ```
 
 The scoring API consumes materialized atom vectors separately from ROS
-messages. A Diffusion Planner adapter constructs these atoms from candidate
-trajectories, predicted objects, route/map context, traffic signals, and the
-previously selected plan. The training code and original deployment bundle are
-available in the [CAMP repository](https://github.com/Fake-fate11/camp-core).
+messages. `autoware_diffusion_planner` provides the integrated adapter: it
+constructs the atoms from the original K=8 batch output and current map/planner
+context, invokes this scoring core, and publishes the selected original row.
+The training code and original deployment bundle are available in the
+[CAMP repository](https://github.com/Fake-fate11/camp-core).
+
+## Main Trajectory Ranker ROS Interface
 
 The output list is ordered by these scores (highest score first), followed by unranked trajectories which maintain their original relative order.
 

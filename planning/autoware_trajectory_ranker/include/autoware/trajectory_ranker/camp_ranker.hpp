@@ -26,6 +26,23 @@ namespace autoware::trajectory_ranker
 {
 
 inline constexpr std::size_t kCampAtomCount = 16;
+inline constexpr std::array<std::string_view, kCampAtomCount> kCampAtomNames{
+  "predicted_obb_collision_exposure_fraction",
+  "ttc_deficit_0_95s",
+  "dynamic_clearance_buffer_deficit",
+  "overspeed_integral_m2_per_s",
+  "full_footprint_road_exit_severity_s",
+  "reverse_progress_severity_m",
+  "red_light_crossing_exposure_fraction",
+  "red_stopping_margin_m2_s",
+  "route_progress_shortfall_m",
+  "longitudinal_acceleration_energy_s",
+  "lateral_acceleration_energy_s",
+  "yaw_rate_energy_s",
+  "yaw_acceleration_energy_s",
+  "longitudinal_jerk_energy_s",
+  "jerk_magnitude_energy_s",
+  "previous_plan_execution_transition_rms"};
 
 enum class CampAtomStatus { Observed, NotApplicable, TypedMissing };
 
@@ -43,6 +60,7 @@ struct CampFixedWeightModel
   std::size_t candidate_pool_k;
   std::vector<std::string> atom_names;
   CampAtomVector scales;
+  std::array<double, 3> transition_component_scales;
   std::vector<CampPatternWeights> patterns;
 };
 

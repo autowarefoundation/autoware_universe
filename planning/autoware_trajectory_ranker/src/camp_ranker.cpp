@@ -43,6 +43,14 @@ CampAtomVector parse_atom_vector(const json & values, const std::string & field)
   return output;
 }
 
+std::array<double, 3> parse_transition_scales(const json & values)
+{
+  const auto & source = values.at("transition_component_positive_q95");
+  return {
+    source.at("position_m").get<double>(), source.at("yaw_rad").get<double>(),
+    source.at("longitudinal_velocity_mps").get<double>()};
+}
+
 CampStatusPattern parse_status_pattern(const json & values)
 {
   if (!values.is_array() || values.size() != kCampAtomCount) {
@@ -64,6 +72,11 @@ void validate_model(const CampFixedWeightModel & model)
   if (model.atom_names.size() != kCampAtomCount) {
     throw std::invalid_argument("atom_names must contain exactly 16 values");
   }
+  for (std::size_t i = 0; i < kCampAtomCount; ++i) {
+    if (std::string_view(model.atom_names.at(i)) != kCampAtomNames.at(i)) {
+      throw std::invalid_argument("CAMP atom names or order do not match the deployment contract");
+    }
+  }
   if (model.patterns.empty()) {
     throw std::invalid_argument("at least one CAMP status pattern is required");
   }
@@ -71,6 +84,11 @@ void validate_model(const CampFixedWeightModel & model)
   for (const double scale : model.scales) {
     if (!std::isfinite(scale) || scale <= 0.0) {
       throw std::invalid_argument("CAMP atom scales must be finite and positive");
+    }
+  }
+  for (const double scale : model.transition_component_scales) {
+    if (!std::isfinite(scale) || scale <= 0.0) {
+      throw std::invalid_argument("CAMP transition component scales must be finite and positive");
     }
   }
 
@@ -118,11 +136,12 @@ CampFixedWeightModel load_camp_fixed_weight_model(const std::filesystem::path & 
   model.candidate_pool_k = root.at("candidate_pool_k").get<std::size_t>();
   model.atom_names = root.at("atom_names").get<std::vector<std::string>>();
   model.scales = parse_atom_vector(root.at("scales"), "scales");
+  model.transition_component_scales = parse_transition_scales(root.at("transition_scales"));
 
   for (const auto & pattern_json : root.at("patterns")) {
-    model.patterns.push_back(
-      CampPatternWeights{parse_status_pattern(pattern_json.at("status")),
-                         parse_atom_vector(pattern_json.at("weights"), "pattern weights")});
+    model.patterns.push_back(CampPatternWeights{
+      parse_status_pattern(pattern_json.at("status")),
+      parse_atom_vector(pattern_json.at("weights"), "pattern weights")});
   }
 
   validate_model(model);

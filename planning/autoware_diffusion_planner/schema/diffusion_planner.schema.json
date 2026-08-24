@@ -102,6 +102,22 @@
             "multi_step_model"
           ]
         },
+        "camp": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Select one unchanged K=8 Diffusion Planner candidate with the bundled fixed-weight CAMP model"
+            },
+            "fixed_weight_model_path": {
+              "type": "string",
+              "default": "$(find-pkg-share autoware_trajectory_ranker)/config/camp_v26_k8_50k.json",
+              "description": "Path to the fixed-weight CAMP model JSON"
+            }
+          },
+          "required": ["enabled", "fixed_weight_model_path"]
+        },
         "planning_frequency_hz": {
           "type": "number",
           "default": 10.0,
@@ -342,6 +358,7 @@
       },
       "required": [
         "model",
+        "camp",
         "planning_frequency_hz",
         "traffic_light_group_msg_timeout_seconds",
         "batch_size",

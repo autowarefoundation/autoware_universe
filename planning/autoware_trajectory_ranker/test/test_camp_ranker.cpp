@@ -46,6 +46,12 @@ TEST(CampRanker, LoadsDeploymentModel)
   EXPECT_EQ(model.candidate_pool_k, 8U);
   EXPECT_EQ(model.atom_names.size(), kCampAtomCount);
   EXPECT_EQ(model.patterns.size(), 24U);
+  for (std::size_t i = 0; i < kCampAtomCount; ++i) {
+    EXPECT_EQ(std::string_view(model.atom_names.at(i)), kCampAtomNames.at(i));
+  }
+  EXPECT_NEAR(model.transition_component_scales.at(0), 15.340749389584412, 1.0e-12);
+  EXPECT_NEAR(model.transition_component_scales.at(1), 0.5042537448405768, 1.0e-12);
+  EXPECT_NEAR(model.transition_component_scales.at(2), 4.582727731088896, 1.0e-12);
 }
 
 TEST(CampRanker, AppliesFrozenScalesAndWeights)
@@ -81,7 +87,7 @@ TEST(CampRanker, MatchesTheReferenceImplementation)
   const auto result = rank_camp_candidates(model, all_observed(), candidates);
   const std::vector<double> expected_costs{
     2.115275390002698, 2.1576671584107743, 1.9804126215115798, 2.023544030207182,
-    1.971631120089219, 2.018646435540969, 2.0821084140558774, 1.8918500852111888};
+    1.971631120089219, 2.018646435540969,  2.0821084140558774, 1.8918500852111888};
 
   ASSERT_EQ(result.costs.size(), expected_costs.size());
   for (std::size_t i = 0; i < expected_costs.size(); ++i) {
@@ -121,8 +127,7 @@ TEST(CampRanker, KeepsTheFirstCandidateForAnExactTie)
 {
   const auto model = deployment_model();
   const auto result = rank_camp_candidates(
-    model, all_observed(),
-    std::vector<CampAtomVector>(model.candidate_pool_k, CampAtomVector{}));
+    model, all_observed(), std::vector<CampAtomVector>(model.candidate_pool_k, CampAtomVector{}));
 
   EXPECT_EQ(result.selected_index, 0U);
 }
