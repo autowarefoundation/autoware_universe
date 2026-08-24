@@ -23098,84 +23098,84 @@
 </thead>
 <tbody>
 <tr>
-<td>onnx_path</td>
+<td>onnx_<wbr>path</wbr></td>
 <td>string</td>
 <td>Path to ONNX model file.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trt_precision</td>
+<td>trt_<wbr>precision</wbr></td>
 <td>string</td>
 <td>TensorRT engine precision.</td>
 <td></td>
 <td>['fp16', 'fp32']</td>
 </tr>
 <tr>
-<td>filter.class_probability_threshold</td>
+<td>filter.<wbr>class_<wbr>probability_<wbr>threshold</wbr></wbr></wbr></td>
 <td>float</td>
 <td>If any of the filter classes has probability &gt;= this value, the point is excluded from the filtered output cloud.</td>
 <td></td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>filter.classes</td>
+<td>filter.<wbr>classes</wbr></td>
 <td>array</td>
 <td>Class names to filter out when their probability exceeds the threshold.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter.output_format</td>
+<td>filter.<wbr>output_<wbr>format</wbr></wbr></td>
 <td>string</td>
 <td>Filtered output point format. Empty string preserves the input format.</td>
 <td></td>
 <td>['', 'xyzi', 'xyzirc', 'xyziradrt', 'xyzircaedt']</td>
 </tr>
 <tr>
-<td>filter.ego_crop_box.reference_frame</td>
+<td>filter.<wbr>ego_<wbr>crop_<wbr>box.<wbr>reference_<wbr>frame</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>TF frame for ego crop box bounds (e.g. base_link).</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter.ego_crop_box.min_x</td>
+<td>filter.<wbr>ego_<wbr>crop_<wbr>box.<wbr>min_<wbr>x</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Min X bound of crop box in reference frame.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter.ego_crop_box.min_y</td>
+<td>filter.<wbr>ego_<wbr>crop_<wbr>box.<wbr>min_<wbr>y</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Min Y bound of crop box in reference frame.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter.ego_crop_box.min_z</td>
+<td>filter.<wbr>ego_<wbr>crop_<wbr>box.<wbr>min_<wbr>z</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Min Z bound of crop box in reference frame.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter.ego_crop_box.max_x</td>
+<td>filter.<wbr>ego_<wbr>crop_<wbr>box.<wbr>max_<wbr>x</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max X bound of crop box in reference frame.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter.ego_crop_box.max_y</td>
+<td>filter.<wbr>ego_<wbr>crop_<wbr>box.<wbr>max_<wbr>y</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max Y bound of crop box in reference frame.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>filter.ego_crop_box.max_z</td>
+<td>filter.<wbr>ego_<wbr>crop_<wbr>box.<wbr>max_<wbr>z</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max Z bound of crop box in reference frame.</td>
 <td></td>
@@ -23196,63 +23196,63 @@
 </thead>
 <tbody>
 <tr>
-<td>fov_up_deg</td>
+<td>fov_<wbr>up_<wbr>deg</wbr></wbr></td>
 <td>float</td>
 <td>LiDAR's upper elevation angle in degrees.</td>
 <td>15.0</td>
 <td>≥-90.0<br>≤90.0</td>
 </tr>
 <tr>
-<td>fov_down_deg</td>
+<td>fov_<wbr>down_<wbr>deg</wbr></wbr></td>
 <td>float</td>
 <td>LiDAR's lower elevation angle in degrees.</td>
 <td>-25.0</td>
 <td>≥-90.0<br>≤90.0</td>
 </tr>
 <tr>
-<td>frustum_width</td>
+<td>frustum_<wbr>width</wbr></td>
 <td>integer</td>
 <td>Width of the FRNet frustum in pixels.</td>
 <td>1024</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>frustum_height</td>
+<td>frustum_<wbr>height</wbr></td>
 <td>integer</td>
 <td>Height of the FRNet frustum in pixels.</td>
 <td>128</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>interpolation_width</td>
+<td>interpolation_<wbr>width</wbr></td>
 <td>integer</td>
 <td>Width of the FRNet LiDAR's points to 2D plane interpolation in pixels.</td>
 <td>4096</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>interpolation_height</td>
+<td>interpolation_<wbr>height</wbr></td>
 <td>integer</td>
 <td>Height of the FRNet LiDAR's points to 2D plane interpolation in pixels.</td>
 <td>128</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>class_names</td>
+<td>class_<wbr>names</wbr></td>
 <td>array</td>
 <td>An array of class names which will be predicted.</td>
 <td></td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>num_points</td>
+<td>num_<wbr>points</wbr></td>
 <td>array</td>
 <td>TensorRT optimization profile for number of points [min, opt, max].</td>
 <td>[5000, 80000, 160000]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>num_unique_coors</td>
+<td>num_<wbr>unique_<wbr>coors</wbr></wbr></td>
 <td>array</td>
 <td>TensorRT optimization profile for number of unique coordinates [min, opt, max].</td>
 <td>[3000, 30000, 60000]</td>
@@ -23280,21 +23280,21 @@
 </thead>
 <tbody>
 <tr>
-<td>max_allowed_processing_time_ms</td>
+<td>max_<wbr>allowed_<wbr>processing_<wbr>time_<wbr>ms</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>A threshold value for the allowed processing time. If the processing time exceeds this value, it will be considered a warning state. [ms]</td>
 <td>200</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_acceptable_consecutive_delay_ms</td>
+<td>max_<wbr>acceptable_<wbr>consecutive_<wbr>delay_<wbr>ms</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>A threshold value for the error state. If the duration since the last processing timestamp, which ended within max_allowed_processing_time_ms, exceeds this value, it will be considered an error state. [ms]</td>
 <td>1000</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>validation_callback_interval_ms</td>
+<td>validation_<wbr>callback_<wbr>interval_<wbr>ms</wbr></wbr></wbr></td>
 <td>float</td>
 <td>An interval value for a timer callback that checks whether the current state meets the max_acceptable_consecutive_delay_ms condition. [ms]</td>
 <td>100</td>

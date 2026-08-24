@@ -22888,119 +22888,119 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 </thead>
 <tbody>
 <tr>
-<td>plugins_path</td>
+<td>plugins_<wbr>path</wbr></td>
 <td>string</td>
 <td>Path to libautoware_tensorrt_plugins.so file for native TensorRT and ONNX Runtime TensorRT EP</td>
 <td>$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.type</td>
+<td>model.<wbr>type</wbr></td>
 <td>string</td>
 <td>Inference model type</td>
 <td>single_step</td>
 <td>['single_step', 'multi_step']</td>
 </tr>
 <tr>
-<td>model.base_model_directory</td>
+<td>model.<wbr>base_<wbr>model_<wbr>directory</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Base directory containing ONNX models and args file</td>
 <td>$(var data_path)/diffusion_planner/v5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.args_filename</td>
+<td>model.<wbr>args_<wbr>filename</wbr></wbr></td>
 <td>string</td>
 <td>Args/configuration JSON filename relative to base_model_directory</td>
 <td>diffusion_planner.param.json</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.backend</td>
+<td>model.<wbr>backend</wbr></td>
 <td>string</td>
 <td>Inference backend. tensorrt uses the native TensorRT implementation; ort_cpu/ort_cuda/ort_tensorrt use ONNX Runtime with the corresponding execution provider.</td>
 <td>tensorrt</td>
 <td>['tensorrt', 'ort_cpu', 'ort_cuda', 'ort_tensorrt']</td>
 </tr>
 <tr>
-<td>model.precision</td>
+<td>model.<wbr>precision</wbr></td>
 <td>string</td>
 <td>TensorRT engine precision</td>
 <td>fp32</td>
 <td>['fp32', 'fp16']</td>
 </tr>
 <tr>
-<td>model.use_cuda_graph</td>
+<td>model.<wbr>use_<wbr>cuda_<wbr>graph</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Use CUDA Graph replay for TensorRT enqueue calls</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.single_step_model.onnx_model_filename</td>
+<td>model.<wbr>single_<wbr>step_<wbr>model.<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Single-step ONNX model filename relative to base_model_directory</td>
 <td>diffusion_planner.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.multi_step_model.encoder_onnx_model_filename</td>
+<td>model.<wbr>multi_<wbr>step_<wbr>model.<wbr>encoder_<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Encoder ONNX model filename relative to base_model_directory</td>
 <td>diffusion_planner_encoder.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.multi_step_model.decoder_onnx_model_filename</td>
+<td>model.<wbr>multi_<wbr>step_<wbr>model.<wbr>decoder_<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Decoder ONNX model filename relative to base_model_directory</td>
 <td>diffusion_planner_decoder.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.multi_step_model.turn_indicator_onnx_model_filename</td>
+<td>model.<wbr>multi_<wbr>step_<wbr>model.<wbr>turn_<wbr>indicator_<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Turn indicator ONNX model filename relative to base_model_directory</td>
 <td>diffusion_planner_turn_indicator.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model.multi_step_model.dpm_solver_steps</td>
+<td>model.<wbr>multi_<wbr>step_<wbr>model.<wbr>dpm_<wbr>solver_<wbr>steps</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of DPM-Solver denoising steps. The final denoise-to-zero step is added separately.</td>
 <td>10</td>
 <td>≥2</td>
 </tr>
 <tr>
-<td>planning_frequency_hz</td>
+<td>planning_<wbr>frequency_<wbr>hz</wbr></wbr></td>
 <td>float</td>
 <td>Planning frequency in Hz</td>
 <td>10.0</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>ignore_neighbors</td>
+<td>ignore_<wbr>neighbors</wbr></td>
 <td>boolean</td>
 <td>Ignore neighbor agents</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light_group_msg_timeout_seconds</td>
+<td>traffic_<wbr>light_<wbr>group_<wbr>msg_<wbr>timeout_<wbr>seconds</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Timeout for traffic light group messages (seconds)</td>
 <td>0.2</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>build_only</td>
+<td>build_<wbr>only</wbr></td>
 <td>boolean</td>
 <td>On build only, do not run the planner</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>batch_size</td>
+<td>batch_<wbr>size</wbr></td>
 <td>integer</td>
 <td>Batch size for multi-batch inference</td>
 <td>1</td>
@@ -23014,154 +23014,182 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>N/A</td>
 </tr>
 <tr>
-<td>velocity_smoothing_window</td>
+<td>velocity_<wbr>smoothing_<wbr>window</wbr></wbr></td>
 <td>integer</td>
 <td>Window size for velocity smoothing. Set to 1 to disable smoothing.</td>
 <td>8</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>stopping_threshold</td>
+<td>stopping_<wbr>threshold</wbr></td>
 <td>float</td>
 <td>Threshold for keeping the stopping state [m/s]</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>turn_indicator_keep_offset</td>
+<td>turn_<wbr>indicator_<wbr>keep_<wbr>offset</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Offset to add to the KEEP turn indicator logit for bias adjustment</td>
 <td>-1.25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>turn_indicator_hold_duration</td>
+<td>turn_<wbr>indicator_<wbr>hold_<wbr>duration</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Duration to hold the turn indicator command before allowing changes (seconds)</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>shift_x</td>
+<td>shift_<wbr>x</wbr></td>
 <td>boolean</td>
 <td>Whether to shift the ego center position by half the wheel base</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>delay_step</td>
+<td>delay_<wbr>step</wbr></td>
 <td>integer</td>
 <td>Input delay step for inference</td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>line_string_max_step_m</td>
+<td>line_<wbr>string_<wbr>max_<wbr>step_<wbr>m</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum arc-length step per model point when resampling line strings [m]. Smaller values produce more fixed-size sub-segments per line string.</td>
 <td>5.0</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>use_time_interpolation</td>
+<td>use_<wbr>time_<wbr>interpolation</wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to interpolate ego past trajectory at regular time intervals</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>object_motion_resampling.enable</td>
+<td>object_<wbr>motion_<wbr>resampling.<wbr>enable</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp (read-only)</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>object_motion_resampling.max_extrapolation_time</td>
+<td>object_<wbr>motion_<wbr>resampling.<wbr>max_<wbr>extrapolation_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum extrapolation horizon [s], both forward from the newest and backward from the oldest observation</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>guidance.start_guidance.reference_distance_m</td>
+<td>ego_<wbr>snap_<wbr>to_<wbr>prev_<wbr>trajectory.<wbr>enable</wbr></wbr></wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Whether to snap the ego pose onto the previous planning trajectory. When enabled, the ego pose is replaced by the foot of the perpendicular to the closest segment of the previous planning trajectory (planning start pose + previous prediction).</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ego_<wbr>snap_<wbr>to_<wbr>prev_<wbr>trajectory.<wbr>max_<wbr>position_<wbr>error_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Maximum allowed position distance [m] between the actual ego pose and the snapped pose. If the distance exceeds this value the snap is skipped and the raw ego pose is kept.</td>
+<td>0.3</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>ego_<wbr>snap_<wbr>to_<wbr>prev_<wbr>trajectory.<wbr>max_<wbr>yaw_<wbr>error_<wbr>deg</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose. If the difference exceeds this value the snap is skipped and the raw ego pose is kept.</td>
+<td>5.0</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>ego_<wbr>snap_<wbr>to_<wbr>prev_<wbr>trajectory.<wbr>max_<wbr>search_<wbr>segment_<wbr>count</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>integer</td>
+<td>Number of leading segments of the previous trajectory searched for the closest one. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.</td>
+<td>5</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>guidance.<wbr>start_<wbr>guidance.<wbr>reference_<wbr>distance_<wbr>m</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Reference straight-line distance between the ego trajectory start and terminal point [m]</td>
 <td>10.0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>guidance.start_guidance.max_scale</td>
+<td>guidance.<wbr>start_<wbr>guidance.<wbr>max_<wbr>scale</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum scale applied to the ego trajectory by start guidance</td>
 <td>30.0</td>
 <td>≥1.0</td>
 </tr>
 <tr>
-<td>guidance.stop_guidance.stop_acceleration_mps2</td>
+<td>guidance.<wbr>stop_<wbr>guidance.<wbr>stop_<wbr>acceleration_<wbr>mps2</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration magnitude used to calculate stop guidance reference distance [m/s^2]</td>
 <td>1.0</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>guidance.centerline_guidance.start_time_s</td>
+<td>guidance.<wbr>centerline_<wbr>guidance.<wbr>start_<wbr>time_<wbr>s</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Trajectory points at and after this prediction time are snapped to the nearest route centerline point [s]</td>
 <td>2.0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>planning_factor.enable_stop</td>
+<td>planning_<wbr>factor.<wbr>enable_<wbr>stop</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stop planning factor</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>planning_factor.enable_slowdown</td>
+<td>planning_<wbr>factor.<wbr>enable_<wbr>slowdown</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable slowdown planning factor</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>planning_factor.stop_velocity_threshold</td>
+<td>planning_<wbr>factor.<wbr>stop_<wbr>velocity_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold to detect a stop [m/s]</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>planning_factor.stop_keep_duration_threshold</td>
+<td>planning_<wbr>factor.<wbr>stop_<wbr>keep_<wbr>duration_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Duration threshold to validate a stop [s]</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>planning_factor.slowdown_accel_threshold</td>
+<td>planning_<wbr>factor.<wbr>slowdown_<wbr>accel_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Acceleration threshold to detect a slowdown [m/s^2]</td>
 <td>-0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug_params.publish_debug_map</td>
+<td>debug_<wbr>params.<wbr>publish_<wbr>debug_<wbr>map</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish debug map markers</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug_params.publish_debug_route</td>
+<td>debug_<wbr>params.<wbr>publish_<wbr>debug_<wbr>route</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish debug route markers</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>debug_params.publish_debug_linestrings</td>
+<td>debug_<wbr>params.<wbr>publish_<wbr>debug_<wbr>linestrings</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish debug linestring markers</td>
 <td>True</td>

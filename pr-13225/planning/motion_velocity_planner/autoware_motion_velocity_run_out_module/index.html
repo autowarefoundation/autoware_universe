@@ -23043,826 +23043,826 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 </thead>
 <tbody>
 <tr>
-<td>run_out.collision.time_margin</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>time_<wbr>margin</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] extra time margin used to determine collisions</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.time_overlap_tolerance</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>time_<wbr>overlap_<wbr>tolerance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] when calculating overlap time intervals, intervals are grouped if they are separated by less than this tolerance value</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.same_direction_angle_threshold</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>same_<wbr>direction_<wbr>angle_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[rad] threshold to determine if a collision is going in the same direction as the ego trajectory</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.opposite_direction_angle_threshold</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>opposite_<wbr>direction_<wbr>angle_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[rad] threshold around pi to determine if a collision is going in a direction opposite to the ego trajectory</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.ignore_conditions.if_ego_arrives_first.enable</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>enable the condition to ignore collisions if ego arrives first</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.ignore_conditions.if_ego_arrives_first.margin.ego_enter_times</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first.<wbr>margin.<wbr>ego_<wbr>enter_<wbr>times</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>[s] predicted times when ego starts overlapping the path of the object</td>
 <td>[0.0, 3.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.ignore_conditions.if_ego_arrives_first.margin.time_margins</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first.<wbr>margin.<wbr>time_<wbr>margins</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>[s] margin values used such that ego needs to enter the overlap before the object with this much margin to decide to ignore the collision</td>
 <td>[0.0, 6.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.ignore_conditions.if_ego_arrives_first.max_overlap_duration</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first.<wbr>max_<wbr>overlap_<wbr>duration</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] the collision is not ignored if ego is predicted to stay on the object's path for longer than this duration</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.ignore_conditions.if_ego_arrives_first_and_cannot_stop.enable</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first_<wbr>and_<wbr>cannot_<wbr>stop.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>enable the condition to ignore collisions if ego arrives first and cannot stop</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.collision.ignore_conditions.if_ego_arrives_first_and_cannot_stop.deceleration_limit</td>
+<td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first_<wbr>and_<wbr>cannot_<wbr>stop.<wbr>deceleration_<wbr>limit</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m/s²] deceleration used to determine if ego can stop before a collision</td>
 <td>4.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.slowdown.on_time_buffer</td>
+<td>run_<wbr>out.<wbr>slowdown.<wbr>on_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] successive collision detection time required to start the slowdown decision</td>
 <td>0.1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.slowdown.off_time_buffer</td>
+<td>run_<wbr>out.<wbr>slowdown.<wbr>off_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] successive non-collision detection time required to remove the slowdown decision</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.slowdown.distance_buffer</td>
+<td>run_<wbr>out.<wbr>slowdown.<wbr>distance_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] longitudinal distance between the collision and the slowdown positions</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.slowdown.deceleration_limit</td>
+<td>run_<wbr>out.<wbr>slowdown.<wbr>deceleration_<wbr>limit</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m/s²] maximum deceleration that can be applied by the preventive slowdown</td>
 <td>4.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.stop.on_time_buffer</td>
+<td>run_<wbr>out.<wbr>stop.<wbr>on_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] successive collision detection time required to start the stopping decision</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.stop.off_time_buffer</td>
+<td>run_<wbr>out.<wbr>stop.<wbr>off_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] successive non-collision detection time required to remove a stopping decision</td>
 <td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.stop.distance_buffer</td>
+<td>run_<wbr>out.<wbr>stop.<wbr>distance_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] longitudinal safety distance to keep between ego and the collision position</td>
 <td>2.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.stop.deceleration_limit</td>
+<td>run_<wbr>out.<wbr>stop.<wbr>deceleration_<wbr>limit</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m/s²] if a stop causes a deceleration higher than this limit, an ERROR diagnostic is published</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.stop.keep_condition.time</td>
+<td>run_<wbr>out.<wbr>stop.<wbr>keep_<wbr>condition.<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] time along the ego trajectory</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.stop.keep_condition.distance</td>
+<td>run_<wbr>out.<wbr>stop.<wbr>keep_<wbr>condition.<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] distance along the ego trajectory</td>
 <td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.stop.reuse_margin</td>
+<td>run_<wbr>out.<wbr>stop.<wbr>reuse_<wbr>margin</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] the previous stop distance is reused if before the newly calculated one but not further than this margin</td>
 <td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.ego.lateral_margin</td>
+<td>run_<wbr>out.<wbr>ego.<wbr>lateral_<wbr>margin</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] extra lateral margin</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.ego.longitudinal_margin</td>
+<td>run_<wbr>out.<wbr>ego.<wbr>longitudinal_<wbr>margin</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] extra longitudinal margin</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.target_labels</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>target_<wbr>labels</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>target labels</td>
 <td>['PEDESTRIAN', 'BICYCLE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore.if_stopped</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore.stopped_velocity_threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>stopped_<wbr>velocity_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m/s] velocity threshold to decide if an object is stopped</td>
 <td>0.25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore.if_on_ego_trajectory</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore.if_behind_ego</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore_collisions.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore_collisions.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore_collisions.start_ignore_time</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] collisions are only ignored if happening after this time</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.ignore_collisions.start_ignore_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] collisions are only ignored if happening after this distance along the ego trajectory</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.confidence_filtering.threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>confidence_<wbr>filtering.<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>only use predicted paths with a higher confidence value than this threshold</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.confidence_filtering.only_use_highest</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.cut_predicted_paths.if_crossing_ego_from_behind</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.cut_predicted_paths.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.cut_predicted_paths.linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.cut_predicted_paths.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.cut_predicted_paths.strict_polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.cut_predicted_paths.strict_linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
 <td>['guard_rail']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.cut_predicted_paths.strict_lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.preserved_duration</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>preserved_<wbr>duration</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.preserved_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>preserved_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] when cutting a predicted path or ignoring an object, at least this much distance is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.DEFAULT.standstill_duration_after_cut</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>standstill_<wbr>duration_<wbr>after_<wbr>cut</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] after cutting a predicted path, assume the object stands still at the last point for this duration</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore.if_stopped</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore.stopped_velocity_threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>stopped_<wbr>velocity_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m/s] velocity threshold to decide if an object is stopped</td>
 <td>0.25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore.if_on_ego_trajectory</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore.if_behind_ego</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore_collisions.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore_collisions.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore_collisions.start_ignore_time</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] collisions are only ignored if happening after this time</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.ignore_collisions.start_ignore_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] collisions are only ignored if happening after this distance along the ego trajectory</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.confidence_filtering.threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>confidence_<wbr>filtering.<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>only use predicted paths with a higher confidence value than this threshold</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.confidence_filtering.only_use_highest</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.cut_predicted_paths.if_crossing_ego_from_behind</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.cut_predicted_paths.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.cut_predicted_paths.linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.cut_predicted_paths.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.cut_predicted_paths.strict_polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.cut_predicted_paths.strict_linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
 <td>['guard_rail']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.cut_predicted_paths.strict_lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.preserved_duration</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>preserved_<wbr>duration</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.preserved_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>preserved_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] when cutting a predicted path or ignoring an object, at least this much distance is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.PEDESTRIAN.standstill_duration_after_cut</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>standstill_<wbr>duration_<wbr>after_<wbr>cut</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] after cutting a predicted path, assume the object stands still at the last point for this duration</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore.if_stopped</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore.stopped_velocity_threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>stopped_<wbr>velocity_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m/s] velocity threshold to decide if an object is stopped</td>
 <td>0.25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore.if_on_ego_trajectory</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore.if_behind_ego</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore_collisions.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore_collisions.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore_collisions.start_ignore_time</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] collisions are only ignored if happening after this time</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.ignore_collisions.start_ignore_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] collisions are only ignored if happening after this distance along the ego trajectory</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.confidence_filtering.threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>confidence_<wbr>filtering.<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>only use predicted paths with a higher confidence value than this threshold</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.confidence_filtering.only_use_highest</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.cut_predicted_paths.if_crossing_ego_from_behind</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.cut_predicted_paths.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.cut_predicted_paths.linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.cut_predicted_paths.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.cut_predicted_paths.strict_polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.cut_predicted_paths.strict_linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
 <td>['guard_rail']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.cut_predicted_paths.strict_lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.preserved_duration</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>preserved_<wbr>duration</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.preserved_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>preserved_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] when cutting a predicted path or ignoring an object, at least this much distance is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.BICYCLE.standstill_duration_after_cut</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>standstill_<wbr>duration_<wbr>after_<wbr>cut</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] after cutting a predicted path, assume the object stands still at the last point for this duration</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore.if_stopped</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore.stopped_velocity_threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>stopped_<wbr>velocity_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m/s] velocity threshold to decide if an object is stopped</td>
 <td>0.25</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore.if_on_ego_trajectory</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore.if_behind_ego</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore_collisions.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore_collisions.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore_collisions.start_ignore_time</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>time</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] collisions are only ignored if happening after this time</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.ignore_collisions.start_ignore_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore_<wbr>collisions.<wbr>start_<wbr>ignore_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] collisions are only ignored if happening after this distance along the ego trajectory</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.confidence_filtering.threshold</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>confidence_<wbr>filtering.<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>only use predicted paths with a higher confidence value than this threshold</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.confidence_filtering.only_use_highest</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.cut_predicted_paths.if_crossing_ego_from_behind</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.cut_predicted_paths.polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.cut_predicted_paths.linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.cut_predicted_paths.lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.cut_predicted_paths.strict_polygon_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.cut_predicted_paths.strict_linestring_types</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
 <td>['guard_rail']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.cut_predicted_paths.strict_lanelet_subtypes</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
 <td>['NONE']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.preserved_duration</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>preserved_<wbr>duration</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.preserved_distance</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>preserved_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[m] when cutting a predicted path or ignoring an object, at least this much distance is preserved from the predicted paths</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.objects.MOTORCYCLE.standstill_duration_after_cut</td>
+<td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>standstill_<wbr>duration_<wbr>after_<wbr>cut</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>[s] after cutting a predicted path, assume the object stands still at the last point for this duration</td>
 <td>2.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.debug.object_label</td>
+<td>run_<wbr>out.<wbr>debug.<wbr>object_<wbr>label</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>debug markers specific to each object classification labels will only be published for this one</td>
 <td>PEDESTRIAN</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.debug.enabled_markers.ego_footprint</td>
+<td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>ego_<wbr>footprint</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.debug.enabled_markers.objects</td>
+<td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>objects</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.debug.enabled_markers.collisions</td>
+<td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>collisions</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.debug.enabled_markers.decisions</td>
+<td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>decisions</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>run_out.debug.enabled_markers.filtering_data</td>
+<td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>filtering_<wbr>data</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
 <td>False</td>

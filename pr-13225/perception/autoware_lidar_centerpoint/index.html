@@ -22869,6 +22869,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#detection-class-remapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Class Remapper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#launch-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#the-build_only-option" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23141,147 +23163,161 @@
 </thead>
 <tbody>
 <tr>
-<td>encoder_onnx_path</td>
+<td>version</td>
+<td>string</td>
+<td>Model bundle version. The node reads major version 4 from minor version 1 upward; a minor bump may add manifest entries the node requires.</td>
+<td>v4.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>encoder_<wbr>onnx_<wbr>path</wbr></wbr></td>
 <td>string</td>
 <td>VoxelFeatureEncoder ONNX file, relative to model_path (absolute paths allowed).</td>
-<td></td>
+<td>pts_voxel_encoder.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>encoder_engine_path</td>
+<td>encoder_<wbr>engine_<wbr>path</wbr></wbr></td>
 <td>string</td>
 <td>VoxelFeatureEncoder TensorRT Engine file, relative to model_path (absolute paths allowed).</td>
-<td></td>
+<td>pts_voxel_encoder.engine</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>head_onnx_path</td>
+<td>head_<wbr>onnx_<wbr>path</wbr></wbr></td>
 <td>string</td>
 <td>DetectionHead ONNX file, relative to model_path (absolute paths allowed).</td>
-<td></td>
+<td>pts_backbone_neck_head.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>head_engine_path</td>
+<td>head_<wbr>engine_<wbr>path</wbr></wbr></td>
 <td>string</td>
 <td>DetectionHead TensorRT Engine file, relative to model_path (absolute paths allowed).</td>
-<td></td>
+<td>pts_backbone_neck_head.engine</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>class_remapper_param_path</td>
+<td>class_<wbr>remapper_<wbr>param_<wbr>path</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Class remapper parameter file, relative to model_path (absolute paths allowed).</td>
-<td></td>
+<td>detection_class_remapper.param.yaml</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trt_precision</td>
+<td>trt_<wbr>precision</wbr></td>
 <td>string</td>
 <td>TensorRT inference precision.</td>
 <td>fp16</td>
 <td>['fp32', 'fp16']</td>
 </tr>
 <tr>
-<td>model_params.class_names</td>
+<td>model_<wbr>params.<wbr>class_<wbr>names</wbr></wbr></wbr></td>
 <td>array</td>
 <td>An array of class names will be predicted.</td>
 <td>['CAR', 'TRUCK', 'BUS', 'BICYCLE', 'PEDESTRIAN']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.has_twist</td>
+<td>model_<wbr>params.<wbr>has_<wbr>twist</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates whether the model outputs twist value.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.point_feature_size</td>
+<td>model_<wbr>params.<wbr>point_<wbr>feature_<wbr>size</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>A number of channels of point feature layer.</td>
 <td>4</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.has_variance</td>
+<td>model_<wbr>params.<wbr>has_<wbr>variance</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates whether the model outputs variance value.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.max_voxel_size</td>
+<td>model_<wbr>params.<wbr>max_<wbr>voxel_<wbr>size</wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>A maximum size of voxel grid.</td>
 <td>40000</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.point_cloud_range</td>
+<td>model_<wbr>params.<wbr>point_<wbr>cloud_<wbr>range</wbr></wbr></wbr></wbr></td>
 <td>array</td>
-<td>An array of distance ranges of each class, this must have same length with <code>class_names</code>.</td>
+<td>The range of the point cloud in [min_x, min_y, min_z, max_x, max_y, max_z] order. [m]</td>
 <td>[-76.8, -76.8, -4.0, 76.8, 76.8, 6.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.voxel_size</td>
+<td>model_<wbr>params.<wbr>voxel_<wbr>size</wbr></wbr></wbr></td>
 <td>array</td>
-<td>An array of voxel grid sizes for PointPainting, this must have same length with <code>paint_class_names</code>.</td>
+<td>The size of a voxel in [x, y, z] order. [m]</td>
 <td>[0.32, 0.32, 10.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.downsample_factor</td>
+<td>model_<wbr>params.<wbr>downsample_<wbr>factor</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>A scale factor of downsampling points</td>
 <td>1</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>model_params.encoder_in_feature_size</td>
+<td>model_<wbr>params.<wbr>encoder_<wbr>in_<wbr>feature_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>A size of encoder input feature channels.</td>
 <td>9</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.detection_score_thresholds.distance_bin_upper_limits</td>
+<td>model_<wbr>params.<wbr>yaw_<wbr>norm_<wbr>thresholds</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>A minimum norm of the predicted yaw vector per class, in the order of <code>class_names</code>. Objects below the threshold are discarded.</td>
+<td>[0.3, 0.3, 0.3, 0.3, 0.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>distance_<wbr>bin_<wbr>upper_<wbr>limits</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>An array of upper bounds of each distance bin.</td>
 <td>[50.0, 90.0, 121.0, 200.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.detection_score_thresholds.min_confidence_scores.CAR</td>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>CAR</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>A minimum confidence score for CAR in each distance bin.</td>
 <td>[0.35, 0.35, 0.35, 0.35]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.detection_score_thresholds.min_confidence_scores.TRUCK</td>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>TRUCK</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>A minimum confidence score for TRUCK in each distance bin.</td>
 <td>[0.35, 0.35, 0.35, 0.35]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.detection_score_thresholds.min_confidence_scores.BUS</td>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>BUS</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>A minimum confidence score for BUS in each distance bin.</td>
 <td>[0.35, 0.35, 0.35, 0.35]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.detection_score_thresholds.min_confidence_scores.BICYCLE</td>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>BICYCLE</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>A minimum confidence score for BICYCLE in each distance bin.</td>
 <td>[0.35, 0.35, 0.35, 0.35]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>model_params.detection_score_thresholds.min_confidence_scores.PEDESTRIAN</td>
+<td>model_<wbr>params.<wbr>detection_<wbr>score_<wbr>thresholds.<wbr>min_<wbr>confidence_<wbr>scores.<wbr>PEDESTRIAN</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>A minimum confidence score for PEDESTRIAN in each distance bin.</td>
 <td>[0.35, 0.35, 0.35, 0.35]</td>
@@ -23295,6 +23331,119 @@
 <tr>
 <th>Name</th>
 <th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cloud_<wbr>capacity</wbr></td>
+<td>integer</td>
+<td>Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).</td>
+<td>2000000</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>post_<wbr>process_<wbr>params.<wbr>circle_<wbr>nms_<wbr>dist_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A distance threshold of circle NMS.</td>
+<td>0.5</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>post_<wbr>process_<wbr>params.<wbr>iou_<wbr>nms_<wbr>search_<wbr>distance_<wbr>2d</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A maximum distance value to search the nearest objects.</td>
+<td>10.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>post_<wbr>process_<wbr>params.<wbr>iou_<wbr>nms_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A threshold value of NMS using IoU score.</td>
+<td>0.1</td>
+<td>≥0.0<br>≤1.0</td>
+</tr>
+<tr>
+<td>densification_<wbr>params.<wbr>world_<wbr>frame_<wbr>id</wbr></wbr></wbr></wbr></td>
+<td>string</td>
+<td>A name of frame id where world coordinates system is defined with respect to.</td>
+<td>map</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>densification_<wbr>params.<wbr>num_<wbr>past_<wbr>frames</wbr></wbr></wbr></wbr></td>
+<td>integer</td>
+<td>A number of past frames to be considered as same input frame.</td>
+<td>1</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>diagnostics.<wbr>max_<wbr>allowed_<wbr>processing_<wbr>time_<wbr>ms</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A threshold value for the allowed processing time. If the processing time exceeds this value, it will be considered a warning state. [ms]</td>
+<td>200.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>diagnostics.<wbr>max_<wbr>acceptable_<wbr>consecutive_<wbr>delay_<wbr>ms</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>A threshold value for the error state. If the duration since the last processing timestamp, which ended within max_allowed_processing_time_ms, exceeds this value, it will be considered an error state. [ms]</td>
+<td>1000.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>diagnostics.<wbr>validation_<wbr>callback_<wbr>interval_<wbr>ms</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>An interval value for a timer callback that checks whether the current state meets the max_acceptable_consecutive_delay_ms condition. [ms]</td>
+<td>100.0</td>
+<td>≥1.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="detection-class-remapper">Detection Class Remapper<a class="headerlink" href="#detection-class-remapper" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allow_<wbr>remapping_<wbr>by_<wbr>area_<wbr>matrix</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Whether to allow remapping of classes. Row is the original class, column is the class to remap to. The order of the 8x8 matrix classes comes from ObjectClassification msg.</td>
+<td>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_<wbr>area_<wbr>matrix</wbr></wbr></td>
+<td>array</td>
+<td>Minimum area for specific class to consider class remapping. [m^2]</td>
+<td>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.1, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>max_<wbr>area_<wbr>matrix</wbr></wbr></td>
+<td>array</td>
+<td>Maximum area for specific class to consider class remapping. [m^2]</td>
+<td>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 36.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 999.999, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h3 id="launch-parameters">Launch Parameters<a class="headerlink" href="#launch-parameters" title="Permanent link">#</a></h3>
+<p>These are given by the launch file and are not part of any parameter file.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
 <th>Default Value</th>
 <th>Description</th>
 </tr>
@@ -23303,38 +23452,8 @@
 <tr>
 <td><code>model_path</code></td>
 <td>string</td>
-<td><code>""</code></td>
-<td>directory containing the model artifacts; relative file entries below resolve against it</td>
-</tr>
-<tr>
-<td><code>encoder_onnx_path</code></td>
-<td>string</td>
-<td><code>""</code></td>
-<td>VoxelFeatureEncoder ONNX file, relative to <code>model_path</code></td>
-</tr>
-<tr>
-<td><code>encoder_engine_path</code></td>
-<td>string</td>
-<td><code>""</code></td>
-<td>VoxelFeatureEncoder TensorRT Engine file, relative to <code>model_path</code></td>
-</tr>
-<tr>
-<td><code>head_onnx_path</code></td>
-<td>string</td>
-<td><code>""</code></td>
-<td>DetectionHead ONNX file, relative to <code>model_path</code></td>
-</tr>
-<tr>
-<td><code>head_engine_path</code></td>
-<td>string</td>
-<td><code>""</code></td>
-<td>DetectionHead TensorRT Engine file, relative to <code>model_path</code></td>
-</tr>
-<tr>
-<td><code>class_remapper_param_path</code></td>
-<td>string</td>
-<td><code>""</code></td>
-<td>class remapper parameter file, relative to <code>model_path</code></td>
+<td><code>$(var data_path)/lidar_centerpoint/base</code></td>
+<td>directory containing the model artifacts; relative manifest entries resolve against it</td>
 </tr>
 <tr>
 <td><code>build_only</code></td>
@@ -23343,53 +23462,17 @@
 <td>shutdown the node after TensorRT engine file is built</td>
 </tr>
 <tr>
-<td><code>trt_precision</code></td>
+<td><code>logger_name</code></td>
 <td>string</td>
-<td><code>fp16</code></td>
-<td>TensorRT inference precision: <code>fp32</code> or <code>fp16</code></td>
-</tr>
-<tr>
-<td><code>post_process_params.yaw_norm_thresholds</code></td>
-<td>list[double]</td>
-<td>[0.3, 0.3, 0.3, 0.3, 0.0]</td>
-<td>An array of distance threshold values of norm of yaw [rad].</td>
-</tr>
-<tr>
-<td><code>post_process_params.iou_nms_search_distance_2d</code></td>
-<td>double</td>
-<td>-</td>
-<td>If two objects are farther than the value, NMS isn't applied.</td>
-</tr>
-<tr>
-<td><code>post_process_params.iou_nms_threshold</code></td>
-<td>double</td>
-<td>-</td>
-<td>IoU threshold for the IoU-based Non Maximum Suppression</td>
-</tr>
-<tr>
-<td><code>post_process_params.has_twist</code></td>
-<td>boolean</td>
-<td>false</td>
-<td>Indicates whether the model outputs twist value.</td>
-</tr>
-<tr>
-<td><code>densification_params.world_frame_id</code></td>
-<td>string</td>
-<td><code>map</code></td>
-<td>the world frame id to fuse multi-frame pointcloud</td>
-</tr>
-<tr>
-<td><code>densification_params.num_past_frames</code></td>
-<td>int</td>
-<td><code>1</code></td>
-<td>the number of past frames to fuse with the current frame</td>
+<td><code>lidar_centerpoint</code></td>
+<td>logger name used for the node logs and debug topics</td>
 </tr>
 </tbody>
 </table>
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_lidar_centerpoint</code> node has <code>build_only</code> option to build the TensorRT engine file from the ONNX file.
 Although it is preferred to move all the ROS parameters in <code>.param.yaml</code> file in Autoware Universe, the <code>build_only</code> option is not moved to the <code>.param.yaml</code> file for now, because it may be used as a flag to execute the build as a pre-task. You can execute with the following command:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_path:<span class="o">=</span>/home/autoware/autoware_data/ml_models/lidar_centerpoint/tiny<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_path:<span class="o">=</span>/home/autoware/autoware_data/ml_models/lidar_centerpoint/base<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <p><code>model_path</code> points at the variant folder (<code>base</code>/<code>tiny</code>/<code>sigma</code>/<code>short_range</code>) of the model bundle; the engine files are written there.</p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
@@ -23397,7 +23480,7 @@ Although it is preferred to move all the ROS parameters in <code>.param.yaml</co
 <li>The <code>object.existence_probability</code> is stored the value of classification confidence of a DNN, not probability.</li>
 </ul>
 <h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>
-<p>Trained models are hosted on Hugging Face at <a href="https://huggingface.co/AutowareFoundation/lidar_centerpoint">AutowareFoundation/lidar_centerpoint</a> and downloaded to <code>~/autoware_data/ml_models/lidar_centerpoint/</code> by the ansible artifacts role (pinned to tag <code>v4.0</code>).</p>
+<p>Trained models are hosted on Hugging Face at <a href="https://huggingface.co/AutowareFoundation/lidar_centerpoint">AutowareFoundation/lidar_centerpoint</a> and downloaded to <code>~/autoware_data/ml_models/lidar_centerpoint/</code> by the ansible artifacts role (pinned to tag <code>v4.1</code>).</p>
 <p>The bundle holds one self-contained folder per variant; the perception launcher (<code>lidar_dnn_detector.launch.xml</code>) selects the folder from the model name, and <code>lidar_centerpoint.launch.xml</code> takes the folder directly as <code>model_path</code>:</p>
 <div class="highlight"><pre><span></span><code>lidar_centerpoint/
 ├── base/         # model_name: centerpoint
@@ -23405,7 +23488,8 @@ Although it is preferred to move all the ROS parameters in <code>.param.yaml</co
 ├── sigma/        # model_name: centerpoint_sigma
 └── short_range/  # model_name: centerpoint_short_range
 </code></pre></div>
-<p>Every variant folder contains the same file set: <code>pts_voxel_encoder.onnx</code>, <code>pts_backbone_neck_head.onnx</code>, <code>ml_package.param.yaml</code>, <code>detection_class_remapper.param.yaml</code> and <code>deploy_metadata.yaml</code>. TensorRT engine files are built locally into the variant folder on first launch (or via <code>build_only:=true</code>).</p>
+<p>Every variant folder contains the same file set: <code>pts_voxel_encoder.onnx</code>, <code>pts_backbone_neck_head.onnx</code>, <code>ml_package.param.yaml</code> and <code>detection_class_remapper.param.yaml</code>. TensorRT engine files are built locally into the variant folder on first launch (or via <code>build_only:=true</code>).</p>
+<p><code>ml_package.param.yaml</code> declares the bundle version. The node reads major version 4 from minor version 1 upward and aborts otherwise, so a version error means the bundle has to be refreshed with the ansible artifacts role of the <a href="https://github.com/autowarefoundation/autoware">autoware</a> repository. A minor bump can add manifest entries the node requires.</p>
 <p><code>Centerpoint</code> was trained in <code>nuScenes</code> (~28k lidar frames) [8] and TIER IV's internal database (~11k lidar frames) for 60 epochs.
 <code>Centerpoint tiny</code> was trained in <code>Argoverse 2</code> (~110k lidar frames) [9] and TIER IV's internal database (~11k lidar frames) for 20 epochs.</p>
 <h2 id="training-centerpoint-model-and-deploying-to-the-autoware">Training CenterPoint Model and Deploying to the Autoware<a class="headerlink" href="#training-centerpoint-model-and-deploying-to-the-autoware" title="Permanent link">#</a></h2>
@@ -23507,35 +23591,7 @@ You can find it in <code>mmdetection3d/projects/AutowareCenterPoint</code> file.
 </code></pre></div>
 <h4 id="create-the-ml_package-file-for-the-custom-model">Create the ml_package file for the custom model<a class="headerlink" href="#create-the-ml_package-file-for-the-custom-model" title="Permanent link">#</a></h4>
 <p>Rename the exported ONNX files to <code>pts_voxel_encoder.onnx</code> and <code>pts_backbone_neck_head.onnx</code>, and create a <strong>ml_package.param.yaml</strong> next to them. Set the model parameters like
-point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">/**</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">ros__parameters</span><span class="p">:</span>
-<span class="w">    </span><span class="c1"># model files, relative to model_path</span>
-<span class="w">    </span><span class="nt">encoder_onnx_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pts_voxel_encoder.onnx</span>
-<span class="w">    </span><span class="nt">encoder_engine_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pts_voxel_encoder.engine</span>
-<span class="w">    </span><span class="nt">head_onnx_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pts_backbone_neck_head.onnx</span>
-<span class="w">    </span><span class="nt">head_engine_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pts_backbone_neck_head.engine</span>
-<span class="w">    </span><span class="nt">class_remapper_param_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">detection_class_remapper.param.yaml</span>
-<span class="w">    </span><span class="nt">trt_precision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fp16</span>
-<span class="w">    </span><span class="nt">model_params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">class_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"CAR"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"TRUCK"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"BUS"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"BICYCLE"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"PEDESTRIAN"</span><span class="p p-Indicator">]</span>
-<span class="w">      </span><span class="nt">point_feature_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-<span class="w">      </span><span class="nt">max_voxel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40000</span>
-<span class="w">      </span><span class="nt">point_cloud_range</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-3.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5.0</span><span class="p p-Indicator">]</span>
-<span class="w">      </span><span class="nt">voxel_size</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8.0</span><span class="p p-Indicator">]</span>
-<span class="w">      </span><span class="nt">downsample_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">      </span><span class="nt">encoder_in_feature_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9</span>
-<span class="w">      </span><span class="nt">has_variance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-<span class="w">      </span><span class="nt">has_twist</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-<span class="w">      </span><span class="nt">detection_score_thresholds</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">distance_bin_upper_limits</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">50.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">90.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">121.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">200.0</span><span class="p p-Indicator">]</span>
-<span class="w">        </span><span class="nt">min_confidence_scores</span><span class="p">:</span>
-<span class="w">          </span><span class="nt">CAR</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">]</span>
-<span class="w">          </span><span class="nt">TRUCK</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">]</span>
-<span class="w">          </span><span class="nt">BUS</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">]</span>
-<span class="w">          </span><span class="nt">BICYCLE</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">]</span>
-<span class="w">          </span><span class="nt">PEDESTRIAN</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">]</span>
-</code></pre></div>
+point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file. The <a href="#ml-model-parameters">ML Model Parameters</a> table lists every entry with its default; <code>version</code> has to be declared as well, or the node aborts at startup.</p>
 <h4 id="launch-the-lidar_centerpoint-node">Launch the lidar_centerpoint node<a class="headerlink" href="#launch-the-lidar_centerpoint-node" title="Permanent link">#</a></h4>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/YOUR/AUTOWARE/PATH/Autoware
 <span class="nb">source</span><span class="w"> </span>install/setup.bash
@@ -23549,6 +23605,8 @@ ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerp
 ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_data/ml_models/lidar_centerpoint/short_range
 </code></pre></div>
 <h3 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h3>
+<h4 id="v41-202608">v4.1 (2026/08)<a class="headerlink" href="#v41-202608" title="Permanent link">#</a></h4>
+<p><code>ml_package.param.yaml</code> gained <code>version</code> and <code>model_params.yaw_norm_thresholds</code>, the latter moved out of <code>centerpoint_common.param.yaml</code> because it is indexed by the predicted class. <code>deploy_metadata.yaml</code> is gone. Bundles of <code>v4.0</code> and earlier are rejected at startup.</p>
 <h4 id="v40-202607">v4.0 (2026/07)<a class="headerlink" href="#v40-202607" title="Permanent link">#</a></h4>
 <p>The model bundle moved to per-variant folders (<code>base</code>/<code>tiny</code>/<code>sigma</code>/<code>short_range</code>) with uniform file names, hosted on <a href="https://huggingface.co/AutowareFoundation/lidar_centerpoint/tree/v4.0">Hugging Face</a>. <code>sigma</code> and <code>short_range</code> weights are published for the first time. Earlier revisions remain available as tags on the same repository (<code>v3.0</code> = flat layout). The <code>v1</code> and <code>v0</code> files below are not distributed any more.</p>
 <h4 id="v1-20220706">v1 (2022/07/06)<a class="headerlink" href="#v1-20220706" title="Permanent link">#</a></h4>

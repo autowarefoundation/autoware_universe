@@ -23228,147 +23228,147 @@ Please refer to it for your parameter settings.</p>
 </thead>
 <tbody>
 <tr>
-<td>fusion_distance</td>
+<td>fusion_<wbr>distance</wbr></td>
 <td>float</td>
 <td>If the detected object's distance is less than its value, the fusion will be processed.</td>
 <td>100.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>strict_iou_fusion_distance</td>
+<td>strict_<wbr>iou_<wbr>fusion_<wbr>distance</wbr></wbr></wbr></td>
 <td>float</td>
 <td>If the detected object's distance is less than its value, IoU method specified in <code>strict_iou_match_mode</code> is used, otherwise <code>rough_iou_match_mode</code> is used.</td>
 <td>100.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>strict_iou_match_mode</td>
+<td>strict_<wbr>iou_<wbr>match_<wbr>mode</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Name of IoU method applied to the objects in range of [0.0, <code>trust_distance</code>].</td>
 <td>iou</td>
 <td>['iou', 'iou_x', 'iou_y']</td>
 </tr>
 <tr>
-<td>rough_iou_match_mode</td>
+<td>rough_<wbr>iou_<wbr>match_<wbr>mode</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Name of IoU method applied to the objects in range of [<code>trust_distance</code>, <code>fusion_distance</code>], if <code>trust_distance</code> &lt; <code>fusion_distance</code>.</td>
 <td>iou_x</td>
 <td>['iou', 'iou_x', 'iou_y']</td>
 </tr>
 <tr>
-<td>use_cluster_semantic_type</td>
+<td>use_<wbr>cluster_<wbr>semantic_<wbr>type</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>If this parameter is false, label of cluster objects will be reset to UNKNOWN.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>only_allow_inside_cluster</td>
+<td>only_<wbr>allow_<wbr>inside_<wbr>cluster</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>If this parameter is true, only clusters in which all their points are inside the RoI can be assigned to the RoI.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>roi_scale_factor</td>
+<td>roi_<wbr>scale_<wbr>factor</wbr></wbr></td>
 <td>float</td>
 <td>A scale factor for resizing RoI while checking if cluster points are inside the RoI.</td>
 <td>1.1</td>
 <td>≥1.0<br>≤2.0</td>
 </tr>
 <tr>
-<td>iou_threshold.UNKNOWN</td>
+<td>iou_<wbr>threshold.<wbr>UNKNOWN</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for UNKNOWN objects.</td>
 <td>0.1</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.CAR</td>
+<td>iou_<wbr>threshold.<wbr>CAR</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for CAR objects.</td>
 <td>0.65</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.TRUCK</td>
+<td>iou_<wbr>threshold.<wbr>TRUCK</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for TRUCK objects.</td>
 <td>0.65</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.BUS</td>
+<td>iou_<wbr>threshold.<wbr>BUS</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for BUS objects.</td>
 <td>0.65</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.TRAILER</td>
+<td>iou_<wbr>threshold.<wbr>TRAILER</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for TRAILER objects.</td>
 <td>0.65</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.MOTORCYCLE</td>
+<td>iou_<wbr>threshold.<wbr>MOTORCYCLE</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for MOTORCYCLE objects.</td>
 <td>0.65</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.BICYCLE</td>
+<td>iou_<wbr>threshold.<wbr>BICYCLE</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for BICYCLE objects.</td>
 <td>0.65</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.PEDESTRIAN</td>
+<td>iou_<wbr>threshold.<wbr>PEDESTRIAN</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for PEDESTRIAN objects.</td>
 <td>0.65</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.ANIMAL</td>
+<td>iou_<wbr>threshold.<wbr>ANIMAL</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for ANIMAL objects.</td>
 <td>0.1</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>iou_threshold.HAZARD</td>
+<td>iou_<wbr>threshold.<wbr>HAZARD</wbr></wbr></td>
 <td>float</td>
 <td>IoU threshold for HAZARD objects.</td>
 <td>0.1</td>
 <td>≥0.0<br>≤1.0</td>
 </tr>
 <tr>
-<td>remove_unknown</td>
+<td>remove_<wbr>unknown</wbr></td>
 <td>boolean</td>
 <td>If this parameter is true, all of objects labeled UNKNOWN will be removed in post-process.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>pedestrian_size_validation.enable</td>
+<td>pedestrian_<wbr>size_<wbr>validation.<wbr>enable</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable pedestrian size validation (3D size check)</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>pedestrian_size_validation.min_width</td>
+<td>pedestrian_<wbr>size_<wbr>validation.<wbr>min_<wbr>width</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum pedestrian width in meters (shoulder width)</td>
 <td>0.3</td>
 <td>≥0.1<br>≤0.5</td>
 </tr>
 <tr>
-<td>pedestrian_size_validation.max_width</td>
+<td>pedestrian_<wbr>size_<wbr>validation.<wbr>max_<wbr>width</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum pedestrian width in meters (with bags/umbrella)</td>
 <td>1.0</td>

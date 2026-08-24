@@ -22957,1386 +22957,1386 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 </thead>
 <tbody>
 <tr>
-<td>plugin_names</td>
+<td>plugin_<wbr>names</wbr></td>
 <td>array</td>
 <td>Ordered list of modifier and optimizer plugin class names</td>
 <td>['autoware::trajectory_processor::plugin::StopPointFixer', 'autoware::trajectory_processor::plugin::SurroundObstacleStop', 'autoware::trajectory_processor::plugin::ObstacleStop', 'autoware::trajectory_processor::plugin::TrafficLightStop', 'autoware::trajectory_processor::plugin::VelocityModifier', 'autoware::trajectory_processor::plugin::TrajectoryPointFixer', 'autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer', 'autoware::trajectory_processor::plugin::TrajectoryQPSmoother', 'autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer', 'autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer', 'autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer', 'autoware::trajectory_processor::plugin::TrajectorySplineSmoother', 'autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer', 'autoware::trajectory_processor::plugin::TrajectoryExtender']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_stop_point_fixer</td>
+<td>use_<wbr>stop_<wbr>point_<wbr>fixer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the stop point fixer modifier plugin</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_obstacle_stop</td>
+<td>use_<wbr>obstacle_<wbr>stop</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the obstacle stop modifier plugin</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_surround_obstacle_stop</td>
+<td>use_<wbr>surround_<wbr>obstacle_<wbr>stop</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the surround obstacle stop modifier plugin</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_traffic_light_stop</td>
+<td>use_<wbr>traffic_<wbr>light_<wbr>stop</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the traffic light stop modifier plugin</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_velocity_modifier</td>
+<td>use_<wbr>velocity_<wbr>modifier</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the velocity modifier plugin</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_time_step</td>
+<td>trajectory_<wbr>time_<wbr>step</wbr></wbr></td>
 <td>float</td>
 <td>Time step for trajectory modification [s]</td>
 <td>0.1</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>stop_point_fixer.force_stop_long_stopped_trajectories</td>
+<td>stop_<wbr>point_<wbr>fixer.<wbr>force_<wbr>stop_<wbr>long_<wbr>stopped_<wbr>trajectories</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Force zero velocity trajectory for trajectories with long stops</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>stop_point_fixer.force_stop_close_stopped_trajectories</td>
+<td>stop_<wbr>point_<wbr>fixer.<wbr>force_<wbr>stop_<wbr>close_<wbr>stopped_<wbr>trajectories</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Force zero velocity trajectory for trajectories with stops close to ego</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>stop_point_fixer.velocity_threshold</td>
+<td>stop_<wbr>point_<wbr>fixer.<wbr>velocity_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold below which ego vehicle is considered stationary</td>
 <td>0.25</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>stop_point_fixer.min_distance_threshold</td>
+<td>stop_<wbr>point_<wbr>fixer.<wbr>min_<wbr>distance_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum distance threshold to trigger trajectory replacement</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>stop_point_fixer.min_stop_duration</td>
+<td>stop_<wbr>point_<wbr>fixer.<wbr>min_<wbr>stop_<wbr>duration</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum duration of stop to consider for trajectory replacement</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>stopping_constraints.nominal_deceleration</td>
+<td>stopping_<wbr>constraints.<wbr>nominal_<wbr>deceleration</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Nominal deceleration during stopping [m/s^2]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>stopping_constraints.maximum_deceleration</td>
+<td>stopping_<wbr>constraints.<wbr>maximum_<wbr>deceleration</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum deceleration during stopping [m/s^2]</td>
 <td>4</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>stopping_constraints.jerk_limit</td>
+<td>stopping_<wbr>constraints.<wbr>jerk_<wbr>limit</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Jerk limit during stopping [m/s^3]</td>
 <td>3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>stopping_constraints.arrived_distance_threshold</td>
+<td>stopping_<wbr>constraints.<wbr>arrived_<wbr>distance_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold to check if the ego vehicle has arrived at the stop point [m]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.use_objects</td>
+<td>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of objects for obstacle stop</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.use_pointcloud</td>
+<td>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of pointcloud for obstacle stop</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.enable_stop_for_objects</td>
+<td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>objects</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when object is detected as obstacle</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.enable_stop_for_pointcloud</td>
+<td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when pointcloud is detected as obstacle</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.stop_margin</td>
+<td>obstacle_<wbr>stop.<wbr>stop_<wbr>margin</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance to maintain from an obstacle when stopped [m]</td>
 <td>6</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.lateral_margin</td>
+<td>obstacle_<wbr>stop.<wbr>lateral_<wbr>margin</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.duplicate_check_threshold</td>
+<td>obstacle_<wbr>stop.<wbr>duplicate_<wbr>check_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold to check if the stop point is already in the trajectory [m]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.obstacle_tracking.on_time_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>obstacle_<wbr>tracking.<wbr>on_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Continuous detection duration to consider object/pointcloud to be persistent [s]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.obstacle_tracking.off_time_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>obstacle_<wbr>tracking.<wbr>off_<wbr>time_<wbr>buffer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Continuous non-detection duration to consider object/pointcloud as not persistent [s]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.obstacle_tracking.object_distance_th</td>
+<td>obstacle_<wbr>stop.<wbr>obstacle_<wbr>tracking.<wbr>object_<wbr>distance_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for object tracking [m]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.obstacle_tracking.object_yaw_th</td>
+<td>obstacle_<wbr>stop.<wbr>obstacle_<wbr>tracking.<wbr>object_<wbr>yaw_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw threshold for object tracking [rad]</td>
 <td>0.1745</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.obstacle_tracking.pcd_distance_th</td>
+<td>obstacle_<wbr>stop.<wbr>obstacle_<wbr>tracking.<wbr>pcd_<wbr>distance_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for pointcloud tracking [m]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.obstacle_tracking.grace_period</td>
+<td>obstacle_<wbr>stop.<wbr>obstacle_<wbr>tracking.<wbr>grace_<wbr>period</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Grace period for object tracking [s]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.objects.object_types</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Object types to consider for obstacle stop</td>
 <td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian', 'hazard']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.objects.max_velocity_th</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>max_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum velocity threshold for target object [m/s]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.objects.stopped_velocity_th</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>stopped_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold for target object to be considered as stopped [m/s]</td>
 <td>0.25</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.objects.max_lateral_velocity_th</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>max_<wbr>lateral_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum lateral velocity threshold for target object to be considered for obstacle stop [m/s]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.objects.safety_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>safety_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Safety buffer to expand object shape [m]</td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.height_buffer</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>height_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Height buffer to add above ego height [m]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.min_height</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>min_<wbr>height</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum height of pointcloud [m]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.voxel_grid_filter.x</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>x</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>X dimension of voxel grid filter [m]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.voxel_grid_filter.y</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>y</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Y dimension of voxel grid filter [m]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.voxel_grid_filter.z</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>z</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Z dimension of voxel grid filter [m]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.voxel_grid_filter.min_size</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum size of voxel grid filter [m]</td>
 <td>3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.clustering.tolerance</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>tolerance</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Tolerance for clustering [m]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.clustering.min_height</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum height for clustering [m]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.clustering.min_size</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum size for clustering [m]</td>
 <td>10</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.pointcloud.clustering.max_size</td>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>max_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum size for clustering [m]</td>
 <td>10000</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.enable</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>enable</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable RSS safety check</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.car</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for car type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.truck</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for truck type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.bus</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for bus type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.trailer</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for trailer type objects [m/s^2]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.motorcycle</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for motorcycle type objects [m/s^2]</td>
 <td>3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.bicycle</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for bicycle type objects [m/s^2]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.pedestrian</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for pedestrian type objects [m/s^2]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.object_decel.animal</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>object_<wbr>decel.<wbr>animal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for animal type objects [m/s^2]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.ego_decel</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>ego_<wbr>decel</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Deceleration for ego vehicle [m/s^2]</td>
 <td>4</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.reaction_time</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>reaction_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Reaction time to consider for RSS calculation [s]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.safety_margin</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>safety_<wbr>margin</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Safety margin to consider for RSS calculation [m]</td>
 <td>2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>obstacle_stop.rss_params.lookahead_horizon</td>
+<td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>lookahead_<wbr>horizon</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lookahead horizon for RSS calculation [s]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.use_objects</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of objects for surround obstacle stop</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.use_pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of pointcloud for surround obstacle stop</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.object_types</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Types of objects to consider for surround obstacle stop</td>
 <td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.car</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.truck</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.bus</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.trailer</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.motorcycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.bicycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.pedestrian</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.hazard</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>hazard</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.animal</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>animal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.unknown</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.front_distance_th.pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>front_<wbr>distance_<wbr>th.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.car</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.truck</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.bus</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.trailer</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.motorcycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.bicycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.pedestrian</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.hazard</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>hazard</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.animal</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>animal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.unknown</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.side_distance_th.pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>side_<wbr>distance_<wbr>th.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.car</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>car</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.truck</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>truck</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.bus</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>bus</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.trailer</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>trailer</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.motorcycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>motorcycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.bicycle</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>bicycle</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.pedestrian</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>pedestrian</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.hazard</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>hazard</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.animal</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>animal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.unknown</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.back_distance_th.pointcloud</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>back_<wbr>distance_<wbr>th.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td></td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.hysteresis_distance</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>hysteresis_<wbr>distance</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance hysteresis threshold for clearing stop [m]</td>
 <td>0.1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.hysteresis_time</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>hysteresis_<wbr>time</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time hysteresis threshold for clearing stop [s]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>surround_obstacle_stop.ego_stopped_vel_th</td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>ego_<wbr>stopped_<wbr>vel_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold below which ego vehicle is considered stopped [m/s]</td>
 <td>0.1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.stop_margin</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>stop_<wbr>margin</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance to maintain from a traffic light when stopped [m]</td>
 <td>0.75</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.stop_for_red_light</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>stop_<wbr>for_<wbr>red_<wbr>light</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when red light is detected</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light_stop.stop_for_amber_light</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>stop_<wbr>for_<wbr>amber_<wbr>light</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stopping behavior when amber light is detected</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light_stop.treat_amber_light_as_red</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>treat_<wbr>amber_<wbr>light_<wbr>as_<wbr>red</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Treat amber light as red light</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light_stop.treat_unknown_light_as_red</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>treat_<wbr>unknown_<wbr>light_<wbr>as_<wbr>red</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Treat unknown light as red light</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>traffic_light_stop.overshoot_tolerance</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>overshoot_<wbr>tolerance</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Overshoot tolerance [m]</td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.allow_if_cannot_stop_distance</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>allow_<wbr>if_<wbr>cannot_<wbr>stop_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m]</td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.th_stable_duration_red</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>stable_<wbr>duration_<wbr>red</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for stable duration of red light [s]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.th_stable_duration_amber</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>stable_<wbr>duration_<wbr>amber</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for stable duration of amber light [s]</td>
 <td>0.2</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.th_stable_duration_unknown</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>stable_<wbr>duration_<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for stable duration of unknown light [s]</td>
 <td>0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.th_amber_rejection_hysteresis</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>amber_<wbr>rejection_<wbr>hysteresis</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for amber rejection hysteresis [s]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.crossing_time_limit</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>crossing_<wbr>time_<wbr>limit</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Crossing time limit [s]</td>
 <td>2.75</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.delay_response_time</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>delay_<wbr>response_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Delay response time used to estimate the minimum ego stopping distance [s]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_light_stop.ego_stopped_vel_th</td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>ego_<wbr>stopped_<wbr>vel_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity below which ego is considered stopped when checking traffic lights [m/s]</td>
 <td>0.01</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>use_akima_spline_interpolation</td>
+<td>use_<wbr>akima_<wbr>spline_<wbr>interpolation</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable Akima spline interpolation for trajectory smoothing</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_eb_smoother</td>
+<td>use_<wbr>eb_<wbr>smoother</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable Elastic Band smoother for trajectory smoothing</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_qp_smoother</td>
+<td>use_<wbr>qp_<wbr>smoother</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable QP-based trajectory smoothing with explicit jerk constraints</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_trajectory_point_fixer</td>
+<td>use_<wbr>trajectory_<wbr>point_<wbr>fixer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Remove repeated or invalid points, or points that go against the general trajectory direction</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_trajectory_extender</td>
+<td>use_<wbr>trajectory_<wbr>extender</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable trajectory extender to extend trajectory backward using ego pose history</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_velocity_optimizer</td>
+<td>use_<wbr>velocity_<wbr>optimizer</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable velocity profile optimization with jerk filtering and constraint enforcement</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_kinematic_feasibility_enforcer</td>
+<td>use_<wbr>kinematic_<wbr>feasibility_<wbr>enforcer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_mpt_optimizer</td>
+<td>use_<wbr>mpt_<wbr>optimizer</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_temporal_mpt_optimizer</td>
+<td>use_<wbr>temporal_<wbr>mpt_<wbr>optimizer</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable Temporal MPT optimizer plugin (acados-based kinematic bicycle MPC for combined geometry and velocity optimization)</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_vel</td>
+<td>max_<wbr>vel</wbr></td>
 <td>float</td>
 <td>Default maximum velocity used when no external velocity limit is available [m/s]</td>
 <td>11.1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>limit.max_acc</td>
+<td>limit.<wbr>max_<wbr>acc</wbr></wbr></td>
 <td>float</td>
 <td>Maximum acceleration limit for velocity smoothing [m/s^2]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>limit.min_acc</td>
+<td>limit.<wbr>min_<wbr>acc</wbr></wbr></td>
 <td>float</td>
 <td>Minimum acceleration limit for velocity smoothing [m/s^2]</td>
 <td>-2.5</td>
 <td>≤0</td>
 </tr>
 <tr>
-<td>limit.max_jerk</td>
+<td>limit.<wbr>max_<wbr>jerk</wbr></wbr></td>
 <td>float</td>
 <td>Maximum jerk limit for velocity smoothing [m/s^3]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>limit.min_jerk</td>
+<td>limit.<wbr>min_<wbr>jerk</wbr></wbr></td>
 <td>float</td>
 <td>Minimum jerk limit for velocity smoothing [m/s^3]</td>
 <td>-1.5</td>
 <td>≤0</td>
 </tr>
 <tr>
-<td>trajectory_point_fixer.remove_close_points</td>
+<td>trajectory_<wbr>point_<wbr>fixer.<wbr>remove_<wbr>close_<wbr>points</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable removal of close proximity points</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_point_fixer.resample_close_points</td>
+<td>trajectory_<wbr>point_<wbr>fixer.<wbr>resample_<wbr>close_<wbr>points</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable resampling of close proximity points</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_point_fixer.min_dist_to_remove_m</td>
+<td>trajectory_<wbr>point_<wbr>fixer.<wbr>min_<wbr>dist_<wbr>to_<wbr>remove_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum distance threshold for removing close proximity points [m]</td>
 <td>0.01</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_point_fixer.min_dist_to_resample_m</td>
+<td>trajectory_<wbr>point_<wbr>fixer.<wbr>min_<wbr>dist_<wbr>to_<wbr>resample_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum distance threshold for merging close proximity points [m]</td>
 <td>0.05</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_point_fixer.stop_detection_velocity_threshold_mps</td>
+<td>trajectory_<wbr>point_<wbr>fixer.<wbr>stop_<wbr>detection_<wbr>velocity_<wbr>threshold_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold used by the stop-detection logic: points whose speed falls below this value while decelerating are treated as stop candidates by both the cluster-based and velocity-profile-based detectors [m/s]</td>
 <td>0.3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_kinematic_feasibility.max_yaw_rate_rad_s</td>
+<td>trajectory_<wbr>kinematic_<wbr>feasibility.<wbr>max_<wbr>yaw_<wbr>rate_<wbr>rad_<wbr>s</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles.</td>
 <td>0.7</td>
 <td>≥0.1<br>≤2</td>
 </tr>
 <tr>
-<td>trajectory_kinematic_feasibility.time_step_s</td>
+<td>trajectory_<wbr>kinematic_<wbr>feasibility.<wbr>time_<wbr>step_<wbr>s</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time step for kinematic feasibility enforcement [s]. Default: 0.1 s.</td>
 <td>0.1</td>
 <td>≥0.01<br>≤1</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.corridor_width_m</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>corridor_<wbr>width_<wbr>m</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Base corridor width for adaptive bounds generation [m]. Defines the lateral distance from trajectory centerline to left/right bounds.</td>
 <td>3.5</td>
 <td>≥2<br>≤10</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.enable_adaptive_width</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>enable_<wbr>adaptive_<wbr>width</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable adaptive corridor width based on curvature and velocity. When true, corridor widens in curves and at low speeds.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.curvature_width_factor</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>curvature_<wbr>width_<wbr>factor</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Factor for curvature-based corridor widening [m/rad]. Higher values provide more space in curves.</td>
 <td>0.5</td>
 <td>≥0<br>≤2</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.velocity_width_factor</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>velocity_<wbr>width_<wbr>factor</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Factor for velocity-based corridor widening [m]. Higher values provide more maneuvering room at low speeds.</td>
 <td>0.3</td>
 <td>≥0<br>≤2</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.min_clearance_m</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>min_<wbr>clearance_<wbr>m</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum clearance from vehicle edges to corridor bounds [m]. Ensures minimum safe distance.</td>
 <td>0.5</td>
 <td>≥0<br>≤2</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.reset_previous_data_each_iteration</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>reset_<wbr>previous_<wbr>data_<wbr>each_<wbr>iteration</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Reset MPT's previous optimization data each cycle. Should be true for diffusion planner (new trajectories each cycle), false for incremental planners.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.enable_debug_info</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>enable_<wbr>debug_<wbr>info</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable debug visualization markers for bounds and reference trajectory.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.output_delta_arc_length_m</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>output_<wbr>delta_<wbr>arc_<wbr>length_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Spacing between trajectory points in MPT optimization [m]. Smaller values provide finer resolution but increase computation.</td>
 <td>1</td>
 <td>≥0.1<br>≤5</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.output_backward_traj_length_m</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>output_<wbr>backward_<wbr>traj_<wbr>length_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Length of trajectory extension backward from ego pose [m].</td>
 <td>5</td>
 <td>≥0<br>≤20</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.ego_nearest_dist_threshold_m</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>ego_<wbr>nearest_<wbr>dist_<wbr>threshold_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for finding nearest trajectory point to ego [m].</td>
 <td>3</td>
 <td>≥0.5<br>≤10</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>ego_<wbr>nearest_<wbr>yaw_<wbr>threshold_<wbr>deg</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw threshold for finding nearest trajectory point to ego [degrees].</td>
 <td>45</td>
 <td>≥10<br>≤90</td>
 </tr>
 <tr>
-<td>trajectory_mpt_optimizer.acceleration_moving_average_window</td>
+<td>trajectory_<wbr>mpt_<wbr>optimizer.<wbr>acceleration_<wbr>moving_<wbr>average_<wbr>window</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Moving average window size for acceleration smoothing. Larger values produce smoother acceleration but increase lag. Window of 1 = no smoothing.</td>
 <td>5</td>
 <td>≥1<br>≤20</td>
 </tr>
 <tr>
-<td>trajectory_temporal_mpt_optimizer.cg_distance_from_rear_axle_ratio</td>
+<td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>cg_<wbr>distance_<wbr>from_<wbr>rear_<wbr>axle_<wbr>ratio</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Ratio of wheel base from rear axle to bicycle center of gravity. lr = ratio * wheel_base, lf = wheel_base - lr.</td>
 <td>0.8</td>
 <td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td>trajectory_temporal_mpt_optimizer.min_points_for_optimization</td>
+<td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>min_<wbr>points_<wbr>for_<wbr>optimization</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Minimum number of trajectory points required to run temporal MPT optimization.</td>
 <td>2</td>
 <td>≥2<br>≤1000</td>
 </tr>
 <tr>
-<td>trajectory_temporal_mpt_optimizer.enable_debug_info</td>
+<td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>enable_<wbr>debug_<wbr>info</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable debug logging for temporal MPT solver failures.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_temporal_mpt_optimizer.publish_debug_topics</td>
+<td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>publish_<wbr>debug_<wbr>topics</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish temporal MPT input, output, status, and control debug topics.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_temporal_mpt_optimizer.write_replay_fixture</td>
+<td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>write_<wbr>replay_<wbr>fixture</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Write replay fixture files when temporal MPT solving fails.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_temporal_mpt_optimizer.replay_fixture_directory</td>
+<td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>replay_<wbr>fixture_<wbr>directory</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Directory used for temporal MPT replay fixture files.</td>
 <td>~/.ros/autoware_temporal_mpt_replay</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console</td>
+<td>trajectory_<wbr>temporal_<wbr>mpt_<wbr>optimizer.<wbr>log_<wbr>replay_<wbr>fixture_<wbr>to_<wbr>console</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Log temporal MPT replay fixture contents to console when solving fails.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_extender.nearest_dist_threshold_m</td>
+<td>trajectory_<wbr>extender.<wbr>nearest_<wbr>dist_<wbr>threshold_<wbr>m</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for trajectory matching [m]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_extender.nearest_yaw_threshold_deg</td>
+<td>trajectory_<wbr>extender.<wbr>nearest_<wbr>yaw_<wbr>threshold_<wbr>deg</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw threshold for trajectory matching [deg]</td>
 <td>60</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_extender.backward_trajectory_extension_m</td>
+<td>trajectory_<wbr>extender.<wbr>backward_<wbr>trajectory_<wbr>extension_<wbr>m</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Length to extend trajectory backward using ego history [m]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_spline_smoother.interpolation_resolution_m</td>
+<td>trajectory_<wbr>spline_<wbr>smoother.<wbr>interpolation_<wbr>resolution_<wbr>m</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Interpolation resolution for Akima spline [m]</td>
 <td>0.5</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>trajectory_spline_smoother.max_distance_discrepancy_m</td>
+<td>trajectory_<wbr>spline_<wbr>smoother.<wbr>max_<wbr>distance_<wbr>discrepancy_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum position deviation allowed for orientation copying [m]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_spline_smoother.preserve_input_trajectory_orientation</td>
+<td>trajectory_<wbr>spline_<wbr>smoother.<wbr>preserve_<wbr>input_<wbr>trajectory_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Copy orientations from input trajectory to spline output</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.weight_smoothness</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>weight_<wbr>smoothness</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for path curvature minimization (geometric smoothness) [dimensionless]</td>
 <td>10</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.weight_fidelity</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>weight_<wbr>fidelity</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for path fidelity (staying close to original path) [dimensionless]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.time_step_s</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>time_<wbr>step_<wbr>s</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Fixed time step for velocity/acceleration calculations [s]</td>
 <td>0.1</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.osqp_eps_abs</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>osqp_<wbr>eps_<wbr>abs</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>OSQP absolute convergence tolerance</td>
 <td>0.0001</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.osqp_eps_rel</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>osqp_<wbr>eps_<wbr>rel</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>OSQP relative convergence tolerance</td>
 <td>0.0001</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.osqp_max_iter</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>osqp_<wbr>max_<wbr>iter</wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>OSQP maximum solver iterations</td>
 <td>100</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.osqp_verbose</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>osqp_<wbr>verbose</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable OSQP verbose solver output</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.preserve_input_trajectory_orientation</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>preserve_<wbr>input_<wbr>trajectory_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Copy orientations from input trajectory to smoothed output</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.max_distance_for_orientation_m</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>max_<wbr>distance_<wbr>for_<wbr>orientation_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Max distance for nearest neighbor matching when copying orientations [m]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.use_velocity_based_fidelity</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>use_<wbr>velocity_<wbr>based_<wbr>fidelity</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable velocity-dependent fidelity weighting (lower fidelity at low speeds)</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.velocity_threshold_mps</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>velocity_<wbr>threshold_<wbr>mps</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Velocity threshold at sigmoid midpoint for velocity-based fidelity [m/s]</td>
 <td>0.3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.sigmoid_sharpness</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>sigmoid_<wbr>sharpness</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Sigmoid steepness for velocity-based fidelity transition (higher = sharper)</td>
 <td>50</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.min_fidelity_weight</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>min_<wbr>fidelity_<wbr>weight</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum fidelity weight at very low speeds [dimensionless]</td>
 <td>0.01</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.max_fidelity_weight</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>max_<wbr>fidelity_<wbr>weight</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum fidelity weight at high speeds [dimensionless]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.num_constrained_points_start</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>num_<wbr>constrained_<wbr>points_<wbr>start</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of points from the start of the trajectory to constrain as hard constraints (preserves initial state)</td>
 <td>3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.num_constrained_points_end</td>
+<td>trajectory_<wbr>qp_<wbr>smoother.<wbr>num_<wbr>constrained_<wbr>points_<wbr>end</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of points from the end of the trajectory to constrain as hard constraints</td>
 <td>3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.nearest_dist_threshold_m</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>nearest_<wbr>dist_<wbr>threshold_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for trajectory matching [m]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.nearest_yaw_threshold_deg</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>nearest_<wbr>yaw_<wbr>threshold_<wbr>deg</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw threshold for trajectory matching [deg]</td>
 <td>60</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.target_pull_out_speed_mps</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>target_<wbr>pull_<wbr>out_<wbr>speed_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Target speed during pull-out maneuver [m/s]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.target_pull_out_acc_mps2</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>target_<wbr>pull_<wbr>out_<wbr>acc_<wbr>mps2</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Target acceleration during pull-out maneuver [m/s²]</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.max_lateral_accel_mps2</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>max_<wbr>lateral_<wbr>accel_<wbr>mps2</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum lateral acceleration [m/s²]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.min_limited_speed_mps</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>min_<wbr>limited_<wbr>speed_<wbr>mps</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum speed when applying lateral acceleration limit [m/s]</td>
 <td>3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.set_engage_speed</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>set_<wbr>engage_<wbr>speed</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Set minimum speed during engage</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.limit_speed</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>limit_<wbr>speed</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable speed limiting</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.limit_lateral_acceleration</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>limit_<wbr>lateral_<wbr>acceleration</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable lateral acceleration limiting</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.smooth_velocities</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>smooth_<wbr>velocities</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable jerk-filtered velocity smoothing</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>continuous_<wbr>jerk_<wbr>smoother.<wbr>jerk_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for jerk minimization in velocity smoothing</td>
 <td>30</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>continuous_<wbr>jerk_<wbr>smoother.<wbr>over_<wbr>v_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for velocity limit violation slack</td>
 <td>3000</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>continuous_<wbr>jerk_<wbr>smoother.<wbr>over_<wbr>a_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for acceleration limit violation slack</td>
 <td>30</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>continuous_<wbr>jerk_<wbr>smoother.<wbr>over_<wbr>j_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for jerk limit violation slack</td>
 <td>10</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>continuous_<wbr>jerk_<wbr>smoother.<wbr>velocity_<wbr>tracking_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for tracking reference velocity</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight</td>
+<td>trajectory_<wbr>velocity_<wbr>optimizer.<wbr>continuous_<wbr>jerk_<wbr>smoother.<wbr>accel_<wbr>tracking_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for tracking reference acceleration</td>
 <td>300</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>elastic_band_params.common.output_delta_arc_length</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>common.<wbr>output_<wbr>delta_<wbr>arc_<wbr>length</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Delta arc length for output trajectory [m]</td>
 <td>0.5</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>elastic_band_params.common.output_backward_traj_length</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>common.<wbr>output_<wbr>backward_<wbr>traj_<wbr>length</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Backward length for backward trajectory from base_link [m]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>elastic_band_params.elastic_band.option.enable_warm_start</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>option.<wbr>enable_<wbr>warm_<wbr>start</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable warm start for optimization</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>elastic_band_params.elastic_band.option.enable_optimization_validation</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>option.<wbr>enable_<wbr>optimization_<wbr>validation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable optimization validation</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>elastic_band_params.elastic_band.common.num_points</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>common.<wbr>num_<wbr>points</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>integer</td>
 <td>Number of points for optimization</td>
 <td>100</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>elastic_band_params.elastic_band.common.delta_arc_length</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>common.<wbr>delta_<wbr>arc_<wbr>length</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Delta arc length for optimization [m]</td>
 <td>1</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>elastic_band_params.elastic_band.weight.smooth_weight</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>weight.<wbr>smooth_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for smoothness constraint</td>
 <td>1</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>elastic_band_params.elastic_band.weight.lat_error_weight</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>elastic_<wbr>band.<wbr>weight.<wbr>lat_<wbr>error_<wbr>weight</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Weight for lateral error constraint</td>
 <td>0.001</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>elastic_band_params.ego_nearest_dist_threshold</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>ego_<wbr>nearest_<wbr>dist_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Distance threshold for ego nearest search [m]</td>
 <td>3</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>elastic_band_params.ego_nearest_yaw_threshold</td>
+<td>elastic_<wbr>band_<wbr>params.<wbr>ego_<wbr>nearest_<wbr>yaw_<wbr>threshold</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Yaw threshold for ego nearest search [rad]</td>
 <td>1.046</td>

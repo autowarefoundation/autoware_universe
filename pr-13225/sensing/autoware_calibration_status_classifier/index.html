@@ -22997,28 +22997,28 @@
 </thead>
 <tbody>
 <tr>
-<td>trt_precision</td>
+<td>trt_<wbr>precision</wbr></td>
 <td>string</td>
 <td>A precision of TensorRT engine.</td>
 <td>fp16</td>
 <td>['fp16', 'fp32']</td>
 </tr>
 <tr>
-<td>cloud_capacity</td>
+<td>cloud_<wbr>capacity</wbr></td>
 <td>integer</td>
 <td>Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).</td>
 <td>2000000</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>onnx_path</td>
+<td>onnx_<wbr>path</wbr></td>
 <td>string</td>
 <td>Path to the ONNX model file used for calibration status verification.</td>
 <td><span class="arithmatex">\((var model_path)/\)</span>(var model_name).onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>runtime_mode</td>
+<td>runtime_<wbr>mode</wbr></td>
 <td>string</td>
 <td>The mode of calibration status node, which determines when the calibration status verification is performed. 'manual' triggers by service, 'periodic' runs at a fixed interval, and 'active' runs continuously.</td>
 <td>active</td>
@@ -23032,133 +23032,133 @@
 <td>N/A</td>
 </tr>
 <tr>
-<td>queue_size</td>
+<td>queue_<wbr>size</wbr></td>
 <td>integer</td>
 <td>The queue size in synchronized callbacks.</td>
 <td>5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>ego_box</td>
+<td>ego_<wbr>box</wbr></td>
 <td>array</td>
 <td>Ego vehicle bounding box in lidar frame [x_min, y_min, z_min, x_max, y_max, z_max]. Used to generate an occlusion mask that prevents projecting LiDAR points through the vehicle chassis onto the image. Set all values to 0.0 to disable.</td>
 <td>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>input.cloud_topics</td>
+<td>input.<wbr>cloud_<wbr>topics</wbr></wbr></td>
 <td>array</td>
 <td>List of LiDAR topics to subscribe for calibration status verification. If only a single LiDAR topic is specified with multiple camera topics, all the camera topics will be validated against that single LiDAR topic. If multiple LiDAR topics are specified with multiple camera topics, each camera topic will be validated against the corresponding LiDAR topic in the list (both lists size must match). If multiple LiDAR topics are specified with a single camera topic, the single camera topic will be validated against all the LiDAR topics in the list.</td>
 <td>['/sensing/lidar/concatenated/pointcloud']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>input.image_topics</td>
+<td>input.<wbr>image_<wbr>topics</wbr></wbr></td>
 <td>array</td>
 <td>List of camera topics to subscribe for calibration status verification. Same rules as for cloud_topics apply here.</td>
 <td>['/sensing/camera/camera8/image_raw']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>input.approx_deltas</td>
+<td>input.<wbr>approx_<wbr>deltas</wbr></wbr></td>
 <td>array</td>
 <td>The approximate time deltas in seconds for each topic pair (LiDAR and camera) for Approximate Time Synchronization Policy. The length of this array must be equal to maximum length of cloud_topics and image_topics arrays or be a single value which will be applied to all topic pairs.</td>
 <td>['0.1']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>input.miscalibration_confidence_thresholds</td>
+<td>input.<wbr>miscalibration_<wbr>confidence_<wbr>thresholds</wbr></wbr></wbr></td>
 <td>array</td>
 <td>Per-pair confidence threshold for determining miscalibration. The length must be 1 (applied to all pairs) or match the number of LiDAR-camera pairs. Positive values shift the decision boundary towards detecting miscalibration, while negative values shift it towards detecting proper calibration. A value of 0.0 means the decision is based solely on the model output without bias.</td>
 <td>[0.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>input.already_rectified</td>
+<td>input.<wbr>already_<wbr>rectified</wbr></wbr></td>
 <td>array</td>
 <td>List of flags indicating whether each camera topic provides already rectified images. The length of this array must be equal to maximum length of image_topics array or be a single value which will be applied to all camera topics.</td>
 <td>[True]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>prerequisite.linear_velocity_check.enabled</td>
+<td>prerequisite.<wbr>linear_<wbr>velocity_<wbr>check.<wbr>enabled</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable or disable linear velocity check for calibration status verification.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>prerequisite.linear_velocity_check.source</td>
+<td>prerequisite.<wbr>linear_<wbr>velocity_<wbr>check.<wbr>source</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The twist message type to subscribe for linear velocity check.</td>
 <td>twist_with_cov_stamped</td>
 <td>['twist_stamped', 'twist_with_cov_stamped', 'odometry']</td>
 </tr>
 <tr>
-<td>prerequisite.linear_velocity_check.threshold</td>
+<td>prerequisite.<wbr>linear_<wbr>velocity_<wbr>check.<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The linear velocity threshold in meters per second. If exceeded, calibration check is skipped.</td>
 <td>3.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>prerequisite.linear_velocity_check.timeout</td>
+<td>prerequisite.<wbr>linear_<wbr>velocity_<wbr>check.<wbr>timeout</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time in seconds the value must stay below the threshold before the prerequisite is considered met again.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>prerequisite.angular_velocity_check.enabled</td>
+<td>prerequisite.<wbr>angular_<wbr>velocity_<wbr>check.<wbr>enabled</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable or disable angular velocity check for calibration status verification.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>prerequisite.angular_velocity_check.source</td>
+<td>prerequisite.<wbr>angular_<wbr>velocity_<wbr>check.<wbr>source</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The twist message type to subscribe for angular velocity check.</td>
 <td>twist_with_cov_stamped</td>
 <td>['twist_stamped', 'twist_with_cov_stamped', 'odometry']</td>
 </tr>
 <tr>
-<td>prerequisite.angular_velocity_check.threshold</td>
+<td>prerequisite.<wbr>angular_<wbr>velocity_<wbr>check.<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>The angular velocity magnitude threshold in radians per second. If exceeded, calibration check is skipped.</td>
 <td>0.1745</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>prerequisite.angular_velocity_check.timeout</td>
+<td>prerequisite.<wbr>angular_<wbr>velocity_<wbr>check.<wbr>timeout</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time in seconds the value must stay below the threshold before the prerequisite is considered met again.</td>
 <td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>prerequisite.objects_check.enabled</td>
+<td>prerequisite.<wbr>objects_<wbr>check.<wbr>enabled</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable or disable object count check for calibration status verification.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>prerequisite.objects_check.source</td>
+<td>prerequisite.<wbr>objects_<wbr>check.<wbr>source</wbr></wbr></wbr></td>
 <td>string</td>
 <td>The object message type to subscribe for object count check.</td>
 <td>predicted_objects</td>
 <td>['predicted_objects', 'tracked_objects', 'detected_objects']</td>
 </tr>
 <tr>
-<td>prerequisite.objects_check.threshold</td>
+<td>prerequisite.<wbr>objects_<wbr>check.<wbr>threshold</wbr></wbr></wbr></td>
 <td>integer</td>
 <td>The maximum number of objects allowed. If exceeded, calibration check is skipped.</td>
 <td>100</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>prerequisite.objects_check.timeout</td>
+<td>prerequisite.<wbr>objects_<wbr>check.<wbr>timeout</wbr></wbr></wbr></td>
 <td>float</td>
 <td>Time in seconds the value must stay below the threshold before the prerequisite is considered met again.</td>
 <td>1.0</td>
@@ -23179,14 +23179,14 @@
 </thead>
 <tbody>
 <tr>
-<td>max_depth</td>
+<td>max_<wbr>depth</wbr></td>
 <td>float</td>
 <td>Maximum depth for projected LiDAR points in the camera frame. Points with depth values greater than this are considered invalid.</td>
 <td>128.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>dilation_size</td>
+<td>dilation_<wbr>size</wbr></td>
 <td>integer</td>
 <td>The size of the dilation kernel used for point cloud processing, 1 means 3x3 kernel, 2 means 5x5 kernel, etc.</td>
 <td>1</td>

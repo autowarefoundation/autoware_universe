@@ -22914,217 +22914,217 @@ This feature works when <code>use_vehicle_adaptor: true</code> is set and requir
 </thead>
 <tbody>
 <tr>
-<td>csv_path_accel_map</td>
+<td>csv_<wbr>path_<wbr>accel_<wbr>map</wbr></wbr></wbr></td>
 <td>string</td>
 <td>path for acceleration map csv file</td>
 <td>$(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/accel_map.csv</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>csv_path_brake_map</td>
+<td>csv_<wbr>path_<wbr>brake_<wbr>map</wbr></wbr></wbr></td>
 <td>string</td>
 <td>path for brake map csv file</td>
 <td>$(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/brake_map.csv</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>csv_path_steer_map</td>
+<td>csv_<wbr>path_<wbr>steer_<wbr>map</wbr></wbr></wbr></td>
 <td>string</td>
 <td>path for steer map csv file</td>
 <td>$(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/steer_map.csv</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>convert_accel_cmd</td>
+<td>convert_<wbr>accel_<wbr>cmd</wbr></wbr></td>
 <td>boolean</td>
 <td>use accel or not</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>convert_brake_cmd</td>
+<td>convert_<wbr>brake_<wbr>cmd</wbr></wbr></td>
 <td>boolean</td>
 <td>use brake or not</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>convert_steer_cmd</td>
+<td>convert_<wbr>steer_<wbr>cmd</wbr></wbr></td>
 <td>boolean</td>
 <td>use steer or not</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_steer_ff</td>
+<td>use_<wbr>steer_<wbr>ff</wbr></wbr></td>
 <td>boolean</td>
 <td>steering steer controller using steer feed forward or not</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_steer_fb</td>
+<td>use_<wbr>steer_<wbr>fb</wbr></wbr></td>
 <td>boolean</td>
 <td>steering steer controller using steer feed back or not</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>is_debugging</td>
+<td>is_<wbr>debugging</wbr></td>
 <td>boolean</td>
 <td>debugging mode or not</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_throttle</td>
+<td>max_<wbr>throttle</wbr></td>
 <td>float</td>
 <td>maximum value of throttle</td>
 <td>0.4</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_brake</td>
+<td>max_<wbr>brake</wbr></td>
 <td>float</td>
 <td>maximum value of brake</td>
 <td>0.8</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>max_steer</td>
+<td>max_<wbr>steer</wbr></td>
 <td>float</td>
 <td>maximum value of steer</td>
 <td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_steer</td>
+<td>min_<wbr>steer</wbr></td>
 <td>float</td>
 <td>minimum value of steer</td>
 <td>-10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.kp</td>
+<td>steer_<wbr>pid.<wbr>kp</wbr></wbr></td>
 <td>float</td>
 <td>proportional coefficient value in PID control</td>
 <td>150.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.ki</td>
+<td>steer_<wbr>pid.<wbr>ki</wbr></wbr></td>
 <td>float</td>
 <td>integral coefficient value in PID control</td>
 <td>15.0</td>
 <td>&gt;0.0</td>
 </tr>
 <tr>
-<td>steer_pid.kd</td>
+<td>steer_<wbr>pid.<wbr>kd</wbr></wbr></td>
 <td>float</td>
 <td>derivative coefficient value in PID control</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.max</td>
+<td>steer_<wbr>pid.<wbr>max</wbr></wbr></td>
 <td>float</td>
 <td>maximum value of PID</td>
 <td>8.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.min</td>
+<td>steer_<wbr>pid.<wbr>min</wbr></wbr></td>
 <td>float</td>
 <td>minimum value of PID</td>
 <td>-8.0.</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.max_p</td>
+<td>steer_<wbr>pid.<wbr>max_<wbr>p</wbr></wbr></wbr></td>
 <td>float</td>
 <td>maximum value of Proportional in PID</td>
 <td>8.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.min_p</td>
+<td>steer_<wbr>pid.<wbr>min_<wbr>p</wbr></wbr></wbr></td>
 <td>float</td>
 <td>minimum value of Proportional in PID</td>
 <td>-8.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.max_i</td>
+<td>steer_<wbr>pid.<wbr>max_<wbr>i</wbr></wbr></wbr></td>
 <td>float</td>
 <td>maximum value of Integral in PID</td>
 <td>8.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.min_i</td>
+<td>steer_<wbr>pid.<wbr>min_<wbr>i</wbr></wbr></wbr></td>
 <td>float</td>
 <td>minimum value of Integral in PID</td>
 <td>-8.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.max_d</td>
+<td>steer_<wbr>pid.<wbr>max_<wbr>d</wbr></wbr></wbr></td>
 <td>float</td>
 <td>maximum value of Derivative in PID</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.min_d</td>
+<td>steer_<wbr>pid.<wbr>min_<wbr>d</wbr></wbr></wbr></td>
 <td>float</td>
 <td>minimum value of Derivative in PID</td>
 <td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>steer_pid.invalid_integration_decay</td>
+<td>steer_<wbr>pid.<wbr>invalid_<wbr>integration_<wbr>decay</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>invalid integration decay value in PID control</td>
 <td>0.97</td>
 <td>&gt;0.0</td>
 </tr>
 <tr>
-<td>convert_steer_cmd_method</td>
+<td>convert_<wbr>steer_<wbr>cmd_<wbr>method</wbr></wbr></wbr></td>
 <td>string</td>
 <td>method for converting steer command</td>
 <td>vgr</td>
 <td>['vgr', 'steer_map']</td>
 </tr>
 <tr>
-<td>vgr_coef_a</td>
+<td>vgr_<wbr>coef_<wbr>a</wbr></wbr></td>
 <td>float</td>
 <td>coefficient a for variable gear ratio</td>
 <td>15.713</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>vgr_coef_b</td>
+<td>vgr_<wbr>coef_<wbr>b</wbr></wbr></td>
 <td>float</td>
 <td>coefficient b for variable gear ratio</td>
 <td>0.053</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>vgr_coef_c</td>
+<td>vgr_<wbr>coef_<wbr>c</wbr></wbr></td>
 <td>float</td>
 <td>coefficient c for variable gear ratio</td>
 <td>0.042</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>convert_actuation_to_steering_status</td>
+<td>convert_<wbr>actuation_<wbr>to_<wbr>steering_<wbr>status</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>convert actuation to steering status or not. Whether to subscribe to actuation_status and calculate and publish steering_status For example, receive the steering wheel angle and calculate the steering wheel angle based on the gear ratio. If false, the vehicle interface must publish steering_status.</td>
 <td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>use_vehicle_adaptor</td>
+<td>use_<wbr>vehicle_<wbr>adaptor</wbr></wbr></td>
 <td>boolean</td>
 <td>flag to enable feature that compensates control commands according to vehicle dynamics.</td>
 <td>false</td>

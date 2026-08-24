@@ -23306,105 +23306,105 @@
 </thead>
 <tbody>
 <tr>
-<td>debug_mode</td>
+<td>debug_<wbr>mode</wbr></td>
 <td>boolean</td>
 <td>Flag to enable debug mode to display additional logging information.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>rosbag_length</td>
+<td>rosbag_<wbr>length</wbr></td>
 <td>float</td>
 <td>This value determine if the rosbag has started from the beginning again. The value should be set smaller than the actual length of the bag.</td>
 <td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>maximum_queue_size</td>
+<td>maximum_<wbr>queue_<wbr>size</wbr></wbr></td>
 <td>integer</td>
 <td>Maximum size of the queue for the Keep Last policy in QoS history.</td>
 <td>5</td>
 <td>≥1</td>
 </tr>
 <tr>
-<td>timeout_sec</td>
+<td>timeout_<wbr>sec</wbr></td>
 <td>float</td>
 <td>Timer's timeout duration in seconds when collectors are created. Collectors will concatenate the point clouds when timeout_sec reaches zero.</td>
 <td>0.1</td>
 <td>≥0.001</td>
 </tr>
 <tr>
-<td>is_motion_compensated</td>
+<td>is_<wbr>motion_<wbr>compensated</wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to indicate if motion compensation is enabled.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>publish_synchronized_pointcloud</td>
+<td>publish_<wbr>synchronized_<wbr>pointcloud</wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to indicate if synchronized point cloud should be published.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>keep_input_frame_in_synchronized_pointcloud</td>
+<td>keep_<wbr>input_<wbr>frame_<wbr>in_<wbr>synchronized_<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to indicate if input frame should be kept in synchronized point cloud.</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>publish_previous_but_late_pointcloud</td>
+<td>publish_<wbr>previous_<wbr>but_<wbr>late_<wbr>pointcloud</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to indicate if a concatenated point cloud should be published if its timestamp is earlier than the previous published concatenated point cloud.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>synchronized_pointcloud_postfix</td>
+<td>synchronized_<wbr>pointcloud_<wbr>postfix</wbr></wbr></td>
 <td>string</td>
 <td>Postfix for the topic name of the synchronized point cloud.</td>
 <td>pointcloud</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>input_twist_topic_type</td>
+<td>input_<wbr>twist_<wbr>topic_<wbr>type</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Type of the input twist topic.</td>
 <td>twist</td>
 <td>['twist', 'odom']</td>
 </tr>
 <tr>
-<td>input_topics</td>
+<td>input_<wbr>topics</wbr></td>
 <td>array</td>
 <td>List of input point cloud topics.</td>
 <td>['cloud_topic1', 'cloud_topic2', 'cloud_topic3']</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>output_frame</td>
+<td>output_<wbr>frame</wbr></td>
 <td>string</td>
 <td>Output frame.</td>
 <td>base_link</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>matching_strategy.type</td>
+<td>matching_<wbr>strategy.<wbr>type</wbr></wbr></td>
 <td>string</td>
 <td>Set it to <code>advanced</code> if you can synchronize your LiDAR sensor; otherwise, set it to <code>naive</code>.</td>
 <td>advanced</td>
 <td>['naive', 'advanced']</td>
 </tr>
 <tr>
-<td>matching_strategy.lidar_timestamp_offsets</td>
+<td>matching_<wbr>strategy.<wbr>lidar_<wbr>timestamp_<wbr>offsets</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>List of LiDAR timestamp offsets in seconds (relative to the earliest LiDAR timestamp). The offsets should be provided in the same order as the input topics.</td>
 <td>[0.0, 0.0, 0.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>matching_strategy.lidar_timestamp_noise_window</td>
+<td>matching_<wbr>strategy.<wbr>lidar_<wbr>timestamp_<wbr>noise_<wbr>window</wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>List of LiDAR timestamp noise windows in seconds. The noise values should be specified in the same order as the input_topics.</td>
 <td>[0.01, 0.01, 0.01]</td>
