@@ -27,7 +27,6 @@ rclcpp_components_register_nodes(${PROJECT_NAME}
   "autoware::default_adapi::AutowareStateNode"
   "autoware::default_adapi::FailSafeNode"
   "autoware::default_adapi::HeartbeatNode"
-  "autoware::default_adapi::ManualControlNode"
   "autoware::default_adapi::MotionNode"
   "autoware::default_adapi::MrmRequestNode"
   "autoware::default_adapi::OperationModeNode"
@@ -47,6 +46,12 @@ rclcpp_components_register_nodes(${PROJECT_NAME}
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::default_adapi::DiagnosticsNode"
   EXECUTABLE diagnostics_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::ManualControlNode"
+  EXECUTABLE manual_control_node
   ROS2_EXECUTOR MultiThreadedExecutor
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )

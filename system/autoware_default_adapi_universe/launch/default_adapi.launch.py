@@ -35,6 +35,8 @@ UNIVERSE = "autoware_default_adapi_universe"
 # component container cannot provide.
 AGNOCAST_WRAPPER_NODES = [
     ("diagnostics", "DiagnosticsNode", "diagnostics_node"),
+    ("manual/local", "ManualControlNode", "manual_control_node"),
+    ("manual/remote", "ManualControlNode", "manual_control_node"),
 ]
 
 
@@ -97,8 +99,6 @@ def launch_setup(context, *args, **kwargs):
         create_api_node("autoware_default_adapi_universe", "autoware_state", "AutowareStateNode"),
         create_api_node("autoware_default_adapi_universe", "fail_safe", "FailSafeNode"),
         create_api_node("autoware_default_adapi_universe", "heartbeat", "HeartbeatNode"),
-        create_api_node("autoware_default_adapi_universe", "manual/local", "ManualControlNode"),
-        create_api_node("autoware_default_adapi_universe", "manual/remote", "ManualControlNode"),
         create_api_node("autoware_default_adapi_universe", "motion", "MotionNode"),
         create_api_node("autoware_default_adapi_universe", "mrm_request", "MrmRequestNode"),
         create_api_node("autoware_default_adapi_universe", "operation_mode", "OperationModeNode"),
