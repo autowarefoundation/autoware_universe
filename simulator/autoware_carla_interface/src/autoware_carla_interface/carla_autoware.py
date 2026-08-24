@@ -121,6 +121,10 @@ class InitializeInterface(object):
         random.seed(0)
         for i, spawn_point in enumerate(spawn_points_tm):
             self.world.debug.draw_string(spawn_point.location, str(i), life_time=10)
+        self._spawn_npc_vehicles(spawn_points_tm)
+
+    def _npc_vehicle_blueprints(self):
+        """Return the blueprints of the vehicle models used as NPC traffic."""
         models = [
             "dodge",
             "audi",
@@ -133,17 +137,21 @@ class InitializeInterface(object):
             "crown",
             "impala",
         ]
-        blueprints = []
-        for vehicle in self.world.get_blueprint_library().filter("*vehicle*"):
-            if any(model in vehicle.id for model in models):
-                blueprints.append(vehicle)
-        max_vehicles = 30
-        max_vehicles = min([max_vehicles, len(spawn_points_tm)])
+        return [
+            vehicle
+            for vehicle in self.world.get_blueprint_library().filter("*vehicle*")
+            if any(model in vehicle.id for model in models)
+        ]
+
+    def _spawn_npc_vehicles(self, spawn_points_tm):
+        """Spawn autopilot NPC vehicles on a random subset of the spawn points."""
+        blueprints = self._npc_vehicle_blueprints()
+        max_vehicles = min(30, len(spawn_points_tm))
         vehicles = []
-        for i, spawn_point in enumerate(random.sample(spawn_points_tm, max_vehicles)):
-            temp = self.world.try_spawn_actor(random.choice(blueprints), spawn_point)
-            if temp is not None:
-                vehicles.append(temp)
+        for spawn_point in random.sample(spawn_points_tm, max_vehicles):
+            vehicle = self.world.try_spawn_actor(random.choice(blueprints), spawn_point)
+            if vehicle is not None:
+                vehicles.append(vehicle)
 
         for vehicle in vehicles:
             vehicle.set_autopilot(True)
