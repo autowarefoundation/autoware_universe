@@ -23048,18 +23048,18 @@
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_<wbr>stop.<wbr>objects.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>target_<wbr>objects.<wbr>bbox</wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
-<td>Object types</td>
-<td>["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard"]</td>
+<td>Types of bounding box shaped objects to consider for obstacle stop</td>
+<td>["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "unknown"]</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>obstacle_<wbr>stop.<wbr>objects.<wbr>max_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Max velocity threshold [m/s]</td>
-<td>1.0</td>
-<td>≥0.0</td>
+<td>obstacle_<wbr>stop.<wbr>objects.<wbr>target_<wbr>objects.<wbr>polygon</wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Types of polygon shaped objects to consider for obstacle stop</td>
+<td>["car", "truck", "bus", "trailer", "pedestrian", "hazard", "unknown"]</td>
+<td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>objects.<wbr>stopped_<wbr>velocity_<wbr>th</wbr></wbr></wbr></wbr></wbr></td>
@@ -23265,10 +23265,17 @@
 <td>N/A</td>
 </tr>
 <tr>
-<td>surround_<wbr>obstacle_<wbr>stop.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>target_<wbr>objects.<wbr>bbox</wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
-<td>Types of objects to consider for surround obstacle stop</td>
+<td>Types of bounding box shaped objects to consider for surround obstacle stop</td>
 <td>["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "animal", "unknown"]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>target_<wbr>objects.<wbr>polygon</wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Types of polygon shaped objects to consider for surround obstacle stop</td>
+<td>["car", "truck", "bus", "trailer", "pedestrian", "hazard", "animal", "unknown"]</td>
 <td>N/A</td>
 </tr>
 <tr>
