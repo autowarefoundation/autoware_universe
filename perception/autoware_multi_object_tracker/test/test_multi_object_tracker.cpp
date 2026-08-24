@@ -495,8 +495,8 @@ public:
 namespace
 {
 
-constexpr size_t kHighLatencyChannel = 0;
-constexpr size_t kLowLatencyChannel = 1;
+constexpr size_t kHighLatencyChannel = 1;
+constexpr size_t kLowLatencyChannel = 0;
 constexpr int32_t kTestStartSec = 2000000000;
 constexpr double kMeasurementInterval = 0.1;
 constexpr double kStaleElapsedTime = 0.6;
@@ -625,6 +625,48 @@ TEST(InputManagerTargetSelection, BatchWindowAdvancesWithFreshStreamAfterTargetD
   EXPECT_TRUE(hasMeasurementAtOrAfter(objects, kLowLatencyChannel, latest_fresh_measurement));
 }
 
+TEST(InputManagerTargetSelection, ExportsRecoveredTargetMeasurementsDuringLatencyRamp)
+{
+  const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+  auto manager = makeInputManagerForTriggerTest(clock);
+  rclcpp::Time now = initializeLatencyStatistics(manager);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+
+  // converge the target latency and the export watermark to the steady state
+  for (size_t i = 0; i < 20; ++i) {
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.5);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.05);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+    autoware::multi_object_tracker::types::ObjectsWithAssociationList objects;
+    manager.getObjects(now, objects);
+  }
+
+  // target dropout: fail over to the low-latency stream, the watermark follows it
+  now = advanceTime(now, kStaleElapsedTime);
+  for (size_t i = 0; i < 5; ++i) {
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.05);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+    autoware::multi_object_tracker::types::ObjectsWithAssociationList objects;
+    manager.getObjects(now, objects);
+  }
+  ASSERT_EQ(manager.getTargetChannelIdx(), kLowLatencyChannel);
+
+  // recovery: every high-latency measurement is exported while the latency estimate converges
+  for (size_t i = 0; i < 20; ++i) {
+    const rclcpp::Time pushed = pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.5);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.05);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+    autoware::multi_object_tracker::types::ObjectsWithAssociationList objects;
+    manager.getObjects(now, objects);
+    EXPECT_TRUE(hasMeasurementAtOrAfter(objects, kHighLatencyChannel, pushed))
+      << "high-latency measurement lost at ramp cycle " << i;
+  }
+  EXPECT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+}
+
 TEST(InputManagerTargetSelection, KeepsTargetWithinLatencyHysteresis)
 {
   const auto clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
@@ -633,30 +675,30 @@ TEST(InputManagerTargetSelection, KeepsTargetWithinLatencyHysteresis)
   // both channels have the same latency, so the first one is selected as the target
   rclcpp::Time now(kTestStartSec, 0, RCL_ROS_TIME);
   for (size_t i = 0; i < 20; ++i) {
-    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.30);
     pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.30);
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.30);
     now = advanceTime(now, kMeasurementInterval);
     manager.optimizeChannelTimings(now);
   }
-  ASSERT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
+  ASSERT_EQ(manager.getTargetChannelIdx(), kLowLatencyChannel);
 
   // a latency difference smaller than the hysteresis must not flip the target stream
   for (size_t i = 0; i < 30; ++i) {
-    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.30);
-    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.32);
-    now = advanceTime(now, kMeasurementInterval);
-    manager.optimizeChannelTimings(now);
-  }
-  EXPECT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
-
-  // a latency difference larger than the hysteresis switches the target stream
-  for (size_t i = 0; i < 100; ++i) {
-    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.30);
-    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.60);
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.30);
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.32);
     now = advanceTime(now, kMeasurementInterval);
     manager.optimizeChannelTimings(now);
   }
   EXPECT_EQ(manager.getTargetChannelIdx(), kLowLatencyChannel);
+
+  // a latency difference larger than the hysteresis switches the target stream
+  for (size_t i = 0; i < 100; ++i) {
+    pushEmptyMeasurement(manager, kLowLatencyChannel, now, 0.30);
+    pushEmptyMeasurement(manager, kHighLatencyChannel, now, 0.60);
+    now = advanceTime(now, kMeasurementInterval);
+    manager.optimizeChannelTimings(now);
+  }
+  EXPECT_EQ(manager.getTargetChannelIdx(), kHighLatencyChannel);
 }
 
 TEST(InputManagerTargetSelection, ShiftsTargetLatencyGraduallyOnIncrease)

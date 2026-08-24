@@ -343,6 +343,16 @@ void InputManager::getObjectTimeInterval(
     // The object_earliest_time is the latest exported object time
     object_earliest_time = latest_exported_object_time_;
   }
+
+  // The window start stays at or below the target stream's newest measurement, bounded by the
+  // 1-second interval: objects below the window start are dropped by getObjectsOlderThan(), so
+  // the target's backlog is exported while the latency estimate converges.
+  if (input_streams_.at(target_stream_idx_)->isTimeInitialized()) {
+    const rclcpp::Time target_horizon =
+      input_streams_.at(target_stream_idx_)->getLatestMeasurementTime();
+    object_earliest_time = std::min(object_earliest_time, target_horizon);
+  }
+  object_earliest_time = std::max(object_earliest_time, object_earliest_time_default);
 }
 
 bool InputManager::isStreamFresh(const InputStream & input_stream, const rclcpp::Time & now) const
