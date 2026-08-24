@@ -66,6 +66,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/utils/geometry_utils.cpp
 )
 
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} acados_interface)
 
@@ -83,7 +85,8 @@ ament_auto_package(INSTALL_TO_SHARE launch config rviz)
 
 install(PROGRAMS scripts/calculation_time_plotter.py DESTINATION lib/${PROJECT_NAME})
 install(TARGETS acados_interface LIBRARY DESTINATION lib)
-install(FILES src/acados_mpc/include/acados_interface.hpp DESTINATION include/autoware/path_optimizer)
+install(FILES src/acados_mpc/include/acados_interface.hpp
+  DESTINATION include/autoware/path_optimizer)
 
 # Downstream (e.g. autoware_trajectory_optimizer) includes acados_interface.hpp -> c_generated_code/...
 # Generated code lives in binary dir (see src/acados_mpc/CMakeLists.txt).

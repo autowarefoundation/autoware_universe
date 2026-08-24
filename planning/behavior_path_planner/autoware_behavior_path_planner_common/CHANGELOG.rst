@@ -2,6 +2,83 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(direction_change_module): propagate `allow_area` to downstream modules for area-primitive route support (`#12815 <https://github.com/autowarefoundation/autoware_universe/issues/12815>`_)
+  * feat: ignore lane_departure in area primitive
+  * feat: add area primitive for isRouteValid() in mission_planner_universe
+  * feat: add allow_area for scenario_selector
+  * feat: add allow_area to planning_validator
+  * feat: add missing params in scenario module manager
+  * fix: set allow_area to false by default
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(behavior_path_planner): add direction change module. Initial Commit (`#12638 <https://github.com/autowarefoundation/autoware_universe/issues/12638>`_)
+  * feat: add direction change module. Initial Commit
+  * style(pre-commit): autofix
+  * refactor: direction_change module
+  * style(pre-commit): autofix
+  * feat: dont flip bounds for reverse manuever for direction_change tagged lanelets
+  the reason is, the nature of reversing in direction_change module and start_planner is different in terms of ego orientation, lane direction, direction of ego motion.
+  direction_change lanelet bounds doesn't need reversing
+  * style(pre-commit): autofix
+  * fix: address issues of path snapping with multiple cusps; build path from dc tagged lanelets
+  * style(pre-commit): autofix
+  * refactor: remove unused methods and helpers
+  * style(pre-commit): autofix
+  * fix: pre-commit cpp lint errors
+  * fix: lint errors
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Sarun MUKDAPITAK, emmeyteja, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bpp packages (`#12085 <https://github.com/mitsudome-r/autoware_universe/issues/12085>`_)
+  * replace getArcCoordinates in bpp packages
+  * replace getArcCoordinates usage in bpp packages (2)
+  * replace getArcCoordinates in bpp package (3)
+  (autoware_behavior_path_goal_planner_module)
+  * replace getArcCoordinates in bpp package(4)
+  (autoware_behavior_path_start_planner_module)
+  * replace getLateralDistanceToClosestLanelet in bpp package
+  * replace getExpandedLanelet(s) in bpp package
+  * replace combineLaneletsShape in bpp packages
+  * fix wrong condition in bpp
+  * style(pre-commit): autofix
+  * remove directly dereference opt for combine_lanelet
+  * remove log if lanelet is empty
+  * bind reference to optional value for combine_lanelets_shape
+  * remove log and simply return outside else in get_dirty_expanded_lanelets opt
+  * remove .has_value in lane_change_module for consistency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12118 <https://github.com/mitsudome-r/autoware_universe/issues/12118>`_)
+* refactor(planning): replace toGeomMsg/toLaneletPoint to autoware_lanelet2_utils in bpp_common (`#12091 <https://github.com/mitsudome-r/autoware_universe/issues/12091>`_)
+  * refactor(behavior_path_planner): deprecate toLaneletPoint/toGeomPt in bpp_common package
+  * fix
+  ---------
+* Contributors: Mamoru Sobue, Sarun MUKDAPITAK, Satoshi OTA, Zulfaqar Azmi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

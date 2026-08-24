@@ -2,6 +2,33 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): fix unchecked optional access in imu corrector (`#12597 <https://github.com/autowarefoundation/autoware_universe/issues/12597>`_)
+* fix: imu scale estimation covariance limit for stability (`#12562 <https://github.com/autowarefoundation/autoware_universe/issues/12562>`_)
+  * fix: imu scale estimation covariance limit for stability
+  * chore: change covaraince limit
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+* chore(autoware_imu_corrector): add maintainers to package.xml (`#12580 <https://github.com/autowarefoundation/autoware_universe/issues/12580>`_)
+* Contributors: SergioReyesSan, Vishal Chauhan, Yoshi Ri, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_imu_corrector): adopt cie (`#12319 <https://github.com/mitsudome-r/autoware_universe/issues/12319>`_)
+  * feat: adopt cie
+  * fix: revert ros2 executor
+  * Potential fix for pull request finding
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+  * fix
+  * fix: remove unnecessary lines
+  * fix: remove unnecessary lines
+  ---------
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+* Contributors: Tetsuhiro Kawaguchi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

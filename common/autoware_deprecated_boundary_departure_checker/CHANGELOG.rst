@@ -2,6 +2,29 @@
 Changelog for package autoware_boundary_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Sarun MUKDAPITAK, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_deprecated_boundary_departure_checker): replace autoware_universe_utils with autoware_utils_geometry (`#12416 <https://github.com/mitsudome-r/autoware_universe/issues/12416>`_)
+* perf(common): use emplace/emplace_back to avoid temporary object creation (`#12238 <https://github.com/mitsudome-r/autoware_universe/issues/12238>`_)
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* Contributors: Vishal Chauhan, Zulfaqar Azmi, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

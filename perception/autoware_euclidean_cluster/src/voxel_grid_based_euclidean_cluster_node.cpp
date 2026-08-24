@@ -26,22 +26,19 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
 : Node("voxel_grid_based_euclidean_cluster_node", options)
 {
   const bool use_height = this->declare_parameter<bool>("use_height");
-  const int min_cluster_size = this->declare_parameter<int>("min_cluster_size");
-  const int max_cluster_size = this->declare_parameter<int>("max_cluster_size");
-  const float tolerance = this->declare_parameter<float>("tolerance");
-  const float voxel_leaf_size = this->declare_parameter<float>("voxel_leaf_size");
-  const int min_points_number_per_voxel =
-    this->declare_parameter<int>("min_points_number_per_voxel");
-  const int min_voxel_cluster_size_for_filtering =
-    this->declare_parameter<int>("min_voxel_cluster_size_for_filtering");
-  const int max_points_per_voxel_in_large_cluster =
-    this->declare_parameter<int>("max_points_per_voxel_in_large_cluster");
-  const int max_voxel_cluster_for_output =
-    this->declare_parameter<int>("max_voxel_cluster_for_output");
+  const int min_points_per_cluster = this->declare_parameter<int>("min_points_per_cluster");
+  const float tolerance = this->declare_parameter<float>("tolerance_m");
+  const float voxel_leaf_size = this->declare_parameter<float>("voxel_leaf_size_m");
+  const int min_points_per_voxel = this->declare_parameter<int>("min_points_per_voxel");
+  const int large_cluster_voxel_count_threshold =
+    this->declare_parameter<int>("large_cluster_voxel_count_threshold");
+  const int large_cluster_max_points_per_voxel =
+    this->declare_parameter<int>("large_cluster_max_points_per_voxel");
+  const int max_voxels_per_cluster = this->declare_parameter<int>("max_voxels_per_cluster");
   cluster_ = std::make_shared<VoxelGridBasedEuclideanCluster>(
-    use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
-    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
-    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
+    use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
 
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(

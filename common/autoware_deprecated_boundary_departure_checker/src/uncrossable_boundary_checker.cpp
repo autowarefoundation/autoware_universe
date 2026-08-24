@@ -23,7 +23,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
@@ -381,8 +381,8 @@ std::vector<SegmentWithIdx> UncrossableBoundaryDepartureChecker::find_closest_bo
 
     auto boundary_segment = utils::to_segment_2d(boundary_segment_3d);
 
-    if (is_closest_to_boundary_segment(
-          boundary_segment, ego_ref_segment, ego_opposite_ref_segment)) {
+    if (
+      is_closest_to_boundary_segment(boundary_segment, ego_ref_segment, ego_opposite_ref_segment)) {
       new_segments.emplace_back(boundary_segment, id);
     }
   }

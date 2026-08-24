@@ -10,6 +10,8 @@ ament_auto_add_library(autoware_path_smoother SHARED
   DIRECTORY src
 )
 
+autoware_agnocast_wrapper_setup(autoware_path_smoother)
+
 target_include_directories(autoware_path_smoother
   SYSTEM PUBLIC
     ${EIGEN3_INCLUDE_DIR}
@@ -30,7 +32,7 @@ if(BUILD_TESTING)
   )
 endif()
 
-ament_auto_package(
+autoware_ament_auto_package(
   INSTALL_TO_SHARE
     launch
     config

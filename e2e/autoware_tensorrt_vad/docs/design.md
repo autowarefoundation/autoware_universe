@@ -95,13 +95,13 @@ graph TD
     style VadOutputData fill:#1A5276,stroke:#154360,stroke-width:2px,color:#FFFFFF;
 
     %% Links to source code files
-    click VadNode "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_node.hpp" "VadNode header file"
-    click VadInterface "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_interface.hpp" "VadInterface header file"
-    click VadModel "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel header file"
-    click VadInputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
-    click VadOutputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
-    click VadInputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
-    click VadOutputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
+    click VadNode "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_node.hpp" "VadNode header file"
+    click VadInterface "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_interface.hpp" "VadInterface header file"
+    click VadModel "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel header file"
+    click VadInputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
+    click VadOutputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
+    click VadInputData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
+    click VadOutputData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
 ```
 
 - `VadInterface`: Interface between ROS and CUDA domains
@@ -170,13 +170,13 @@ flowchart TD
 
     %% Links to source code files
     click VadNode_sub "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode source file"
-    click VadInterface "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_interface.hpp" "VadInterface header file"
-    click VadInterface2 "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_interface.hpp" "VadInterface header file"
+    click VadInterface "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_interface.hpp" "VadInterface header file"
+    click VadInterface2 "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_interface.hpp" "VadInterface header file"
     click VadNode_pub "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode source file"
-    click VadInputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
-    click VadOutputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
-    click VadInputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
-    click VadOutputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
+    click VadInputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
+    click VadOutputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
+    click VadInputData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
+    click VadOutputData "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "Data types header file"
 ```
 
 - Topic conversion and coordinate transformation are handled by the interface (`VadInterface`)
@@ -197,7 +197,7 @@ flowchart TD
 
 ### Separation between model architecture and deployment parameters
 
-- Model architecture parameters (network structure, normalization, training dataset classes) are defined in `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/vad/v0.1/`)
+- Model architecture parameters (network structure, normalization, training dataset classes) are defined in `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/ml_models/vad/v0.1/`)
 - Deployment parameters (hardware settings, file paths, detection thresholds) are configured in [`vad_carla_tiny.param.yaml`](../config/vad_carla_tiny.param.yaml)
   - Object class remapping parameters are added to [`object_class_remapper_carla_tiny.param.yaml`](../config/object_class_remapper_carla_tiny.param.yaml)
     - Following the precedent of [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)

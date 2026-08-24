@@ -6,7 +6,7 @@ This node aggregates trajectory candidates from multiple trajectory generators i
 
 ## Algorithm Overview
 
-When a message arrives on `~/input/trajectories`, the node splits it by `generator_id` and updates an in-memory buffer so that only the most recent trajectory set for each generator is retained.
+When a `CandidateTrajectories` message is received (from either `~/input/trajectories_generative` or `~/input/trajectories_backup`), the library splits it by `generator_id` and updates an in-memory buffer so that only the most recent trajectory set for each generator is retained.
 
 A 100 ms timer then scans this buffer and drops any entry whose header stamp is older than the configured duration_time. Immediately after pruning, the timer concatenates all remaining trajectories and their accompanying `generator_info` arrays, publishes the aggregated message.
 
@@ -14,10 +14,11 @@ A 100 ms timer then scans this buffer and drops any entry whose header stamp i
 
 ### Topics
 
-| Direction  | Topic name              | Message Type                                                | Description                                    |
-| ---------- | ----------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
-| Subscriber | `~/input/trajectories`  | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectory sets produced by each generator     |
-| Publisher  | `~/output/trajectories` | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Concatenated list of all buffered trajectories |
+| Direction  | Topic name                        | Message Type                                                | Description                                    |
+| ---------- | --------------------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| Subscriber | `~/input/trajectories_generative` | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectory sets from generative planners       |
+| Subscriber | `~/input/trajectories_backup`     | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectory sets from backup planners           |
+| Publisher  | `~/output/trajectories`           | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Concatenated list of all buffered trajectories |
 
 ### Parameters
 

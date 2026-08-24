@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::detected_object_feature_remover::DetectedObjectFeatureRemoverNode
+  plugin: autoware::detected_object_feature_remover::DetectedObjectFeatureRemover
   executable: detected_object_feature_remover_node
   node_output: screen
 
@@ -29,7 +29,9 @@ publishers:
 # parameters
 param_files: []
 
-param_values: []
+param_values:
+  - name: run_convex_hull_conversion
+    default: false
 
 # processes
 processes:

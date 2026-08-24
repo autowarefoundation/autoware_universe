@@ -1,0 +1,45 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: DummyInfrastructure.node
+
+package:
+  name: autoware_dummy_infrastructure
+  provider: autoware
+
+launch:
+  plugin: autoware::dummy_infrastructure::DummyInfrastructureNode
+  executable: autoware_dummy_infrastructure_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: command_array
+    message_type: tier4_v2x_msgs/msg/InfrastructureCommandArray
+    remap_target: ~/input/command_array
+  - name: planning_factors
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: ~/input/planning_factors
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: ~/input/odometry
+
+publishers:
+  - name: state_array
+    message_type: tier4_v2x_msgs/msg/VirtualTrafficLightStateArray
+    remap_target: ~/output/state_array
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/dummy_infrastructure.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: publish
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: state_array

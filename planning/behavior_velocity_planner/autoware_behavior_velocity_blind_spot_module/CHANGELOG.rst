@@ -2,6 +2,49 @@
 Changelog for package autoware_behavior_velocity_blind_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(behavior_velocity_blind_spot_module): use Trajectory instead of PathWithLaneId (`#11613 <https://github.com/autowarefoundation/autoware_universe/issues/11613>`_)
+  * use Trajectory instead of PathWithLaneId
+  * get rid of deprecated function
+  * use new function to clamp velocity
+  * remove duplicated utility functions
+  * bind time interval with predicted path
+  * fix conflict resolve error
+  * use remove_const from lanelet2_utils
+  * cpp-check:fix mismatch parameter name
+  * cpp-check:remove knowncondition
+  * cpp-check:remove local variable shadowing
+  ---------
+  Co-authored-by: Sarun MUKDAPITAK <72495070+sarun-hub@users.noreply.github.com>
+  Co-authored-by: Sarun Mukdapitak <sarun.mukda@gmail.com>
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Mitsuhiro Sakamoto, Sarun MUKDAPITAK, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12138 <https://github.com/mitsudome-r/autoware_universe/issues/12138>`_)
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bvp packages (`#12084 <https://github.com/mitsudome-r/autoware_universe/issues/12084>`_)
+  * replace getArcCoordinates in bvp packages
+  * replace getCenterlineWithOffset in bvp package
+  * replace combineLaneletsShape in bvp packages
+  * remove log for empty concat_lanelets_opt then return
+  * bind reference to optional value
+  ---------
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

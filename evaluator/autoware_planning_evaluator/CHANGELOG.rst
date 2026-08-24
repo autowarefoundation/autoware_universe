@@ -2,6 +2,32 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Sarun MUKDAPITAK, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(planning_evaluator): change metric output json format (`#12404 <https://github.com/mitsudome-r/autoware_universe/issues/12404>`_)
+  fix metric json output format
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - evaluator component  (`#12086 <https://github.com/mitsudome-r/autoware_universe/issues/12086>`_)
+  replace getArcCoordinates in evaluator component
+* fix(planning_evaluator): incorrect DRAC formula (`#12124 <https://github.com/mitsudome-r/autoware_universe/issues/12124>`_)
+  * fix drac calculation
+  * fix unit test
+  ---------
+* Contributors: Kem (TiankuiXian), Sarun MUKDAPITAK, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

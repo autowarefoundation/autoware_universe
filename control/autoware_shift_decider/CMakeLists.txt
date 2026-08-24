@@ -16,12 +16,14 @@ target_link_libraries(${PROJECT_NAME}_node
   shift_decider_parameters
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_node
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_node
   PLUGIN "autoware::shift_decider::ShiftDecider"
   EXECUTABLE ${PROJECT_NAME}
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
-ament_auto_package(
+autoware_ament_auto_package(
   INSTALL_TO_SHARE
   launch
   config

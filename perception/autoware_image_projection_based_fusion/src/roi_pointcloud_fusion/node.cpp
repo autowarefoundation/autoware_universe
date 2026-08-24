@@ -39,7 +39,7 @@ using Classification = autoware_perception_msgs::msg::ObjectClassification;
 RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
 {
-  const std::array<std::pair<std::string, uint8_t>, 8> fusion_class_names = {
+  const std::array<std::pair<std::string, uint8_t>, 10> fusion_class_names = {
     {{"UNKNOWN", Classification::UNKNOWN},
      {"CAR", Classification::CAR},
      {"TRUCK", Classification::TRUCK},
@@ -47,7 +47,9 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
      {"TRAILER", Classification::TRAILER},
      {"MOTORCYCLE", Classification::MOTORCYCLE},
      {"BICYCLE", Classification::BICYCLE},
-     {"PEDESTRIAN", Classification::PEDESTRIAN}}};
+     {"PEDESTRIAN", Classification::PEDESTRIAN},
+     {"ANIMAL", Classification::ANIMAL},
+     {"HAZARD", Classification::HAZARD}}};
   for (const auto & [class_name, label] : fusion_class_names) {
     fusion_enabled_classes_[label] =
       declare_parameter<bool>("fusion_enabled_classes." + class_name);
@@ -60,9 +62,7 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   max_object_size_ = declare_parameter<double>("max_object_size");
 
   // publisher
-  // pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
-  // TODO(Koichi98): replace pub_ptr_ in FusionNode with agnocast_wrapper
-  agnocast_pub_ptr_ = AUTOWARE_CREATE_PUBLISHER2(ClusterMsgType, "output", rclcpp::QoS{1});
+  pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
   cluster_debug_pub_ = this->create_publisher<PointCloudMsgType>("debug/clusters", 1);
 }
 
@@ -151,8 +151,9 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
     }
 
     Eigen::Vector2d projected_point;
-    if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-          cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
+    if (
+      det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+        cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
       for (std::size_t i = 0; i < output_objs.size(); ++i) {
         auto & feature_obj = output_objs.at(i);
         const auto & check_roi = feature_obj.feature.roi;
@@ -209,18 +210,6 @@ void RoiPointCloudFusionNode::postprocess(
   }
 }
 
-void RoiPointCloudFusionNode::publish(const ClusterMsgType & output_msg)
-{
-  const auto objects_sub_count = agnocast_pub_ptr_->get_subscription_count() +
-                                 agnocast_pub_ptr_->get_intra_process_subscription_count();
-  if (objects_sub_count < 1) {
-    return;
-  }
-  // TODO(Koichi98): replace publish function in FusionNode with agnocast_wrapper
-  auto agnocast_output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(agnocast_pub_ptr_);
-  *agnocast_output_msg = output_msg;
-  agnocast_pub_ptr_->publish(std::move(agnocast_output_msg));
-}
 }  // namespace autoware::image_projection_based_fusion
 
 #include <rclcpp_components/register_node_macro.hpp>

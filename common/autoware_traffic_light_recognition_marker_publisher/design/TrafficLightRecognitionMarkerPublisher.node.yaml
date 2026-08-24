@@ -1,0 +1,41 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: TrafficLightRecognitionMarkerPublisher.node
+
+package:
+  name: autoware_traffic_light_recognition_marker_publisher
+  provider: autoware
+
+launch:
+  plugin: autoware::traffic_light_recognition_marker_publisher::TrafficLightRecognitionMarkerPublisher
+  executable: autoware_traffic_light_recognition_marker_publisher_node
+
+# interfaces
+subscribers:
+  - name: lanelet2_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+
+publishers:
+  - name: marker
+    message_type: visualization_msgs/msg/MarkerArray
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: load_traffic_light_positions
+    trigger_conditions:
+      - on_input: lanelet2_map
+    outcomes:
+      - terminal: null
+  - name: publish_recognition_markers
+    trigger_conditions:
+      - on_input: traffic_signals
+    outcomes:
+      - to_output: marker

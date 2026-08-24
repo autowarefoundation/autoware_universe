@@ -2,6 +2,43 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: polar voxel noise filter (`#12496 <https://github.com/autowarefoundation/autoware_universe/issues/12496>`_)
+  * feat: polar voxel noise filter
+  * chore: added missing destructor and mutex
+  * chore: adressing comments about depercated functions
+  * chore: adressing comments about unused items and readme
+  * chore: adressing comments about pointcloud format and prefix
+  * style(pre-commit): autofix
+  * chore: adressing new parameter in bounds checking and suffix renamed variables
+  * style(pre-commit): autofix
+  * chore: adding unit test for the polar voxel filter
+  * style(pre-commit): autofix
+  * chore: added test on cmakelist all points primary return default
+  * style(pre-commit): autofix
+  * chore: handling case when pointcloud without return type information
+  * chore: pointcloud msg format validation only once to avoid redundancy
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+* Contributors: SergioReyesSan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(cuda_pointcloud_preprocessor): add missing initialization (`#12493 <https://github.com/mitsudome-r/autoware_universe/issues/12493>`_)
+* perf(pointcloud_preprocessor): use emplace/emplace_back to avoid temporary object creation (`#12227 <https://github.com/mitsudome-r/autoware_universe/issues/12227>`_)
+* feat(autoware_cuda_pointcloud_preprocessor): cuda 12.0 build compatibility (`#12194 <https://github.com/mitsudome-r/autoware_universe/issues/12194>`_)
+  * feat(autoware_cuda_pointcloud_preprocessor): CUDA 12.0+ build compatibility
+  * feat: restore Turing arch
+  ---------
+* docs(sensing): fix mkdocs macro rendering and links in sensing pages (`#12111 <https://github.com/mitsudome-r/autoware_universe/issues/12111>`_)
+  docs(sensing): fix mkdocs macro paths, links, and schema fields
+* Contributors: Amadeusz Szymko, Manato Hirabayashi, Max Schmeller, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

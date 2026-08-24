@@ -164,8 +164,9 @@ RoiDetectedObjectFusionNode::generateDetectedObjectRoIs(
       }
 
       Eigen::Vector2d proj_point;
-      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-            cv::Point3d(point.x(), point.y(), point.z()), proj_point)) {
+      if (
+        det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+          cv::Point3d(point.x(), point.y(), point.z()), proj_point)) {
         const double px = proj_point.x();
         const double py = proj_point.y();
 

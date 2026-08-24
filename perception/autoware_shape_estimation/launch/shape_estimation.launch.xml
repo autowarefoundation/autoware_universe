@@ -5,7 +5,7 @@
   <arg name="output/objects" default="shape_estimated_objects"/>
   <arg name="node_name" default="shape_estimation"/>
 
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
   <arg name="model_path" default="$(var data_path)/shape_estimation/pointnet.onnx"/>
   <!-- Parameter -->
   <arg name="config_file" default="$(find-pkg-share autoware_shape_estimation)/config/shape_estimation.param.yaml"/>

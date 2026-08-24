@@ -2,6 +2,25 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_vehicle_cmd_gate): apply to CIE (`#12654 <https://github.com/autowarefoundation/autoware_universe/issues/12654>`_)
+  * feat: apply to CIE
+  * chore: re-trigger CI
+  * chore: re-trigger CI
+  ---------
+* Contributors: Yutaro Kobayashi, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(control_command_filter, vehicle_cmd_gate): add logging capabilities for command limits (`#12250 <https://github.com/mitsudome-r/autoware_universe/issues/12250>`_)
+  * feat(control_command_filter): add logging capabilities for command limits
+  * feat(vehicle_cmd_filter): add logging for velocity, acceleration, jerk, and steering limits
+  * feat(command_filter): enhance logging by adding clock support for throttling
+* Contributors: Kyoichi Sugahara, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -149,17 +149,17 @@ __global__ void generateVoxels_random_kernel(
 
   float * address =
     voxels + (voxel_index * MAX_POINT_IN_VOXEL_SIZE + point_id) * POINT_NUM_FEATURES;
-  atomicExch(address, x);
-  atomicExch(address + 1, y);
-  atomicExch(address + 2, z);
+  address[0] = x;
+  address[1] = y;
+  address[2] = z;
   if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
     const float t = points[point_idx * POINT_NUM_FEATURES + 3];
-    atomicExch(address + 3, t);  // Time_lag
+    address[3] = t;  // Time_lag
   } else if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
     const float i = points[point_idx * POINT_NUM_FEATURES + 3];
     const float t = points[point_idx * POINT_NUM_FEATURES + 4];
-    atomicExch(address + 3, i);  // Intensity
-    atomicExch(address + 4, t);  // Time_lag
+    address[3] = i;  // Intensity
+    address[4] = t;  // Time_lag
   }
 }
 
@@ -206,9 +206,6 @@ __global__ void generateBaseFeatures_kernel(
       voxel_features[outIndex * 5 + 4] = voxels[inIndex * 5 + 4];
     }
   }
-
-  // clear buffer for next infer
-  atomicExch(mask + voxel_index, 0);
 }
 
 template <std::size_t ENCODER_IN_FEATURE_SIZE>

@@ -77,6 +77,7 @@ class InitializeInterface(object):
         self.spawn_point = self.param_["spawn_point"]
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
+        self.no_rendering_mode = self.param_["no_rendering_mode"]
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -135,7 +136,7 @@ class InitializeInterface(object):
     def load_world(self):
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
-        client.load_world(self.carla_map)
+        client.load_world_if_different(self.carla_map)
 
         # Wait for the world to be fully loaded
         # This is critical for non-default maps that need time to load
@@ -155,6 +156,7 @@ class InitializeInterface(object):
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = self.fixed_delta_seconds
         settings.synchronous_mode = self.sync_mode
+        settings.no_rendering_mode = self.no_rendering_mode
         self.world.apply_settings(settings)
         CarlaDataProvider.set_world(self.world)
         CarlaDataProvider.set_client(client)

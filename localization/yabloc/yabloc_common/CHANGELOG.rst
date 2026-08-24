@@ -2,6 +2,20 @@
 Changelog for package yabloc_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): fix unchecked optional access in yabloc common (`#12648 <https://github.com/autowarefoundation/autoware_universe/issues/12648>`_)
+* fix(yabloc_common): remove redundant semicolon (`#12607 <https://github.com/autowarefoundation/autoware_universe/issues/12607>`_)
+  remove redundant semicolon
+* Contributors: Kento Yabuuchi, Vishal Chauhan, github-actions
+
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(yabloc_common): avoid maybe-uninitialized build error on NVIDIA DRIVE AGX Thor (`#12229 <https://github.com/mitsudome-r/autoware_universe/issues/12229>`_)
+* Contributors: Ryuta Kambe, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

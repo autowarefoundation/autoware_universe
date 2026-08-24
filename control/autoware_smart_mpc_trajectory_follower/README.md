@@ -40,7 +40,7 @@ In "mppi_ilqr" mode, the initial value of iLQR is given by the MPPI solution.
 To perform a simulation, run the following command:
 
 ```bash
-ros2 launch autoware_launch planning_simulator.launch.xml map_path:=$HOME/autoware_map/sample-map-planning vehicle_model:=sample_vehicle sensor_model:=sample_sensor_kit trajectory_follower_mode:=smart_mpc_trajectory_follower
+ros2 launch autoware_launch planning_simulator.launch.xml map_path:=$HOME/autoware_data/maps/sample-map-planning vehicle_model:=sample_vehicle sensor_model:=sample_sensor_kit trajectory_follower_mode:=smart_mpc_trajectory_follower
 ```
 
 > [!NOTE]

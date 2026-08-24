@@ -14,8 +14,6 @@
 
 #include "autoware/deprecated/boundary_departure_checker/footprint_generator/steering.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
-
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>

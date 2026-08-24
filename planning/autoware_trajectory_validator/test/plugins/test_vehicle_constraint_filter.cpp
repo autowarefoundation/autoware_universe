@@ -20,7 +20,7 @@ namespace
 {
 autoware_planning_msgs::msg::TrajectoryPoint create_trajectory_point(
   double x, double y, double z, double vx, double vy, double time_from_start_sec,
-  double heading_rate_rps = 0.0)
+  double heading_rate_rps = 0.0, double acceleration_mps2 = 0.0)
 {
   autoware_planning_msgs::msg::TrajectoryPoint point;
   point.pose.position.x = x;
@@ -29,6 +29,7 @@ autoware_planning_msgs::msg::TrajectoryPoint create_trajectory_point(
   point.longitudinal_velocity_mps = vx;
   point.lateral_velocity_mps = vy;
   point.heading_rate_rps = heading_rate_rps;
+  point.acceleration_mps2 = acceleration_mps2;
   point.time_from_start.sec = static_cast<int32_t>(time_from_start_sec);
   point.time_from_start.nanosec =
     static_cast<uint32_t>((time_from_start_sec - static_cast<int32_t>(time_from_start_sec)) * 1e9);
@@ -60,9 +61,12 @@ TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
-  EXPECT_TRUE(result.has_value());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result.value().is_feasible);
 }
 
 TEST(VehicleConstraintFilterTest, InfeasibleWhenSpeedExceedsMax)
@@ -84,18 +88,22 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSpeedExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
-  EXPECT_FALSE(result.has_value());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FALSE(result.value().is_feasible);
 }
 
 TEST(VehicleConstraintFilterTest, InfeasibleWhenAccelerationExceedsMax)
 {
   // Create a trajectory that exceeds max acceleration
   TrajectoryPoints traj_points = {
-    create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 1.0, 0.0, 1.0),
-    create_trajectory_point(2.0, 2.0, 0.0, 3.5, 0.0, 2.0)};  // Last point exceeds max acceleration
+    create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    create_trajectory_point(1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0),
+    create_trajectory_point(
+      2.0, 2.0, 0.0, 3.5, 0.0, 2.0, 0.0, 3.5)};  // Last point exceeds max acceleration
 
   VehicleInfo vehicle_info;
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
@@ -107,18 +115,22 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenAccelerationExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
-  EXPECT_FALSE(result.has_value());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FALSE(result.value().is_feasible);
 }
 
 TEST(VehicleConstraintFilterTest, InfeasibleWhenDecelerationExceedsMax)
 {
   // Create a trajectory that exceeds max deceleration
   TrajectoryPoints traj_points = {
-    create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 3.0, 0.0, 1.0),
-    create_trajectory_point(2.0, 2.0, 0.0, 0.0, 0.0, 2.0)};  // Last point exceeds max deceleration
+    create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0),
+    create_trajectory_point(1.0, 1.0, 0.0, 3.0, 0.0, 1.0, 0.0, -1.0),
+    create_trajectory_point(
+      2.0, 2.0, 0.0, 0.0, 0.0, 2.0, 0.0, -3.0)};  // Last point exceeds max deceleration
 
   VehicleInfo vehicle_info;
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
@@ -131,18 +143,25 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenDecelerationExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
-  EXPECT_FALSE(result.has_value());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FALSE(result.value().is_feasible);
 }
 
 TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringAngleExceedsMax)
 {
-  // Create a trajectory that exceeds max steering angle
+  // Create a trajectory that exceeds max steering angle after smoothing
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 0.0, 0.0, 5.0, 0.0, 1.0),   // Exceeds max steering angle
-    create_trajectory_point(1.0, 1.0, 0.0, 5.0, 0.0, 2.0)};  // Exceeds max steering angle
+    create_trajectory_point(1.0, 0.0, 0.0, 5.0, 0.0, 1.0),
+    create_trajectory_point(2.0, 0.0, 0.0, 5.0, 0.0, 2.0),
+    create_trajectory_point(2.0, 1.0, 0.0, 5.0, 0.0, 3.0),
+    create_trajectory_point(2.0, 2.0, 0.0, 5.0, 0.0, 4.0),
+    create_trajectory_point(1.0, 2.0, 0.0, 5.0, 0.0, 5.0),
+    create_trajectory_point(0.0, 2.0, 0.0, 5.0, 0.0, 6.0)};  // Exceeds max steering angle
 
   VehicleInfo vehicle_info;
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
@@ -155,19 +174,27 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringAngleExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
-  EXPECT_FALSE(result.has_value());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FALSE(result.value().is_feasible);
 }
 
 TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringRateExceedsMax)
 {
-  // Create a trajectory that exceeds max steering rate
+  // Create a trajectory that exceeds max steering rate after smoothing
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 0.0, 0.0, 5.0, 0.0, 1.0),
     create_trajectory_point(2.0, 0.0, 0.0, 5.0, 0.0, 2.0),
-    create_trajectory_point(2.0, 1.0, 0.0, 5.0, 0.0, 3.0)};  // Exceeds max steering rate
+    create_trajectory_point(3.0, 0.0, 0.0, 5.0, 0.0, 3.0),
+    create_trajectory_point(3.0, 1.0, 0.0, 5.0, 0.0, 4.0),
+    create_trajectory_point(3.0, 2.0, 0.0, 5.0, 0.0, 5.0),
+    create_trajectory_point(3.0, 3.0, 0.0, 5.0, 0.0, 6.0),
+    create_trajectory_point(2.0, 3.0, 0.0, 5.0, 0.0, 7.0),
+    create_trajectory_point(1.0, 3.0, 0.0, 5.0, 0.0, 8.0)};  // Exceeds max steering rate
 
   VehicleInfo vehicle_info;
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
@@ -180,9 +207,12 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringRateExceedsMax)
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
-  auto result = filter.is_feasible(traj_points, context);
+  CandidateTrajectory candidate_trajectory;
+  candidate_trajectory.points = traj_points;
+  auto result = filter.is_feasible(candidate_trajectory, context);
 
-  EXPECT_FALSE(result.has_value());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FALSE(result.value().is_feasible);
 }
 
 // --- is_speed_ok(...) tests ---
@@ -195,7 +225,9 @@ TEST(IsSpeedOkTest, TrueWhenAllSpeedsBelowMax)
     create_trajectory_point(2.0, 2.0, 0.0, 7.0, 0.0, 2.0)};
   double max_speed = 10.0;  // m/s
 
-  EXPECT_TRUE(is_speed_ok(traj_points, max_speed));
+  const auto [_, is_ok] = is_speed_ok(traj_points, max_speed);
+
+  EXPECT_TRUE(is_ok);
 }
 
 TEST(IsSpeedOkTest, FalseWhenAnySpeedAboveMax)
@@ -206,7 +238,9 @@ TEST(IsSpeedOkTest, FalseWhenAnySpeedAboveMax)
     create_trajectory_point(2.0, 2.0, 0.0, 11.0, 0.0, 2.0)};
   double max_speed = 10.0;  // m/s
 
-  EXPECT_FALSE(is_speed_ok(traj_points, max_speed));
+  const auto [_, is_ok] = is_speed_ok(traj_points, max_speed);
+
+  EXPECT_FALSE(is_ok);
 }
 
 // --- is_acceleration_ok(...) tests ---
@@ -214,23 +248,27 @@ TEST(IsSpeedOkTest, FalseWhenAnySpeedAboveMax)
 TEST(IsAccelerationOkTest, TrueWhenAllAccelerationsBelowMax)
 {
   TrajectoryPoints traj_points = {
-    create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 1.0, 0.0, 1.0),
-    create_trajectory_point(2.0, 2.0, 0.0, 2.0, 0.0, 2.0)};
+    create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    create_trajectory_point(1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0),
+    create_trajectory_point(2.0, 2.0, 0.0, 2.0, 0.0, 2.0, 0.0, 2.0)};
   double max_acceleration = 2.0;  // m/s^2
 
-  EXPECT_TRUE(is_acceleration_ok(traj_points, max_acceleration));
+  const auto [_, is_ok] = is_acceleration_ok(traj_points, max_acceleration);
+
+  EXPECT_TRUE(is_ok);
 }
 
 TEST(IsAccelerationOkTest, FalseWhenAnyAccelerationAboveMax)
 {
   TrajectoryPoints traj_points = {
-    create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 1.0, 0.0, 1.0),
-    create_trajectory_point(2.0, 2.0, 0.0, 3.5, 0.0, 2.0)};
+    create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    create_trajectory_point(1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0),
+    create_trajectory_point(2.0, 2.0, 0.0, 3.5, 0.0, 2.0, 0.0, 3.5)};
   double max_acceleration = 2.0;  // m/s^2
 
-  EXPECT_FALSE(is_acceleration_ok(traj_points, max_acceleration));
+  const auto [_, is_ok] = is_acceleration_ok(traj_points, max_acceleration);
+
+  EXPECT_FALSE(is_ok);
 }
 
 // --- is_deceleration_ok(...) tests ---
@@ -238,23 +276,27 @@ TEST(IsAccelerationOkTest, FalseWhenAnyAccelerationAboveMax)
 TEST(IsDecelerationOkTest, TrueWhenAllDecelerationsBelowMax)
 {
   TrajectoryPoints traj_points = {
-    create_trajectory_point(0.0, 0.0, 0.0, 3.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 2.0, 0.0, 1.0),
-    create_trajectory_point(2.0, 2.0, 0.0, 1.0, 0.0, 2.0)};
+    create_trajectory_point(0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0),
+    create_trajectory_point(1.0, 1.0, 0.0, 2.0, 0.0, 1.0, 0.0, -1.0),
+    create_trajectory_point(2.0, 2.0, 0.0, 1.0, 0.0, 2.0, 0.0, -2.0)};
   double max_deceleration = 2.0;  // m/s^2
 
-  EXPECT_TRUE(is_deceleration_ok(traj_points, max_deceleration));
+  const auto [_, is_ok] = is_deceleration_ok(traj_points, max_deceleration);
+
+  EXPECT_TRUE(is_ok);
 }
 
 TEST(IsDecelerationOkTest, FalseWhenAnyDecelerationAboveMax)
 {
   TrajectoryPoints traj_points = {
-    create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 3.0, 0.0, 1.0),
-    create_trajectory_point(2.0, 2.0, 0.0, 0.0, 0.0, 2.0)};
+    create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0),
+    create_trajectory_point(1.0, 1.0, 0.0, 3.0, 0.0, 1.0, 0.0, -1.0),
+    create_trajectory_point(2.0, 2.0, 0.0, 0.0, 0.0, 2.0, 0.0, -3.0)};
   double max_deceleration = 2.0;  // m/s^2
 
-  EXPECT_FALSE(is_deceleration_ok(traj_points, max_deceleration));
+  const auto [_, is_ok] = is_deceleration_ok(traj_points, max_deceleration);
+
+  EXPECT_FALSE(is_ok);
 }
 
 // --- is_steering_angle_ok(...) tests ---
@@ -269,7 +311,9 @@ TEST(IsSteeringAngleOkTest, TrueWhenAllSteeringAnglesBelowMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
   double max_steering_angle = 0.5;  // rad
 
-  EXPECT_TRUE(is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle));
+  const auto [_, is_ok] = is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle);
+
+  EXPECT_TRUE(is_ok);
 }
 
 TEST(IsSteeringAngleOkTest, FalseWhenAnySteeringAngleAboveMax)
@@ -277,12 +321,18 @@ TEST(IsSteeringAngleOkTest, FalseWhenAnySteeringAngleAboveMax)
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 0.0, 0.0, 5.0, 0.0, 1.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 5.0, 0.0, 2.0)};
+    create_trajectory_point(2.0, 0.0, 0.0, 5.0, 0.0, 2.0),
+    create_trajectory_point(2.0, 1.0, 0.0, 5.0, 0.0, 3.0),
+    create_trajectory_point(2.0, 2.0, 0.0, 5.0, 0.0, 4.0),
+    create_trajectory_point(1.0, 2.0, 0.0, 5.0, 0.0, 5.0),
+    create_trajectory_point(0.0, 2.0, 0.0, 5.0, 0.0, 6.0)};
   VehicleInfo vehicle_info;         // Fill in with appropriate values
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
   double max_steering_angle = 0.5;  // rad
 
-  EXPECT_FALSE(is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle));
+  const auto [_, is_ok] = is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle);
+
+  EXPECT_FALSE(is_ok);
 }
 
 // --- is_steering_rate_ok(...) tests ---
@@ -298,7 +348,9 @@ TEST(IsSteeringRateOkTest, TrueWhenAllSteeringRatesBelowMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
   double max_steering_rate = 0.1;   // rad/s
 
-  EXPECT_TRUE(is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate));
+  const auto [_, is_ok] = is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate);
+
+  EXPECT_TRUE(is_ok);
 }
 
 TEST(IsSteeringRateOkTest, FalseWhenAnySteeringRateAboveMax)
@@ -307,11 +359,18 @@ TEST(IsSteeringRateOkTest, FalseWhenAnySteeringRateAboveMax)
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 0.0, 0.0, 5.0, 0.0, 1.0),
     create_trajectory_point(2.0, 0.0, 0.0, 5.0, 0.0, 2.0),
-    create_trajectory_point(2.0, 1.0, 0.0, 5.0, 0.0, 3.0)};
+    create_trajectory_point(3.0, 0.0, 0.0, 5.0, 0.0, 3.0),
+    create_trajectory_point(3.0, 1.0, 0.0, 5.0, 0.0, 4.0),
+    create_trajectory_point(3.0, 2.0, 0.0, 5.0, 0.0, 5.0),
+    create_trajectory_point(3.0, 3.0, 0.0, 5.0, 0.0, 6.0),
+    create_trajectory_point(2.0, 3.0, 0.0, 5.0, 0.0, 7.0),
+    create_trajectory_point(1.0, 3.0, 0.0, 5.0, 0.0, 8.0)};
   VehicleInfo vehicle_info;         // Fill in with appropriate values
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
   double max_steering_rate = 0.1;   // rad/s
 
-  EXPECT_FALSE(is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate));
+  const auto [_, is_ok] = is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate);
+
+  EXPECT_FALSE(is_ok);
 }
 }  // namespace autoware::trajectory_validator::plugin::safety::testing

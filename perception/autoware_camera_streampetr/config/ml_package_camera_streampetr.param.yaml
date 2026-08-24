@@ -1,10 +1,10 @@
 # This is just an example file, the actual model param file comes with the model onnx files
-# and is stored in the artifacts directory (~/autoware_data/camera_streampetr by default).
+# and is stored in the artifacts directory (~/autoware_data/ml_models/camera_streampetr by default).
 
 /**:
   ros__parameters:
     model_params: # These are parameters that are dependent on the onnx file.
-      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN", "TRAFFIC_CONE", "BARRIER"]
       detection_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]  # [-x,-y,-z,x,y,z] from base_link. The model is not trained to predict objects outside this range.
                                                                 # So, anything outside this range is wrong, and this parameter is used to filter out objects that are outside this range
       input_image_height: 480
@@ -13,3 +13,24 @@
       rois_number: 5 # ["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_BACK_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK_RIGHT"]
       pre_memory_length: 1024 # Input memory length for the temporal model
       post_memory_length: 1280 # Output memory length for the temporal model
+
+    model_params:
+      trt_precision: "fp16" # TensorRT precision mode: "fp16" or "fp32"
+      use_temporal: true # Can the model use temporal information or not.
+
+      backbone_path: "$(var model_path)/simplify_extract_img_feat.onnx" # Path to the backbone onnx file, relative to the model_param_path
+      head_path: "$(var model_path)/simplify_pts_head_memory.onnx" # Path to the detection head onnx file, relative to the model_param_path
+      position_embedding_path: "$(var model_path)/simplify_position_embedding.onnx" # Path to the position embedding onnx file, relative to the model_param_path
+
+      backbone_engine_path: ""   # Path to the tensorRT engine file for the backbone. If empty, the path will be set to backbone_path with .engine extension, and the engine will be built if it does not exist.
+      head_engine_path: ""       # Path to the tensorRT engine file for the head. If empty, the path will be set to head_path with .engine extension, and the engine will be built if it does not exist.
+      position_embedding_engine_path: "" # Path to the tensorRT engine file for the position embedding. If empty, the path will be set to position_embedding_path with .engine extension, and the engine will be built if it does not exist.
+
+      workspace_size: 32 # TensorRT workspace size for building the engine. 2^workspace_size bytes, e.g., 32 means 4 GB of workspace will be used for building the engine.
+
+    post_process_params: # These are post-processing parameters to improve the predictions.
+      confidence_threshold: [0.36, 0.39, 0.38, 0.41, 0.43, 0.43, 0.43]  # Per-class thresholds: [CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN, TRAFFIC_CONE, BARRIER]
+      circle_nms_dist_threshold: 0.0   # turn off circle NMS by setting 0.0, otherwise set to around 0.5
+      iou_nms_search_distance_2d: 10.0
+      iou_nms_threshold: 0.5           # set to 0 to turn off iou NMS
+      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0, 0.0, 0.0]

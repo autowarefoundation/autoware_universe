@@ -1,0 +1,56 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: GoalDistanceCalculator.node
+
+package:
+  name: autoware_goal_distance_calculator
+  provider: autoware
+
+launch:
+  plugin: autoware::goal_distance_calculator::GoalDistanceCalculatorNode
+  executable: autoware_goal_distance_calculator_node
+
+# interfaces
+subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: ros_transform_static
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf_static
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+    global: /planning/mission_planning/route
+
+publishers:
+  - name: deviation/lateral
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: goal_distance_calculator/deviation/lateral
+  - name: deviation/longitudinal
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: goal_distance_calculator/deviation/longitudinal
+  - name: deviation/yaw
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: goal_distance_calculator/deviation/yaw
+  - name: deviation/yaw_deg
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: goal_distance_calculator/deviation/yaw_deg
+
+# parameters
+param_files:
+  - name: goal_distance_calculator_param
+    default: config/goal_distance_calculator.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: calculate_goal_deviation
+    trigger_conditions:
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: deviation/lateral
+      - to_output: deviation/longitudinal
+      - to_output: deviation/yaw
+      - to_output: deviation/yaw_deg

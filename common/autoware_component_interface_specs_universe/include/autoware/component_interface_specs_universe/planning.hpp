@@ -15,63 +15,20 @@
 #ifndef AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__PLANNING_HPP_
 #define AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__PLANNING_HPP_
 
-#include <rclcpp/qos.hpp>
+#include <autoware/component_interface_specs/planning.hpp>
 
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
-#include <autoware_planning_msgs/msg/route_state.hpp>
-#include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <autoware_planning_msgs/srv/clear_route.hpp>
-#include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
-#include <autoware_planning_msgs/srv/set_waypoint_route.hpp>
-
+// Re-export the core specs so universe consumers keep resolving the canonical
+// (single-version-authority) type; core is the sole definition and version authority.
 namespace autoware::component_interface_specs_universe::planning
 {
-
-struct SetLaneletRoute
-{
-  using Service = autoware_planning_msgs::srv::SetLaneletRoute;
-  static constexpr char name[] = "/planning/set_lanelet_route";
-};
-
-struct SetWaypointRoute
-{
-  using Service = autoware_planning_msgs::srv::SetWaypointRoute;
-  static constexpr char name[] = "/planning/set_waypoint_route";
-};
-
-struct ClearRoute
-{
-  using Service = autoware_planning_msgs::srv::ClearRoute;
-  static constexpr char name[] = "/planning/clear_route";
-};
-
-struct RouteState
-{
-  using Message = autoware_planning_msgs::msg::RouteState;
-  static constexpr char name[] = "/planning/route_state";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
-};
-
-struct LaneletRoute
-{
-  using Message = autoware_planning_msgs::msg::LaneletRoute;
-  static constexpr char name[] = "/planning/route";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
-};
-
-struct Trajectory
-{
-  using Message = autoware_planning_msgs::msg::Trajectory;
-  static constexpr char name[] = "/planning/trajectory";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
+using autoware::component_interface_specs::planning::ClearRoute;
+using autoware::component_interface_specs::planning::LaneletRoute;
+using autoware::component_interface_specs::planning::RouteState;
+using autoware::component_interface_specs::planning::SetLaneletRoute;
+using autoware::component_interface_specs::planning::SetWaypointRoute;
+using autoware::component_interface_specs::planning::Specs;
+using autoware::component_interface_specs::planning::Trajectory;
+using autoware::component_interface_specs::planning::version;
 }  // namespace autoware::component_interface_specs_universe::planning
 
 #endif  // AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__PLANNING_HPP_
