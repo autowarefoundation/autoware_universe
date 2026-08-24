@@ -23392,21 +23392,21 @@ along with the worst value across all objects. You can set <code>obstacle.worst_
 <td>ego_<wbr>frame</wbr></td>
 <td>string</td>
 <td>reference frame of ego</td>
-<td>base_link</td>
+<td>base_<wbr>link</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>metrics_<wbr>for_<wbr>publish</wbr></wbr></td>
 <td>array</td>
 <td>metrics to collect and publish</td>
-<td>['curvature', 'point_interval', 'relative_angle', 'resampled_relative_angle', 'length', 'duration', 'velocity', 'acceleration', 'jerk', 'lateral_deviation', 'yaw_deviation', 'velocity_deviation', 'lateral_trajectory_displacement_local', 'lateral_trajectory_displacement_global', 'stability', 'stability_frechet', 'obstacle_distance', 'obstacle_ttc', 'obstacle_pet', 'obstacle_drac', 'modified_goal_longitudinal_deviation', 'modified_goal_lateral_deviation', 'modified_goal_yaw_deviation', 'stop_decision', 'abnormal_stop_decision', 'blinker_change_count', 'steer_change_count']</td>
+<td>["curvature", "point_<wbr>interval", "relative_<wbr>angle", "resampled_<wbr>relative_<wbr>angle", "length", "duration", "velocity", "acceleration", "jerk", "lateral_<wbr>deviation", "yaw_<wbr>deviation", "velocity_<wbr>deviation", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>local", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>global", "stability", "stability_<wbr>frechet", "obstacle_<wbr>distance", "obstacle_<wbr>ttc", "obstacle_<wbr>pet", "obstacle_<wbr>drac", "modified_<wbr>goal_<wbr>longitudinal_<wbr>deviation", "modified_<wbr>goal_<wbr>lateral_<wbr>deviation", "modified_<wbr>goal_<wbr>yaw_<wbr>deviation", "stop_<wbr>decision", "abnormal_<wbr>stop_<wbr>decision", "blinker_<wbr>change_<wbr>count", "steer_<wbr>change_<wbr>count"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>metrics_<wbr>for_<wbr>output</wbr></wbr></td>
 <td>array</td>
 <td>metrics to output to json file when the node is terminated</td>
-<td>['curvature', 'point_interval', 'relative_angle', 'resampled_relative_angle', 'length', 'duration', 'velocity', 'acceleration', 'jerk', 'lateral_deviation', 'yaw_deviation', 'velocity_deviation', 'lateral_trajectory_displacement_local', 'lateral_trajectory_displacement_global', 'stability', 'stability_frechet', 'obstacle_distance', 'obstacle_ttc', 'obstacle_pet', 'obstacle_drac', 'modified_goal_longitudinal_deviation', 'modified_goal_lateral_deviation', 'modified_goal_yaw_deviation', 'stop_decision', 'abnormal_stop_decision', 'blinker_change_count', 'steer_change_count']</td>
+<td>["curvature", "point_<wbr>interval", "relative_<wbr>angle", "resampled_<wbr>relative_<wbr>angle", "length", "duration", "velocity", "acceleration", "jerk", "lateral_<wbr>deviation", "yaw_<wbr>deviation", "velocity_<wbr>deviation", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>local", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>global", "stability", "stability_<wbr>frechet", "obstacle_<wbr>distance", "obstacle_<wbr>ttc", "obstacle_<wbr>pet", "obstacle_<wbr>drac", "modified_<wbr>goal_<wbr>longitudinal_<wbr>deviation", "modified_<wbr>goal_<wbr>lateral_<wbr>deviation", "modified_<wbr>goal_<wbr>yaw_<wbr>deviation", "stop_<wbr>decision", "abnormal_<wbr>stop_<wbr>decision", "blinker_<wbr>change_<wbr>count", "steer_<wbr>change_<wbr>count"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23441,14 +23441,14 @@ along with the worst value across all objects. You can set <code>obstacle.worst_
 <td>obstacle.<wbr>worst_<wbr>only</wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the worst obstacle metric value is published; if false, metrics are published for each object</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle.<wbr>use_<wbr>ego_<wbr>traj_<wbr>vel</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, the planned trajectory velocity is used; if false, current ego velocity is used</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23476,7 +23476,7 @@ along with the worst value across all objects. You can set <code>obstacle.worst_
 <td>stop_<wbr>decision.<wbr>topic_<wbr>prefix</wbr></wbr></wbr></td>
 <td>string</td>
 <td>prefix of the topic to subscribe to for planning factors</td>
-<td>/planning/planning_factors/</td>
+<td>/<wbr>planning/<wbr>planning_<wbr>factors/<wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23504,7 +23504,7 @@ along with the worst value across all objects. You can set <code>obstacle.worst_
 <td>stop_<wbr>decision.<wbr>module_<wbr>list</wbr></wbr></wbr></td>
 <td>array</td>
 <td>list of modules to be checked for stop decision, the <code>topic_prefix</code>/<code>module</code> topic should be available and publish the <code>autoware_internal_planning_msgs::PlanningFactorArray</code> message</td>
-<td>['avoidance_by_lane_change', 'behavior_path_planner', 'blind_spot', 'crosswalk', 'detection_area', 'dynamic_obstacle_avoidance', 'dynamic_obstacle_stop', 'goal_planner', 'intersection', 'lane_change_left', 'lane_change_right', 'motion_velocity_planner', 'merge_from_private', 'no_drivable_lane', 'no_stopping_area', 'obstacle_cruise', 'obstacle_slow_down', 'obstacle_stop', 'occlusion_spot', 'out_of_lane', 'run_out', 'side_shift', 'start_planner', 'static_obstacle_avoidance', 'stop_line', 'surround_obstacle_checker', 'traffic_light', 'virtual_traffic_light', 'walkway']</td>
+<td>["avoidance_<wbr>by_<wbr>lane_<wbr>change", "behavior_<wbr>path_<wbr>planner", "blind_<wbr>spot", "crosswalk", "detection_<wbr>area", "dynamic_<wbr>obstacle_<wbr>avoidance", "dynamic_<wbr>obstacle_<wbr>stop", "goal_<wbr>planner", "intersection", "lane_<wbr>change_<wbr>left", "lane_<wbr>change_<wbr>right", "motion_<wbr>velocity_<wbr>planner", "merge_<wbr>from_<wbr>private", "no_<wbr>drivable_<wbr>lane", "no_<wbr>stopping_<wbr>area", "obstacle_<wbr>cruise", "obstacle_<wbr>slow_<wbr>down", "obstacle_<wbr>stop", "occlusion_<wbr>spot", "out_<wbr>of_<wbr>lane", "run_<wbr>out", "side_<wbr>shift", "start_<wbr>planner", "static_<wbr>obstacle_<wbr>avoidance", "stop_<wbr>line", "surround_<wbr>obstacle_<wbr>checker", "traffic_<wbr>light", "virtual_<wbr>traffic_<wbr>light", "walkway"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>

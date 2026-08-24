@@ -23156,56 +23156,56 @@ Although it has a cons to converge to the local minima, it can get a good soluti
 <td>option.<wbr>enable_<wbr>skip_<wbr>optimization</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Skip elastic band and model predictive trajectory optimization.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.<wbr>enable_<wbr>reset_<wbr>prev_<wbr>optimization</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>If true, optimization has no fix constraint to the previous result.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.<wbr>enable_<wbr>outside_<wbr>drivable_<wbr>area_<wbr>stop</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Stop if the ego's trajectory footprint is outside the drivable area.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.<wbr>use_<wbr>footprint_<wbr>polygon_<wbr>for_<wbr>outside_<wbr>drivable_<wbr>area_<wbr>check</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>If false, only the footprint's corner points are considered for drivable area check.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.<wbr>debug.<wbr>enable_<wbr>pub_<wbr>debug_<wbr>marker</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish debug markers.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.<wbr>debug.<wbr>enable_<wbr>pub_<wbr>extra_<wbr>debug_<wbr>marker</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish extra debug markers.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.<wbr>debug.<wbr>enable_<wbr>debug_<wbr>info</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable debug information.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.<wbr>debug.<wbr>enable_<wbr>calculation_<wbr>time_<wbr>info</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable calculation time information.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23275,21 +23275,21 @@ Although it has a cons to converge to the local minima, it can get a good soluti
 <td>mpt.<wbr>use_<wbr>acados</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable/disable acados solver for MPT optimization</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mpt.<wbr>use_<wbr>acados_<wbr>circle_<wbr>constraints</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable/disable the new MPT-style circle road-bound constraints in acados</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mpt.<wbr>option.<wbr>steer_<wbr>limit_<wbr>constraint</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable steer limit constraint.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23303,21 +23303,21 @@ Although it has a cons to converge to the local minima, it can get a good soluti
 <td>mpt.<wbr>option.<wbr>enable_<wbr>manual_<wbr>warm_<wbr>start</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable manual warm start.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mpt.<wbr>option.<wbr>enable_<wbr>warm_<wbr>start</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable warm start.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mpt.<wbr>option.<wbr>enable_<wbr>optimization_<wbr>validation</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable optimization validation.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23492,28 +23492,28 @@ Although it has a cons to converge to the local minima, it can get a good soluti
 <td>mpt.<wbr>collision_<wbr>free_<wbr>constraints.<wbr>option.<wbr>l_<wbr>inf_<wbr>norm</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Use L-infinity norm for collision-free constraints.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mpt.<wbr>collision_<wbr>free_<wbr>constraints.<wbr>option.<wbr>soft_<wbr>constraint</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable soft constraints.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mpt.<wbr>collision_<wbr>free_<wbr>constraints.<wbr>option.<wbr>hard_<wbr>constraint</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable hard constraints.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mpt.<wbr>collision_<wbr>free_<wbr>constraints.<wbr>vehicle_<wbr>circles.<wbr>method</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Method to represent footprint as circles.</td>
-<td>fitting_uniform_circle</td>
+<td>fitting_<wbr>uniform_<wbr>circle</wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>

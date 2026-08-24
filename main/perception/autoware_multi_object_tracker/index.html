@@ -22836,10 +22836,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#input" class="md-nav__link">
+  <a href="#subscribers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Input
+        Subscribers
       
     </span>
   </a>
@@ -22847,10 +22847,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
+  <a href="#publishers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Output
+        Publishers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-channel-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input channel configuration
       
     </span>
   </a>
@@ -22873,6 +22884,17 @@
   
     <nav class="md-nav" aria-label="Parameters">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#node-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node parameters
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#input-channel-parameters" class="md-nav__link">
@@ -23058,29 +23080,132 @@ In addition, when associating observations to tracers, data association have gat
 The pedestrian or bicycle tracker is running at the same time as the respective EKF model in order to enable the transition between pedestrian and bicycle tracking.
 For big vehicles such as trucks and buses, we have separate models for passenger cars and large vehicles because they are difficult to distinguish from passenger cars and are not stable. Therefore, separate models are prepared for passenger cars and big vehicles, and these models are run at the same time as the respective EKF models to ensure stability.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
-<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
-<p>Multiple inputs are pre-defined in the input channel parameters (described below) and the inputs can be configured</p>
+<p>The interfaces below are generated from the node design file
+<a href="design/MultiObjectTracker.node.yaml"><code>design/MultiObjectTracker.node.yaml</code></a>.</p>
+<h3 id="subscribers">Subscribers<a class="headerlink" href="#subscribers" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Type</th>
 <th>Description</th>
+<th>Topic (global)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>input/detection**/objects</code></td>
-<td><code>std::string</code></td>
-<td>input topic</td>
+<td><code>detection01/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 1</td>
+<td></td>
 </tr>
 <tr>
-<td><code>input/detection**/channel</code></td>
-<td><code>std::string</code></td>
-<td>input channel configuration</td>
+<td><code>detection02/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 2</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection03/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 3</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection04/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 4</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection05/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 5</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection06/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 6</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection07/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 7</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection08/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 8</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection09/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 9</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection10/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 10</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection11/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 11</td>
+<td></td>
+</tr>
+<tr>
+<td><code>detection12/<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the detected objects input for channel 12</td>
+<td></td>
+</tr>
+<tr>
+<td><code>input/<wbr>odometry</wbr></code></td>
+<td><code>nav_<wbr>msgs/<wbr>msg/<wbr>Odometry</wbr></wbr></wbr></code></td>
+<td>the odometry input for ego vehicle state estimation</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ros_<wbr>transform</wbr></code></td>
+<td><code>tf2_<wbr>msgs/<wbr>msg/<wbr>TFMessage</wbr></wbr></wbr></code></td>
+<td>the ros transform input for ego vehicle state estimation</td>
+<td><code>/<wbr>tf</wbr></code></td>
 </tr>
 </tbody>
 </table>
+<h3 id="publishers">Publishers<a class="headerlink" href="#publishers" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>QoS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>objects</code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>TrackedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the tracked objects output from the multi-object tracker</td>
+<td>reliability: reliable<br>durability: transient_local</td>
+</tr>
+<tr>
+<td><code>merged_<wbr>objects</wbr></code></td>
+<td><code>autoware_<wbr>perception_<wbr>msgs/<wbr>msg/<wbr>DetectedObjects</wbr></wbr></wbr></wbr></code></td>
+<td>the merged detected objects output from the multi-object tracker</td>
+<td>reliability: reliable<br>durability: transient_local</td>
+</tr>
+</tbody>
+</table>
+<h3 id="input-channel-configuration">Input channel configuration<a class="headerlink" href="#input-channel-configuration" title="Permanent link">#</a></h3>
+<p>Multiple inputs are pre-defined in the input channel parameters (described below) and the inputs can be configured.</p>
 <p>rule of the channel configuration</p>
 <ul>
 <li>'none' or empty : Indicates that this detection input channel is not used/disabled</li>
@@ -23128,24 +23253,106 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <span class="nt">input/detection07/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">none</span><span class="w"> </span><span class="c1"># Disabled</span>
 </code></pre></div>
 <p>Up to 12 detection inputs can be configured (detection01 through detection12). Each input consists of an objects topic and its corresponding channel configuration.</p>
-<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<h3 id="node-parameters">Node parameters<a class="headerlink" href="#node-parameters" title="Permanent link">#</a></h3>
+<p>The node launch parameters below are generated from the node design file
+<a href="design/MultiObjectTracker.node.yaml"><code>design/MultiObjectTracker.node.yaml</code></a>.</p>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Type</th>
+<th>Default</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>~/output</code></td>
-<td><code>autoware_perception_msgs::msg::TrackedObjects</code></td>
-<td>tracked objects</td>
+<td><code>input/<wbr>detection01/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 1</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection02/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 2</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection03/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 3</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection04/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 4</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection05/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 5</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection06/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 6</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection07/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 7</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection08/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 8</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection09/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 9</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection10/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 10</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection11/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 11</td>
+</tr>
+<tr>
+<td><code>input/<wbr>detection12/<wbr>channel</wbr></wbr></code></td>
+<td>string</td>
+<td><code>none</code></td>
+<td>the channel name for channel 12</td>
+</tr>
+<tr>
+<td><code>publish_<wbr>merged_<wbr>objects</wbr></wbr></code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>switch to publish the merged detected objects output</td>
+</tr>
+<tr>
+<td><code>ego_<wbr>source</wbr></code></td>
+<td>string</td>
+<td><code>tf</code></td>
+<td>the source of ego vehicle state estimation. "tf" or "odometry" are supported. If "tf" is selected, the ego vehicle state is estimated from the ros transform input. If "odometry" is selected, the ego vehicle state is estimated from the odometry input.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <h3 id="input-channel-parameters">Input Channel parameters<a class="headerlink" href="#input-channel-parameters" title="Permanent link">#</a></h3>
 <table>
 <thead>
@@ -23169,42 +23376,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>detected_<wbr>objects.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detected_<wbr>objects.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detected_<wbr>objects.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detected_<wbr>objects.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detected_<wbr>objects.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detected_<wbr>objects.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23225,42 +23432,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>lidar_<wbr>clustering.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>clustering.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>clustering.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>clustering.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>clustering.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>clustering.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23281,42 +23488,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23337,42 +23544,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint_<wbr>short_<wbr>range.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint_<wbr>short_<wbr>range.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint_<wbr>short_<wbr>range.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint_<wbr>short_<wbr>range.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint_<wbr>short_<wbr>range.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>centerpoint_<wbr>short_<wbr>range.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23393,42 +23600,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>lidar_<wbr>apollo.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>apollo.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>apollo.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>apollo.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>apollo.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>apollo.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23449,42 +23656,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>lidar_<wbr>pointpainting.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>pointpainting.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>pointpainting.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>pointpainting.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>pointpainting.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>lidar_<wbr>pointpainting.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23505,42 +23712,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>camera_<wbr>streampetr.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>streampetr.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>streampetr.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>streampetr.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>streampetr.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>streampetr.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23561,42 +23768,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23617,42 +23824,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion_<wbr>irregular.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion_<wbr>irregular.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion_<wbr>irregular.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion_<wbr>irregular.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion_<wbr>irregular.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>lidar_<wbr>fusion_<wbr>irregular.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23673,42 +23880,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>detection_<wbr>by_<wbr>tracker.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detection_<wbr>by_<wbr>tracker.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detection_<wbr>by_<wbr>tracker.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detection_<wbr>by_<wbr>tracker.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detection_<wbr>by_<wbr>tracker.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>detection_<wbr>by_<wbr>tracker.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23729,42 +23936,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>radar.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>radar.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>radar.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>radar.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>radar.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>radar.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23785,42 +23992,42 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>input_<wbr>channels.<wbr>camera_<wbr>vru.<wbr>flags.<wbr>can_<wbr>spawn_<wbr>new_<wbr>tracker</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can spawn new trackers.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>vru.<wbr>flags.<wbr>can_<wbr>trust_<wbr>existence_<wbr>probability</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the existence probability.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>vru.<wbr>flags.<wbr>can_<wbr>trust_<wbr>extension</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object size(extension).</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>vru.<wbr>flags.<wbr>can_<wbr>trust_<wbr>classification</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object classification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>vru.<wbr>flags.<wbr>can_<wbr>trust_<wbr>orientation</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Indicates if the input channel can trust the object orientation.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input_<wbr>channels.<wbr>camera_<wbr>vru.<wbr>optional.<wbr>name</wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The name of the input channel.</td>
-<td>detected_objects</td>
+<td>detected_<wbr>objects</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23865,14 +24072,14 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>ego_<wbr>frame_<wbr>id</wbr></wbr></td>
 <td>string</td>
 <td>Vehicle's ego frame.</td>
-<td>base_link</td>
+<td>base_<wbr>link</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>consider_<wbr>odometry_<wbr>uncertainty</wbr></wbr></td>
 <td>boolean</td>
 <td>If True, consider odometry uncertainty in tracking.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23886,7 +24093,7 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>publish_<wbr>on_<wbr>timer</wbr></wbr></td>
 <td>boolean</td>
 <td>Publish trigger, independent of delay_compensation. false publishes tracks on measurement; true publishes them from the periodic timer at publish_rate.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23900,7 +24107,7 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>tracker_<wbr>configs.<wbr>polygon_<wbr>tracker.<wbr>enable_<wbr>velocity_<wbr>estimation</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Estimate velocity for polygon tracks.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23977,7 +24184,7 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>tracker_<wbr>configs.<wbr>static_<wbr>tracker.<wbr>convert_<wbr>polygon_<wbr>to_<wbr>bbox</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Convert POLYGON shape to BOUNDING_BOX at publish time.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24012,28 +24219,28 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>publish_<wbr>processing_<wbr>time</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable to publish debug message of process time information.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>publish_<wbr>processing_<wbr>time_<wbr>detail</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable to publish debug message of detailed process time information.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>publish_<wbr>tentative_<wbr>objects</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable to publish tentative tracked objects, which have lower confidence.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>publish_<wbr>debug_<wbr>markers</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable to publish debug markers, which indicates association of multi-inputs, existence probability of each detection.</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>

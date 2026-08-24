@@ -23074,7 +23074,7 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>enable the condition to ignore collisions if ego arrives first</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23102,7 +23102,7 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>collision.<wbr>ignore_<wbr>conditions.<wbr>if_<wbr>ego_<wbr>arrives_<wbr>first_<wbr>and_<wbr>cannot_<wbr>stop.<wbr>enable</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>enable the condition to ignore collisions if ego arrives first and cannot stop</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23207,14 +23207,14 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>target_<wbr>labels</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>target labels</td>
-<td>['PEDESTRIAN', 'BICYCLE']</td>
+<td>["PEDESTRIAN", "BICYCLE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23228,42 +23228,42 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23291,56 +23291,56 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
-<td>['guard_rail']</td>
+<td>["guard_<wbr>rail"]</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>DEFAULT.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23368,7 +23368,7 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23382,42 +23382,42 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23445,56 +23445,56 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
-<td>['guard_rail']</td>
+<td>["guard_<wbr>rail"]</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>PEDESTRIAN.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23522,7 +23522,7 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23536,42 +23536,42 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23599,56 +23599,56 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
-<td>['guard_rail']</td>
+<td>["guard_<wbr>rail"]</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>BICYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23676,7 +23676,7 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>if_<wbr>stopped</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object with a velocity bellow the threshold are ignored</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23690,42 +23690,42 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>if_<wbr>on_<wbr>ego_<wbr>trajectory</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, object located on the ego trajectory footprint are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>if_<wbr>behind_<wbr>ego</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, objects located behind the ego vehicles are ignored</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to ignore objects</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore_<wbr>collisions.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>ignore_<wbr>collisions.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used where collisions are ignored</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23753,56 +23753,56 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>confidence_<wbr>filtering.<wbr>only_<wbr>use_<wbr>highest</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, only the path(s) with the highest confidence are used</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>if_<wbr>crossing_<wbr>ego_<wbr>from_<wbr>behind</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>if true, cut after crossing the ego vehicle</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>polygon_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of polygons in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>linestring_<wbr>types</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>types of linestrings in the vector map used to strictly cut predicted paths</td>
-<td>['guard_rail']</td>
+<td>["guard_<wbr>rail"]</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>objects.<wbr>MOTORCYCLE.<wbr>cut_<wbr>predicted_<wbr>paths.<wbr>strict_<wbr>lanelet_<wbr>subtypes</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>subtypes of lanelets in the vector map used to strictly cut predicted paths</td>
-<td>['NONE']</td>
+<td>["NONE"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23837,35 +23837,35 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 <td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>ego_<wbr>footprint</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>objects</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>collisions</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>decisions</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>run_<wbr>out.<wbr>debug.<wbr>enabled_<wbr>markers.<wbr>filtering_<wbr>data</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 </tbody>

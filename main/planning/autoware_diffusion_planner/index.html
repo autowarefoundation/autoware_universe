@@ -22891,28 +22891,28 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>plugins_<wbr>path</wbr></td>
 <td>string</td>
 <td>Path to libautoware_tensorrt_plugins.so file for native TensorRT and ONNX Runtime TensorRT EP</td>
-<td>$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so</td>
+<td>$(find-pkg-share autoware_<wbr>tensorrt_<wbr>plugins)/<wbr>plugins/<wbr>libautoware_<wbr>tensorrt_<wbr>plugins.<wbr>so</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>model.<wbr>type</wbr></td>
 <td>string</td>
 <td>Inference model type</td>
-<td>single_step</td>
+<td>single_<wbr>step</wbr></td>
 <td>['single_step', 'multi_step']</td>
 </tr>
 <tr>
 <td>model.<wbr>base_<wbr>model_<wbr>directory</wbr></wbr></wbr></td>
 <td>string</td>
 <td>Base directory containing ONNX models and args file</td>
-<td>$(var data_path)/diffusion_planner/v5.0</td>
+<td>$(var data_<wbr>path)/<wbr>diffusion_<wbr>planner/<wbr>v5.0</wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>model.<wbr>args_<wbr>filename</wbr></wbr></td>
 <td>string</td>
 <td>Args/configuration JSON filename relative to base_model_directory</td>
-<td>diffusion_planner.param.json</td>
+<td>diffusion_<wbr>planner.<wbr>param.<wbr>json</wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -22933,35 +22933,35 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>model.<wbr>use_<wbr>cuda_<wbr>graph</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Use CUDA Graph replay for TensorRT enqueue calls</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>model.<wbr>single_<wbr>step_<wbr>model.<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Single-step ONNX model filename relative to base_model_directory</td>
-<td>diffusion_planner.onnx</td>
+<td>diffusion_<wbr>planner.<wbr>onnx</wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>model.<wbr>multi_<wbr>step_<wbr>model.<wbr>encoder_<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Encoder ONNX model filename relative to base_model_directory</td>
-<td>diffusion_planner_encoder.onnx</td>
+<td>diffusion_<wbr>planner_<wbr>encoder.<wbr>onnx</wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>model.<wbr>multi_<wbr>step_<wbr>model.<wbr>decoder_<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Decoder ONNX model filename relative to base_model_directory</td>
-<td>diffusion_planner_decoder.onnx</td>
+<td>diffusion_<wbr>planner_<wbr>decoder.<wbr>onnx</wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>model.<wbr>multi_<wbr>step_<wbr>model.<wbr>turn_<wbr>indicator_<wbr>onnx_<wbr>model_<wbr>filename</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>Turn indicator ONNX model filename relative to base_model_directory</td>
-<td>diffusion_planner_turn_indicator.onnx</td>
+<td>diffusion_<wbr>planner_<wbr>turn_<wbr>indicator.<wbr>onnx</wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -22982,7 +22982,7 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>ignore_<wbr>neighbors</wbr></td>
 <td>boolean</td>
 <td>Ignore neighbor agents</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -22996,7 +22996,7 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>build_<wbr>only</wbr></td>
 <td>boolean</td>
 <td>On build only, do not run the planner</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23045,7 +23045,7 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>shift_<wbr>x</wbr></td>
 <td>boolean</td>
 <td>Whether to shift the ego center position by half the wheel base</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23066,14 +23066,14 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>use_<wbr>time_<wbr>interpolation</wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to interpolate ego past trajectory at regular time intervals</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>object_<wbr>motion_<wbr>resampling.<wbr>enable</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp (read-only)</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23087,7 +23087,7 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>ego_<wbr>snap_<wbr>to_<wbr>prev_<wbr>trajectory.<wbr>enable</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Whether to snap the ego pose onto the previous planning trajectory. When enabled, the ego pose is replaced by the foot of the perpendicular to the closest segment of the previous planning trajectory (planning start pose + previous prediction).</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23143,14 +23143,14 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>planning_<wbr>factor.<wbr>enable_<wbr>stop</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stop planning factor</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>planning_<wbr>factor.<wbr>enable_<wbr>slowdown</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable slowdown planning factor</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23178,21 +23178,21 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>debug_<wbr>params.<wbr>publish_<wbr>debug_<wbr>map</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish debug map markers</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>debug_<wbr>params.<wbr>publish_<wbr>debug_<wbr>route</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish debug route markers</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>debug_<wbr>params.<wbr>publish_<wbr>debug_<wbr>linestrings</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Publish debug linestring markers</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 </tbody>

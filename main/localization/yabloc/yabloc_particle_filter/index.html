@@ -22935,7 +22935,7 @@
 <td>visualize</td>
 <td>boolean</td>
 <td>whether particles are also published in visualization_msgs or not</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23081,74 +23081,74 @@
 <td>acceptable_<wbr>max_<wbr>delay</wbr></wbr></td>
 <td>float</td>
 <td>how long to hold the predicted particles</td>
-<td>1</td>
+<td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>visualize</td>
 <td>boolean</td>
 <td>whether publish particles as marker_array or not</td>
-<td>0</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>mahalanobis_<wbr>distance_<wbr>threshold</wbr></wbr></td>
 <td>float</td>
 <td>if the Mahalanobis distance to the GNSS for particle exceeds this, the correction skips.</td>
-<td>30</td>
+<td>30.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>for_<wbr>fixed/max_<wbr>weight</wbr></wbr></td>
+<td>for_<wbr>fixed/<wbr>max_<wbr>weight</wbr></wbr></wbr></td>
 <td>float</td>
 <td>gnss weight distribution used when observation is fixed</td>
-<td>5</td>
+<td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>for_<wbr>fixed/flat_<wbr>radius</wbr></wbr></td>
-<td>float</td>
-<td>gnss weight distribution used when observation is fixed</td>
-<td>0.5</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>for_<wbr>fixed/max_<wbr>radius</wbr></wbr></td>
-<td>float</td>
-<td>gnss weight distribution used when observation is fixed</td>
-<td>10</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>for_<wbr>fixed/min_<wbr>weight</wbr></wbr></td>
+<td>for_<wbr>fixed/<wbr>flat_<wbr>radius</wbr></wbr></wbr></td>
 <td>float</td>
 <td>gnss weight distribution used when observation is fixed</td>
 <td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>for_<wbr>not_<wbr>fixed/max_<wbr>weight</wbr></wbr></wbr></td>
+<td>for_<wbr>fixed/<wbr>max_<wbr>radius</wbr></wbr></wbr></td>
 <td>float</td>
-<td>gnss weight distribution used when observation is not fixed</td>
-<td>1</td>
+<td>gnss weight distribution used when observation is fixed</td>
+<td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>for_<wbr>not_<wbr>fixed/flat_<wbr>radius</wbr></wbr></wbr></td>
+<td>for_<wbr>fixed/<wbr>min_<wbr>weight</wbr></wbr></wbr></td>
 <td>float</td>
-<td>gnss weight distribution used when observation is not fixed</td>
-<td>5</td>
+<td>gnss weight distribution used when observation is fixed</td>
+<td>0.5</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>for_<wbr>not_<wbr>fixed/max_<wbr>radius</wbr></wbr></wbr></td>
+<td>for_<wbr>not_<wbr>fixed/<wbr>max_<wbr>weight</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>gnss weight distribution used when observation is not fixed</td>
-<td>20</td>
+<td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>for_<wbr>not_<wbr>fixed/min_<wbr>weight</wbr></wbr></wbr></td>
+<td>for_<wbr>not_<wbr>fixed/<wbr>flat_<wbr>radius</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>gnss weight distribution used when observation is not fixed</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>for_<wbr>not_<wbr>fixed/<wbr>max_<wbr>radius</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>gnss weight distribution used when observation is not fixed</td>
+<td>20.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>for_<wbr>not_<wbr>fixed/<wbr>min_<wbr>weight</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>gnss weight distribution used when observation is not fixed</td>
 <td>0.5</td>
@@ -23267,14 +23267,14 @@
 <td>acceptable_<wbr>max_<wbr>delay</wbr></wbr></td>
 <td>float</td>
 <td>how long to hold the predicted particles</td>
-<td>1</td>
+<td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>visualize</td>
 <td>boolean</td>
 <td>whether publish particles as marker_array or not</td>
-<td>0</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23288,14 +23288,14 @@
 <td>max_<wbr>range</wbr></td>
 <td>float</td>
 <td>width of hierarchical cost map</td>
-<td>40</td>
+<td>40.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>gamma</td>
 <td>float</td>
 <td>gamma value of the intensity gradient of the cost map</td>
-<td>5</td>
+<td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23316,7 +23316,7 @@
 <td>enabled_<wbr>at_<wbr>first</wbr></wbr></td>
 <td>boolean</td>
 <td>if it is false, this node is not activated at first. you can activate by service call</td>
-<td>1</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 </tbody>
