@@ -71,6 +71,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   add_compile_options(-Wno-narrowing)
 
   set(DIFFUSION_PLANNER_SOURCES
+    src/camp_atom_materializer.cpp
     src/diffusion_planner_core.cpp
     src/diffusion_planner_node.cpp
     src/conversion/lanelet.cpp
@@ -124,6 +125,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
   )
+  ament_target_dependencies(autoware_diffusion_planner_component
+    autoware_trajectory_ranker
+  )
 
   if(onnxruntime_FOUND)
     if(TARGET onnxruntime::onnxruntime)
@@ -145,6 +149,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   if(BUILD_TESTING)
     ament_add_ros_isolated_gtest(test_diffusion_planner
       test/agent_test.cpp
+      test/camp_atom_materializer_test.cpp
       test/agent_history_resampler_test.cpp
       test/agent_lifecycle_test.cpp
       test/lanelet_test.cpp
@@ -163,6 +168,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       test/planning_factor_utils_test.cpp)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
+    target_compile_definitions(test_diffusion_planner PRIVATE
+      CAMP_TEST_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../autoware_trajectory_ranker/config/camp_v26_k8_50k.json"
+    )
     ament_target_dependencies(test_diffusion_planner
       autoware_lanelet2_extension
       autoware_map_msgs

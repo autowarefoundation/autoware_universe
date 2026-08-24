@@ -104,7 +104,31 @@ void DiffusionPlannerCore::load_model()
 {
   last_agent_poses_map_.clear();
   last_ego_to_map_transform_.reset();
+  camp_previous_plan_.reset();
+  camp_model_.reset();
   diffusion_planner_inference_.reset();
+  if (params_.camp_enabled) {
+    if (params_.camp_fixed_weight_model_path.empty()) {
+      throw std::invalid_argument("camp.fixed_weight_model_path must be set when CAMP is enabled");
+    }
+    const bool temperature_matches =
+      params_.temperature_list.size() == 8U && params_.temperature_list.front() == 0.0 &&
+      std::all_of(
+        params_.temperature_list.begin() + 1, params_.temperature_list.end(),
+        [](const double value) { return value == 1.0; });
+    if (params_.model_type != "multi_step" || params_.batch_size != 8 || !temperature_matches) {
+      throw std::invalid_argument(
+        "CAMP fixed-weight deployment requires multi_step K=8 with temperature=[0,1,...,1]");
+    }
+    if (params_.shift_x) {
+      throw std::invalid_argument("CAMP fixed-weight deployment requires shift_x=false");
+    }
+    camp_model_ =
+      trajectory_ranker::load_camp_fixed_weight_model(params_.camp_fixed_weight_model_path);
+    if (camp_model_->candidate_pool_k != static_cast<std::size_t>(params_.batch_size)) {
+      throw std::invalid_argument("CAMP model and Diffusion Planner candidate counts differ");
+    }
+  }
   utils::check_weight_version(params_.args_path);
   observation_normalization_ = utils::load_observation_normalization(params_.args_path);
   state_normalization_ = utils::load_state_normalization(params_.args_path);
@@ -254,6 +278,7 @@ void DiffusionPlannerCore::set_map(
 {
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(
     lanelet_map_ptr, params_.line_string_max_step_m);
+  camp_previous_plan_.reset();
 }
 
 std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
@@ -265,6 +290,9 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   const std::shared_ptr<const TurnIndicatorsReport> & turn_indicators,
   const LaneletRoute::ConstSharedPtr & route_ptr, const rclcpp::Time & current_time)
 {
+  if (route_ptr && route_ptr_ && route_ptr.get() != route_ptr_.get()) {
+    camp_previous_plan_.reset();
+  }
   route_ptr_ = (!route_ptr_ || route_ptr) ? route_ptr : route_ptr_;
 
   TrackedObjects empty_object_list;
@@ -591,6 +619,47 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   return input_data_map;
 }
 
+CampTensorContext DiffusionPlannerCore::capture_camp_tensor_context(
+  const InputDataMap & input_data_map) const
+{
+  if (!params_.camp_enabled) return {};
+
+  const auto copy_first_batch = [&input_data_map](
+                                  const std::string & key, const std::size_t values_per_batch) {
+    const auto & source = input_data_map.at(key);
+    if (source.size() < values_per_batch) {
+      throw std::invalid_argument("CAMP input tensor " + key + " is incomplete");
+    }
+    return std::vector<float>(
+      source.begin(), source.begin() + static_cast<std::ptrdiff_t>(values_per_batch));
+  };
+
+  CampTensorContext result;
+  result.lanes = copy_first_batch(
+    "lanes", static_cast<std::size_t>(NUM_SEGMENTS_IN_LANE) *
+               static_cast<std::size_t>(POINTS_PER_SEGMENT) *
+               static_cast<std::size_t>(SEGMENT_POINT_DIM));
+  result.route_lanes = copy_first_batch(
+    "route_lanes", static_cast<std::size_t>(NUM_SEGMENTS_IN_ROUTE) *
+                     static_cast<std::size_t>(POINTS_PER_SEGMENT) *
+                     static_cast<std::size_t>(SEGMENT_POINT_DIM));
+  result.route_speed_limits =
+    copy_first_batch("route_lanes_speed_limit", static_cast<std::size_t>(NUM_SEGMENTS_IN_ROUTE));
+  for (std::size_t segment = 0; segment < static_cast<std::size_t>(NUM_SEGMENTS_IN_ROUTE);
+       ++segment) {
+    for (std::size_t point = 0; point < static_cast<std::size_t>(POINTS_PER_SEGMENT); ++point) {
+      const std::size_t row = (segment * static_cast<std::size_t>(POINTS_PER_SEGMENT) + point) *
+                              static_cast<std::size_t>(SEGMENT_POINT_DIM);
+      for (std::size_t state = static_cast<std::size_t>(TRAFFIC_LIGHT_GREEN);
+           state <= static_cast<std::size_t>(TRAFFIC_LIGHT_WHITE); ++state) {
+        result.route_has_traffic_light =
+          result.route_has_traffic_light || result.route_lanes.at(row + state) > 0.5F;
+      }
+    }
+  }
+  return result;
+}
+
 InferenceResult DiffusionPlannerCore::run_inference(const InputDataMap & input_data_map)
 {
   if (!diffusion_planner_inference_) {
@@ -601,7 +670,8 @@ InferenceResult DiffusionPlannerCore::run_inference(const InputDataMap & input_d
 
 PlannerOutput DiffusionPlannerCore::create_planner_output(
   const InferenceOutput & inference_output, const FrameContext & frame_context,
-  const rclcpp::Time & timestamp, const UUID & generator_uuid)
+  const rclcpp::Time & timestamp, const UUID & generator_uuid,
+  const std::optional<CampTensorContext> & camp_tensor_context)
 {
   const auto & [raw_predictions, turn_indicator_logit] = inference_output.outputs;
   const std::vector<float> denormalized_predictions =
@@ -633,6 +703,47 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
                                 ? TurnIndicatorsReport::DISABLE
                                 : turn_indicators_history_.back().report;
 
+  std::size_t selected_candidate_index = 0;
+  if (camp_model_) {
+    if (!camp_tensor_context) {
+      throw std::invalid_argument("CAMP tensor context is unavailable");
+    }
+    CampAtomMaterializationInput camp_input;
+    camp_input.denormalized_predictions = denormalized_predictions;
+    camp_input.batch_size = params_.batch_size;
+    camp_input.agent_count = MAX_NUM_AGENTS;
+    camp_input.tensor_context = *camp_tensor_context;
+    camp_input.lanelet_map = &lane_segment_context_->get_lanelet_map();
+    camp_input.ego_to_map = frame_context.ego_to_map_transform;
+    camp_input.ego_wheelbase_m = vehicle_spec_.wheel_base;
+    camp_input.ego_length_m = vehicle_spec_.vehicle_length;
+    camp_input.ego_width_m = vehicle_spec_.vehicle_width;
+    camp_input.origin_seconds = timestamp.seconds();
+    camp_input.previous_plan = camp_previous_plan_;
+    const std::size_t observed_actors =
+      std::min(kCampActorCount, frame_context.ego_centric_neighbor_histories.size());
+    for (std::size_t actor = 0; actor < observed_actors; ++actor) {
+      const auto & shape = frame_context.ego_centric_neighbor_histories.at(actor)
+                             .get_latest_state()
+                             .original_info.shape;
+      const double length = static_cast<double>(shape.dimensions.x);
+      const double width = static_cast<double>(shape.dimensions.y);
+      if (std::isfinite(length) && length > 0.0 && std::isfinite(width) && width > 0.0) {
+        camp_input.actor_shapes.at(actor) = {true, length, width};
+      }
+    }
+
+    const auto materialized =
+      materialize_camp_atoms(camp_input, camp_model_->transition_component_scales);
+    const auto ranking = trajectory_ranker::rank_camp_candidates(
+      *camp_model_, materialized.status, materialized.raw_atoms);
+    selected_candidate_index = ranking.selected_index;
+    output.camp_candidate_costs = ranking.costs;
+    camp_previous_plan_ = CampPreviousPlan{
+      timestamp.seconds(), materialized.candidate_world_plans.at(selected_candidate_index)};
+  }
+  output.selected_candidate_index = selected_candidate_index;
+
   // Trajectory and CandidateTrajectories
   for (int i = 0; i < params_.batch_size; i++) {
     auto trajectory = postprocess::create_ego_trajectory(
@@ -645,8 +756,8 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
       }
     }
 
-    if (i == 0) {
-      // Use the first trajectory as the main output trajectory
+    if (static_cast<std::size_t>(i) == selected_candidate_index) {
+      // CAMP-disabled operation keeps candidate 0; CAMP emits the selected original row.
       output.trajectory = trajectory;
     }
 
@@ -657,8 +768,8 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
     const TurnIndicatorsCommand turn_indicators_command =
       turn_indicator_managers_.at(i).evaluate(single_turn_indicator_logit, timestamp, prev_report);
 
-    if (i == 0) {
-      // Publish the first trajectory's command on the standalone turn indicator topic.
+    if (static_cast<std::size_t>(i) == selected_candidate_index) {
+      // Keep the standalone command aligned with the selected candidate.
       output.turn_indicators_command = turn_indicators_command;
     }
 
@@ -680,8 +791,8 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
   }
 
   // PredictedObjects
-  // Use the first prediction as the main predicted objects
-  constexpr int64_t batch_idx = 0;
+  // Keep the published actor prediction aligned with the selected ego candidate.
+  const int64_t batch_idx = static_cast<int64_t>(selected_candidate_index);
   output.predicted_objects = postprocess::create_predicted_objects(
     agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
 
