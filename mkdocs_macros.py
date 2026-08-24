@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import urllib
 
 from tabulate import tabulate
@@ -16,9 +17,15 @@ def format_param_type(param_type):
         return param_type
 
 
-def format_param_name(param_name):
-    # Names carry no space or hyphen: mark the separators as line-break opportunities.
-    return param_name.replace(".", ".<wbr>").replace("_", "_<wbr>")
+# Identifiers (parameter names, topic paths, message types, file paths) carry no
+# space or hyphen: their separators are the only line-break opportunities. A
+# separator followed by a digit is kept unbreakable so numeric values stay intact.
+SEPARATOR_BREAK_PATTERN = re.compile(r"([._/])(?!\d)")
+
+
+def add_break_opportunities(text):
+    """Mark the separators of an unbreakable identifier as line-break opportunities."""
+    return SEPARATOR_BREAK_PATTERN.sub(r"\1<wbr>", text)
 
 
 def format_param_range(param):
@@ -112,10 +119,10 @@ def extract_parameter_info(parameters, doc, base_dir, cache, namespace="", seen_
             )
         else:
             param = {}
-            param["Name"] = format_param_name(namespace + k)
+            param["Name"] = add_break_opportunities(namespace + k)
             param["Type"] = format_param_type(resolved.get("type", "N/A"))
             param["Description"] = resolved.get("description", "")
-            param["Default"] = resolved.get("default", "")
+            param["Default"] = add_break_opportunities(format_cell(resolved.get("default")))
             param["Range"] = format_param_range(resolved)
             params.append(param)
     return params
@@ -190,6 +197,14 @@ def format_qos(qos):
     return "<br/>".join(f"{k}: {format_cell(v)}" for k, v in qos.items())
 
 
+def format_code(value):
+    """Format an identifier as inline code, breakable at its separators."""
+    text = format_cell(value)
+    if not text:
+        return ""
+    return f"<code>{add_break_opportunities(text)}</code>"
+
+
 def build_table(rows, columns):
     """Build a GitHub Markdown table for the given column spec.
 
@@ -213,11 +228,11 @@ def extract_interface_rows(entries):
     for entry in entries or []:
         rows.append(
             {
-                "Name": f"`{entry['name']}`",
-                "Type": f"`{entry['message_type']}`",
+                "Name": format_code(entry["name"]),
+                "Type": format_code(entry["message_type"]),
                 "Description": format_cell(entry.get("description")),
-                "Topic": f"`{entry['global']}`" if entry.get("global") else "",
-                "Remap": f"`{entry['remap_target']}`" if entry.get("remap_target") else "",
+                "Topic": format_code(entry.get("global")),
+                "Remap": format_code(entry.get("remap_target")),
                 "QoS": format_qos(entry.get("qos")),
             }
         )
@@ -243,9 +258,9 @@ def format_param_values_table(param_values):
     for param in param_values or []:
         rows.append(
             {
-                "Name": f"`{param['name']}`",
+                "Name": format_code(param["name"]),
                 "Type": format_param_type(param.get("type", "")),
-                "Default": format_cell(param.get("default")),
+                "Default": format_code(param.get("default")),
                 "Description": format_cell(param.get("description")),
             }
         )
@@ -268,9 +283,9 @@ def format_param_files_table(param_files):
     for entry in param_files or []:
         rows.append(
             {
-                "Name": f"`{entry['name']}`",
-                "Default": format_cell(entry.get("default")),
-                "Schema": f"`{entry['schema']}`" if entry.get("schema") else "",
+                "Name": format_code(entry["name"]),
+                "Default": format_code(entry.get("default")),
+                "Schema": format_code(entry.get("schema")),
                 "Description": format_cell(entry.get("description")),
             }
         )
