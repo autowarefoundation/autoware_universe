@@ -22,64 +22,42 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
-void TrajectoryExtender::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryExtender::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
-  if (!params.use_trajectory_extender) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
   // Note: This function adds the current ego state to a history trajectory. Note that it is ok to
   // call this function several times with the same ego state, since there is a check inside the
   // function to avoid adding the same state multiple times.
   trajectory_extender_utils::add_ego_state_to_trajectory(
-    past_ego_state_trajectory_.points, data.current_odometry,
+    past_ego_state_trajectory_.points, *data.current_odometry,
     extender_params_.nearest_dist_threshold_m,
     autoware_utils_math::deg2rad(extender_params_.nearest_yaw_threshold_deg),
     extender_params_.backward_trajectory_extension_m);
   trajectory_extender_utils::expand_trajectory_with_ego_history(
-    traj_points, past_ego_state_trajectory_.points, data.current_odometry);
+    traj_points, past_ego_state_trajectory_.points, *data.current_odometry);
+  return ProcessingResult::Modified;
 }
 
-void TrajectoryExtender::set_up_params()
+void TrajectoryExtender::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-
-  extender_params_.nearest_dist_threshold_m =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_dist_threshold_m");
-  extender_params_.nearest_yaw_threshold_deg =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_yaw_threshold_deg");
-  extender_params_.backward_trajectory_extension_m = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_extender.backward_trajectory_extension_m");
+  enabled_ = params.use_trajectory_extender;
+  extender_params_ = params.trajectory_extender;
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
+void TrajectoryExtender::update_params(const TrajectoryProcessorParams & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<double>(
-    parameters, "trajectory_extender.nearest_dist_threshold_m",
-    extender_params_.nearest_dist_threshold_m);
-  update_param<double>(
-    parameters, "trajectory_extender.nearest_yaw_threshold_deg",
-    extender_params_.nearest_yaw_threshold_deg);
-  update_param<double>(
-    parameters, "trajectory_extender.backward_trajectory_extension_m",
-    extender_params_.backward_trajectory_extension_m);
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
+  enabled_ = params.use_trajectory_extender;
+  extender_params_ = params.trajectory_extender;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryExtender,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryExtender,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

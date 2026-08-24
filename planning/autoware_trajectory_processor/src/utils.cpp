@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::utils
+namespace autoware::trajectory_processor::utils
 {
 
 rclcpp::Logger get_logger()
@@ -165,4 +165,4 @@ void copy_trajectory_orientation(
   }
 }
 
-}  // namespace autoware::trajectory_optimizer::utils
+}  // namespace autoware::trajectory_processor::utils

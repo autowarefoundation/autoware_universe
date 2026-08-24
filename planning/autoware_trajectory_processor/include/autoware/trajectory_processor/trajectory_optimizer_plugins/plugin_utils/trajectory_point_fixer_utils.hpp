@@ -17,15 +17,16 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_POINT_FIXER_UTILS_HPP_
 
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/semantic_speed_tracker.hpp"
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_point_fixer_utils
 {
+using autoware::trajectory_processor::SemanticSpeedTracker;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using nav_msgs::msg::Odometry;
@@ -170,7 +171,7 @@ void detect_velocity_based_stop(
 void build_stop_approach_ranges(
   const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker);
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_point_fixer_utils
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_POINT_FIXER_UTILS_HPP_

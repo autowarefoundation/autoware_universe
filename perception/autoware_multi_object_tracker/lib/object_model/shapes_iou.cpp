@@ -147,6 +147,16 @@ double get2dGeneralizedIoU(
   return iou - (convex_shape_area - union_area) / convex_shape_area;
 }
 
+double get2dMinimumGap(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object)
+{
+  const auto source_polygon =
+    autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
+  const auto target_polygon =
+    autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
+  return boost::geometry::distance(source_polygon, target_polygon);
+}
+
 bool get2dPrecisionRecallGIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   double & precision, double & recall, double & generalized_iou)

@@ -115,8 +115,9 @@ void VehicleConstraintFilter::update_parameters(const validator::Params & params
 }
 
 VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext &)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext &)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (!vehicle_info_ptr_) {
     return tl::make_unexpected("Vehicle info not set");
   }

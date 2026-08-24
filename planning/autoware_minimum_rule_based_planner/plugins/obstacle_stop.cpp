@@ -31,12 +31,12 @@
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
-using autoware::trajectory_modifier::utils::clamp_stop_point_arc_length;
-using autoware::trajectory_modifier::utils::insert_stop_point;
-using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_object_collision;
-using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_pcd_collision;
-using autoware::trajectory_modifier::utils::obstacle_stop::get_trajectory_shape;
-using autoware::trajectory_modifier::utils::obstacle_stop::PointCloud;
+using autoware::trajectory_processor::utils::clamp_stop_point_arc_length;
+using autoware::trajectory_processor::utils::insert_stop_point;
+using autoware::trajectory_processor::utils::obstacle_stop::get_nearest_object_collision;
+using autoware::trajectory_processor::utils::obstacle_stop::get_nearest_pcd_collision;
+using autoware::trajectory_processor::utils::obstacle_stop::get_trajectory_shape;
+using autoware::trajectory_processor::utils::obstacle_stop::PointCloud;
 
 void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
 {
@@ -47,13 +47,13 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
       get_node_ptr(), "backup_planner_obstacle_stop");
 
   pointcloud_filter_ =
-    std::make_unique<trajectory_modifier::utils::obstacle_stop::PointCloudFilter>(
+    std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
       params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,
       params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
       params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
       params_.pointcloud.clustering.max_size);
 
-  object_filter_ = std::make_unique<trajectory_modifier::utils::obstacle_stop::ObjectFilter>(
+  object_filter_ = std::make_unique<trajectory_processor::utils::obstacle_stop::ObjectFilter>(
     params_.objects.object_types, params_.objects.max_velocity_th,
     params_.objects.stopped_velocity_th, params_.objects.max_lateral_velocity_th,
     params_.objects.safety_buffer);

@@ -20,6 +20,7 @@
 
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware/trajectory/path_point_with_lane_id.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
@@ -934,8 +935,9 @@ std::optional<double> CrosswalkModule::findObjectPassageDirectionAlongVehicleLan
     for (unsigned i = 0; i < path.path.size() - 1; ++i) {
       const auto & start = path.path.at(i).position;
       const auto & end = path.path.at(i + 1).position;
-      if (const auto intersect = autoware_utils::intersect(line_start, line_end, start, end);
-          intersect.has_value()) {
+      if (
+        const auto intersect = autoware_utils::intersect(line_start, line_end, start, end);
+        intersect.has_value()) {
         return std::make_optional(std::make_pair(i, intersect.value()));
       }
     }
@@ -1186,8 +1188,9 @@ void CrosswalkModule::applySlowDownByOcclusion(
     detection_range);
   debug_data_.occlusion_detection_areas = detection_areas;
   debug_data_.crosswalk_origin = first_path_point_on_crosswalk;
-  if (is_crosswalk_occluded(
-        *planner_data.occupancy_grid, detection_areas, objects_ptr->objects, planner_param_)) {
+  if (
+    is_crosswalk_occluded(
+      *planner_data.occupancy_grid, detection_areas, objects_ptr->objects, planner_param_)) {
     if (!current_initial_occlusion_time_) {
       current_initial_occlusion_time_ = now;
     }
@@ -1389,9 +1392,10 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForParkedVehicl
       const auto zero_vel_s =
         autoware::experimental::trajectory::search_zero_velocity_position(ego_path, ego_s)) {
       const auto zero_vel_point = ego_path.compute(*zero_vel_s).point;
-      if (boost::geometry::within(
-            lanelet::BasicPoint2d(zero_vel_point.pose.position.x, zero_vel_point.pose.position.y),
-            parked_vehicles_stop_.search_area)) {
+      if (
+        boost::geometry::within(
+          lanelet::BasicPoint2d(zero_vel_point.pose.position.x, zero_vel_point.pose.position.y),
+          parked_vehicles_stop_.search_area)) {
         is_stop_planned = true;
       }
     }
@@ -1441,8 +1445,9 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForParkedVehicl
     const auto & obj_pose = target.kinematics.initial_pose_with_covariance.pose;
     const auto obj_point = obj_pose.position;
 
-    if (boost::geometry::within(
-          lanelet::BasicPoint2d(obj_point.x, obj_point.y), parked_vehicles_stop_.search_area)) {
+    if (
+      boost::geometry::within(
+        lanelet::BasicPoint2d(obj_point.x, obj_point.y), parked_vehicles_stop_.search_area)) {
       const auto obj_s =
         autoware::experimental::trajectory::find_nearest_index(ego_path, obj_point);
       if (obj_s > max_s_value) {
@@ -1614,7 +1619,8 @@ void CrosswalkModule::updateObjectState(
       findEgoPassageDirectionAlongPath(ego_path);
     object_info_manager_.update(
       obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
-      is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,
+      is_ego_yielding, has_traffic_light, collision_point,
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification), p,
       crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
@@ -1693,7 +1699,7 @@ bool CrosswalkModule::isVehicle(const PredictedObject & object)
     return false;
   }
 
-  const auto & label = object.classification.front().label;
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::CAR) {
     return true;
@@ -1724,7 +1730,7 @@ bool CrosswalkModule::isCrosswalkUserType(const PredictedObject & object) const
     return false;
   }
 
-  const auto & label = object.classification.front().label;
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
   if (label == ObjectClassification::UNKNOWN && planner_param_.look_unknown) {
     return true;

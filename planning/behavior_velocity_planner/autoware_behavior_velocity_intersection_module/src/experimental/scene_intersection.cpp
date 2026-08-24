@@ -308,8 +308,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   const auto is_stuck_status =
     isStuckStatus(*path, intersection_stoplines, path_lanelets, planner_data);
   if (is_stuck_status) {
-    if (can_smoothly_stop_at(
-          *path, closest_idx, is_stuck_status->stuck_stopline_idx, planner_data)) {
+    if (
+      can_smoothly_stop_at(*path, closest_idx, is_stuck_status->stuck_stopline_idx, planner_data)) {
       return is_stuck_status.value();
     }
     RCLCPP_ERROR_THROTTLE(
@@ -449,9 +449,10 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
     if (
       has_collision_with_margin && !has_traffic_light_ && enable_conservative_yield_merging &&
       intersection_stoplines.maximum_footprint_overshoot_line) {
-      if (can_smoothly_stop_at(
-            *path, closest_idx, intersection_stoplines.maximum_footprint_overshoot_line.value(),
-            planner_data)) {
+      if (
+        can_smoothly_stop_at(
+          *path, closest_idx, intersection_stoplines.maximum_footprint_overshoot_line.value(),
+          planner_data)) {
         // NOTE(soblin): intersection_stoplines.maximum_footprint_overshoot_line.value() is not used
         // as stop line. in this case, ego tries to stop at current position
         const auto stop_line_idx = closest_idx;
@@ -489,8 +490,9 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   const auto yield_stuck_status =
     isYieldStuckStatus(*path, interpolated_path_info, intersection_stoplines, planner_data);
   if (yield_stuck_status) {
-    if (can_smoothly_stop_at(
-          *path, closest_idx, yield_stuck_status->stuck_stopline_idx, planner_data)) {
+    if (
+      can_smoothly_stop_at(
+        *path, closest_idx, yield_stuck_status->stuck_stopline_idx, planner_data)) {
       return yield_stuck_status.value();
     }
     RCLCPP_WARN_THROTTLE(

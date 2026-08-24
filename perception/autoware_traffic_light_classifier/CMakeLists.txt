@@ -57,6 +57,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   ament_auto_add_library(${PROJECT_NAME} SHARED
+    src/classifier_params.cpp
     src/classifier/color_classifier.cpp
     src/classifier/cnn_classifier.cpp
     src/classifier/cnn_lamp_recognizer.cpp
@@ -74,11 +75,12 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     stdc++fs
   )
   rclcpp_components_register_node(${PROJECT_NAME}
-    PLUGIN "autoware::traffic_light::TrafficLightClassifierNodelet"
+    PLUGIN "autoware::traffic_light::TrafficLightClassifierNode"
     EXECUTABLE traffic_light_classifier_node
   )
 
   ament_auto_add_library(single_image_debug_inference_node SHARED
+    src/classifier_params.cpp
     src/classifier/cnn_classifier.cpp
     src/classifier/color_classifier.cpp
     src/classifier/cnn_lamp_recognizer.cpp
@@ -111,6 +113,7 @@ else()
   )
 
   ament_auto_add_library(${PROJECT_NAME} SHARED
+    src/classifier_params.cpp
     src/classifier/color_classifier.cpp
     src/traffic_light_classifier.cpp
     src/traffic_light_classifier_node.cpp
@@ -121,7 +124,7 @@ else()
   )
 
   rclcpp_components_register_node(${PROJECT_NAME}
-    PLUGIN "autoware::traffic_light::TrafficLightClassifierNodelet"
+    PLUGIN "autoware::traffic_light::TrafficLightClassifierNode"
     EXECUTABLE traffic_light_classifier_node
   )
 
@@ -142,20 +145,11 @@ if(BUILD_TESTING)
     ${OpenCV_LIBRARIES}
   )
 
-  # ROS-free unit tests for the color classification core (ColorClassifierCore).
+  # ROS-free unit tests for the color classification core (ColorClassifier).
   ament_auto_add_gtest(test_color_classifier
     test/test_color_classifier.cpp
   )
   target_link_libraries(test_color_classifier
-    ${PROJECT_NAME}
-    ${OpenCV_LIBRARIES}
-  )
-
-  # ColorClassifier ROS adapter tests (the size guard needs the node's logger).
-  ament_add_ros_isolated_gtest(test_color_classifier_adapter
-    test/test_color_classifier_adapter.cpp
-  )
-  target_link_libraries(test_color_classifier_adapter
     ${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
   )
@@ -169,15 +163,27 @@ if(BUILD_TESTING)
     ${OpenCV_LIBRARIES}
   )
 
-  # GPU/TensorRT characterization test for CNNClassifier (only compiled under
-  # TRT+CUDA, hence the gate). It builds a node, so it uses the ROS-isolated runner;
-  # TIMEOUT covers the first-time TensorRT engine build.
+  # Tests that depend on TensorRT/CUDA code, built only when those libraries are available.
   if(TRT_AVAIL AND CUDA_AVAIL)
-    ament_add_ros_isolated_gtest(test_cnn_classifier
+    # CNNClassifier tests (ROS-free): static helpers run GPU-free; the classify()
+    # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
+    ament_auto_add_gtest(test_cnn_classifier
       test/test_cnn_classifier.cpp
       TIMEOUT 600
     )
     target_link_libraries(test_cnn_classifier
+      ${PROJECT_NAME}
+      ${OpenCV_LIBRARIES}
+      ${CUDA_LIBRARIES}
+    )
+
+    # CnnLampRecognizer tests (ROS-free): static helpers run GPU-free; the classify()
+    # tests self-skip without a GPU/model. TIMEOUT covers the engine build.
+    ament_auto_add_gtest(test_cnn_lamp_recognizer
+      test/test_cnn_lamp_recognizer.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_cnn_lamp_recognizer
       ${PROJECT_NAME}
       ${OpenCV_LIBRARIES}
       ${CUDA_LIBRARIES}

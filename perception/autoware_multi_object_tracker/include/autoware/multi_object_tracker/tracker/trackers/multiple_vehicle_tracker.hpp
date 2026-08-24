@@ -30,6 +30,9 @@ private:
   VehicleTracker normal_vehicle_tracker_;
   VehicleTracker big_vehicle_tracker_;
 
+  // Heading-sign consensus across the layers; the stronger sign belief is authoritative.
+  void alignOrientationSigns();
+
   // Inner tracker that backs the published object for the current highest-prob label.
   VehicleTracker & activeInner()
   {
@@ -105,6 +108,12 @@ public:
   {
     if (!trust_extension) return UpdatePath::CONDITIONED;
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
+
+  // Same policy as VehicleTracker: staleness on full measurements is meaningful.
+  double getElapsedTimeFromFullMeasurement(const rclcpp::Time & current_time) const override
+  {
+    return elapsedSinceLastFullMeasurement(current_time);
   }
 };
 

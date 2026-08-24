@@ -92,7 +92,7 @@ protected:
     sim_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME) + rclcpp::Duration(std::chrono::seconds(1));
     publish_clock();
     for (int i = 0; i < 10; ++i) {
-      rclcpp::spin_some(node_under_test_);
+      rclcpp::spin_some(node_under_test_->get_node_base_interface());
       rclcpp::spin_some(test_node_);
     }
   }
@@ -114,7 +114,7 @@ protected:
   void spin_for_messages(int iterations = 10)
   {
     for (int i = 0; i < iterations; ++i) {
-      rclcpp::spin_some(node_under_test_);
+      rclcpp::spin_some(node_under_test_->get_node_base_interface());
       rclcpp::spin_some(test_node_);
     }
   }
@@ -138,16 +138,16 @@ protected:
   {
     const rclcpp::Time deadline = sim_time_ + timeout;
     while (rclcpp::ok()) {
-      rclcpp::spin_some(node_under_test_);
+      rclcpp::spin_some(node_under_test_->get_node_base_interface());
       rclcpp::spin_some(test_node_);
       if (condition()) return true;
       if (sim_time_ >= deadline) break;
       sim_time_ = sim_time_ + step;
       publish_clock();
       // First spin: delivers the clock update and may mark the timer as ready.
-      rclcpp::spin_some(node_under_test_);
+      rclcpp::spin_some(node_under_test_->get_node_base_interface());
       // Second spin: executes any timer callback that became ready above.
-      rclcpp::spin_some(node_under_test_);
+      rclcpp::spin_some(node_under_test_->get_node_base_interface());
       rclcpp::spin_some(test_node_);
     }
     return false;

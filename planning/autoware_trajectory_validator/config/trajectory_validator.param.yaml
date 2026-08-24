@@ -8,6 +8,7 @@
         "safety::UncrossableBoundaryDepartureFilter",
         "safety::VehicleConstraintFilter",
         "traffic_rule::TrafficLightFilter",
+        "traffic_rule::CrosswalkFilter",
       ]
 
     vehicle_constraint:
@@ -17,12 +18,32 @@
       max_steering_angle: 0.8 # rad
       max_steering_rate: 0.3 # rad/s
 
+    crosswalk:
+      object_types: ["pedestrian", "bicycle"]
+      lon_detection_margin: 2.0 # [m] longitudinal extrusion length from crosswalk edge
+      lat_detection_margin: 1.0 # [m] lateral extrusion length from crosswalk edge
+      object_clear_time_th: 0.3 # [s] duration threshold to clear target object when no longer seen
+      overshoot_tolerance: 0.1  # [m] maximum overshoot distance allowed to consider the trajectory feasible
+      nominal_deceleration: 1.0 # [m/s^2] nominal deceleration to calculate the stop distance used as trajectory length limit
+      nominal_jerk: 1.0 # [m/s^3] nominal jerk to calculate the stop distance used as trajectory length limit
+      stop_duration: 3.0 # [s] minimum duration of the stop to consider the trajectory feasible
+      arrived_distance_threshold: 5.0 # [m] threshold to check if the ego vehicle has arrived at crosswalk stop line
+      use_trajectory_time: false # [bool] whether to use the embedded trajectory time to evaluate the stop duration
+
     traffic_light:
       deceleration_limit: 2.8  # [m/s^2] trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
       jerk_limit: 5.0  # [m/s^3] trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
       delay_response_time: 0.5 # [s] delay response time used to estimate the minimum ego stopping distance
       crossing_time_limit: 2.75 # [s] trajectories crossing an amber light are rejected if they cannot cross before this time
       treat_amber_light_as_red_light: true # [-] when true, amber lights are handled like red lights
+      treat_unknown_light_as_red_light: false # [-] when true, unknown lights are handled like red lights
+      stop_overshoot_margin: 0.5 # [m] maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible
+      allow_if_cannot_stop_distance: 0.0 # [m] allow crossing a stop line within this distance if ego cannot stop before the line plus its margin
+      stable_duration_threshold_red: 0.0 # [s] minimum duration a red light must be seen before it is considered active
+      stable_duration_threshold_amber: 0.0 # [s] minimum duration an amber light must be seen before it is considered active
+      stable_duration_threshold_unknown: 0.0 # [s] minimum duration an unknown light must be seen before it is considered active
+      amber_rejection_hysteresis_duration: 0.0 # [s] duration to persist an amber rejection
+      ego_stopped_velocity_threshold: 0.01 # [m/s] velocity below which ego is considered fully stopped
       checked_trajectory_length:  # maximum length of the planned trajectory that is scanned for traffic light stop lines.
         deceleration_limit: 2.0  # [m/s^2] deceleration limit to calculate the stop distance used as trajectory length limit
         jerk_limit: 2.0  # [m/s^3] jerk limit to calculate the stop distance used as trajectory length limit
