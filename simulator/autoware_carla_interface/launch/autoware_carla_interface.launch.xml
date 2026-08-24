@@ -16,6 +16,8 @@
     <arg name="fixed_delta_seconds" default="0.05" description="Time step for CARLA, FPS=1/value"/>
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
+    <arg name="min_positive_throttle" default="0.0" description="Minimum throttle applied while accelerating from (near) standstill; heavy CARLA vehicles never start on small actuation-map throttle"/>
+    <arg name="min_positive_throttle_speed_threshold" default="0.8" description="Apply min_positive_throttle only below this speed [m/s]; negative = always"/>
     <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
     <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
     <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
@@ -59,6 +61,8 @@
       <param name="vehicle_type" value="$(var vehicle_type)"/>
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
+      <param name="min_positive_throttle" value="$(var min_positive_throttle)"/>
+      <param name="min_positive_throttle_speed_threshold" value="$(var min_positive_throttle_speed_threshold)"/>
       <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>
       <param name="map_origin_y" value="$(var map_origin_y)"/>
