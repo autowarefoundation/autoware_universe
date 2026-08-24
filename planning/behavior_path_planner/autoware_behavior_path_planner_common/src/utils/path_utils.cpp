@@ -102,12 +102,11 @@ PathWithLaneId resamplePathWithSpline(
   std::unordered_set<int64_t> unique_lane_ids;
   const auto s_vec = autoware::motion_utils::calcSignedArcLengthPartialSum(
     transformed_path, 0, transformed_path.size());
-  const auto is_close_to_existing = [](const std::vector<double> & vec, const double x,
-                                       const double epsilon) {
-    return std::any_of(vec.begin(), vec.end(), [&](const double v) {
-      return std::abs(v - x) < epsilon;
-    });
-  };
+  const auto is_close_to_existing =
+    [](const std::vector<double> & vec, const double x, const double epsilon) {
+      return std::any_of(
+        vec.begin(), vec.end(), [&](const double v) { return std::abs(v - x) < epsilon; });
+    };
   for (size_t i = 0; i < path.points.size(); ++i) {
     const double s = s_vec.at(i);
 
@@ -184,8 +183,7 @@ void restoreMissingLaneIds(PathWithLaneId & target, const PathWithLaneId & sourc
   const auto & target_start_pos = target.points.front().point.pose.position;
   const auto source_start_idx =
     autoware::motion_utils::findNearestIndex(source.points, target_start_pos);
-  const double arclength_offset =
-    source_arclength.at(source_start_idx) - target_arclength.front();
+  const double arclength_offset = source_arclength.at(source_start_idx) - target_arclength.front();
 
   std::unordered_set<int64_t> target_lane_ids;
   for (const auto & point : target.points) {
@@ -210,23 +208,23 @@ void restoreMissingLaneIds(PathWithLaneId & target, const PathWithLaneId & sourc
   constexpr double max_assign_arclength_diff = 15.0;
   const auto find_target_idx_by_source_arclength =
     [&](const size_t source_idx) -> std::optional<size_t> {
-      const double mapped_arclength = source_arclength.at(source_idx) - arclength_offset;
+    const double mapped_arclength = source_arclength.at(source_idx) - arclength_offset;
 
-      size_t nearest_idx = 0;
-      double min_diff = std::numeric_limits<double>::max();
-      for (size_t j = 0; j < target_arclength.size(); ++j) {
-        const double diff = std::abs(target_arclength.at(j) - mapped_arclength);
-        if (diff < min_diff) {
-          min_diff = diff;
-          nearest_idx = j;
-        }
+    size_t nearest_idx = 0;
+    double min_diff = std::numeric_limits<double>::max();
+    for (size_t j = 0; j < target_arclength.size(); ++j) {
+      const double diff = std::abs(target_arclength.at(j) - mapped_arclength);
+      if (diff < min_diff) {
+        min_diff = diff;
+        nearest_idx = j;
       }
+    }
 
-      if (min_diff > max_assign_arclength_diff) {
-        return std::nullopt;
-      }
-      return nearest_idx;
-    };
+    if (min_diff > max_assign_arclength_diff) {
+      return std::nullopt;
+    }
+    return nearest_idx;
+  };
 
   for (auto & [id, src_indices] : missing_id_source_indices) {
     for (const auto src_idx : src_indices) {
