@@ -125,6 +125,32 @@ Scores are assigned based on the inverse of the rank of the matching prefix:
 - A trajectory matching the second prefix gets a score of $N-1$, and so on.
 - Trajectories that do not match any prefix, or whose generator info is missing, are assigned a score of `0.0`.
 
+## CAMP Fixed-Weight Scoring
+
+The package also provides the scoring core for CAMP (Conic Atom Meta-Policy), a
+decision-layer ranker for an ordered pool produced by a frozen trajectory
+generator. CAMP does not modify or regenerate trajectories. It applies learned
+nonnegative weights to 16 deployment-observable trajectory atoms and selects
+the lowest-cost original candidate.
+
+The bundled `config/camp_v26_k8_50k.json` model contains the K=8 fixed-weight
+CAMP parameters, atom scales, and endpoint-status patterns. Raw observed atoms
+are normalized as `clip(raw / scale, 0, 10)`. `not_applicable` and
+`typed_missing` atoms remain inactive rather than being replaced with zero.
+Candidate ties retain the original ordering.
+
+```cpp
+const auto model = load_camp_fixed_weight_model(model_path);
+const auto ranking = rank_camp_candidates(model, status_pattern, raw_candidate_atoms);
+const auto selected_row = ranking.selected_index;
+```
+
+The scoring API consumes materialized atom vectors separately from ROS
+messages. A Diffusion Planner adapter constructs these atoms from candidate
+trajectories, predicted objects, route/map context, traffic signals, and the
+previously selected plan. The training code and original deployment bundle are
+available in the [CAMP repository](https://github.com/Fake-fate11/camp-core).
+
 The output list is ordered by these scores (highest score first), followed by unranked trajectories which maintain their original relative order.
 
 ### Input / Output
