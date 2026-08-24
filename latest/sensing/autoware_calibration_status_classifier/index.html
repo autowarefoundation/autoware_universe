@@ -23014,7 +23014,7 @@
 <td>onnx_<wbr>path</wbr></td>
 <td>string</td>
 <td>Path to the ONNX model file used for calibration status verification.</td>
-<td><span class="arithmatex">\((var model_path)/\)</span>(var model_name).onnx</td>
+<td><span class="arithmatex">\((var model_&lt;wbr&gt;path)/&lt;wbr&gt;\)</span>(var model_<wbr>name).<wbr>onnx</wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23049,21 +23049,21 @@
 <td>input.<wbr>cloud_<wbr>topics</wbr></wbr></td>
 <td>array</td>
 <td>List of LiDAR topics to subscribe for calibration status verification. If only a single LiDAR topic is specified with multiple camera topics, all the camera topics will be validated against that single LiDAR topic. If multiple LiDAR topics are specified with multiple camera topics, each camera topic will be validated against the corresponding LiDAR topic in the list (both lists size must match). If multiple LiDAR topics are specified with a single camera topic, the single camera topic will be validated against all the LiDAR topics in the list.</td>
-<td>['/sensing/lidar/concatenated/pointcloud']</td>
+<td>["/<wbr>sensing/<wbr>lidar/<wbr>concatenated/<wbr>pointcloud"]</wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input.<wbr>image_<wbr>topics</wbr></wbr></td>
 <td>array</td>
 <td>List of camera topics to subscribe for calibration status verification. Same rules as for cloud_topics apply here.</td>
-<td>['/sensing/camera/camera8/image_raw']</td>
+<td>["/<wbr>sensing/<wbr>camera/<wbr>camera8/<wbr>image_<wbr>raw"]</wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>input.<wbr>approx_<wbr>deltas</wbr></wbr></td>
 <td>array</td>
 <td>The approximate time deltas in seconds for each topic pair (LiDAR and camera) for Approximate Time Synchronization Policy. The length of this array must be equal to maximum length of cloud_topics and image_topics arrays or be a single value which will be applied to all topic pairs.</td>
-<td>['0.1']</td>
+<td>["0.1"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23077,21 +23077,21 @@
 <td>input.<wbr>already_<wbr>rectified</wbr></wbr></td>
 <td>array</td>
 <td>List of flags indicating whether each camera topic provides already rectified images. The length of this array must be equal to maximum length of image_topics array or be a single value which will be applied to all camera topics.</td>
-<td>[True]</td>
+<td>[true]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>prerequisite.<wbr>linear_<wbr>velocity_<wbr>check.<wbr>enabled</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable or disable linear velocity check for calibration status verification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>prerequisite.<wbr>linear_<wbr>velocity_<wbr>check.<wbr>source</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The twist message type to subscribe for linear velocity check.</td>
-<td>twist_with_cov_stamped</td>
+<td>twist_<wbr>with_<wbr>cov_<wbr>stamped</wbr></wbr></wbr></td>
 <td>['twist_stamped', 'twist_with_cov_stamped', 'odometry']</td>
 </tr>
 <tr>
@@ -23112,14 +23112,14 @@
 <td>prerequisite.<wbr>angular_<wbr>velocity_<wbr>check.<wbr>enabled</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable or disable angular velocity check for calibration status verification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>prerequisite.<wbr>angular_<wbr>velocity_<wbr>check.<wbr>source</wbr></wbr></wbr></wbr></td>
 <td>string</td>
 <td>The twist message type to subscribe for angular velocity check.</td>
-<td>twist_with_cov_stamped</td>
+<td>twist_<wbr>with_<wbr>cov_<wbr>stamped</wbr></wbr></wbr></td>
 <td>['twist_stamped', 'twist_with_cov_stamped', 'odometry']</td>
 </tr>
 <tr>
@@ -23140,14 +23140,14 @@
 <td>prerequisite.<wbr>objects_<wbr>check.<wbr>enabled</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Flag to enable or disable object count check for calibration status verification.</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>prerequisite.<wbr>objects_<wbr>check.<wbr>source</wbr></wbr></wbr></td>
 <td>string</td>
 <td>The object message type to subscribe for object count check.</td>
-<td>predicted_objects</td>
+<td>predicted_<wbr>objects</wbr></td>
 <td>['predicted_objects', 'tracked_objects', 'detected_objects']</td>
 </tr>
 <tr>

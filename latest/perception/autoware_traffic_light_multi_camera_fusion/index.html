@@ -23144,42 +23144,42 @@
 <td>message_<wbr>lifespan</wbr></td>
 <td>float</td>
 <td>The maximum timestamp span to be fused.</td>
-<td>0</td>
+<td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>approximate_<wbr>sync</wbr></td>
 <td>boolean</td>
 <td>Whether to work in Approximate Synchronization Mode.</td>
-<td>0</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>prior_<wbr>log_<wbr>odds</wbr></wbr></td>
 <td>float</td>
 <td>The uniform prior log-odds to initialize the belief for any new traffic light state. 0.0 (log(1)) means a neutral (50%) initial belief. Positive values make all states initially more likely, negative values make them less likely.</td>
-<td>0</td>
+<td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>signal_<wbr>consistency_<wbr>check.<wbr>enable</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enables the validation feature. If set to true, the system checks for consistency among detected traffic light signals associated with a specific regulatory element.</td>
-<td>0</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>signal_<wbr>consistency_<wbr>check.<wbr>publish_<wbr>partial_<wbr>matched_<wbr>signal</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Determines whether to publish common signals among traffic lights associated with a regulatory element. If set to true, partially matched signals will be published. If set to false, a single mismatch among the traffic lights will output a fail-safe signal.</td>
-<td>0</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>map_<wbr>based_<wbr>signal_<wbr>filter.<wbr>enable</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enables the rule-based filter that constrains ML predictions to the (color, shape) combinations declared on each traffic light's <code>light_bulbs</code> linestring in the lanelet2 map. Predictions whose (color, shape) is not encoded in the map are dropped from the element list. If every element is filtered out, the traffic light emits a fail-safe UNKNOWN signal.</td>
-<td>0</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 </tbody>

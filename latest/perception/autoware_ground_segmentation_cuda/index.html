@@ -22850,14 +22850,14 @@
 <td>global_<wbr>slope_<wbr>max_<wbr>angle_<wbr>deg</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum global ground slope angle [deg]. Larger values reduce false negatives on steep roads but can increase false positives (classifying objects as ground).</td>
-<td>10</td>
+<td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>local_<wbr>slope_<wbr>max_<wbr>angle_<wbr>deg</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum local slope angle [deg] between adjacent points (used for fine discrimination of small objects or ramps).</td>
-<td>13</td>
+<td>13.0</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -22892,63 +22892,63 @@
 <td>center_<wbr>pcl_<wbr>shift</wbr></wbr></td>
 <td>float</td>
 <td>X-axis offset [m] applied to additional LiDAR point clouds relative to vehicle reference (positive forward).</td>
-<td>0</td>
+<td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>sector_<wbr>angle_<wbr>deg</wbr></wbr></td>
 <td>float</td>
 <td>Angular width of each polar sector [deg].</td>
-<td>1</td>
+<td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_<wbr>recheck_<wbr>ground_<wbr>cluster</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable secondary pass to re-evaluate ground clusters (may reduce false ground on elevated points).</td>
-<td>1</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>recheck_<wbr>start_<wbr>distance</wbr></wbr></td>
 <td>float</td>
 <td>Minimum radial distance [m] at which ground cluster recheck logic begins.</td>
-<td>20</td>
+<td>20.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>use_<wbr>lowest_<wbr>point</wbr></wbr></td>
 <td>boolean</td>
 <td>Use lowest point in cell as reference during ground recheck (otherwise median-like selection).</td>
-<td>1</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>min_<wbr>x</wbr></td>
 <td>float</td>
 <td>Minimum X range relative to base_link [m] included in processing.</td>
-<td>-100</td>
+<td>-100.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>max_<wbr>x</wbr></td>
 <td>float</td>
 <td>Maximum X (forward) range relative to base_link [m] included in processing.</td>
-<td>150</td>
+<td>150.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>min_<wbr>y</wbr></td>
 <td>float</td>
 <td>Minimum Y range relative to base_link [m] included in processing.</td>
-<td>-70</td>
+<td>-70.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>max_<wbr>y</wbr></td>
 <td>float</td>
 <td>Maximum Y range relative to base_link [m] included in processing.</td>
-<td>70</td>
+<td>70.0</td>
 <td>N/A</td>
 </tr>
 <tr>

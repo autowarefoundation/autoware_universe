@@ -22848,7 +22848,7 @@
 <td>plugin_<wbr>names</wbr></td>
 <td>array</td>
 <td>List of plugins to load</td>
-<td>['autoware::minimum_rule_based_planner::plugin::ObstacleStop', 'autoware::minimum_rule_based_planner::plugin::SurroundObstacleStop']</td>
+<td>["autoware::minimum_<wbr>rule_<wbr>based_<wbr>planner::plugin::ObstacleStop", "autoware::minimum_<wbr>rule_<wbr>based_<wbr>planner::plugin::SurroundObstacleStop"]</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -22897,7 +22897,7 @@
 <td>path_<wbr>planning.<wbr>path_<wbr>shift.<wbr>enable</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable path shifting to ego pose</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -22960,35 +22960,35 @@
 <td>obstacle_<wbr>stop.<wbr>enable</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable obstacle stop [m]</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable object detection [m]</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable pointcloud detection [m]</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>objects</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stop for objects</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>enable_<wbr>stop_<wbr>for_<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable stop for pointcloud</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23051,7 +23051,7 @@
 <td>obstacle_<wbr>stop.<wbr>objects.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Object types</td>
-<td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian', 'hazard']</td>
+<td>["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23163,7 +23163,7 @@
 <td>obstacle_<wbr>stop.<wbr>rss_<wbr>params.<wbr>enable</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable RSS-based stop logic</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23247,28 +23247,28 @@
 <td>surround_<wbr>obstacle_<wbr>stop.<wbr>enable</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable surround obstacle stop</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>objects</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of objects for surround obstacle stop</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>surround_<wbr>obstacle_<wbr>stop.<wbr>use_<wbr>pointcloud</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the use of pointcloud for surround obstacle stop</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>surround_<wbr>obstacle_<wbr>stop.<wbr>object_<wbr>types</wbr></wbr></wbr></wbr></td>
 <td>array</td>
 <td>Types of objects to consider for surround obstacle stop</td>
-<td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian', 'hazard', 'animal', 'unknown']</td>
+<td>["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "animal", "unknown"]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23569,28 +23569,28 @@
 <td>velocity_<wbr>smoother.<wbr>set_<wbr>engage_<wbr>speed</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Set engage speed at start</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>velocity_<wbr>smoother.<wbr>limit_<wbr>speed</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Apply max speed limit</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>velocity_<wbr>smoother.<wbr>limit_<wbr>lateral_<wbr>acceleration</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Apply max lateral acceleration limit</td>
-<td>False</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>velocity_<wbr>smoother.<wbr>smooth_<wbr>velocities</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Apply jerk-filtered velocity smoothing</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23653,35 +23653,35 @@
 <td>debug.<wbr>enable_<wbr>path</wbr></wbr></td>
 <td>boolean</td>
 <td>Enable path debugging</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>debug.<wbr>enable_<wbr>shifted_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable shifted trajectory debugging</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>debug.<wbr>enable_<wbr>optimizer_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable optimizer trajectory debugging</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>debug.<wbr>enable_<wbr>modifier_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable modifier trajectory debugging</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>debug.<wbr>enable_<wbr>output_<wbr>trajectory</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable output trajectory debugging</td>
-<td>True</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 </tbody>
