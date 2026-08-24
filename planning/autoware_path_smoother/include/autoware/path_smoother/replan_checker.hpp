@@ -23,12 +23,19 @@
 #include <memory>
 #include <vector>
 
+namespace autoware::agnocast_wrapper
+{
+class Node;
+}  // namespace autoware::agnocast_wrapper
+
 namespace autoware::path_smoother
 {
 class ReplanChecker
 {
 public:
   explicit ReplanChecker(rclcpp::Node * node, const EgoNearestParam & ego_nearest_param);
+  explicit ReplanChecker(
+    autoware::agnocast_wrapper::Node * node, const EgoNearestParam & ego_nearest_param);
   void onParam(const std::vector<rclcpp::Parameter> & parameters);
 
   bool isResetRequired(const PlannerData & planner_data) const;
@@ -40,6 +47,9 @@ public:
     const rclcpp::Time & current_time);
 
 private:
+  template <typename NodeT>
+  void declareParams(NodeT * node);
+
   EgoNearestParam ego_nearest_param_;
   rclcpp::Logger logger_;
 
