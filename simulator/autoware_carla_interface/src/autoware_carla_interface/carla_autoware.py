@@ -165,6 +165,13 @@ class InitializeInterface(object):
         self.ego_actor = CarlaDataProvider.request_new_actor(
             self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
         )
+        if self.ego_actor is None:
+            raise RuntimeError(
+                f"Failed to spawn ego vehicle '{self.vehicle_type}' at "
+                f"({spawn_point.location.x:.1f}, {spawn_point.location.y:.1f}, "
+                f"{spawn_point.location.z:.1f}); the spawn point may be occupied "
+                "or invalid for this map"
+            )
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
 
