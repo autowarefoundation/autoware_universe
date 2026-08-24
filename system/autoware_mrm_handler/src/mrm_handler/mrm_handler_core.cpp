@@ -13,7 +13,6 @@
 
 #include "autoware/mrm_handler/mrm_handler_core.hpp"
 
-
 #include <chrono>
 #include <memory>
 #include <string>
@@ -64,8 +63,7 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options)
   // Clients
   client_mrm_pull_over_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   client_mrm_pull_over_ = create_client<tier4_system_msgs::srv::OperateMrm>(
-    "~/output/mrm/pull_over/operate", rclcpp::ServicesQoS(),
-    client_mrm_pull_over_group_);
+    "~/output/mrm/pull_over/operate", rclcpp::ServicesQoS(), client_mrm_pull_over_group_);
   client_mrm_comfortable_stop_group_ =
     create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   client_mrm_comfortable_stop_ = create_client<tier4_system_msgs::srv::OperateMrm>(
@@ -74,8 +72,7 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options)
   client_mrm_emergency_stop_group_ =
     create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   client_mrm_emergency_stop_ = create_client<tier4_system_msgs::srv::OperateMrm>(
-    "~/output/mrm/emergency_stop/operate", rclcpp::ServicesQoS(),
-    client_mrm_emergency_stop_group_);
+    "~/output/mrm/emergency_stop/operate", rclcpp::ServicesQoS(), client_mrm_emergency_stop_group_);
 
   // Initialize
   mrm_state_.stamp = this->now();

@@ -85,8 +85,9 @@ private:
   sub_operation_mode_availability_;
   // Subscribers without callback
   autoware::agnocast_wrapper::polling::PollingSubscriber<nav_msgs::msg::Odometry>::SharedPtr
-    sub_odom_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
-      nav_msgs::msg::Odometry>(this, "~/input/odometry");
+    sub_odom_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<nav_msgs::msg::Odometry>(
+        this, "~/input/odometry");
   autoware::agnocast_wrapper::polling::PollingSubscriber<
     autoware_vehicle_msgs::msg::ControlModeReport>::SharedPtr sub_control_mode_ =
     autoware::agnocast_wrapper::polling::create_polling_subscriber<
