@@ -206,6 +206,10 @@ BehaviorModuleOutput PlannerManager::run(const std::shared_ptr<PlannerData> & da
   result_output.valid_output.path = utils::resamplePathWithSpline(
     result_output.valid_output.path, data->parameters.output_path_interval,
     keep_input_points(getSceneModuleStatus()));
+  if (last_valid_reference_path_.has_value()) {
+    utils::restoreMissingLaneIds(
+      result_output.valid_output.path, last_valid_reference_path_->path);
+  }
   generateCombinedDrivableArea(result_output.valid_output, data);
   return result_output.valid_output;
 }

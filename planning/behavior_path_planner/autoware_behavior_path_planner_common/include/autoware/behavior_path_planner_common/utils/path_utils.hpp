@@ -59,6 +59,18 @@ PathWithLaneId resamplePathWithSpline(
   const std::pair<double, double> target_section = {0.0, std::numeric_limits<double>::max()});
 
 /**
+ * @brief Restore lane ids that exist on the source path but are missing from the target path.
+ *
+ * Downstream modules such as stop_line look up regulatory elements by lane ids on PathWithLaneId.
+ * Path shifting / resampling can drop short intermediate lanes, so this copies those missing ids
+ * onto target points at the corresponding arc length on the source path.
+ *
+ * @param [in,out] target Path whose lane ids may be incomplete.
+ * @param [in] source Path that still contains the original lane ids.
+ */
+void restoreMissingLaneIds(PathWithLaneId & target, const PathWithLaneId & source);
+
+/**
  * @brief Gets index based on target index and arc length.
  * @param [in] path Path.
  * @param [in] target_idx Target index.
