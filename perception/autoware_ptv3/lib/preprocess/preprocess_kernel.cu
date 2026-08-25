@@ -362,6 +362,12 @@ __global__ void setInitialStageCountKernel(
   *stage_counts = num_voxels;
 }
 
+/**
+ * @brief Writes the sequence 0..count-1 to `out`.
+ *
+ * @param out Output array.
+ * @param count Number of elements to write.
+ */
 __global__ void fillIdentityKernel(std::int64_t * __restrict__ out, std::int64_t count)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -371,6 +377,16 @@ __global__ void fillIdentityKernel(std::int64_t * __restrict__ out, std::int64_t
   out[idx] = idx;
 }
 
+/**
+ * @brief Stages the key/value pair for one of the input-level order sorts.
+ *
+ * @param serialized_code Input voxels' codes, laid out [num_orders, num_voxels]; only the
+ * `order_index` row is read.
+ * @param keys Output sort keys: that row's codes.
+ * @param indices Output sort values: 0..num_voxels-1.
+ * @param num_voxels Number of input voxels.
+ * @param order_index Serialization order being sorted.
+ */
 __global__ void prepareInputLevelOrderSortKernel(
   const std::int64_t * __restrict__ serialized_code, std::int64_t * __restrict__ keys,
   std::int64_t * __restrict__ indices, std::int64_t num_voxels, std::int32_t order_index)
@@ -380,7 +396,6 @@ __global__ void prepareInputLevelOrderSortKernel(
     return;
   }
 
-  // serialized_code is laid out densely as [num_orders, num_voxels].
   keys[idx] = serialized_code[order_index * num_voxels + idx];
   indices[idx] = idx;
 }
@@ -423,6 +438,37 @@ __global__ void markPoolingRunsKernel(
   run_flags[idx] = (idx == 0 || key != (serialized_code_in[idx - 1] >> shift)) ? 1 : 0;
 }
 
+/**
+ * @brief Emits the pooled level and its gather metadata from the parent-run flags.
+ *
+ * @pre `run_flags` marks the input level's parent-run starts (see markPoolingRunsKernel; zero
+ * beyond `input_count`) and `run_ids` is its inclusive prefix sum over all `capacity` entries, so
+ * `run_ids[capacity - 1]` is the pooled voxel count.
+ *
+ * @param grid_coord_in Input level's grid coordinates, laid out [input_count, 3].
+ * @param serialized_code_in Input level's codes, laid out [num_orders, input_count].
+ * @param run_flags 1 at each parent run start, 0 elsewhere.
+ * @param run_ids Each input voxel's 1-based parent segment number.
+ * @param indices_out Output gather order for the pooling layer; the identity, as the input is
+ * already grouped by parent.
+ * @param indptr_out Output segment boundaries, [pooled_count + 1]: first input index of each
+ * segment, terminated by `input_count`.
+ * @param head_indices_out Output representative input voxel per segment: its run start.
+ * @param cluster_out Output parent segment index of each input voxel.
+ * @param grid_coord_out Output pooled coordinates, [pooled_count, 3]: the input coordinates
+ * right-shifted by `pooling_depth`.
+ * @param serialized_code_out Output pooled codes, [num_orders, pooled_count]: the input codes
+ * right-shifted by `3 * pooling_depth`.
+ * @param order_out Output pooled serialization orders, [num_orders, pooled_count]; only the
+ * order-0 row is written here, the rest by fillOrderAndInverseKernel.
+ * @param inverse_out Output inverse permutations of `order_out`, same layout and coverage.
+ * @param stage_counts Per-level voxel counts; entry `stage_index` is the input level's count and
+ * entry `stage_index + 1` is set to the pooled count.
+ * @param stage_index Level the input arrays describe.
+ * @param pooling_depth Bits each grid coordinate is shifted right by, i.e. log2(pooling stride).
+ * @param num_orders Number of serialization orders.
+ * @param capacity Padded length of the arrays (max_num_voxels).
+ */
 __global__ void fillPoolingStageKernel(
   const std::int32_t * __restrict__ grid_coord_in,
   const std::int64_t * __restrict__ serialized_code_in, const std::int64_t * __restrict__ run_flags,
@@ -455,8 +501,6 @@ __global__ void fillPoolingStageKernel(
     return;
   }
 
-  // The input is already grouped by parent (see markPoolingRunsKernel), so the gather order is the
-  // identity.
   indices_out[idx] = idx;
   const auto segment_index = run_ids[idx] - 1;
   cluster_out[idx] = segment_index;
