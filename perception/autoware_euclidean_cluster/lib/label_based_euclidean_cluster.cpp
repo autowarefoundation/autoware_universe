@@ -213,6 +213,7 @@ LabelBasedEuclideanCluster::LabelBasedEuclideanCluster(
   if (!shape_estimator_) {
     throw std::invalid_argument("LabelBasedEuclideanCluster: shape_estimator is null");
   }
+
   // Build label-to-group index for confusable merging
   for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
     for (const auto label : confusable_groups_[g].labels) {

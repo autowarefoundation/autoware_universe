@@ -43,18 +43,18 @@ public:
   EuclideanClusterInterface() = default;
   EuclideanClusterInterface(
     bool use_height, int min_points_per_cluster, int max_cluster_size,
-    float min_cluster_size_m = 0.0F)
+    float min_cluster_size = 0.0F)
   : use_height_(use_height),
     min_points_per_cluster_(min_points_per_cluster),
     max_cluster_size_(max_cluster_size),
-    min_cluster_size_m_(min_cluster_size_m)
+    min_cluster_size_(min_cluster_size)
   {
   }
   virtual ~EuclideanClusterInterface() = default;
   void setUseHeight(bool use_height) { use_height_ = use_height; }
   void setMinClusterSize(int size) { min_points_per_cluster_ = size; }
   void setMaxClusterSize(int size) { max_cluster_size_ = size; }
-  void setMinClusterSizeM(float size) { min_cluster_size_m_ = size; }
+  void setMinClusterSize(float size) { min_cluster_size_ = size; }
 
   /// @brief Cluster a point cloud and return only point copies for each cluster.
   /// @details This legacy overload preserves the existing interface for callers that do not need
@@ -78,7 +78,7 @@ protected:
   /// @details A zero threshold disables this filter.
   bool isClusterLargeEnough(const pcl::PointCloud<pcl::PointXYZ> & cluster) const
   {
-    if (min_cluster_size_m_ <= 0.0F || cluster.empty()) {
+    if (min_cluster_size_ <= 0.0F || cluster.empty()) {
       return true;
     }
 
@@ -95,13 +95,13 @@ protected:
     for (const auto & point : cluster) {
       radius = std::max(radius, std::hypot(point.x - center_x, point.y - center_y));
     }
-    return 2.0F * radius >= min_cluster_size_m_;
+    return 2.0F * radius >= min_cluster_size_;
   }
 
   bool use_height_ = true;
   int min_points_per_cluster_;
   int max_cluster_size_;
-  float min_cluster_size_m_ = 0.0F;
+  float min_cluster_size_ = 0.0F;
 };
 
 }  // namespace autoware::euclidean_cluster
