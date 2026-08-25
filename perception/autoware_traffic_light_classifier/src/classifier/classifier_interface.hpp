@@ -20,6 +20,7 @@
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 
+#include <optional>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -28,9 +29,16 @@ class ClassifierInterface
 {
 public:
   virtual ~ClassifierInterface() = default;
-  virtual bool getTrafficSignals(
-    const std::vector<cv::Mat> & input_image,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) = 0;
+  // Classify each ROI image and return one signal per image, carrying the classified elements.
+  // traffic_light_id / type are left unset -- the caller associates them. Returns std::nullopt on
+  // inference failure.
+  virtual std::optional<tier4_perception_msgs::msg::TrafficLightArray> classify(
+    const std::vector<cv::Mat> & images) = 0;
+
+  // One composite RGB debug view for the batch, rendered from the most recent classify() call.
+  // Returns an empty Mat when there is nothing to show. The caller (the node) invokes it only when
+  // a debug consumer is attached, so this stays off the hot path.
+  virtual cv::Mat make_debug_image(const std::vector<cv::Mat> & images) const = 0;
 };
 }  // namespace autoware::traffic_light
 

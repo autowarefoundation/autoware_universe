@@ -15,32 +15,25 @@
 #ifndef TRAFFIC_LIGHT_SELECTOR_NODE_HPP_
 #define TRAFFIC_LIGHT_SELECTOR_NODE_HPP_
 
-#include "traffic_light_selector_utils.hpp"
+#include "traffic_light_selector.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
-#include <tier4_perception_msgs/msg/detected_object_with_feature.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
-#include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 
-#include <map>
 #include <memory>
-#include <vector>
 
 namespace autoware::traffic_light
 {
-using sensor_msgs::msg::RegionOfInterest;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
-using tier4_perception_msgs::msg::DetectedObjectWithFeature;
-using tier4_perception_msgs::msg::TrafficLightRoi;
 using tier4_perception_msgs::msg::TrafficLightRoiArray;
 
 class TrafficLightSelectorNode : public rclcpp::Node
@@ -71,11 +64,6 @@ private:
     const TrafficLightRoiArray::ConstSharedPtr & rough_rois_msg,
     const TrafficLightRoiArray::ConstSharedPtr & expect_rois_msg,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg);
-
-  void evaluateWholeRois(
-    const std::vector<RegionOfInterest> & detected_rois,
-    const std::map<int64_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
-    std::map<int64_t, RegionOfInterest> & total_max_iou_rois_map);
 };
 
 }  // namespace autoware::traffic_light

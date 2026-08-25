@@ -18,8 +18,16 @@
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
+#include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/region_of_interest.hpp>
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
+
+// cppcheck-suppress preprocessorErrorDirective
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+#include <cv_bridge/cv_bridge.hpp>
+#else
+#include <cv_bridge/cv_bridge.h>
+#endif
 
 #include <cstddef>
 #include <memory>
@@ -39,14 +47,28 @@ TrafficLightClassifier::TrafficLightClassifier(
 }
 
 std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
-  const cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoiArray & rois) const
+  const sensor_msgs::msg::Image & image_msg,
+  const tier4_perception_msgs::msg::TrafficLightRoiArray & rois) const
 {
   Result result;
-  result.signals.signals.resize(rois.rois.size());
+  if (rois.rois.empty()) {
+    result.signals.header = image_msg.header;
+    return result;
+  }
+
+  cv_bridge::CvImagePtr cv_ptr;
+  try {
+    cv_ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::RGB8);
+  } catch (const cv_bridge::Exception &) {
+    return std::nullopt;
+  }
+  const cv::Mat & image = cv_ptr->image;
 
   std::vector<cv::Mat> images;
+  // Valid ROIs in classification order (parallel to `images`). The classifier returns elements
+  // only, so we zip each ROI's traffic_light_id / type back onto the output afterwards.
+  std::vector<const tier4_perception_msgs::msg::TrafficLightRoi *> valid_rois;
   std::vector<size_t> exposure_out_of_range_indices;
-  size_t idx_valid_roi = 0;
   for (const auto & input_roi : rois.rois) {
     // ignore if the roi is not the type to be classified
     if (input_roi.traffic_light_type != classify_traffic_light_type_) {
@@ -57,31 +79,45 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
       continue;
     }
 
-    // set traffic light id and type
-    result.signals.signals[idx_valid_roi].traffic_light_id = input_roi.traffic_light_id;
-    result.signals.signals[idx_valid_roi].traffic_light_type = input_roi.traffic_light_type;
-
     const sensor_msgs::msg::RegionOfInterest & roi = input_roi.roi;
     auto roi_img = image(cv::Rect(roi.x_offset, roi.y_offset, roi.width, roi.height));
     const double brightness = utils::compute_brightness(roi_img);
     if (brightness >= over_exposure_threshold_) {
-      exposure_out_of_range_indices.emplace_back(idx_valid_roi);
+      exposure_out_of_range_indices.emplace_back(images.size());
       result.detected_over_exposure = true;
     } else if (brightness <= under_exposure_threshold_) {
-      exposure_out_of_range_indices.emplace_back(idx_valid_roi);
+      exposure_out_of_range_indices.emplace_back(images.size());
       result.detected_under_exposure = true;
     }
+    valid_rois.emplace_back(&input_roi);
     images.emplace_back(roi_img);
-    idx_valid_roi++;
   }
 
   // classify the images
-  result.signals.signals.resize(images.size());
   if (!images.empty()) {
-    if (!classifier_->getTrafficSignals(images, result.signals)) {
+    auto classified = classifier_->classify(images);
+    if (!classified) {
       return std::nullopt;
     }
+    result.signals = std::move(*classified);
   }
+
+  // One signal per input image is the ClassifierInterface contract. Enforce it here, at the one
+  // place that relies on it: a backend returning a different count would break the per-index
+  // traffic_light_id / type association below (and, for a longer result, read out of bounds).
+  if (result.signals.signals.size() != images.size()) {
+    return std::nullopt;
+  }
+
+  // The classifier leaves traffic_light_id / type unset; associate them by position.
+  for (size_t i = 0; i < result.signals.signals.size(); i++) {
+    result.signals.signals[i].traffic_light_id = valid_rois[i]->traffic_light_id;
+    result.signals.signals[i].traffic_light_type = valid_rois[i]->traffic_light_type;
+  }
+
+  // Hand the classified crops back to the caller so it can request a debug view later; the debug
+  // image reflects the classifier's view, before the UNKNOWN / exposure post-processing below.
+  result.roi_images = images;
 
   // append the undetected rois as unknown
   for (const auto & input_roi : rois.rois) {
@@ -103,7 +139,19 @@ std::optional<TrafficLightClassifier::Result> TrafficLightClassifier::classify(
     traffic_light_utils::setSignalUnknown(signal, 0.0);
   }
 
+  result.signals.header = image_msg.header;
   return result;
+}
+
+sensor_msgs::msg::Image::ConstSharedPtr TrafficLightClassifier::make_debug_image(
+  const Result & result) const
+{
+  const cv::Mat debug_image = classifier_->make_debug_image(result.roi_images);
+  if (debug_image.empty()) {
+    return nullptr;
+  }
+  return cv_bridge::CvImage(result.signals.header, sensor_msgs::image_encodings::RGB8, debug_image)
+    .toImageMsg();
 }
 
 }  // namespace autoware::traffic_light

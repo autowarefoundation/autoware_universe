@@ -17,6 +17,7 @@
 
 #include "types/forward.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_system_msgs/msg/driving_mode_flag.hpp>
@@ -29,13 +30,13 @@ namespace autoware::diagnostic_graph_aggregator
 class DrivingModeMapping
 {
 public:
-  DrivingModeMapping(rclcpp::Node & node, const Graph & graph);
+  DrivingModeMapping(autoware::agnocast_wrapper::Node & node, const Graph & graph);
   void update(const rclcpp::Time & stamp) const;
 
 private:
   using DrivingModeFlag = tier4_system_msgs::msg::DrivingModeFlag;
-  rclcpp::Publisher<DrivingModeFlag>::SharedPtr pub_available_;
-  rclcpp::Publisher<DrivingModeFlag>::SharedPtr pub_continuable_;
+  AUTOWARE_PUBLISHER_PTR(DrivingModeFlag) pub_available_;
+  AUTOWARE_PUBLISHER_PTR(DrivingModeFlag) pub_continuable_;
 
   std::unordered_map<uint32_t, BaseUnit *> mode_to_unit_;
 };

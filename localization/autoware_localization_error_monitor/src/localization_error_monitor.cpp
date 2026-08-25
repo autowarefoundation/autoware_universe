@@ -32,7 +32,7 @@
 namespace autoware::localization_error_monitor
 {
 LocalizationErrorMonitor::LocalizationErrorMonitor(const rclcpp::NodeOptions & options)
-: Node("localization_error_monitor", options)
+: autoware::agnocast_wrapper::Node("localization_error_monitor", options)
 {
   scale_ = this->declare_parameter<double>("scale");
   error_ellipse_size_ = this->declare_parameter<double>("error_ellipse_size");
@@ -52,21 +52,25 @@ LocalizationErrorMonitor::LocalizationErrorMonitor(const rclcpp::NodeOptions & o
   ellipse_marker_pub_ =
     this->create_publisher<visualization_msgs::msg::Marker>("debug/ellipse_marker", durable_qos);
 
-  logger_configure_ = std::make_unique<autoware_utils_logging::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<
+    autoware_utils_logging::BasicLoggerLevelConfigure<autoware::agnocast_wrapper::Node>>(this);
 
-  diagnostics_error_monitor_ = std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
+  diagnostics_error_monitor_ = std::make_unique<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
     this, "ellipse_error_status");
 }
 
-void LocalizationErrorMonitor::on_odom(nav_msgs::msg::Odometry::ConstSharedPtr input_msg)
+void LocalizationErrorMonitor::on_odom(AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry)
+                                         input_msg)
 {
   diagnostics_error_monitor_->clear();
 
   ellipse_ = autoware::localization_util::calculate_xy_ellipse(input_msg->pose, scale_);
 
-  const auto ellipse_marker = autoware::localization_util::create_ellipse_marker(
+  auto ellipse_marker = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(ellipse_marker_pub_);
+  *ellipse_marker = autoware::localization_util::create_ellipse_marker(
     ellipse_, input_msg->header, input_msg->pose);
-  ellipse_marker_pub_->publish(ellipse_marker);
+  ellipse_marker_pub_->publish(std::move(ellipse_marker));
 
   // update localization accuracy diagnostics
   const auto accuracy_status =

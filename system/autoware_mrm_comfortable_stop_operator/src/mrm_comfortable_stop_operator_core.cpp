@@ -16,13 +16,14 @@
 
 #include <autoware_utils/ros/update_param.hpp>
 
+#include <utility>
 #include <vector>
 
 namespace autoware::mrm_comfortable_stop_operator
 {
 
 MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions & node_options)
-: Node("mrm_comfortable_stop_operator", node_options)
+: autoware::agnocast_wrapper::Node("mrm_comfortable_stop_operator", node_options)
 {
   // Parameter
   params_.update_rate = static_cast<int>(declare_parameter<int>("update_rate"));
@@ -46,7 +47,7 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
 
   // Timer
   const auto update_period_ns = rclcpp::Rate(params_.update_rate).period();
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), update_period_ns, std::bind(&MrmComfortableStopOperator::onTimer, this));
 
   // Initialize
@@ -67,8 +68,8 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
 }
 
 void MrmComfortableStopOperator::operateComfortableStop(
-  const tier4_system_msgs::srv::OperateMrm::Request::SharedPtr request,
-  const tier4_system_msgs::srv::OperateMrm::Response::SharedPtr response)
+  AUTOWARE_SERVER_REQUEST_PTR(tier4_system_msgs::srv::OperateMrm) request,
+  AUTOWARE_SERVER_RESPONSE_PTR(tier4_system_msgs::srv::OperateMrm) response)
 {
   if (request->operate == true) {
     publishVelocityLimit();
@@ -81,9 +82,9 @@ void MrmComfortableStopOperator::operateComfortableStop(
   }
 }
 
-void MrmComfortableStopOperator::onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg)
+void MrmComfortableStopOperator::onDrivingModeRequest(const DrivingModeRequest & msg)
 {
-  if (msg->mode == driving_mode_id_) {
+  if (msg.mode == driving_mode_id_) {
     publishVelocityLimit();
     status_.state = MrmBehaviorStatus::OPERATING;
   } else {
@@ -92,9 +93,9 @@ void MrmComfortableStopOperator::onDrivingModeRequest(DrivingModeRequest::ConstS
   }
 }
 
-void MrmComfortableStopOperator::onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg)
+void MrmComfortableStopOperator::onDrivingModeInfo(const DrivingModeInfo & msg)
 {
-  for (const auto & item : msg->items) {
+  for (const auto & item : msg.items) {
     if (item.name == "comfortable_stop") {
       driving_mode_id_ = item.mode;
       break;
@@ -123,10 +124,10 @@ void MrmComfortableStopOperator::publishMrmState() const
   item.mode = driving_mode_id_.value();
   item.state = convert_mrm_state(status_.state);
 
-  DrivingModeMrmState msg;
-  msg.stamp = this->now();
-  msg.items = {item};
-  pub_mrm_state_->publish(msg);
+  auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_mrm_state_);
+  msg->stamp = this->now();
+  msg->items = {item};
+  pub_mrm_state_->publish(std::move(msg));
 }
 
 rcl_interfaces::msg::SetParametersResult MrmComfortableStopOperator::onParameter(
@@ -145,34 +146,35 @@ rcl_interfaces::msg::SetParametersResult MrmComfortableStopOperator::onParameter
 
 void MrmComfortableStopOperator::publishStatus() const
 {
-  auto status = status_;
-  status.stamp = this->now();
-  pub_status_->publish(status);
+  auto status = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_status_);
+  *status = status_;
+  status->stamp = this->now();
+  pub_status_->publish(std::move(status));
 }
 
 void MrmComfortableStopOperator::publishVelocityLimit() const
 {
-  auto velocity_limit = autoware_internal_planning_msgs::msg::VelocityLimit();
-  velocity_limit.stamp = this->now();
-  velocity_limit.max_velocity = 0;
-  velocity_limit.use_constraints = true;
-  velocity_limit.constraints.min_acceleration = static_cast<float>(params_.min_acceleration);
-  velocity_limit.constraints.max_jerk = static_cast<float>(params_.max_jerk);
-  velocity_limit.constraints.min_jerk = static_cast<float>(params_.min_jerk);
-  velocity_limit.sender = "mrm_comfortable_stop_operator";
+  auto velocity_limit = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_velocity_limit_);
+  velocity_limit->stamp = this->now();
+  velocity_limit->max_velocity = 0;
+  velocity_limit->use_constraints = true;
+  velocity_limit->constraints.min_acceleration = static_cast<float>(params_.min_acceleration);
+  velocity_limit->constraints.max_jerk = static_cast<float>(params_.max_jerk);
+  velocity_limit->constraints.min_jerk = static_cast<float>(params_.min_jerk);
+  velocity_limit->sender = "mrm_comfortable_stop_operator";
 
-  pub_velocity_limit_->publish(velocity_limit);
+  pub_velocity_limit_->publish(std::move(velocity_limit));
 }
 
 void MrmComfortableStopOperator::publishVelocityLimitClearCommand() const
 {
   auto velocity_limit_clear_command =
-    autoware_internal_planning_msgs::msg::VelocityLimitClearCommand();
-  velocity_limit_clear_command.stamp = this->now();
-  velocity_limit_clear_command.command = true;
-  velocity_limit_clear_command.sender = "mrm_comfortable_stop_operator";
+    ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_velocity_limit_clear_command_);
+  velocity_limit_clear_command->stamp = this->now();
+  velocity_limit_clear_command->command = true;
+  velocity_limit_clear_command->sender = "mrm_comfortable_stop_operator";
 
-  pub_velocity_limit_clear_command_->publish(velocity_limit_clear_command);
+  pub_velocity_limit_clear_command_->publish(std::move(velocity_limit_clear_command));
 }
 
 void MrmComfortableStopOperator::onTimer() const

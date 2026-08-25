@@ -1,0 +1,57 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: LidarFRNet.node
+
+package:
+  name: autoware_lidar_frnet
+  provider: autoware
+
+launch:
+  plugin: autoware::lidar_frnet::LidarFRNetNode
+  executable: autoware_lidar_frnet_node
+  node_output: screen
+
+# interfaces
+# segmentation-only node (no objects output). pointcloud over cuda_blackboard.
+# each output has a cuda_blackboard companion (.../cuda) of the same negotiated type.
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud
+  - name: pointcloud_cuda
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud/cuda
+
+publishers:
+  - name: pointcloud_filtered
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/filtered
+  - name: pointcloud_segmentation
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/segmentation
+  - name: pointcloud_visualization
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/visualization
+
+# parameters
+param_files:
+  - name: model_param
+    default: config/lidar_frnet.param.yaml
+  - name: ml_package_param
+    default: ml_package_lidar_frnet.param.yaml
+  - name: diagnostics_param
+    default: config/diagnostics.param.yaml
+
+param_values:
+  - name: build_only
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: segment
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: pointcloud_segmentation
