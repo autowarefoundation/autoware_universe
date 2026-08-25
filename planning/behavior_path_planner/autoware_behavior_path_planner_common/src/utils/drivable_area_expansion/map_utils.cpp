@@ -18,6 +18,8 @@
 
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
+#include <autoware_perception_msgs/msg/predicted_path.hpp>
+
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/index/predicates.hpp>
@@ -32,6 +34,22 @@
 
 namespace autoware::behavior_path_planner::drivable_area_expansion
 {
+namespace
+{
+/// @brief Get the predicted path used to check whether an object can reach a given point
+/// @param[in] object object to check
+/// @return the most likely predicted path, or nullptr if the object has no predicted path
+const autoware_perception_msgs::msg::PredictedPath * get_most_likely_path(
+  const PredictedObject & object)
+{
+  const auto & paths = object.kinematics.predicted_paths;
+  const auto most_likely_path = std::max_element(
+    paths.begin(), paths.end(),
+    [](const auto & p1, const auto & p2) { return p1.confidence < p2.confidence; });
+  return most_likely_path == paths.end() ? nullptr : &*most_likely_path;
+}
+}  // namespace
+
 SegmentRtree extract_uncrossable_segments(
   const lanelet::LaneletMap & lanelet_map, const Point & ego_point,
   const DrivableAreaExpansionParameters & params)
@@ -91,6 +109,22 @@ SegmentRtree extract_uncrossable_segments(
   return SegmentRtree(segments);  // packing algorithm
 }
 
+void extend_search_box(lanelet::BoundingBox2d & search_box, const PredictedObject & object)
+{
+  // the footprint also covers the initial position used as the start of the predicted path
+  const auto footprint = autoware_utils::to_polygon2d(object);
+  for (const auto & p : footprint.outer()) {
+    search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
+  }
+  const auto * most_likely_path = get_most_likely_path(object);
+  if (most_likely_path == nullptr) {
+    return;
+  }
+  for (const auto & pose : most_likely_path->path) {
+    search_box.extend(lanelet::BasicPoint2d{pose.position.x, pose.position.y});
+  }
+}
+
 bool is_separated_by_uncrossable_segments(
   const SegmentRtree & uncrossable_segments, const Point & from, const PredictedObject & object)
 {
@@ -121,11 +155,8 @@ bool is_separated_by_uncrossable_segments(
   // the object may still reach the given point by following its predicted path around the boundary
   // or through one of its gaps. the path is cut where it crosses the boundary since the object is
   // assumed to stop there
-  const auto & predicted_paths = object.kinematics.predicted_paths;
-  const auto most_likely_path = std::max_element(
-    predicted_paths.begin(), predicted_paths.end(),
-    [](const auto & p1, const auto & p2) { return p1.confidence < p2.confidence; });
-  if (most_likely_path == predicted_paths.end()) {
+  const auto * most_likely_path = get_most_likely_path(object);
+  if (most_likely_path == nullptr) {
     return true;
   }
   const auto & initial_position = object.kinematics.initial_pose_with_covariance.pose.position;

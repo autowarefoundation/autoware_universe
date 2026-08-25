@@ -1060,16 +1060,13 @@ drivable_area_expansion::SegmentRtree extractUncrossableSegments(
   if (parameters->uncrossable_linestring_types.empty() || data.reference_path.points.empty()) {
     return drivable_area_expansion::SegmentRtree{};
   }
-  // the box must cover every line of sight, i.e. the ego path and the footprint of every object
+  // the box must cover everything the check queries: ego path, footprints, predicted paths
   lanelet::BoundingBox2d search_box;
   for (const auto & p : data.reference_path.points) {
     search_box.extend(lanelet::BasicPoint2d{p.point.pose.position.x, p.point.pose.position.y});
   }
   for (const auto & object : objects) {
-    const auto footprint = autoware_utils::to_polygon2d(object.object);
-    for (const auto & p : footprint.outer()) {
-      search_box.extend(lanelet::BasicPoint2d{p.x(), p.y()});
-    }
+    drivable_area_expansion::extend_search_box(search_box, object.object);
   }
   return drivable_area_expansion::extract_uncrossable_segments(
     *planner_data->route_handler->getLaneletMapPtr(), search_box,

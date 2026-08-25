@@ -48,12 +48,21 @@ bool has_types(
 /// planning cycle and then queried for each object.
 /// If @p types is empty, no segment is extracted and the returned rtree is empty.
 /// @param[in] lanelet_map lanelet map
-/// @param[in] search_box box covering the points to check (e.g. the ego path and the objects)
+/// @param[in] search_box box covering the points to check (e.g. the ego path and the objects, see
+/// extend_search_box())
 /// @param[in] types linestring types representing a physical boundary that objects cannot cross
 /// @return the uncrossable segments stored in a rtree
 SegmentRtree extract_uncrossable_segments(
   const lanelet::LaneletMap & lanelet_map, const lanelet::BoundingBox2d & search_box,
   const std::vector<DrivableAreaExpansionParameters::LinestringType> & types);
+
+/// @brief Extend the search box with the points queried by is_separated_by_uncrossable_segments()
+/// @details The box must cover every point queried by the check, i.e. the footprint of the object
+/// and the poses of its most likely predicted path. Otherwise a boundary crossing the predicted
+/// path, or the line of sight to one of its poses, is missing from the extracted segments.
+/// @param[inout] search_box box to extend
+/// @param[in] object object that will be checked
+void extend_search_box(lanelet::BoundingBox2d & search_box, const PredictedObject & object);
 
 /// @brief Determine if an object cannot reach a point without crossing an uncrossable segment
 /// @details The object is separated only if all of the following hold.
@@ -67,6 +76,7 @@ SegmentRtree extract_uncrossable_segments(
 /// Note that the check is done against a single point, so an object that can only reach the given
 /// point through a far away gap of the boundary may still be reported as separated.
 /// If @p uncrossable_segments is empty, the check is disabled and false is always returned.
+/// @note the segments must be extracted from a box covering the object, see extend_search_box().
 /// @param[in] uncrossable_segments uncrossable segments prepared once per planning cycle
 /// @param[in] from point to check against (e.g. a point on the ego path)
 /// @param[in] object object to check
