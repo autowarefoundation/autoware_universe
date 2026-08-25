@@ -45,15 +45,28 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 namespace thrust_stream = cuda_utils::thrust_stream;
 
-CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(const PreprocessorCapacity & capacity)
-: stream_(initialize_stream()), capacity_(capacity)
+namespace
+{
+
+PreprocessorCapacity validate_capacity(const PreprocessorCapacity & capacity)
 {
   if (
-    capacity_.max_input_point_count == 0 || capacity_.max_ring_count <= 0 ||
-    capacity_.max_points_per_ring <= 0 || capacity_.max_twist_struct_count == 0) {
+    capacity.max_input_point_count == 0 || capacity.max_ring_count <= 0 ||
+    capacity.max_points_per_ring <= 0 || capacity.max_twist_struct_count == 0) {
     throw std::runtime_error("CudaPointcloudPreprocessor capacities must be positive");
   }
+  return capacity;
+}
 
+}  // namespace
+
+CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(const PreprocessorCapacity & capacity)
+: capacity_(validate_capacity(capacity)),
+  num_rings_(capacity_.max_ring_count),
+  max_points_per_ring_(capacity_.max_points_per_ring),
+  num_organized_points_(static_cast<std::size_t>(num_rings_) * max_points_per_ring_),
+  stream_(initialize_stream())
+{
   using sensor_msgs::msg::PointField;
 
   auto make_point_field = [](
@@ -118,10 +131,6 @@ void CudaPointcloudPreprocessor::setUndistortionType(const UndistortionType & un
 
 void CudaPointcloudPreprocessor::initializeBuffers()
 {
-  num_rings_ = capacity_.max_ring_count;
-  max_points_per_ring_ = capacity_.max_points_per_ring;
-  num_organized_points_ = static_cast<std::size_t>(num_rings_) * max_points_per_ring_;
-
   device_input_points_.resize(capacity_.max_input_point_count);
   device_ring_index_.resize(num_rings_);
   device_indexes_tensor_.resize(num_organized_points_);

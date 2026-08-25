@@ -89,11 +89,11 @@ private:
   UndistortionType undistortion_type_{UndistortionType::Invalid};
   bool enable_ring_outlier_filter_{true};
 
+  PreprocessorCapacity capacity_{};
   int num_rings_{};
   int max_points_per_ring_{};
-  std::size_t num_raw_points_{};
   std::size_t num_organized_points_{};
-  PreprocessorCapacity capacity_{};
+  std::size_t num_raw_points_{};
 
   std::vector<sensor_msgs::msg::PointField> point_fields_;
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> output_pointcloud_ptr_;
