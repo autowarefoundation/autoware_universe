@@ -122,14 +122,22 @@ private:
   cudaEvent_t num_cropped_points_copy_event_;
   cudaEvent_t num_unique_points_copy_event_;
 
-  // Serialization order of the finest level (the input voxels), laid out
-  // [num_orders, num_voxels]. Row 0 is the identity; the remaining rows are the only sorts left in
-  // the pooling-metadata path.
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> finest_level_order_d_{nullptr};
+  // Serialization order of the input level (the deduplicated voxels generateFeatures emits), laid
+  // out [num_orders, num_voxels]. Row 0 is the identity; the remaining rows are the only sorts
+  // left in the pooling-metadata path.
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> input_level_order_d_{nullptr};
+  // Keys for one of those sorts: the input level's codes in the order being ranked.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
+  // Sorted-keys output; CUB requires the buffer, nothing reads it afterwards.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};
+  // Sort payload, filled with 0..n-1; sorting it by the keys yields the order's ranking, written
+  // directly into the input_level_order_d_ row.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_indices_d_{nullptr};
+  // Run-start flags over the current level: 1 where a new parent segment (or, when deriving a
+  // pooled order, a new rank run) begins, 0 elsewhere.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_flags_d_{nullptr};
+  // Inclusive scan of run_flags_d_, numbering each element's run; run id - 1 is the pooled-level
+  // slot the element scatters to.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
