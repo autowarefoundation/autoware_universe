@@ -126,7 +126,8 @@ private:
   // out [num_orders, num_voxels]. Row 0 is the identity; the remaining rows are the only sorts
   // left in the pooling-metadata path.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> input_level_order_d_{nullptr};
-  // Keys for one of those sorts: the input level's codes in the order being ranked.
+  // Keys for one of those sorts: each input voxel's code under the serialization order being
+  // sorted.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
   // Sorted-keys output; CUB requires the buffer, nothing reads it afterwards.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};
