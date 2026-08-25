@@ -225,7 +225,6 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   const auto input_point_count =
     static_cast<std::size_t>(input_pointcloud_msg.width) * input_pointcloud_msg.height;
   num_raw_points_ = std::min(input_point_count, capacity_.max_input_point_count);
-  num_organized_points_ = static_cast<std::size_t>(num_rings_) * max_points_per_ring_;
 
   if (num_raw_points_ == 0) {
     output_pointcloud_ptr_->row_step = 0;

@@ -103,8 +103,8 @@ public:
       return std::make_pair(
         diagnostic_msgs::msg::DiagnosticStatus::ERROR,
         "[ERROR]: input bounds exceeded; truncated_points=" + std::to_string(truncated_points_) +
-          ", dropped_twists=" + std::to_string(dropped_twists_) +
-          ", dropped_imus=" + std::to_string(dropped_imus_));
+          ", dropped_twists=" + std::to_string(dropped_twists_) + ", dropped_imus=" +
+          std::to_string(dropped_imus_) + ", ring_overflow=" + (ring_overflow_ ? "true" : "false"));
     }
     return std::nullopt;
   }
