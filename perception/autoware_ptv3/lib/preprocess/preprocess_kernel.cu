@@ -357,9 +357,9 @@ __global__ void computeGridCoordsAndSerializationKernel(
 }
 
 __global__ void setInitialStageCountKernel(
-  std::int64_t * __restrict__ stage_counts, std::int64_t num_voxels)
+  std::int64_t * __restrict__ stage_counts_out, std::int64_t num_voxels)
 {
-  *stage_counts = num_voxels;
+  *stage_counts_out = num_voxels;
 }
 
 /**
@@ -380,24 +380,24 @@ __global__ void fillIdentityKernel(std::int64_t * __restrict__ out, std::int64_t
 /**
  * @brief Stages the key/value pair for one of the input-level order sorts.
  *
- * @param serialized_code Input voxels' codes, laid out [num_orders, num_voxels]; only the
+ * @param serialized_code_in Input voxels' codes, laid out [num_orders, num_voxels]; only the
  * `order_index` row is read.
- * @param keys Output sort keys: that row's codes.
- * @param indices Output sort values: 0..num_voxels-1.
+ * @param keys_out Sort keys: that row's codes.
+ * @param indices_out Sort values: 0..num_voxels-1.
  * @param num_voxels Number of input voxels.
  * @param order_index Serialization order being sorted.
  */
 __global__ void prepareInputLevelOrderSortKernel(
-  const std::int64_t * __restrict__ serialized_code, std::int64_t * __restrict__ keys,
-  std::int64_t * __restrict__ indices, std::int64_t num_voxels, std::int32_t order_index)
+  const std::int64_t * __restrict__ serialized_code_in, std::int64_t * __restrict__ keys_out,
+  std::int64_t * __restrict__ indices_out, std::int64_t num_voxels, std::int32_t order_index)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= num_voxels) {
     return;
   }
 
-  keys[idx] = serialized_code[order_index * num_voxels + idx];
-  indices[idx] = idx;
+  keys_out[idx] = serialized_code_in[order_index * num_voxels + idx];
+  indices_out[idx] = idx;
 }
 
 /**
@@ -409,15 +409,15 @@ __global__ void prepareInputLevelOrderSortKernel(
  *
  * @param serialized_code_in Input level's codes, laid out [num_orders, input_count]; only the
  * order-0 row is read.
- * @param stage_counts Per-level voxel counts; entry `stage_index` is the input level's count.
- * @param run_flags Output flags: 1 at each parent run start, 0 elsewhere (including padding).
+ * @param stage_counts_in Per-level voxel counts; entry `stage_index` is the input level's count.
+ * @param run_flags_out Flags: 1 at each parent run start, 0 elsewhere (including padding).
  * @param stage_index Level the input arrays describe.
  * @param pooling_depth Bits each grid coordinate is shifted right by, i.e. log2(pooling stride).
  * @param capacity Padded length of the arrays (max_num_voxels).
  */
 __global__ void markPoolingRunsKernel(
   const std::int64_t * __restrict__ serialized_code_in,
-  const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ run_flags,
+  const std::int64_t * __restrict__ stage_counts_in, std::int64_t * __restrict__ run_flags_out,
   std::int32_t stage_index, std::int32_t pooling_depth, std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -425,9 +425,9 @@ __global__ void markPoolingRunsKernel(
     return;
   }
 
-  const auto input_count = stage_counts[stage_index];
+  const auto input_count = stage_counts_in[stage_index];
   if (idx >= input_count) {
-    run_flags[idx] = 0;
+    run_flags_out[idx] = 0;
     return;
   }
 
@@ -435,20 +435,20 @@ __global__ void markPoolingRunsKernel(
 
   const auto shift = pooling_depth * 3;
   const auto key = serialized_code_in[idx] >> shift;
-  run_flags[idx] = (idx == 0 || key != (serialized_code_in[idx - 1] >> shift)) ? 1 : 0;
+  run_flags_out[idx] = (idx == 0 || key != (serialized_code_in[idx - 1] >> shift)) ? 1 : 0;
 }
 
 /**
  * @brief Emits the pooled level and its gather metadata from the parent-run flags.
  *
- * @pre `run_flags` marks the input level's parent-run starts (see markPoolingRunsKernel; zero
- * beyond `input_count`) and `run_ids` is its inclusive prefix sum over all `capacity` entries, so
- * `run_ids[capacity - 1]` is the pooled voxel count.
+ * @pre `run_flags_in` marks the input level's parent-run starts (see markPoolingRunsKernel; zero
+ * beyond `input_count`) and `run_ids_in` is its inclusive prefix sum over all `capacity` entries,
+ * so `run_ids_in[capacity - 1]` is the pooled voxel count.
  *
  * @param grid_coord_in Input level's grid coordinates, laid out [input_count, 3].
  * @param serialized_code_in Input level's codes, laid out [num_orders, input_count].
- * @param run_flags 1 at each parent run start, 0 elsewhere.
- * @param run_ids Each input voxel's 1-based parent segment number.
+ * @param run_flags_in 1 at each parent run start, 0 elsewhere.
+ * @param run_ids_in Each input voxel's 1-based parent segment number.
  * @param indices_out Output gather order for the pooling layer; the identity, as the input is
  * already grouped by parent.
  * @param indptr_out Output segment boundaries, [pooled_count + 1]: first input index of each
@@ -462,8 +462,8 @@ __global__ void markPoolingRunsKernel(
  * @param order_out Output pooled serialization orders, [num_orders, pooled_count]; only the
  * order-0 row is written here, the rest by fillOrderAndInverseKernel.
  * @param inverse_out Output inverse permutations of `order_out`, same layout and coverage.
- * @param stage_counts Per-level voxel counts; entry `stage_index` is the input level's count and
- * entry `stage_index + 1` is set to the pooled count.
+ * @param stage_counts_inout Per-level voxel counts; entry `stage_index` is the input level's
+ * count and entry `stage_index + 1` is set to the pooled count.
  * @param stage_index Level the input arrays describe.
  * @param pooling_depth Bits each grid coordinate is shifted right by, i.e. log2(pooling stride).
  * @param num_orders Number of serialization orders.
@@ -471,14 +471,14 @@ __global__ void markPoolingRunsKernel(
  */
 __global__ void fillPoolingStageKernel(
   const std::int32_t * __restrict__ grid_coord_in,
-  const std::int64_t * __restrict__ serialized_code_in, const std::int64_t * __restrict__ run_flags,
-  const std::int64_t * __restrict__ run_ids, std::int64_t * __restrict__ indices_out,
-  std::int64_t * __restrict__ indptr_out, std::int64_t * __restrict__ head_indices_out,
-  std::int64_t * __restrict__ cluster_out, std::int32_t * __restrict__ grid_coord_out,
-  std::int64_t * __restrict__ serialized_code_out, std::int64_t * __restrict__ order_out,
-  std::int64_t * __restrict__ inverse_out, std::int64_t * __restrict__ stage_counts,
-  std::int32_t stage_index, std::int32_t pooling_depth, std::int32_t num_orders,
-  std::int64_t capacity)
+  const std::int64_t * __restrict__ serialized_code_in,
+  const std::int64_t * __restrict__ run_flags_in, const std::int64_t * __restrict__ run_ids_in,
+  std::int64_t * __restrict__ indices_out, std::int64_t * __restrict__ indptr_out,
+  std::int64_t * __restrict__ head_indices_out, std::int64_t * __restrict__ cluster_out,
+  std::int32_t * __restrict__ grid_coord_out, std::int64_t * __restrict__ serialized_code_out,
+  std::int64_t * __restrict__ order_out, std::int64_t * __restrict__ inverse_out,
+  std::int64_t * __restrict__ stage_counts_inout, std::int32_t stage_index,
+  std::int32_t pooling_depth, std::int32_t num_orders, std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= capacity) {
@@ -490,10 +490,10 @@ __global__ void fillPoolingStageKernel(
   // stage's input count (the original serialized_code is laid out [2, num_voxels]) and the output
   // by the stage's output count. Using `capacity` as the stride here would both misread the
   // dense input and produce a non-dense output that TensorRT cannot consume.
-  const auto input_count = stage_counts[stage_index];
-  const auto next_count = run_ids[capacity - 1];
+  const auto input_count = stage_counts_inout[stage_index];
+  const auto next_count = run_ids_in[capacity - 1];
   if (idx == 0) {
-    stage_counts[stage_index + 1] = next_count;
+    stage_counts_inout[stage_index + 1] = next_count;
     indptr_out[next_count] = input_count;
   }
 
@@ -502,10 +502,10 @@ __global__ void fillPoolingStageKernel(
   }
 
   indices_out[idx] = idx;
-  const auto segment_index = run_ids[idx] - 1;
+  const auto segment_index = run_ids_in[idx] - 1;
   cluster_out[idx] = segment_index;
 
-  if (run_flags[idx] == 0) {
+  if (run_flags_in[idx] == 0) {
     return;
   }
 
@@ -535,16 +535,16 @@ __global__ void fillPoolingStageKernel(
  * order-`order_index` code without sorting.
  *
  * @param order_in Input level's serialization orders, laid out [num_orders, input_count].
- * @param cluster Parent segment index of each input voxel (see fillPoolingStageKernel).
- * @param stage_counts Per-level voxel counts; entry `stage_index` is the input level's count.
- * @param run_flags Output flags: 1 where the parent changes, 0 elsewhere (including padding).
+ * @param cluster_in Parent segment index of each input voxel (see fillPoolingStageKernel).
+ * @param stage_counts_in Per-level voxel counts; entry `stage_index` is the input level's count.
+ * @param run_flags_out Flags: 1 where the parent changes, 0 elsewhere (including padding).
  * @param stage_index Level the input arrays describe.
  * @param order_index Serialization order being walked.
  * @param capacity Padded length of the arrays (max_num_voxels).
  */
 __global__ void markOrderRunsKernel(
-  const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster,
-  const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ run_flags,
+  const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster_in,
+  const std::int64_t * __restrict__ stage_counts_in, std::int64_t * __restrict__ run_flags_out,
   std::int32_t stage_index, std::int32_t order_index, std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -552,22 +552,22 @@ __global__ void markOrderRunsKernel(
     return;
   }
 
-  const auto input_count = stage_counts[stage_index];
+  const auto input_count = stage_counts_in[stage_index];
   if (idx >= input_count) {
-    run_flags[idx] = 0;
+    run_flags_out[idx] = 0;
     return;
   }
 
-  // order_in is laid out densely as [num_orders, input_count].
-  const auto segment_index = cluster[order_in[order_index * input_count + idx]];
-  run_flags[idx] =
-    (idx == 0 || segment_index != cluster[order_in[order_index * input_count + idx - 1]]) ? 1 : 0;
+  const auto segment_index = cluster_in[order_in[order_index * input_count + idx]];
+  run_flags_out[idx] =
+    (idx == 0 || segment_index != cluster_in[order_in[order_index * input_count + idx - 1]]) ? 1
+                                                                                             : 0;
 }
 
 __global__ void fillOrderAndInverseKernel(
-  const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster,
-  const std::int64_t * __restrict__ run_flags, const std::int64_t * __restrict__ run_ids,
-  const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ order_out,
+  const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster_in,
+  const std::int64_t * __restrict__ run_flags_in, const std::int64_t * __restrict__ run_ids_in,
+  const std::int64_t * __restrict__ stage_counts_in, std::int64_t * __restrict__ order_out,
   std::int64_t * __restrict__ inverse_out, std::int32_t stage_index, std::int32_t order_index,
   std::int64_t capacity)
 {
@@ -576,15 +576,15 @@ __global__ void fillOrderAndInverseKernel(
     return;
   }
 
-  const auto input_count = stage_counts[stage_index];
-  if (idx >= input_count || run_flags[idx] == 0) {
+  const auto input_count = stage_counts_in[stage_index];
+  if (idx >= input_count || run_flags_in[idx] == 0) {
     return;
   }
 
   // order/inverse are stored densely as [num_orders, out_count] to match the engine input layout.
-  const auto out_count = stage_counts[stage_index + 1];
-  const auto out_idx = run_ids[idx] - 1;
-  const auto segment_index = cluster[order_in[order_index * input_count + idx]];
+  const auto out_count = stage_counts_in[stage_index + 1];
+  const auto out_idx = run_ids_in[idx] - 1;
+  const auto segment_index = cluster_in[order_in[order_index * input_count + idx]];
   order_out[order_index * out_count + out_idx] = segment_index;
   inverse_out[order_index * out_count + segment_index] = out_idx;
 }
