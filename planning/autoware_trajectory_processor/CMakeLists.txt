@@ -50,6 +50,10 @@ ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
 )
 autoware_agnocast_wrapper_setup(autoware_trajectory_modifier_utils)
 
+target_link_libraries(autoware_trajectory_modifier_utils PUBLIC
+  autoware_point_types
+)
+
 ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.cpp
   src/trajectory_optimizer_plugins/trajectory_extender.cpp
