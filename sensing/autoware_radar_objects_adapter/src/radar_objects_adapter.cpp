@@ -74,10 +74,7 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
     "acceleration_x",        "acceleration_y", "orientation"};
 
-  // agnocast_wrapper::Subscription does not expose get_topic_name(); resolve the input topic
-  // name via the node's topics interface (works in both =0 and =1 builds).
-  std::size_t hash_code = std::hash<std::string>{}(
-    this->get_node_topics_interface()->resolve_topic_name("~/input/objects"));
+  std::size_t hash_code = std::hash<std::string>{}(radar_objects_sub_->get_topic_name());
 
   for (std::size_t i = 0; i < sizeof(std::size_t); ++i) {
     topic_hash_code_[i] = static_cast<std::uint8_t>((hash_code >> (i * 8)) & 0xFF);
