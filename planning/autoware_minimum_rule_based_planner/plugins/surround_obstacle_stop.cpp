@@ -127,7 +127,7 @@ void SurroundObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & p
     get_node_ptr()->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
 
   pointcloud_filter_ =
-    std::make_unique<trajectory_modifier::utils::obstacle_stop::PointCloudFilter>(
+    std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
       params_.target_objects.pointcloud);
 
   proximity_checker_ = std::make_unique<obstacle_proximity_checker::ProximityChecker>(
