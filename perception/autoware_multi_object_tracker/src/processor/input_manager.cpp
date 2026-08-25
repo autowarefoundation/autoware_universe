@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -312,37 +313,40 @@ void InputManager::getObjectTimeInterval(
   const rclcpp::Time & now, rclcpp::Time & object_latest_time,
   rclcpp::Time & object_earliest_time) const
 {
-  // Set the object time interval
+  // The newest measurement of the target stream, once its time statistics are initialized
+  const auto & target_stream = input_streams_.at(target_stream_idx_);
+  const std::optional<rclcpp::Time> target_latest_measurement =
+    target_stream->isTimeInitialized()
+      ? std::make_optional(target_stream->getLatestMeasurementTime())
+      : std::nullopt;
 
   // 1. object_latest_time
-  // The object_latest_time is the current time minus the target stream latency
-  object_latest_time =
+  // The current time minus the target stream latency, kept at or above the target stream's
+  // newest measurement
+  const rclcpp::Time latency_based_latest_time =
     now - rclcpp::Duration::from_seconds(target_stream_latency_ - 0.1 * target_stream_latency_std_);
-
-  // check the target stream can be included in the object time interval
-  if (input_streams_.at(target_stream_idx_)->isTimeInitialized()) {
-    const rclcpp::Time latest_measurement_time =
-      input_streams_.at(target_stream_idx_)->getLatestMeasurementTime();
-    // if the object_latest_time is older than the latest measurement time, set it to the latest
-    // object time
-    object_latest_time =
-      object_latest_time < latest_measurement_time ? latest_measurement_time : object_latest_time;
-  }
+  object_latest_time = target_latest_measurement
+                         ? std::max(latency_based_latest_time, *target_latest_measurement)
+                         : latency_based_latest_time;
 
   // 2. object_earliest_time
-  // The default object_earliest_time is to have a 1-second time interval
-  const rclcpp::Time object_earliest_time_default =
+  // The window start resumes from the export watermark; a watermark ahead of the window end
+  // falls back to the default 1-second interval
+  const rclcpp::Time earliest_time_default =
     object_latest_time - rclcpp::Duration::from_seconds(1.0);
-  if (
-    latest_exported_object_time_ < object_earliest_time_default ||
-    latest_exported_object_time_ > object_latest_time) {
-    // if the latest exported object time is too old or newer than the object_latest_time,
-    // set to the default
-    object_earliest_time = object_earliest_time_default;
-  } else {
-    // The object_earliest_time is the latest exported object time
-    object_earliest_time = latest_exported_object_time_;
-  }
+  const rclcpp::Time export_resume_time = latest_exported_object_time_ > object_latest_time
+                                            ? earliest_time_default
+                                            : latest_exported_object_time_;
+
+  // The window start stays at or below the target stream's newest measurement: objects below the
+  // window start are dropped by getObjectsOlderThan(), so the target's backlog is exported while
+  // the latency estimate converges
+  const rclcpp::Time target_covered_time =
+    target_latest_measurement ? std::min(export_resume_time, *target_latest_measurement)
+                              : export_resume_time;
+
+  // Bounded to the 1-second interval
+  object_earliest_time = std::max(target_covered_time, earliest_time_default);
 }
 
 bool InputManager::isStreamFresh(const InputStream & input_stream, const rclcpp::Time & now) const
