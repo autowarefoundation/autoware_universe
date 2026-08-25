@@ -258,7 +258,7 @@ void expect_permutation(const std::vector<std::int64_t> & values, const std::str
 }
 
 // A fixture whose serialization orders rank a level identically cannot detect an implementation
-// that returns the same ranking for every order, so require the orders to disagree.
+// that returns the same row for every order, so require the orders to disagree.
 void expect_orders_diverge(
   const std::vector<std::int64_t> & order, const std::size_t count, const std::size_t num_orders,
   const std::string & name)

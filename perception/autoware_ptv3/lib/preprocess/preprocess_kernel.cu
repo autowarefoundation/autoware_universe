@@ -476,19 +476,19 @@ __global__ void fillPoolingStageKernel(
       serialized_code_in[order_index * input_count + idx] >> (pooling_depth * 3);
   }
 
-  // Segments are emitted in ascending order-0 code, so the pooled level's order-0 ranking is the
-  // identity and markPoolingRunsKernel's precondition holds for the next stage.
+  // Segments are emitted in ascending order-0 code, so the pooled level's order-0 row is simply
+  // 0..n-1 and markPoolingRunsKernel's precondition holds for the next stage.
   order_out[segment_index] = segment_index;
   inverse_out[segment_index] = segment_index;
 }
 
 /**
- * @brief Marks where the parent voxel changes while walking the input level in
- * order-`order_index` rank order.
+ * @brief Marks where the parent voxel changes while walking the input level as listed by
+ * serialization order `order_index`.
  *
  * Every serialization order visits each parent's children contiguously and the parents in
- * ascending pooled code, so compacting the run heads yields the pooled level's
- * order-`order_index` ranking without sorting.
+ * ascending pooled code, so compacting the run heads lists the pooled level's voxels in ascending
+ * order-`order_index` code without sorting.
  *
  * @param order_in Input level's serialization orders, laid out [num_orders, input_count].
  * @param cluster Parent segment index of each input voxel (see fillPoolingStageKernel).
@@ -503,21 +503,21 @@ __global__ void markOrderRunsKernel(
   const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ run_flags,
   std::int32_t stage_index, std::int32_t order_index, std::int64_t capacity)
 {
-  const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (rank >= capacity) {
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= capacity) {
     return;
   }
 
   const auto input_count = stage_counts[stage_index];
-  if (rank >= input_count) {
-    run_flags[rank] = 0;
+  if (idx >= input_count) {
+    run_flags[idx] = 0;
     return;
   }
 
   // order_in is laid out densely as [num_orders, input_count].
-  const auto segment_index = cluster[order_in[order_index * input_count + rank]];
-  run_flags[rank] =
-    (rank == 0 || segment_index != cluster[order_in[order_index * input_count + rank - 1]]) ? 1 : 0;
+  const auto segment_index = cluster[order_in[order_index * input_count + idx]];
+  run_flags[idx] =
+    (idx == 0 || segment_index != cluster[order_in[order_index * input_count + idx - 1]]) ? 1 : 0;
 }
 
 __global__ void fillOrderAndInverseKernel(
@@ -527,22 +527,22 @@ __global__ void fillOrderAndInverseKernel(
   std::int64_t * __restrict__ inverse_out, std::int32_t stage_index, std::int32_t order_index,
   std::int64_t capacity)
 {
-  const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (rank >= capacity) {
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= capacity) {
     return;
   }
 
   const auto input_count = stage_counts[stage_index];
-  if (rank >= input_count || run_flags[rank] == 0) {
+  if (idx >= input_count || run_flags[idx] == 0) {
     return;
   }
 
   // order/inverse are stored densely as [num_orders, out_count] to match the engine input layout.
   const auto out_count = stage_counts[stage_index + 1];
-  const auto out_rank = run_ids[rank] - 1;
-  const auto segment_index = cluster[order_in[order_index * input_count + rank]];
-  order_out[order_index * out_count + out_rank] = segment_index;
-  inverse_out[order_index * out_count + segment_index] = out_rank;
+  const auto out_idx = run_ids[idx] - 1;
+  const auto segment_index = cluster[order_in[order_index * input_count + idx]];
+  order_out[order_index * out_count + out_idx] = segment_index;
+  inverse_out[order_index * out_count + segment_index] = out_idx;
 }
 
 std::int32_t poolingDepth(const std::int64_t stride)
@@ -573,9 +573,9 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, clamped_num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-  // The input level is already sorted by order-0 code, so its order-0 ranking is the identity.
-  // The remaining orders cannot be derived from it and need one real sort each - the only sorts
-  // in this function.
+  // The input level is already sorted by order-0 code, so its order-0 row is simply 0..n-1. The
+  // remaining orders cannot be derived from it and need one real sort each - the only sorts in
+  // this function.
   if (clamped_num_voxels > 0) {
     fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
       input_level_order_d_.get(), clamped_num_voxels);

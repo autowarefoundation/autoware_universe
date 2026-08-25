@@ -131,11 +131,11 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
   // Sorted-keys output; CUB requires the buffer, nothing reads it afterwards.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};
-  // Sort payload, filled with 0..n-1; sorting it by the keys yields the order's ranking, written
-  // directly into the input_level_order_d_ row.
+  // Filled with 0..n-1 and sorted alongside the keys, which leaves it listing the voxel indices
+  // in ascending code order; written directly into the input_level_order_d_ row.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_indices_d_{nullptr};
-  // Run-start flags over the current level: 1 where a new parent segment (or, when deriving a
-  // pooled order, a new rank run) begins, 0 elsewhere.
+  // Run-start flags: 1 where the parent voxel changes while walking a level, either in storage
+  // order (pooling) or as listed by one of its serialization orders; 0 elsewhere.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_flags_d_{nullptr};
   // Inclusive scan of run_flags_d_, numbering each element's run; run id - 1 is the pooled-level
   // slot the element scatters to.
