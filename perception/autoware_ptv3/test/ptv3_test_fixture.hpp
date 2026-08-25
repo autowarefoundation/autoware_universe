@@ -64,6 +64,22 @@ struct PTv3ConfigParams
   std::vector<float> post_center_range = {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F};
 };
 
+// Host reimplementation of the device-side serialized (Morton / Z-order) encoding. `transposed`
+// selects the "z-trans" order, which swaps the x and y planes.
+inline std::int64_t serialize_coord(
+  const std::int64_t x, const std::int64_t y, const std::int64_t z, const std::int32_t depth,
+  const bool transposed)
+{
+  std::int64_t code = 0;
+  for (std::int32_t bit = 0; bit < depth; ++bit) {
+    const std::int64_t mask = 1LL << bit;
+    code |= (((transposed ? y : x) & mask) << (2 * bit + 2));
+    code |= (((transposed ? x : y) & mask) << (2 * bit + 1));
+    code |= ((z & mask) << (2 * bit));
+  }
+  return code;
+}
+
 inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
 {
   return PTv3Config(

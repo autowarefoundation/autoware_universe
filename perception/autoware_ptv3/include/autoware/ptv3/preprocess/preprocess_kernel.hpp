@@ -46,12 +46,44 @@ public:
   PreprocessCuda(const PTv3Config & config, cudaStream_t stream);
   ~PreprocessCuda();
 
+  /**
+   * @brief Crops, voxelizes and deduplicates the input cloud.
+   *
+   * The emitted voxels are sorted by their order-0 serialized code.
+   *
+   * @param input_data Input cloud in `input_format` layout.
+   * @param input_format Point layout of `input_data`.
+   * @param num_points Number of points in `input_data`.
+   * @param voxel_features Output feature vector (x, y, z, intensity) per voxel.
+   * @param voxel_coords Output grid coordinates, laid out [num_voxels, 3].
+   * @param serialized_code Output serialized codes, laid out [num_orders, num_voxels].
+   * @param compact_points Output representative input point per voxel, in `input_format` layout.
+   * @param reconstruction_features Optional output feature vectors of every input point (FULL
+   * reconstruction) or of the in-range ones (PARTIAL). Skipped if nullptr.
+   * @param cropped_source_points Optional output of the in-range input points, in `input_format`
+   * layout. Skipped if nullptr.
+   * @param inverse_map Optional output mapping each in-range point to its voxel index. Skipped if
+   * nullptr.
+   * @param num_cropped_points Output number of in-range points.
+   * @return Number of unique voxels. May exceed max_num_voxels, in which case only the first
+   * max_num_voxels voxels were written to the outputs.
+   */
   std::size_t generateFeatures(
     const void * input_data, CloudFormat input_format, unsigned int num_points,
-    float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
+    float * voxel_features, std::int32_t * voxel_coords, std::int64_t * serialized_code,
     void * compact_points, float * reconstruction_features, void * cropped_source_points,
     std::int64_t * inverse_map, std::size_t * num_cropped_points);
 
+  /**
+   * @brief Builds the per-stage pooling metadata the encoder graph consumes.
+   *
+   * @param grid_coord Grid coordinates of the input voxels, laid out [num_voxels, 3].
+   * @param serialized_code Codes of the input voxels, laid out [num_orders, num_voxels].
+   * @param num_voxels Number of input voxels.
+   * @param stages Output device buffers to fill, one per pooling stage.
+   * @param stage_counts Output voxel count per level, laid out [num_stages + 1]; entry 0 is the
+   * input count.
+   */
   void generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
     const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
@@ -69,28 +101,21 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_mask_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_indices_d_{nullptr};
 
-  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> hashes64_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> sorted_hashes64_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> hash_indexes64_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> sorted_hash_indexes64_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> unique_mask64_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> unique_indices64_d_{nullptr};
-
-  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> hashes32_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> sorted_hashes32_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> hash_indexes32_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> sorted_hash_indexes32_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> unique_mask32_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> unique_indices32_d_{nullptr};
+  // Voxelization keys: order-0 serialized (Morton) codes, unique per grid cell, so sorting by them
+  // both deduplicates voxels and puts them in order-0 serialization order.
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> codes_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> sorted_codes_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> code_indices_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> sorted_code_indices_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> unique_mask_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> unique_indices_d_{nullptr};
 
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> generate_feature_workspace_d_{nullptr};
   std::size_t generate_feature_workspace_size_{0};
   autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_cropped_points_;
-  autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_unique_points32_;
-  autoware::cuda_utils::CudaUniquePtrHost<std::uint64_t> num_unique_points64_;
+  autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_unique_points_;
   cudaEvent_t num_cropped_points_copy_event_;
-  cudaEvent_t num_unique_points32_copy_event_;
-  cudaEvent_t num_unique_points64_copy_event_;
+  cudaEvent_t num_unique_points_copy_event_;
 
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_keys_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_sorted_keys_d_{nullptr};
@@ -100,6 +125,7 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
+  int code_sort_end_bit_{64};
 };
 }  // namespace autoware::ptv3
 

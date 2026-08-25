@@ -21,7 +21,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -90,13 +89,18 @@ public:
       voxel_z_size_ = voxel_size[2];
     }
 
+    // Cells the device grid mapping (see gridCoord) can emit per axis - one more than
+    // round(extent / size) when a range border is not voxel-aligned. The largest coordinate comes
+    // from the largest float below max_range: the crop is strict and float division is monotonic.
     const auto grid_cells = [](const float min_range, const float max_range, const float size) {
-      return static_cast<std::int64_t>(std::round((max_range - min_range) / size));
+      const float min_coord = std::floor(min_range / size);
+      const float max_coord = std::floor(std::nextafter(max_range, min_range) / size);
+      return static_cast<std::int64_t>(max_coord - min_coord) + 1;
     };
     grid_x_size_ = grid_cells(min_x_range_, max_x_range_, voxel_x_size_);
     grid_y_size_ = grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
     grid_z_size_ = grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
-    auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
+    const auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
     auto max_voxels_depth =
@@ -104,9 +108,6 @@ public:
     if (serialization_depth_ * 3 + max_voxels_depth >= 64) {
       throw std::runtime_error("Serialization depth is too large");
     }
-
-    use_64bit_hash_ =
-      grid_x_size_ * grid_y_size_ * grid_z_size_ > std::numeric_limits<std::uint32_t>::max();
 
     serialization_orders_ = validate_serialization_orders(serialization_orders);
     pooling_strides_ = validate_pooling_strides(pooling_strides);
@@ -349,9 +350,9 @@ public:
     return enc_channels;
   }
 
-  // Hard geometric voxel-count bound for one encoder stage: a stage cannot hold more voxels
-  // than the sparse grid has cells at its cumulative pooling depth, and pooling never grows
-  // the voxel count, so min(max_num_voxels_, grid cells) is safe for any input.
+  // Hard voxel-count bound for one encoder stage: a stage cannot hold more voxels than the grid
+  // has cells at its cumulative pooling depth, and pooling never grows the voxel count. Sizes the
+  // encoder stage buffers and TensorRT profiles.
   [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
   {
     std::int64_t cumulative_depth = 0;
@@ -379,7 +380,6 @@ public:
   bool use_det3d_head_;
 
   // Preprocess parameters
-  bool use_64bit_hash_{};
   std::int32_t serialization_depth_{};
 
   ///// NETWORK PARAMETERS /////
@@ -430,7 +430,7 @@ public:
   float voxel_y_size_{};
   float voxel_z_size_{};
 
-  // Grid size
+  // Grid size (cells the device grid mapping can emit, see the constructor)
   std::int64_t grid_x_size_{};
   std::int64_t grid_y_size_{};
   std::int64_t grid_z_size_{};
