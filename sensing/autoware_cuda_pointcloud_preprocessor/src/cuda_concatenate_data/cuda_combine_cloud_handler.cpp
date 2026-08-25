@@ -17,6 +17,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/pointcloud_preprocessor/concatenate_data/concatenation_info_manager.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
@@ -64,7 +65,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::CombineCloudHandler(
 {
   for (const auto & topic : input_topics_) {
     CudaConcatStruct cuda_concat_struct;
-    cudaStreamCreate(&cuda_concat_struct.stream);
+    CHECK_CUDA_ERROR(cudaStreamCreate(&cuda_concat_struct.stream));
     cuda_concat_struct_map_[topic] = std::move(cuda_concat_struct);
   }
 }
@@ -256,9 +257,9 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
           reinterpret_cast<PointTypeStruct *>(output_cloud->data.get()), stream);
         output_cloud->header.frame_id = cloud->header.frame_id;
       } else {
-        cudaMemcpyAsync(
+        CHECK_CUDA_ERROR(cudaMemcpyAsync(
           output_cloud->data.get(), output_points + concatenated_start_index, data_size,
-          cudaMemcpyDeviceToDevice, stream);
+          cudaMemcpyDeviceToDevice, stream));
         output_cloud->header.frame_id = output_frame_;
       }
 
@@ -277,7 +278,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
   // Sync all streams
   for (const auto & [topic, cuda_concat_struct] : cuda_concat_struct_map_) {
-    cudaStreamSynchronize(cuda_concat_struct.stream);
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(cuda_concat_struct.stream));
   }
 
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
