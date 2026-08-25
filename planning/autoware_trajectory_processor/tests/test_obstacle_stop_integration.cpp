@@ -16,6 +16,8 @@
 #include "trajectory_processor_test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -26,12 +28,11 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <gtest/gtest.h>
 
 #include <chrono>
-#include <limits>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <thread>
@@ -133,35 +134,33 @@ PredictedObjects::ConstSharedPtr make_blocking_car(double x, double y)
   return std::make_shared<const PredictedObjects>(predicted_objects);
 }
 
-// Build a dense blocking pointcloud the obstacle_stop pipeline will detect.
-sensor_msgs::msg::PointCloud2::ConstSharedPtr make_blocking_pointcloud_cluster(
-  double center_x, double center_y, double height)
+// Build a single blocking PointXYZCPE point. obstacle_stop evaluates points independently
+// (no voxel/clustering), so a dense cluster is unnecessary and can confuse the tracker when
+// neighboring points fall within pcd_distance_th.
+sensor_msgs::msg::PointCloud2::ConstSharedPtr make_blocking_pointcloud(double x, double y, double z)
 {
-  constexpr int voxel_count_x = 4;
-  constexpr int voxel_count_y = 3;
-  constexpr int points_per_voxel = 3;
+  using autoware::point_types::PointCloudClassification;
+  using autoware::point_types::PointXYZCPE;
 
   sensor_msgs::msg::PointCloud2 cloud;
   cloud.header.frame_id = "map";
-  sensor_msgs::PointCloud2Modifier modifier(cloud);
-  modifier.setPointCloud2FieldsByString(1, "xyz");
-  modifier.resize(voxel_count_x * voxel_count_y * points_per_voxel);
+  cloud.height = 1;
+  cloud.width = 1;
+  cloud.is_dense = true;
+  cloud.is_bigendian = false;
+  cloud.fields = autoware::point_types::create_fields_point_xyzcpe();
+  cloud.point_step = sizeof(PointXYZCPE);
+  cloud.row_step = cloud.point_step * cloud.width;
+  cloud.data.resize(cloud.row_step);
 
-  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
-  sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
-  sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
-  for (int xi = 0; xi < voxel_count_x; ++xi) {
-    for (int yi = 0; yi < voxel_count_y; ++yi) {
-      for (int p = 0; p < points_per_voxel; ++p) {
-        *iter_x = static_cast<float>(center_x + 0.2 * xi + 0.05 + 0.01 * p);
-        *iter_y = static_cast<float>(center_y + 0.2 * yi + 0.05);
-        *iter_z = static_cast<float>(height);
-        ++iter_x;
-        ++iter_y;
-        ++iter_z;
-      }
-    }
-  }
+  PointXYZCPE point;
+  point.x = static_cast<float>(x);
+  point.y = static_cast<float>(y);
+  point.z = static_cast<float>(z);
+  // INVALID maps to target type "unknown" used by the integration test params.
+  point.class_id = static_cast<std::uint8_t>(PointCloudClassification::INVALID);
+  point.probability = 1.0F;
+  std::memcpy(cloud.data.data(), &point, sizeof(PointXYZCPE));
 
   return std::make_shared<const sensor_msgs::msg::PointCloud2>(cloud);
 }
@@ -390,13 +389,12 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject_ReachMaxDecel)
   EXPECT_NEAR(object_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }
 
-TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluster)
+TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloud)
 {
   // Arrange
-  constexpr double cluster_center_x = 25.0;
+  constexpr double obstacle_x = 25.0;
   auto trajectory = create_straight_trajectory(30.0, 8.0);
-  const auto pointcloud_blocking_path =
-    make_blocking_pointcloud_cluster(cluster_center_x, 0.0, 0.7);
+  const auto pointcloud_blocking_path = make_blocking_pointcloud(obstacle_x, 0.0, 0.7);
   const auto input = create_input_data(
     make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), nullptr, pointcloud_blocking_path);
 
@@ -409,31 +407,19 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluste
   // Assert
   ASSERT_TRUE(modified);
   EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
-  EXPECT_LT(trajectory.back().pose.position.x, cluster_center_x);
-
-  const auto min_pcd_x = [&pointcloud_blocking_path]() {
-    sensor_msgs::PointCloud2ConstIterator<float> iter_x(*pointcloud_blocking_path, "x");
-    auto min_x = std::numeric_limits<float>::max();
-    for (; iter_x != iter_x.end(); ++iter_x) {
-      if (*iter_x < min_x) {
-        min_x = *iter_x;
-      }
-    }
-    return min_x;
-  }();
+  EXPECT_LT(trajectory.back().pose.position.x, obstacle_x);
 
   const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
   const auto expected_stop_margin = params_.obstacle_stop.stop_margin + ego_front_offset;
-  EXPECT_NEAR(min_pcd_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
+  EXPECT_NEAR(obstacle_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }
 
-TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluster_ReachMaxDecel)
+TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloud_ReachMaxDecel)
 {
   // Arrange
-  constexpr double cluster_center_x = 15.0;
+  constexpr double obstacle_x = 15.0;
   auto trajectory = create_straight_trajectory(30.0, 8.0);
-  const auto pointcloud_blocking_path =
-    make_blocking_pointcloud_cluster(cluster_center_x, 0.0, 0.7);
+  const auto pointcloud_blocking_path = make_blocking_pointcloud(obstacle_x, 0.0, 0.7);
   const auto input = create_input_data(
     make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), nullptr, pointcloud_blocking_path);
 
@@ -446,19 +432,8 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluste
   // Assert
   ASSERT_TRUE(modified);
   EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
-  EXPECT_LT(trajectory.back().pose.position.x, cluster_center_x);
+  EXPECT_LT(trajectory.back().pose.position.x, obstacle_x);
 
-  const auto min_pcd_x = [&pointcloud_blocking_path]() {
-    sensor_msgs::PointCloud2ConstIterator<float> iter_x(*pointcloud_blocking_path, "x");
-    auto min_x = std::numeric_limits<float>::max();
-    for (; iter_x != iter_x.end(); ++iter_x) {
-      if (*iter_x < min_x) {
-        min_x = *iter_x;
-      }
-    }
-    return min_x;
-  }();
-
-  const auto expected_stop_margin = 2.01;  // Computed based on max_decel limit and jerk limit
-  EXPECT_NEAR(min_pcd_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
+  const auto expected_stop_margin = 1.96;  // Computed based on max_decel limit and jerk limit
+  EXPECT_NEAR(obstacle_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }
