@@ -24,6 +24,7 @@
   <depend>cuda_blackboard</depend>
   <depend>launch_ros</depend>
   <depend>pcl_ros</depend>
+  <depend>perception_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2_eigen</depend>

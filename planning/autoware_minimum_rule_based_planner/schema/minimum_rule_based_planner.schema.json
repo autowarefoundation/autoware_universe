@@ -240,28 +240,46 @@
             "objects": {
               "type": "object",
               "properties": {
-                "object_types": {
-                  "type": "array",
-                  "description": "Object types",
-                  "default": [
-                    "car",
-                    "truck",
-                    "bus",
-                    "trailer",
-                    "motorcycle",
-                    "bicycle",
-                    "pedestrian",
-                    "hazard"
-                  ],
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "max_velocity_th": {
-                  "type": "number",
-                  "description": "Max velocity threshold [m/s]",
-                  "default": 1.0,
-                  "minimum": 0.0
+                "target_objects": {
+                  "type": "object",
+                  "properties": {
+                    "bbox": {
+                      "type": "array",
+                      "description": "Types of bounding box shaped objects to consider for obstacle stop",
+                      "default": [
+                        "car",
+                        "truck",
+                        "bus",
+                        "trailer",
+                        "motorcycle",
+                        "bicycle",
+                        "pedestrian",
+                        "hazard",
+                        "unknown"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "polygon": {
+                      "type": "array",
+                      "description": "Types of polygon shaped objects to consider for obstacle stop",
+                      "default": [
+                        "car",
+                        "truck",
+                        "bus",
+                        "trailer",
+                        "pedestrian",
+                        "hazard",
+                        "unknown"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
                 },
                 "stopped_velocity_th": {
                   "type": "number",
@@ -481,24 +499,48 @@
               "description": "Enable the use of pointcloud for surround obstacle stop",
               "default": false
             },
-            "object_types": {
-              "type": "array",
-              "description": "Types of objects to consider for surround obstacle stop",
-              "default": [
-                "car",
-                "truck",
-                "bus",
-                "trailer",
-                "motorcycle",
-                "bicycle",
-                "pedestrian",
-                "hazard",
-                "animal",
-                "unknown"
-              ],
-              "items": {
-                "type": "string"
-              }
+            "target_objects": {
+              "type": "object",
+              "properties": {
+                "bbox": {
+                  "type": "array",
+                  "description": "Types of bounding box shaped objects to consider for surround obstacle stop",
+                  "default": [
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "motorcycle",
+                    "bicycle",
+                    "pedestrian",
+                    "hazard",
+                    "animal",
+                    "unknown"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "polygon": {
+                  "type": "array",
+                  "description": "Types of polygon shaped objects to consider for surround obstacle stop",
+                  "default": [
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "pedestrian",
+                    "hazard",
+                    "animal",
+                    "unknown"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
             },
             "front_distance_th": {
               "type": "object",

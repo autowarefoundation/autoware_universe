@@ -18,7 +18,7 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
-#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
@@ -26,10 +26,10 @@
 #include <memory>
 #include <vector>
 
-using autoware::trajectory_modifier::plugin::StopPointFixer;
 using autoware::trajectory_processor::TrajectoryProcessorContext;
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::StopPointFixer;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::test::process_plugin;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -118,7 +118,7 @@ protected:
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<StopPointFixer> plugin_;
-  trajectory_modifier_params::Params params_;
+  trajectory_processor_params::Params params_;
   std::shared_ptr<TrajectoryProcessorContext> context_;
 };
 

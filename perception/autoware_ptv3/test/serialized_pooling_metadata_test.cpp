@@ -79,25 +79,6 @@ std::int32_t pooling_depth(const std::int64_t stride)
   return depth;
 }
 
-std::int64_t serialize_coord(
-  const std::int64_t x, const std::int64_t y, const std::int64_t z, const std::int32_t depth,
-  const bool transposed)
-{
-  std::int64_t code = 0;
-  for (std::int32_t bit = 0; bit < depth; ++bit) {
-    const std::int64_t mask = 1LL << bit;
-    if (transposed) {
-      code |= ((y & mask) << (2 * bit + 2));
-      code |= ((x & mask) << (2 * bit + 1));
-    } else {
-      code |= ((x & mask) << (2 * bit + 2));
-      code |= ((y & mask) << (2 * bit + 1));
-    }
-    code |= ((z & mask) << (2 * bit));
-  }
-  return code;
-}
-
 std::vector<std::int64_t> make_serialized_code(
   const std::vector<std::int32_t> & grid_coord, const std::int32_t depth)
 {
