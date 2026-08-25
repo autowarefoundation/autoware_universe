@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    # model bundle version, checked against the range the node supports
+    version: v4.1
     # model files, relative to model_path
     encoder_onnx_path: pts_voxel_encoder.onnx
     encoder_engine_path: pts_voxel_encoder.engine
@@ -17,6 +19,7 @@
       encoder_in_feature_size: 9
       has_variance: false
       has_twist: false
+      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
       detection_score_thresholds:
         # Upper bound of radial distance of 3d center_x and center_y in bounding boxes, and starting from 0
         # [0-50m), [50.0-90m), [90.0-121.0m), [121.0-200.0m), set a very high number for the last one to be safe

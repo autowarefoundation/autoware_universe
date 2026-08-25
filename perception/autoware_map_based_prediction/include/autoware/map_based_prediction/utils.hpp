@@ -141,6 +141,10 @@ struct ObjectDecelerationParams
 /// i.e. when the object cannot stop at all.
 double distance_to_stop_with_deceleration(double speed, double deceleration);
 
+/// 2D linestring over the path positions up to and including @p last_idx.
+lanelet::BasicLineString2d to_linestring_2d(
+  const std::vector<geometry_msgs::msg::Pose> & path, size_t last_idx);
+
 }  // namespace utils
 
 }  // namespace autoware::map_based_prediction
