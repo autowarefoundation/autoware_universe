@@ -35,7 +35,8 @@ namespace autoware::control_validator
 using diagnostic_msgs::msg::DiagnosticStatus;
 
 void LatencyValidator::validate(
-  ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const
+  ControlValidatorStatus & res, const Control & control_cmd,
+  autoware::agnocast_wrapper::Node & node) const
 {
   res.latency = (node.now() - control_cmd.stamp).seconds();
   res.is_valid_latency = res.latency < params_.nominal_latency;
@@ -261,19 +262,19 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control_cmd", 1, std::bind(&ControlValidator::on_control_cmd, this, _1));
   sub_operational_state_ =
-    autoware_utils::InterProcessPollingSubscriber<OperationModeState>::create_subscription(
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<OperationModeState>(
       this, "~/input/operational_mode_state", 1);
   sub_kinematics_ =
-    autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>::create_subscription(
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<nav_msgs::msg::Odometry>(
       this, "~/input/kinematics", 1);
   sub_reference_traj_ =
-    autoware_utils::InterProcessPollingSubscriber<Trajectory>::create_subscription(
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
       this, "~/input/reference_trajectory", 1);
   sub_predicted_traj_ =
-    autoware_utils::InterProcessPollingSubscriber<Trajectory>::create_subscription(
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
       this, "~/input/predicted_trajectory", 1);
   sub_measured_acc_ =
-    autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>::create_subscription(
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
       this, "~/input/measured_acceleration", 1);
 
   pub_status_ = create_publisher<ControlValidatorStatus>("~/output/validation_status", 1);
@@ -404,7 +405,7 @@ void ControlValidator::validation_filtering(ControlValidatorStatus & res)
   res.is_warn_yaw = false;
 }
 
-void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
+void ControlValidator::on_control_cmd(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Control) & msg)
 {
   stop_watch.tic();
 
@@ -428,17 +429,17 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
     return;
   };
 
-  Control::ConstSharedPtr control_cmd_msg = msg;
+  const auto control_cmd_msg = msg;
   if (!control_cmd_msg) {
     return waiting(sub_control_cmd_->get_topic_name());
   }
   Trajectory::ConstSharedPtr predicted_trajectory_msg = sub_predicted_traj_->take_data();
   if (!predicted_trajectory_msg) {
-    return waiting(sub_reference_traj_->subscriber()->get_topic_name());
+    return waiting(sub_reference_traj_->get_topic_name());
   }
   Trajectory::ConstSharedPtr reference_trajectory_msg = sub_reference_traj_->take_data();
   if (!reference_trajectory_msg) {
-    return waiting(sub_reference_traj_->subscriber()->get_topic_name());
+    return waiting(sub_reference_traj_->get_topic_name());
   }
   if (reference_trajectory_msg->points.size() < 2) {
     // TODO(takagi): This check should be moved into each of the individual validate() functions.
@@ -454,11 +455,11 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   }
   Odometry::ConstSharedPtr kinematics_msg = sub_kinematics_->take_data();
   if (!kinematics_msg) {
-    return waiting(sub_kinematics_->subscriber()->get_topic_name());
+    return waiting(sub_kinematics_->get_topic_name());
   }
   AccelWithCovarianceStamped::ConstSharedPtr acceleration_msg = sub_measured_acc_->take_data();
   if (!acceleration_msg) {
-    return waiting(sub_measured_acc_->subscriber()->get_topic_name());
+    return waiting(sub_measured_acc_->get_topic_name());
   }
 
   // pre process
