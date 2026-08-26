@@ -15,6 +15,7 @@
 #ifndef MULTI_CAMERA_FUSION_HPP_
 #define MULTI_CAMERA_FUSION_HPP_
 
+#include "map_based_signal_filter.hpp"
 #include "signal_validator.hpp"
 #include "traffic_light_multi_camera_fusion_process.hpp"
 #include "types.hpp"
@@ -30,6 +31,7 @@
 #include <lanelet2_core/Forward.h>
 
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -72,11 +74,13 @@ struct MultiCameraFusionConfig
   double prior_log_odds{0.0};
   bool use_signal_consistency_check{false};
   bool publish_partial_matched_signal{false};
+  bool use_map_based_signal_filter{false};
   lanelet::LaneletMapPtr lanelet_map_ptr{nullptr};
 };
 
 struct MultiCameraFusionResult
 {
+  autoware_perception_msgs::msg::TrafficLightGroupArray traffic_light_groups;
   std::vector<ConflictInfo> conflicted_regulatory_element_status;
   // Traffic light IDs that were observed by a camera but are not registered in the loaded map.
   // The Node logs a warning for each entry.
@@ -100,8 +104,7 @@ public:
   MultiCameraFusion() = default;
 
   MultiCameraFusionResult fuse(
-    const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals,
-    NewSignalArrayType & output_groups);
+    const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals);
 
 private:
   GroupFusionResult group_fusion(const std::map<IdType, utils::FusionRecord> & fused_record_map);
@@ -137,6 +140,10 @@ private:
   Use multiset in case multiple cameras publish images at the exact same time.
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
+  /*
+  Non-null only when the map-based filter is enabled and a lanelet map is available.
+  */
+  std::unique_ptr<MapBasedSignalFilter> map_based_signal_filter_;
 };
 
 }  // namespace autoware::traffic_light

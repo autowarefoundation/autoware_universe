@@ -30,6 +30,7 @@
 
 #include <thrust/device_vector.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -38,11 +39,20 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
+struct PreprocessorCapacity
+{
+  std::size_t max_input_point_count{0};
+  int max_ring_count{0};
+  int max_points_per_ring{0};
+  std::size_t max_twist_struct_count{0};
+};
+
 struct ProcessingStats
 {
   int mismatch_count{0};
   int num_crop_box_passed_points{0};
   int num_nan_points{0};
+  bool ring_overflow{false};
 };
 
 class CudaPointcloudPreprocessor
@@ -50,7 +60,7 @@ class CudaPointcloudPreprocessor
 public:
   enum class UndistortionType { Invalid, Undistortion2D, Undistortion3D };
 
-  CudaPointcloudPreprocessor();
+  explicit CudaPointcloudPreprocessor(const PreprocessorCapacity & capacity);
 
   void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
   void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
@@ -70,6 +80,7 @@ public:
 private:
   static cudaStream_t initialize_stream();
 
+  void initializeBuffers();
   void organizePointcloud();
 
   CropBoxParameters self_crop_box_parameters_{};
@@ -78,10 +89,11 @@ private:
   UndistortionType undistortion_type_{UndistortionType::Invalid};
   bool enable_ring_outlier_filter_{true};
 
+  PreprocessorCapacity capacity_{};
   int num_rings_{};
   int max_points_per_ring_{};
-  size_t num_raw_points_{};
-  size_t num_organized_points_{};
+  std::size_t num_organized_points_{};
+  std::size_t num_raw_points_{};
 
   std::vector<sensor_msgs::msg::PointField> point_fields_;
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> output_pointcloud_ptr_;
@@ -116,6 +128,8 @@ private:
   thrust::device_vector<std::uint32_t> device_indices_;
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
+  std::size_t active_twist_2d_struct_count_{};
+  std::size_t active_twist_3d_struct_count_{};
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
 };
 

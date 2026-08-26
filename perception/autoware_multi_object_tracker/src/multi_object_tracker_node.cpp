@@ -16,7 +16,6 @@
 
 #include "multi_object_tracker_node.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
@@ -59,8 +58,13 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   params_.world_frame_id = declare_parameter<std::string>("world_frame_id");
   params_.ego_frame_id = declare_parameter<std::string>("ego_frame_id");
-  params_.enable_delay_compensation = declare_parameter<bool>("enable_delay_compensation");
   params_.enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
+  params_.ego_source = toEgoSource(declare_parameter<std::string>("ego_source"));
+  // publish-trigger side: false publishes on measurement, true publishes from the periodic timer
+  params_.publish_on_timer = declare_parameter<bool>("publish_on_timer");
+  // object-export side: which timestamp the published tracks are predicted to
+  params_.delay_compensation =
+    toDelayReference(declare_parameter<std::string>("delay_compensation"));
   params_.publish_processing_time_detail =
     declare_parameter<bool>("publish_processing_time_detail");
   params_.publish_merged_objects = declare_parameter<bool>("publish_merged_objects");
@@ -209,39 +213,24 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     params_.association_config.buildMaxDistances();
   }
 
-  params_.tracker_overlap_manager_config.min_known_object_removal_iou =
-    declare_parameter<double>("min_known_object_removal_iou");
-  params_.tracker_overlap_manager_config.min_unknown_object_removal_iou =
-    declare_parameter<double>("min_unknown_object_removal_iou");
-
-  const auto parse_label_double_map = [this](const std::string & ns) -> LabelDoubleMap {
-    LabelDoubleMap result;
-    for (const auto label : classes::trackedLabels()) {
-      result[label] = declare_parameter<double>(ns + "." + classes::toString(label));
-    }
-    return result;
-  };
-
-  // pruning parameters
-  params_.tracker_overlap_manager_config.pruning_giou_thresholds =
-    parse_label_double_map("pruning_generalized_iou_thresholds");
-  params_.tracker_overlap_manager_config.pruning_static_object_speed =
-    declare_parameter<double>("pruning_static_object_speed");
-  params_.tracker_overlap_manager_config.pruning_moving_object_speed =
-    declare_parameter<double>("pruning_moving_object_speed");
-  params_.tracker_overlap_manager_config.pruning_static_iou_threshold =
-    declare_parameter<double>("pruning_static_iou_threshold");
-
-  params_.tracker_overlap_manager_config.pruning_distance_thresholds =
-    parse_label_double_map("pruning_distance_thresholds");
-  for (const auto & [label, dist] :
-       params_.tracker_overlap_manager_config.pruning_distance_thresholds) {
-    params_.tracker_overlap_manager_config.pruning_distance_thresholds_sq[label] = dist * dist;
+  // pruning parameters: tracker-pair redundancy thresholds per label-pair class
+  params_.tracker_overlap_manager_config.pedestrian_pair_min_iou =
+    declare_parameter<double>("pruning_pedestrian_pair_min_iou");
+  params_.tracker_overlap_manager_config.known_pair_min_iou =
+    declare_parameter<double>("pruning_known_pair_min_iou");
+  params_.tracker_overlap_manager_config.unknown_pair_min_giou =
+    declare_parameter<double>("pruning_unknown_pair_min_giou");
+  params_.tracker_overlap_manager_config.unknown_pair_max_gap =
+    declare_parameter<double>("pruning_unknown_pair_max_gap");
+  // Per-tracker-type configuration (tracker_configs.<tracker>.<member>)
+  params_.tracker_configs.polygon_tracker.enable_velocity_estimation =
+    declare_parameter<bool>("tracker_configs.polygon_tracker.enable_velocity_estimation");
+  for (const auto label : classes::trackedLabels()) {
+    params_.tracker_configs.polygon_tracker.enable_motion_output[label] = declare_parameter<bool>(
+      "tracker_configs.polygon_tracker.enable_motion_output." + classes::toString(label));
   }
-  params_.creation_config.enable_unknown_object_velocity_estimation =
-    declare_parameter<bool>("enable_unknown_object_velocity_estimation");
-  params_.creation_config.enable_unknown_object_motion_output =
-    declare_parameter<bool>("enable_unknown_object_motion_output");
+  params_.tracker_configs.static_tracker.convert_polygon_to_bbox =
+    declare_parameter<bool>("tracker_configs.static_tracker.convert_polygon_to_bbox");
 
   // Set the unknown-unknown association GIoU threshold
   params_.association_config.unknown_association_giou_threshold =
@@ -274,6 +263,15 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
                   msg) { this->onMeasurement(index, std::move(msg)); });
   }
 
+  // odometry subscription (ego pose source when ego_source == "odometry")
+  if (params_.ego_source == EgoSource::ODOMETRY) {
+    sub_odometry_ = create_subscription<nav_msgs::msg::Odometry>(
+      "~/input/odometry", rclcpp::QoS{10},
+      [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) msg) {
+        state_.odometry->updateOdometryBuffer(*msg);
+      });
+  }
+
   // publishers
   tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
     "~/output/objects", rclcpp::QoS{1});
@@ -284,7 +282,17 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   ////// callback timer
-  if (params_.enable_delay_compensation) {
+  // Refresh target stream selection periodically so a stalled latency-reference stream can fail
+  // over without changing the publish cadence. Measurement callbacks remain the batch trigger.
+  const auto channel_optimizer_timer_period = rclcpp::Rate(params_.publish_rate).period();
+  channel_optimizer_timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), channel_optimizer_timer_period,
+    std::bind(&MultiObjectTracker::onChannelOptimizerTimer, this));
+
+  // The publish timer is an independent trigger: when disabled, tracks are published on
+  // measurement; when enabled, the timer drives publishing. The export reference
+  // (delay_compensation) is orthogonal.
+  if (params_.publish_on_timer) {
     constexpr double timer_multiplier = 10.0;  // 10 times frequent for publish timing check
     const auto timer_period = rclcpp::Rate(params_.publish_rate * timer_multiplier).period();
     publish_timer_ = autoware::agnocast_wrapper::create_timer(
@@ -343,6 +351,14 @@ void MultiObjectTracker::processObjects()
   if (result.should_publish) {
     publish();
   }
+}
+
+void MultiObjectTracker::onChannelOptimizerTimer()
+{
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  state_.input_manager->optimizeChannelTimings(this->now());
 }
 
 void MultiObjectTracker::onTimer()

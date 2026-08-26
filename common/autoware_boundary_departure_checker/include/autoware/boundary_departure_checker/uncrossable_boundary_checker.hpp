@@ -52,16 +52,18 @@ public:
    * @brief Update departure status along a predicted trajectory.
    * @param[in] predicted_traj predicted trajectory
    * @param[in] ego_state current ego dynamic state
+   * @param[in,out] state hysteresis state to evaluate against and update in place. The caller
+   *   owns this state, allowing independent hysteresis per trajectory/generator.
    * @return departure result
    */
   DepartureResult update_departure_status(
-    const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state);
+    const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state,
+    HysteresisState & state);
 
 private:
   UncrossableBoundaryDepartureParam param_;
   VehicleInfo vehicle_info_;
   std::unique_ptr<BoundaryDepartureEvaluator> evaluator_ptr_;
-  HysteresisState hysteresis_state_;
 
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>();

@@ -14,9 +14,8 @@
 
 #include "autoware/external_cmd_selector/external_cmd_selector_node.hpp"
 
-#include <autoware/qos_utils/qos_compatibility.hpp>
-
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -25,7 +24,7 @@ namespace autoware::external_cmd_selector
 {
 
 ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_options)
-: Node("external_cmd_selector", node_options)
+: autoware::agnocast_wrapper::Node("external_cmd_selector", node_options)
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -51,7 +50,7 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
   callback_group_services_ =
     this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-  auto subscriber_option = rclcpp::SubscriptionOptions();
+  AUTOWARE_SUBSCRIPTION_OPTIONS subscriber_option;
   subscriber_option.callback_group = callback_group_subscribers_;
 
   // Subscriber
@@ -113,7 +112,7 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
   srv_select_external_command_ = create_service<CommandSourceSelect>(
     "~/service/select_external_command",
     std::bind(&ExternalCmdSelector::on_select_external_command, this, _1, _2),
-    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), callback_group_services_);
+    rclcpp::ServicesQoS(), callback_group_services_);
 
   // Initialize mode
   auto convert_selector_mode = [](const std::string & mode_text) {
@@ -125,7 +124,7 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
     }
     throw std::invalid_argument("unknown selector mode");
   };
-  current_selector_mode_.data = convert_selector_mode(initial_selector_mode);
+  current_selector_mode_.store(convert_selector_mode(initial_selector_mode));
 
   // Diagnostics Updater
   updater_.setHardwareID("external_cmd_selector");
@@ -135,52 +134,58 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
 
   // Timer
   const auto period_ns = rclcpp::Rate(update_rate).period();
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), period_ns, std::bind(&ExternalCmdSelector::on_timer, this),
     callback_group_subscribers_);
 }
 
-void ExternalCmdSelector::on_pedals_cmd(const PedalsCommand & msg, uint8_t mode)
+void ExternalCmdSelector::on_pedals_cmd(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PedalsCommand) & msg, uint8_t mode)
 {
-  if (current_selector_mode_.data != mode) return;
-  pub_pedals_cmd_->publish(msg);
+  if (current_selector_mode_.load() != mode) return;
+  pub_pedals_cmd_->publish(*msg);
 }
 
-void ExternalCmdSelector::on_steering_cmd(const SteeringCommand & msg, uint8_t mode)
+void ExternalCmdSelector::on_steering_cmd(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SteeringCommand) & msg, uint8_t mode)
 {
-  if (current_selector_mode_.data != mode) return;
-  pub_steering_cmd_->publish(msg);
+  if (current_selector_mode_.load() != mode) return;
+  pub_steering_cmd_->publish(*msg);
 }
 
-void ExternalCmdSelector::on_heartbeat(const OperatorHeartbeat & msg, uint8_t mode)
+void ExternalCmdSelector::on_heartbeat(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(OperatorHeartbeat) & msg, uint8_t mode)
 {
-  if (current_selector_mode_.data != mode) return;
-  pub_heartbeat_->publish(msg);
+  if (current_selector_mode_.load() != mode) return;
+  pub_heartbeat_->publish(*msg);
 }
 
-void ExternalCmdSelector::on_gear_cmd(const GearCommand & msg, uint8_t mode)
+void ExternalCmdSelector::on_gear_cmd(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(GearCommand) & msg, uint8_t mode)
 {
-  if (current_selector_mode_.data != mode) return;
-  pub_gear_cmd_->publish(msg);
+  if (current_selector_mode_.load() != mode) return;
+  pub_gear_cmd_->publish(*msg);
 }
 
-void ExternalCmdSelector::on_turn_indicators_cmd(const TurnIndicatorsCommand & msg, uint8_t mode)
+void ExternalCmdSelector::on_turn_indicators_cmd(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TurnIndicatorsCommand) & msg, uint8_t mode)
 {
-  if (current_selector_mode_.data != mode) return;
-  pub_turn_indicators_cmd_->publish(msg);
+  if (current_selector_mode_.load() != mode) return;
+  pub_turn_indicators_cmd_->publish(*msg);
 }
 
-void ExternalCmdSelector::on_hazard_lights_cmd(const HazardLightsCommand & msg, uint8_t mode)
+void ExternalCmdSelector::on_hazard_lights_cmd(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(HazardLightsCommand) & msg, uint8_t mode)
 {
-  if (current_selector_mode_.data != mode) return;
-  pub_hazard_lights_cmd_->publish(msg);
+  if (current_selector_mode_.load() != mode) return;
+  pub_hazard_lights_cmd_->publish(*msg);
 }
 
 bool ExternalCmdSelector::on_select_external_command(
-  const CommandSourceSelect::Request::SharedPtr req,
-  const CommandSourceSelect::Response::SharedPtr res)
+  const AUTOWARE_SERVER_REQUEST_PTR(CommandSourceSelect) & req,
+  const AUTOWARE_SERVER_RESPONSE_PTR(CommandSourceSelect) & res)
 {
-  current_selector_mode_.data = req->mode.data;
+  current_selector_mode_.store(req->mode.data);
   res->success = true;
   res->message = "Success.";
   return true;
@@ -188,7 +193,9 @@ bool ExternalCmdSelector::on_select_external_command(
 
 void ExternalCmdSelector::on_timer()
 {
-  pub_current_selector_mode_->publish(current_selector_mode_);
+  CommandSourceMode mode;
+  mode.data = current_selector_mode_.load();
+  pub_current_selector_mode_->publish(mode);
   updater_.force_update();
 }
 

@@ -6,3 +6,5 @@
     signal_consistency_check:
       enable: false
       publish_partial_matched_signal: false
+    map_based_signal_filter:
+      enable: false

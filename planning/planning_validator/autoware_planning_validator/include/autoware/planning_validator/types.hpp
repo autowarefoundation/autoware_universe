@@ -79,6 +79,7 @@ struct PlanningValidatorParams
 {
   bool publish_diag = true;
   bool display_on_terminal = true;
+  bool allow_area = false;
   double soft_stop_deceleration{};
   double soft_stop_jerk_lim{};
   double th_traffic_light_timeout{0.5};

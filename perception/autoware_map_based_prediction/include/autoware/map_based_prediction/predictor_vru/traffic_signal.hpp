@@ -17,6 +17,7 @@
 
 #include "autoware/map_based_prediction/data_structure.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -46,7 +47,7 @@ public:
     std::vector<double> timeout_set_for_no_intention_to_walk;
   };
 
-  explicit TrafficSignalModule(rclcpp::Node & node) : node_(node) {}
+  explicit TrafficSignalModule(autoware::agnocast_wrapper::Node & node) : node_(node) {}
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
   {
@@ -66,12 +67,16 @@ public:
   [[nodiscard]] std::optional<lanelet::Id> getSignalId(
     const lanelet::ConstLanelet & way_lanelet) const;
 
+  /// True when @p way_lanelet has an associated traffic signal that is currently red.
+  /// Returns false when the lanelet has no signal or the signal is not red.
+  [[nodiscard]] bool isRedSignal(const lanelet::ConstLanelet & way_lanelet) const;
+
   bool calcIntentionToCross(
     const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
     const lanelet::Id & signal_id);
 
 private:
-  rclcpp::Node & node_;
+  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   std::unordered_map<lanelet::Id, TrafficLightGroup> signal_id_map_;

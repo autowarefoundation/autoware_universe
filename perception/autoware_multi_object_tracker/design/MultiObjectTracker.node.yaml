@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.3.0
+autoware_system_design_format: 0.4.0
 
 # node information
 name: MultiObjectTracker.node
@@ -13,41 +13,60 @@ launch:
 
 # interfaces
 subscribers:
-  - name: ros_transform
-    message_type: tf2_msgs/msg/TFMessage
-    global: /tf
   - name: detection01/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 1
   - name: detection02/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 2
   - name: detection03/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 3
   - name: detection04/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 4
   - name: detection05/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 5
   - name: detection06/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 6
   - name: detection07/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 7
   - name: detection08/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 8
   - name: detection09/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 9
   - name: detection10/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 10
   - name: detection11/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 11
   - name: detection12/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the detected objects input for channel 12
+  - name: input/odometry
+    message_type: nav_msgs/msg/Odometry
+    description: the odometry input for ego vehicle state estimation
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    description: the ros transform input for ego vehicle state estimation
+    global: /tf
+
 publishers:
   - name: objects
     message_type: autoware_perception_msgs/msg/TrackedObjects
+    description: the tracked objects output from the multi-object tracker
     qos:
       reliability: reliable
       durability: transient_local
   - name: merged_objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
+    description: the merged detected objects output from the multi-object tracker
     qos:
       reliability: reliable
       durability: transient_local
@@ -56,51 +75,71 @@ publishers:
 param_files:
   - name: tracker_setting_path
     default: config/multi_object_tracker_node.param.yaml
+    description: Parameters for the multi-object tracker node
   - name: data_association_matrix_path
     default: config/data_association_matrix.param.yaml
+    description: Parameters for Data Association
   - name: input_channels_path
     default: config/input_channels.param.yaml
+    description: Parameters for Input Channels. the channel names are set in this file. The channel names are used to subscribe to the detected objects from each channel.
 
 param_values:
   - name: input/detection01/channel
     type: string
     default: none
+    description: the channel name for channel 1
   - name: input/detection02/channel
     type: string
     default: none
+    description: the channel name for channel 2
   - name: input/detection03/channel
     type: string
     default: none
+    description: the channel name for channel 3
   - name: input/detection04/channel
     type: string
     default: none
+    description: the channel name for channel 4
   - name: input/detection05/channel
     type: string
     default: none
+    description: the channel name for channel 5
   - name: input/detection06/channel
     type: string
     default: none
+    description: the channel name for channel 6
   - name: input/detection07/channel
     type: string
     default: none
+    description: the channel name for channel 7
   - name: input/detection08/channel
     type: string
     default: none
+    description: the channel name for channel 8
   - name: input/detection09/channel
     type: string
     default: none
+    description: the channel name for channel 9
   - name: input/detection10/channel
     type: string
     default: none
+    description: the channel name for channel 10
   - name: input/detection11/channel
     type: string
     default: none
+    description: the channel name for channel 11
   - name: input/detection12/channel
     type: string
     default: none
+    description: the channel name for channel 12
   - name: publish_merged_objects
     type: boolean
     default: false
+    description: switch to publish the merged detected objects output
+  - name: ego_source
+    type: string
+    default: tf
+    description: the source of ego vehicle state estimation. "tf" or "odometry" are supported. If "tf" is selected, the ego vehicle state is estimated from the ros transform input. If "odometry" is selected, the ego vehicle state is estimated from the odometry input.
 
 # processes
 processes:

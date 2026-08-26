@@ -26,6 +26,7 @@
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
 #include <vector>
@@ -42,6 +43,7 @@ private:
   // ROS interface
   std::vector<AUTOWARE_SUBSCRIPTION_PTR(autoware_perception_msgs::msg::DetectedObjects)>
     sub_objects_array_{};
+  AUTOWARE_SUBSCRIPTION_PTR(nav_msgs::msg::Odometry) sub_odometry_ {};
 
   AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) tracked_objects_pub_;
   AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) merged_objects_pub_;
@@ -49,8 +51,9 @@ private:
   AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
   detailed_processing_time_publisher_;
 
-  // publish timer
+  // timers
   AUTOWARE_TIMER_PTR publish_timer_;
+  AUTOWARE_TIMER_PTR channel_optimizer_timer_;
 
   // parameters and internal state
   MultiObjectTrackerParameters params_;
@@ -65,6 +68,7 @@ private:
 
   // callback functions
   void onTimer();
+  void onChannelOptimizerTimer();
   void processObjects();
   void onMeasurement(
     const size_t channel_index,

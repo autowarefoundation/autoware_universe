@@ -9,17 +9,98 @@
         "plugins_path": {
           "type": "string",
           "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
-          "description": "Path to libautoware_tensorrt_plugins.so file for the diffusion planner"
+          "description": "Path to libautoware_tensorrt_plugins.so file for native TensorRT and ONNX Runtime TensorRT EP"
         },
-        "onnx_model_path": {
-          "type": "string",
-          "default": "$(var data_path)/v4.0/diffusion_planner.onnx",
-          "description": "Path to the ONNX model file for the diffusion planner"
-        },
-        "args_path": {
-          "type": "string",
-          "default": "$(var data_path)/v4.0/diffusion_planner.param.json",
-          "description": "Path to model argument/configuration file"
+        "model": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "default": "single_step",
+              "enum": ["single_step", "multi_step"],
+              "description": "Inference model type"
+            },
+            "base_model_directory": {
+              "type": "string",
+              "default": "$(var data_path)/diffusion_planner/v5.0",
+              "description": "Base directory containing ONNX models and args file"
+            },
+            "args_filename": {
+              "type": "string",
+              "default": "diffusion_planner.param.json",
+              "description": "Args/configuration JSON filename relative to base_model_directory"
+            },
+            "backend": {
+              "type": "string",
+              "default": "tensorrt",
+              "enum": ["tensorrt", "ort_cpu", "ort_cuda", "ort_tensorrt"],
+              "description": "Inference backend. tensorrt uses the native TensorRT implementation; ort_cpu/ort_cuda/ort_tensorrt use ONNX Runtime with the corresponding execution provider."
+            },
+            "precision": {
+              "type": "string",
+              "default": "fp32",
+              "enum": ["fp32", "fp16"],
+              "description": "TensorRT engine precision"
+            },
+            "use_cuda_graph": {
+              "type": "boolean",
+              "default": true,
+              "description": "Use CUDA Graph replay for TensorRT enqueue calls"
+            },
+            "single_step_model": {
+              "type": "object",
+              "properties": {
+                "onnx_model_filename": {
+                  "type": "string",
+                  "default": "diffusion_planner.onnx",
+                  "description": "Single-step ONNX model filename relative to base_model_directory"
+                }
+              },
+              "required": ["onnx_model_filename"]
+            },
+            "multi_step_model": {
+              "type": "object",
+              "properties": {
+                "encoder_onnx_model_filename": {
+                  "type": "string",
+                  "default": "diffusion_planner_encoder.onnx",
+                  "description": "Encoder ONNX model filename relative to base_model_directory"
+                },
+                "decoder_onnx_model_filename": {
+                  "type": "string",
+                  "default": "diffusion_planner_decoder.onnx",
+                  "description": "Decoder ONNX model filename relative to base_model_directory"
+                },
+                "turn_indicator_onnx_model_filename": {
+                  "type": "string",
+                  "default": "diffusion_planner_turn_indicator.onnx",
+                  "description": "Turn indicator ONNX model filename relative to base_model_directory"
+                },
+                "dpm_solver_steps": {
+                  "type": "integer",
+                  "default": 10,
+                  "minimum": 2,
+                  "description": "Number of DPM-Solver denoising steps. The final denoise-to-zero step is added separately."
+                }
+              },
+              "required": [
+                "encoder_onnx_model_filename",
+                "decoder_onnx_model_filename",
+                "turn_indicator_onnx_model_filename",
+                "dpm_solver_steps"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "base_model_directory",
+            "args_filename",
+            "backend",
+            "precision",
+            "use_cuda_graph",
+            "single_step_model",
+            "multi_step_model"
+          ]
         },
         "planning_frequency_hz": {
           "type": "number",
@@ -31,11 +112,6 @@
           "type": "boolean",
           "default": false,
           "description": "Ignore neighbor agents"
-        },
-        "ignore_unknown_neighbors": {
-          "type": "boolean",
-          "default": true,
-          "description": "Ignore neighbor agents with unknown class"
         },
         "traffic_light_group_msg_timeout_seconds": {
           "type": "number",
@@ -106,6 +182,105 @@
           "default": false,
           "description": "Whether to interpolate ego past trajectory at regular time intervals"
         },
+        "object_motion_resampling": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": true,
+              "description": "Re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp (read-only)"
+            },
+            "max_extrapolation_time": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0,
+              "description": "Maximum extrapolation horizon [s], both forward from the newest and backward from the oldest observation"
+            }
+          },
+          "required": ["enable", "max_extrapolation_time"]
+        },
+        "ego_snap_to_prev_trajectory": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether to snap the ego pose onto the previous planning trajectory. When enabled, the ego pose is replaced by the foot of the perpendicular to the closest segment of the previous planning trajectory (planning start pose + previous prediction)."
+            },
+            "max_position_error_m": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0,
+              "description": "Maximum allowed position distance [m] between the actual ego pose and the snapped pose. If the distance exceeds this value the snap is skipped and the raw ego pose is kept."
+            },
+            "max_yaw_error_deg": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0,
+              "description": "Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose. If the difference exceeds this value the snap is skipped and the raw ego pose is kept."
+            },
+            "max_search_segment_count": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "description": "Number of leading segments of the previous trajectory searched for the closest one. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected."
+            }
+          },
+          "required": [
+            "enable",
+            "max_position_error_m",
+            "max_yaw_error_deg",
+            "max_search_segment_count"
+          ]
+        },
+        "guidance": {
+          "type": "object",
+          "properties": {
+            "start_guidance": {
+              "type": "object",
+              "properties": {
+                "reference_distance_m": {
+                  "type": "number",
+                  "default": 10.0,
+                  "minimum": 0,
+                  "description": "Reference straight-line distance between the ego trajectory start and terminal point [m]"
+                },
+                "max_scale": {
+                  "type": "number",
+                  "default": 30.0,
+                  "minimum": 1.0,
+                  "description": "Maximum scale applied to the ego trajectory by start guidance"
+                }
+              },
+              "required": ["reference_distance_m", "max_scale"]
+            },
+            "stop_guidance": {
+              "type": "object",
+              "properties": {
+                "stop_acceleration_mps2": {
+                  "type": "number",
+                  "default": 1.0,
+                  "exclusiveMinimum": 0,
+                  "description": "Deceleration magnitude used to calculate stop guidance reference distance [m/s^2]"
+                }
+              },
+              "required": ["stop_acceleration_mps2"]
+            },
+            "centerline_guidance": {
+              "type": "object",
+              "properties": {
+                "start_time_s": {
+                  "type": "number",
+                  "default": 2.0,
+                  "minimum": 0,
+                  "description": "Trajectory points at and after this prediction time are snapped to the nearest route centerline point [s]"
+                }
+              },
+              "required": ["start_time_s"]
+            }
+          },
+          "required": ["start_guidance", "stop_guidance", "centerline_guidance"]
+        },
         "planning_factor": {
           "type": "object",
           "properties": {
@@ -166,8 +341,7 @@
         }
       },
       "required": [
-        "onnx_model_path",
-        "args_path",
+        "model",
         "planning_frequency_hz",
         "traffic_light_group_msg_timeout_seconds",
         "batch_size",
@@ -177,7 +351,8 @@
         "turn_indicator_keep_offset",
         "turn_indicator_hold_duration",
         "planning_factor",
-        "debug_params"
+        "debug_params",
+        "guidance"
       ]
     }
   },
