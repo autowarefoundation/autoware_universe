@@ -61,7 +61,7 @@ DrivingModeMapping::DrivingModeMapping(autoware::agnocast_wrapper::Node & node, 
 
 void DrivingModeMapping::update(const rclcpp::Time & stamp) const
 {
-  const auto create_message = [this, stamp](const auto & pub, const auto & units) {
+  const auto create_message = [stamp](const auto & pub, const auto & units) {
     auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub);
     msg->stamp = stamp;
     for (const auto & [mode, unit] : units) {
