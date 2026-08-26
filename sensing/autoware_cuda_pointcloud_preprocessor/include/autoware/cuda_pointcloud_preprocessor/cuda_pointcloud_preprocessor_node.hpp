@@ -77,6 +77,8 @@ CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, channel);
 struct InputBoundsParams
 {
   std::size_t max_input_point_count{};
+  int max_ring_count{};
+  int max_points_per_ring{};
   std::size_t max_twist_subscriber_queue_size{};
   std::size_t max_imu_subscriber_queue_size{};
   std::size_t max_twist_queue_size{};
