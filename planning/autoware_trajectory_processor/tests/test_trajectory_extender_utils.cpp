@@ -21,9 +21,9 @@
 #include <cmath>
 #include <vector>
 
-using autoware::trajectory_optimizer::plugin::trajectory_extender_utils::
+using autoware::trajectory_processor::plugin::trajectory_extender_utils::
   add_ego_state_to_trajectory;
-using autoware::trajectory_optimizer::plugin::trajectory_extender_utils::
+using autoware::trajectory_processor::plugin::trajectory_extender_utils::
   expand_trajectory_with_ego_history;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using nav_msgs::msg::Odometry;

@@ -5,7 +5,6 @@ The `traffic_light_compliance_checker` package provides a deterministic validati
 ## Core Features
 
 1. **Signal State Tracking (`TrafficLightStatusTracker`)**
-
    - Eliminates perception jitter and signal flickering by maintaining a temporal state history for each traffic light group ID.
    - Leverages stable duration thresholds before validating a transition to `RED` or `AMBER`.
    - Utilizes a hysteresis buffer to sustain known states during transient object occlusions.

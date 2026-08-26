@@ -282,6 +282,13 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   ////// callback timer
+  // Refresh target stream selection periodically so a stalled latency-reference stream can fail
+  // over without changing the publish cadence. Measurement callbacks remain the batch trigger.
+  const auto channel_optimizer_timer_period = rclcpp::Rate(params_.publish_rate).period();
+  channel_optimizer_timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), channel_optimizer_timer_period,
+    std::bind(&MultiObjectTracker::onChannelOptimizerTimer, this));
+
   // The publish timer is an independent trigger: when disabled, tracks are published on
   // measurement; when enabled, the timer drives publishing. The export reference
   // (delay_compensation) is orthogonal.
@@ -344,6 +351,14 @@ void MultiObjectTracker::processObjects()
   if (result.should_publish) {
     publish();
   }
+}
+
+void MultiObjectTracker::onChannelOptimizerTimer()
+{
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  state_.input_manager->optimizeChannelTimings(this->now());
 }
 
 void MultiObjectTracker::onTimer()

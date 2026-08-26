@@ -23,6 +23,7 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LaneletMap.h>
 
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <string>
@@ -123,6 +124,26 @@ LaneletsData getCurrentLanelets(
   const double sigma_yaw_angle_deg);
 double lateral_distance_to_lanelet_bounds(
   const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Point & point);
+
+/// Deceleration [m/ss] assumed for each object class when judging whether an object can stop
+/// before a line it is predicted to cross. Values are negative accelerations, and every class of
+/// autoware_perception_msgs::msg::ObjectClassification has an entry.
+struct ObjectDecelerationParams
+{
+  std::unordered_map<uint8_t, double> per_label{};
+
+  /// Deceleration configured for @p label. Returns 0.0 for a label that has no entry at all, so
+  /// that such an object is treated as unable to stop.
+  [[nodiscard]] double get(uint8_t label) const;
+};
+
+/// Distance [m] travelled before coming to a stop. Infinite when @p deceleration is not negative,
+/// i.e. when the object cannot stop at all.
+double distance_to_stop_with_deceleration(double speed, double deceleration);
+
+/// 2D linestring over the path positions up to and including @p last_idx.
+lanelet::BasicLineString2d to_linestring_2d(
+  const std::vector<geometry_msgs::msg::Pose> & path, size_t last_idx);
 
 }  // namespace utils
 
