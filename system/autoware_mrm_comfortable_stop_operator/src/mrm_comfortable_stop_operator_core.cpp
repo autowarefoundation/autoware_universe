@@ -86,10 +86,10 @@ void MrmComfortableStopOperator::operateComfortableStop(
 void MrmComfortableStopOperator::onDrivingModeRequest(const DrivingModeRequest & msg)
 {
   if (msg.mode == driving_mode_id_) {
-    if (status_.state != MrmBehaviorStatus::OPERATING) publishVelocityLimit();
+    publishVelocityLimit();
     status_.state = MrmBehaviorStatus::OPERATING;
   } else {
-    if (status_.state != MrmBehaviorStatus::AVAILABLE) publishVelocityLimitClearCommand();
+    publishVelocityLimitClearCommand();
     status_.state = MrmBehaviorStatus::AVAILABLE;
   }
 }
