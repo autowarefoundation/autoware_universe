@@ -16,7 +16,11 @@
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_CORE_HPP_
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
-#include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
+#include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
+#include "autoware/diffusion_planner/inference/guidance/centerline_guidance.hpp"
+#include "autoware/diffusion_planner/inference/guidance/start_guidance.hpp"
+#include "autoware/diffusion_planner/inference/guidance/stop_guidance.hpp"
+#include "autoware/diffusion_planner/inference/inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/turn_indicator_manager.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 #include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
@@ -35,6 +39,7 @@
 #include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <std_msgs/msg/float32_multi_array.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -62,8 +67,10 @@ using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using preprocess::TrafficSignalStamped;
+using std_msgs::msg::Float32MultiArray;
 using unique_identifier_msgs::msg::UUID;
-using utils::NormalizationMap;
+using utils::ObservationNormalization;
+using utils::StateNormalization;
 using InputDataMap = std::unordered_map<std::string, std::vector<float>>;
 using AgentPoses = std::vector<std::vector<std::vector<Eigen::Matrix4d>>>;
 
@@ -88,7 +95,9 @@ struct PlannerOutput
   Trajectory trajectory;
   CandidateTrajectories candidate_trajectories;
   PredictedObjects predicted_objects;
-  TurnIndicatorsCommand turn_indicator_command;
+  TurnIndicatorsCommand turn_indicators_command;
+  Float32MultiArray denoising_steps;
+  std::unordered_map<std::string, std::vector<bool>> guidance_triggered;
 };
 
 struct FrameContext
@@ -98,17 +107,59 @@ struct FrameContext
   Eigen::Matrix4d ego_to_map_transform;
   std::vector<AgentHistory> ego_centric_neighbor_histories;
   rclcpp::Time frame_time;
+  // Ego pose snapped onto the previous planning trajectory (map frame) and the interpolation time
+  // of the snapped foot along that trajectory. Set only when ego_snap_to_prev_trajectory actually
+  // snapped this frame; nullopt otherwise.
+  std::optional<Eigen::Matrix4d> snapped_pose;
+  std::optional<double> snapped_interpolation_time_s;
+};
+
+/**
+ * @brief Parameters for snapping the ego pose onto the previous planning trajectory.
+ *
+ * The ego pose fed to the model is replaced by the foot of the perpendicular to the closest
+ * segment of the previous planning trajectory, so that consecutive frames stay on a single
+ * consistent trajectory instead of re-planning from a slightly drifted localization pose. The
+ * error limits reject the snap when the previous trajectory no longer reflects reality.
+ */
+struct EgoSnapParams
+{
+  // When false, the raw ego pose is used as-is.
+  bool enable;
+
+  // Maximum allowed distance [m] between the actual ego pose and the snapped pose.
+  double max_position_error_m;
+
+  // Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose.
+  double max_yaw_error_deg;
+
+  // Number of leading segments of the previous trajectory searched for the closest one. The
+  // planning cycle only advances the ego by ~1 segment, so a small window is enough and it keeps
+  // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
+  int64_t max_search_segment_count;
 };
 
 struct DiffusionPlannerParams
 {
-  std::string model_path;
+  std::string model_type;
+  std::string base_model_directory;
+  std::string args_filename;
+  std::string single_step_model_filename;
+  std::string encoder_model_filename;
+  std::string decoder_model_filename;
+  std::string turn_indicator_model_filename;
+  std::string single_step_model_path;
+  std::string encoder_model_path;
+  std::string decoder_model_path;
+  std::string turn_indicator_model_path;
   std::string args_path;
   std::string plugins_path;
+  std::string backend;
+  std::string trt_precision;
+  bool use_cuda_graph;
   bool build_only;
   double planning_frequency_hz;
   bool ignore_neighbors;
-  bool ignore_unknown_neighbors;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
   std::vector<double> temperature_list;
@@ -120,6 +171,13 @@ struct DiffusionPlannerParams
   int64_t delay_step;
   double line_string_max_step_m;
   bool use_time_interpolation;
+  HistoryResamplingParams object_motion_resampling;
+  EgoSnapParams ego_snap_to_prev_trajectory;
+  int dpm_solver_steps;
+  double start_guidance_reference_distance_m;
+  double start_guidance_max_scale;
+  double stop_guidance_stop_acceleration_mps2;
+  double centerline_guidance_start_time_s;
 };
 
 /**
@@ -147,7 +205,7 @@ public:
   /**
    * @brief Load TensorRT model and normalization statistics.
    *
-   * @throws std::runtime_error if args_path or model_path are invalid, if the
+   * @throws std::runtime_error if args_path or model paths are invalid, if the
    *         model version is incompatible, or if TensorRT engine setup fails.
    */
   void load_model();
@@ -158,6 +216,8 @@ public:
    * @param params New parameters to apply
    */
   void update_params(const DiffusionPlannerParams & params);
+
+  void resolve_model_paths();
 
   /**
    * @brief Prepare frame context for inference.
@@ -201,7 +261,7 @@ public:
    *
    * @return true if model is loaded, false otherwise
    */
-  bool is_model_loaded() const { return tensorrt_inference_ != nullptr; }
+  bool is_model_loaded() const { return diffusion_planner_inference_ != nullptr; }
 
   /**
    * @brief Check if the map is loaded.
@@ -211,19 +271,43 @@ public:
   bool is_map_loaded() const { return lane_segment_context_ != nullptr; }
 
   /**
-   * @brief Get the normalization map.
+   * @brief Enable or disable start guidance.
    *
-   * @return Reference to normalization map
+   * @param enabled Whether start guidance should be enabled
    */
-  const NormalizationMap & get_normalization_map() const { return normalization_map_; }
+  void set_start_guidance_enabled(bool enabled);
+
+  /**
+   * @brief Enable or disable stop guidance.
+   *
+   * @param enabled Whether stop guidance should be enabled
+   */
+  void set_stop_guidance_enabled(bool enabled);
+
+  /**
+   * @brief Enable or disable centerline guidance.
+   *
+   * @param enabled Whether centerline guidance should be enabled
+   */
+  void set_centerline_guidance_enabled(bool enabled);
+
+  /**
+   * @brief Get the observation normalization.
+   *
+   * @return Reference to observation normalization
+   */
+  const ObservationNormalization & get_observation_normalization() const
+  {
+    return observation_normalization_;
+  }
 
   /**
    * @brief Run inference on the input data.
    *
    * @param input_data_map Input data for inference
-   * @return Inference result with predictions and turn indicator logits
+   * @return Inference result with predictions, turn indicator logits, and denoising steps
    */
-  TensorrtInference::InferenceResult run_inference(const InputDataMap & input_data_map);
+  InferenceResult run_inference(const InputDataMap & input_data_map);
 
   /**
    * @brief Create all planner output messages from raw inference outputs.
@@ -231,17 +315,15 @@ public:
    * Parses raw predictions, creates ego trajectory (batch 0), candidate trajectories
    * for all batches, predicted objects for neighbor agents, and turn indicator command.
    *
-   * @param predictions Raw model output predictions.
-   * @param turn_indicator_logit Logits for turn indicator classes.
+   * @param inference_output Successful inference output.
    * @param frame_context Context of the current frame.
    * @param timestamp The ROS time stamp for the messages.
    * @param generator_uuid The unique identifier for the planner instance.
    * @return PlannerOutput containing all output messages.
    */
   PlannerOutput create_planner_output(
-    const std::vector<float> & predictions, const std::vector<float> & turn_indicator_logit,
-    const FrameContext & frame_context, const rclcpp::Time & timestamp,
-    const UUID & generator_uuid);
+    const InferenceOutput & inference_output, const FrameContext & frame_context,
+    const rclcpp::Time & timestamp, const UUID & generator_uuid);
 
   /**
    * @brief Get the first traffic light on the route for debugging.
@@ -273,13 +355,27 @@ private:
   // Parameters
   DiffusionPlannerParams params_;
   VehicleSpec vehicle_spec_;
-  NormalizationMap normalization_map_;
+
+  ObservationNormalization observation_normalization_;
+  StateNormalization state_normalization_;
 
   // Inference engine
-  std::unique_ptr<TensorrtInference> tensorrt_inference_{nullptr};
+  std::unique_ptr<Inference> diffusion_planner_inference_{nullptr};
+  std::shared_ptr<StartGuidance> start_guidance_{nullptr};
+  std::shared_ptr<StopGuidance> stop_guidance_{nullptr};
+  std::shared_ptr<CenterlineGuidance> centerline_guidance_{nullptr};
+  bool start_guidance_enabled_{false};
+  bool stop_guidance_enabled_{false};
+  bool centerline_guidance_enabled_{false};
 
   // Postprocessing
-  postprocess::TurnIndicatorManager turn_indicator_manager_;
+  std::vector<postprocess::TurnIndicatorManager> turn_indicator_managers_;
+
+  /**
+   * @brief Resize the per-trajectory turn indicator managers to the current batch size and
+   *        apply the latest hold duration / keep offset parameters to each of them.
+   */
+  void sync_turn_indicator_managers();
 
   // History data
   std::deque<nav_msgs::msg::Odometry> ego_history_;
@@ -287,6 +383,7 @@ private:
   AgentData agent_data_;
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
+  std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;

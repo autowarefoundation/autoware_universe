@@ -2,12 +2,11 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_pipeline_latency_monitor</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>Monitor latency in the Autoware pipeline and publish diagnostics when a threshold is exceeded</description>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
   <maintainer email="takeshi.iwanari@tier4.jp">Takeshi Iwanari</maintainer>
-  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
 
@@ -16,6 +15,7 @@
   <author email="maxime.clement@tier4.jp">Maxime CLEMENT</author>
   <author email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</author>
   <author email="takeshi.iwanari@tier4.jp">Takeshi Iwanari</author>
+  <author email="satoshi.ota@tier4.jp">Satoshi Ota</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 

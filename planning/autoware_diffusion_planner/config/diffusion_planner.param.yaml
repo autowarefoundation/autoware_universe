@@ -1,11 +1,30 @@
 /**:
   ros__parameters:
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
-    onnx_model_path: $(var data_path)/v4.0/diffusion_planner.onnx
-    args_path: $(var data_path)/v4.0/diffusion_planner.param.json
+    model:
+      type: "multi_step"
+      backend: "tensorrt" # "tensorrt" "ort_cpu" "ort_cuda" "ort_tensorrt"
+      precision: "fp32"
+      use_cuda_graph: false
+      base_model_directory: $(var data_path)/diffusion_planner/v5.0
+      args_filename: diffusion_planner.param.json
+      single_step_model:
+        onnx_model_filename: diffusion_planner.onnx
+      multi_step_model:
+        encoder_onnx_model_filename: diffusion_planner_encoder.onnx
+        decoder_onnx_model_filename: diffusion_planner_decoder.onnx
+        turn_indicator_onnx_model_filename: diffusion_planner_turn_indicator.onnx
+        dpm_solver_steps: 10
+    guidance:
+      start_guidance:
+        reference_distance_m: 10.0
+        max_scale: 30.0
+      stop_guidance:
+        stop_acceleration_mps2: 1.0
+      centerline_guidance:
+        start_time_s: 2.0
     planning_frequency_hz: 10.0
     ignore_neighbors: false
-    ignore_unknown_neighbors: true
     traffic_light_group_msg_timeout_seconds: 0.2
     batch_size: 1
     temperature: [0.0]
@@ -17,6 +36,14 @@
     delay_step: 0
     line_string_max_step_m: 5.0
     use_time_interpolation: false
+    object_motion_resampling:
+      enable: true                    # re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp
+      max_extrapolation_time: 0.5     # [s]  max extrapolation horizon (both forward from newest and backward from oldest observation)
+    ego_snap_to_prev_trajectory:
+      enable: false                   # snap the ego pose onto the closest segment of the previous planning trajectory
+      max_position_error_m: 0.3       # [m]   skip the snap when the actual ego pose is farther than this from the snapped pose
+      max_yaw_error_deg: 5.0          # [deg] skip the snap when the heading differs by more than this from the snapped pose
+      max_search_segment_count: 5     # number of leading segments of the previous trajectory searched for the closest one
     planning_factor:
       enable_stop: true
       enable_slowdown: false

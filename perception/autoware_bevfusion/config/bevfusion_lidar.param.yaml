@@ -24,7 +24,7 @@
     circle_nms_dist_threshold: 0.5
     iou_nms_search_distance_2d: 10.0
     iou_nms_threshold: 0.1
-    yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0] # refers to the class_names
+    yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0, 0.0, 0.0] # refers to the class_names
 
     detection_score_thresholds:
         # Upper bound of radial distance of 3d center_x and center_y in bounding boxes, and starting from 0
@@ -37,3 +37,5 @@
           BUS: [0.10, 0.10, 0.10, 0.10]
           BICYCLE: [0.10, 0.10, 0.10, 0.10]
           PEDESTRIAN: [0.10, 0.10, 0.10, 0.10]
+          TRAFFIC_CONE: [0.10, 0.10, 0.10, 0.10]
+          BARRIER: [0.10, 0.10, 0.10, 0.10]

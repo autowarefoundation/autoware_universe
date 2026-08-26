@@ -15,18 +15,12 @@
 #ifndef TYPES_HPP_
 #define TYPES_HPP_
 
-#include "type_alias.hpp"
+#include <autoware/obstacle_proximity_checker/structs.hpp>
 
 namespace autoware::surround_obstacle_checker
 {
 
-struct StopObstacle
-{
-  bool is_point_cloud;
-  double nearest_distance;
-  Point nearest_point;
-  UUID uuid;
-};
+using StopObstacle = autoware::obstacle_proximity_checker::ProximityObstacle;
 
 }  // namespace autoware::surround_obstacle_checker
 

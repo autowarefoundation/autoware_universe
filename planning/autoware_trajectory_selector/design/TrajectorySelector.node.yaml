@@ -1,0 +1,33 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: TrajectorySelector.node
+package:
+  name: autoware_trajectory_selector
+  provider: autoware
+launch:
+  plugin: autoware::trajectory_selector::TrajectorySelectorNode
+  executable: autoware_trajectory_selector_node
+# interfaces
+subscribers:
+  - name: lanelet2_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: trajectories_generative
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: trajectories_backup
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+publishers:
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
+    remap_target: ~/debug/processing_time_detail_ms/trajectory_selector
+# parameters
+param_files: []
+param_values: []
+# processes
+processes:
+  - name: select_trajectory
+    trigger_conditions:
+      - on_input: trajectories_generative
+    outcomes:
+      - to_output: trajectories

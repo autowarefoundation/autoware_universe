@@ -15,6 +15,7 @@
 #ifndef MULTI_CAMERA_FUSION_HPP_
 #define MULTI_CAMERA_FUSION_HPP_
 
+#include "map_based_signal_filter.hpp"
 #include "signal_validator.hpp"
 #include "traffic_light_multi_camera_fusion_process.hpp"
 #include "types.hpp"
@@ -30,6 +31,7 @@
 #include <lanelet2_core/Forward.h>
 
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -51,6 +53,13 @@ struct ConflictInfo
 using GroupFusionInfoMap =
   std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
 
+struct GroupFusionResult
+{
+  std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, utils::FusionRecord>
+    grouped_record_map;
+  std::vector<ConflictInfo> conflicts;
+};
+
 struct MultiCameraFusionConfig
 {
   /*
@@ -65,6 +74,7 @@ struct MultiCameraFusionConfig
   double prior_log_odds{0.0};
   bool use_signal_consistency_check{false};
   bool publish_partial_matched_signal{false};
+  bool use_map_based_signal_filter{false};
   lanelet::LaneletMapPtr lanelet_map_ptr{nullptr};
 };
 
@@ -97,47 +107,28 @@ public:
     const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals);
 
 private:
-  void multi_camera_fusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
-
-  void group_fusion(
-    const std::map<IdType, utils::FusionRecord> & fused_record_map,
-    std::map<IdType, utils::FusionRecord> & grouped_record_map,
-    std::vector<IdType> & unmapped_traffic_light_ids);
+  GroupFusionResult group_fusion(const std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   /**
    * @brief Accumulates log-odds evidence for each traffic light group from individual fused
    * records.
    */
   GroupFusionInfoMap accumulate_group_evidence(
-    const std::map<IdType, utils::FusionRecord> & fused_record_map,
-    std::vector<IdType> & unmapped_traffic_light_ids);
+    const std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   /**
    * @brief Processes a single fused record and updates the group_fusion_info_map.
    */
   void process_fused_record(
-    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record,
-    std::vector<IdType> & unmapped_traffic_light_ids);
-
-  /**
-   * @brief Updates the map for a single (element, regulatory_id) combination.
-   */
-  void update_group_info_for_element(
-    GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
-    const utils::FusionRecord & record) const;
-
-  /**
-   * @brief Handles the log-odds accumulation logic.
-   */
-  void update_log_odds(
-    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence) const;
+    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
 
   /**
    * @brief Determines the best state for each group based on accumulated evidence.
+   * @return The conflicts detected during this call. Empty when no conflict is found.
    */
-  void determine_best_group_state(
+  std::vector<ConflictInfo> determine_best_group_state(
     const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
-    std::map<IdType, utils::FusionRecord> & grouped_record_map);
+    std::map<IdType, utils::FusionRecord> & grouped_record_map) const;
 
   MultiCameraFusionConfig config_{};
   /*
@@ -149,8 +140,10 @@ private:
   Use multiset in case multiple cameras publish images at the exact same time.
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
-
-  std::vector<ConflictInfo> conflicted_regulatory_element_status_{};
+  /*
+  Non-null only when the map-based filter is enabled and a lanelet map is available.
+  */
+  std::unique_ptr<MapBasedSignalFilter> map_based_signal_filter_;
 };
 
 }  // namespace autoware::traffic_light

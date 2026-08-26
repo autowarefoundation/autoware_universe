@@ -177,7 +177,7 @@ void insert_vertex(
   }
 
   vertices[vertex_index].next = current_index;
-  vertices[vertex_index].prev = vertices[current_index].prev.value();
+  vertices[vertex_index].prev = vertices[current_index].prev;
   std::size_t prev_index = vertices[current_index].prev.value();
 
   if (prev_index != current_index) {

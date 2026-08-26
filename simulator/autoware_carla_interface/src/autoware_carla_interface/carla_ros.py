@@ -25,6 +25,7 @@ from autoware_vehicle_msgs.msg import TurnIndicatorsReport
 from autoware_vehicle_msgs.msg import VelocityReport
 from builtin_interfaces.msg import Time
 import carla
+import cv2
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -42,11 +43,14 @@ from transforms3d.euler import euler2quat
 # New modular sensor infrastructure
 from .modules import ROSPublisherManager
 from .modules import SensorKitLoader
+from .modules import SensorPublishWorker
 from .modules import SensorRegistry
+from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import carla_location_to_ros_point
 from .modules.carla_utils import carla_rotation_to_ros_quaternion
 from .modules.carla_utils import create_cloud
+from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
@@ -69,6 +73,12 @@ class carla_ros2_interface(object):
             "vehicle_type": (rclpy.Parameter.Type.STRING, None),
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
+            "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
+            "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
+            "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
+            "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -300,6 +310,12 @@ class carla_ros2_interface(object):
         # Thread synchronization (protects: current_control, ego_actor, timestamp, physics_control)
         self._state_lock = threading.Lock()
 
+        # Per-sensor publish workers keyed by sensor ID. Heavy sensor data
+        # (camera, lidar) is converted and published on these threads so the
+        # synchronous tick loop is never blocked by serialization or by
+        # reliable-QoS flow control (see SensorPublishWorker).
+        self._publish_workers = {}
+
         # ROS-related helpers initialized later
         self.ros2_node = None
         self.ros_publisher_manager = None
@@ -336,26 +352,50 @@ class carla_ros2_interface(object):
         should_publish = self.sensor_registry.should_publish(sensor, self.timestamp)
         return not should_publish
 
-    def get_msg_header(self, frame_id):
-        """Obtain and modify ROS message header."""
+    def get_msg_header(self, frame_id, timestamp=None):
+        """Obtain and modify ROS message header.
+
+        timestamp defaults to the latest tick time; publish workers pass the
+        timestamp captured when their frame was enqueued so messages are
+        stamped with the frame's own tick even when published later.
+        """
         header = Header()
         header.frame_id = frame_id
-        seconds = int(self.timestamp)
-        nanoseconds = int((self.timestamp - int(self.timestamp)) * 1000000000.0)
+        if timestamp is None:
+            timestamp = self.timestamp
+        seconds = int(timestamp)
+        nanoseconds = int((timestamp - int(timestamp)) * 1000000000.0)
         header.stamp = Time(sec=seconds, nanosec=nanoseconds)
         return header
 
-    def lidar(self, carla_lidar_measurement, id_):
-        """Transform the received lidar measurement into a ROS point cloud message."""
-        if self.checkFrequency(id_):
-            return
+    def _submit_to_publish_worker(self, key, fn, *args):
+        """Run a publish call on the sensor's worker thread (created lazily)."""
+        worker = self._publish_workers.get(key)
+        if worker is None:
+            worker = SensorPublishWorker(key, self.logger)
+            self._publish_workers[key] = worker
+        worker.submit(fn, args)
 
+    def lidar(self, carla_lidar_measurement, id_, timestamp=None):
+        """Transform the received lidar measurement into a ROS point cloud message.
+
+        Runs on the sensor's publish worker thread; frequency gating and
+        registry bookkeeping happen at the dispatch site in run_step.
+        """
         config = self.sensor_registry.get_sensor(id_)
         if not config:
             self.logger.warning(f"No registry entry for LiDAR sensor '{id_}'")
             return
 
-        header = self.get_msg_header(frame_id=config.frame_id or "base_link")
+        publisher = self.pub_lidar.get(id_)
+        if publisher is None:
+            self.logger.warning(f"LiDAR publisher missing for '{id_}'")
+            return
+        # Skip the conversion work when nothing consumes this point cloud.
+        if publisher.get_subscription_count() == 0:
+            return
+
+        header = self.get_msg_header(frame_id=config.frame_id or "base_link", timestamp=timestamp)
         fields = [
             PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
             PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
@@ -407,19 +447,51 @@ class carla_ros2_interface(object):
         structured_lidar_data["channel"] = lidar_data[:, 5].astype(numpy.uint16)
 
         point_cloud_msg = create_cloud(header, fields, structured_lidar_data)
-        publisher = self.pub_lidar.get(id_)
-        if publisher is None:
-            self.logger.warning(f"LiDAR publisher missing for '{id_}'")
-            return
-
         publisher.publish(point_cloud_msg)
-        self.sensor_registry.update_sensor_timestamp(id_, self.timestamp)
+
+    def _project_initialpose_to_ground(self, carla_pose_transform):
+        """Return the CARLA ground height under the pose, or None to skip snapping.
+
+        Returns None when spawn_point_ground_snap is disabled, or when no ground
+        height can be found (older CARLA APIs without ``ground_projection``, or
+        no ground hit), so callers fall back to the fixed z-offset.
+        """
+        if not self.param_values["spawn_point_ground_snap"]:
+            return None
+
+        return project_point_to_ground(
+            CarlaDataProvider.get_world(),
+            carla_pose_transform.location.x,
+            carla_pose_transform.location.y,
+        )
 
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
-        pose.position.z += 2.0
-        carla_pose_transform = ros_pose_to_carla_transform(pose)
+        carla_pose_transform = ros_pose_to_carla_transform(
+            pose,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
+
+        # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
+        # map-frame z is meaningless here. When spawn_point_ground_snap is
+        # enabled and CARLA exposes ground_projection, snap onto the map
+        # geometry; otherwise fall back to the fixed +2.0 z-offset that has
+        # always been applied.
+        ground_z = self._project_initialpose_to_ground(carla_pose_transform)
+        if ground_z is not None:
+            carla_pose_transform.location.z = (
+                ground_z + self.param_values["initial_pose_ground_offset_z"]
+            )
+            self.logger.info(
+                "Ground-snapped initial pose: "
+                f"ground_z={ground_z:.3f}, "
+                f"offset_z={self.param_values['initial_pose_ground_offset_z']:.3f}, "
+                f"pose_z={carla_pose_transform.location.z:.3f}"
+            )
+        else:
+            carla_pose_transform.location.z += 2.0
 
         with self._state_lock:
             if self.ego_actor is not None:
@@ -454,7 +526,11 @@ class carla_ros2_interface(object):
                 return
             ego_transform = self.ego_actor.get_transform()
 
-        pose_carla.position = carla_location_to_ros_point(ego_transform.location)
+        pose_carla.position = carla_location_to_ros_point(
+            ego_transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
         pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
         out_pose_with_cov.pose.pose = pose_carla
@@ -529,42 +605,62 @@ class carla_ros2_interface(object):
 
         return camera_info
 
-    def camera(self, carla_camera_data, cam_id):
-        """Handle multiple cameras with dynamic routing by sensor ID."""
+    def camera(self, carla_camera_data, cam_id, timestamp=None):
+        """Handle multiple cameras with dynamic routing by sensor ID.
+
+        Runs on the sensor's publish worker thread; frequency gating and
+        registry bookkeeping happen at the dispatch site in run_step.
+        """
         config = self.sensor_registry.get_sensor(cam_id)
         if not config:
             self.logger.warning(f"No registry entry for camera '{cam_id}'")
             return
 
+        # Converting and publishing a multi-megabyte image is expensive even
+        # off the tick thread (GIL pressure from several workers starves it).
+        # Skip the work entirely when nothing consumes this camera; checked
+        # per frame so late subscribers start receiving immediately.
+        img_pub = self.pub_camera.get(cam_id)
+        info_pub = self.pub_camera_info.get(cam_id)
+        has_image_subs = img_pub is not None and img_pub.get_subscription_count() > 0
+        has_info_subs = info_pub is not None and info_pub.get_subscription_count() > 0
+        if not has_image_subs and not has_info_subs:
+            return
+
         if cam_id not in self.camera_info_cache:
             self.camera_info_cache[cam_id] = self._build_camera_info(carla_camera_data)
 
-        if self.checkFrequency(cam_id):
-            return
+        header = self.get_msg_header(
+            frame_id=config.frame_id or f"{cam_id}/camera_optical_link", timestamp=timestamp
+        )
 
-        # Create image message
+        # Publish camera info
+        if has_info_subs:
+            cam_info = self.camera_info_cache[cam_id]
+            cam_info.header = header
+            info_pub.publish(cam_info)
+
+        # Publish image
+        if has_image_subs:
+            img_msg = self._build_image_msg(carla_camera_data, config.image_encoding)
+            img_msg.header = header
+            img_pub.publish(img_msg)
+
+    def _build_image_msg(self, carla_camera_data, encoding):
+        """Convert a CARLA camera frame into a ROS image message.
+
+        CARLA renders BGRA. Converting to mono8 here rather than in the
+        consumer keeps three of every four bytes off the wire, and a consumer
+        that wants luminance was going to do this conversion anyway.
+        """
         image_array = numpy.ndarray(
             shape=(carla_camera_data.height, carla_camera_data.width, 4),
             dtype=numpy.uint8,
             buffer=carla_camera_data.raw_data,
         )
-        img_msg = self.cv_bridge.cv2_to_imgmsg(image_array, encoding="bgra8")
-        img_msg.header = self.get_msg_header(
-            frame_id=config.frame_id or f"{cam_id}/camera_optical_link"
-        )
-
-        # Publish camera info
-        cam_info = self.camera_info_cache[cam_id]
-        cam_info.header = img_msg.header
-        info_pub = self.pub_camera_info.get(cam_id)
-        if info_pub:
-            info_pub.publish(cam_info)
-
-        # Publish image
-        img_pub = self.pub_camera.get(cam_id)
-        if img_pub:
-            img_pub.publish(img_msg)
-            self.sensor_registry.update_sensor_timestamp(cam_id, self.timestamp)
+        if encoding == "mono8":
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_BGRA2GRAY)
+        return self.cv_bridge.cv2_to_imgmsg(image_array, encoding=encoding)
 
     def imu(self, carla_imu_measurement):
         """Transform and publish IMU measurement to ROS."""
@@ -652,6 +748,11 @@ class carla_ros2_interface(object):
                 return  # Skip if vehicle not initialized yet
 
             steer_curve = self.physics_control.steering_curve
+            # numpy.interp requires the sample x-coordinates to be increasing.
+            # CARLA 0.10 can return the steering-curve points out of order,
+            # so sort by x before interpolating. On 0.9.x the curve is already
+            # sorted, making this a no-op.
+            steer_curve = sorted(steer_curve, key=lambda v: v.x)
             current_vel = self.ego_actor.get_velocity()
             max_steer_ratio = numpy.interp(
                 abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
@@ -829,12 +930,22 @@ class carla_ros2_interface(object):
                 )
                 continue
 
+            # Camera and lidar conversion/publishing run on per-sensor worker
+            # threads: publishing multi-megabyte messages inline (reliable-QoS
+            # camera images in particular block on DDS flow control) would
+            # stall this loop and slow simulation time itself. Frequency
+            # gating and registry bookkeeping stay on this thread so the
+            # registry is never accessed concurrently.
             if sensor_type == "sensor.camera.rgb":
-                self.camera(data[1], key)  # Pass sensor ID for multi-camera support
+                if not self.checkFrequency(key):
+                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                    self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
             elif sensor_type == "sensor.other.gnss":
                 self.pose()
             elif sensor_type == "sensor.lidar.ray_cast":
-                self.lidar(data[1], key)
+                if not self.checkFrequency(key):
+                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                    self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
             elif sensor_type == "sensor.other.imu":
                 self.imu(data[1])
             else:
@@ -858,6 +969,11 @@ class carla_ros2_interface(object):
         process hanging and publisher leaks.
 
         """
+        # Stop publish workers before destroying the publishers they use
+        for worker in self._publish_workers.values():
+            worker.stop()
+        self._publish_workers.clear()
+
         # Destroy publishers first
         if self.ros_publisher_manager:
             self.ros_publisher_manager.destroy_all_publishers()

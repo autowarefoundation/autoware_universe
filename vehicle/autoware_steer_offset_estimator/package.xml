@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_steer_offset_estimator</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>The steer_offset_estimator</description>
   <maintainer email="taiki.tanaka@tier4.jp">Taiki Tanaka</maintainer>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
@@ -24,6 +24,8 @@
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
   <depend>tl_expected</depend>
   <depend>yaml_cpp_vendor</depend>
   <exec_depend>autoware_global_parameter_loader</exec_depend>

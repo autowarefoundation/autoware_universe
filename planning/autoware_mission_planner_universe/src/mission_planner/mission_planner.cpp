@@ -18,6 +18,7 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -53,11 +54,25 @@ std::string route_state_to_string(const uint8_t state)
       // clang-format on
   }
 }
+
+ArrivalCheckerThreshold get_arrival_checker_threshold(rclcpp::Node & node)
+{
+  ArrivalCheckerThreshold threshold;
+  threshold.angle =
+    autoware_utils::deg2rad(node.declare_parameter<double>("arrival_check_angle_deg"));
+  threshold.lateral_distance = node.declare_parameter<double>("arrival_check_lateral_distance");
+  threshold.longitudinal_undershoot_distance =
+    node.declare_parameter<double>("arrival_check_longitudinal_undershoot_distance");
+  threshold.longitudinal_overshoot_distance =
+    node.declare_parameter<double>("arrival_check_longitudinal_overshoot_distance");
+  threshold.duration = node.declare_parameter<double>("arrival_check_duration");
+  return threshold;
+}
 }  // namespace
 
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 : Node("mission_planner", options),
-  arrival_checker_(this),
+  arrival_checker_(get_arrival_checker_threshold(*this)),
   plugin_loader_(
     "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
   tf_buffer_(get_clock()),
@@ -172,13 +187,11 @@ void MissionPlanner::check_initialization()
 void MissionPlanner::on_odometry(const Odometry::ConstSharedPtr msg)
 {
   odometry_ = msg;
+  arrival_checker_.update(*msg);
 
   // NOTE: Do not check in the other states as goal may change.
   if (state_.state == RouteState::SET) {
-    PoseStamped pose;
-    pose.header = odometry_->header;
-    pose.pose = odometry_->pose.pose;
-    if (arrival_checker_.is_arrived(pose)) {
+    if (arrival_checker_.is_arrived()) {
       change_state(RouteState::ARRIVED);
     }
   }
@@ -408,11 +421,12 @@ void MissionPlanner::on_set_preferred_primitive(
     auto & segment = current_route.segments.at(i);
     const auto & preferred_primitive = req->preferred_primitives.at(i);
 
-    if (std::none_of(
-          segment.primitives.begin(), segment.primitives.end(),
-          [&preferred_primitive](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
-            return p.id == preferred_primitive.id;
-          })) {
+    if (
+      std::none_of(
+        segment.primitives.begin(), segment.primitives.end(),
+        [&preferred_primitive](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
+          return p.id == preferred_primitive.id;
+        })) {
       res->status.success = false;
       throw service_utils::ServiceException(
         autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
@@ -494,7 +508,7 @@ void MissionPlanner::change_route()
 {
   current_route_ = nullptr;
   planner_->clearRoute();
-  arrival_checker_.set_goal();
+  arrival_checker_.clear_goal();
 
   // TODO(Takagi, Isamu): publish an empty route here
   // pub_route_->publish();
