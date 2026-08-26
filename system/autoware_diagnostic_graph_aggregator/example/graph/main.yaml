@@ -15,6 +15,8 @@ units:
   - path: /autoware/modes/autonomous/available
     type: and
     list:
+      # The available flag typically consists of the continuable flag and additional conditions.
+      # You can configure additional checks for mode transition by listing conditions here.
       - { type: link, link: /autoware/modes/autonomous }
 
   - path: /autoware/modes/local
