@@ -59,8 +59,8 @@
 
     # Post-clustering merge for confusable label pairs (e.g. truck/trailer over-segmentation).
     confusable_label_groups:
-      truck_trailer:
-        labels: ["truck", "trailer"]
+      truck_trailer_car:
+        labels: ["truck", "trailer", "car"]
         cross_label_tolerance_m: 0.5
         max_merged_size_m: 25.0
 
