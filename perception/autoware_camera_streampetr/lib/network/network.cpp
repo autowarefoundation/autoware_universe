@@ -203,10 +203,10 @@ void StreamPetrNetwork::initialize_memory_and_profiling()
 void StreamPetrNetwork::configure_nms_if_needed()
 {
   if (config_.iou_threshold > 0.0) {
-    NMSParams p;
-    p.search_distance_2d_ = config_.search_distance_2d;
-    p.iou_threshold_ = config_.iou_threshold;
-    iou_bev_nms_.set_parameters(p);
+    perception_utils::IouBevNmsParams p;
+    p.search_distance_2d = config_.search_distance_2d;
+    p.iou_threshold = config_.iou_threshold;
+    iou_bev_nms_.setParameters(p);
   }
 }
 
@@ -313,7 +313,7 @@ void StreamPetrNetwork::postprocess(
   }
 
   if (config_.iou_threshold > 0.0) {
-    iou_bev_nms_.apply(raw_objects, output_objects);
+    output_objects = iou_bev_nms_.apply(raw_objects);
   } else {
     output_objects = std::move(raw_objects);
   }
