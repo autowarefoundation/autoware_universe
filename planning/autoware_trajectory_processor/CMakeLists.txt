@@ -50,7 +50,7 @@ ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
 )
 autoware_agnocast_wrapper_setup(autoware_trajectory_modifier_utils)
 
-target_link_libraries(autoware_trajectory_modifier_utils PUBLIC
+ament_target_dependencies(autoware_trajectory_modifier_utils
   autoware_point_types
 )
 
