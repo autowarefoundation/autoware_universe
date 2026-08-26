@@ -8,7 +8,10 @@ find_package(tf2_geometry_msgs REQUIRED)
 autoware_package()
 
 find_package(ament_cmake_export_dependencies REQUIRED)
-ament_export_dependencies(acados)
+ament_export_dependencies(
+  acados
+  autoware_point_types
+)
 
 # Temporal kinematic-bicycle acados solver: Python codegen at build time (add_custom_command).
 # See src/acados_mpt/CMakeLists.txt — target acados_interface_temporal.
@@ -46,10 +49,6 @@ autoware_agnocast_wrapper_register_node(autoware_trajectory_processor_component
 ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
   src/trajectory_modifier_utils/utils.cpp
   src/trajectory_modifier_utils/obstacle_stop_utils.cpp
-)
-
-ament_target_dependencies(autoware_trajectory_modifier_utils
-  autoware_point_types
 )
 
 ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
