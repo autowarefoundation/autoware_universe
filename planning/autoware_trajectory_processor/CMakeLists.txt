@@ -48,7 +48,7 @@ ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
   src/trajectory_modifier_utils/obstacle_stop_utils.cpp
 )
 
-target_link_libraries(autoware_trajectory_modifier_utils PUBLIC
+ament_target_dependencies(autoware_trajectory_modifier_utils
   autoware_point_types
 )
 
