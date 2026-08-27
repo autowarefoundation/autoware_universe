@@ -52,6 +52,12 @@
           "description": "Minimum semantic probability required for a point to be used.",
           "default": 0.3
         },
+        "min_cluster_size_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum XY bounding-circle diameter for an output cluster in meters. Zero disables size filtering.",
+          "default": 0
+        },
         "use_shape_estimation_corrector": {
           "type": "boolean",
           "description": "Enable the shape estimation corrector.",
@@ -107,7 +113,8 @@
         "use_shape_estimation_corrector",
         "use_shape_estimation_filter",
         "use_boost_bbox_optimizer",
-        "shape_policy"
+        "shape_policy",
+        "min_cluster_size_m"
       ],
       "additionalProperties": false
     },
@@ -122,7 +129,12 @@
         "min_points_per_voxel": { "type": "integer" },
         "large_cluster_voxel_count_threshold": { "type": "integer" },
         "large_cluster_max_points_per_voxel": { "type": "integer" },
-        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 }
+        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 },
+        "min_cluster_size_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label."
+        }
       },
       "additionalProperties": false
     },
