@@ -23070,16 +23070,30 @@ In particular, this node implements:</p>
 <td>≥1</td>
 </tr>
 <tr>
+<td>max_<wbr>ring_<wbr>count</wbr></wbr></td>
+<td>integer</td>
+<td>Maximum number of LiDAR rings used for startup allocation of ring outlier filter CUDA buffers.</td>
+<td>128</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>max_<wbr>points_<wbr>per_<wbr>ring</wbr></wbr></wbr></td>
+<td>integer</td>
+<td>Maximum number of points per ring used for startup allocation of ring outlier filter CUDA buffers.</td>
+<td>7200</td>
+<td>≥1</td>
+</tr>
+<tr>
 <td>max_<wbr>twist_<wbr>frequency_<wbr>hz</wbr></wbr></wbr></td>
 <td>float</td>
-<td>Maximum expected twist input frequency. Used with twist_imu_queue_window_sec to bound the twist queue.</td>
+<td>Maximum expected twist input frequency. Used to bound the twist queue.</td>
 <td>200.0</td>
 <td>&gt;0.0</td>
 </tr>
 <tr>
 <td>max_<wbr>imu_<wbr>frequency_<wbr>hz</wbr></wbr></wbr></td>
 <td>float</td>
-<td>Maximum expected IMU input frequency. Used with twist_imu_queue_window_sec to bound the IMU queue.</td>
+<td>Maximum expected IMU input frequency. Used to bound the IMU queue.</td>
 <td>200.0</td>
 <td>&gt;0.0</td>
 </tr>
