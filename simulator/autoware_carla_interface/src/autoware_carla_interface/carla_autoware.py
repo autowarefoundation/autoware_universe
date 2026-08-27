@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import queue
 import random
 import signal
 import time
@@ -42,6 +43,7 @@ class SensorLoop(object):
         self.running = False
         self.timestamp_last_run = 0.0
         self.timeout = 20.0
+        self.tick_follower = False
 
     def _stop_loop(self):
         self.running = False
@@ -56,7 +58,7 @@ class SensorLoop(object):
             except SensorReceivedNoData as e:
                 raise RuntimeError(e)
             self.ego_actor.apply_control(ego_action)
-        if self.running:
+        if self.running and not self.tick_follower:
             CarlaDataProvider.get_world().tick()
 
 
@@ -83,6 +85,7 @@ class InitializeInterface(object):
         self.spawn_point = self.param_["spawn_point"]
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
+        self.tick_follower = self.param_["tick_follower"]
         self.spawn_point_ground_snap = self.param_["spawn_point_ground_snap"]
         self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
         self.force_load_world = self.param_["force_load_world"]
@@ -403,7 +406,11 @@ class InitializeInterface(object):
         self.bridge_loop.ego_actor = self.ego_actor
         self.bridge_loop.start_system_time = time.time()
         self.bridge_loop.start_game_time = GameTime.get_time()
+        self.bridge_loop.tick_follower = self.tick_follower
         self.bridge_loop.running = True
+        if self.tick_follower:
+            self._run_bridge_follower()
+            return
         while self.bridge_loop.running:
             timestamp = None
             world = CarlaDataProvider.get_world()
@@ -418,6 +425,47 @@ class InitializeInterface(object):
                     time.sleep(self.max_real_delta_seconds - delta_step)
                 self.prev_tick_wall_time = time.time()
                 self.bridge_loop._tick_sensor(timestamp)
+
+    def _run_bridge_follower(self):
+        """Consume the frames another client ticks, without ticking the world.
+
+        Frames arrive through world.on_tick() rather than wait_for_tick(),
+        which only reports the frames that arrive while it is being awaited
+        and so loses one whenever an iteration runs long. When this loop does
+        fall behind it drains the queue to the newest frame, because sensor
+        data is perishable.
+        """
+        world = CarlaDataProvider.get_world()
+        frame_queue = queue.Queue()
+        callback_id = world.on_tick(lambda snapshot: frame_queue.put(snapshot.timestamp))
+        logger = self.interface.logger
+        logger.info("tick_follower mode: waiting for frames ticked by an external client")
+        skipped_total = 0
+        try:
+            while self.bridge_loop.running:
+                try:
+                    timestamp = frame_queue.get(timeout=1.0)
+                except queue.Empty:
+                    # The tick owner is not running yet, or has stopped.
+                    continue
+                skipped = 0
+                while True:
+                    try:
+                        timestamp = frame_queue.get_nowait()
+                        skipped += 1
+                    except queue.Empty:
+                        break
+                if skipped:
+                    skipped_total += skipped
+                    logger.warning(
+                        f"tick_follower is behind the tick cadence: skipped {skipped} "
+                        f"frame(s) ({skipped_total} in total), resuming at frame "
+                        f"{timestamp.frame}",
+                        throttle_duration_sec=10.0,
+                    )
+                self.bridge_loop._tick_sensor(timestamp)
+        finally:
+            world.remove_on_tick(callback_id)
 
     def _stop_loop(self, sign, frame):
         self.bridge_loop._stop_loop()
