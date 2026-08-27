@@ -840,7 +840,11 @@ class carla_ros2_interface(object):
         out_vel_state.header = self.get_msg_header(frame_id="base_link")
         out_vel_state.longitudinal_velocity = ego_velocity[0]
         out_vel_state.lateral_velocity = ego_velocity[1]
-        out_vel_state.heading_rate = ego_transform.transform_vector(ego_angular_velocity).z
+        # CARLA reports the angular velocity in deg/s in Unreal's left-handed
+        # (CW-positive) frame, while ROS expects rad/s CCW-positive (REP-103):
+        # https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
+        # https://www.ros.org/reps/rep-0103.html
+        out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
 
         out_steering_state.stamp = out_vel_state.header.stamp
         out_steering_state.steering_tire_angle = -math.radians(steer_angle)
