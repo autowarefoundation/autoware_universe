@@ -15,6 +15,11 @@
 import math
 import threading
 
+from autoware_perception_msgs.msg import DetectedObject
+from autoware_perception_msgs.msg import DetectedObjectKinematics
+from autoware_perception_msgs.msg import DetectedObjects
+from autoware_perception_msgs.msg import ObjectClassification
+from autoware_perception_msgs.msg import Shape
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
@@ -54,6 +59,16 @@ from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
+# CARLA vehicle blueprints carry a base_type attribute; map it to the closest
+# Autoware label. Anything unlisted falls back to CAR.
+BASE_TYPE_TO_LABEL = {
+    "car": ObjectClassification.CAR,
+    "truck": ObjectClassification.TRUCK,
+    "van": ObjectClassification.TRUCK,
+    "motorcycle": ObjectClassification.MOTORCYCLE,
+    "bicycle": ObjectClassification.BICYCLE,
+}
+
 
 class carla_ros2_interface(object):
 
@@ -79,6 +94,7 @@ class carla_ros2_interface(object):
             "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "publish_ground_truth_objects": (rclpy.Parameter.Type.BOOL, False),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -133,6 +149,12 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state = self.ros2_node.create_publisher(
             HazardLightsReport, "/vehicle/status/hazard_lights_status", 1
         )
+
+        self.pub_ground_truth_objects = None
+        if self.param_values["publish_ground_truth_objects"]:
+            self.pub_ground_truth_objects = self.ros2_node.create_publisher(
+                DetectedObjects, "/perception/object_recognition/detection/objects", 1
+            )
 
     def _initialize_subscriptions(self):
         """Initialize all ROS 2 subscriptions."""
@@ -888,6 +910,71 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state.publish(out_hazard_lights_state)
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
+    def ground_truth_objects(self):
+        """Publish every CARLA vehicle except the ego as a ground truth detection.
+
+        Feeds the perception stack from the simulator instead of from sensor data, so
+        tracking and prediction keep running on the real Autoware nodes downstream.
+        Pedestrians are not covered yet.
+
+        Velocity is deliberately left to the tracker: publishing it would need a world
+        to object frame rotation that is easy to get wrong, and a wrong twist is worse
+        for prediction than no twist at all.
+        """
+        with self._state_lock:
+            if not self.ego_actor:
+                return
+            ego_id = self.ego_actor.id
+            world = self.ego_actor.get_world()
+
+        msg = DetectedObjects()
+        msg.header = self.get_msg_header(frame_id="map")
+
+        try:
+            for actor in world.get_actors().filter("*vehicle*"):
+                if actor.id == ego_id:
+                    continue
+
+                transform = actor.get_transform()
+                extent = actor.bounding_box.extent
+
+                obj = DetectedObject()
+                obj.existence_probability = 1.0
+
+                classification = ObjectClassification()
+                classification.label = BASE_TYPE_TO_LABEL.get(
+                    actor.attributes.get("base_type"), ObjectClassification.CAR
+                )
+                classification.probability = 1.0
+                obj.classification.append(classification)
+
+                obj.kinematics.pose_with_covariance.pose.position = carla_location_to_ros_point(
+                    transform.location,
+                    origin_x=self.param_values["map_origin_x"],
+                    origin_y=self.param_values["map_origin_y"],
+                )
+                obj.kinematics.pose_with_covariance.pose.orientation = (
+                    carla_rotation_to_ros_quaternion(transform.rotation)
+                )
+                obj.kinematics.orientation_availability = DetectedObjectKinematics.AVAILABLE
+                obj.kinematics.has_position_covariance = False
+                obj.kinematics.has_twist = False
+                obj.kinematics.has_twist_covariance = False
+
+                obj.shape.type = Shape.BOUNDING_BOX
+                obj.shape.dimensions.x = float(extent.x * 2.0)
+                obj.shape.dimensions.y = float(extent.y * 2.0)
+                obj.shape.dimensions.z = float(extent.z * 2.0)
+
+                msg.objects.append(obj)
+        except RuntimeError as e:
+            # Skip the whole cycle rather than publish a partial list: a list that is
+            # missing vehicles reads to the tracker as vehicles that disappeared.
+            self.logger.warning(f"Ground truth objects skipped, CARLA query failed: {e}")
+            return
+
+        self.pub_ground_truth_objects.publish(msg)
+
     def run_step(self, input_data, timestamp):
         """
         Execute main simulation step for publishing sensor data and getting control commands.
@@ -956,6 +1043,9 @@ class carla_ros2_interface(object):
 
         # Publish ego vehicle status
         self.ego_status()
+
+        if self.pub_ground_truth_objects is not None:
+            self.ground_truth_objects()
 
         # Thread-safe read of current control command
         with self._state_lock:
