@@ -156,6 +156,11 @@ class carla_ros2_interface(object):
             # SplatSim parameters (global only; per-sensor rendering settings are
             # read from the sensor mapping's per-sensor `parameters:` block).
             "render_with_splatsim": (rclpy.Parameter.Type.BOOL, False),
+            # Publish CARLA ground-truth localization (kinematic_state, TF,
+            # pose, acceleration) even without splatsim rendering. Used by the
+            # E2E planning setup instead of the former carla_state_publisher
+            # GNSS round-trip, which duplicated these topics.
+            "publish_ground_truth_localization": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_render_camera": (rclpy.Parameter.Type.BOOL, True),
             "splatsim_render_lidar": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_tileset_path": (rclpy.Parameter.Type.STRING, ""),
@@ -390,6 +395,12 @@ class carla_ros2_interface(object):
         # Setup all components
         self._initialize_parameters()
         self.render_with_splatsim = bool(self.param_values.get("render_with_splatsim", False))
+        # Ground-truth localization is implied by splatsim rendering (no other
+        # localization source exists in that mode) and can be requested
+        # standalone for the E2E planning setup.
+        self.publish_gt_localization = self.render_with_splatsim or bool(
+            self.param_values.get("publish_ground_truth_localization", False)
+        )
         self._setup_tf_listener()
         self._initialize_clock_publisher()
 
@@ -399,9 +410,11 @@ class carla_ros2_interface(object):
         self._initialize_subscriptions()
         self._initialize_status_publishers()
 
-        # SplatSim: create dummy perception and localization publishers
+        # SplatSim: create dummy perception publishers
         if self.render_with_splatsim:
             self._initialize_splatsim_publishers()
+        if self.publish_gt_localization:
+            self._initialize_localization_publishers()
 
         # Start ROS 2 spin thread (Thread Safety: Shared state protected by self._state_lock)
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
@@ -1043,6 +1056,13 @@ class carla_ros2_interface(object):
         if self.render_with_splatsim:
             self._splatsim_tick(seconds, nanoseconds)
 
+        # Ground-truth localization (kinematic_state / TF / pose / accel)
+        if self.publish_gt_localization:
+            with self._state_lock:
+                has_ego = self.ego_actor is not None
+            if has_ego:
+                self._publish_localization()
+
         # Push turn indicator / hazard lights to CARLA before reading status back.
         self.apply_light_state()
 
@@ -1100,7 +1120,7 @@ class carla_ros2_interface(object):
     # ── SplatSim integration methods ──────────────────────────────────────
 
     def _initialize_splatsim_publishers(self):
-        """Create publishers for dummy perception and localization (splatsim mode)."""
+        """Create publishers for dummy perception (splatsim mode)."""
         self.pub_empty_objects = self.ros2_node.create_publisher(
             PredictedObjects, "/perception/object_recognition/objects", 1
         )
@@ -1115,6 +1135,9 @@ class carla_ros2_interface(object):
         self.pub_empty_occupancy_grid = self.ros2_node.create_publisher(
             OccupancyGrid, "/perception/occupancy_grid_map/map", 1
         )
+
+    def _initialize_localization_publishers(self):
+        """Create publishers for CARLA ground-truth localization."""
         self.pub_tf = self.ros2_node.create_publisher(TFMessage, "/tf", 10)
         self.pub_localization_odom = self.ros2_node.create_publisher(
             Odometry, "/localization/kinematic_state", 10
@@ -1361,7 +1384,7 @@ class carla_ros2_interface(object):
         return SplatSimLidarConfig(**kwargs)
 
     def _splatsim_tick(self, seconds, nanoseconds):
-        """Per-tick splatsim work: send poses, publish dummy perception/localization."""
+        """Per-tick splatsim work: send poses, publish dummy perception."""
         with self._state_lock:
             actor_matrix = (
                 self.ego_actor.get_transform().get_matrix() if self.ego_actor is not None else None
@@ -1370,11 +1393,6 @@ class carla_ros2_interface(object):
             self._send_splatsim_poses(actor_matrix, seconds, nanoseconds)
 
         self._publish_dummy_perception()
-
-        with self._state_lock:
-            has_ego = self.ego_actor is not None
-        if has_ego:
-            self._publish_localization()
 
     def _send_splatsim_poses(self, actor_matrix, seconds, nanoseconds) -> None:
         """Forward the ego pose to every splatsim camera and LiDAR container."""
