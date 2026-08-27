@@ -22,13 +22,10 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <map>
 #include <numeric>
-#include <random>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -329,13 +326,57 @@ TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
   }
 }
 
-// Randomized sweep against the CPU reference: the scan-based derivation assumes pooling preserves
-// the serialization order, so exercise that across many occupancy patterns.
-TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
+// Hand-crafted voxel layouts against the CPU reference: each case pins one boundary of the
+// scan-based derivation, and the levels are small enough to verify by hand (stride-2 pooling
+// merges voxels whose grid coordinates match after one right-shift per stage).
+TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForEdgeCaseClouds)
 {
   const auto config = make_test_config();
   constexpr std::size_t kNumOrders = 2;
   const auto stage_count = config.pooling_strides_.size();
+
+  struct EdgeCase
+  {
+    std::string name;
+    // Unique (x, y, z) triplets in any order (the pipeline never emits duplicate voxels); sorted
+    // by order-0 code before upload.
+    std::vector<std::int32_t> grid_coord;
+    // Hand-verified voxel count per level: input, then one entry per pooling stage.
+    std::vector<std::int64_t> expected_stage_counts;
+    // Whether every level of two or more voxels must satisfy expect_orders_diverge.
+    bool orders_diverge;
+  };
+
+  // A 4x4x2 box fills the level to exactly max_num_voxels (asserted below), leaving no padded
+  // entries, and pools into four runs of eight voxels each.
+  ASSERT_EQ(config.max_num_voxels_, 32);
+  std::vector<std::int32_t> full_capacity_box;
+  for (std::int32_t x = 0; x < 4; ++x) {
+    for (std::int32_t y = 0; y < 4; ++y) {
+      for (std::int32_t z = 0; z < 2; ++z) {
+        full_capacity_box.insert(full_capacity_box.end(), {x, y, z});
+      }
+    }
+  }
+
+  const std::vector<EdgeCase> cases = {
+    // The input-level sorts and every run are skipped; all levels stay empty.
+    {"empty input", {}, {0, 0, 0}, false},
+    // One run of length 1 per level; all metadata is the identity mapping.
+    {"single voxel", {5, 3, 1}, {1, 1, 1}, false},
+    // A full 2x2x2 block: the whole level is a single run and collapses to one voxel.
+    {"one full parent",
+     {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1},
+     {8, 1, 1},
+     false},
+    // Voxels spaced four cells apart never share a parent: every run has length 1 and no stage
+    // merges anything.
+    {"no merging", {0, 0, 0, 4, 0, 0, 8, 0, 0, 12, 0, 0}, {4, 4, 4}, false},
+    // Parent runs of length 3, 1 and 2 in level order: multi-voxel runs at both ends of the
+    // level with a single-voxel run in between, then everything merges into one voxel.
+    {"mixed run lengths", {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 0, 2, 0, 0, 3, 1, 1}, {6, 3, 1}, true},
+    {"full capacity", full_capacity_box, {32, 4, 1}, true},
+  };
 
   PreprocessCuda preprocess(config, stream_);
   auto grid_coord_d = makeDeviceBuffer<std::int32_t>(config.max_num_voxels_ * 3);
@@ -354,28 +395,9 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
         stage.serialized_inverse.get()});
   }
 
-  // The grid spans 2^serialization_depth_ cells per axis; draw from a sub-cube so that pooling
-  // actually merges cells instead of every voxel ending up in its own parent.
-  const std::int32_t extent = 1 << config.serialization_depth_;
-  std::mt19937 rng(20260805U);
-
-  for (int trial = 0; trial < 32; ++trial) {
-    const std::size_t requested =
-      1U + static_cast<std::size_t>(rng() % static_cast<unsigned>(config.max_num_voxels_));
-    std::uniform_int_distribution<std::int32_t> coord_dist(0, extent - 1);
-
-    // Deduplicate: the pipeline never feeds repeated voxels into the metadata builder.
-    std::set<std::array<std::int32_t, 3>> unique_coords;
-    for (std::size_t i = 0; i < requested; ++i) {
-      unique_coords.insert({coord_dist(rng), coord_dist(rng), coord_dist(rng)});
-    }
-    std::vector<std::int32_t> grid_coord;
-    grid_coord.reserve(unique_coords.size() * 3);
-    for (const auto & coord : unique_coords) {
-      grid_coord.insert(grid_coord.end(), coord.begin(), coord.end());
-    }
-    grid_coord = sort_grid_coord_by_order0(grid_coord, config.serialization_depth_);
-
+  for (const auto & edge_case : cases) {
+    const auto grid_coord =
+      sort_grid_coord_by_order0(edge_case.grid_coord, config.serialization_depth_);
     const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
     const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
 
@@ -395,18 +417,20 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForRandomizedClouds)
     }
 
     const auto stage_counts = copyToHost(stage_counts_d.get(), stage_count + 1);
-    const auto trial_prefix =
-      "trial " + std::to_string(trial) + " (" + std::to_string(num_voxels) + " voxels) ";
-    ASSERT_EQ(stage_counts[0], num_voxels) << trial_prefix;
+    ASSERT_EQ(stage_counts, edge_case.expected_stage_counts) << edge_case.name;
 
     for (std::size_t stage_index = 0; stage_index < references.size(); ++stage_index) {
       const auto & expected = references[stage_index];
       const auto & actual = device_stages[stage_index];
       const auto in_count = static_cast<std::size_t>(stage_counts[stage_index]);
       const auto out_count = static_cast<std::size_t>(stage_counts[stage_index + 1]);
-      const auto prefix = trial_prefix + "stage " + std::to_string(stage_index) + " ";
+      const auto prefix = edge_case.name + " stage " + std::to_string(stage_index) + " ";
 
       ASSERT_EQ(out_count, expected.head_indices.size()) << prefix + "out_count";
+      if (edge_case.orders_diverge && out_count >= 2) {
+        expect_orders_diverge(
+          expected.serialized_order, out_count, kNumOrders, prefix + "reference serialized_order");
+      }
       expect_equal(
         copyToHost(actual.indices.get(), in_count), expected.indices, prefix + "indices");
       expect_equal(
