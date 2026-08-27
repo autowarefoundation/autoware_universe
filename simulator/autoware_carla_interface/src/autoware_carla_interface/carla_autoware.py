@@ -133,7 +133,6 @@ class InitializeInterface(object):
         )
         return snapped
 
-
     def _flatten_steering_curve(self):
         """Replace the vehicle's speed-based steering curve with an identity curve.
 
