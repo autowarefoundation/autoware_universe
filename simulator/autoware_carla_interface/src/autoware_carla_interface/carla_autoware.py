@@ -133,6 +133,28 @@ class InitializeInterface(object):
         )
         return snapped
 
+
+    def _flatten_steering_curve(self):
+        """Replace the vehicle's speed-based steering curve with an identity curve.
+
+        CARLA 0.10 ships corrupt steering-curve data (duplicated, unsorted
+        points such as (10 m/s, 0.5)) which the simulator applies internally,
+        attenuating the achievable steering angle at driving speeds. Writing a
+        flat curve back removes the server-side attenuation so the commanded
+        steer fraction maps directly to the wheel angle.
+        """
+        try:
+            physics = self.ego_actor.get_physics_control()
+            physics.steering_curve = [
+                carla.Vector2D(0.0, 1.0),
+                carla.Vector2D(120.0, 1.0),
+            ]
+            self.ego_actor.apply_physics_control(physics)
+            self.interface.physics_control = physics
+            print("INFO: Applied a flat steering curve to the ego vehicle.")
+        except RuntimeError as error:
+            print(f"WARNING: Failed to flatten the steering curve: {error}")
+
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
         traffic_manager = client.get_trafficmanager()  # cspell:ignore trafficmanager
@@ -205,6 +227,8 @@ class InitializeInterface(object):
         )
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
+        if self.interface.param_values.get("flatten_steering_curve", False):
+            self._flatten_steering_curve()
 
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
