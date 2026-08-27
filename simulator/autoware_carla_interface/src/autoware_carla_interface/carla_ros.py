@@ -776,9 +776,7 @@ class carla_ros2_interface(object):
         if self._max_steer_angle_rad is None:
             max_deg = float(self.param_values.get("max_wheel_steer_angle_deg", 0.0))
             if max_deg <= 0.0:
-                max_deg = max(
-                    (w.max_steer_angle for w in self.physics_control.wheels), default=0.0
-                )
+                max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
             if max_deg <= 0.0:
                 max_deg = 70.0  # CARLA's usual front-wheel default
             self._max_steer_angle_rad = math.radians(max_deg)
