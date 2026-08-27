@@ -48,6 +48,7 @@ subscribers:
     remap_target: input/external_emergency_stop_heartbeat
   - name: gate_mode
     message_type: tier4_control_msgs/msg/GateMode
+    global: /control/gate_mode_cmd
     remap_target: input/gate_mode
   - name: emergency_control_cmd
     message_type: autoware_control_msgs/msg/Control
