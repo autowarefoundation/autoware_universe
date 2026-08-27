@@ -15,10 +15,8 @@ rclcpp_components_register_node(${PROJECT_NAME}_goal_pose_visualizer_component
 
 ament_auto_add_library(${PROJECT_NAME}_lanelet2_plugins SHARED
   src/lanelet2_plugins/default_planner.cpp
-  src/lanelet2_plugins/default_planner_plugin.cpp
   src/lanelet2_plugins/utility_functions.cpp
 )
-pluginlib_export_plugin_description_file(autoware_mission_planner_universe plugins/plugin_description.xml)
 
 ament_auto_add_library(${PROJECT_NAME}_component SHARED
   src/mission_planner/arrival_checker.cpp
@@ -37,6 +35,16 @@ rclcpp_components_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::mission_planner_universe::RouteSelector"
   EXECUTABLE route_selector
 )
+
+# Kept in its own library so that the pluginlib registration is never linked into another target.
+# class_loader flags a plugin library loaded outside of a ClassLoader as "non-pure" and then stops
+# unloading any library in that process.
+ament_auto_add_library(${PROJECT_NAME}_default_planner_plugin SHARED
+  src/lanelet2_plugins/default_planner_plugin.cpp
+  NO_TARGET_LINK_LIBRARIES
+)
+target_link_libraries(${PROJECT_NAME}_default_planner_plugin ${PROJECT_NAME}_lanelet2_plugins)
+pluginlib_export_plugin_description_file(autoware_mission_planner_universe plugins/plugin_description.xml)
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}

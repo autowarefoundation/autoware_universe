@@ -28,6 +28,8 @@ namespace autoware::mission_planner_universe::lanelet2
 /// PlannerPlugin. It declares the parameters, feeds the map and publishes the goal footprint on
 /// behalf of the planner, so that out-of-package callers that load the planner through pluginlib
 /// keep working unchanged.
+///
+/// initialize() must be called before any other method.
 class DefaultPlannerPlugin : public mission_planner_universe::PlannerPlugin
 {
 public:

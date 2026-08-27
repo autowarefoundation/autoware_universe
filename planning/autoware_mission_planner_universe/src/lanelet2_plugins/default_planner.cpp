@@ -127,7 +127,7 @@ DefaultPlanner::MarkerArray DefaultPlanner::visualize(
         const auto area = route_handler_.getAreaFromId(prim.id);
         visualization_msgs::msg::Marker m;
         m.header.frame_id = "map";
-        m.header.stamp = rclcpp::Clock().now();
+        m.header.stamp = route.header.stamp;
         m.ns = "route_areas";
         m.id = area_id++;
         m.action = visualization_msgs::msg::Marker::ADD;

@@ -69,30 +69,6 @@ ArrivalCheckerThreshold get_arrival_checker_threshold(rclcpp::Node & node)
   threshold.duration = node.declare_parameter<double>("arrival_check_duration");
   return threshold;
 }
-
-void log_planned_route(const rclcpp::Logger & logger, const LaneletRoute & route)
-{
-  if (route.segments.empty()) {
-    return;
-  }
-
-  size_t n_lane_seg = 0;
-  size_t n_area_seg = 0;
-  for (const auto & segment : route.segments) {
-    if (segment.preferred_primitive.primitive_type == "area") {
-      RCLCPP_INFO(logger, "Planned area id: %ld", segment.preferred_primitive.id);
-      ++n_area_seg;
-    } else {
-      RCLCPP_INFO(logger, "Planned lanelet id: %ld", segment.preferred_primitive.id);
-      ++n_lane_seg;
-    }
-  }
-  RCLCPP_INFO(
-    logger,
-    "[DefaultPlanner] Route segments for message: total=%zu (lane_segments=%zu, "
-    "area_segments=%zu)",
-    route.segments.size(), n_lane_seg, n_area_seg);
-}
 }  // namespace
 
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
@@ -670,8 +646,6 @@ LaneletRoute MissionPlanner::create_route(
     pub_goal_footprint_marker_->publish(
       lanelet2::DefaultPlanner::visualize_debug_footprint(*plan_result.goal_footprint));
   }
-  log_planned_route(get_logger(), plan_result.route);
-
   LaneletRoute route = plan_result.route;
   route.header.stamp = header.stamp;
   route.header.frame_id = map_frame_;

@@ -57,7 +57,7 @@ void DefaultPlannerPlugin::initialize(rclcpp::Node * node, const LaneletMapBin::
 
 bool DefaultPlannerPlugin::ready() const
 {
-  return planner_ && planner_->ready();
+  return planner_->ready();
 }
 
 PlannerPlugin::LaneletRoute DefaultPlannerPlugin::plan(const RoutePoints & points)
