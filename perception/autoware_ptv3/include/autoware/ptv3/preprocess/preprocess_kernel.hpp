@@ -122,23 +122,23 @@ private:
   cudaEvent_t num_cropped_points_copy_event_;
   cudaEvent_t num_unique_points_copy_event_;
 
-  // Serialization order of the input level (the deduplicated voxels generateFeatures emits), laid
-  // out [num_orders, num_voxels]. Row 0 is the identity; the remaining rows are the only sorts
-  // left in the pooling-metadata path.
+  /// Serialization order of the input level (the deduplicated voxels generateFeatures emits),
+  /// laid out [num_orders, num_voxels]. Row 0 is the identity; the remaining rows are the only
+  /// sorts left in the pooling-metadata path.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> input_level_order_d_{nullptr};
-  // Keys for one of those sorts: each input voxel's code under the serialization order being
-  // sorted.
+  /// Keys for one of those sorts: each input voxel's code under the serialization order being
+  /// sorted.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};
-  // Sorted-keys output; CUB requires the buffer, nothing reads it afterwards.
+  /// Sorted-keys output; CUB requires the buffer, nothing reads it afterwards.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_sorted_keys_d_{nullptr};
-  // Filled with 0..n-1 and sorted alongside the keys, which leaves it listing the voxel indices
-  // in ascending code order; written directly into the input_level_order_d_ row.
+  /// Filled with 0..n-1 and sorted alongside the keys, which leaves it listing the voxel indices
+  /// in ascending code order; written directly into the input_level_order_d_ row.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_indices_d_{nullptr};
-  // Run-start flags: 1 where the parent voxel changes while walking a level, either in storage
-  // order (pooling) or as listed by one of its serialization orders; 0 elsewhere.
+  /// Run-start flags: 1 where the parent voxel changes while walking a level, either in storage
+  /// order (pooling) or as listed by one of its serialization orders; 0 elsewhere.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_flags_d_{nullptr};
-  // Inclusive scan of run_flags_d_, numbering each element's run; run id - 1 is the pooled-level
-  // slot the element scatters to.
+  /// Inclusive scan of run_flags_d_, numbering each element's run; run id - 1 is the pooled-level
+  /// slot the element scatters to.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
