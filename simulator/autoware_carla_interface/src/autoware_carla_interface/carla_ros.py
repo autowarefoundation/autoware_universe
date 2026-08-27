@@ -29,6 +29,8 @@ import cv2
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import TransformStamped
+from nav_msgs.msg import Odometry
 import numpy
 import rclpy
 from rosgraph_msgs.msg import Clock
@@ -36,6 +38,7 @@ from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
+from tf2_msgs.msg import TFMessage
 from tier4_vehicle_msgs.msg import ActuationCommandStamped
 from tier4_vehicle_msgs.msg import ActuationStatusStamped
 from transforms3d.euler import euler2quat
@@ -77,6 +80,11 @@ class carla_ros2_interface(object):
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
             "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
+            # Publish the CARLA ground-truth localization (kinematic_state and
+            # the map->base_link TF) directly from the ego transform. Used by
+            # the E2E planning setup instead of the former carla_state_publisher
+            # GNSS round-trip, which duplicated these topics.
+            "publish_ground_truth_localization": (rclpy.Parameter.Type.BOOL, False),
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
@@ -127,6 +135,11 @@ class carla_ros2_interface(object):
         self.pub_actuation_status = self.ros2_node.create_publisher(
             ActuationStatusStamped, "/vehicle/status/actuation_status", 1
         )
+        if self.param_values.get("publish_ground_truth_localization", False):
+            self.pub_gt_tf = self.ros2_node.create_publisher(TFMessage, "/tf", 10)
+            self.pub_gt_odom = self.ros2_node.create_publisher(
+                Odometry, "/localization/kinematic_state", 10
+            )
         self.pub_turn_indicators_state = self.ros2_node.create_publisher(
             TurnIndicatorsReport, "/vehicle/status/turn_indicators_status", 1
         )
@@ -888,6 +901,55 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state.publish(out_hazard_lights_state)
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
+    def _publish_ground_truth_odometry(self):
+        """Publish /localization/kinematic_state and the map->base_link TF.
+
+        Both are derived from the CARLA ground-truth ego transform, replacing
+        the former carla_state_publisher GNSS round-trip. The twist is the
+        body-frame ground-truth velocity; the angular rate converts CARLA's
+        deg/s CW-positive convention to rad/s CCW-positive (REP-103):
+        https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
+        https://www.ros.org/reps/rep-0103.html
+        """
+        with self._state_lock:
+            if not self.ego_actor:
+                return
+            ego_transform = self.ego_actor.get_transform()
+            ego_vel = self.ego_actor.get_velocity()
+            ego_ang_vel = self.ego_actor.get_angular_velocity()
+
+        header = self.get_msg_header(frame_id="map")
+        pose = Pose()
+        pose.position = carla_location_to_ros_point(
+            ego_transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
+        pose.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
+
+        tf_stamped = TransformStamped()
+        tf_stamped.header = header
+        tf_stamped.child_frame_id = "base_link"
+        tf_stamped.transform.translation.x = pose.position.x
+        tf_stamped.transform.translation.y = pose.position.y
+        tf_stamped.transform.translation.z = pose.position.z
+        tf_stamped.transform.rotation = pose.orientation
+        self.pub_gt_tf.publish(TFMessage(transforms=[tf_stamped]))
+
+        odom = Odometry()
+        odom.header = header
+        odom.child_frame_id = "base_link"
+        odom.pose.pose = pose
+        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
+        inv_rot_mat = trans_mat[0:3, 0:3].T
+        vel_vec = numpy.array([ego_vel.x, ego_vel.y, ego_vel.z]).reshape(3, 1)
+        body_vel = (inv_rot_mat @ vel_vec).T[0]
+        odom.twist.twist.linear.x = float(body_vel[0])
+        odom.twist.twist.linear.y = float(-body_vel[1])
+        odom.twist.twist.linear.z = float(body_vel[2])
+        odom.twist.twist.angular.z = -math.radians(ego_ang_vel.z)
+        self.pub_gt_odom.publish(odom)
+
     def run_step(self, input_data, timestamp):
         """
         Execute main simulation step for publishing sensor data and getting control commands.
@@ -918,6 +980,9 @@ class carla_ros2_interface(object):
         obj_clock = Clock()
         obj_clock.clock = Time(sec=seconds, nanosec=nanoseconds)
         self.clock_publisher.publish(obj_clock)
+
+        if self.param_values.get("publish_ground_truth_localization", False):
+            self._publish_ground_truth_odometry()
 
         # publish data of all sensors
         for key, data in input_data.items():
