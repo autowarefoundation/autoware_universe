@@ -194,6 +194,46 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
   EXPECT_TRUE(has_ped);
 }
 
+TEST_F(LabelBasedEuclideanClusterTest, PerLabelMinimumSizeFiltersTinyTruckButKeepsHazard)
+{
+  const auto truck_point_label = static_cast<std::uint8_t>(PointCloudClassification::TRUCK);
+  const auto hazard_point_label = static_cast<std::uint8_t>(PointCloudClassification::HAZARD);
+
+  const auto truck_object_label = static_cast<std::uint8_t>(ObjectClassification::TRUCK);
+  const auto hazard_object_label = static_cast<std::uint8_t>(ObjectClassification::HAZARD);
+
+  auto truck_cluster =
+    std::make_shared<VoxelGridBasedEuclideanCluster>(false, 2, 1.0, 0.1, 1, 10, 100, 10000, 1.0F);
+  auto hazard_cluster =
+    std::make_shared<VoxelGridBasedEuclideanCluster>(false, 2, 1.0, 0.1, 1, 10, 100, 10000, 0.0F);
+  LabelBasedEuclideanCluster cluster(
+    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{
+      {truck_object_label, truck_cluster},
+      {hazard_object_label, hazard_cluster},
+    },
+    shape_estimator_);
+
+  auto pc = create_pointcloud(
+    {0.0F, 0.05F, 0.10F, 5.0F, 5.05F, 5.10F}, {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
+    {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
+    {
+      truck_point_label,
+      truck_point_label,
+      truck_point_label,
+      hazard_point_label,
+      hazard_point_label,
+      hazard_point_label,
+    });
+
+  const auto result = cluster.process(pc);
+
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->objects.objects.size(), 1U);
+  EXPECT_EQ(
+    result->objects.objects.front().classification.front().label, ObjectClassification::HAZARD);
+}
+
 // ============================================================================
 // Probability Filtering Tests
 // ============================================================================
