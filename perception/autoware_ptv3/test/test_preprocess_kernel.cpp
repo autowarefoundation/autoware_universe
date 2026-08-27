@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -51,6 +52,7 @@ protected:
   {
     CudaUniquePtr<float[]> reconstruction_features_d;
     CudaUniquePtr<std::int32_t[]> voxel_coords_d;
+    CudaUniquePtr<std::int64_t[]> serialized_code_d;
     CudaUniquePtr<CloudPointTypeXYZI[]> cropped_source_points_d;
     CudaUniquePtr<std::int64_t[]> inverse_map_d;
     std::size_t num_cropped_points{};
@@ -119,7 +121,7 @@ protected:
     auto reconstruction_features_d =
       makeDeviceBuffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
     auto voxel_coords_d = makeDeviceBuffer<std::int32_t>(config.cloud_capacity_ * 3);
-    auto voxel_hashes_d = makeDeviceBuffer<std::int64_t>(config.cloud_capacity_ * 2);
+    auto serialized_code_d = makeDeviceBuffer<std::int64_t>(config.cloud_capacity_ * 2);
     auto compact_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(config.cloud_capacity_);
     auto cropped_source_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(config.cloud_capacity_);
     auto inverse_map_d = makeDeviceBuffer<std::int64_t>(config.cloud_capacity_);
@@ -127,7 +129,7 @@ protected:
     std::size_t num_cropped_points = 0;
     const auto num_voxels = preprocess_->generateFeatures(
       input_points_d.get(), CloudFormat::XYZI, host_points.size(), voxel_features_d.get(),
-      voxel_coords_d.get(), voxel_hashes_d.get(), compact_points_d.get(),
+      voxel_coords_d.get(), serialized_code_d.get(), compact_points_d.get(),
       reconstruction_features_d.get(),
       with_source_outputs ? cropped_source_points_d.get() : nullptr,
       with_source_outputs ? inverse_map_d.get() : nullptr, &num_cropped_points);
@@ -137,6 +139,7 @@ protected:
     return GenerateFeaturesResult{
       std::move(reconstruction_features_d),
       std::move(voxel_coords_d),
+      std::move(serialized_code_d),
       std::move(cropped_source_points_d),
       std::move(inverse_map_d),
       num_cropped_points,
@@ -249,6 +252,109 @@ TEST_F(PreprocessKernelTest, CroppedVoxelCoordsStayInsideGridBounds)
     EXPECT_LT(y, config.grid_y_size_);
     EXPECT_LT(z, config.grid_z_size_);
   }
+}
+
+// generateSerializedPoolingMetadata requires voxels ordered by their order-0 serialized code; this
+// pins that contract of generateFeatures down at its source.
+TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
+{
+  PTv3ConfigParams params;
+  params.cloud_capacity = 64;
+  params.voxels_num = {1, 32, 64};
+  params.point_cloud_range = {0.0F, 0.0F, 0.0F, 8.0F, 8.0F, 8.0F};
+  params.voxel_size = {1.0F, 1.0F, 1.0F};
+
+  // Scrambled relative to the serialization curve, with one duplicated voxel, so that neither
+  // input order nor deduplication can accidentally satisfy the assertions below.
+  const std::vector<CloudPointTypeXYZI> host_points{
+    {7.5F, 7.5F, 7.5F, 1.0F}, {0.5F, 0.5F, 0.5F, 2.0F}, {3.5F, 1.5F, 0.5F, 3.0F},
+    {0.5F, 6.5F, 2.5F, 4.0F}, {3.5F, 1.5F, 0.5F, 5.0F}, {6.5F, 0.5F, 4.5F, 6.0F},
+  };
+
+  const auto result = runGenerateFeatures(params, host_points, true);
+  ASSERT_EQ(result.num_cropped_points, 6U);
+  ASSERT_EQ(result.num_voxels, 5U);
+
+  const auto depth = config_->serialization_depth_;
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  const auto serialized_code = copyToHost(result.serialized_code_d.get(), result.num_voxels * 2);
+
+  for (std::size_t voxel_idx = 1; voxel_idx < result.num_voxels; ++voxel_idx) {
+    EXPECT_LT(serialized_code[voxel_idx - 1], serialized_code[voxel_idx])
+      << "at voxel " << voxel_idx;
+  }
+
+  // The codes must describe the grid coordinates that were actually emitted.
+  for (std::size_t voxel_idx = 0; voxel_idx < result.num_voxels; ++voxel_idx) {
+    const auto x = voxel_coords[voxel_idx * 3 + 0];
+    const auto y = voxel_coords[voxel_idx * 3 + 1];
+    const auto z = voxel_coords[voxel_idx * 3 + 2];
+    EXPECT_EQ(serialized_code[voxel_idx], serialize_coord(x, y, z, depth, false))
+      << "order 0 at voxel " << voxel_idx;
+    EXPECT_EQ(serialized_code[result.num_voxels + voxel_idx], serialize_coord(x, y, z, depth, true))
+      << "order 1 at voxel " << voxel_idx;
+  }
+}
+
+// End-to-end check of the unaligned-boundary depth handling: the corner voxel (16, 16, 16) needs
+// a fifth coordinate bit, without which it would deduplicate into (0, 0, 0).
+TEST_F(PreprocessKernelTest, UnalignedRangeBoundaryKeepsCornerVoxelsDistinct)
+{
+  PTv3ConfigParams params;
+  params.cloud_capacity = 64;
+  params.voxels_num = {1, 32, 64};
+  params.point_cloud_range = {0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 16.5F};
+  params.voxel_size = {1.0F, 1.0F, 1.0F};
+
+  const std::vector<CloudPointTypeXYZI> host_points{
+    {0.6F, 0.6F, 0.6F, 1.0F},     // grid coord (0, 0, 0)
+    {16.4F, 16.4F, 16.4F, 2.0F},  // grid coord (16, 16, 16): needs a fifth coordinate bit
+  };
+
+  const auto result = runGenerateFeatures(params, host_points, true);
+  ASSERT_EQ(result.num_cropped_points, 2U);
+  ASSERT_EQ(result.num_voxels, 2U);
+
+  const auto depth = config_->serialization_depth_;
+  EXPECT_EQ(depth, 5);
+
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  const auto serialized_code = copyToHost(result.serialized_code_d.get(), result.num_voxels * 2);
+  EXPECT_EQ(voxel_coords, (std::vector<std::int32_t>{0, 0, 0, 16, 16, 16}));
+  EXPECT_EQ(serialized_code[0], serialize_coord(0, 0, 0, depth, false));
+  EXPECT_EQ(serialized_code[1], serialize_coord(16, 16, 16, depth, false));
+}
+
+// Decimal-aligned borders (neither 102.4 nor 0.1 is a binary float) rely on the config using the
+// same float arithmetic as the device mapping: depth stays 11, a point one ULP below the border
+// lands in the last cell, and a point exactly on the border is cropped.
+TEST_F(PreprocessKernelTest, Base10AlignedBordersStayWithinSerializationDepth)
+{
+  PTv3ConfigParams params;
+  params.cloud_capacity = 64;
+  params.voxels_num = {1, 32, 64};
+  params.point_cloud_range = {-102.4F, -102.4F, -102.4F, 102.4F, 102.4F, 102.4F};
+  params.voxel_size = {0.1F, 0.1F, 0.1F};
+
+  const float below_max = std::nextafter(102.4F, 0.0F);
+  const std::vector<CloudPointTypeXYZI> host_points{
+    {-102.4F, -102.4F, -102.4F, 1.0F},        // exactly on the min border: grid coord (0, 0, 0)
+    {below_max, below_max, below_max, 2.0F},  // last cell: grid coord (2047, 2047, 2047)
+    {102.4F, 102.4F, 102.4F, 3.0F},           // exactly on the max border: cropped
+  };
+
+  const auto result = runGenerateFeatures(params, host_points, true);
+  ASSERT_EQ(result.num_cropped_points, 2U);
+  ASSERT_EQ(result.num_voxels, 2U);
+
+  const auto depth = config_->serialization_depth_;
+  EXPECT_EQ(depth, 11);
+
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  const auto serialized_code = copyToHost(result.serialized_code_d.get(), result.num_voxels * 2);
+  EXPECT_EQ(voxel_coords, (std::vector<std::int32_t>{0, 0, 0, 2047, 2047, 2047}));
+  EXPECT_EQ(serialized_code[0], serialize_coord(0, 0, 0, depth, false));
+  EXPECT_EQ(serialized_code[1], serialize_coord(2047, 2047, 2047, depth, false));
 }
 
 TEST_F(PreprocessKernelTest, FullReconstructionKeepsAllInputFeaturesBeforeCrop)

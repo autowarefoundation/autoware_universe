@@ -16,6 +16,9 @@
     <arg name="fixed_delta_seconds" default="0.05" description="Time step for CARLA, FPS=1/value"/>
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
+    <arg name="spawn_point_ground_snap" default="False" description="Snap the ego spawn point and RViz initial pose onto CARLA map geometry via ground_projection"/>
+    <arg name="spawn_point_ground_offset_z" default="0.5" description="Z offset added above the projected ground when ground-snapping the spawn point"/>
+    <arg name="initial_pose_ground_offset_z" default="1.0" description="Z offset added above the projected ground when ground-snapping the RViz initial pose"/>
     <arg name="force_load_world" default="False" description="Always reload the CARLA world with client.load_world() instead of load_world_if_different()"/>
     <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
     <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
@@ -60,6 +63,9 @@
       <param name="vehicle_type" value="$(var vehicle_type)"/>
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
+      <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
+      <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
+      <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
       <param name="force_load_world" value="$(var force_load_world)"/>
       <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>

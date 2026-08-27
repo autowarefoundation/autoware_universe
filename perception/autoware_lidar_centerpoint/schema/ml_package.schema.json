@@ -6,25 +6,36 @@
     "ml_package": {
       "type": "object",
       "properties": {
+        "version": {
+          "type": "string",
+          "description": "Model bundle version. The node reads major version 4 from minor version 1 upward; a minor bump may add manifest entries the node requires.",
+          "default": "v4.1",
+          "pattern": "^v?[0-9]+\\.[0-9]+$"
+        },
         "encoder_onnx_path": {
           "type": "string",
-          "description": "VoxelFeatureEncoder ONNX file, relative to model_path (absolute paths allowed)."
+          "description": "VoxelFeatureEncoder ONNX file, relative to model_path (absolute paths allowed).",
+          "default": "pts_voxel_encoder.onnx"
         },
         "encoder_engine_path": {
           "type": "string",
-          "description": "VoxelFeatureEncoder TensorRT Engine file, relative to model_path (absolute paths allowed)."
+          "description": "VoxelFeatureEncoder TensorRT Engine file, relative to model_path (absolute paths allowed).",
+          "default": "pts_voxel_encoder.engine"
         },
         "head_onnx_path": {
           "type": "string",
-          "description": "DetectionHead ONNX file, relative to model_path (absolute paths allowed)."
+          "description": "DetectionHead ONNX file, relative to model_path (absolute paths allowed).",
+          "default": "pts_backbone_neck_head.onnx"
         },
         "head_engine_path": {
           "type": "string",
-          "description": "DetectionHead TensorRT Engine file, relative to model_path (absolute paths allowed)."
+          "description": "DetectionHead TensorRT Engine file, relative to model_path (absolute paths allowed).",
+          "default": "pts_backbone_neck_head.engine"
         },
         "class_remapper_param_path": {
           "type": "string",
-          "description": "Class remapper parameter file, relative to model_path (absolute paths allowed)."
+          "description": "Class remapper parameter file, relative to model_path (absolute paths allowed).",
+          "default": "detection_class_remapper.param.yaml"
         },
         "trt_precision": {
           "type": "string",
@@ -64,12 +75,12 @@
             },
             "point_cloud_range": {
               "type": "array",
-              "description": "An array of distance ranges of each class, this must have same length with `class_names`.",
+              "description": "The range of the point cloud in [min_x, min_y, min_z, max_x, max_y, max_z] order. [m]",
               "default": [-76.8, -76.8, -4.0, 76.8, 76.8, 6.0]
             },
             "voxel_size": {
               "type": "array",
-              "description": "An array of voxel grid sizes for PointPainting, this must have same length with `paint_class_names`.",
+              "description": "The size of a voxel in [x, y, z] order. [m]",
               "default": [0.32, 0.32, 10.0]
             },
             "downsample_factor": {
@@ -82,6 +93,16 @@
               "type": "integer",
               "description": "A size of encoder input feature channels.",
               "default": 9
+            },
+            "yaw_norm_thresholds": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              },
+              "description": "A minimum norm of the predicted yaw vector per class, in the order of `class_names`. Objects below the threshold are discarded.",
+              "default": [0.3, 0.3, 0.3, 0.3, 0.0]
             },
             "detection_score_thresholds": {
               "type": "object",
@@ -129,6 +150,7 @@
         }
       },
       "required": [
+        "version",
         "encoder_onnx_path",
         "encoder_engine_path",
         "head_onnx_path",
