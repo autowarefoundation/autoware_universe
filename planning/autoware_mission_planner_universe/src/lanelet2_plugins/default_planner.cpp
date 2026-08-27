@@ -27,6 +27,7 @@
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
@@ -95,15 +96,15 @@ DefaultPlanner::DefaultPlanner(
   route_handler_.setAllowArea(param_.allow_area);
 }
 
-bool DefaultPlanner::ready() const
-{
-  return is_graph_ready_;
-}
-
 void DefaultPlanner::set_map(const LaneletMapBin & msg)
 {
   route_handler_.setMap(msg);
   is_graph_ready_ = true;
+}
+
+bool DefaultPlanner::ready() const
+{
+  return is_graph_ready_;
 }
 
 DefaultPlanner::MarkerArray DefaultPlanner::visualize(

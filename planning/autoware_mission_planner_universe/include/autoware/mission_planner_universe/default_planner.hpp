@@ -33,7 +33,6 @@
 
 namespace autoware::mission_planner_universe::lanelet2
 {
-
 struct DefaultPlannerParameters
 {
   double goal_angle_threshold_deg;
