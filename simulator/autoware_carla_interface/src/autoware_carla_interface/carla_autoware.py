@@ -138,6 +138,7 @@ class InitializeInterface(object):
             flush=True,
         )
         return snapped
+
     def _reload_world(self, client):
         """Reload the world via client.load_world(); return the failure, if any."""
         self.logger.info(f"Loading CARLA world '{self.carla_map}' with client.load_world()")
