@@ -460,4 +460,3 @@ void DefaultPlanner::clearRoute()
 }
 
 }  // namespace autoware::mission_planner_universe::lanelet2
-
