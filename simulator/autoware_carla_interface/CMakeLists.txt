@@ -69,6 +69,9 @@ install(DIRECTORY config DESTINATION share/${PROJECT_NAME}/)
 # Install calibration maps
 install(DIRECTORY calibration_maps/ DESTINATION share/${PROJECT_NAME}/)
 
+# Install bundled test maps
+install(DIRECTORY test_map DESTINATION share/${PROJECT_NAME}/)
+
 # Install resource files
 install(DIRECTORY resource DESTINATION share/${PROJECT_NAME}/)
 

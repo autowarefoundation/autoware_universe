@@ -37,6 +37,25 @@ This ros package enables communication between Autoware and CARLA for autonomous
    projector_type: Local
    ```
 
+#### Test map: Kashiwanoha
+
+The steps above set up a CARLA town, whose lanelet2 map is derived from the simulator's own
+OpenDRIVE. For trying the opposite direction, the one a real deployment travels, this package ships
+a small map of a real site under `test_map/kashiwanoha/`: surveyed as lanelet2, then converted to
+OpenDRIVE for CARLA. Nothing needs downloading, so `map_path` can point straight at the installed
+directory:
+
+```bash
+map_path:=$(ros2 pkg prefix --share autoware_carla_interface)/test_map/kashiwanoha
+```
+
+CARLA needs the matching world, which that directory also carries as OpenDRIVE. See
+[test_map/kashiwanoha/README.md](test_map/kashiwanoha/README.md) for how to load it, for the coordinate
+frame both sides share, and for the map's origin and license.
+
+That directory holds no point cloud map, so it suits a ground-truth localization setup rather than
+one that scan-matches.
+
 ### Build
 
 ```bash
