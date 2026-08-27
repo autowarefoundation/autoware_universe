@@ -1062,7 +1062,17 @@ class carla_ros2_interface(object):
         out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
 
         out_steering_state.stamp = out_vel_state.header.stamp
-        out_steering_state.steering_tire_angle = -math.radians(steer_angle)
+        # CARLA 0.10 (Chaos) always reports 0 from get_wheel_steer_angle();
+        # synthesize the steering state from the applied control in that case
+        # so controllers keep receiving a consistent steering feedback.
+        if abs(steer_angle) > 1e-6:
+            out_steering_state.steering_tire_angle = -math.radians(steer_angle)
+        elif self.physics_control is not None:
+            out_steering_state.steering_tire_angle = (
+                -control.steer * self._max_wheel_steer_angle_rad()
+            )
+        else:
+            out_steering_state.steering_tire_angle = 0.0
 
         out_gear_state.stamp = out_vel_state.header.stamp
         out_gear_state.report = GearReport.DRIVE
