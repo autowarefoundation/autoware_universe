@@ -157,6 +157,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `fixed_delta_seconds`             | double | 0.05                                                                              | Time step for the simulation (related to client FPS)                                                                                                                                                                                                                                                                                                                                |
 | `use_traffic_manager`             | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                                                                                                                                                                                        |
 | `max_real_delta_seconds`          | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                                                                                                                                                                                 |
+| `tick_follower`                   | bool   | False                                                                             | If True, the bridge does not tick the CARLA world and instead follows the frames ticked by another client. See [Multi-client co-simulation](#multi-client-co-simulation).                                                                                                                                                                                                           |
 | `carla_map`                       | string | ""                                                                                | Explicit CARLA level name. When non-empty it overrides the name derived from `map_path`; useful for CARLA 0.10 levels whose name differs from the Autoware map directory. Empty reproduces the current behavior.                                                                                                                                                                    |
 | `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default `False` (re-)enables rendering even if the server was started headless; set `True` to keep rendering off.                                                                                                                                    |
 | `force_load_world`                | bool   | False                                                                             | Always reload the world with `client.load_world()` instead of `load_world_if_different()`. Default False reproduces the current call (with a version-tolerant fallback).                                                                                                                                                                                                            |
@@ -210,6 +211,27 @@ On a CARLA API without `ground_projection`, snapping is skipped and the previous
 fixed z-offset is used, so enabling the flag never raises. The spawn-point path
 logs a warning when it falls back; the RViz initial-pose fallback is silent (and
 with the default random spawn the spawn-point path is not exercised at all).
+
+### Multi-client co-simulation
+
+By default this bridge owns the CARLA simulation clock: its main loop calls `world.tick()` on every
+cycle. A server in synchronous mode advances one frame per `tick()` call, so a second client that
+also ticks, for example an external traffic simulator feeding background vehicles into the same
+server, makes the simulation advance more than once per intended step.
+
+Setting `tick_follower` to `True` puts the bridge in a passive mode. It no longer ticks the world in
+its main loop, and instead publishes sensor data, the clock and the ego control for the frames that
+the external client ticks. Exactly one client in the whole setup may own the clock.
+
+Two things to keep in mind when using this mode:
+
+- **Start the bridge before the tick owner.** Loading the world still ticks it a few times to bring
+  up the ego vehicle and its sensors, and those ticks must not race the external owner.
+- **The cadence belongs to the tick owner**, so `max_real_delta_seconds` no longer paces the loop.
+  Set `fixed_delta_seconds` to the step length that the owner uses.
+
+If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
+and reports how many it skipped through a throttled warning.
 
 ### Sensor Configuration
 
