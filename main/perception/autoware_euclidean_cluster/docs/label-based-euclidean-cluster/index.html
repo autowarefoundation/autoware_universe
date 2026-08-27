@@ -8009,6 +8009,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Processing Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filtering-clusters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering Clusters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -23028,6 +23045,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Processing Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filtering-clusters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering Clusters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -23207,6 +23241,12 @@ a throttled warning.</p>
 <li>Estimate a shape and pose for each cluster with <code>ShapeEstimator</code>.</li>
 <li>If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.</li>
 </ol>
+<h3 id="filtering-clusters">Filtering Clusters<a class="headerlink" href="#filtering-clusters" title="Permanent link">#</a></h3>
+<p>Clusters can optionally be filtered by their physical size after label-based clustering.
+The size is the diameter of an XY bounding circle around the cluster, which is independent of object heading.
+<code>min_cluster_size_m: 0.0</code> disables the global filter.
+A value under <code>label_cluster_params.&lt;label&gt;.min_cluster_size_m</code> overrides it for that label; setting the override to <code>0.0</code> disables filtering for that label.
+This allows large-object labels such as <code>truck</code> to reject implausibly small false positives while leaving small <code>hazard</code> objects unfiltered.</p>
 <h2 id="shape-estimation-behavior">Shape Estimation Behavior<a class="headerlink" href="#shape-estimation-behavior" title="Permanent link">#</a></h2>
 <p>After clustering, the node converts each cluster into a <code>DetectedObject</code>.</p>
 <ul>
@@ -23299,6 +23339,13 @@ a throttled warning.</p>
 <td>N/A</td>
 </tr>
 <tr>
+<td>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Minimum XY bounding-circle diameter for an output cluster in meters. Zero disables size filtering.</td>
+<td>0</td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>use_<wbr>shape_<wbr>estimation_<wbr>corrector</wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Enable the shape estimation corrector.</td>
@@ -23383,6 +23430,13 @@ a throttled warning.</p>
 <td>≥1</td>
 </tr>
 <tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>unknown.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>car.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
@@ -23437,6 +23491,13 @@ a throttled warning.</p>
 <td></td>
 <td></td>
 <td>≥1</td>
+</tr>
+<tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>car.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
 </tr>
 <tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>bus.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
@@ -23495,6 +23556,13 @@ a throttled warning.</p>
 <td>≥1</td>
 </tr>
 <tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>bus.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>truck.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
@@ -23549,6 +23617,13 @@ a throttled warning.</p>
 <td></td>
 <td></td>
 <td>≥1</td>
+</tr>
+<tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>truck.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
 </tr>
 <tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>trailer.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
@@ -23607,6 +23682,13 @@ a throttled warning.</p>
 <td>≥1</td>
 </tr>
 <tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>trailer.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>motorcycle.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
@@ -23661,6 +23743,13 @@ a throttled warning.</p>
 <td></td>
 <td></td>
 <td>≥1</td>
+</tr>
+<tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>motorcycle.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
 </tr>
 <tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>bicycle.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
@@ -23719,6 +23808,13 @@ a throttled warning.</p>
 <td>≥1</td>
 </tr>
 <tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>bicycle.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>pedestrian.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
@@ -23773,6 +23869,13 @@ a throttled warning.</p>
 <td></td>
 <td></td>
 <td>≥1</td>
+</tr>
+<tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>pedestrian.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
 </tr>
 <tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>animal.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
@@ -23831,6 +23934,13 @@ a throttled warning.</p>
 <td>≥1</td>
 </tr>
 <tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>animal.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>label_<wbr>cluster_<wbr>params.<wbr>hazard.<wbr>use_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td></td>
@@ -23887,6 +23997,13 @@ a throttled warning.</p>
 <td>≥1</td>
 </tr>
 <tr>
+<td>label_<wbr>cluster_<wbr>params.<wbr>hazard.<wbr>min_<wbr>cluster_<wbr>size_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Optional per-label minimum XY bounding-circle diameter in meters. Overrides the global value; zero disables filtering for this label.</td>
+<td></td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>confusable_<wbr>label_<wbr>groups</wbr></wbr></td>
 <td>object</td>
 <td>Optional post-clustering merge groups for confusable label pairs (e.g. truck/trailer). Each key is a user-defined group name.</td>
@@ -23909,6 +24026,7 @@ hazards need a tighter tolerance and finer voxels than cars or trucks.</p>
 <li>Each override block accepts the same keys as the global clustering parameters.</li>
 <li>Any key omitted inside an override block falls back to the corresponding global value, so a block
   only needs to list the parameters that differ.</li>
+<li><code>min_cluster_size_m</code> is also accepted in an override block and is evaluated after clustering.</li>
 <li>A label with no override block (or an empty one) keeps using the global default cluster.</li>
 <li>When a label-specific cluster is created, the node logs <code>Using custom cluster params for label '&lt;label&gt;'</code> at startup.</li>
 </ul>
