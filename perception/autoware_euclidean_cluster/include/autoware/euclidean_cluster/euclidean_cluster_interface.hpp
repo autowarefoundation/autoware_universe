@@ -78,8 +78,11 @@ protected:
   /// @details A zero threshold disables this filter.
   bool isClusterLargeEnough(const pcl::PointCloud<pcl::PointXYZ> & cluster) const
   {
-    if (min_cluster_size_ <= 0.0F || cluster.empty()) {
+    if (min_cluster_size_ <= 0.0F) {
       return true;
+    }
+    if (cluster.empty()) {
+      return false;
     }
 
     float center_x = 0.0F;
