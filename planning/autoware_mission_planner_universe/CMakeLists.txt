@@ -36,9 +36,9 @@ rclcpp_components_register_node(${PROJECT_NAME}_component
   EXECUTABLE route_selector
 )
 
-# Kept in its own library so that the pluginlib registration is never linked into another target.
-# class_loader flags a plugin library loaded outside of a ClassLoader as "non-pure" and then stops
-# unloading any library in that process.
+# Kept out of the libraries the node components link against: class_loader flags a plugin library
+# loaded outside of a ClassLoader as "non-pure" and then stops unloading any library in that
+# process. Note this library is still exported, so a downstream package can link it directly.
 ament_auto_add_library(${PROJECT_NAME}_default_planner_plugin SHARED
   src/lanelet2_plugins/default_planner_plugin.cpp
   NO_TARGET_LINK_LIBRARIES

@@ -29,7 +29,8 @@ namespace autoware::mission_planner_universe::lanelet2
 /// behalf of the planner, so that out-of-package callers that load the planner through pluginlib
 /// keep working unchanged.
 ///
-/// initialize() must be called before any other method.
+/// initialize() must be called before plan(), visualize(), updateRoute(), clearRoute() and
+/// getRouteHandler(). ready() answers before it, as the plugin did when it was the planner itself.
 class DefaultPlannerPlugin : public mission_planner_universe::PlannerPlugin
 {
 public:
