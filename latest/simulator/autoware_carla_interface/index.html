@@ -23147,7 +23147,7 @@ works on luminance alone, such as feature tracking or visual odometry. A
 <h5 id="sensor-noise">Sensor Noise<a class="headerlink" href="#sensor-noise" title="Permanent link">#</a></h5>
 <p>The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
 is what reproducing a run wants. It also means anything consuming those sensors
-sees a measurement no hardware produces: a localisation or odometry stack scored
+sees a measurement no hardware produces: a localization or odometry stack scored
 against a perfect gyro reports an accuracy it will not reach on a vehicle.</p>
 <p>Set any of the CARLA noise attributes under the sensor's <code>parameters</code> to get a
 sensor that behaves like hardware:</p>
@@ -23166,7 +23166,7 @@ sensor that behaves like hardware:</p>
 <span class="w">      </span><span class="nt">noise_gyro_bias_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0005</span>
 <span class="w">      </span><span class="nt">noise_accel_stddev_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
 </code></pre></div>
-<p>Recognised names are <code>noise_accel_stddev_{x,y,z}</code>, <code>noise_gyro_stddev_{x,y,z}</code>
+<p>Recognized names are <code>noise_accel_stddev_{x,y,z}</code>, <code>noise_gyro_stddev_{x,y,z}</code>
 and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,lon}_stddev</code> and
 <code>noise_{alt,lat,lon}_bias</code> for the GNSS. Anything left out stays at zero.</p>
 <h5 id="light-weight-sensor-mapping">Light-Weight Sensor Mapping<a class="headerlink" href="#light-weight-sensor-mapping" title="Permanent link">#</a></h5>
@@ -23201,6 +23201,12 @@ and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,l
 <div class="highlight"><pre><span></span><code><span class="n">client</span><span class="o">.</span><span class="n">load_world</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">map_name</span><span class="p">)</span>
 <span class="bp">self</span><span class="o">.</span><span class="n">world</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_world</span><span class="p">()</span>
 </code></pre></div>
+<p>After loading, the interface checks that the map CARLA is actually running is
+ the one that was requested. If it is not - the level does not exist, the
+ server failed to switch, or the connection dropped - the mismatch is logged to
+ <code>rosout</code> and the node aborts with <code>CarlaWorldLoadError</code>. Running Autoware
+ against a map the simulator is not simulating would silently invalidate the
+ whole run, so it is treated as fatal rather than tolerated.</p>
 </li>
 <li>
 <p><strong>Spawn Ego Vehicle</strong>:</p>
