@@ -33,6 +33,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::ptv3
@@ -80,6 +81,11 @@ protected:
   void allocateSegOutputMessages();
   void allocateSerializedPoolingBuffers();
   void bindSerializedPoolingAddresses();
+  /// Whether the loaded encoder artifact declares a tensor of this name.
+  [[nodiscard]] bool encoderDeclares(const std::string & name) const
+  {
+    return encoder_tensors_.count(name) > 0;
+  }
   void precomputeSerializedPoolingMetadata();
   bool setSerializedPoolingInputShapes();
   [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
@@ -99,6 +105,8 @@ protected:
 
   // The encoder is always present. The heads are loaded only when enabled.
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> encoder_trt_ptr_{nullptr};
+  /// IO tensor names the loaded encoder artifact declares, read from the ONNX at load time.
+  std::unordered_set<std::string> encoder_tensors_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> detection3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};

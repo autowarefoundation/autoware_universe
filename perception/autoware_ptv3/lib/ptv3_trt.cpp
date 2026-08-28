@@ -32,6 +32,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -39,6 +40,19 @@ namespace autoware::ptv3
 {
 namespace
 {
+
+std::string joinSortedNames(std::vector<std::string> names)
+{
+  std::sort(names.begin(), names.end());
+  std::string joined;
+  for (std::size_t index = 0; index < names.size(); ++index) {
+    if (index > 0) {
+      joined += ", ";
+    }
+    joined += names[index];
+  }
+  return joined;
+}
 
 std::int64_t poolingDepth(const std::int64_t stride)
 {
@@ -298,33 +312,69 @@ void PTv3TRT::createPointFields()
 
 void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 {
+  // TrtCommon parses the ONNX in its constructor, so the artifact's declared IO is available
+  // before setup() builds or loads the engine. Encoder variants that gate blocks off - LitePT
+  // runs convolution early and attention late - read a strict subset of the PTv3 contract and
+  // export only what they read. Declaring and binding the intersection lets one node serve both,
+  // instead of a fixed list that a narrower artifact fails TrtCommon's IO validation against.
+  encoder_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
+    std::vector<std::string>{config_.plugins_path_});
+
+  for (std::int32_t index = 0; index < encoder_trt_ptr_->getNbIOTensors(); ++index) {
+    const auto * tensor_name = encoder_trt_ptr_->getIOTensorName(index);
+    if (tensor_name == nullptr) {
+      throw std::runtime_error("Encoder ONNX exposes an unnamed IO tensor.");
+    }
+    encoder_tensors_.emplace(tensor_name);
+  }
+
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
+  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
+  // Every tensor this node knows how to supply, whether or not the artifact declares it.
+  std::unordered_set<std::string> supported;
+
+  const auto declare_io = [this, &network_io, &supported](
+                            const std::string & name, const nvinfer1::Dims & io_dims,
+                            const std::optional<nvinfer1::DataType> data_type = std::nullopt) {
+    supported.emplace(name);
+    if (!encoderDeclares(name)) {
+      return;
+    }
+    network_io.emplace_back(name, io_dims, data_type);
+  };
+  const auto declare_profile = [this, &profile_dims](
+                                 const std::string & name, const nvinfer1::Dims & min_dims,
+                                 const nvinfer1::Dims & opt_dims, const nvinfer1::Dims & max_dims) {
+    if (!encoderDeclares(name)) {
+      return;
+    }
+    profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
+  };
 
   // Inputs
-  network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
-  network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
-  network_io.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
+  declare_io("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+  declare_io("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
+  // Only consumed when the finest stage attends; a convolution-only stage 0 reads no base order.
+  declare_io("serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
 
   // Outputs: per-encoder-stage point features point_feat_i [N_i, enc_channels[i]],
   // finest to deepest.
   for (std::size_t stage = 0; stage < config_.enc_channels_.size(); ++stage) {
-    network_io.emplace_back(
+    declare_io(
       stageFeatureName(stage), nvinfer1::Dims{2, {-1, config_.enc_channels_[stage]}},
       nvinfer1::DataType::kFLOAT);
   }
 
-  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
-
-  profile_dims.emplace_back(
+  declare_profile(
     "grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
     nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
 
-  profile_dims.emplace_back(
+  declare_profile(
     "feat", nvinfer1::Dims{2, {config_.voxels_num_[0], 4}},
     nvinfer1::Dims{2, {config_.voxels_num_[1], 4}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 4}});
 
-  profile_dims.emplace_back(
+  declare_profile(
     "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
     nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
 
@@ -336,13 +386,13 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   // data-dependent, so they are declared dynamic and bounded by the voxel-count optimization
   // profile. A pooled (output) count is at most its input count, so all pooled dims are
   // conservatively bounded by [1, opt, max] voxels.
-  const auto add_pooling_io = [&network_io, &profile_dims](
+  const auto add_pooling_io = [&declare_io, &declare_profile](
                                 const std::string & name, const nvinfer1::Dims & io_dims,
                                 const nvinfer1::Dims & min_dims, const nvinfer1::Dims & opt_dims,
                                 const nvinfer1::Dims & max_dims,
                                 const std::optional<nvinfer1::DataType> data_type = std::nullopt) {
-    network_io.emplace_back(name, io_dims, data_type);
-    profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
+    declare_io(name, io_dims, data_type);
+    declare_profile(name, min_dims, opt_dims, max_dims);
   };
 
   const std::int64_t min_voxels = config_.voxels_num_[0];
@@ -379,9 +429,36 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
       nvinfer1::Dims{2, {num_orders, max_voxels}});
   }
 
-  encoder_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{config_.plugins_path_});
+  // Subset, not free-for-all: a tensor the node cannot supply would otherwise reach enqueue with
+  // no address bound at all, so refuse the artifact instead.
+  std::vector<std::string> unsupported;
+  for (const auto & name : encoder_tensors_) {
+    if (supported.count(name) == 0) {
+      unsupported.push_back(name);
+    }
+  }
+  if (!unsupported.empty()) {
+    throw std::runtime_error(
+      "Encoder ONNX declares tensor(s) this node cannot supply: [" + joinSortedNames(unsupported) +
+      "]. The model's IO contract does not match this version of autoware_ptv3.");
+  }
+
+  // The point features and the geometry that produces them are not optional in any variant.
+  std::vector<std::string> missing;
+  std::vector<std::string> required{"grid_coord", "feat"};
+  for (std::size_t stage = 0; stage < config_.enc_channels_.size(); ++stage) {
+    required.push_back(stageFeatureName(stage));
+  }
+  for (const auto & name : required) {
+    if (!encoderDeclares(name)) {
+      missing.push_back(name);
+    }
+  }
+  if (!missing.empty()) {
+    throw std::runtime_error(
+      "Encoder ONNX is missing required tensor(s): [" + joinSortedNames(missing) +
+      "]. Check that the artifact matches the configured encoder channels.");
+  }
 
   if (!encoder_trt_ptr_->setup(
         std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
@@ -391,7 +468,9 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
 
   encoder_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
   encoder_trt_ptr_->setTensorAddress("feat", feat_d_.get());
-  encoder_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+  if (encoderDeclares("serialized_code")) {
+    encoder_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+  }
   for (std::size_t stage = 0; stage < stage_feat_d_.size(); ++stage) {
     encoder_trt_ptr_->setTensorAddress(stageFeatureName(stage).c_str(), stage_feat_d_[stage].get());
   }
@@ -527,18 +606,25 @@ void PTv3TRT::bindSerializedPoolingAddresses()
   // so their device addresses are stable and can be bound a single time. The per-stage
   // serialized_code buffers are only used to chain pooling stages on the host side and are not
   // engine inputs, so they are intentionally not bound here.
+  // The metadata is generated for every stage regardless - each stage's order feeds the next
+  // one's pooling, and the head engines consume the clusters - but a gated encoder reads only
+  // part of it, so bind what the artifact actually declares.
   for (std::size_t stage = 0; stage < serialized_pooling_stages_d_.size(); ++stage) {
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
     auto & buffers = serialized_pooling_stages_d_[stage];
-    encoder_trt_ptr_->setTensorAddress((prefix + "indices").c_str(), buffers.indices.get());
-    encoder_trt_ptr_->setTensorAddress((prefix + "indptr").c_str(), buffers.indptr.get());
-    encoder_trt_ptr_->setTensorAddress(
-      (prefix + "head_indices").c_str(), buffers.head_indices.get());
-    encoder_trt_ptr_->setTensorAddress((prefix + "grid_coord").c_str(), buffers.grid_coord.get());
-    encoder_trt_ptr_->setTensorAddress(
-      (prefix + "serialized_order").c_str(), buffers.serialized_order.get());
-    encoder_trt_ptr_->setTensorAddress(
-      (prefix + "serialized_inverse").c_str(), buffers.serialized_inverse.get());
+    const auto bind = [this, &prefix](const std::string & field, void * data) {
+      const auto name = prefix + field;
+      if (!encoderDeclares(name)) {
+        return;
+      }
+      encoder_trt_ptr_->setTensorAddress(name.c_str(), data);
+    };
+    bind("indices", buffers.indices.get());
+    bind("indptr", buffers.indptr.get());
+    bind("head_indices", buffers.head_indices.get());
+    bind("grid_coord", buffers.grid_coord.get());
+    bind("serialized_order", buffers.serialized_order.get());
+    bind("serialized_inverse", buffers.serialized_inverse.get());
   }
 }
 
@@ -579,18 +665,20 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
     const auto in_count = serialized_pooling_num_voxels_[stage];
     const auto out_count = serialized_pooling_num_voxels_[stage + 1];
-    success &=
-      encoder_trt_ptr_->setInputShape((prefix + "indices").c_str(), nvinfer1::Dims{1, {in_count}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "indptr").c_str(), nvinfer1::Dims{1, {out_count + 1}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "head_indices").c_str(), nvinfer1::Dims{1, {out_count}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "grid_coord").c_str(), nvinfer1::Dims{2, {out_count, 3}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "serialized_order").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "serialized_inverse").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
+    const auto set_shape = [this, &prefix, &success](
+                             const std::string & field, const nvinfer1::Dims & dims) {
+      const auto name = prefix + field;
+      if (!encoderDeclares(name)) {
+        return;
+      }
+      success &= encoder_trt_ptr_->setInputShape(name.c_str(), dims);
+    };
+    set_shape("indices", nvinfer1::Dims{1, {in_count}});
+    set_shape("indptr", nvinfer1::Dims{1, {out_count + 1}});
+    set_shape("head_indices", nvinfer1::Dims{1, {out_count}});
+    set_shape("grid_coord", nvinfer1::Dims{2, {out_count, 3}});
+    set_shape("serialized_order", nvinfer1::Dims{2, {num_orders, out_count}});
+    set_shape("serialized_inverse", nvinfer1::Dims{2, {num_orders, out_count}});
   }
 
   return success;
@@ -957,7 +1045,9 @@ bool PTv3TRT::preProcess(
 
   encoder_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
   encoder_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
-  encoder_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+  if (encoderDeclares("serialized_code")) {
+    encoder_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+  }
 
   if (!setSerializedPoolingInputShapes()) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Failed to set serialized pooling input shapes.");
