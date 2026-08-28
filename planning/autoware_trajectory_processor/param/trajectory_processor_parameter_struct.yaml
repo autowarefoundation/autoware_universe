@@ -142,6 +142,13 @@ trajectory_processor_params:
       validation:
         bounds<>: [0.0, 100.0]
       read_only: false
+    minimum_stop_margin:
+      type: double
+      default_value: 3.0
+      description: Minimum distance to maintain from an obstacle when stopped [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
     lateral_margin:
       type: double
       default_value: 0.5
@@ -202,18 +209,18 @@ trajectory_processor_params:
         read_only: false
 
     objects:
-      object_types:
-        type: string_array
-        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard]
-        description: Types of objects to consider for obstacle stop
-        read_only: false
-      max_velocity_th:
-        type: double
-        default_value: 5.0
-        description: Maximum velocity threshold for target object to be considered for obstacle stop [m/s]
-        validation:
-          bounds<>: [0.0, 100.0]
-        read_only: false
+      target_objects:
+        bbox:
+          type: string_array
+          default_value:
+            [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard, unknown]
+          description: Types of bounding box shaped objects to consider for obstacle stop
+          read_only: false
+        polygon:
+          type: string_array
+          default_value: [car, truck, bus, trailer, pedestrian, hazard, unknown]
+          description: Types of polygon shaped objects to consider for obstacle stop
+          read_only: false
       stopped_velocity_th:
         type: double
         default_value: 0.25
@@ -405,11 +412,18 @@ trajectory_processor_params:
       default_value: true
       description: Enable the use of pointcloud for surround obstacle stop
       read_only: false
-    object_types:
-      type: string_array
-      default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
-      description: Types of objects to consider for surround obstacle stop
-      read_only: false
+    target_objects:
+      bbox:
+        type: string_array
+        default_value:
+          [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard, animal, unknown]
+        description: Types of bounding box shaped objects to consider for surround obstacle stop
+        read_only: false
+      polygon:
+        type: string_array
+        default_value: [car, truck, bus, trailer, pedestrian, hazard, animal, unknown]
+        description: Types of polygon shaped objects to consider for surround obstacle stop
+        read_only: false
     base_distance_th:
       &distance_th_template {
         type: double,

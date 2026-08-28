@@ -51,8 +51,9 @@ private:
   AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
   detailed_processing_time_publisher_;
 
-  // publish timer
+  // timers
   AUTOWARE_TIMER_PTR publish_timer_;
+  AUTOWARE_TIMER_PTR channel_optimizer_timer_;
 
   // parameters and internal state
   MultiObjectTrackerParameters params_;
@@ -67,6 +68,7 @@ private:
 
   // callback functions
   void onTimer();
+  void onChannelOptimizerTimer();
   void processObjects();
   void onMeasurement(
     const size_t channel_index,
