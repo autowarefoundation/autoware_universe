@@ -48,7 +48,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 }
 }  // namespace
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryProcessorParams & params)
@@ -171,18 +171,9 @@ bool TrafficLightStop::set_stop_point(
 
   if (
     target_stop_point_arc_length < stopping_params_.arrived_distance_threshold ||
-    !utils::insert_stop_point(traj_points, target_stop_point_arc_length, trajectory_length)) {
-    traj_points = std::invoke([&]() {
-      TrajectoryPoints stop_points;
-      auto p = traj_points.front();
-      p.longitudinal_velocity_mps = 0.0;
-      p.acceleration_mps2 = 0.0;
-      p.time_from_start = rclcpp::Duration::from_seconds(0.0);
-      stop_points.push_back(p);
-      p.time_from_start = rclcpp::Duration::from_seconds(trajectory_time_step_);
-      stop_points.push_back(p);
-      return stop_points;
-    });
+    !utils::insert_stop_point(traj_points, target_stop_point_arc_length)) {
+    utils::replace_trajectory_with_stop_point(
+      traj_points, input.current_odometry->pose.pose, trajectory_time_step_);
   }
 
   const auto & stop_pose = traj_points.back().pose;
@@ -226,9 +217,9 @@ void TrafficLightStop::publish_debug_string() const
   pub_debug_text_->publish(string_stamp);
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::TrafficLightStop,
+  autoware::trajectory_processor::plugin::TrafficLightStop,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

@@ -21,6 +21,7 @@
 #include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -48,13 +49,14 @@
 #include <unordered_set>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware_utils_geometry::MultiPolygon2d;
@@ -141,6 +143,8 @@ struct TrajectoryShape
   autoware_utils_geometry::Box2d bounding_box;
   double trajectory_length;
   double forward_traj_length;
+
+  [[nodiscard]] double ego_arc_length() const { return trajectory_length - forward_traj_length; }
 };
 
 struct DebugData
@@ -203,20 +207,6 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
   const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points);
 
-/**
- * @brief Find the nearest obstacle along the path using each object's footprint polygon at the
- * current time.
- * @details For every target object, polygon vertices are projected onto arc length along the
- * trajectory; the minimum over all vertices and objects defines the collision point.
- * @param trajectory_points Reference path.
- * @param target_objects Predicted objects to test (typically already filtered).
- * @param[out] colliding_object Object that yielded the minimum arc-length collision.
- * @return Collision point and arc length, or nullopt if inputs are invalid or no objects.
- */
-std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points, const PredictedObjects & target_objects,
-  PredictedObject & colliding_object);
-
 using ObjectDecelMap = std::unordered_map<ObjectType, double>;
 
 /**
@@ -249,7 +239,8 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const PredictedObjects & target_objects, const ObjectDecelMap & object_decel_map,
   const double ego_decel, const double reaction_time, const double safety_margin,
-  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object);
+  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object,
+  const bool use_rss_check = true);
 
 /// Filters predicted objects by semantic type, speed, and spatial relationship to the trajectory.
 struct ObjectFilter
@@ -257,23 +248,25 @@ struct ObjectFilter
   /**
    * @brief Construct a filter from allowed type names and speed thresholds.
    * @param object_type_strings Allowed object classes (see string_to_object_type).
-   * @param max_velocity_th Remove objects with longitudinal twist.x above this [m/s].
    * @param stopped_velocity_th Used when filtering by target area for "moving" vs stopped.
    * @param max_lateral_velocity_th Lateral speed threshold for the exiting-object heuristic [m/s].
    * @param safety_buffer Safety buffer to expand object shape [m].
    */
   ObjectFilter(
-    const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th,
-    const double safety_buffer)
-  : max_velocity_th_(max_velocity_th),
-    stopped_velocity_th_(stopped_velocity_th),
+    const std::vector<std::string> & bbox_object_type_strings,
+    const std::vector<std::string> & polygon_object_type_strings, const double stopped_velocity_th,
+    const double max_lateral_velocity_th, const double safety_buffer)
+  : stopped_velocity_th_(stopped_velocity_th),
     max_lateral_velocity_th_(max_lateral_velocity_th),
     safety_buffer_(safety_buffer)
   {
-    for (const auto & object_type_string : object_type_strings) {
+    for (const auto & object_type_string : bbox_object_type_strings) {
       if (string_to_object_type.count(object_type_string) == 0) continue;
-      object_types_.emplace(string_to_object_type.at(object_type_string));
+      bbox_object_types_.emplace(string_to_object_type.at(object_type_string));
+    }
+    for (const auto & object_type_string : polygon_object_type_strings) {
+      if (string_to_object_type.count(object_type_string) == 0) continue;
+      polygon_object_types_.emplace(string_to_object_type.at(object_type_string));
     }
   }
 
@@ -287,14 +280,16 @@ struct ObjectFilter
       std::remove_if(
         objects.objects.begin(), objects.objects.end(),
         [&](const auto & object) {
-          if (object.kinematics.initial_twist_with_covariance.twist.linear.x > max_velocity_th_)
-            return true;
           const auto label =
             object.classification.empty()
               ? ObjectClassification::UNKNOWN
               : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
           if (classification_to_object_type.count(label) == 0) return true;
-          return object_types_.count(classification_to_object_type.at(label)) == 0;
+          if (object.shape.type == Shape::BOUNDING_BOX)
+            return bbox_object_types_.count(classification_to_object_type.at(label)) == 0;
+          if (object.shape.type == Shape::POLYGON)
+            return polygon_object_types_.count(classification_to_object_type.at(label)) == 0;
+          return true;
         }),
       objects.objects.end());
   }
@@ -318,24 +313,28 @@ struct ObjectFilter
    * @brief Update allow-listed types and velocity thresholds without reconstructing the filter.
    */
   void set_params(
-    const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th,
-    const double safety_buffer)
+    const std::vector<std::string> & bbox_object_type_strings,
+    const std::vector<std::string> & polygon_object_type_strings, const double stopped_velocity_th,
+    const double max_lateral_velocity_th, const double safety_buffer)
   {
-    object_types_.clear();
-    for (const auto & object_type_string : object_type_strings) {
+    bbox_object_types_.clear();
+    polygon_object_types_.clear();
+    for (const auto & object_type_string : bbox_object_type_strings) {
       if (string_to_object_type.count(object_type_string) == 0) continue;
-      object_types_.emplace(string_to_object_type.at(object_type_string));
+      bbox_object_types_.emplace(string_to_object_type.at(object_type_string));
     }
-    max_velocity_th_ = max_velocity_th;
+    for (const auto & object_type_string : polygon_object_type_strings) {
+      if (string_to_object_type.count(object_type_string) == 0) continue;
+      polygon_object_types_.emplace(string_to_object_type.at(object_type_string));
+    }
     stopped_velocity_th_ = stopped_velocity_th;
     max_lateral_velocity_th_ = max_lateral_velocity_th;
     safety_buffer_ = safety_buffer;
   }
 
 private:
-  std::unordered_set<ObjectType> object_types_;
-  double max_velocity_th_;
+  std::unordered_set<ObjectType> bbox_object_types_;
+  std::unordered_set<ObjectType> polygon_object_types_;
   double stopped_velocity_th_;
   double max_lateral_velocity_th_;
   double safety_buffer_;
@@ -513,6 +512,6 @@ private:
   boost::uuids::random_generator id_generator_;
 };
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_

@@ -24,14 +24,14 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 
 ## Inputs / Outputs
 
-### Input
+The interfaces below are generated from the node design file
+[`design/MultiObjectTracker.node.yaml`](design/MultiObjectTracker.node.yaml).
 
-Multiple inputs are pre-defined in the input channel parameters (described below) and the inputs can be configured
+{{ node_interfaces_to_markdown("perception/autoware_multi_object_tracker/design/MultiObjectTracker.node.yaml") }}
 
-| Name                        | Type          | Description                 |
-| --------------------------- | ------------- | --------------------------- |
-| `input/detection**/objects` | `std::string` | input topic                 |
-| `input/detection**/channel` | `std::string` | input channel configuration |
+### Input channel configuration
+
+Multiple inputs are pre-defined in the input channel parameters (described below) and the inputs can be configured.
 
 rule of the channel configuration
 
@@ -85,13 +85,14 @@ input/detection07/channel: none # Disabled
 
 Up to 12 detection inputs can be configured (detection01 through detection12). Each input consists of an objects topic and its corresponding channel configuration.
 
-### Output
-
-| Name       | Type                                            | Description     |
-| ---------- | ----------------------------------------------- | --------------- |
-| `~/output` | `autoware_perception_msgs::msg::TrackedObjects` | tracked objects |
-
 ## Parameters
+
+### Node parameters
+
+The node launch parameters below are generated from the node design file
+[`design/MultiObjectTracker.node.yaml`](design/MultiObjectTracker.node.yaml).
+
+{{ node_param_values_to_markdown("perception/autoware_multi_object_tracker/design/MultiObjectTracker.node.yaml") }}
 
 ### Input Channel parameters
 

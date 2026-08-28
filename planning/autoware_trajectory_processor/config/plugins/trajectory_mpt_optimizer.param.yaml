@@ -21,6 +21,9 @@
     # they represent clearance from the generated corridor bounds (simple perpendicular offsets),
     # NOT actual road boundaries or drivable area from maps.
     mpt:
+      use_acados: false
+      use_acados_circle_constraints: true
+
       option:
         steer_limit_constraint: false
         visualize_sampling_num: 1

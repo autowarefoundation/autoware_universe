@@ -45,10 +45,12 @@ from .modules import ROSPublisherManager
 from .modules import SensorKitLoader
 from .modules import SensorPublishWorker
 from .modules import SensorRegistry
+from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import carla_location_to_ros_point
 from .modules.carla_utils import carla_rotation_to_ros_quaternion
 from .modules.carla_utils import create_cloud
+from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
@@ -71,6 +73,18 @@ class carla_ros2_interface(object):
             "vehicle_type": (rclpy.Parameter.Type.STRING, None),
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
+            "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
+            "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
+            "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            # Minimum throttle applied while accelerating from (near) standstill.
+            # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
+            # never start moving on the small throttle the actuation map yields
+            # at low target accelerations.
+            "min_positive_throttle": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "min_positive_throttle_speed_threshold": (rclpy.Parameter.Type.DOUBLE, 0.8),
+            "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
+            "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -441,11 +455,49 @@ class carla_ros2_interface(object):
         point_cloud_msg = create_cloud(header, fields, structured_lidar_data)
         publisher.publish(point_cloud_msg)
 
+    def _project_initialpose_to_ground(self, carla_pose_transform):
+        """Return the CARLA ground height under the pose, or None to skip snapping.
+
+        Returns None when spawn_point_ground_snap is disabled, or when no ground
+        height can be found (older CARLA APIs without ``ground_projection``, or
+        no ground hit), so callers fall back to the fixed z-offset.
+        """
+        if not self.param_values["spawn_point_ground_snap"]:
+            return None
+
+        return project_point_to_ground(
+            CarlaDataProvider.get_world(),
+            carla_pose_transform.location.x,
+            carla_pose_transform.location.y,
+        )
+
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
-        pose.position.z += 2.0
-        carla_pose_transform = ros_pose_to_carla_transform(pose)
+        carla_pose_transform = ros_pose_to_carla_transform(
+            pose,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
+
+        # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
+        # map-frame z is meaningless here. When spawn_point_ground_snap is
+        # enabled and CARLA exposes ground_projection, snap onto the map
+        # geometry; otherwise fall back to the fixed +2.0 z-offset that has
+        # always been applied.
+        ground_z = self._project_initialpose_to_ground(carla_pose_transform)
+        if ground_z is not None:
+            carla_pose_transform.location.z = (
+                ground_z + self.param_values["initial_pose_ground_offset_z"]
+            )
+            self.logger.info(
+                "Ground-snapped initial pose: "
+                f"ground_z={ground_z:.3f}, "
+                f"offset_z={self.param_values['initial_pose_ground_offset_z']:.3f}, "
+                f"pose_z={carla_pose_transform.location.z:.3f}"
+            )
+        else:
+            carla_pose_transform.location.z += 2.0
 
         with self._state_lock:
             if self.ego_actor is not None:
@@ -480,7 +532,11 @@ class carla_ros2_interface(object):
                 return
             ego_transform = self.ego_actor.get_transform()
 
-        pose_carla.position = carla_location_to_ros_point(ego_transform.location)
+        pose_carla.position = carla_location_to_ros_point(
+            ego_transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
         pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
         out_pose_with_cov.pose.pose = pose_carla
@@ -682,6 +738,31 @@ class carla_ros2_interface(object):
         self.prev_timestamp = self.timestamp
         return steer_output
 
+    def _ego_speed_mps(self):
+        """Return the ego speed in m/s (needs _state_lock held)."""
+        velocity = self.ego_actor.get_velocity()
+        return math.sqrt(
+            velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z
+        )
+
+    def _apply_min_positive_throttle(self, out_cmd, in_cmd):
+        """Enforce the standstill throttle floor on out_cmd (needs _state_lock held).
+
+        Heavy CARLA vehicles do not creep and never start moving on the small
+        throttle the actuation map yields at low target accelerations, so
+        while accelerating from (near) standstill the commanded throttle is
+        raised to at least min_positive_throttle. Disabled by default (0.0).
+        """
+        min_positive_throttle = self.param_values.get("min_positive_throttle", 0.0)
+        if min_positive_throttle <= 0.0 or out_cmd.throttle <= 0.0:
+            return
+        if in_cmd.actuation.brake_cmd > 0.0:
+            return
+        speed_threshold = self.param_values.get("min_positive_throttle_speed_threshold", 0.8)
+        if speed_threshold >= 0.0 and self._ego_speed_mps() > speed_threshold:
+            return
+        out_cmd.throttle = max(out_cmd.throttle, min_positive_throttle)
+
     def control_callback(self, in_cmd):
         """
         Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
@@ -691,13 +772,24 @@ class carla_ros2_interface(object):
         """
         out_cmd = carla.VehicleControl()
         out_cmd.throttle = in_cmd.actuation.accel_cmd
+        # Keep the vehicle in first gear with manual shifting so heavy vehicles
+        # respond to throttle immediately instead of idling in neutral.
+        out_cmd.gear = 1
+        out_cmd.manual_gear_shift = True
 
         with self._state_lock:
             # convert base on steer curve of the vehicle
             if not self.physics_control or not self.ego_actor:
                 return  # Skip if vehicle not initialized yet
 
+            self._apply_min_positive_throttle(out_cmd, in_cmd)
+
             steer_curve = self.physics_control.steering_curve
+            # numpy.interp requires the sample x-coordinates to be increasing.
+            # CARLA 0.10 can return the steering-curve points out of order,
+            # so sort by x before interpolating. On 0.9.x the curve is already
+            # sorted, making this a no-op.
+            steer_curve = sorted(steer_curve, key=lambda v: v.x)
             current_vel = self.ego_actor.get_velocity()
             max_steer_ratio = numpy.interp(
                 abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
@@ -785,7 +877,11 @@ class carla_ros2_interface(object):
         out_vel_state.header = self.get_msg_header(frame_id="base_link")
         out_vel_state.longitudinal_velocity = ego_velocity[0]
         out_vel_state.lateral_velocity = ego_velocity[1]
-        out_vel_state.heading_rate = ego_transform.transform_vector(ego_angular_velocity).z
+        # CARLA reports the angular velocity in deg/s in Unreal's left-handed
+        # (CW-positive) frame, while ROS expects rad/s CCW-positive (REP-103):
+        # https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
+        # https://www.ros.org/reps/rep-0103.html
+        out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
 
         out_steering_state.stamp = out_vel_state.header.stamp
         out_steering_state.steering_tire_angle = -math.radians(steer_angle)
