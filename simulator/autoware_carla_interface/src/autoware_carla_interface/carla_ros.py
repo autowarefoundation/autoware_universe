@@ -76,6 +76,7 @@ class carla_ros2_interface(object):
             "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            "force_load_world": (rclpy.Parameter.Type.BOOL, False),
             # Minimum throttle applied while accelerating from (near) standstill.
             # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
             # never start moving on the small throttle the actuation map yields
