@@ -27,8 +27,6 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -48,18 +46,9 @@ private:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
-  struct TransformSamplingConfig
-  {
-    double min_timestamp_offset;
-    double max_timestamp_offset;
-  };
-
   std::unique_ptr<TrafficLightMapBasedDetector> detector_;
   TrafficLightMapBasedDetectorConfig detector_config_;
-  TransformSamplingConfig transform_sampling_config_;
 
-  bool get_transform(
-    const rclcpp::Time & t, const std::string & frame_id, tf2::Transform & tf) const;
   void map_callback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
   void camera_info_callback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr input_msg);
   void route_callback(const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr input_msg);
