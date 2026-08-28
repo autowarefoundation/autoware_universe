@@ -80,6 +80,8 @@ protected:
   void allocateSegOutputMessages();
   void allocateSerializedPoolingBuffers();
   void bindSerializedPoolingAddresses();
+  /// Whether the loaded encoder engine has a tensor of this name. Only valid after setup().
+  [[nodiscard]] bool encoderDeclares(const std::string & name) const;
   void precomputeSerializedPoolingMetadata();
   bool setSerializedPoolingInputShapes();
   [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
