@@ -169,13 +169,18 @@ class InitializeInterface(object):
         """Reduce a CARLA level name such as 'Carla/Maps/Town01' to 'Town01'."""
         return map_name.split("/")[-1]
 
-    def _current_world_map(self, client):
-        """Return the current world's map name, or None if it cannot be determined."""
+    def _query_world_map(self, client):
+        """Return (map_name, query_failed) for the currently active CARLA world."""
         try:
-            return self._normalize_map_name(client.get_world().get_map().name)
+            return self._normalize_map_name(client.get_world().get_map().name), False
         except RuntimeError as exc:
             self.logger.warning(f"Failed to query the active CARLA map: {exc}")
-            return None
+            return None, True
+
+    def _current_world_map(self, client):
+        """Return the current world's map name, or None if it cannot be determined."""
+        name, _ = self._query_world_map(client)
+        return name
 
     def _load_world_if_different(self, client):
         """Try load_world_if_different(); return True on success, False to fall back."""
@@ -199,14 +204,25 @@ class InitializeInterface(object):
         expected = self._normalize_map_name(self.carla_map)
         deadline = time.time() + max(float(self.timeout), 1.0)
         current = None
+        query_failed = False
         while True:
-            current = self._current_world_map(client)
+            current, query_failed = self._query_world_map(client)
             if current == expected:
                 self.logger.info(f"Loaded CARLA world '{expected}'")
                 return
             if time.time() >= deadline:
                 break
             time.sleep(1.0)
+
+        if query_failed:
+            # The active world raised instead of returning a map name (e.g. a CARLA
+            # level without parseable OpenDRIVE metadata). CarlaDataProvider tolerates
+            # running without a map, so proceed rather than aborting the bridge.
+            self.logger.warning(
+                f"Could not verify CARLA loaded '{expected}' by map name (no parseable "
+                "OpenDRIVE metadata); continuing without map verification."
+            )
+            return
 
         message = (
             f"CARLA world mismatch: requested map '{expected}' but the active world is "
