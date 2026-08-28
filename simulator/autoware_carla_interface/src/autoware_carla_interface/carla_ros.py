@@ -307,6 +307,7 @@ class carla_ros2_interface(object):
         self.prev_timestamp = None
         self.prev_steer_output = 0.0
         self.tau = 0.2
+        self._max_steer_angle_rad = None
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -785,19 +786,31 @@ class carla_ros2_interface(object):
 
             self._apply_min_positive_throttle(out_cmd, in_cmd)
 
-            steer_curve = self.physics_control.steering_curve
-            # numpy.interp requires the sample x-coordinates to be increasing.
-            # CARLA 0.10 can return the steering-curve points out of order,
-            # so sort by x before interpolating. On 0.9.x the curve is already
-            # sorted, making this a no-op.
-            steer_curve = sorted(steer_curve, key=lambda v: v.x)
-            current_vel = self.ego_actor.get_velocity()
-            max_steer_ratio = numpy.interp(
-                abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
-            )
-            out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
+            # steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter
+            # passes control_cmd.steering_tire_angle through), while
+            # VehicleControl.steer expects a fraction of the wheel's max steer
+            # angle in [-1, 1]. Normalize by the max wheel angle; the sign flips
+            # because Autoware is CCW-positive and CARLA CW-positive.
+            # NOTE: no steering_curve multiplication here — the simulator applies
+            # its speed-based steering limit internally, and CARLA 0.10 returns
+            # corrupt curve data (duplicated/unsorted points) anyway.
+            steer_norm = -in_cmd.actuation.steer_cmd / self._max_wheel_steer_angle_rad()
+            steer_norm = max(-1.0, min(1.0, steer_norm))
+            out_cmd.steer = self.first_order_steering(steer_norm)
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
+
+    def _max_wheel_steer_angle_rad(self):
+        """Max steerable wheel angle [rad], cached from the vehicle physics.
+
+        Must be called with ``physics_control`` already available.
+        """
+        if self._max_steer_angle_rad is None:
+            max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
+            if max_deg <= 0.0:
+                max_deg = 70.0  # CARLA's usual front-wheel default
+            self._max_steer_angle_rad = math.radians(max_deg)
+        return self._max_steer_angle_rad
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
