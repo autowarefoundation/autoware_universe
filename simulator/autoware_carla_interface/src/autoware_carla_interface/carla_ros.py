@@ -913,7 +913,12 @@ class carla_ros2_interface(object):
         https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
         https://www.ros.org/reps/rep-0103.html
         https://github.com/carla-simulator/ros-bridge/blob/master/carla_common/src/carla_common/transforms.py
+
+        No-op unless publish_ground_truth_localization is enabled (the
+        publishers only exist when it is).
         """
+        if not self.param_values.get("publish_ground_truth_localization", False):
+            return
         with self._state_lock:
             if not self.ego_actor:
                 return
@@ -957,6 +962,39 @@ class carla_ros2_interface(object):
         odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
         self.pub_gt_odom.publish(odom)
 
+    def _publish_sensor_data(self, key, data):
+        """Publish one sensor's data, dispatching on its sensor type.
+
+        Camera and lidar conversion/publishing run on per-sensor worker
+        threads: publishing multi-megabyte messages inline (reliable-QoS
+        camera images in particular block on DDS flow control) would stall
+        the simulation loop and slow simulation time itself. Frequency
+        gating and registry bookkeeping stay on the calling thread so the
+        registry is never accessed concurrently.
+        """
+        sensor_type = self.id_to_sensor_type_map.get(key)
+        if not sensor_type:
+            self.logger.warning(
+                f"Unknown sensor ID '{key}' received from CARLA - skipping. "
+                f"This may indicate a sensor configuration mismatch."
+            )
+            return
+
+        if sensor_type == "sensor.camera.rgb":
+            if not self.checkFrequency(key):
+                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
+        elif sensor_type == "sensor.other.gnss":
+            self.pose()
+        elif sensor_type == "sensor.lidar.ray_cast":
+            if not self.checkFrequency(key):
+                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
+        elif sensor_type == "sensor.other.imu":
+            self.imu(data[1])
+        else:
+            self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+
     def run_step(self, input_data, timestamp):
         """
         Execute main simulation step for publishing sensor data and getting control commands.
@@ -988,40 +1026,11 @@ class carla_ros2_interface(object):
         obj_clock.clock = Time(sec=seconds, nanosec=nanoseconds)
         self.clock_publisher.publish(obj_clock)
 
-        if self.param_values.get("publish_ground_truth_localization", False):
-            self._publish_ground_truth_odometry()
+        self._publish_ground_truth_odometry()
 
         # publish data of all sensors
         for key, data in input_data.items():
-            # Safely get sensor type with fallback
-            sensor_type = self.id_to_sensor_type_map.get(key)
-            if not sensor_type:
-                self.logger.warning(
-                    f"Unknown sensor ID '{key}' received from CARLA - skipping. "
-                    f"This may indicate a sensor configuration mismatch."
-                )
-                continue
-
-            # Camera and lidar conversion/publishing run on per-sensor worker
-            # threads: publishing multi-megabyte messages inline (reliable-QoS
-            # camera images in particular block on DDS flow control) would
-            # stall this loop and slow simulation time itself. Frequency
-            # gating and registry bookkeeping stay on this thread so the
-            # registry is never accessed concurrently.
-            if sensor_type == "sensor.camera.rgb":
-                if not self.checkFrequency(key):
-                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                    self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
-            elif sensor_type == "sensor.other.gnss":
-                self.pose()
-            elif sensor_type == "sensor.lidar.ray_cast":
-                if not self.checkFrequency(key):
-                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                    self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
-            elif sensor_type == "sensor.other.imu":
-                self.imu(data[1])
-            else:
-                self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+            self._publish_sensor_data(key, data)
 
         # Push turn indicator / hazard lights to CARLA before reading status back.
         self.apply_light_state()
