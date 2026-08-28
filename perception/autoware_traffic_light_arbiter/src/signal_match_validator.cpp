@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -219,6 +220,17 @@ Time get_newer_stamp(const Time & stamp1, const Time & stamp2)
 
 namespace autoware::traffic_light
 {
+
+SourcePriority to_source_priority(const std::string & source_priority)
+{
+  if (source_priority == "external") {
+    return SourcePriority::EXTERNAL;
+  }
+  if (source_priority == "perception") {
+    return SourcePriority::PERCEPTION;
+  }
+  return SourcePriority::CONFIDENCE;
+}
 
 autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::validate_signals(
   const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals) const
