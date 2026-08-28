@@ -1081,6 +1081,10 @@
          <lastmod>2026-08-28</lastmod>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/main/simulator/autoware_dummy_infrastructure/</loc>
+         <lastmod>2026-08-28</lastmod>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/simulator/autoware_dummy_traffic_light_publisher/</loc>
          <lastmod>2026-08-28</lastmod>
     </url>
@@ -1222,10 +1226,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/system/autoware_dummy_diag_publisher/</loc>
-         <lastmod>2026-08-28</lastmod>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/main/system/autoware_dummy_infrastructure/</loc>
          <lastmod>2026-08-28</lastmod>
     </url>
     <url>
