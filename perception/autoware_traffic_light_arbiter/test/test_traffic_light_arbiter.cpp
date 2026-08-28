@@ -39,7 +39,6 @@
 namespace
 {
 
-using autoware::traffic_light::SourcePriority;
 using autoware::traffic_light::TrafficLightArbiter;
 using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
 using TrafficLightElement = autoware_perception_msgs::msg::TrafficLightElement;
@@ -47,14 +46,14 @@ using TrafficLightGroup = autoware_perception_msgs::msg::TrafficLightGroup;
 using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 
-// --- Short aliases for enum values used throughout the tests ----------
+// --- Short aliases for the source_priority values used throughout the tests ---
 //
 // Anonymous-namespace scoped so they don't leak; keeps each test's reading
-// flow on color/shape/priority rather than on the enum-qualifying prefix.
+// flow on color/shape/priority rather than on the string literal.
 
-constexpr auto CONFIDENCE = SourcePriority::CONFIDENCE;
-constexpr auto EXTERNAL = SourcePriority::EXTERNAL;
-constexpr auto PERCEPTION = SourcePriority::PERCEPTION;
+constexpr const char * CONFIDENCE = "confidence";
+constexpr const char * EXTERNAL = "external";
+constexpr const char * PERCEPTION = "perception";
 
 constexpr uint8_t RED = TrafficLightElement::RED;
 constexpr uint8_t GREEN = TrafficLightElement::GREEN;
@@ -301,7 +300,7 @@ const lanelet::LaneletMapConstPtr shared_map = []() {
 
 // Builds an arbiter with the suite-wide map already loaded. priority and
 // enable_signal_matching select the reconciliation mode under test.
-TrafficLightArbiter make_arbiter(SourcePriority priority, bool enable_signal_matching)
+TrafficLightArbiter make_arbiter(std::string priority, bool enable_signal_matching)
 {
   TrafficLightArbiter arbiter(
     priority, enable_signal_matching, default_external_delay_tolerance,
