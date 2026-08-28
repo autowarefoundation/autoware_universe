@@ -201,9 +201,8 @@ std::string TrtCommon::getPrecision() const
 const char * TrtCommon::getIOTensorName(const int32_t index) const
 {
   if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
+    // Falling back to the parsed network is documented, supported behaviour: it is how a caller
+    // inspects the model's IO before setup() builds the engine. Only a missing network is an error.
     if (!network_) {
       logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
       return nullptr;
@@ -228,9 +227,8 @@ const char * TrtCommon::getIOTensorName(const int32_t index) const
 int32_t TrtCommon::getNbIOTensors() const
 {
   if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
+    // Falling back to the parsed network is documented, supported behaviour: it is how a caller
+    // inspects the model's IO before setup() builds the engine. Only a missing network is an error.
     if (!network_) {
       logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
       return 0;
@@ -243,9 +241,8 @@ int32_t TrtCommon::getNbIOTensors() const
 nvinfer1::Dims TrtCommon::getTensorShape(const int32_t index) const
 {
   if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
+    // Falling back to the parsed network is documented, supported behaviour: it is how a caller
+    // inspects the model's IO before setup() builds the engine. Only a missing network is an error.
     if (!network_) {
       logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
       return nvinfer1::Dims{};

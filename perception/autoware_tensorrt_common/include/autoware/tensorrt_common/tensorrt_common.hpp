@@ -97,6 +97,9 @@ public:
   /**
    * @brief Get tensor name by index from TensorRT engine with fallback from TensorRT network.
    *
+   * The network is parsed by the constructor, so this is callable before setup() to inspect
+   * the IO the model declares.
+   *
    * @param[in] index Tensor index.
    * @return Tensor name.
    */
@@ -105,12 +108,18 @@ public:
   /**
    * @brief Get number of IO tensors from TensorRT engine with fallback from TensorRT network.
    *
+   * The network is parsed by the constructor, so this is callable before setup() to inspect
+   * the IO the model declares.
+   *
    * @return Number of IO tensors.
    */
   [[nodiscard]] int32_t getNbIOTensors() const;
 
   /**
    * @brief Get tensor shape by index from TensorRT engine with fallback from TensorRT network.
+   *
+   * The network is parsed by the constructor, so this is callable before setup() to inspect
+   * the IO the model declares.
    *
    * @param[in] index Tensor index.
    * @return Tensor shape.
