@@ -51,6 +51,12 @@ Additionally, source interface for switching trajectory and command, filter inte
 
 ![data-flow-external](./doc/data-flow-external.drawio.svg)
 
+## Mode Information
+
+Since mode ID assignments vary depending on the system configuration, the nodes responsible for the functions of each mode must know the corresponding ID.
+Handling IDs directly can lead to misconfiguration, so this node provides a mapping to human-readable names.
+Using this information, each node first converts the name of the mode it is responsible for into an ID and performs processing using that ID.
+
 ## Request and Flags
 
 The driving mode manager sends driving mode request and receives driving mode flags to/from external modules.
