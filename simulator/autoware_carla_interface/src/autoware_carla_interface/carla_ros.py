@@ -905,11 +905,14 @@ class carla_ros2_interface(object):
         """Publish /localization/kinematic_state and the map->base_link TF.
 
         Both are derived from the CARLA ground-truth ego transform, replacing
-        the former carla_state_publisher GNSS round-trip. The twist is the
-        body-frame ground-truth velocity; the angular rate converts CARLA's
-        deg/s CW-positive convention to rad/s CCW-positive (REP-103):
+        the former carla_state_publisher GNSS round-trip. CARLA reports both
+        velocities in its world frame, so each is rotated into the ego body
+        frame before the CARLA-to-ROS (REP-103) conversion; the angular rate
+        additionally converts deg/s to rad/s with the axis signs used by the
+        official ros-bridge (x, -y, -z):
         https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
         https://www.ros.org/reps/rep-0103.html
+        https://github.com/carla-simulator/ros-bridge/blob/master/carla_common/src/carla_common/transforms.py
         """
         with self._state_lock:
             if not self.ego_actor:
@@ -947,7 +950,11 @@ class carla_ros2_interface(object):
         odom.twist.twist.linear.x = float(body_vel[0])
         odom.twist.twist.linear.y = float(-body_vel[1])
         odom.twist.twist.linear.z = float(body_vel[2])
-        odom.twist.twist.angular.z = -math.radians(ego_ang_vel.z)
+        ang_vel_vec = numpy.array([ego_ang_vel.x, ego_ang_vel.y, ego_ang_vel.z]).reshape(3, 1)
+        body_ang_vel = (inv_rot_mat @ ang_vel_vec).T[0]
+        odom.twist.twist.angular.x = math.radians(float(body_ang_vel[0]))
+        odom.twist.twist.angular.y = -math.radians(float(body_ang_vel[1]))
+        odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
         self.pub_gt_odom.publish(odom)
 
     def run_step(self, input_data, timestamp):
