@@ -194,6 +194,22 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       ${PROJECT_NAME}_lib
     )
 
+    ament_add_gtest(ptv3_trt_test
+      test/ptv3_trt_test.cpp
+    )
+
+    target_link_libraries(ptv3_trt_test
+      CUDA::cudart
+      ${PROJECT_NAME}_lib
+    )
+
+    target_include_directories(ptv3_trt_test PRIVATE
+      include
+      ${CUDA_INCLUDE_DIRS}
+    )
+
+    ament_target_dependencies(ptv3_trt_test autoware_point_types)
+
   endif()
 
   autoware_ament_auto_package(
