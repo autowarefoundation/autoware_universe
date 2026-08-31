@@ -12,15 +12,15 @@ launch:
 subscribers:
   - name: current_max_velocity
     message_type: autoware_internal_planning_msgs/msg/VelocityLimit
-    global: /planning/scenario_planning/current_max_velocity
+    remap_target: /planning/scenario_planning/current_max_velocity
 publishers:
   - name: max_velocity_default
     message_type: autoware_internal_planning_msgs/msg/VelocityLimit
-    global: /planning/scenario_planning/max_velocity_default
+    remap_target: /planning/scenario_planning/max_velocity_default
 servers:
   - name: set_velocity_limit
     message_type: tier4_external_api_msgs/srv/SetVelocityLimit
-    global: /api/autoware/set/velocity_limit
+    remap_target: /api/autoware/set/velocity_limit
 # parameters
 param_files: []
 param_values: []
