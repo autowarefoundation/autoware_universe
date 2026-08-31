@@ -22945,7 +22945,8 @@ the smoothers. It does not modify positions.</p>
   in-package <code>ContinuousJerkSmoother</code> (QP-based, via <code>autoware_qp_interface</code>) that enforces
   <code>limit.max_acc</code>, <code>limit.min_acc</code>, <code>limit.max_jerk</code>, <code>limit.min_jerk</code> on the velocity profile.</li>
 <li><strong>Pull-out speed</strong> (<code>set_engage_speed</code>, disabled by default): clamps initial velocity to
-  <code>target_pull_out_speed_mps</code> when the vehicle is near standstill.</li>
+  <code>target_pull_out_speed_mps</code> when the vehicle is near standstill. Applied after speed limiting
+  and jerk smoothing so those stages cannot overwrite the engage/pull-out constraints.</li>
 </ul>
 <p>The velocity optimizer is the only stage where velocity values in the output trajectory are
 computed with awareness of physical limits. Everything before it treats velocity as a side effect
