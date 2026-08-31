@@ -144,9 +144,10 @@ std::optional<CollisionInterval> findPassageInterval(
     static_cast<double>(exit_idx) * rclcpp::Duration(predicted_path.time_step).seconds();
   const auto lane_position = [&]() {
     if (first_attention_lane_opt) {
-      if (lanelet::geometry::inside(
-            first_attention_lane_opt.value(),
-            lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
+      if (
+        lanelet::geometry::inside(
+          first_attention_lane_opt.value(),
+          lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
         return CollisionInterval::LanePosition::FIRST;
       }
     }

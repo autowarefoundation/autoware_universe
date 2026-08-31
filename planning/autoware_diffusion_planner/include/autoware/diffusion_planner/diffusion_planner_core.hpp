@@ -16,6 +16,7 @@
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_CORE_HPP_
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
+#include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/inference/guidance/centerline_guidance.hpp"
 #include "autoware/diffusion_planner/inference/guidance/start_guidance.hpp"
 #include "autoware/diffusion_planner/inference/guidance/stop_guidance.hpp"
@@ -94,7 +95,7 @@ struct PlannerOutput
   Trajectory trajectory;
   CandidateTrajectories candidate_trajectories;
   PredictedObjects predicted_objects;
-  TurnIndicatorsCommand turn_indicator_command;
+  TurnIndicatorsCommand turn_indicators_command;
   Float32MultiArray denoising_steps;
   std::unordered_map<std::string, std::vector<bool>> guidance_triggered;
 };
@@ -106,11 +107,47 @@ struct FrameContext
   Eigen::Matrix4d ego_to_map_transform;
   std::vector<AgentHistory> ego_centric_neighbor_histories;
   rclcpp::Time frame_time;
+  // Ego pose snapped onto the previous planning trajectory (map frame) and the interpolation time
+  // of the snapped foot along that trajectory. Set only when ego_snap_to_prev_trajectory actually
+  // snapped this frame; nullopt otherwise.
+  std::optional<Eigen::Matrix4d> snapped_pose;
+  std::optional<double> snapped_interpolation_time_s;
+};
+
+/**
+ * @brief Parameters for snapping the ego pose onto the previous planning trajectory.
+ *
+ * The ego pose fed to the model is replaced by the foot of the perpendicular to the closest
+ * segment of the previous planning trajectory, so that consecutive frames stay on a single
+ * consistent trajectory instead of re-planning from a slightly drifted localization pose. The
+ * error limits reject the snap when the previous trajectory no longer reflects reality.
+ */
+struct EgoSnapParams
+{
+  // When false, the raw ego pose is used as-is.
+  bool enable;
+
+  // Maximum allowed distance [m] between the actual ego pose and the snapped pose.
+  double max_position_error_m;
+
+  // Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose.
+  double max_yaw_error_deg;
+
+  // Number of leading segments of the previous trajectory searched for the closest one. The
+  // planning cycle only advances the ego by ~1 segment, so a small window is enough and it keeps
+  // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
+  int64_t max_search_segment_count;
 };
 
 struct DiffusionPlannerParams
 {
   std::string model_type;
+  std::string base_model_directory;
+  std::string args_filename;
+  std::string single_step_model_filename;
+  std::string encoder_model_filename;
+  std::string decoder_model_filename;
+  std::string turn_indicator_model_filename;
   std::string single_step_model_path;
   std::string encoder_model_path;
   std::string decoder_model_path;
@@ -123,7 +160,6 @@ struct DiffusionPlannerParams
   bool build_only;
   double planning_frequency_hz;
   bool ignore_neighbors;
-  bool ignore_unknown_neighbors;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
   std::vector<double> temperature_list;
@@ -135,6 +171,8 @@ struct DiffusionPlannerParams
   int64_t delay_step;
   double line_string_max_step_m;
   bool use_time_interpolation;
+  HistoryResamplingParams object_motion_resampling;
+  EgoSnapParams ego_snap_to_prev_trajectory;
   int dpm_solver_steps;
   double start_guidance_reference_distance_m;
   double start_guidance_max_scale;
@@ -178,6 +216,8 @@ public:
    * @param params New parameters to apply
    */
   void update_params(const DiffusionPlannerParams & params);
+
+  void resolve_model_paths();
 
   /**
    * @brief Prepare frame context for inference.
@@ -329,7 +369,13 @@ private:
   bool centerline_guidance_enabled_{false};
 
   // Postprocessing
-  postprocess::TurnIndicatorManager turn_indicator_manager_;
+  std::vector<postprocess::TurnIndicatorManager> turn_indicator_managers_;
+
+  /**
+   * @brief Resize the per-trajectory turn indicator managers to the current batch size and
+   *        apply the latest hold duration / keep offset parameters to each of them.
+   */
+  void sync_turn_indicator_managers();
 
   // History data
   std::deque<nav_msgs::msg::Odometry> ego_history_;
@@ -337,6 +383,7 @@ private:
   AgentData agent_data_;
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
+  std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;

@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: AutomaticPoseInitializer.node
+
+package:
+  name: autoware_automatic_pose_initializer
+  provider: autoware
+
+launch:
+  plugin: autoware::automatic_pose_initializer::AutomaticPoseInitializer
+  executable: autoware_automatic_pose_initializer_node
+  node_output: screen
+
+# interfaces
+# adapi helper: watches the localization initialization state and, while uninitialized,
+# calls the localization Initialize service. interfaces come via component-interface specs.
+subscribers:
+  - name: initialization_state
+    message_type: autoware_adapi_v1_msgs/msg/LocalizationInitializationState
+    global: /localization/initialization_state
+
+publishers: []
+
+clients:
+  - name: initialize
+    message_type: autoware_localization_msgs/srv/InitializeLocalization
+    global: /localization/initialize
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: initialize
+    trigger_conditions:
+      - on_input: initialization_state
+    outcomes: []

@@ -82,7 +82,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_concatenate_data/cuda_combine_cloud_handler.cpp
   src/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.cu
   src/cuda_concatenate_data/cuda_cloud_collector.cpp
-  src/cuda_concatenate_data/cuda_collector_matching_strategy.cpp
+  src/cuda_concatenate_data/cuda_collector_matcher.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.cu
   src/cuda_pointcloud_preprocessor/common_kernels.cu
   src/cuda_pointcloud_preprocessor/organize_kernels.cu

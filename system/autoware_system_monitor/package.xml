@@ -17,17 +17,20 @@
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>fmt</depend>
+  <depend>libboost-dev</depend>
   <depend>libboost-filesystem-dev</depend>
   <depend>libboost-regex-dev</depend>
   <depend>libboost-serialization-dev</depend>
   <depend>libboost-thread-dev</depend>
   <depend>libnl-3-dev</depend>
+  <depend>rcl_interfaces</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>tier4_external_api_msgs</depend>
 
   <exec_depend>chrony</exec_depend>
+  <exec_depend>edac-utils</exec_depend>
   <exec_depend>sysstat</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>

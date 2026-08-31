@@ -22,8 +22,9 @@
 namespace autoware::trajectory_validator::plugin::safety
 {
 UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext & context)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (const auto validate_context = validate_filter_context(context); !validate_context) {
     return tl::make_unexpected(validate_context.error());
   }
@@ -39,7 +40,11 @@ UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter:
   ego_state.acceleration = context.acceleration->accel.accel.linear.x;
   ego_state.current_time_s = rclcpp::Time(context.odometry->header.stamp).seconds();
 
-  auto status = checker_->update_departure_status(traj_points, ego_state);
+  // Evaluate each generator's trajectory against its own hysteresis state so that a critical
+  // verdict for one trajectory does not bleed into another through the shared ON/OFF buffers.
+  auto & hysteresis_state = hysteresis_states_[candidate_trajectory.generator_id.uuid];
+
+  auto status = checker_->update_departure_status(traj_points, ego_state, hysteresis_state);
 
   const bool is_feasible = status.status != boundary_departure_checker::DepartureType::CRITICAL;
 

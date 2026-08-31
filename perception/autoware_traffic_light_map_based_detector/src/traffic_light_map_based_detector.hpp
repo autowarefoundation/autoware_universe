@@ -31,6 +31,7 @@
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
+#include <tf2/buffer_core.h>
 
 #include <memory>
 #include <optional>
@@ -69,6 +70,8 @@ struct TrafficLightMapBasedDetectorConfig
   double max_detection_range;
   double car_traffic_light_max_angle_range;
   double pedestrian_traffic_light_max_angle_range;
+  double min_timestamp_offset;
+  double max_timestamp_offset;
 };
 
 class TrafficLightMapBasedDetector
@@ -92,9 +95,15 @@ public:
   std::optional<SetRouteError> set_route(
     const autoware_planning_msgs::msg::LaneletRoute & route_msg);
 
+  /**
+   * @brief Detect traffic light ROIs visible from the camera
+   *
+   * @param tf_buffer     the tf buffer to look up "map" -> camera_info.header.frame_id
+   * @param camera_info   the camera info of the image to detect traffic lights in
+   * @return              the detection result
+   */
   DetectionResult detect(
-    const std::vector<StampedTransform> & tf_map2camera_samples,
-    const sensor_msgs::msg::CameraInfo & camera_info) const;
+    const tf2::BufferCore & tf_buffer, const sensor_msgs::msg::CameraInfo & camera_info) const;
 
 private:
   void set_map(const autoware_map_msgs::msg::LaneletMapBin & map_msg);

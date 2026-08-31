@@ -40,7 +40,8 @@ namespace autoware
 {
 namespace tensorrt_common
 {
-constexpr std::array<std::string_view, 3> valid_precisions = {"fp32", "fp16", "int8"};
+constexpr std::array<std::string_view, 4> valid_precisions = {
+  "fp32", "fp16", "int8", "strongly-typed"};
 
 /**
  * @brief Return a human-readable name for a TensorRT DataType.
@@ -81,7 +82,9 @@ struct TrtCommonConfig
   /** @brief Construct TrtCommonConfig, ONNX model path is mandatory.
    *
    * @param[in] onnx_path ONNX model path
-   * @param[in] precision precision for inference
+   * @param[in] precision precision requested for the weakly typed build ("fp32", "fp16",
+   *            "int8"), or "strongly-typed" to build a strongly typed network where every
+   *            tensor precision is taken from the model itself.
    * @param[in] engine_path TensorRT engine path
    * @param[in] max_workspace_size maximum workspace size for TensorRT
    * @param[in] dla_core_id DLA core ID
@@ -129,7 +132,8 @@ struct TrtCommonConfig
   //!< @brief ONNX model path.
   const fs::path onnx_path;
 
-  //!< @brief Precision for inference.
+  //!< @brief Precision requested for the weakly typed build, or "strongly-typed" for a
+  //!< strongly typed network with tensor precisions taken from the model itself.
   const std::string precision;
 
   //!< @brief TensorRT engine path.

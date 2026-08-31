@@ -19,6 +19,7 @@
 #endif
 
 #include "classifier/color_classifier.hpp"
+#include "classifier_params.hpp"
 #include "traffic_light_classifier_node.hpp"
 
 #include <memory>
@@ -26,7 +27,7 @@
 
 namespace
 {
-std::string toString(const uint8_t state)
+std::string state_to_string(const uint8_t state)
 {
   if (state == tier4_perception_msgs::msg::TrafficLightElement::RED) {
     return "red";
@@ -71,13 +72,12 @@ public:
     const auto image_path = declare_parameter("image_path", "");
 
     int classifier_type = this->declare_parameter(
-      "classifier_type",
-      static_cast<int>(TrafficLightClassifierNodelet::ClassifierType::HSVFilter));
-    if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
-      classifier_ptr_ = std::make_unique<ColorClassifier>(this);
-    } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
+      "classifier_type", static_cast<int>(TrafficLightClassifierNode::ClassifierType::HSVFilter));
+    if (classifier_type == TrafficLightClassifierNode::ClassifierType::HSVFilter) {
+      classifier_ptr_ = std::make_unique<ColorClassifier>(declare_hsv_config(this));
+    } else if (classifier_type == TrafficLightClassifierNode::ClassifierType::CNN) {
 #if ENABLE_GPU
-      classifier_ptr_ = std::make_unique<CNNClassifier>(this);
+      classifier_ptr_ = std::make_unique<CNNClassifier>(declare_cnn_config(this));
 #else
       RCLCPP_ERROR(get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
@@ -89,7 +89,7 @@ public:
       return;
     }
     cv::namedWindow("inference image", cv::WINDOW_NORMAL);
-    cv::setMouseCallback("inference image", SingleImageDebugInferenceNode::onMouse, this);
+    cv::setMouseCallback("inference image", SingleImageDebugInferenceNode::on_mouse, this);
 
     cv::imshow("inference image", image_);
 
@@ -101,15 +101,15 @@ public:
   }
 
 private:
-  static void onMouse(int event, int x, int y, int flags, void * param)
+  static void on_mouse(int event, int x, int y, int flags, void * param)
   {
     SingleImageDebugInferenceNode * node = static_cast<SingleImageDebugInferenceNode *>(param);
     if (node) {
-      node->inferWithCrop(event, x, y, flags);
+      node->infer_with_crop(event, x, y, flags);
     }
   }
 
-  void inferWithCrop(int action, int x, int y, [[maybe_unused]] int flags)
+  void infer_with_crop(int action, int x, int y, [[maybe_unused]] int flags)
   {
     // cspell: ignore LBUTTONDOWN, LBUTTONUP
     if (action == cv::EVENT_LBUTTONDOWN) {
@@ -123,16 +123,16 @@ private:
         return;
       }
       cv::cvtColor(crop, crop, cv::COLOR_BGR2RGB);
-      tier4_perception_msgs::msg::TrafficLightArray traffic_signal;
-      if (!classifier_ptr_->getTrafficSignals({crop}, traffic_signal)) {
+      const auto traffic_signal = classifier_ptr_->classify({crop});
+      if (!traffic_signal) {
         RCLCPP_ERROR(get_logger(), "failed to classify image");
         return;
       }
       cv::Scalar color;
       cv::Scalar text_color;
-      for (const auto & element : traffic_signal.signals[0].elements) {
-        auto color_str = toString(element.color);
-        auto shape_str = toString(element.shape);
+      for (const auto & element : traffic_signal->signals[0].elements) {
+        auto color_str = state_to_string(element.color);
+        auto shape_str = state_to_string(element.shape);
         auto confidence_str = std::to_string(element.confidence);
         if (shape_str == "circle") {
           if (color_str == "red") {
