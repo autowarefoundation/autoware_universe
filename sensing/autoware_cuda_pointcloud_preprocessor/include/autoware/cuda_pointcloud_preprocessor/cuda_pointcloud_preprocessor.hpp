@@ -115,8 +115,8 @@ private:
   thrust::device_vector<std::int32_t> device_max_ring_;
   thrust::device_vector<std::int32_t> device_max_points_per_ring_;
 
-  thrust::device_vector<std::uint8_t> device_sort_workspace_;
-  std::size_t sort_workspace_bytes_{0};
+  thrust::device_vector<std::uint8_t> device_scratch_workspace_;
+  std::size_t workspace_bytes_{0};
 
   // Pointcloud preprocessing buffers
   thrust::device_vector<InputPointType> device_transformed_points_;
@@ -128,9 +128,13 @@ private:
   thrust::device_vector<std::uint32_t> device_indices_;
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
-  std::size_t active_twist_2d_struct_count_{};
-  std::size_t active_twist_3d_struct_count_{};
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
+  // Layout of `device_processing_stats_` and of the host buffer it is read back into
+  static constexpr std::size_t crop_box_passed_stat_index = 0U;
+  static constexpr std::size_t nan_stat_index = 1U;
+  static constexpr std::size_t mismatch_stat_index = 2U;
+  static constexpr std::size_t processing_stat_count = 3U;
+  thrust::device_vector<std::uint32_t> device_processing_stats_;
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
