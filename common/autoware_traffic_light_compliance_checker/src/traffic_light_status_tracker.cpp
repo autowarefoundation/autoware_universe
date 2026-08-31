@@ -73,9 +73,6 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
   const autoware_perception_msgs::msg::TrafficLightGroupArray & signals,
   const rclcpp::Time & current_time, const bool is_ego_stopped)
 {
-  autoware_perception_msgs::msg::TrafficLightGroupArray filtered_signals;
-  filtered_signals.stamp = signals.stamp;
-
   for (const auto & signal : signals.traffic_light_groups) {
     const auto id = signal.traffic_light_group_id;
     auto history_it = signal_history_.find(id);
@@ -103,15 +100,21 @@ autoware_perception_msgs::msg::TrafficLightGroupArray TrafficLightStatusTracker:
       }
       history_it->second.stable_state = signal;
     }
-
-    if (is_ego_stopped) {
-      filtered_signals.traffic_light_groups.push_back(signal);
-    } else if (history_it->second.stable_state) {
-      filtered_signals.traffic_light_groups.push_back(*history_it->second.stable_state);
-    }
   }
 
   cleanup_signal_history(current_time);
+
+  autoware_perception_msgs::msg::TrafficLightGroupArray filtered_signals;
+  filtered_signals.stamp = signals.stamp;
+  for (const auto & tracked_signal : signal_history_) {
+    const auto & history = tracked_signal.second;
+    const bool seen_this_frame = history.last_seen_time == current_time;
+    if (is_ego_stopped && seen_this_frame) {
+      filtered_signals.traffic_light_groups.push_back(history.current_state);
+    } else if (history.stable_state) {
+      filtered_signals.traffic_light_groups.push_back(*history.stable_state);
+    }
+  }
 
   return filtered_signals;
 }

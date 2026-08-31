@@ -35,6 +35,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -287,15 +288,42 @@ ComplianceResult TrafficLightComplianceChecker::check_with_filtered_signals(
     return ComplianceResult{};
   }
 
+  const auto [red_stop_lines, amber_stop_lines] =
+    get_stop_lines(*input.map, input.route, filtered_signals);
+
+  if (
+    (!check_red_lights || red_stop_lines.empty()) &&
+    (!check_amber_lights || amber_stop_lines.empty())) {
+    violation_distance_history_.clear();
+    return ComplianceResult{};
+  }
+
+  // clear violation distance history for tl ids that are no longer in detected stop lines
+  cleanup_violation_distance_history(
+    red_stop_lines, amber_stop_lines, check_red_lights, check_amber_lights);
+
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint> trajectory;
   lanelet::BasicLineString2d trajectory_ls;
+
+  // floor minimum lookahead distance by the previous violation distance to avoid chattering
+  // behavior between cycles
+  const auto max_prev_violation_distance =
+    violation_distance_history_.empty()
+      ? 0.0
+      : std::max_element(
+          violation_distance_history_.begin(), violation_distance_history_.end(),
+          [](const auto & a, const auto & b) { return a.second < b.second; })
+          ->second;
+
+  const auto min_lookahead_distance =
+    std::max(params_.min_lookahead_distance, max_prev_violation_distance);
+
   // Floor by min_lookahead_distance so low ego speed still covers nearby stop lines,
   // while keeping the comfortable-stop cap so far lights are not over-checked
   // (important for traffic_light_filter which rejects trajectories).
   // stop_overshoot_margin extends the scan so a stop just past the line is not truncated.
   const auto max_trajectory_length = std::max(
-    params_.min_lookahead_distance,
-    ego_stopping_distance_.value_or(0.0) + params_.stop_overshoot_margin);
+    min_lookahead_distance, ego_stopping_distance_.value_or(0.0) + params_.stop_overshoot_margin);
   auto length = 0.0;
   auto backward_length = 0.0;
   std::optional<lanelet::BasicPoint2d> stop_point;
@@ -337,9 +365,6 @@ ComplianceResult TrafficLightComplianceChecker::check_with_filtered_signals(
     if (stop_point.has_value()) stop_point.value() = offset_point;
   }
 
-  const auto [red_stop_lines, amber_stop_lines] =
-    get_stop_lines(*input.map, input.route, filtered_signals);
-
   ComplianceResult result;
   if (check_red_lights) {
     result.violations =
@@ -351,6 +376,10 @@ ComplianceResult TrafficLightComplianceChecker::check_with_filtered_signals(
       input.current_time, backward_length);
     result.violations.insert(
       result.violations.end(), amber_light_violations.begin(), amber_light_violations.end());
+  }
+
+  for (const auto & violation : result.violations) {
+    violation_distance_history_[violation.traffic_light_id] = violation.arc_length_to_cross_point;
   }
 
   return result;
@@ -431,4 +460,28 @@ bool TrafficLightComplianceChecker::is_allow_if_cannot_stop(
          distance_from_ego_front < *ego_stopping_distance_ - params_.stop_overshoot_margin;
 }
 
+void TrafficLightComplianceChecker::cleanup_violation_distance_history(
+  const std::vector<StopLineInfo> & red_stop_lines,
+  const std::vector<StopLineInfo> & amber_stop_lines, const bool check_red_lights,
+  const bool check_amber_lights) const
+{
+  std::unordered_set<int64_t> target_tl_ids;
+  if (check_red_lights) {
+    for (const auto & red_stop_line : red_stop_lines) {
+      target_tl_ids.insert(red_stop_line.traffic_light_id);
+    }
+  }
+  if (check_amber_lights) {
+    for (const auto & amber_stop_line : amber_stop_lines) {
+      target_tl_ids.insert(amber_stop_line.traffic_light_id);
+    }
+  }
+  for (auto it = violation_distance_history_.begin(); it != violation_distance_history_.end();) {
+    if (target_tl_ids.count(it->first) == 0) {
+      it = violation_distance_history_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
 }  // namespace autoware::traffic_light_compliance_checker

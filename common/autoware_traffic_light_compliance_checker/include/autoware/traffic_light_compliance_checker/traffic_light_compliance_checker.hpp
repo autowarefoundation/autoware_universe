@@ -110,10 +110,16 @@ private:
 
   bool is_allow_if_cannot_stop(const double distance_to_cross_point) const;
 
+  void cleanup_violation_distance_history(
+    const std::vector<StopLineInfo> & red_stop_lines,
+    const std::vector<StopLineInfo> & amber_stop_lines, const bool check_red_lights,
+    const bool check_amber_lights) const;
+
   Parameters params_;
   vehicle_info_utils::VehicleInfo vehicle_info_;
   std::unique_ptr<TrafficLightStatusTracker> status_tracker_;
   mutable std::unordered_map<int64_t, rclcpp::Time> amber_rejection_history_;
+  mutable std::unordered_map<int64_t, double> violation_distance_history_;
   std::optional<double> ego_stopping_distance_;
 };
 
