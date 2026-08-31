@@ -33,10 +33,7 @@ subscribers:
     message_type: autoware_perception_msgs/msg/PredictedObjects
     remap_target: ~/input/objects
 
-publishers:
-  - name: preview_image
-    message_type: sensor_msgs/msg/Image
-    global: /sensing/camera/camera8/calibration_status_classifier/preview_image
+publishers: []
 
 servers:
   - name: validate_calibration_srv
