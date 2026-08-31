@@ -36,16 +36,6 @@ rclcpp_components_register_node(${PROJECT_NAME}_component
   EXECUTABLE route_selector
 )
 
-# Kept out of the libraries the node components link against: class_loader flags a plugin library
-# loaded outside of a ClassLoader as "non-pure" and then stops unloading any library in that
-# process. Note this library is still exported, so a downstream package can link it directly.
-ament_auto_add_library(${PROJECT_NAME}_default_planner_plugin SHARED
-  src/lanelet2_plugins/default_planner_plugin.cpp
-  NO_TARGET_LINK_LIBRARIES
-)
-target_link_libraries(${PROJECT_NAME}_default_planner_plugin ${PROJECT_NAME}_lanelet2_plugins)
-pluginlib_export_plugin_description_file(autoware_mission_planner_universe plugins/plugin_description.xml)
-
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
   test/test_lanelet2_plugins_default_planner.cpp
