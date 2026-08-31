@@ -15,11 +15,10 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_PROCESSOR_CONTEXT_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_PROCESSOR_CONTEXT_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 namespace autoware::trajectory_processor
 {
@@ -28,7 +27,8 @@ namespace autoware::trajectory_processor
 struct TrajectoryProcessorContext
 {
   /// @brief Construct shared services from the hosting ROS node.
-  explicit TrajectoryProcessorContext(rclcpp::Node * node)
+  template <typename NodeT>
+  explicit TrajectoryProcessorContext(NodeT * node)
   : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
     tf_buffer{node->get_clock()},
     tf_listener{tf_buffer}
@@ -36,8 +36,8 @@ struct TrajectoryProcessorContext
   }
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
-  tf2_ros::Buffer tf_buffer;
-  tf2_ros::TransformListener tf_listener;
+  autoware::agnocast_wrapper::Buffer tf_buffer;
+  autoware::agnocast_wrapper::TransformListener tf_listener;
 };
 
 }  // namespace autoware::trajectory_processor

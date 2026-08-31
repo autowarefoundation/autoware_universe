@@ -208,7 +208,8 @@ Responsibilities:
   in-package `ContinuousJerkSmoother` (QP-based, via `autoware_qp_interface`) that enforces
   `limit.max_acc`, `limit.min_acc`, `limit.max_jerk`, `limit.min_jerk` on the velocity profile.
 - **Pull-out speed** (`set_engage_speed`, disabled by default): clamps initial velocity to
-  `target_pull_out_speed_mps` when the vehicle is near standstill.
+  `target_pull_out_speed_mps` when the vehicle is near standstill. Applied after speed limiting
+  and jerk smoothing so those stages cannot overwrite the engage/pull-out constraints.
 
 The velocity optimizer is the only stage where velocity values in the output trajectory are
 computed with awareness of physical limits. Everything before it treats velocity as a side effect

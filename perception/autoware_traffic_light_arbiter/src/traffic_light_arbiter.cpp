@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -202,15 +203,15 @@ std::unordered_set<lanelet::Id> extract_pedestrian_traffic_light_ids(
 }  // namespace
 
 TrafficLightArbiter::TrafficLightArbiter(
-  SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
+  std::string source_priority, bool enable_signal_matching, double external_delay_tolerance,
   double external_time_tolerance, double perception_time_tolerance)
-: source_priority_(source_priority),
+: source_priority_(to_source_priority(source_priority)),
   external_delay_tolerance_(external_delay_tolerance),
   external_time_tolerance_(external_time_tolerance),
   perception_time_tolerance_(perception_time_tolerance)
 {
   if (enable_signal_matching) {
-    signal_match_validator_ = std::make_unique<SignalMatchValidator>(source_priority_);
+    signal_match_validator_ = std::make_unique<SignalMatchValidator>(source_priority);
   }
 }
 
