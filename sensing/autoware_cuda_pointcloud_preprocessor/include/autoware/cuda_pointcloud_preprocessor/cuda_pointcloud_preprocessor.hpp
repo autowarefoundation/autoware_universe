@@ -129,6 +129,11 @@ private:
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
+  // Layout of `device_processing_stats_` and of the host buffer it is read back into
+  static constexpr std::size_t crop_box_passed_stat_index = 0U;
+  static constexpr std::size_t nan_stat_index = 1U;
+  static constexpr std::size_t mismatch_stat_index = 2U;
+  static constexpr std::size_t processing_stat_count = 3U;
   thrust::device_vector<std::uint32_t> device_processing_stats_;
 };
 

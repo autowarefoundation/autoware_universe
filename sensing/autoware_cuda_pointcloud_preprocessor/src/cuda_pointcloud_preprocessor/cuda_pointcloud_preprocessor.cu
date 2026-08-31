@@ -206,7 +206,7 @@ void CudaPointcloudPreprocessor::initializeBuffers()
   device_indices_.resize(num_organized_points_);
   device_twist_2d_structs_.resize(capacity_.max_twist_struct_count);
   device_twist_3d_structs_.resize(capacity_.max_twist_struct_count);
-  device_processing_stats_.resize(3);
+  device_processing_stats_.resize(processing_stat_count);
 
   std::vector<std::int32_t> segment_offsets_host(num_rings_ + 1);
   for (int i = 0; i < num_rings_ + 1; i++) {
@@ -493,11 +493,6 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &max_points_per_ring_value, thrust::raw_pointer_cast(device_max_points_per_ring_.data()),
     sizeof(std::int32_t), cudaMemcpyDeviceToHost, stream_));
-
-  constexpr std::size_t crop_box_passed_stat_index = 0U;
-  constexpr std::size_t nan_stat_index = 1U;
-  constexpr std::size_t mismatch_stat_index = 2U;
-  constexpr std::size_t processing_stat_count = 3U;
 
   countEqualAsync(
     reinterpret_cast<void *>(thrust::raw_pointer_cast(device_scratch_workspace_.data())),
