@@ -12,15 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# CUDA 13 moved the CCCL headers (Thrust, CUB, libcu++) to include/cccl/.
-# Only nvcc adds that directory to its include path. The CCCL CMake config
-# is outside the default search path, so find_package needs the hints.
-# find_package searches the hints after CCCL_ROOT and CMAKE_PREFIX_PATH but
-# before the system prefixes, so the toolkit config wins over a system copy
-# and explicit user overrides still win over the hints.
+# CUDA 13 moved the CCCL headers to include/cccl/. The CCCL CMake config sits
+# outside the default CMake search path, so find_package needs the hints.
 
 find_package(CUDAToolkit REQUIRED)
 find_package(CCCL CONFIG REQUIRED HINTS
   "${CUDAToolkit_LIBRARY_DIR}/cmake"
   "${CUDAToolkit_TARGET_DIR}/lib64/cmake"
   "${CUDAToolkit_TARGET_DIR}/lib/cmake")
+
+# The CCCL targets are not imported, so this marker re-marks their include
+# directory as a system include for consumers.
+if(NOT TARGET autoware_cuda_utils::cccl_system)
+  add_library(autoware_cuda_utils::cccl_system INTERFACE IMPORTED GLOBAL)
+  get_target_property(_autoware_cuda_utils_cccl_dir CCCL::libcudacxx
+    INTERFACE_INCLUDE_DIRECTORIES)
+  if(_autoware_cuda_utils_cccl_dir)
+    set_property(TARGET autoware_cuda_utils::cccl_system PROPERTY
+      INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_autoware_cuda_utils_cccl_dir}")
+  endif()
+  unset(_autoware_cuda_utils_cccl_dir)
+endif()

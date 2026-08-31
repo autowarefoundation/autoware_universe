@@ -87,6 +87,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ${autoware_cuda_utils_INCLUDE_DIRS}
   )
 
+  # detection3d_postprocess_test needs this: it host-compiles Thrust and gets no ament_target_dependencies.
   target_link_libraries(${PROJECT_NAME}_cuda_lib
     autoware_cuda_utils::autoware_cuda_utils
   )
