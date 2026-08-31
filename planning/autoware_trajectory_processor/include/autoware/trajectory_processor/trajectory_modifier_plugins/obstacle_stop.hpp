@@ -24,6 +24,7 @@
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -88,10 +89,10 @@ private:
   std::unordered_map<utils::obstacle_stop::ObjectType, double> object_decel_map_;
 
   MarkerArray marker_array_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_filtered_pointcloud_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  PublisherHandle<visualization_msgs::msg::MarkerArray> debug_viz_pub_;
+  PublisherHandle<PointCloud2> pub_filtered_pointcloud_;
+  PublisherHandle<PointCloud2> pub_clustered_pointcloud_;
+  PublisherHandle<StringStamped> pub_debug_text_;
 
   void check_obstacles(const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
   std::optional<CollisionPoint> check_predicted_objects(

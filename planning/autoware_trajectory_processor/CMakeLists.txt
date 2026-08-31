@@ -22,6 +22,7 @@ generate_parameter_library(trajectory_processor_param
 ament_auto_add_library(autoware_trajectory_processor_utils SHARED
   src/utils.cpp
 )
+autoware_agnocast_wrapper_setup(autoware_trajectory_processor_utils)
 
 ament_auto_add_library(autoware_trajectory_processor_component SHARED
   src/trajectory_processor.cpp
@@ -47,6 +48,7 @@ ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
   src/trajectory_modifier_utils/utils.cpp
   src/trajectory_modifier_utils/obstacle_stop_utils.cpp
 )
+autoware_agnocast_wrapper_setup(autoware_trajectory_modifier_utils)
 
 ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.cpp
@@ -66,6 +68,7 @@ ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/plugin_utils/trajectory_spline_smoother_utils.cpp
   src/trajectory_optimizer_plugins/plugin_utils/trajectory_velocity_optimizer_utils.cpp
 )
+autoware_agnocast_wrapper_setup(autoware_trajectory_optimizer_plugins)
 target_link_libraries(
   autoware_trajectory_optimizer_plugins
   acados_interface_temporal
@@ -81,6 +84,7 @@ ament_auto_add_library(autoware_trajectory_modifier_plugins SHARED
   src/trajectory_modifier_plugins/surround_obstacle_stop.cpp
   src/trajectory_modifier_plugins/traffic_light_stop.cpp
 )
+autoware_agnocast_wrapper_setup(autoware_trajectory_modifier_plugins)
 
 target_link_libraries(autoware_trajectory_modifier_plugins
   autoware_trajectory_modifier_utils
@@ -91,7 +95,19 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 
+  set(NODE_TEST_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_obstacle_stop_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_stop_point_fixer_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_surround_obstacle_stop_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_traffic_light_stop_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_trajectory_processor_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_trajectory_processor_plugin_base.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_velocity_modifier_integration.cpp
+  )
+
   file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
+  list(REMOVE_ITEM TEST_SOURCES ${NODE_TEST_SOURCES})
+
   ament_add_ros_isolated_gtest(test_autoware_trajectory_processor
     ${TEST_SOURCES}
   )
@@ -101,6 +117,18 @@ if(BUILD_TESTING)
     autoware_trajectory_modifier_plugins
     autoware_trajectory_modifier_utils
   )
+
+  if(NOT (DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
+    ament_add_ros_isolated_gtest(test_autoware_trajectory_processor_nodes
+      ${NODE_TEST_SOURCES}
+    )
+    target_link_libraries(test_autoware_trajectory_processor_nodes
+      autoware_trajectory_processor_component
+      autoware_trajectory_optimizer_plugins
+      autoware_trajectory_modifier_plugins
+      autoware_trajectory_modifier_utils
+    )
+  endif()
 endif()
 
 install(TARGETS acados_interface_temporal LIBRARY DESTINATION lib)

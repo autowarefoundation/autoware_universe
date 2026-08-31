@@ -79,6 +79,13 @@ class carla_ros2_interface(object):
             "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            "force_load_world": (rclpy.Parameter.Type.BOOL, False),
+            # Minimum throttle applied while accelerating from (near) standstill.
+            # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
+            # never start moving on the small throttle the actuation map yields
+            # at low target accelerations.
+            "min_positive_throttle": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "min_positive_throttle_speed_threshold": (rclpy.Parameter.Type.DOUBLE, 0.8),
             "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
             # Publish the CARLA ground-truth localization (kinematic_state and
             # the map->base_link TF) directly from the ego transform. Used by
@@ -313,6 +320,7 @@ class carla_ros2_interface(object):
         self.prev_timestamp = None
         self.prev_steer_output = 0.0
         self.tau = 0.2
+        self._max_steer_angle_rad = None
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -745,6 +753,31 @@ class carla_ros2_interface(object):
         self.prev_timestamp = self.timestamp
         return steer_output
 
+    def _ego_speed_mps(self):
+        """Return the ego speed in m/s (needs _state_lock held)."""
+        velocity = self.ego_actor.get_velocity()
+        return math.sqrt(
+            velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z
+        )
+
+    def _apply_min_positive_throttle(self, out_cmd, in_cmd):
+        """Enforce the standstill throttle floor on out_cmd (needs _state_lock held).
+
+        Heavy CARLA vehicles do not creep and never start moving on the small
+        throttle the actuation map yields at low target accelerations, so
+        while accelerating from (near) standstill the commanded throttle is
+        raised to at least min_positive_throttle. Disabled by default (0.0).
+        """
+        min_positive_throttle = self.param_values.get("min_positive_throttle", 0.0)
+        if min_positive_throttle <= 0.0 or out_cmd.throttle <= 0.0:
+            return
+        if in_cmd.actuation.brake_cmd > 0.0:
+            return
+        speed_threshold = self.param_values.get("min_positive_throttle_speed_threshold", 0.8)
+        if speed_threshold >= 0.0 and self._ego_speed_mps() > speed_threshold:
+            return
+        out_cmd.throttle = max(out_cmd.throttle, min_positive_throttle)
+
     def control_callback(self, in_cmd):
         """
         Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
@@ -754,25 +787,43 @@ class carla_ros2_interface(object):
         """
         out_cmd = carla.VehicleControl()
         out_cmd.throttle = in_cmd.actuation.accel_cmd
+        # Keep the vehicle in first gear with manual shifting so heavy vehicles
+        # respond to throttle immediately instead of idling in neutral.
+        out_cmd.gear = 1
+        out_cmd.manual_gear_shift = True
 
         with self._state_lock:
             # convert base on steer curve of the vehicle
             if not self.physics_control or not self.ego_actor:
                 return  # Skip if vehicle not initialized yet
 
-            steer_curve = self.physics_control.steering_curve
-            # numpy.interp requires the sample x-coordinates to be increasing.
-            # CARLA 0.10 can return the steering-curve points out of order,
-            # so sort by x before interpolating. On 0.9.x the curve is already
-            # sorted, making this a no-op.
-            steer_curve = sorted(steer_curve, key=lambda v: v.x)
-            current_vel = self.ego_actor.get_velocity()
-            max_steer_ratio = numpy.interp(
-                abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
-            )
-            out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
+            self._apply_min_positive_throttle(out_cmd, in_cmd)
+
+            # steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter
+            # passes control_cmd.steering_tire_angle through), while
+            # VehicleControl.steer expects a fraction of the wheel's max steer
+            # angle in [-1, 1]. Normalize by the max wheel angle; the sign flips
+            # because Autoware is CCW-positive and CARLA CW-positive.
+            # NOTE: no steering_curve multiplication here — the simulator applies
+            # its speed-based steering limit internally, and CARLA 0.10 returns
+            # corrupt curve data (duplicated/unsorted points) anyway.
+            steer_norm = -in_cmd.actuation.steer_cmd / self._max_wheel_steer_angle_rad()
+            steer_norm = max(-1.0, min(1.0, steer_norm))
+            out_cmd.steer = self.first_order_steering(steer_norm)
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
+
+    def _max_wheel_steer_angle_rad(self):
+        """Max steerable wheel angle [rad], cached from the vehicle physics.
+
+        Must be called with ``physics_control`` already available.
+        """
+        if self._max_steer_angle_rad is None:
+            max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
+            if max_deg <= 0.0:
+                max_deg = 70.0  # CARLA's usual front-wheel default
+            self._max_steer_angle_rad = math.radians(max_deg)
+        return self._max_steer_angle_rad
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
@@ -853,7 +904,11 @@ class carla_ros2_interface(object):
         out_vel_state.header = self.get_msg_header(frame_id="base_link")
         out_vel_state.longitudinal_velocity = ego_velocity[0]
         out_vel_state.lateral_velocity = ego_velocity[1]
-        out_vel_state.heading_rate = ego_transform.transform_vector(ego_angular_velocity).z
+        # CARLA reports the angular velocity in deg/s in Unreal's left-handed
+        # (CW-positive) frame, while ROS expects rad/s CCW-positive (REP-103):
+        # https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
+        # https://www.ros.org/reps/rep-0103.html
+        out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
 
         out_steering_state.stamp = out_vel_state.header.stamp
         out_steering_state.steering_tire_angle = -math.radians(steer_angle)
