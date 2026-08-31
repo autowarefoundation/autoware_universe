@@ -34,13 +34,16 @@ class PostprocessCuda
 public:
   explicit PostprocessCuda(const PTv3Config & config, cudaStream_t stream);
 
+  /// `input_features` holds one row of `feature_stride` floats per point, xyz first.
   void createVisualizationPointcloud(
-    const float * input_features, const std::int64_t * pred_labels, float * output_points,
-    std::size_t num_classes, std::size_t num_points);
+    const float * input_features, std::int64_t feature_stride, const std::int64_t * pred_labels,
+    float * output_points, std::size_t num_classes, std::size_t num_points);
 
+  /// `input_features` holds one row of `feature_stride` floats per point, xyz first.
   std::size_t createSegmentationPointcloud(
-    const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-    point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points);
+    const float * input_features, std::int64_t feature_stride, const std::int64_t * pred_labels,
+    const float * pred_probs, point_types::PointXYZCPE * output_points, std::size_t num_classes,
+    std::size_t num_points);
 
   void reconstructPartial(
     const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,

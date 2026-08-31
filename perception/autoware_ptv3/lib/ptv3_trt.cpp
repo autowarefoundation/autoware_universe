@@ -20,8 +20,6 @@
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
-#include <autoware/point_types/memory.hpp>
-#include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/point_field.hpp>
@@ -172,8 +170,11 @@ PTv3TRT::~PTv3TRT()
 
 void PTv3TRT::initPtr()
 {
+  voxels_d_ = autoware::cuda_utils::make_unique<float[]>(
+    config_.max_num_voxels_ * config_.max_points_per_voxel_ * config_.num_point_feature_size_);
+  num_points_per_voxel_d_ =
+    autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_);
   grid_coord_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
-  feat_d_ = autoware::cuda_utils::make_unique<float[]>(config_.max_num_voxels_ * 4);
   serialized_code_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
 
@@ -186,9 +187,6 @@ void PTv3TRT::initPtr()
         config_.stage_voxel_capacity(stage) * config_.enc_channels_[stage]));
   }
 
-  compact_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
-    config_.max_num_voxels_ * sizeof(CloudPointTypeXYZIRCAEDT));
-
   if (config_.use_seg3d_head_) {
     pred_labels_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
     pred_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
@@ -198,9 +196,10 @@ void PTv3TRT::initPtr()
         config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT));
     }
     if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
-      reconstructed_features_d_ = autoware::cuda_utils::make_unique<float[]>(
-        config_.cloud_capacity_ * config_.num_point_feature_size_);
-      inverse_map_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
+      // The inverse map covers every cropped point of the densified cloud; the reconstructed
+      // outputs cover only the published current frame.
+      inverse_map_d_ =
+        autoware::cuda_utils::make_unique<std::int64_t[]>(config_.densified_cloud_capacity_);
       reconstructed_labels_d_ =
         autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
       reconstructed_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
@@ -229,6 +228,7 @@ void PTv3TRT::initPtr()
     detection3d_post_ptr_ = std::make_unique<Detection3DPostprocess>(config_, stream_);
   }
 
+  aggregator_ptr_ = std::make_unique<SweepAggregator>(config_, stream_);
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
   if (config_.use_seg3d_head_) {
     post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
@@ -300,9 +300,16 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
 {
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
 
-  // Inputs
+  // Inputs: padded voxel points and their counts (the graph averages them per voxel), grid
+  // coordinates and serialized codes.
+  const auto max_points_per_voxel = config_.max_points_per_voxel_;
+  const auto num_features = config_.num_point_feature_size_;
+  network_io.emplace_back(
+    "voxels", nvinfer1::Dims{3, {-1, max_points_per_voxel, num_features}},
+    nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back(
+    "num_points_per_voxel", nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT32);
   network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
-  network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
   network_io.emplace_back(
     "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
 
@@ -317,12 +324,17 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
 
   profile_dims.emplace_back(
-    "grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
+    "voxels", nvinfer1::Dims{3, {config_.voxels_num_[0], max_points_per_voxel, num_features}},
+    nvinfer1::Dims{3, {config_.voxels_num_[1], max_points_per_voxel, num_features}},
+    nvinfer1::Dims{3, {config_.voxels_num_[2], max_points_per_voxel, num_features}});
 
   profile_dims.emplace_back(
-    "feat", nvinfer1::Dims{2, {config_.voxels_num_[0], 4}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], 4}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 4}});
+    "num_points_per_voxel", nvinfer1::Dims{1, {config_.voxels_num_[0]}},
+    nvinfer1::Dims{1, {config_.voxels_num_[1]}}, nvinfer1::Dims{1, {config_.voxels_num_[2]}});
+
+  profile_dims.emplace_back(
+    "grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
+    nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
 
   profile_dims.emplace_back(
     "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
@@ -389,8 +401,9 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
     throw std::runtime_error("Failed to setup encoder TRT engine.");
   }
 
+  encoder_trt_ptr_->setTensorAddress("voxels", voxels_d_.get());
+  encoder_trt_ptr_->setTensorAddress("num_points_per_voxel", num_points_per_voxel_d_.get());
   encoder_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
-  encoder_trt_ptr_->setTensorAddress("feat", feat_d_.get());
   encoder_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
   for (std::size_t stage = 0; stage < stage_feat_d_.size(); ++stage) {
     encoder_trt_ptr_->setTensorAddress(stageFeatureName(stage).c_str(), stage_feat_d_[stage].get());
@@ -694,32 +707,11 @@ void PTv3TRT::initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & tr
   }
 }
 
-CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const
-{
-  const auto & fields = cloud.fields;
-  const auto num_fields = fields.size();
-
-  if (num_fields == 10 && point_types::is_data_layout_compatible_with_point_xyzircaedt(fields)) {
-    return CloudFormat::XYZIRCAEDT;
-  }
-  if (num_fields == 9 && point_types::is_data_layout_compatible_with_point_xyziradrt(fields)) {
-    return CloudFormat::XYZIRADRT;
-  }
-  if (num_fields == 6 && point_types::is_data_layout_compatible_with_point_xyzirc(fields)) {
-    return CloudFormat::XYZIRC;
-  }
-  if (num_fields == 4 && point_types::is_data_layout_compatible_with_point_xyzi(fields)) {
-    return CloudFormat::XYZI;
-  }
-
-  return CloudFormat::UNKNOWN;
-}
-
 bool PTv3TRT::infer(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
-  bool should_publish_filtered_pointcloud, bool should_detect_objects,
-  std::optional<std::vector<Box3D>> & det_boxes3d,
+  const Eigen::Affine3f & affine_world2current, bool should_publish_segmented_pointcloud,
+  bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud,
+  bool should_detect_objects, std::optional<std::vector<Box3D>> & det_boxes3d,
   std::unordered_map<std::string, double> & proc_timing)
 {
   det_boxes3d.reset();
@@ -731,7 +723,7 @@ bool PTv3TRT::infer(
   const bool should_run_det3d = config_.use_det3d_head_ && should_detect_objects;
 
   stop_watch_ptr_->toc("processing/inner", true);
-  if (!preProcess(msg_ptr, should_run_seg3d)) {
+  if (!preProcess(msg_ptr, affine_world2current, should_run_seg3d)) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Pre-process failed. Skipping inference.");
     return false;
   }
@@ -794,17 +786,21 @@ bool PTv3TRT::infer(
 
 bool PTv3TRT::preProcess(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  const bool should_run_seg3d)
+  const Eigen::Affine3f & affine_world2current, const bool should_run_seg3d)
 {
   using autoware::cuda_utils::clear_async;
 
-  std::call_once(init_cloud_, [this, &msg_ptr]() {
-    input_format_ = detectCloudFormat(*msg_ptr);
-    if (input_format_ == CloudFormat::UNKNOWN) {
-      throw std::runtime_error(
-        "Unsupported point cloud type. Expected one of: XYZIRCAEDT (10 fields), "
-        "XYZIRADRT (9 fields), XYZIRC (6 fields), or XYZI (4 fields).");
-    }
+  aggregator_ptr_->enqueuePointCloud(msg_ptr, affine_world2current);
+  densified_cloud_ = aggregator_ptr_->aggregate();
+  num_current_points_ = static_cast<std::int64_t>(densified_cloud_.num_current_points);
+
+  if (densified_cloud_.num_current_points == 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping inference.");
+    return false;
+  }
+
+  std::call_once(init_cloud_, [this]() {
+    input_format_ = densified_cloud_.current_format;
 
     const auto requested_output_format = parse_cloud_format_string(config_.filter_output_format_);
     filtered_output_format_ =
@@ -876,24 +872,11 @@ bool PTv3TRT::preProcess(
   });
   allocateSegOutputMessages();
 
-  const auto num_points = msg_ptr->height * msg_ptr->width;
-  if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::FULL) {
-    num_source_points_ = static_cast<std::int64_t>(num_points);
-    current_input_data_ = msg_ptr->data.get();
-  }
-
-  if (num_points == 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping inference.");
-    return false;
-  }
-
-  clear_async(feat_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 4, stream_);
+  clear_async(
+    num_points_per_voxel_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
   clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
   clear_async(
     serialized_code_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
-  clear_async(
-    compact_points_d_.get(),
-    static_cast<std::size_t>(config_.max_num_voxels_) * sizeof(CloudPointTypeXYZIRCAEDT), stream_);
   if (should_run_seg3d) {
     clear_async(pred_labels_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
     clear_async(
@@ -908,10 +891,7 @@ bool PTv3TRT::preProcess(
     }
     if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
       clear_async(
-        reconstructed_features_d_.get(),
-        static_cast<std::size_t>(config_.cloud_capacity_) * config_.num_point_feature_size_,
-        stream_);
-      clear_async(inverse_map_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
+        inverse_map_d_.get(), static_cast<std::size_t>(config_.densified_cloud_capacity_), stream_);
       clear_async(
         reconstructed_labels_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
       clear_async(
@@ -923,18 +903,20 @@ bool PTv3TRT::preProcess(
   }
 
   std::size_t num_cropped_points = 0;
+  std::size_t num_cropped_current_points = 0;
   const bool should_reconstruct_source =
     should_run_seg3d && config_.source_reconstruction_ != SourceReconstruction::NONE;
-  num_voxels_ = pre_ptr_->generateFeatures(
-    msg_ptr->data.get(), input_format_, num_points, feat_d_.get(), grid_coord_d_.get(),
-    serialized_code_d_.get(), compact_points_d_.get(),
-    should_reconstruct_source ? reconstructed_features_d_.get() : nullptr,
-    should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::PARTIAL
-      ? cropped_source_points_d_.get()
-      : nullptr,
-    should_reconstruct_source ? inverse_map_d_.get() : nullptr, &num_cropped_points);
+  num_voxels_ = pre_ptr_->generateVoxels(
+    densified_cloud_.points, densified_cloud_.num_points, densified_cloud_.num_current_points,
+    voxels_d_.get(), num_points_per_voxel_d_.get(), grid_coord_d_.get(), serialized_code_d_.get(),
+    should_reconstruct_source ? inverse_map_d_.get() : nullptr, &num_cropped_points,
+    &num_cropped_current_points);
+  num_cropped_current_points_ = static_cast<std::int64_t>(num_cropped_current_points);
+
   if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
-    num_cropped_points_ = static_cast<std::int64_t>(num_cropped_points);
+    pre_ptr_->extractCurrentSourcePoints(
+      densified_cloud_.current_msg->data.get(), densified_cloud_.current_format,
+      densified_cloud_.num_current_points, cropped_source_points_d_.get());
   }
 
   if (num_voxels_ < config_.min_num_voxels_) {
@@ -955,8 +937,11 @@ bool PTv3TRT::preProcess(
 
   precomputeSerializedPoolingMetadata();
 
+  encoder_trt_ptr_->setInputShape(
+    "voxels", nvinfer1::Dims{
+                3, {num_voxels_, config_.max_points_per_voxel_, config_.num_point_feature_size_}});
+  encoder_trt_ptr_->setInputShape("num_points_per_voxel", nvinfer1::Dims{1, {num_voxels_}});
   encoder_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
-  encoder_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
   encoder_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
 
   if (!setSerializedPoolingInputShapes()) {
@@ -1057,42 +1042,51 @@ bool PTv3TRT::postProcess(
   const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
   bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud)
 {
-  // Segmentation pointcloud
+  // Segmentation outputs describe the current frame only. Current-frame points form the
+  // leading block of the densified cloud and of every crop-derived array, so bounding the
+  // reconstruction counts to the current frame publishes exactly the input frame's points.
   if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     post_ptr_->reconstructPartial(
       inverse_map_d_.get(), pred_labels_d_.get(), pred_probs_d_.get(),
       reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
-      config_.segmentation_class_names_.size(), num_cropped_points_, num_voxels_);
+      config_.segmentation_class_names_.size(), num_cropped_current_points_, num_voxels_);
   }
   if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
     post_ptr_->reconstructFull(
       pre_ptr_->cropMask(), pre_ptr_->cropIndices(), inverse_map_d_.get(), pred_labels_d_.get(),
       pred_probs_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
-      config_.segmentation_class_names_.size(), num_source_points_, num_voxels_);
+      config_.segmentation_class_names_.size(), num_current_points_, num_voxels_);
   }
 
-  const auto source_features = config_.source_reconstruction_ != SourceReconstruction::NONE
-                                 ? reconstructed_features_d_.get()
-                                 : feat_d_.get();
+  // Without reconstruction the outputs sit at voxel level, positioned at each voxel's first
+  // point (slot 0 of the padded voxel), hence the padded row stride.
+  const auto source_features =
+    config_.source_reconstruction_ == SourceReconstruction::FULL      ? densified_cloud_.points
+    : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? pre_ptr_->croppedFeatures()
+                                                                      : voxels_d_.get();
+  const auto source_feature_stride =
+    config_.source_reconstruction_ == SourceReconstruction::NONE
+      ? config_.max_points_per_voxel_ * config_.num_point_feature_size_
+      : config_.num_point_feature_size_;
   const auto source_labels = config_.source_reconstruction_ != SourceReconstruction::NONE
                                ? reconstructed_labels_d_.get()
                                : pred_labels_d_.get();
   const auto source_probs = config_.source_reconstruction_ != SourceReconstruction::NONE
                               ? reconstructed_probs_d_.get()
                               : pred_probs_d_.get();
-  const auto source_points = config_.source_reconstruction_ == SourceReconstruction::FULL
-                               ? current_input_data_
-                             : config_.source_reconstruction_ == SourceReconstruction::PARTIAL
-                               ? cropped_source_points_d_.get()
-                               : compact_points_d_.get();
+  const void * source_points = config_.source_reconstruction_ == SourceReconstruction::FULL
+                                 ? densified_cloud_.current_msg->data.get()
+                               : config_.source_reconstruction_ == SourceReconstruction::PARTIAL
+                                 ? cropped_source_points_d_.get()
+                                 : nullptr;
   const auto num_source_output_points =
-    config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_source_points_
-    : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_points_
+    config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_current_points_
+    : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_current_points_
                                                                       : num_voxels_;
 
   if (should_publish_segmented_pointcloud) {
     const auto num_segmented_points = post_ptr_->createSegmentationPointcloud(
-      source_features, source_labels, source_probs,
+      source_features, source_feature_stride, source_labels, source_probs,
       reinterpret_cast<point_types::PointXYZCPE *>(segmented_points_msg_ptr_->data.get()),
       config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
@@ -1108,7 +1102,7 @@ bool PTv3TRT::postProcess(
   // Visualization pointcloud
   if (should_publish_visualization_pointcloud) {
     post_ptr_->createVisualizationPointcloud(
-      source_features, source_labels,
+      source_features, source_feature_stride, source_labels,
       reinterpret_cast<float *>(visualization_points_msg_ptr_->data.get()),
       config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
@@ -1119,8 +1113,14 @@ bool PTv3TRT::postProcess(
   }
 
   if (should_publish_filtered_pointcloud) {
+    // The filtered cloud is rebuilt from the current frame's original points; PTv3Config
+    // rejects filter classes in 'none' mode, where no per-point source exists.
+    if (source_points == nullptr) {
+      throw std::runtime_error(
+        "The filtered pointcloud requires source_reconstruction 'partial' or 'full'.");
+    }
     const auto num_filtered_points = post_ptr_->createFilteredPointcloud(
-      source_points, input_format_, filtered_output_format_, source_probs,
+      source_points, densified_cloud_.current_format, filtered_output_format_, source_probs,
       filtered_points_msg_ptr_->data.get(), config_.segmentation_class_names_.size(),
       num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
