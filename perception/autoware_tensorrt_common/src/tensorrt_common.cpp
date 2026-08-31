@@ -200,71 +200,62 @@ std::string TrtCommon::getPrecision() const
 
 const char * TrtCommon::getIOTensorName(const int32_t index) const
 {
-  if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
-    if (!network_) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
-      return nullptr;
-    }
-    auto num_inputs = network_->getNbInputs();
-    auto num_outputs = network_->getNbOutputs();
-    if (index < 0 || index >= num_inputs + num_outputs) {
-      logger_->log(
-        nvinfer1::ILogger::Severity::kERROR,
-        "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
-      return nullptr;
-    }
-    if (index < num_inputs) {
-      return network_->getInput(index)->getName();
-    }
-    return network_->getOutput(index - num_inputs)->getName();
+  if (!network_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
+    return nullptr;
   }
-
-  return engine_->getIOTensorName(index);
+  if (engine_) {
+    return engine_->getIOTensorName(index);
+  }
+  // Before setup() the parsed network is the only source of IO, and reading it is supported:
+  // it is how a caller inspects what the model declares before the engine exists.
+  const auto num_inputs = network_->getNbInputs();
+  const auto num_outputs = network_->getNbOutputs();
+  if (index < 0 || index >= num_inputs + num_outputs) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kERROR,
+      "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
+    return nullptr;
+  }
+  if (index < num_inputs) {
+    return network_->getInput(index)->getName();
+  }
+  return network_->getOutput(index - num_inputs)->getName();
 }
 
 int32_t TrtCommon::getNbIOTensors() const
 {
-  if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
-    if (!network_) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
-      return 0;
-    }
-    return network_->getNbInputs() + network_->getNbOutputs();
+  if (!network_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
+    return 0;
   }
-  return engine_->getNbIOTensors();
+  if (engine_) {
+    return engine_->getNbIOTensors();
+  }
+  return network_->getNbInputs() + network_->getNbOutputs();
 }
 
 nvinfer1::Dims TrtCommon::getTensorShape(const int32_t index) const
 {
-  if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
-    if (!network_) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
-      return nvinfer1::Dims{};
-    }
-    auto num_inputs = network_->getNbInputs();
-    auto num_outputs = network_->getNbOutputs();
-    if (index < 0 || index >= num_inputs + num_outputs) {
-      logger_->log(
-        nvinfer1::ILogger::Severity::kERROR,
-        "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
-      return nvinfer1::Dims{};
-    }
-    if (index < num_inputs) {
-      return network_->getInput(index)->getDimensions();
-    }
-    return network_->getOutput(index - num_inputs)->getDimensions();
+  if (!network_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
+    return nvinfer1::Dims{};
   }
-  auto const & name = getIOTensorName(index);
-  return getTensorShape(name);
+  if (engine_) {
+    return getTensorShape(getIOTensorName(index));
+  }
+  const auto num_inputs = network_->getNbInputs();
+  const auto num_outputs = network_->getNbOutputs();
+  if (index < 0 || index >= num_inputs + num_outputs) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kERROR,
+      "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
+    return nvinfer1::Dims{};
+  }
+  if (index < num_inputs) {
+    return network_->getInput(index)->getDimensions();
+  }
+  return network_->getOutput(index - num_inputs)->getDimensions();
 }
 
 nvinfer1::Dims TrtCommon::getTensorShape(const char * tensor_name) const
