@@ -103,11 +103,10 @@ private:
     const std::string & target_frame, const std::string & source_frame,
     tf2::Transform * tf2_transform_ptr);
 
-  // Callback
   void pointcloudCallback(AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2)
                             input_pointcloud_msg_ptr);
-  void twistCallback(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
-  void imuCallback(const sensor_msgs::msg::Imu & imu_msg);
+  void insertTwistMessage(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
+  void insertImuMessage(const sensor_msgs::msg::Imu & imu_msg);
 
   // Helper Functions
   [[nodiscard]] bool validatePointcloudLayout(
@@ -117,8 +116,6 @@ private:
 
   void updateTwistQueue(std::uint64_t first_point_stamp);
   void updateImuQueue(std::uint64_t first_point_stamp);
-  void boundTwistQueue();
-  void boundImuQueue();
   std::optional<geometry_msgs::msg::TransformStamped> lookupTransformToBase(
     const std::string & source_frame);
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> processPointcloud(

@@ -16,6 +16,7 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/memory.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/queue_bounds.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/crop_box_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/diagnostics_base.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/distortion_corrector_diagnostics.hpp"
@@ -299,55 +300,14 @@ bool CudaPointcloudPreprocessorNode::getTransform(
   return true;
 }
 
-void CudaPointcloudPreprocessorNode::twistCallback(
+void CudaPointcloudPreprocessorNode::insertTwistMessage(
   const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg)
 {
-  while (!twist_queue_.empty()) {
-    // for replay rosbag
-    bool backwards_time_jump_detected =
-      rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(twist_msg.header.stamp);
-    bool is_queue_longer_than_1s =
-      rclcpp::Time(twist_queue_.front().header.stamp) <
-      rclcpp::Time(twist_msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
-
-    if (backwards_time_jump_detected) {
-      twist_queue_.clear();
-    } else if (is_queue_longer_than_1s) {
-      twist_queue_.pop_front();
-    } else {
-      break;
-    }
-  }
-
-  auto it = std::lower_bound(
-    twist_queue_.begin(), twist_queue_.end(), twist_msg.header.stamp,
-    [](const auto & twist, const auto & stamp) {
-      return rclcpp::Time(twist.header.stamp) < stamp;
-    });
-  twist_queue_.insert(it, twist_msg);
-  boundTwistQueue();
+  detail::insert_sorted(twist_queue_, twist_msg);
 }
 
-void CudaPointcloudPreprocessorNode::imuCallback(const sensor_msgs::msg::Imu & imu_msg)
+void CudaPointcloudPreprocessorNode::insertImuMessage(const sensor_msgs::msg::Imu & imu_msg)
 {
-  while (!angular_velocity_queue_.empty()) {
-    // for rosbag replay
-    bool backwards_time_jump_detected = rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
-                                        rclcpp::Time(imu_msg.header.stamp);
-
-    bool is_queue_longer_than_1s =
-      rclcpp::Time(angular_velocity_queue_.front().header.stamp) <
-      rclcpp::Time(imu_msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
-
-    if (backwards_time_jump_detected) {
-      angular_velocity_queue_.clear();
-    } else if (is_queue_longer_than_1s) {
-      angular_velocity_queue_.pop_front();
-    } else {
-      break;
-    }
-  }
-
   tf2::Transform imu_to_base_tf2{};
   getTransform(base_frame_, imu_msg.header.frame_id, &imu_to_base_tf2);
   geometry_msgs::msg::TransformStamped imu_to_base_msg;
@@ -360,13 +320,7 @@ void CudaPointcloudPreprocessorNode::imuCallback(const sensor_msgs::msg::Imu & i
   tf2::doTransform(angular_velocity, transformed_angular_velocity, imu_to_base_msg);
   transformed_angular_velocity.header = imu_msg.header;
 
-  auto it = std::lower_bound(
-    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), imu_msg.header.stamp,
-    [](const auto & angular_velocity, const auto & stamp) {
-      return rclcpp::Time(angular_velocity.header.stamp) < stamp;
-    });
-  angular_velocity_queue_.insert(it, transformed_angular_velocity);
-  boundImuQueue();
+  detail::insert_sorted(angular_velocity_queue_, transformed_angular_velocity);
 }
 
 void CudaPointcloudPreprocessorNode::pointcloudCallback(
@@ -453,30 +407,13 @@ void CudaPointcloudPreprocessorNode::updateTwistQueue(std::uint64_t first_point_
   std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
     twist_sub_->take_data();
 
-  auto it = std::lower_bound(
-    twist_queue_.begin(), twist_queue_.end(), first_point_stamp,
-    [](const auto & twist, const std::uint64_t stamp) {
-      // To prevent potential precision loss, use nanoseconds
-      return static_cast<std::uint64_t>(rclcpp::Time(twist.header.stamp).nanoseconds()) < stamp;
-    });
-  twist_queue_.erase(twist_queue_.begin(), it);
-
-  twist_msgs.erase(
-    std::remove_if(
-      twist_msgs.begin(), twist_msgs.end(),
-      [first_point_stamp](const auto & twist) {
-        return static_cast<std::uint64_t>(rclcpp::Time(twist->header.stamp).nanoseconds()) <
-               first_point_stamp;
-      }),
-    twist_msgs.end());
-
-  const auto free_capacity = input_bounds_params_.max_twist_queue_size - twist_queue_.size();
-  if (twist_msgs.size() > free_capacity) {
-    latest_input_bounds_status_.dropped_twist_count += twist_msgs.size() - free_capacity;
-    twist_msgs.erase(twist_msgs.begin(), twist_msgs.end() - free_capacity);
-  }
+  latest_input_bounds_status_.dropped_twist_count += detail::prepare_queue_update(
+    twist_queue_, twist_msgs, input_bounds_params_.max_twist_queue_size, first_point_stamp);
   for (const auto & msg : twist_msgs) {
-    twistCallback(*msg);
+    if (detail::is_backward_time_jump(twist_queue_, msg->header.stamp)) {
+      twist_queue_.clear();
+    }
+    insertTwistMessage(*msg);
   }
 }
 
@@ -486,48 +423,13 @@ void CudaPointcloudPreprocessorNode::updateImuQueue(std::uint64_t first_point_st
 
   std::vector<sensor_msgs::msg::Imu::ConstSharedPtr> imu_msgs = imu_sub_->take_data();
 
-  auto it = std::lower_bound(
-    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), first_point_stamp,
-    [](const auto & angular_velocity, const std::uint64_t stamp) {
-      //  To prevent potential precision loss, use nanoseconds
-      return static_cast<std::uint64_t>(rclcpp::Time(angular_velocity.header.stamp).nanoseconds()) <
-             stamp;
-    });
-  angular_velocity_queue_.erase(angular_velocity_queue_.begin(), it);
-
-  imu_msgs.erase(
-    std::remove_if(
-      imu_msgs.begin(), imu_msgs.end(),
-      [first_point_stamp](const auto & imu) {
-        return static_cast<std::uint64_t>(rclcpp::Time(imu->header.stamp).nanoseconds()) <
-               first_point_stamp;
-      }),
-    imu_msgs.end());
-
-  const auto free_capacity =
-    input_bounds_params_.max_imu_queue_size - angular_velocity_queue_.size();
-  if (imu_msgs.size() > free_capacity) {
-    latest_input_bounds_status_.dropped_imu_count += imu_msgs.size() - free_capacity;
-    imu_msgs.erase(imu_msgs.begin(), imu_msgs.end() - free_capacity);
-  }
+  latest_input_bounds_status_.dropped_imu_count += detail::prepare_queue_update(
+    angular_velocity_queue_, imu_msgs, input_bounds_params_.max_imu_queue_size, first_point_stamp);
   for (const auto & msg : imu_msgs) {
-    imuCallback(*msg);
-  }
-}
-
-void CudaPointcloudPreprocessorNode::boundTwistQueue()
-{
-  while (twist_queue_.size() > input_bounds_params_.max_twist_queue_size) {
-    twist_queue_.pop_front();
-    ++latest_input_bounds_status_.dropped_twist_count;
-  }
-}
-
-void CudaPointcloudPreprocessorNode::boundImuQueue()
-{
-  while (angular_velocity_queue_.size() > input_bounds_params_.max_imu_queue_size) {
-    angular_velocity_queue_.pop_front();
-    ++latest_input_bounds_status_.dropped_imu_count;
+    if (detail::is_backward_time_jump(angular_velocity_queue_, msg->header.stamp)) {
+      angular_velocity_queue_.clear();
+    }
+    insertImuMessage(*msg);
   }
 }
 
