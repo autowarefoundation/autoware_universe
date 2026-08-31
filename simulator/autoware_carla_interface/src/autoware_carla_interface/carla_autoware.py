@@ -220,6 +220,7 @@ class InitializeInterface(object):
             time.sleep(1.0)
 
         if query_ever_failed:
+            # cspell:ignore libcarla
             # The map query raised at least once instead of returning a name (e.g. a
             # CARLA level without parseable OpenDRIVE metadata). After such a failure
             # libcarla keeps serving the previous episode's cached map, so a later
