@@ -20,6 +20,7 @@
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -64,7 +65,7 @@ private:
   bool is_stop_active_{false};
   std::optional<rclcpp::Time> last_obstacle_found_time_;
 
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  PublisherHandle<StringStamped> pub_debug_text_;
 
   [[nodiscard]] bool check_inputs(const TrajectoryProcessorData & input) const;
 

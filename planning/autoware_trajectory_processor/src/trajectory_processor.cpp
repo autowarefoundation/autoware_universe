@@ -51,9 +51,25 @@ TrajectoryProcessor::TrajectoryProcessor(const rclcpp::NodeOptions & options)
   trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
   trajectory_pub_ = create_publisher<Trajectory>("~/output/trajectory", 1);
 
+  sub_current_odometry_ =
+    namespace_polling::create_polling_subscriber<Odometry>(this, "~/input/odometry");
+  sub_current_acceleration_ =
+    namespace_polling::create_polling_subscriber<Acceleration>(this, "~/input/acceleration");
+  sub_objects_ =
+    namespace_polling::create_polling_subscriber<PredictedObjects>(this, "~/input/objects");
+  sub_pointcloud_ = namespace_polling::create_polling_subscriber<PointCloud2>(
+    this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos());
+  sub_traffic_lights_ = namespace_polling::create_polling_subscriber<
+    autoware_perception_msgs::msg::TrafficLightGroupArray>(this, "~/input/traffic_signals");
+  sub_route_ =
+    namespace_polling::create_polling_subscriber<autoware_planning_msgs::msg::LaneletRoute>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local());
+
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
-  debug_publisher_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+  debug_publisher_ =
+    std::make_shared<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "~/debug");
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
@@ -61,7 +77,8 @@ TrajectoryProcessor::TrajectoryProcessor(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(get_logger(), "TrajectoryProcessor initialized with %zu plugins", plugins_.size());
 }
 
-void TrajectoryProcessor::on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+void TrajectoryProcessor::on_map(
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
@@ -118,12 +135,12 @@ void TrajectoryProcessor::update_params()
 tl::expected<TrajectoryProcessorData, std::string> TrajectoryProcessor::make_input_data()
 {
   TrajectoryProcessorData data;
-  data.current_odometry = sub_current_odometry_.take_data();
-  data.current_acceleration = sub_current_acceleration_.take_data();
-  data.predicted_objects = sub_objects_.take_data();
-  data.obstacle_pointcloud = sub_pointcloud_.take_data();
-  data.route = sub_route_.take_data();
-  data.traffic_light_signals = sub_traffic_lights_.take_data();
+  data.current_odometry = sub_current_odometry_->take_data();
+  data.current_acceleration = sub_current_acceleration_->take_data();
+  data.predicted_objects = sub_objects_->take_data();
+  data.obstacle_pointcloud = sub_pointcloud_->take_data();
+  data.route = sub_route_->take_data();
+  data.traffic_light_signals = sub_traffic_lights_->take_data();
   data.lanelet_map = lanelet_map_ptr_;
 
   if (!data.current_odometry || !data.current_acceleration) {
@@ -156,7 +173,8 @@ void TrajectoryProcessor::publish_processing_time(const double processing_time_m
     "processing_time_ms", processing_time_ms);
 }
 
-void TrajectoryProcessor::on_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryProcessor::on_trajectories(AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories)
+                                            msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;

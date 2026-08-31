@@ -114,13 +114,9 @@ namespace autoware::trajectory_processor::plugin
 
 void SurroundObstacleStop::on_initialize(const TrajectoryProcessorParams & params)
 {
-  const auto node_ptr = get_node_ptr();
-  planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "modifier_surround_obstacle_stop");
+  init_planning_factor_interface("modifier_surround_obstacle_stop");
 
-  pub_debug_text_ =
-    node_ptr->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
+  pub_debug_text_ = make_publisher<StringStamped>("~/surround_obstacle_stop/debug/text");
 
   enabled_ = params.use_surround_obstacle_stop;
   params_ = params.surround_obstacle_stop;
@@ -272,7 +268,7 @@ ProcessingResult SurroundObstacleStop::process(
     autoware_internal_planning_msgs::msg::SafetyFactorArray{});
 
   RCLCPP_WARN_THROTTLE(
-    get_node_ptr()->get_logger(), *get_clock(), 1000,
+    get_logger(), *get_clock(), 1000,
     "[TM SurroundObstacleStop] Replaced trajectory with zero velocity due to nearby obstacle.");
 
   publish_debug_string(true);
@@ -290,7 +286,7 @@ void SurroundObstacleStop::publish_debug_string(const bool is_active) const
   StringStamped string_stamp;
   string_stamp.stamp = get_clock()->now();
   string_stamp.data = ss.str();
-  pub_debug_text_->publish(string_stamp);
+  pub_debug_text_(string_stamp);
 }
 
 }  // namespace autoware::trajectory_processor::plugin

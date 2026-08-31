@@ -42,13 +42,14 @@ ProcessingResult TrajectoryEBSmootherOptimizer::process(
 
 void TrajectoryEBSmootherOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
   enabled_ = params.use_eb_smoother;
-  ego_nearest_param_ = EgoNearestParam(node_ptr);
-  common_param_ = CommonParam(node_ptr);
   smoother_time_keeper_ptr_ = std::make_shared<SmootherTimekeeper>();
-  eb_path_smoother_ptr_ = std::make_shared<EBPathSmoother>(
-    node_ptr, false, ego_nearest_param_, common_param_, smoother_time_keeper_ptr_);
+  with_node([&](auto * node) {
+    ego_nearest_param_ = EgoNearestParam(node);
+    common_param_ = CommonParam(node);
+    eb_path_smoother_ptr_ = std::make_shared<EBPathSmoother>(
+      node, false, ego_nearest_param_, common_param_, smoother_time_keeper_ptr_);
+  });
   eb_path_smoother_ptr_->initialize(false, common_param_);
   eb_path_smoother_ptr_->resetPreviousData();
 }
