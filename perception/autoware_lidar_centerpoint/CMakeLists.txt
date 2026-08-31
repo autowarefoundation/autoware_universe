@@ -62,6 +62,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/centerpoint_trt.cpp
     lib/detection_class_remapper.cpp
+    lib/ml_package_version.cpp
     lib/utils.cpp
     lib/ros_utils.cpp
     lib/preprocess/pointcloud_densification.cpp
@@ -147,6 +148,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     )
     ament_auto_add_gtest(test_ros_utils
       test/test_ros_utils.cpp
+    )
+    ament_auto_add_gtest(test_ml_package_version
+      test/test_ml_package_version.cpp
     )
     # Temporary disabled, tracked by:
     # https://github.com/autowarefoundation/autoware_universe/issues/7724

@@ -1,7 +1,13 @@
 <launch>
   <arg name="config" default="$(find-pkg-share autoware_trajectory_gate)/config/trajectory_gate.param.yaml"/>
+  <arg name="output/trajectory" default="output/trajectory"/>
+
+  <!-- Enabled if "main" is listed in config source name -->
+  <arg name="inputs/main/trajectory" default="inputs/main/trajectory"/>
 
   <node pkg="autoware_trajectory_gate" exec="trajectory_gate_node">
     <param from="$(var config)"/>
+    <remap from="~/output/trajectory" to="$(var output/trajectory)"/>
+    <remap from="~/inputs/main/trajectory" to="$(var inputs/main/trajectory)"/>
   </node>
 </launch>

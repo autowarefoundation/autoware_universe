@@ -198,11 +198,10 @@ void TrajectoryProcessor::on_trajectories(AUTOWARE_MESSAGE_CONST_SHARED_PTR(Cand
     auto & candidate = output.candidate_trajectories.at(candidate_index);
     auto data = input.value();
     for (auto & processor_plugin : plugins_) {
-      if (processor_plugin->process(candidate.points, data) != plugin::ProcessingResult::Modified) {
-        continue;
-      }
-      processor_plugin->publish_planning_factor();
+      const auto result = processor_plugin->process(candidate.points, data);
       processor_plugin->publish_debug_data("trajectory_" + std::to_string(candidate_index));
+      if (result != plugin::ProcessingResult::Modified) continue;
+      processor_plugin->publish_planning_factor();
       if (!modified_instances.empty()) {
         modified_instances += ", ";
       }

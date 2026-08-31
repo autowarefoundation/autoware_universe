@@ -24,21 +24,24 @@
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 
 #include <gtest/gtest.h>
+#include <tf2/buffer_core.h>
 
 #include <cmath>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
 {
 
-using autoware::traffic_light::StampedTransform;
 using autoware::traffic_light::TrafficLightMapBasedDetector;
 using autoware::traffic_light::TrafficLightMapBasedDetectorConfig;
 using autoware_map_msgs::msg::LaneletMapBin;
@@ -59,14 +62,33 @@ TrafficLightMapBasedDetectorConfig make_default_config()
   config.max_detection_range = 200.0;
   config.car_traffic_light_max_angle_range = 40.0;
   config.pedestrian_traffic_light_max_angle_range = 80.0;
+  config.min_timestamp_offset = -0.01;
+  config.max_timestamp_offset = 0.0;
   return config;
+}
+
+const char camera_frame_id[] = "camera_optical_link";
+
+std::unique_ptr<tf2::BufferCore> make_tf_buffer(
+  const std::vector<std::pair<rclcpp::Time, tf2::Transform>> & samples)
+{
+  auto tf_buffer = std::make_unique<tf2::BufferCore>();
+  for (const auto & [stamp, transform] : samples) {
+    geometry_msgs::msg::TransformStamped transform_stamped;
+    transform_stamped.header.stamp = stamp;
+    transform_stamped.header.frame_id = "map";
+    transform_stamped.child_frame_id = camera_frame_id;
+    transform_stamped.transform = tf2::toMsg(transform);
+    tf_buffer->setTransform(transform_stamped, "test");
+  }
+  return tf_buffer;
 }
 
 /// 640x480 ideal pinhole camera (fx=fy=400, cx=320, cy=240, no distortion).
 CameraInfo make_default_camera_info()
 {
   CameraInfo camera_info;
-  camera_info.header.frame_id = "camera_optical_link";
+  camera_info.header.frame_id = camera_frame_id;
   camera_info.header.stamp = rclcpp::Time(1000, 0);
   camera_info.width = 640;
   camera_info.height = 480;
@@ -223,10 +245,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithoutSetRouteUsesAllMapTrafficLig
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
-  const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
+  const auto tf_buffer = make_tf_buffer({{camera_info.header.stamp, make_camera_pose()}});
 
   // Act
-  const auto result = detector.detect(tf_samples, camera_info);
+  const auto result = detector.detect(*tf_buffer, camera_info);
 
   // Assert
   ASSERT_EQ(result.rough_rois.rois.size(), 1u);
@@ -294,10 +316,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectProducesRoisWithExpectedPixelCoordi
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
-  const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
+  const auto tf_buffer = make_tf_buffer({{camera_info.header.stamp, make_camera_pose()}});
 
   // Act
-  const auto result = detector.detect(tf_samples, camera_info);
+  const auto result = detector.detect(*tf_buffer, camera_info);
 
   // Assert
   // rough ROI includes vibration margin
@@ -328,12 +350,13 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithYawVariedTransformSamplesProduc
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
-  const std::vector<StampedTransform> tf_samples = {
-    {camera_info.header.stamp, make_camera_pose(0.0)},
-    {camera_info.header.stamp, make_camera_pose(5.0)}};
+  const auto current_time = rclcpp::Time(camera_info.header.stamp);
+  const auto previous_time = current_time - rclcpp::Duration::from_seconds(0.01);
+  const auto tf_buffer =
+    make_tf_buffer({{previous_time, make_camera_pose(0.0)}, {current_time, make_camera_pose(5.0)}});
 
   // Act
-  const auto result = detector.detect(tf_samples, camera_info);
+  const auto result = detector.detect(*tf_buffer, camera_info);
 
   // Assert
   ASSERT_EQ(result.rough_rois.rois.size(), 1u);
@@ -343,7 +366,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithYawVariedTransformSamplesProduc
   EXPECT_NEAR(result.rough_rois.rois[0].roi.height, 39, 1);
 }
 
-TEST(TrafficLightMapBasedDetectorTest, DetectWithEmptyTransformSamplesReturnsEmpty)
+TEST(TrafficLightMapBasedDetectorTest, DetectWithNoAvailableTransformReturnsEmpty)
 {
   // Arrange
   const auto config = make_default_config();
@@ -351,9 +374,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithEmptyTransformSamplesReturnsEmp
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
+  tf2::BufferCore empty_tf_buffer;
 
   // Act
-  const auto result = detector.detect({}, camera_info);
+  const auto result = detector.detect(empty_tf_buffer, camera_info);
 
   // Assert
   EXPECT_TRUE(result.rough_rois.rois.empty());
@@ -368,10 +392,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutSolidSubtypeTrafficLight)
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
-  const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
+  const auto tf_buffer = make_tf_buffer({{camera_info.header.stamp, make_camera_pose()}});
 
   // Act
-  const auto result = detector.detect(tf_samples, camera_info);
+  const auto result = detector.detect(*tf_buffer, camera_info);
 
   // Assert
   EXPECT_TRUE(result.rough_rois.rois.empty());
@@ -387,10 +411,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideDistan
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
-  const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
+  const auto tf_buffer = make_tf_buffer({{camera_info.header.stamp, make_camera_pose()}});
 
   // Act
-  const auto result = detector.detect(tf_samples, camera_info);
+  const auto result = detector.detect(*tf_buffer, camera_info);
 
   // Assert
   EXPECT_TRUE(result.rough_rois.rois.empty());
@@ -406,11 +430,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideAngleR
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
-  const std::vector<StampedTransform> tf_samples = {
-    {camera_info.header.stamp, make_camera_pose(90.0)}};
+  const auto tf_buffer = make_tf_buffer({{camera_info.header.stamp, make_camera_pose(90.0)}});
 
   // Act
-  const auto result = detector.detect(tf_samples, camera_info);
+  const auto result = detector.detect(*tf_buffer, camera_info);
 
   // Assert
   EXPECT_TRUE(result.rough_rois.rois.empty());
@@ -439,14 +462,14 @@ TEST(TrafficLightMapBasedDetectorTest, SetRouteWithKnownLaneletIdSucceedsAndDete
   TrafficLightMapBasedDetector detector(config, map);
 
   const auto camera_info = make_default_camera_info();
-  const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
+  const auto tf_buffer = make_tf_buffer({{camera_info.header.stamp, make_camera_pose()}});
 
   const auto traffic_light_id = get_traffic_light_ids(map)[0];
   const auto route = make_route(get_road_lanelet_ids(map)[0]);
 
   // Act
   const auto error = detector.set_route(route);
-  const auto result = detector.detect(tf_samples, camera_info);
+  const auto result = detector.detect(*tf_buffer, camera_info);
 
   // Assert
   EXPECT_FALSE(error.has_value());
