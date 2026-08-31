@@ -14,9 +14,12 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_crop_box_filter/cuda_crop_box_filter.hpp"
 
+#include <sensor_msgs/msg/point_field.hpp>
+
 #include <thrust/execution_policy.h>
 #include <thrust/scan.h>
 
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -101,35 +104,76 @@ CudaCropBoxFilter::~CudaCropBoxFilter()
   }
 }
 
-bool CudaCropBoxFilter::findXyzOffsets(
+namespace
+{
+std::string describeDatatype(std::uint8_t datatype)
+{
+  using sensor_msgs::msg::PointField;
+  switch (datatype) {
+    case PointField::INT8:
+      return "INT8";
+    case PointField::UINT8:
+      return "UINT8";
+    case PointField::INT16:
+      return "INT16";
+    case PointField::UINT16:
+      return "UINT16";
+    case PointField::INT32:
+      return "INT32";
+    case PointField::UINT32:
+      return "UINT32";
+    case PointField::FLOAT32:
+      return "FLOAT32";
+    case PointField::FLOAT64:
+      return "FLOAT64";
+    default:
+      return "datatype " + std::to_string(static_cast<int>(datatype));
+  }
+}
+}  // namespace
+
+std::string CudaCropBoxFilter::findXyzOffsets(
   const cuda_blackboard::CudaPointCloud2 & cloud, std::size_t offsets[3])
 {
-  bool found[3] = {false, false, false};
-  for (const auto & f : cloud.fields) {
-    // FLOAT32 == 7 in sensor_msgs::msg::PointField. Anything else would need a
-    // conversion this filter deliberately does not do.
-    if (f.datatype != 7 || f.count != 1) {
-      continue;
+  // Look a coordinate up by name first, and only then check what the kernel
+  // needs of it. Skipping fields that fail the checks and reporting "not found"
+  // at the end would blame a missing field for a present one of the wrong type,
+  // which is the harder of the two to diagnose from a log line.
+  const char * names[3] = {"x", "y", "z"};
+  for (int axis = 0; axis < 3; ++axis) {
+    const sensor_msgs::msg::PointField * field = nullptr;
+    for (const auto & f : cloud.fields) {
+      if (f.name == names[axis]) {
+        field = &f;
+        break;
+      }
+    }
+    if (field == nullptr) {
+      return std::string("no field named '") + names[axis] + "'";
+    }
+    // The kernel reads four bytes as a float. Anything else would need a
+    // conversion this filter deliberately does not do, and reading a FLOAT64
+    // field as a float yields plausible-looking garbage rather than an error.
+    if (field->datatype != sensor_msgs::msg::PointField::FLOAT32) {
+      return std::string("field '") + names[axis] + "' is " + describeDatatype(field->datatype) +
+             ", but this filter reads it as FLOAT32";
+    }
+    if (field->count != 1) {
+      return std::string("field '") + names[axis] + "' has count " +
+             std::to_string(field->count) + ", but this filter reads a single element";
     }
     // A field must lie wholly inside the point. Without this a malformed cloud
     // declaring x at offset 60 with point_step 20 would have the kernel read
     // past the end of every point -- out of bounds on the device, where it
     // fails as corrupt output rather than a fault.
-    if (f.offset + sizeof(float) > cloud.point_step) {
-      continue;
+    if (field->offset + sizeof(float) > cloud.point_step) {
+      return std::string("field '") + names[axis] + "' ends at byte " +
+             std::to_string(field->offset + sizeof(float)) + ", past point_step " +
+             std::to_string(cloud.point_step);
     }
-    if (f.name == "x") {
-      offsets[0] = f.offset;
-      found[0] = true;
-    } else if (f.name == "y") {
-      offsets[1] = f.offset;
-      found[1] = true;
-    } else if (f.name == "z") {
-      offsets[2] = f.offset;
-      found[2] = true;
-    }
+    offsets[axis] = field->offset;
   }
-  return found[0] && found[1] && found[2];
+  return {};
 }
 
 void CudaCropBoxFilter::ensureCapacity(std::size_t num_points)
@@ -154,7 +198,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaCropBoxFilter::filter(
   const cuda_blackboard::CudaPointCloud2 & input)
 {
   std::size_t off[3];
-  if (!findXyzOffsets(input, off)) {
+  layout_error_ = findXyzOffsets(input, off);
+  if (!layout_error_.empty()) {
     return nullptr;
   }
 

@@ -22,11 +22,14 @@
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -131,9 +134,98 @@ CudaCropBoxFilter::BoxParams box(bool negative)
   return params;
 }
 
-TestPoint point(float x, float y, float z, float intensity = 0.0f, std::uint16_t ring = 0)
+TestPoint point(float x, float y, float z)
 {
-  return TestPoint{x, y, z, intensity, ring, 0};
+  return TestPoint{x, y, z, 0.0f, 0, 0};
+}
+
+/// Host-side mirror of the shared box, so a test can predict the selection
+/// independently of the kernel it is checking.
+bool insideSharedBox(const TestPoint & p)
+{
+  const auto params = box(false);
+  const std::array<std::array<float, 3>, 3> axes{
+    {{p.x, params.min_x, params.max_x},
+     {p.y, params.min_y, params.max_y},
+     {p.z, params.min_z, params.max_z}}};
+  return std::all_of(axes.begin(), axes.end(), [](const std::array<float, 3> & axis) {
+    return axis[0] >= axis[1] && axis[0] <= axis[2];
+  });
+}
+
+/// The output is a flat, dense cloud whose row_step agrees with its width,
+/// whatever the input's organisation was.
+void expectFlatDenseCloud(const cuda_blackboard::CudaPointCloud2 & cloud)
+{
+  EXPECT_EQ(cloud.height, 1u);
+  EXPECT_TRUE(cloud.is_dense);
+  EXPECT_EQ(cloud.row_step, cloud.width * cloud.point_step);
+}
+
+void expectXValues(const std::vector<TestPoint> & points, const std::vector<float> & expected)
+{
+  ASSERT_EQ(points.size(), expected.size());
+  for (std::size_t i = 0; i < expected.size(); ++i) {
+    EXPECT_FLOAT_EQ(points[i].x, expected[i]) << "at kept index " << i;
+  }
+}
+
+void expectFinite(const TestPoint & p)
+{
+  EXPECT_TRUE(std::isfinite(p.x));
+  EXPECT_TRUE(std::isfinite(p.y));
+  EXPECT_TRUE(std::isfinite(p.z));
+}
+
+/// Alternating inside and outside points, so the kept ones are not contiguous in
+/// the input and the scatter actually has to move them. Every part of the
+/// payload, the alignment hole included, carries a distinct value.
+std::vector<TestPoint> alternatingInsideOutside(int count)
+{
+  std::vector<TestPoint> points;
+  points.reserve(static_cast<std::size_t>(count));
+  for (int i = 0; i < count; ++i) {
+    const float radius = (i % 2 == 0) ? 1.0f : 40.0f;
+    TestPoint p =
+      point(radius * static_cast<float>(i % 5 - 2), radius, 0.5f * static_cast<float>(i % 7 - 3));
+    p.intensity = static_cast<float>(i) * 1.25f;
+    p.ring = static_cast<std::uint16_t>(i * 37);
+    p.pad = static_cast<std::uint16_t>(0xA5A5u ^ i);
+    points.push_back(p);
+  }
+  return points;
+}
+
+std::vector<std::size_t> expectedKeptIndices(const std::vector<TestPoint> & points)
+{
+  std::vector<std::size_t> kept;
+  for (std::size_t i = 0; i < points.size(); ++i) {
+    if (insideSharedBox(points[i])) {
+      kept.push_back(i);
+    }
+  }
+  return kept;
+}
+
+std::vector<std::uint8_t> toBytes(const std::vector<TestPoint> & points)
+{
+  std::vector<std::uint8_t> bytes(points.size() * sizeof(TestPoint));
+  std::memcpy(bytes.data(), points.data(), bytes.size());
+  return bytes;
+}
+
+/// Compare the raw point_step blobs. Comparing fields would only prove the
+/// fields this filter already reads survived.
+void expectBlobsCopiedVerbatim(
+  const std::vector<std::uint8_t> & input_bytes, const std::vector<std::uint8_t> & output_bytes,
+  const std::vector<std::size_t> & expected, std::size_t step)
+{
+  for (std::size_t k = 0; k < expected.size(); ++k) {
+    const std::uint8_t * src = input_bytes.data() + expected[k] * step;
+    const std::uint8_t * dst = output_bytes.data() + k * step;
+    EXPECT_EQ(std::memcmp(src, dst, step), 0)
+      << "point " << k << " (input index " << expected[k] << ") was not copied verbatim";
+  }
 }
 
 bool haveCudaDevice()
@@ -171,19 +263,10 @@ TEST_F(CudaCropBoxFilterTest, KeepsInsideDropsOutside)
   const auto cloud = makeCloud(input);
   const auto output = filter.filter(cloud);
   ASSERT_NE(output, nullptr);
-
-  const auto kept = readBackPoints(*output);
   ASSERT_EQ(output->width, 3u);
-  ASSERT_EQ(kept.size(), 3u);
-  EXPECT_FLOAT_EQ(kept[0].x, 0.0f);
-  EXPECT_FLOAT_EQ(kept[1].x, 9.9f);
-  EXPECT_FLOAT_EQ(kept[2].x, -1.0f);
 
-  // The output is a flat cloud regardless of the input's organisation, and the
-  // cropped result has no non-finite points left in it.
-  EXPECT_EQ(output->height, 1u);
-  EXPECT_TRUE(output->is_dense);
-  EXPECT_EQ(output->row_step, output->width * output->point_step);
+  expectXValues(readBackPoints(*output), {0.0f, 9.9f, -1.0f});
+  expectFlatDenseCloud(*output);
 }
 
 TEST_F(CudaCropBoxFilterTest, BoundsAreInclusiveOnAllSixFaces)
@@ -267,59 +350,26 @@ TEST_F(CudaCropBoxFilterTest, NonFinitePointsAreDroppedInBothPolarities)
 
   const auto kept = readBackPoints(*outside);
   EXPECT_FLOAT_EQ(kept[0].x, 50.0f);
-  EXPECT_TRUE(std::isfinite(kept[0].x));
-  EXPECT_TRUE(std::isfinite(kept[0].y));
-  EXPECT_TRUE(std::isfinite(kept[0].z));
+  expectFinite(kept[0]);
 }
 
 TEST_F(CudaCropBoxFilterTest, WholePointBlobSurvivesByteForByte)
 {
   CudaCropBoxFilter filter(box(false));
 
-  std::vector<TestPoint> input;
-  for (int i = 0; i < 64; ++i) {
-    // Alternate inside and outside so the kept points are not contiguous in the
-    // input and the scatter actually has to move them.
-    const float radius = (i % 2 == 0) ? 1.0f : 40.0f;
-    TestPoint p = point(
-      radius * static_cast<float>(i % 5 - 2), radius, 0.5f * static_cast<float>(i % 7 - 3),
-      static_cast<float>(i) * 1.25f, static_cast<std::uint16_t>(i * 37));
-    p.pad = static_cast<std::uint16_t>(0xA5A5u ^ i);  // a real layout's hole carries bits too
-    input.push_back(p);
-  }
-
-  std::vector<std::uint8_t> input_bytes(input.size() * sizeof(TestPoint));
-  std::memcpy(input_bytes.data(), input.data(), input_bytes.size());
+  const auto input = alternatingInsideOutside(64);
+  const auto expected = expectedKeptIndices(input);
 
   const auto cloud = makeCloud(input);
   const auto output = filter.filter(cloud);
   ASSERT_NE(output, nullptr);
   ASSERT_GT(output->width, 0u);
+  ASSERT_EQ(output->width, expected.size());
+
   EXPECT_EQ(output->point_step, cloud.point_step);
   EXPECT_EQ(output->fields.size(), cloud.fields.size());
 
-  // Recompute the expected selection on the host, then compare the raw
-  // point_step blobs. Comparing fields would only prove the fields this filter
-  // already reads survived.
-  std::vector<std::size_t> expected;
-  for (std::size_t i = 0; i < input.size(); ++i) {
-    const TestPoint & p = input[i];
-    if (
-      p.x >= -10.0f && p.x <= 10.0f && p.y >= -10.0f && p.y <= 10.0f && p.z >= -5.0f &&
-      p.z <= 5.0f) {
-      expected.push_back(i);
-    }
-  }
-  ASSERT_EQ(output->width, expected.size());
-
-  const auto output_bytes = readBack(*output);
-  const std::size_t step = cloud.point_step;
-  for (std::size_t k = 0; k < expected.size(); ++k) {
-    const std::uint8_t * src = input_bytes.data() + expected[k] * step;
-    const std::uint8_t * dst = output_bytes.data() + k * step;
-    EXPECT_EQ(std::memcmp(src, dst, step), 0)
-      << "point " << k << " (input index " << expected[k] << ") was not copied verbatim";
-  }
+  expectBlobsCopiedVerbatim(toBytes(input), readBack(*output), expected, cloud.point_step);
 }
 
 TEST_F(CudaCropBoxFilterTest, EmptyInputYieldsEmptyOutput)
@@ -330,7 +380,6 @@ TEST_F(CudaCropBoxFilterTest, EmptyInputYieldsEmptyOutput)
   const auto output = filter.filter(cloud);
   ASSERT_NE(output, nullptr);
   EXPECT_EQ(output->width, 0u);
-  EXPECT_EQ(output->height, 1u);
   EXPECT_EQ(output->row_step, 0u);
   EXPECT_EQ(output->fields.size(), cloud.fields.size());
 
@@ -351,11 +400,42 @@ TEST_F(CudaCropBoxFilterTest, RejectsALayoutWithoutFloat32Xyz)
   // rather than crop on it.
   const auto cloud = makeCloud({point(0.0f, 0.0f, 0.0f)}, sensor_msgs::msg::PointField::FLOAT64);
   EXPECT_EQ(filter.filter(cloud), nullptr);
+  // The report must name the field and its type. A generic "unusable layout"
+  // sends the reader looking for a missing field that is in fact present.
+  EXPECT_NE(filter.lastLayoutError().find("'x'"), std::string::npos)
+    << filter.lastLayoutError();
+  EXPECT_NE(filter.lastLayoutError().find("FLOAT64"), std::string::npos)
+    << filter.lastLayoutError();
 
-  // A cloud missing z entirely is refused for the same reason.
+  // A cloud missing z entirely is refused too, and says so differently.
   auto missing_z = makeCloud({point(0.0f, 0.0f, 0.0f)});
   missing_z.fields.erase(missing_z.fields.begin() + 2);
   EXPECT_EQ(filter.filter(missing_z), nullptr);
+  EXPECT_NE(filter.lastLayoutError().find("no field named 'z'"), std::string::npos)
+    << filter.lastLayoutError();
+
+  // A field declared past the end of the point is refused before any kernel
+  // reads out of bounds.
+  auto overrun = makeCloud({point(0.0f, 0.0f, 0.0f)});
+  overrun.fields[0].offset = overrun.point_step;
+  EXPECT_EQ(filter.filter(overrun), nullptr);
+  EXPECT_NE(filter.lastLayoutError().find("point_step"), std::string::npos)
+    << filter.lastLayoutError();
+}
+
+TEST_F(CudaCropBoxFilterTest, AcceptsAnUnusualFieldOrder)
+{
+  CudaCropBoxFilter filter(box(false));
+
+  // The kernel addresses every coordinate as offset + index * point_step and
+  // never assumes an order, so a cloud whose field descriptors are listed z, y,
+  // x is as readable as one listed x, y, z. Refusing it -- which comparing
+  // against a named point type would -- would reject a cloud this can process.
+  auto reordered = makeCloud({point(1.0f, 2.0f, 3.0f)});
+  std::swap(reordered.fields[0], reordered.fields[2]);
+  const auto output = filter.filter(reordered);
+  ASSERT_NE(output, nullptr);
+  EXPECT_EQ(output->width, 1u);
 }
 
 }  // namespace

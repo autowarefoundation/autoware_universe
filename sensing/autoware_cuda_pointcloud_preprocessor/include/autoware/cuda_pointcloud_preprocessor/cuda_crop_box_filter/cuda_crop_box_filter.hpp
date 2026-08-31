@@ -19,7 +19,9 @@
 
 #include <cuda_runtime.h>
 
+#include <cstddef>
 #include <memory>
+#include <string>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -73,12 +75,24 @@ public:
   /// and avoid a synchronise between the producer and this filter.
   cudaStream_t stream() const { return stream_; }
 
-  /// Offsets of the x, y, z fields, or false when the layout is unusable.
-  static bool findXyzOffsets(
+  /// Resolve the offsets of the x, y, z fields this filter reads.
+  ///
+  /// Returns an empty string on success. Otherwise the string names the first
+  /// requirement the cloud does not meet, for a caller to log verbatim. The
+  /// requirements are only what the kernel does: it addresses a coordinate as
+  /// `data + point_index * point_step + offset` and reads four bytes as a
+  /// float, so field order, absolute offsets and the size of the point struct
+  /// are all free, while the datatype, the count and staying inside the point
+  /// are not.
+  static std::string findXyzOffsets(
     const cuda_blackboard::CudaPointCloud2 & cloud, std::size_t offsets[3]);
+
+  /// Why the most recent filter() returned nullptr, or empty if it did not.
+  const std::string & lastLayoutError() const { return layout_error_; }
 
 private:
   BoxParams params_;
+  std::string layout_error_;
   cudaStream_t stream_{};
 
   // Scratch, grown on demand and kept between calls. A scan needs somewhere to

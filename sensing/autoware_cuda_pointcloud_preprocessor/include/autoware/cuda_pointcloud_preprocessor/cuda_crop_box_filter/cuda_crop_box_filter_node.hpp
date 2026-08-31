@@ -44,6 +44,12 @@ public:
 private:
   void pointcloudCallback(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr msg);
 
+  /// True when the cloud may be cropped with the configured box. Warns once on
+  /// the first mismatch; this filter has no transform to reconcile them with.
+  bool acceptsFrame(const std::string & frame_id);
+
+  void warnAboutLayoutOnce();
+
   std::string expected_frame_;
   bool warned_about_frame_{false};
   bool warned_about_layout_{false};
