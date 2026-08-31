@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    # Matches the CPU chain's random_downsample_filter.param.yaml, so switching
+    # backends does not change NDT's input budget along with the backend.
+    sample_num: 5000
