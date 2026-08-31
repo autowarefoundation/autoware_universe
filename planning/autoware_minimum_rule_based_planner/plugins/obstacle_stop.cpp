@@ -49,18 +49,15 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
 
   pointcloud_filter_ =
     std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
-      params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,
-      params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
-      params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
-      params_.pointcloud.clustering.max_size);
+      params_.pointcloud.target_types);
 
   object_filter_ = std::make_unique<trajectory_processor::utils::obstacle_stop::ObjectFilter>(
     params_.objects.target_objects.bbox, params_.objects.target_objects.polygon,
     params_.objects.stopped_velocity_th, params_.objects.max_lateral_velocity_th,
     params_.objects.safety_buffer);
 
-  pub_clustered_pointcloud_ =
-    get_node_ptr()->create_publisher<PointCloud2>("~/obstacle_stop/debug/cluster_points", 1);
+  pub_filtered_pointcloud_ =
+    get_node_ptr()->create_publisher<PointCloud2>("~/obstacle_stop/debug/filtered_points", 1);
   debug_viz_pub_ = get_node_ptr()->create_publisher<MarkerArray>("~/obstacle_stop/debug/marker", 1);
   pub_debug_text_ =
     get_node_ptr()->create_publisher<StringStamped>("~/obstacle_stop/debug/text", 1);
@@ -219,20 +216,19 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
 
   {
     const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
-    const auto rel_min_point = autoware_utils_geometry::inverse_transform_point(
+    const auto rel_min_corner = autoware_utils_geometry::inverse_transform_point(
       bounding_box.min_corner().to_3d(), data.odometry_ptr->pose.pose);
-    const auto rel_max_point = autoware_utils_geometry::inverse_transform_point(
+    const auto rel_max_corner = autoware_utils_geometry::inverse_transform_point(
       bounding_box.max_corner().to_3d(), data.odometry_ptr->pose.pose);
+    constexpr double buffer = 1.0;
+    const auto [min_x, max_x] = std::minmax(rel_min_corner.x(), rel_max_corner.x());
+    const auto [min_y, max_y] = std::minmax(rel_min_corner.y(), rel_max_corner.y());
     const auto min_z = params_.pointcloud.min_height;
     const auto max_z = context_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
     pointcloud_filter_->filter_pointcloud(
-      filtered_pointcloud, rel_min_point.x(), rel_max_point.x(), rel_min_point.y(),
-      rel_max_point.y(), min_z, max_z);
+      filtered_pointcloud, min_x - buffer, max_x + buffer, min_y - buffer, max_y + buffer, min_z,
+      max_z);
   }
-
-  PointCloud::Ptr clustered_points(new PointCloud);
-  pointcloud_filter_->cluster_pointcloud(
-    filtered_pointcloud, clustered_points, params_.pointcloud.clustering.min_height);
 
   {
     geometry_msgs::msg::TransformStamped transform_stamped;
@@ -245,23 +241,29 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
     }
 
     Eigen::Affine3f isometry = tf2::transformToEigen(transform_stamped.transform).cast<float>();
-    autoware_utils::transform_pointcloud(*filtered_pointcloud, *filtered_pointcloud, isometry);
+    for (auto & p : filtered_pointcloud->points) {
+      const Eigen::Vector3f q = isometry * Eigen::Vector3f(p.x, p.y, p.z);
+      p.x = q.x();
+      p.y = q.y();
+      p.z = q.z();
+    }
   }
 
   {
-    const auto cluster_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    pcl::toROSMsg(*clustered_points, *cluster_pointcloud);
-    cluster_pointcloud->header.stamp = pointcloud->header.stamp;
-    cluster_pointcloud->header.frame_id = "map";
-    debug_data_.cluster_points = cluster_pointcloud;
+    const auto filtered_pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*filtered_pointcloud, *filtered_pointcloud_msg);
+    filtered_pointcloud_msg->header.stamp = pointcloud->header.stamp;
+    filtered_pointcloud_msg->header.frame_id = "map";
+    debug_data_.filtered_points = filtered_pointcloud_msg;
   }
 
   if (data.predicted_objects_ptr && !data.predicted_objects_ptr->objects.empty()) {
-    pointcloud_filter_->filter_pointcloud_by_object(clustered_points, *data.predicted_objects_ptr);
+    pointcloud_filter_->filter_pointcloud_by_object(
+      filtered_pointcloud, *data.predicted_objects_ptr);
   }
 
   return get_nearest_pcd_collision(
-    traj_points, debug_data_.trajectory_shape, clustered_points, debug_data_.target_pcd_points);
+    traj_points, debug_data_.trajectory_shape, filtered_pointcloud, debug_data_.target_pcd_points);
 }
 
 void ObstacleStop::update_collision_points_buffer(
@@ -346,15 +348,15 @@ std::optional<CollisionPoint> ObstacleStop::get_nearest_collision_point(
 
 void ObstacleStop::publish_debug_string(bool is_safe) const
 {
-  const auto cluster_pcd_size =
-    debug_data_.cluster_points ? debug_data_.cluster_points->data.size() : 0;
+  const auto filtered_pcd_size =
+    debug_data_.filtered_points ? debug_data_.filtered_points->data.size() : 0;
   std::ostringstream ss;
   ss << std::fixed << std::setprecision(2) << std::boolalpha;
   ss << "OBSTACLE STOP (Backup Planner):" << "\n";
   ss << "\t\t" << "SAFE: " << is_safe << "\n";
   ss << "\t\t" << "OBJECTS: " << debug_data_.filtered_objects.objects.size() << " --> "
      << debug_data_.target_polygons.size() << "\n";
-  ss << "\t\t" << "POINTCLOUD: " << cluster_pcd_size << " --> "
+  ss << "\t\t" << "POINTCLOUD: " << filtered_pcd_size << " --> "
      << debug_data_.target_pcd_points.size() << "\n";
   if (nearest_collision_point_) {
     ss << "\t\t" << "DISTANCE TO COLLISION: " << nearest_collision_point_->arc_length << " m"
@@ -369,7 +371,7 @@ void ObstacleStop::publish_debug_string(bool is_safe) const
 
 void ObstacleStop::publish_debug_data(const std::string & ns, const ModifierData & data) const
 {
-  if (debug_data_.cluster_points) pub_clustered_pointcloud_->publish(*debug_data_.cluster_points);
+  if (debug_data_.filtered_points) pub_filtered_pointcloud_->publish(*debug_data_.filtered_points);
 
   MarkerArray marker_array;
   const auto ego_z = data.odometry_ptr->pose.pose.position.z;

@@ -16,6 +16,7 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__SURROUND_OBSTACLE_STOP_HPP_
 
 #include "autoware/obstacle_proximity_checker/obstacle_proximity_checker.hpp"
+#include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 #include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -33,6 +34,7 @@ using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using ModifierParams = trajectory_processor_params::Params;
 using autoware_internal_debug_msgs::msg::StringStamped;
+using utils::obstacle_stop::PointCloud;
 
 class SurroundObstacleStop : public TrajectoryProcessorPluginBase
 {
@@ -56,7 +58,7 @@ private:
   ModifierParams::SurroundObstacleStop params_;
 
   std::unique_ptr<obstacle_proximity_checker::ProximityChecker> proximity_checker_;
-
+  std::unique_ptr<utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
   std::optional<obstacle_proximity_checker::CheckResult> proximity_check_result_;
 
   std::optional<rclcpp::Time> last_frame_time_;
