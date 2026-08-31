@@ -19,6 +19,9 @@
     <arg name="spawn_point_ground_snap" default="False" description="Snap the ego spawn point and RViz initial pose onto CARLA map geometry via ground_projection"/>
     <arg name="spawn_point_ground_offset_z" default="0.5" description="Z offset added above the projected ground when ground-snapping the spawn point"/>
     <arg name="initial_pose_ground_offset_z" default="1.0" description="Z offset added above the projected ground when ground-snapping the RViz initial pose"/>
+    <arg name="force_load_world" default="False" description="Always reload the CARLA world with client.load_world() instead of load_world_if_different()"/>
+    <arg name="min_positive_throttle" default="0.0" description="Minimum throttle applied while accelerating from (near) standstill; heavy CARLA vehicles never start on small actuation-map throttle"/>
+    <arg name="min_positive_throttle_speed_threshold" default="0.8" description="Apply min_positive_throttle only below this speed [m/s]; negative = always"/>
     <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
     <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
     <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
@@ -65,6 +68,9 @@
       <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
       <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
       <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
+      <param name="force_load_world" value="$(var force_load_world)"/>
+      <param name="min_positive_throttle" value="$(var min_positive_throttle)"/>
+      <param name="min_positive_throttle_speed_threshold" value="$(var min_positive_throttle_speed_threshold)"/>
       <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>
       <param name="map_origin_y" value="$(var map_origin_y)"/>

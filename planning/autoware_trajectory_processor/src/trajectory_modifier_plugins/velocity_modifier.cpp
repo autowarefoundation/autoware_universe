@@ -97,7 +97,7 @@ ProcessingResult VelocityModifier::process(
       .build(trajectory);
   if (!trajectory_interpolation_util) {
     RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "[TM VelocityModifier] Failed to build interpolation trajectory");
     return ProcessingResult::Unchanged;
   }
@@ -106,7 +106,7 @@ ProcessingResult VelocityModifier::process(
 
   if (dt < 1e-3) {
     RCLCPP_ERROR_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "[TM VelocityModifier] Invalid trajectory time step: %f, unable to interpolate trajectory",
       dt);
     traj_points = std::move(trajectory);

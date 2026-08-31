@@ -22,6 +22,7 @@ subscribers:
 publishers:
   - name: weighted_particles
     message_type: yabloc_particle_filter/msg/ParticleArray
+    global: /localization/pose_estimator/yabloc/pf/weighted_particles
   - name: match_image
     message_type: sensor_msgs/msg/Image
     remap_target: ~/debug/match_image
@@ -43,7 +44,7 @@ publishers:
 servers:
   - name: switch_srv
     message_type: std_srvs/srv/SetBool
-    remap_target: ~/service/switch_srv
+    remap_target: ~/switch_srv
 # parameters
 param_files:
   - name: camera_particle_corrector_param
