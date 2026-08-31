@@ -18,10 +18,10 @@ launch:
 subscribers:
   - name: diag_graph_struct
     message_type: tier4_system_msgs/msg/DiagGraphStruct
-    global: /diagnostics_graph/struct
+    remap_target: /diagnostics_graph/struct
   - name: diag_graph_status
     message_type: tier4_system_msgs/msg/DiagGraphStatus
-    global: /diagnostics_graph/status
+    remap_target: /diagnostics_graph/status
 
 publishers: []
 
