@@ -769,6 +769,26 @@ class carla_ros2_interface(object):
             return
         out_cmd.throttle = max(out_cmd.throttle, min_positive_throttle)
 
+    def _wake_sleeping_physics(self, out_cmd, in_cmd):
+        """Wake the ego physics body when pulling away from a standstill.
+
+        CARLA 0.10 (UE5/Chaos) puts a stationary vehicle's physics body to
+        sleep, and VehicleControl throttle does NOT wake it, so a vehicle that
+        has been stopped for a while can never launch again (observed: throttle
+        applied, brake 0, first gear — velocity stays exactly 0 until an
+        external set_target_velocity kick wakes the body). Nudge the body awake
+        whenever the stack is trying to pull away from a standstill; once
+        rolling (speed > 0.05 m/s) this no-ops. Needs ``_state_lock`` held.
+        """
+        if out_cmd.throttle <= 0.0 or in_cmd.actuation.brake_cmd > 0.0:
+            return
+        if self._ego_speed_mps() >= 0.05:
+            return
+        wake_yaw = math.radians(self.ego_actor.get_transform().rotation.yaw)
+        self.ego_actor.set_target_velocity(
+            carla.Vector3D(0.3 * math.cos(wake_yaw), 0.3 * math.sin(wake_yaw), 0.0)
+        )
+
     def control_callback(self, in_cmd):
         """
         Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
@@ -789,6 +809,7 @@ class carla_ros2_interface(object):
                 return  # Skip if vehicle not initialized yet
 
             self._apply_min_positive_throttle(out_cmd, in_cmd)
+            self._wake_sleeping_physics(out_cmd, in_cmd)
 
             # steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter
             # passes control_cmd.steering_tire_angle through), while
