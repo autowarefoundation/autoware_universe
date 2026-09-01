@@ -96,6 +96,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
   ${autoware_pointcloud_preprocessor_TARGETS}
+  ${cuda_blackboard_LIBRARIES}
 )
 
 target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
@@ -179,12 +180,8 @@ if(BUILD_TESTING)
   ament_add_gtest(test_cuda_pointcloud_preprocessor
     test/test_cuda_pointcloud_preprocessor.cpp
   )
-  target_link_options(test_cuda_pointcloud_preprocessor PRIVATE "LINKER:--no-as-needed")
   target_link_libraries(test_cuda_pointcloud_preprocessor
-    cuda_pointcloud_preprocessor
     cuda_pointcloud_preprocessor_lib
-    autoware_pointcloud_preprocessor::concatenate_data
-    autoware_pointcloud_preprocessor::pointcloud_preprocessor_filter_base
     ${CUDA_LIBRARIES}
   )
   target_include_directories(test_cuda_pointcloud_preprocessor SYSTEM PRIVATE

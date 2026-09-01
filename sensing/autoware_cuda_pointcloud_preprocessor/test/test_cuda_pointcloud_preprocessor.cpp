@@ -184,15 +184,16 @@ TEST(CudaPointcloudPreprocessor, RejectsInvalidCapacities)
   EXPECT_THROW(CudaPointcloudPreprocessor{capacity}, std::runtime_error);
 }
 
-TEST_F(CudaPointcloudPreprocessorDeviceTest, ProcessesPointsAtRingCapacityBoundary)
+// `ring_overflow` is reported for two separate capacities, so the cases below exercise the ring
+// index and the points per ring one at a time, at and past their boundary.
+TEST_F(CudaPointcloudPreprocessorDeviceTest, ProcessesRingIndexAtCapacityBoundary)
 {
-  CudaPointcloudPreprocessor preprocessor{make_capacity(4, 2, 2)};
+  CudaPointcloudPreprocessor preprocessor{make_capacity(2, 2, 2)};
   preprocessor.setRingOutlierFilterActive(false);
   preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
 
-  const auto input_cloud = make_input_cloud(
-    {make_point(1.0F, 0, 0), make_point(2.0F, 1, 0), make_point(3.0F, 2, 1),
-     make_point(4.0F, 3, 1)});
+  // Ring 1 is the highest index `max_ring_count` allows.
+  const auto input_cloud = make_input_cloud({make_point(1.0F, 0, 0), make_point(2.0F, 1, 1)});
 
   const auto output_cloud = preprocessor.process(
     input_cloud, make_identity_transform(),
@@ -200,7 +201,26 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, ProcessesPointsAtRingCapacityBounda
     std::deque<geometry_msgs::msg::Vector3Stamped>{}, 0U);
 
   ASSERT_NE(output_cloud, nullptr);
-  EXPECT_EQ(output_cloud->width, 4U);
+  EXPECT_EQ(output_cloud->width, 2U);
+  EXPECT_FALSE(preprocessor.getProcessingStats().ring_overflow);
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, ProcessesPointsPerRingAtCapacityBoundary)
+{
+  CudaPointcloudPreprocessor preprocessor{make_capacity(2, 2, 2)};
+  preprocessor.setRingOutlierFilterActive(false);
+  preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
+
+  // Both points share ring 0, filling it to exactly `max_points_per_ring`.
+  const auto input_cloud = make_input_cloud({make_point(1.0F, 0, 0), make_point(2.0F, 1, 0)});
+
+  const auto output_cloud = preprocessor.process(
+    input_cloud, make_identity_transform(),
+    std::deque<geometry_msgs::msg::TwistWithCovarianceStamped>{},
+    std::deque<geometry_msgs::msg::Vector3Stamped>{}, 0U);
+
+  ASSERT_NE(output_cloud, nullptr);
+  EXPECT_EQ(output_cloud->width, 2U);
   EXPECT_FALSE(preprocessor.getProcessingStats().ring_overflow);
 }
 
@@ -210,6 +230,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, ReportsRingIndexOverflow)
   preprocessor.setRingOutlierFilterActive(false);
   preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
 
+  // Ring 1 is one past what `max_ring_count` allows.
   const auto input_cloud = make_input_cloud({make_point(1.0F, 0, 0), make_point(2.0F, 1, 1)});
 
   const auto output_cloud = preprocessor.process(
@@ -227,8 +248,9 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, ReportsPointsPerRingOverflow)
   preprocessor.setRingOutlierFilterActive(false);
   preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
 
+  // All three points share ring 0, one past `max_points_per_ring`.
   const auto input_cloud =
-    make_input_cloud({make_point(1.0F, 0), make_point(2.0F, 1), make_point(3.0F, 2)});
+    make_input_cloud({make_point(1.0F, 0, 0), make_point(2.0F, 1, 0), make_point(3.0F, 2, 0)});
 
   const auto output_cloud = preprocessor.process(
     input_cloud, make_identity_transform(),
