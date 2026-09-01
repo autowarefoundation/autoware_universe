@@ -193,10 +193,9 @@ int edtIntersectionStart(
   const double resolution_squared = column.resolution_m * column.resolution_m;
   const double row_d = static_cast<double>(row);
   const double previous_d = static_cast<double>(previous_row);
-  const double intersection =
-    (source_squared[row] - source_squared[previous_row] +
-     resolution_squared * (row_d * row_d - previous_d * previous_d)) /
-    (2.0 * resolution_squared * (row_d - previous_d));
+  const double intersection = (source_squared[row] - source_squared[previous_row] +
+                               resolution_squared * (row_d * row_d - previous_d * previous_d)) /
+                              (2.0 * resolution_squared * (row_d - previous_d));
   if (intersection < 0.0) {
     return 0;
   }
@@ -235,7 +234,8 @@ int popDominatedParabolas(
   EdtEnvelope & envelope)
 {
   while (envelope.size > 0) {
-    const int start = edtEnvelopeStart(column, source_squared, row, envelope.rows[envelope.size - 1]);
+    const int start =
+      edtEnvelopeStart(column, source_squared, row, envelope.rows[envelope.size - 1]);
     if (start > envelope.starts[envelope.size - 1]) {
       return start;
     }
@@ -279,10 +279,8 @@ void fillEdtColumn(
         ++envelope_index;
       }
       const int source_row = envelope.rows[envelope_index];
-      const double distance =
-        column.resolution_m * std::abs(static_cast<double>(i - source_row));
-      const double horizontal_distance =
-        column.edt_map[source_row * column.width + column.j].first;
+      const double distance = column.resolution_m * std::abs(static_cast<double>(i - source_row));
+      const double horizontal_distance = column.edt_map[source_row * column.width + column.j].first;
       const double envelope_value = horizontal_distance * horizontal_distance + distance * distance;
       if (!(min_value <= envelope_value)) {
         min_value = envelope_value;
