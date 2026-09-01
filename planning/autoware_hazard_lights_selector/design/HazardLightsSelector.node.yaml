@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::hazard_lights_selector::HazardLightsSelectorNode
+  plugin: autoware::hazard_lights_selector::HazardLightsSelector
   executable: autoware_hazard_lights_selector_node
   node_output: screen
 

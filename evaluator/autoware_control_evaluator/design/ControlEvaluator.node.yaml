@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::control_evaluator::ControlEvaluatorNode
+  plugin: control_diagnostics::ControlEvaluatorNode
   executable: control_evaluator
   node_output: screen
 
