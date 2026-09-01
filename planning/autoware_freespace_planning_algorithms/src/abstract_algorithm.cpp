@@ -185,7 +185,8 @@ double edtSquaredValueAt(const EdtColumn & column, const int source_row, const i
 }
 
 // Floating-point takeover row of the parabola rooted at row versus
-// previous_row, clamped to [0, height]. Requires a nonzero resolution.
+// previous_row, clamped to [0, height]. Requires a positive finite
+// resolution.
 int edtIntersectionStart(
   const EdtColumn & column, const std::vector<double> & source_squared, const int row,
   const int previous_row)
@@ -212,7 +213,7 @@ int edtEnvelopeStart(
   const int previous_row)
 {
   const double resolution_squared = column.resolution_m * column.resolution_m;
-  if (resolution_squared == 0.0) {
+  if (!(resolution_squared > 0.0) || !std::isfinite(resolution_squared)) {
     return source_squared[row] < source_squared[previous_row] ? 0 : column.height;
   }
   int start = edtIntersectionStart(column, source_squared, row, previous_row);
@@ -282,7 +283,7 @@ void fillEdtColumn(
       const double distance = column.resolution_m * std::abs(static_cast<double>(i - source_row));
       const double horizontal_distance = column.edt_map[source_row * column.width + column.j].first;
       const double envelope_value = horizontal_distance * horizontal_distance + distance * distance;
-      if (!(min_value <= envelope_value)) {
+      if (envelope_value < min_value) {
         min_value = envelope_value;
         rel_pos.x = column.edt_map[source_row * column.width + column.j].second.x;
         rel_pos.y = distance;
