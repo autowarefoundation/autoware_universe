@@ -157,9 +157,11 @@ struct CollisionPoint
 {
   geometry_msgs::msg::Point point;
   double arc_length;
-  rclcpp::Time start_time;
+  double obstacle_lon_vel;
   bool is_active{false};
   bool is_dynamic{false};
+  rclcpp::Time first_seen;
+  rclcpp::Time last_seen;
 
   /**
    * @brief Construct a collision sample from a point and its arc length along the reference path.
@@ -168,24 +170,29 @@ struct CollisionPoint
    * @param is_dynamic Whether this collision is dynamic.
    */
   CollisionPoint(
-    const geometry_msgs::msg::Point & point, const double arc_length, const bool is_dynamic = false)
-  : point(point), arc_length(arc_length), is_dynamic(is_dynamic)
+    const geometry_msgs::msg::Point & point, const double arc_length, const double obstacle_lon_vel,
+    const bool is_dynamic = false)
+  : point(point), arc_length(arc_length), obstacle_lon_vel(obstacle_lon_vel), is_dynamic(is_dynamic)
   {
   }
 
   /**
    * @brief Copy a collision point and attach timing / activation state (e.g. for hysteresis).
    * @param collision_point Source geometry and arc length.
-   * @param start_time Time associated with this collision state.
+   * @param first_seen Time associated with first detection of this collision state.
+   * @param last_seen Time associated with last detection of this collision state.
    * @param active Whether this collision is currently considered active.
    */
   CollisionPoint(
-    const CollisionPoint & collision_point, const rclcpp::Time & start_time, const bool active)
+    const CollisionPoint & collision_point, const rclcpp::Time & first_seen,
+    const rclcpp::Time & last_seen, const bool active)
   : point(collision_point.point),
     arc_length(collision_point.arc_length),
-    start_time(start_time),
+    obstacle_lon_vel(collision_point.obstacle_lon_vel),
     is_active(active),
-    is_dynamic(collision_point.is_dynamic)
+    is_dynamic(collision_point.is_dynamic),
+    first_seen(first_seen),
+    last_seen(last_seen)
   {
   }
 };
