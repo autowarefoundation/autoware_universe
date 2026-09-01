@@ -56,5 +56,4 @@ processes:
       - and:
           - on_input: lidar
           - on_input: camera
-    outcomes:
-      - to_output: preview_image
+    outcomes: []
