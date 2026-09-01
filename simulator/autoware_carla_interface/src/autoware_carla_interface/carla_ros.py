@@ -55,6 +55,32 @@ from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
 
+def _parse_geo_reference(xodr_xml: str):
+    """Extract ``(lat_0, lon_0)`` from the OpenDRIVE ``<geoReference>`` PROJ string."""
+    import re
+    import xml.etree.ElementTree as ET
+
+    match = re.search(
+        r"<geoReference>\s*(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?\s*</geoReference>",
+        xodr_xml,
+        re.DOTALL,
+    )
+    if match and match.group(1).strip():
+        proj_string = match.group(1).strip()
+    else:
+        root = ET.fromstring(xodr_xml)
+        geo_ref = root.find(".//geoReference")
+        if geo_ref is None or not geo_ref.text:
+            raise ValueError("No <geoReference> found in OpenDRIVE XML")
+        proj_string = geo_ref.text.strip()
+
+    lat_match = re.search(r"\+lat_0=([0-9eE.+-]+)", proj_string)
+    lon_match = re.search(r"\+lon_0=([0-9eE.+-]+)", proj_string)
+    if lat_match is None or lon_match is None:
+        raise ValueError(f"Cannot extract +lat_0/+lon_0 from geoReference: {proj_string}")
+    return float(lat_match.group(1)), float(lon_match.group(1))
+
+
 class carla_ros2_interface(object):
 
     def _initialize_parameters(self):
@@ -477,13 +503,57 @@ class carla_ros2_interface(object):
             carla_pose_transform.location.y,
         )
 
+    def _resolve_map_origin(self):
+        """Return the CARLA→map-frame origin offset from a single source of truth.
+
+        An explicit non-zero ``map_origin_x/y`` parameter always wins.  When the
+        parameters are left at 0/0 and the CARLA map carries a georeferenced
+        OpenDRIVE ``<geoReference>`` (+lat_0/+lon_0 other than 0/0, e.g. maps
+        converted from lanelet2), derive the offset as the origin's in-cell MGRS
+        coordinates.  Hand-maintained constants for such maps can silently
+        disagree with the geoReference by sub-metre amounts, shifting the GNSS
+        pose and RViz initialpose against everything else that derives its
+        offset from the map itself.  Stock CARLA towns (no usable geoReference)
+        keep the plain 0/0 behavior.
+        """
+        px = float(self.param_values["map_origin_x"])
+        py = float(self.param_values["map_origin_y"])
+        if px != 0.0 or py != 0.0:
+            return px, py
+        derived = getattr(self, "_derived_map_origin", None)
+        if derived is not None:
+            return derived
+        try:
+            xodr_xml = CarlaDataProvider.get_world().get_map().to_opendrive()
+            lat_0, lon_0 = _parse_geo_reference(xodr_xml)
+        except (RuntimeError, ValueError):
+            self._derived_map_origin = (0.0, 0.0)
+            return self._derived_map_origin
+        if lat_0 == 0.0 and lon_0 == 0.0:
+            self._derived_map_origin = (0.0, 0.0)
+            return self._derived_map_origin
+        from autoware_lanelet2_extension_python.projection import MGRSProjector
+        import lanelet2.core
+        import lanelet2.io
+
+        projector = MGRSProjector(lanelet2.io.Origin(lat_0, lon_0))
+        local = projector.forward(lanelet2.core.GPSPoint(lat_0, lon_0, 0.0))
+        self._derived_map_origin = (float(local.x), float(local.y))
+        self.logger.info(
+            f"map origin derived from OpenDRIVE geoReference: "
+            f"lat_0={lat_0:.8f}, lon_0={lon_0:.8f} -> "
+            f"offset=({local.x:.3f}, {local.y:.3f})"
+        )
+        return self._derived_map_origin
+
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
+        origin_x, origin_y = self._resolve_map_origin()
         carla_pose_transform = ros_pose_to_carla_transform(
             pose,
-            origin_x=self.param_values["map_origin_x"],
-            origin_y=self.param_values["map_origin_y"],
+            origin_x=origin_x,
+            origin_y=origin_y,
         )
 
         # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
@@ -538,10 +608,11 @@ class carla_ros2_interface(object):
                 return
             ego_transform = self.ego_actor.get_transform()
 
+        origin_x, origin_y = self._resolve_map_origin()
         pose_carla.position = carla_location_to_ros_point(
             ego_transform.location,
-            origin_x=self.param_values["map_origin_x"],
-            origin_y=self.param_values["map_origin_y"],
+            origin_x=origin_x,
+            origin_y=origin_y,
         )
         pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
