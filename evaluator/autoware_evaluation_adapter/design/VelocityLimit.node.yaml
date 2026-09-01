@@ -6,7 +6,6 @@ package:
   provider: autoware
 launch:
   plugin: autoware::evaluation_adapter::VelocityLimit
-  executable: autoware_evaluation_adapter_node
   node_output: screen
 # interfaces
 subscribers:
