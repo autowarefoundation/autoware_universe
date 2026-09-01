@@ -82,8 +82,8 @@ void CombineCloudHandler<CudaPointCloud2Traits>::allocate_pointclouds()
   }
 
   concatenated_cloud_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-  concatenated_cloud_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
-    max_concat_pointcloud_size_ * input_topics_.size());
+  concatenated_cloud_ptr_->data =
+    cuda_blackboard::make_unique<std::uint8_t[]>(max_concat_pointcloud_size_);
 }
 
 ConcatenatedCloudResult<CudaPointCloud2Traits>
@@ -132,8 +132,8 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   if (total_data_size > max_concat_pointcloud_size_ || !concatenated_cloud_ptr_) {
     max_concat_pointcloud_size_ = CHUNK_SIZE * (1 + total_data_size / CHUNK_SIZE);
     concatenated_cloud_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-    concatenated_cloud_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
-      max_concat_pointcloud_size_ * input_topics_.size());
+    concatenated_cloud_ptr_->data =
+      cuda_blackboard::make_unique<std::uint8_t[]>(max_concat_pointcloud_size_);
   }
 
   concatenate_cloud_result.concatenate_cloud_ptr = std::move(concatenated_cloud_ptr_);
