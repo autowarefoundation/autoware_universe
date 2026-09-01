@@ -37,11 +37,11 @@ publishers:
 # parameters
 param_files:
   - name: model_param
-    default: config/lidar_frnet.param.yaml
+    default: config/frnet.param.yaml
   - name: ml_package_param
-    default: ml_package_lidar_frnet.param.yaml
+    default: config/ml_package_frnet_ot128.param.yaml
   - name: diagnostics_param
-    default: config/diagnostics.param.yaml
+    default: config/diagnostics_frnet.param.yaml
 
 param_values:
   - name: build_only
