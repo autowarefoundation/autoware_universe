@@ -44,4 +44,4 @@ repositories:
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
-    version: 0.1.0
+    version: 0.2.0
