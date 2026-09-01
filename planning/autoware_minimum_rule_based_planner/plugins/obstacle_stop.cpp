@@ -44,8 +44,8 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
   params_ = params.obstacle_stop;
 
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      get_node_ptr(), "backup_planner_obstacle_stop");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(get_node_ptr(), "backup_planner_obstacle_stop");
 
   pointcloud_filter_ =
     std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(

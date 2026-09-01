@@ -11,6 +11,19 @@ if(NOT ${CUDA_FOUND})
   return()
 endif()
 
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/find_cccl.cmake)
+
+# The installed headers use Thrust and cuda_runtime_api.h, so consumers need both include paths.
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME} INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(${PROJECT_NAME} INTERFACE CCCL::CCCL autoware_cuda_utils::cccl_system CUDA::cudart)
+
+install(TARGETS ${PROJECT_NAME} EXPORT export_${PROJECT_NAME})
+ament_export_targets(export_${PROJECT_NAME})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
@@ -28,6 +41,7 @@ if(BUILD_TESTING)
   )
 
   target_link_libraries(test_autoware_cuda_utils
+    ${PROJECT_NAME}
     ${GTEST_LIBRARIES}
     ${GTEST_MAIN_LIBRARIES}
   )
@@ -43,4 +57,4 @@ if(BUILD_TESTING)
   ament_add_gtest_test(test_autoware_cuda_utils)
 endif()
 
-ament_auto_package()
+ament_auto_package(CONFIG_EXTRAS cmake/find_cccl.cmake)
