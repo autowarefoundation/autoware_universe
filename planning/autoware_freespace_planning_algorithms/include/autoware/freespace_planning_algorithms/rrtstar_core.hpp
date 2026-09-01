@@ -74,6 +74,8 @@ public:
 
   bool isValidPose(const Pose & pose) const { return isInside(pose) && is_obstacle_free_(pose); }
   double getReedsSheppRadius() const { return rsspace_.rho_; }
+  // Reseed the sampler, so tests can make the sampling sequence deterministic.
+  void setSeed(const std::mt19937::result_type seed) { rand_gen_.seed(seed); }
 
 private:
   bool isInside(const Pose & p) const;
