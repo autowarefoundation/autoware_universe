@@ -29,6 +29,8 @@ import cv2
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import TransformStamped
+from nav_msgs.msg import Odometry
 import numpy
 import rclpy
 from rosgraph_msgs.msg import Clock
@@ -36,6 +38,7 @@ from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
+from tf2_msgs.msg import TFMessage
 from tier4_vehicle_msgs.msg import ActuationCommandStamped
 from tier4_vehicle_msgs.msg import ActuationStatusStamped
 from transforms3d.euler import euler2quat
@@ -84,6 +87,11 @@ class carla_ros2_interface(object):
             "min_positive_throttle": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "min_positive_throttle_speed_threshold": (rclpy.Parameter.Type.DOUBLE, 0.8),
             "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
+            # Publish the CARLA ground-truth localization (kinematic_state and
+            # the map->base_link TF) directly from the ego transform. Used by
+            # the E2E planning setup instead of the former carla_state_publisher
+            # GNSS round-trip, which duplicated these topics.
+            "publish_ground_truth_localization": (rclpy.Parameter.Type.BOOL, False),
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
@@ -138,6 +146,11 @@ class carla_ros2_interface(object):
         self.pub_actuation_status = self.ros2_node.create_publisher(
             ActuationStatusStamped, "/vehicle/status/actuation_status", 1
         )
+        if self.param_values.get("publish_ground_truth_localization", False):
+            self.pub_gt_tf = self.ros2_node.create_publisher(TFMessage, "/tf", 10)
+            self.pub_gt_odom = self.ros2_node.create_publisher(
+                Odometry, "/localization/kinematic_state", 10
+            )
         self.pub_turn_indicators_state = self.ros2_node.create_publisher(
             TurnIndicatorsReport, "/vehicle/status/turn_indicators_status", 1
         )
@@ -947,6 +960,100 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state.publish(out_hazard_lights_state)
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
+    def _publish_ground_truth_odometry(self):
+        """Publish /localization/kinematic_state and the map->base_link TF.
+
+        Both are derived from the CARLA ground-truth ego transform, replacing
+        the former carla_state_publisher GNSS round-trip. CARLA reports both
+        velocities in its world frame, so each is rotated into the ego body
+        frame before the CARLA-to-ROS (REP-103) conversion; the angular rate
+        additionally converts deg/s to rad/s with the axis signs used by the
+        official ros-bridge (x, -y, -z):
+        https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
+        https://www.ros.org/reps/rep-0103.html
+        https://github.com/carla-simulator/ros-bridge/blob/master/carla_common/src/carla_common/transforms.py
+
+        No-op unless publish_ground_truth_localization is enabled (the
+        publishers only exist when it is).
+        """
+        if not self.param_values.get("publish_ground_truth_localization", False):
+            return
+        with self._state_lock:
+            if not self.ego_actor:
+                return
+            ego_transform = self.ego_actor.get_transform()
+            ego_vel = self.ego_actor.get_velocity()
+            ego_ang_vel = self.ego_actor.get_angular_velocity()
+
+        header = self.get_msg_header(frame_id="map")
+        pose = Pose()
+        pose.position = carla_location_to_ros_point(
+            ego_transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
+        pose.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
+
+        tf_stamped = TransformStamped()
+        tf_stamped.header = header
+        tf_stamped.child_frame_id = "base_link"
+        tf_stamped.transform.translation.x = pose.position.x
+        tf_stamped.transform.translation.y = pose.position.y
+        tf_stamped.transform.translation.z = pose.position.z
+        tf_stamped.transform.rotation = pose.orientation
+        self.pub_gt_tf.publish(TFMessage(transforms=[tf_stamped]))
+
+        odom = Odometry()
+        odom.header = header
+        odom.child_frame_id = "base_link"
+        odom.pose.pose = pose
+        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
+        inv_rot_mat = trans_mat[0:3, 0:3].T
+        vel_vec = numpy.array([ego_vel.x, ego_vel.y, ego_vel.z]).reshape(3, 1)
+        body_vel = (inv_rot_mat @ vel_vec).T[0]
+        odom.twist.twist.linear.x = float(body_vel[0])
+        odom.twist.twist.linear.y = float(-body_vel[1])
+        odom.twist.twist.linear.z = float(body_vel[2])
+        ang_vel_vec = numpy.array([ego_ang_vel.x, ego_ang_vel.y, ego_ang_vel.z]).reshape(3, 1)
+        body_ang_vel = (inv_rot_mat @ ang_vel_vec).T[0]
+        odom.twist.twist.angular.x = math.radians(float(body_ang_vel[0]))
+        odom.twist.twist.angular.y = -math.radians(float(body_ang_vel[1]))
+        odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
+        self.pub_gt_odom.publish(odom)
+
+    def _publish_sensor_data(self, key, data):
+        """Publish one sensor's data, dispatching on its sensor type.
+
+        Camera and lidar conversion/publishing run on per-sensor worker
+        threads: publishing multi-megabyte messages inline (reliable-QoS
+        camera images in particular block on DDS flow control) would stall
+        the simulation loop and slow simulation time itself. Frequency
+        gating and registry bookkeeping stay on the calling thread so the
+        registry is never accessed concurrently.
+        """
+        sensor_type = self.id_to_sensor_type_map.get(key)
+        if not sensor_type:
+            self.logger.warning(
+                f"Unknown sensor ID '{key}' received from CARLA - skipping. "
+                f"This may indicate a sensor configuration mismatch."
+            )
+            return
+
+        if sensor_type == "sensor.camera.rgb":
+            if not self.checkFrequency(key):
+                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
+        elif sensor_type == "sensor.other.gnss":
+            self.pose()
+        elif sensor_type == "sensor.lidar.ray_cast":
+            if not self.checkFrequency(key):
+                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
+        elif sensor_type == "sensor.other.imu":
+            self.imu(data[1])
+        else:
+            self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+
     def run_step(self, input_data, timestamp):
         """
         Execute main simulation step for publishing sensor data and getting control commands.
@@ -978,37 +1085,11 @@ class carla_ros2_interface(object):
         obj_clock.clock = Time(sec=seconds, nanosec=nanoseconds)
         self.clock_publisher.publish(obj_clock)
 
+        self._publish_ground_truth_odometry()
+
         # publish data of all sensors
         for key, data in input_data.items():
-            # Safely get sensor type with fallback
-            sensor_type = self.id_to_sensor_type_map.get(key)
-            if not sensor_type:
-                self.logger.warning(
-                    f"Unknown sensor ID '{key}' received from CARLA - skipping. "
-                    f"This may indicate a sensor configuration mismatch."
-                )
-                continue
-
-            # Camera and lidar conversion/publishing run on per-sensor worker
-            # threads: publishing multi-megabyte messages inline (reliable-QoS
-            # camera images in particular block on DDS flow control) would
-            # stall this loop and slow simulation time itself. Frequency
-            # gating and registry bookkeeping stay on this thread so the
-            # registry is never accessed concurrently.
-            if sensor_type == "sensor.camera.rgb":
-                if not self.checkFrequency(key):
-                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                    self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
-            elif sensor_type == "sensor.other.gnss":
-                self.pose()
-            elif sensor_type == "sensor.lidar.ray_cast":
-                if not self.checkFrequency(key):
-                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                    self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
-            elif sensor_type == "sensor.other.imu":
-                self.imu(data[1])
-            else:
-                self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+            self._publish_sensor_data(key, data)
 
         # Push turn indicator / hazard lights to CARLA before reading status back.
         self.apply_light_state()
