@@ -89,6 +89,10 @@ class carla_ros2_interface(object):
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
+            # Replace the ego vehicle's speed-based steering curve with an
+            # identity curve (workaround for the corrupt curve data CARLA 0.10
+            # returns, which attenuates steering at driving speeds).
+            "flatten_steering_curve": (rclpy.Parameter.Type.BOOL, False),
         }
 
         self.param_values = {}

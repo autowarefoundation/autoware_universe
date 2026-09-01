@@ -51,6 +51,7 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping_light_weight.yaml" if="$(var use_light_weight_sensor_mapping)"/>
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
+    <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -76,6 +77,7 @@
       <param name="map_origin_y" value="$(var map_origin_y)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
+      <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>
