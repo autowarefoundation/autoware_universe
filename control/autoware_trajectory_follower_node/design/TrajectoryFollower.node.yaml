@@ -35,8 +35,6 @@ publishers:
     message_type: std_msgs/msg/Float32Stamped
   - name: longitudinal_diagnostic
     message_type: diagnostic_msgs/msg/DiagnosticStatus
-  - name: stop_reason
-    message_type: tier4_planning_msgs/msg/StopReasonArray
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
 
