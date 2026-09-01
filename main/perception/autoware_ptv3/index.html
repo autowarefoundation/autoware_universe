@@ -23211,6 +23211,13 @@ therefore guard against <code>NaN</code> before using the <code>entropy</code> f
 <td>['none', 'partial', 'full']</td>
 </tr>
 <tr>
+<td>segmentation3d.<wbr>class_<wbr>mapping</wbr></wbr></td>
+<td>object</td>
+<td>Mapping from each segmentation3d.class_names entry to a PointCloudClassification value. Keys must match class_names exactly and every class_names entry must be present.</td>
+<td></td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>segmentation3d.<wbr>filter.<wbr>classes</wbr></wbr></td>
 <td>array</td>
 <td>Class names to filter out from the filtered output cloud.</td>
@@ -23429,8 +23436,15 @@ therefore guard against <code>NaN</code> before using the <code>entropy</code> f
 </tr>
 </tbody>
 </table>
-<p><code>filter.*</code> parameters are configured in <code>config/ptv3.param.yaml</code>, while class metadata and the
-visualization <code>palette</code> are configured in <code>config/ml_package_ptv3_seg3d_head.param.yaml</code>.</p>
+<p><code>filter.*</code> and <code>class_mapping.*</code> parameters are configured in <code>config/ptv3.param.yaml</code>, while
+class metadata and the visualization <code>palette</code> are configured in
+<code>config/ml_package_ptv3_seg3d_head.param.yaml</code>.</p>
+<p><code>segmentation3d.class_mapping</code> maps each segmentation class name to the
+<code>autoware::point_types::PointCloudClassification</code> value published in the segmentation point cloud's
+<code>class_id</code> field. Its keys must match <code>segmentation3d.class_names</code> exactly, and every entry of
+<code>class_names</code> must be present — the node fails to start otherwise, naming the missing class. This
+makes the consolidation of model classes (for example <code>traffic_cone</code>, <code>debris</code> and <code>vertical_thin</code>
+into <code>HAZARD</code>) a configuration choice rather than a compile-time constant.</p>
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_ptv3</code> node has a <code>build_only</code> option to build the TensorRT engine file from the specified ONNX file, after which the program exits.</p>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_ptv3<span class="w"> </span>ptv3.launch.xml<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
