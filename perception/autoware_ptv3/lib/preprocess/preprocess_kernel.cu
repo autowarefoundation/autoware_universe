@@ -356,10 +356,10 @@ __global__ void computeGridCoordsAndSerializationKernel(
   codes[idx + num_points] = serializeCoord(coord.x, coord.y, coord.z, depth, true);
 }
 
-__global__ void setInitialStageCountKernel(
-  std::int64_t * __restrict__ stage_counts_out, std::int64_t num_voxels)
+__global__ void setInitialLevelCountKernel(
+  std::int64_t * __restrict__ level_counts_out, std::int64_t num_voxels)
 {
-  *stage_counts_out = num_voxels;
+  *level_counts_out = num_voxels;
 }
 
 /**
@@ -409,15 +409,15 @@ __global__ void prepareInputLevelOrderSortKernel(
  *
  * @param serialized_code_in Input level's codes, laid out [num_orders, input_count]; only the
  * order-0 row is read.
- * @param stage_counts_in Per-level voxel counts; entry `stage_index` is the input level's count.
+ * @param level_counts_in Per-level voxel counts; entry `stage_index` is the input level's count.
  * @param run_flags_out Flags: 1 at each parent run start, 0 elsewhere (including padding).
- * @param stage_index Level the input arrays describe.
+ * @param stage_index Pooling stage the input arrays describe; its input is level `stage_index`.
  * @param pooling_depth Bits each grid coordinate is shifted right by, i.e. log2(pooling stride).
  * @param capacity Padded length of the arrays (max_num_voxels).
  */
 __global__ void markPoolingRunsKernel(
   const std::int64_t * __restrict__ serialized_code_in,
-  const std::int64_t * __restrict__ stage_counts_in, std::int64_t * __restrict__ run_flags_out,
+  const std::int64_t * __restrict__ level_counts_in, std::int64_t * __restrict__ run_flags_out,
   std::int32_t stage_index, std::int32_t pooling_depth, std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -425,7 +425,7 @@ __global__ void markPoolingRunsKernel(
     return;
   }
 
-  const auto input_count = stage_counts_in[stage_index];
+  const auto input_count = level_counts_in[stage_index];
   if (idx >= input_count) {
     run_flags_out[idx] = 0;
     return;
@@ -462,9 +462,9 @@ __global__ void markPoolingRunsKernel(
  * @param order_out Output pooled serialization orders, [num_orders, pooled_count]; only the
  * order-0 row is written here, the rest by fillOrderAndInverseKernel.
  * @param inverse_out Output inverse permutations of `order_out`, same layout and coverage.
- * @param stage_counts_inout Per-level voxel counts; entry `stage_index` is the input level's
+ * @param level_counts_inout Per-level voxel counts; entry `stage_index` is the input level's
  * count and entry `stage_index + 1` is set to the pooled count.
- * @param stage_index Level the input arrays describe.
+ * @param stage_index Pooling stage the input arrays describe; its input is level `stage_index`.
  * @param pooling_depth Bits each grid coordinate is shifted right by, i.e. log2(pooling stride).
  * @param num_orders Number of serialization orders.
  * @param capacity Padded length of the arrays (max_num_voxels).
@@ -477,7 +477,7 @@ __global__ void fillPoolingStageKernel(
   std::int64_t * __restrict__ head_indices_out, std::int64_t * __restrict__ cluster_out,
   std::int32_t * __restrict__ grid_coord_out, std::int64_t * __restrict__ serialized_code_out,
   std::int64_t * __restrict__ order_out, std::int64_t * __restrict__ inverse_out,
-  std::int64_t * __restrict__ stage_counts_inout, std::int32_t stage_index,
+  std::int64_t * __restrict__ level_counts_inout, std::int32_t stage_index,
   std::int32_t pooling_depth, std::int32_t num_orders, std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -490,10 +490,10 @@ __global__ void fillPoolingStageKernel(
   // stage's input count (the original serialized_code is laid out [2, num_voxels]) and the output
   // by the stage's output count. Using `capacity` as the stride here would both misread the
   // dense input and produce a non-dense output that TensorRT cannot consume.
-  const auto input_count = stage_counts_inout[stage_index];
+  const auto input_count = level_counts_inout[stage_index];
   const auto next_count = run_ids_in[capacity - 1];
   if (idx == 0) {
-    stage_counts_inout[stage_index + 1] = next_count;
+    level_counts_inout[stage_index + 1] = next_count;
     indptr_out[next_count] = input_count;
   }
 
@@ -536,15 +536,15 @@ __global__ void fillPoolingStageKernel(
  *
  * @param order_in Input level's serialization orders, laid out [num_orders, input_count].
  * @param cluster_in Parent segment index of each input voxel (see fillPoolingStageKernel).
- * @param stage_counts_in Per-level voxel counts; entry `stage_index` is the input level's count.
+ * @param level_counts_in Per-level voxel counts; entry `stage_index` is the input level's count.
  * @param run_flags_out Flags: 1 where the parent changes, 0 elsewhere (including padding).
- * @param stage_index Level the input arrays describe.
+ * @param stage_index Pooling stage the input arrays describe; its input is level `stage_index`.
  * @param order_index Serialization order being walked.
  * @param capacity Padded length of the arrays (max_num_voxels).
  */
 __global__ void markOrderRunsKernel(
   const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster_in,
-  const std::int64_t * __restrict__ stage_counts_in, std::int64_t * __restrict__ run_flags_out,
+  const std::int64_t * __restrict__ level_counts_in, std::int64_t * __restrict__ run_flags_out,
   std::int32_t stage_index, std::int32_t order_index, std::int64_t capacity)
 {
   const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -552,7 +552,7 @@ __global__ void markOrderRunsKernel(
     return;
   }
 
-  const auto input_count = stage_counts_in[stage_index];
+  const auto input_count = level_counts_in[stage_index];
   if (idx >= input_count) {
     run_flags_out[idx] = 0;
     return;
@@ -567,7 +567,7 @@ __global__ void markOrderRunsKernel(
 __global__ void fillOrderAndInverseKernel(
   const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ cluster_in,
   const std::int64_t * __restrict__ run_flags_in, const std::int64_t * __restrict__ run_ids_in,
-  const std::int64_t * __restrict__ stage_counts_in, std::int64_t * __restrict__ order_out,
+  const std::int64_t * __restrict__ level_counts_in, std::int64_t * __restrict__ order_out,
   std::int64_t * __restrict__ inverse_out, std::int32_t stage_index, std::int32_t order_index,
   std::int64_t capacity)
 {
@@ -576,13 +576,13 @@ __global__ void fillOrderAndInverseKernel(
     return;
   }
 
-  const auto input_count = stage_counts_in[stage_index];
+  const auto input_count = level_counts_in[stage_index];
   if (idx >= input_count || run_flags_in[idx] == 0) {
     return;
   }
 
   // order/inverse are stored densely as [num_orders, out_count] to match the engine input layout.
-  const auto out_count = stage_counts_in[stage_index + 1];
+  const auto out_count = level_counts_in[stage_index + 1];
   const auto out_idx = run_ids_in[idx] - 1;
   const auto segment_index = cluster_in[order_in[order_index * input_count + idx]];
   order_out[order_index * out_count + out_idx] = segment_index;
@@ -600,7 +600,7 @@ std::int32_t poolingDepth(const std::int64_t stride)
 
 void PreprocessCuda::generateSerializedPoolingMetadata(
   const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
-  const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts)
+  const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * level_counts)
 {
   if (stages.size() != config_.pooling_strides_.size()) {
     throw std::runtime_error("Serialized pooling stage buffer count does not match config.");
@@ -614,7 +614,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
     static_cast<std::size_t>(std::max<std::int64_t>(clamped_num_voxels, 1)),
     config_.threads_per_block_);
 
-  setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, clamped_num_voxels);
+  setInitialLevelCountKernel<<<1, 1, 0, stream_>>>(level_counts, clamped_num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   // The input level is already sorted by order-0 code, so its order-0 row is simply 0..n-1. The
@@ -649,7 +649,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
     const auto pooling_depth = poolingDepth(config_.pooling_strides_[stage_index]);
 
     markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-      current_serialized_code, stage_counts, run_flags_d_.get(),
+      current_serialized_code, level_counts, run_flags_d_.get(),
       static_cast<std::int32_t>(stage_index), pooling_depth, capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
@@ -661,14 +661,14 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
     fillPoolingStageKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
       current_grid_coord, current_serialized_code, run_flags_d_.get(), run_ids_d_.get(),
       stage.indices, stage.indptr, stage.head_indices, stage.cluster, stage.grid_coord,
-      stage.serialized_code, stage.serialized_order, stage.serialized_inverse, stage_counts,
+      stage.serialized_code, stage.serialized_order, stage.serialized_inverse, level_counts,
       static_cast<std::int32_t>(stage_index), pooling_depth, num_orders, capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
     // Order 0 was already written as the identity by fillPoolingStageKernel above.
     for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
       markOrderRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        current_order, stage.cluster, stage_counts, run_flags_d_.get(),
+        current_order, stage.cluster, level_counts, run_flags_d_.get(),
         static_cast<std::int32_t>(stage_index), order_index, capacity);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
@@ -678,7 +678,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
           capacity, stream_));
 
       fillOrderAndInverseKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        current_order, stage.cluster, run_flags_d_.get(), run_ids_d_.get(), stage_counts,
+        current_order, stage.cluster, run_flags_d_.get(), run_ids_d_.get(), level_counts,
         stage.serialized_order, stage.serialized_inverse, static_cast<std::int32_t>(stage_index),
         order_index, capacity);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());

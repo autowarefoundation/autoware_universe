@@ -178,17 +178,17 @@ TEST(PTv3ConfigTest, SerializationDepthCoversUnalignedRangeBoundary)
   EXPECT_EQ(unaligned.serialization_depth_, 5);
 }
 
-// The same boundary coordinates count toward the per-stage voxel bound: 17 x 17 x 5 cells at
-// stage 0, ceil'd per stride-2 stage. A 16 x 16 x 4 bound would under-size the encoder stage
-// buffers and TensorRT profiles.
-TEST(PTv3ConfigTest, StageVoxelCapacityCoversUnalignedRangeBoundary)
+// The same boundary coordinates count toward the per-level voxel bound: 17 x 17 x 5 cells at
+// level 0, ceil'd per stride-2 pooling stage. A 16 x 16 x 4 bound would under-size the encoder
+// level buffers and TensorRT profiles.
+TEST(PTv3ConfigTest, LevelVoxelCapacityCoversUnalignedRangeBoundary)
 {
   const auto config = makeDetectionConfig(
     {0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 4.5F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
     {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {1, 1024, 4096});
-  EXPECT_EQ(config.stage_voxel_capacity(0), 17 * 17 * 5);
-  EXPECT_EQ(config.stage_voxel_capacity(1), 9 * 9 * 3);
-  EXPECT_EQ(config.stage_voxel_capacity(4), 2 * 2 * 1);
+  EXPECT_EQ(config.level_voxel_capacity(0), 17 * 17 * 5);
+  EXPECT_EQ(config.level_voxel_capacity(1), 9 * 9 * 3);
+  EXPECT_EQ(config.level_voxel_capacity(4), 2 * 2 * 1);
 }
 
 // Borders that are voxel-aligned in decimal but not exactly representable in binary (neither 102.4

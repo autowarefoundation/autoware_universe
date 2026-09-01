@@ -82,8 +82,8 @@ public:
    * @param serialized_code Codes of the input voxels, laid out [num_orders, num_voxels].
    * @param num_voxels Number of input voxels; clamped to max_num_voxels internally.
    * @param stages Output device buffers to fill, one per pooling stage.
-   * @param stage_counts Output voxel count per level, laid out [num_stages + 1]; entry 0 is the
-   * (clamped) input count.
+   * @param level_counts Output voxel count per level, laid out [num_pooling_stages + 1]; entry 0 is
+   * the (clamped) input count.
    * @pre The input voxels are sorted by their order-0 serialized code (`serialized_code` row 0),
    * as generateFeatures emits them. The coarser levels are derived with prefix scans that rely on
    * this ordering; an unsorted input silently produces wrong metadata. Asserted on device in
@@ -91,7 +91,7 @@ public:
    */
   void generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
-    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
+    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * level_counts);
 
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
   [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }

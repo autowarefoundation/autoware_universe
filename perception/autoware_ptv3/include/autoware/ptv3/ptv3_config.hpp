@@ -133,15 +133,15 @@ public:
       filter_apply_to_segmentation_ = filter_apply_to_segmentation;
       source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
 
-      // dec_depths drives the seg-head engine input set: block stages consume their
+      // dec_depths drives the seg-head engine input set: block levels consume their
       if (dec_depths.size() != pooling_strides_.size()) {
         throw std::runtime_error(
-          "dec_depths must contain one entry per decoder stage (pooling_strides size = " +
+          "dec_depths must contain one entry per decoder level (pooling_strides size = " +
           std::to_string(pooling_strides_.size()) + "), got " + std::to_string(dec_depths.size()) +
           ".");
       }
-      for (std::size_t stage = 0; stage < dec_depths.size(); ++stage) {
-        if (dec_depths[stage] < 0) {
+      for (std::size_t level = 0; level < dec_depths.size(); ++level) {
+        if (dec_depths[level] < 0) {
           throw std::runtime_error("dec_depths entries must be non-negative.");
         }
       }
@@ -191,25 +191,25 @@ public:
       bbox_voxel_x_size_ = bbox_voxel_size[0];
       bbox_voxel_y_size_ = bbox_voxel_size[1];
 
-      // The exporter taps encoder stages S-2 (BEV resolution) and S-1, so the detection grid
-      // resolution must equal the voxel size at stage S-2's cumulative pooling depth.
-      std::int64_t skip_stage_depth = 0;
+      // The exporter taps encoder levels S-2 (BEV resolution) and S-1, so the detection grid
+      // resolution must equal the voxel size at level S-2's cumulative pooling depth.
+      std::int64_t skip_level_depth = 0;
       for (std::size_t stage = 0; stage + 1 < pooling_strides_.size(); ++stage) {
         for (auto value = pooling_strides_[stage]; value > 1; value >>= 1) {
-          ++skip_stage_depth;
+          ++skip_level_depth;
         }
       }
-      const auto skip_stage_scale = static_cast<float>(std::int64_t{1} << skip_stage_depth);
+      const auto skip_level_scale = static_cast<float>(std::int64_t{1} << skip_level_depth);
       constexpr float eps = 1e-3F;
-      if (std::abs(bbox_voxel_x_size_ - voxel_x_size_ * skip_stage_scale) > eps) {
+      if (std::abs(bbox_voxel_x_size_ - voxel_x_size_ * skip_level_scale) > eps) {
         throw std::runtime_error(
           "x component of bbox_voxel_size must equal voxel_size * 2^" +
-          std::to_string(skip_stage_depth) + " (the detection branch taps that encoder stage).");
+          std::to_string(skip_level_depth) + " (the detection branch taps that encoder level).");
       }
-      if (std::abs(bbox_voxel_y_size_ - voxel_y_size_ * skip_stage_scale) > eps) {
+      if (std::abs(bbox_voxel_y_size_ - voxel_y_size_ * skip_level_scale) > eps) {
         throw std::runtime_error(
           "y component of bbox_voxel_size must equal voxel_size * 2^" +
-          std::to_string(skip_stage_depth) + " (the detection branch taps that encoder stage).");
+          std::to_string(skip_level_depth) + " (the detection branch taps that encoder level).");
       }
 
       distance_bin_upper_limits_ = distance_bin_upper_limits;
@@ -375,7 +375,7 @@ public:
   {
     if (enc_channels.size() != expected_size) {
       throw std::runtime_error(
-        "enc_channels must contain one entry per encoder stage (pooling_strides size + 1 = " +
+        "enc_channels must contain one entry per encoder level (pooling_strides size + 1 = " +
         std::to_string(expected_size) + "), got " + std::to_string(enc_channels.size()) + ".");
     }
     for (const auto channels : enc_channels) {
@@ -386,13 +386,13 @@ public:
     return enc_channels;
   }
 
-  // Hard voxel-count bound for one encoder stage: a stage cannot hold more voxels than the grid
+  // Hard voxel-count bound for one encoder level: a level cannot hold more voxels than the grid
   // has cells at its cumulative pooling depth, and pooling never grows the voxel count. Sizes the
-  // encoder stage buffers and TensorRT profiles.
-  [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
+  // encoder level buffers and TensorRT profiles.
+  [[nodiscard]] std::int64_t level_voxel_capacity(const std::size_t level) const
   {
     std::int64_t cumulative_depth = 0;
-    for (std::size_t stage = 0; stage < stage_index; ++stage) {
+    for (std::size_t stage = 0; stage < level; ++stage) {
       for (auto value = pooling_strides_[stage]; value > 1; value >>= 1) {
         ++cumulative_depth;
       }
@@ -424,10 +424,10 @@ public:
   std::vector<std::string> segmentation_class_names_;
   std::vector<std::string> serialization_orders_;
   std::vector<std::int64_t> pooling_strides_;
-  std::vector<std::int64_t> enc_channels_;  // per encoder stage, finest to deepest
+  std::vector<std::int64_t> enc_channels_;  // per encoder level, finest to deepest
 
   // Segmentation head
-  std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage
+  std::vector<std::int64_t> dec_depths_;  // decoder block counts per level
   std::vector<float> colors_rgb_;
   // class id (index into segmentation_class_names_) -> PointCloudClassification
   std::vector<std::uint8_t> class_id_to_classification_;

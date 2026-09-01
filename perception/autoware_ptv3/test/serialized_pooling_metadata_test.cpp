@@ -292,7 +292,7 @@ TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
   PreprocessCuda preprocess(config, stream_);
   auto grid_coord_d = makeDeviceBuffer<std::int32_t>(grid_coord.size());
   auto serialized_code_d = makeDeviceBuffer<std::int64_t>(serialized_code.size());
-  auto stage_counts_d = makeDeviceBuffer<std::int64_t>(config.pooling_strides_.size() + 1);
+  auto level_counts_d = makeDeviceBuffer<std::int64_t>(config.pooling_strides_.size() + 1);
   std::vector<DeviceStage> device_stages;
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   for (std::size_t stage = 0; stage < config.pooling_strides_.size(); ++stage) {
@@ -309,14 +309,14 @@ TEST_F(SerializedPoolingMetadataTest, DetectionGridCoord3StaysInsideBevGrid)
   copyToDevice(grid_coord_d.get(), grid_coord);
   copyToDevice(serialized_code_d.get(), serialized_code);
   preprocess.generateSerializedPoolingMetadata(
-    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
+    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, level_counts_d.get());
   ASSERT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
-  const auto stage_counts = copyToHost(stage_counts_d.get(), config.pooling_strides_.size() + 1);
+  const auto level_counts = copyToHost(level_counts_d.get(), config.pooling_strides_.size() + 1);
   // TODO(mojomex): generalize to other detection feature depth settings.
   const std::size_t point_grid_coord_3_stage = 2;
   const auto point_grid_coord_3_count =
-    static_cast<std::size_t>(stage_counts[point_grid_coord_3_stage + 1]);
+    static_cast<std::size_t>(level_counts[point_grid_coord_3_stage + 1]);
   const auto point_grid_coord_3 = copyToHost(
     device_stages[point_grid_coord_3_stage].grid_coord.get(), point_grid_coord_3_count * 3);
   for (std::size_t i = 0; i < point_grid_coord_3_count; ++i) {
@@ -343,7 +343,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForEdgeCaseClouds)
     // by order-0 code before upload.
     std::vector<std::int32_t> grid_coord;
     // Hand-verified voxel count per level: input, then one entry per pooling stage.
-    std::vector<std::int64_t> expected_stage_counts;
+    std::vector<std::int64_t> expected_level_counts;
     // Whether every level of two or more voxels must satisfy expect_orders_diverge.
     bool orders_diverge;
   };
@@ -382,7 +382,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForEdgeCaseClouds)
   PreprocessCuda preprocess(config, stream_);
   auto grid_coord_d = makeDeviceBuffer<std::int32_t>(config.max_num_voxels_ * 3);
   auto serialized_code_d = makeDeviceBuffer<std::int64_t>(config.max_num_voxels_ * kNumOrders);
-  auto stage_counts_d = makeDeviceBuffer<std::int64_t>(stage_count + 1);
+  auto level_counts_d = makeDeviceBuffer<std::int64_t>(stage_count + 1);
   std::vector<DeviceStage> device_stages;
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   for (std::size_t stage = 0; stage < stage_count; ++stage) {
@@ -405,7 +405,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForEdgeCaseClouds)
     copyToDevice(grid_coord_d.get(), grid_coord);
     copyToDevice(serialized_code_d.get(), serialized_code);
     preprocess.generateSerializedPoolingMetadata(
-      grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
+      grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, level_counts_d.get());
     ASSERT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
     std::vector<CpuStage> references;
@@ -417,14 +417,14 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForEdgeCaseClouds)
         config.pooling_strides_[stage]));
     }
 
-    const auto stage_counts = copyToHost(stage_counts_d.get(), stage_count + 1);
-    ASSERT_EQ(stage_counts, edge_case.expected_stage_counts) << edge_case.name;
+    const auto level_counts = copyToHost(level_counts_d.get(), stage_count + 1);
+    ASSERT_EQ(level_counts, edge_case.expected_level_counts) << edge_case.name;
 
     for (std::size_t stage_index = 0; stage_index < references.size(); ++stage_index) {
       const auto & expected = references[stage_index];
       const auto & actual = device_stages[stage_index];
-      const auto in_count = static_cast<std::size_t>(stage_counts[stage_index]);
-      const auto out_count = static_cast<std::size_t>(stage_counts[stage_index + 1]);
+      const auto in_count = static_cast<std::size_t>(level_counts[stage_index]);
+      const auto out_count = static_cast<std::size_t>(level_counts[stage_index + 1]);
       const auto prefix = edge_case.name + " stage " + std::to_string(stage_index) + " ";
 
       ASSERT_EQ(out_count, expected.head_indices.size()) << prefix + "out_count";
@@ -472,7 +472,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   PreprocessCuda preprocess(config, stream_);
   auto grid_coord_d = makeDeviceBuffer<std::int32_t>(grid_coord.size());
   auto serialized_code_d = makeDeviceBuffer<std::int64_t>(serialized_code.size());
-  auto stage_counts_d = makeDeviceBuffer<std::int64_t>(config.pooling_strides_.size() + 1);
+  auto level_counts_d = makeDeviceBuffer<std::int64_t>(config.pooling_strides_.size() + 1);
   std::vector<DeviceStage> device_stages;
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   for (std::size_t stage = 0; stage < config.pooling_strides_.size(); ++stage) {
@@ -490,7 +490,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   copyToDevice(serialized_code_d.get(), serialized_code);
 
   preprocess.generateSerializedPoolingMetadata(
-    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
+    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, level_counts_d.get());
   ASSERT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
   std::vector<CpuStage> references;
@@ -500,16 +500,16 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     references[0].grid_coord, references[0].serialized_code, kNumOrders,
     config.pooling_strides_[1]));
 
-  const auto stage_counts = copyToHost(stage_counts_d.get(), config.pooling_strides_.size() + 1);
-  ASSERT_EQ(stage_counts[0], num_voxels);
-  ASSERT_EQ(stage_counts[1], static_cast<std::int64_t>(references[0].head_indices.size()));
-  ASSERT_EQ(stage_counts[2], static_cast<std::int64_t>(references[1].head_indices.size()));
+  const auto level_counts = copyToHost(level_counts_d.get(), config.pooling_strides_.size() + 1);
+  ASSERT_EQ(level_counts[0], num_voxels);
+  ASSERT_EQ(level_counts[1], static_cast<std::int64_t>(references[0].head_indices.size()));
+  ASSERT_EQ(level_counts[2], static_cast<std::int64_t>(references[1].head_indices.size()));
 
   for (std::size_t stage_index = 0; stage_index < references.size(); ++stage_index) {
     const auto & expected = references[stage_index];
     const auto & actual = device_stages[stage_index];
-    const auto in_count = static_cast<std::size_t>(stage_counts[stage_index]);
-    const auto out_count = static_cast<std::size_t>(stage_counts[stage_index + 1]);
+    const auto in_count = static_cast<std::size_t>(level_counts[stage_index]);
+    const auto out_count = static_cast<std::size_t>(level_counts[stage_index + 1]);
     const auto prefix = "stage " + std::to_string(stage_index) + " ";
 
     const auto indices = copyToHost(actual.indices.get(), in_count);

@@ -73,7 +73,7 @@ public:
 protected:
   void initPtr();
   void initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-  [[nodiscard]] std::array<std::int64_t, 3> stageProfileCounts(std::size_t stage_index) const;
+  [[nodiscard]] std::array<std::int64_t, 3> levelProfileCounts(std::size_t level) const;
   void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
@@ -140,8 +140,8 @@ protected:
   };
 
   std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
-  CudaUniquePtr<std::int64_t[]> serialized_pooling_num_voxels_d_{nullptr};
-  CudaUniquePtrHost<std::int64_t[]> serialized_pooling_num_voxels_;
+  CudaUniquePtr<std::int64_t[]> level_num_voxels_d_{nullptr};
+  CudaUniquePtrHost<std::int64_t[]> level_num_voxels_;
   std::vector<std::int64_t> serialized_pooling_depths_;
 
   // Preprocess outputs
@@ -160,9 +160,9 @@ protected:
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
 
-  // Encoder outputs shared with all the heads: per-stage point features,
-  // finest to deepest, sized by each stage's geometric voxel capacity.
-  std::vector<CudaUniquePtr<float[]>> stage_feat_d_;
+  // Encoder outputs shared with all the heads: per-level point features,
+  // finest to deepest, sized by each level's geometric voxel capacity.
+  std::vector<CudaUniquePtr<float[]>> level_feat_d_;
 
   // Segmentation head outputs
   CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};

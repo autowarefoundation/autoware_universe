@@ -10,6 +10,32 @@ This package implements a TensorRT powered inference node for Point Transformers
 The sparse convolution backend corresponds to [spconv](https://github.com/traveller59/spconv).
 Autoware installs it automatically in its setup script. If needed, the user can also build it and install it following the [following instructions](https://github.com/autowarefoundation/spconv_cpp).
 
+### Terminology: level vs. stage
+
+A **level** is a resolution: a set of voxels. A **pooling stage** is the transition between two
+levels. There is always one more level than stage — with `pooling_strides: [2, 2, 2, 2]` and
+`enc_channels: [32, 64, 128, 256, 512]`, five levels and four stages:
+
+```text
+level 0 --stage 0--> level 1 --stage 1--> level 2 --stage 2--> level 3 --stage 3--> level 4
+```
+
+Level 0 is the input voxels. A level owns a voxel count, a `grid_coord`, a serialization order and
+inverse, and a point feature output. A stage owns the machinery of one downsampling: `indices`,
+`indptr`, `head_indices` and `cluster`.
+
+| indexed by level (`0..N`)                    | indexed by pooling stage (`0..N-1`)                    |
+| -------------------------------------------- | ------------------------------------------------------ |
+| `point_feat_i`, `enc_channels`, `dec_depths` | `pooling_strides`, `pooling_cluster_i`                 |
+| `levelFeatureName`, `levelProfileCounts`     | `serialized_pooling_<i>_{indices,indptr,head_indices}` |
+| `level_voxel_capacity`, `level_num_voxels_`  | `serialized_pooling_stages_d_`                         |
+
+Note that `serialized_pooling_<i>_grid_coord`, `_serialized_order` and `_serialized_inverse` are
+named after stage `i` but describe **level `i+1`** — the level that stage produced. That off-by-one
+is why code addressing both families shifts indices. `indices` and `indptr` cannot be levelled at
+all: `indices` is level-`i`-sized and `indptr` is level-`i+1`-sized plus one, so they span the
+transition and belong to the stage.
+
 ## Inputs / Outputs
 
 ### Input
