@@ -165,12 +165,20 @@ void VelocityValidator::validate(
     autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
       .longitudinal_velocity_mps);
 
-  const bool is_stopped = std::abs(v_vel) < 0.05;
+  const auto stopped_vel_th = 5e-2;
+  const auto is_stopped = std::abs(v_vel) < stopped_vel_th;
 
-  const bool is_rolling_back =
-    std::signbit(v_vel * t_vel) && std::abs(v_vel) > params_.rolling_back_velocity;
   if (!params_.hold_velocity_error_until_stop || !res.is_rolling_back || is_stopped) {
-    res.is_rolling_back = is_rolling_back;
+    res.is_rolling_back = [&]() -> bool {
+      if (is_stopped || std::abs(v_vel) < params_.rolling_back_velocity) {
+        return false;
+      }
+  
+      if (std::abs(t_vel) < stopped_vel_th) {
+        return std::signbit(v_vel);
+      }
+      return std::signbit(v_vel * t_vel);
+    }();
   }
 
   const double over_velocity_v_vel =
