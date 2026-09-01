@@ -118,8 +118,8 @@ void SurroundObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & p
   params_ = params.surround_obstacle_stop;
 
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      get_node_ptr(), "backup_planner_surround_obstacle_stop");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(get_node_ptr(), "backup_planner_surround_obstacle_stop");
 
   pub_debug_text_ =
     get_node_ptr()->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
