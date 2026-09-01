@@ -207,6 +207,7 @@ PTv3Config make_test_config()
   params.voxels_num = {1, 16, 32};
   params.point_cloud_range = {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F};
   params.segmentation_class_names = {"class"};
+  params.segmentation_class_mapping = {{"class", "NOISE"}};
   params.palette = {0, 0, 0};
   params.filter_output_format = "XYZI";
   params.source_reconstruction = "none";
