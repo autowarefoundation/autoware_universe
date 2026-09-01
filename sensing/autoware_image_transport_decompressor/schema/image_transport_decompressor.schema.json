@@ -8,7 +8,7 @@
       "properties": {
         "encoding": {
           "type": "string",
-          "description": "The image encoding to use for the decompressed image",
+          "description": "The encoding to publish. Use `rgb8` or `bgr8`. Any other value publishes the encoding the sender named, which may not match the payload; see Assumptions / Known limits.",
           "default": "default"
         }
       },

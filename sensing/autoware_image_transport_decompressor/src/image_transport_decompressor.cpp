@@ -46,7 +46,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include "autoware/image_transport_decompressor/image_transport_decompressor.hpp"
+#include "image_transport_decompressor.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -59,126 +59,105 @@
 #include <cv_bridge/cv_bridge.h>
 #endif
 
-#include <limits>
-#include <memory>
+#include <algorithm>
+#include <array>
+#include <stdexcept>
 #include <string>
 #include <utility>
-#include <vector>
 
-namespace autoware::image_preprocessor
+namespace autoware::image_preprocessor::image_transport_decompressor
 {
-ImageTransportDecompressor::ImageTransportDecompressor(const rclcpp::NodeOptions & node_options)
-: rclcpp::Node("image_transport_decompressor", node_options),
-  encoding_(declare_parameter<std::string>("encoding"))
-{
-  compressed_image_sub_ = create_subscription<sensor_msgs::msg::CompressedImage>(
-    "~/input/compressed_image", rclcpp::SensorDataQoS(),
-    std::bind(&ImageTransportDecompressor::onCompressedImage, this, std::placeholders::_1));
-  raw_image_pub_ =
-    create_publisher<sensor_msgs::msg::Image>("~/output/raw_image", rclcpp::SensorDataQoS());
-}
 
-void ImageTransportDecompressor::onCompressedImage(
-  const sensor_msgs::msg::CompressedImage::ConstSharedPtr input_compressed_image_msg)
+void revert_color_transformation(
+  cv_bridge::CvImage & cv_image, const std::string & compressed_encoding);
+
+sensor_msgs::msg::Image decompress(
+  const sensor_msgs::msg::CompressedImage & compressed_image,
+  const std::string & requested_encoding)
 {
-  cv_bridge::CvImagePtr cv_ptr(new cv_bridge::CvImage);
+  cv_bridge::CvImage cv_image;
   // Copy message header
-  cv_ptr->header = input_compressed_image_msg->header;
+  cv_image.header = compressed_image.header;
 
-  // Decode color/mono image
+  // Decode the image. cv::IMREAD_COLOR makes it 8-bit with three channels in BGR order, whatever
+  // the depth and the channel count of the compressed stream are.
   try {
-    cv_ptr->image = cv::imdecode(cv::Mat(input_compressed_image_msg->data), cv::IMREAD_COLOR);
-
-    // Assign image encoding string
-    const size_t split_pos = input_compressed_image_msg->format.find(';');
-    if (split_pos == std::string::npos) {
-      // Older version of compressed_image_transport does not signal image format
-      switch (cv_ptr->image.channels()) {
-        case 1:
-          cv_ptr->encoding = sensor_msgs::image_encodings::MONO8;
-          break;
-        case 3:
-          cv_ptr->encoding = sensor_msgs::image_encodings::BGR8;
-          break;
-        default:
-          RCLCPP_ERROR(
-            get_logger(), "Unsupported number of channels: %i", cv_ptr->image.channels());
-          break;
-      }
-    } else {
-      std::string image_encoding;
-      if (encoding_ == std::string("rgb8")) {
-        image_encoding = "rgb8";
-      } else if (encoding_ == std::string("bgr8")) {
-        image_encoding = "bgr8";
-      } else {
-        // default encoding
-        image_encoding = input_compressed_image_msg->format.substr(0, split_pos);
-      }
-
-      cv_ptr->encoding = image_encoding;
-
-      if (sensor_msgs::image_encodings::isColor(image_encoding)) {
-        std::string compressed_encoding = input_compressed_image_msg->format.substr(split_pos);
-        bool compressed_bgr_image =
-          (compressed_encoding.find("compressed bgr") != std::string::npos);
-
-        // Revert color transformation
-        if (compressed_bgr_image) {
-          // if necessary convert colors from bgr to rgb
-          if (
-            (image_encoding == sensor_msgs::image_encodings::RGB8) ||
-            (image_encoding == sensor_msgs::image_encodings::RGB16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_BGR2RGB);
-          }
-
-          if (
-            (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
-            (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_BGR2RGBA);
-          }
-
-          if (
-            (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
-            (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_BGR2BGRA);
-          }
-        } else {
-          // if necessary convert colors from rgb to bgr
-          if (
-            (image_encoding == sensor_msgs::image_encodings::BGR8) ||
-            (image_encoding == sensor_msgs::image_encodings::BGR16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_RGB2BGR);
-          }
-
-          if (
-            (image_encoding == sensor_msgs::image_encodings::BGRA8) ||
-            (image_encoding == sensor_msgs::image_encodings::BGRA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_RGB2BGRA);
-          }
-
-          if (
-            (image_encoding == sensor_msgs::image_encodings::RGBA8) ||
-            (image_encoding == sensor_msgs::image_encodings::RGBA16)) {
-            cv::cvtColor(cv_ptr->image, cv_ptr->image, CV_RGB2RGBA);
-          }
-        }
-      }
-    }
-  } catch (cv::Exception & e) {
-    RCLCPP_ERROR(get_logger(), "%s", e.what());
+    cv_image.image = cv::imdecode(cv::Mat(compressed_image.data), cv::IMREAD_COLOR);
+  } catch (const cv::Exception & e) {
+    // Reported the same way as the empty image below, keeping the decoder's own message.
+    throw std::runtime_error(e.what());
+  }
+  if (cv_image.image.empty()) {
+    // cv::imdecode throws on an empty payload, but reports one it cannot make sense of by returning
+    // an empty image, so raise that second case here.
+    throw std::runtime_error("the compressed image could not be decoded");
   }
 
-  size_t rows = cv_ptr->image.rows;
-  size_t cols = cv_ptr->image.cols;
+  // Assign image encoding string
+  const size_t split_pos = compressed_image.format.find(';');
+  if (split_pos == std::string::npos) {
+    // Older version of compressed_image_transport does not signal image format
+    cv_image.encoding = sensor_msgs::image_encodings::BGR8;
+  } else {
+    std::string image_encoding;
+    if (requested_encoding == std::string("rgb8")) {
+      image_encoding = "rgb8";
+    } else if (requested_encoding == std::string("bgr8")) {
+      image_encoding = "bgr8";
+    } else {
+      // default encoding
+      image_encoding = compressed_image.format.substr(0, split_pos);
+    }
 
-  if ((rows > 0) && (cols > 0)) {
-    // Publish message to user callback
-    auto image_ptr = std::make_unique<sensor_msgs::msg::Image>(*cv_ptr->toImageMsg());
-    raw_image_pub_->publish(std::move(image_ptr));
+    cv_image.encoding = image_encoding;
+
+    revert_color_transformation(cv_image, compressed_image.format.substr(split_pos));
+  }
+
+  sensor_msgs::msg::Image output;
+  cv_image.toImageMsg(output);
+  return output;
+}
+
+// Conversion that undoes the color transformation the sender applied, per encoding to publish
+// under. There are two tables because the conversion depends on the channel order the sender
+// compressed in. An encoding absent from a table, "mono8" or "yuv422" for instance, needs no
+// conversion.
+using ColorConversions = std::array<std::pair<const char *, cv::ColorConversionCodes>, 6>;
+
+constexpr ColorConversions conversions_from_bgr{
+  {{sensor_msgs::image_encodings::RGB8, cv::COLOR_BGR2RGB},
+   {sensor_msgs::image_encodings::RGB16, cv::COLOR_BGR2RGB},
+   {sensor_msgs::image_encodings::RGBA8, cv::COLOR_BGR2RGBA},
+   {sensor_msgs::image_encodings::RGBA16, cv::COLOR_BGR2RGBA},
+   {sensor_msgs::image_encodings::BGRA8, cv::COLOR_BGR2BGRA},
+   {sensor_msgs::image_encodings::BGRA16, cv::COLOR_BGR2BGRA}}};
+
+constexpr ColorConversions conversions_from_rgb{
+  {{sensor_msgs::image_encodings::BGR8, cv::COLOR_RGB2BGR},
+   {sensor_msgs::image_encodings::BGR16, cv::COLOR_RGB2BGR},
+   {sensor_msgs::image_encodings::BGRA8, cv::COLOR_RGB2BGRA},
+   {sensor_msgs::image_encodings::BGRA16, cv::COLOR_RGB2BGRA},
+   {sensor_msgs::image_encodings::RGBA8, cv::COLOR_RGB2RGBA},
+   {sensor_msgs::image_encodings::RGBA16, cv::COLOR_RGB2RGBA}}};
+
+// Undo the color transformation the sender applied before compressing, so that the channels end up
+// in the order cv_image.encoding promises. @p compressed_encoding is the part of the format field
+// from the ';' onwards, which names the order the sender compressed in.
+void revert_color_transformation(
+  cv_bridge::CvImage & cv_image, const std::string & compressed_encoding)
+{
+  const bool compressed_bgr_image = compressed_encoding.find("compressed bgr") != std::string::npos;
+  const ColorConversions & conversions =
+    compressed_bgr_image ? conversions_from_bgr : conversions_from_rgb;
+
+  const auto conversion = std::find_if(
+    conversions.begin(), conversions.end(),
+    [&cv_image](const auto & entry) { return cv_image.encoding == entry.first; });
+
+  if (conversion != conversions.end()) {
+    cv::cvtColor(cv_image.image, cv_image.image, conversion->second);
   }
 }
-}  // namespace autoware::image_preprocessor
 
-#include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::image_preprocessor::ImageTransportDecompressor)
+}  // namespace autoware::image_preprocessor::image_transport_decompressor

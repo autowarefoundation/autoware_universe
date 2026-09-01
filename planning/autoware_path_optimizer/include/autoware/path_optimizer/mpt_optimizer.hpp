@@ -35,11 +35,17 @@
 #include <std_msgs/msg/multi_array_dimension.hpp>
 #include <std_msgs/msg/multi_array_layout.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace autoware::agnocast_wrapper
+{
+class Node;
+}  // namespace autoware::agnocast_wrapper
 
 namespace autoware::path_optimizer
 {
@@ -182,6 +188,12 @@ public:
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     const TrajectoryParam & traj_param, const std::shared_ptr<DebugData> debug_data_ptr,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_);
+  MPTOptimizer(
+    autoware::agnocast_wrapper::Node * node, const bool enable_debug_info,
+    const EgoNearestParam ego_nearest_param,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
+    const TrajectoryParam & traj_param, const std::shared_ptr<DebugData> debug_data_ptr,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_);
 
   std::optional<std::vector<TrajectoryPoint>> optimizeTrajectory(const PlannerData & planner_data);
   std::optional<std::vector<TrajectoryPoint>> getPrevOptimizedTrajectoryPoints() const;
@@ -244,8 +256,8 @@ private:
 
   struct MPTParam
   {
-    explicit MPTParam(
-      rclcpp::Node * node, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
+    template <typename NodeT>
+    explicit MPTParam(NodeT * node, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
     MPTParam() = default;
     void onParam(const std::vector<rclcpp::Parameter> & parameters);
 
@@ -319,18 +331,27 @@ private:
   };
 
   // publisher
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_fixed_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_ref_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_mpt_traj_pub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr debug_acados_mpt_traj_pub_;
+  using TrajectoryPublishFunc = std::function<void(const Trajectory &)>;
+  using Float32MultiArrayPublishFunc =
+    std::function<void(const std_msgs::msg::Float32MultiArray &)>;
+
+  TrajectoryPublishFunc debug_fixed_traj_pub_;
+  TrajectoryPublishFunc debug_ref_traj_pub_;
+  TrajectoryPublishFunc debug_mpt_traj_pub_;
+  TrajectoryPublishFunc debug_acados_mpt_traj_pub_;
 
   // Add new publishers for spline coefficients and curvatures
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_steering_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr
-    debug_acados_optimised_steering_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_states_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_acados_optimised_states_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_ref_steering_pub_;
+  Float32MultiArrayPublishFunc debug_optimised_steering_pub_;
+  Float32MultiArrayPublishFunc debug_acados_optimised_steering_pub_;
+  Float32MultiArrayPublishFunc debug_optimised_states_pub_;
+  Float32MultiArrayPublishFunc debug_acados_optimised_states_pub_;
+  Float32MultiArrayPublishFunc debug_ref_steering_pub_;
+
+  template <typename NodeT>
+  void setUpPublishers(NodeT * node);
+
+  template <typename NodeT>
+  void initializeCommon(NodeT * node);
 
   // argument
   bool enable_debug_info_;

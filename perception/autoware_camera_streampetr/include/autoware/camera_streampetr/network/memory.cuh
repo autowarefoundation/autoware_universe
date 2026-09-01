@@ -45,7 +45,7 @@ struct Memory
 
   cudaStream_t mem_stream;  // CUDA stream for asynchronous memory operations
 
-  void Init(cudaStream_t stream, const int pre_length, const int post_length)
+  void init(cudaStream_t stream, const int pre_length, const int post_length)
   {
     mem_len = post_length;
     pre_len = pre_length;
@@ -53,9 +53,9 @@ struct Memory
     cudaMallocAsync(&mem_buf, sizeof(float) * mem_len, mem_stream);
   }
 
-  void StepReset();
-  void StepPre(float ts);
-  void StepPost(float ts);
+  void step_reset();
+  void step_pre(float ts);
+  void step_post(float ts);
 
-  void DebugPrint();
+  void debug_print();
 };  // struct Memory
