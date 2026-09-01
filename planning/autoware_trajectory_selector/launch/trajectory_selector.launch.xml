@@ -4,7 +4,8 @@
   <arg name="trajectory_ranker_param_path" default="$(find-pkg-share autoware_trajectory_ranker)/config/trajectory_ranker.param.yaml"/>
   <arg name="input_generative_trajectories" default="~/input/trajectories_generative"/>
   <arg name="input_backup_trajectories" default="~/input/trajectories_backup"/>
-  <arg name="output_trajectories" default="~/output/trajectories"/>
+  <arg name="output_trajectory" default="~/output/trajectory"/>
+  <arg name="output_turn_indicators" default="~/output/turn_indicators"/>
   <arg name="input_vector_map" default="~/input/vector_map"/>
   <arg name="input_odometry" default="~/input/odometry"/>
   <arg name="input_objects" default="~/input/objects"/>
@@ -20,7 +21,8 @@
     <param from="$(var trajectory_ranker_param_path)" allow_substs="true"/>
     <remap from="~/input/trajectories_generative" to="$(var input_generative_trajectories)"/>
     <remap from="~/input/trajectories_backup" to="$(var input_backup_trajectories)"/>
-    <remap from="~/output/scored_trajectories" to="$(var output_trajectories)"/>
+    <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
+    <remap from="~/output/turn_indicators" to="$(var output_turn_indicators)"/>
     <remap from="~/input/lanelet2_map" to="$(var input_vector_map)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>

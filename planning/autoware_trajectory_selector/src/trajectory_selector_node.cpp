@@ -41,6 +41,9 @@ TrajectorySelectorNode::TrajectorySelectorNode(const rclcpp::NodeOptions & node_
     *this, get_node_parameters_interface(),
     autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo(), time_keeper_);
 
+  adapter_ptr_ =
+    std::make_unique<trajectory_adapter::TrajectoryAdapterWrapper>(*this, time_keeper_);
+
   selector_params_ = selector_params_listener_.get_params();
   selector_params_listener_.setUserCallback([&](const auto &) { update_parameters(); });
   update_fallback_timer();
@@ -73,6 +76,8 @@ void TrajectorySelectorNode::publishers()
     create_publisher<CandidateTrajectories>("~/output/validated_trajectories", 1);
   pub_scored_trajectories_ =
     create_publisher<ScoredCandidateTrajectories>("~/output/scored_trajectories", 1);
+  pub_trajectory_ = create_publisher<Trajectory>("~/output/trajectory", 1);
+  pub_turn_indicators_ = create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
   pub_processing_time_detail_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/trajectory_selector", 1);
   time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(pub_processing_time_detail_);
@@ -253,6 +258,15 @@ void TrajectorySelectorNode::process_trajectories()
   const auto scored_trajectories =
     ranker_ptr_->rank_trajectories(input_trajectories, take_ranker_data(valid_trajectories));
   pub_scored_trajectories_->publish(scored_trajectories);
+
+  const auto adapted_trajectory = adapter_ptr_->get_trajectory(scored_trajectories);
+  if (!adapted_trajectory) return;
+
+  pub_trajectory_->publish(adapted_trajectory->trajectory);
+
+  auto turn_indicators = adapted_trajectory->turn_indicators;
+  turn_indicators.stamp = now();
+  pub_turn_indicators_->publish(turn_indicators);
 }
 
 void TrajectorySelectorNode::update_parameters()

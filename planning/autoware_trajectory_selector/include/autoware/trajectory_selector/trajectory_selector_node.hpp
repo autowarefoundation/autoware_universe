@@ -21,6 +21,7 @@
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/trajectory_adapter/trajectory_adapter_wrapper.hpp>
 #include <autoware/trajectory_concatenator/trajectory_concatenator_wrapper.hpp>
 #include <autoware/trajectory_ranker/trajectory_ranker_wrapper.hpp>
 #include <autoware/trajectory_validator/trajectory_validator_wrapper.hpp>
@@ -32,6 +33,8 @@
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -46,6 +49,8 @@ using autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_planning_msgs::msg::Trajectory;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
@@ -56,8 +61,8 @@ using trajectory_ranker::TrajectorySource;
 using trajectory_validator::ValidationReports;
 
 /**
- * @brief Concatenates candidate trajectories from multiple planners, validates them, and
- * publishes the surviving set.
+ * @brief Concatenates candidate trajectories from multiple planners, validates them, ranks them,
+ * and publishes the selected planning outputs.
  */
 class TrajectorySelectorNode : public autoware::agnocast_wrapper::Node
 {
@@ -127,6 +132,7 @@ private:
   std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorWrapper> concatenator_ptr_;
   std::unique_ptr<trajectory_validator::TrajectoryValidatorWrapper> validator_ptr_;
   std::unique_ptr<trajectory_ranker::TrajectoryRankerWrapper> ranker_ptr_;
+  std::unique_ptr<trajectory_adapter::TrajectoryAdapterWrapper> adapter_ptr_;
   AUTOWARE_TIMER_PTR timer_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   LaneletRoute::ConstSharedPtr route_ptr_;
@@ -158,6 +164,8 @@ private:
   AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) pub_concatenated_trajectories_;
   AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) pub_validated_trajectories_;
   AUTOWARE_PUBLISHER_PTR(ScoredCandidateTrajectories) pub_scored_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(Trajectory) pub_trajectory_;
+  AUTOWARE_PUBLISHER_PTR(TurnIndicatorsCommand) pub_turn_indicators_;
   AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail) pub_processing_time_detail_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
