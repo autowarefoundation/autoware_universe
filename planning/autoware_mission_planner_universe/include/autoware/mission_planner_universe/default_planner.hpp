@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LANELET2_PLUGINS__DEFAULT_PLANNER_HPP_
-#define LANELET2_PLUGINS__DEFAULT_PLANNER_HPP_
+#ifndef AUTOWARE__MISSION_PLANNER_UNIVERSE__DEFAULT_PLANNER_HPP_
+#define AUTOWARE__MISSION_PLANNER_UNIVERSE__DEFAULT_PLANNER_HPP_
 
-#include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace autoware::mission_planner_universe::lanelet2
 {
-
 struct DefaultPlannerParameters
 {
   double goal_angle_threshold_deg;
@@ -42,26 +42,41 @@ struct DefaultPlannerParameters
   bool allow_area;
 };
 
-class DefaultPlanner : public mission_planner_universe::PlannerPlugin
+class DefaultPlanner
 {
 public:
-  DefaultPlanner() : vehicle_info_(), is_graph_ready_(false), param_(), node_(nullptr) {}
+  using RoutePoints = std::vector<geometry_msgs::msg::Pose>;
+  using LaneletRoute = autoware_planning_msgs::msg::LaneletRoute;
+  using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+  using MarkerArray = visualization_msgs::msg::MarkerArray;
 
-  void initialize(rclcpp::Node * node) override;
-  void initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg) override;
-  [[nodiscard]] bool ready() const override;
-  LaneletRoute plan(const RoutePoints & points) override;
-  void updateRoute(const PlannerPlugin::LaneletRoute & route) override;
-  void clearRoute() override;
+  // goal_footprint is only set when is_goal_valid() actually computed the footprint (some early
+  // return paths, e.g. the shoulder-lanelet check, never reach that computation).
+  struct PlanResult
+  {
+    LaneletRoute route;
+    std::optional<autoware_utils::LinearRing2d> goal_footprint;
+    std::optional<std::string> warning_message;
+  };
+
+  DefaultPlanner(
+    const DefaultPlannerParameters & param,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
+
+  void set_map(const LaneletMapBin & msg);
+  [[nodiscard]] bool ready() const;
+  PlanResult plan(const RoutePoints & points);
+  void updateRoute(const LaneletRoute & route);
+  void clearRoute();
   [[nodiscard]] MarkerArray visualize(
-    const LaneletRoute & route, float goal_lanelet_transparency = 0.05) const override;
+    const LaneletRoute & route, float goal_lanelet_transparency = 0.05) const;
   [[nodiscard]] static MarkerArray visualize_debug_footprint(
     autoware_utils::LinearRing2d goal_footprint);
-  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-  const autoware::route_handler::RouteHandler & getRouteHandler() const override
+  [[nodiscard]] const autoware::route_handler::RouteHandler & getRouteHandler() const
   {
     return route_handler_;
   }
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
 protected:
   using RouteSections = std::vector<autoware_planning_msgs::msg::LaneletSegment>;
@@ -71,12 +86,14 @@ protected:
 
   DefaultPlannerParameters param_;
 
-  rclcpp::Node * node_;
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr map_subscriber_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr pub_goal_footprint_marker_;
-
-  void initialize_common(rclcpp::Node * node);
-  void map_callback(const LaneletMapBin::ConstSharedPtr msg);
+  // goal_footprint is only set once is_goal_valid() reaches the footprint computation (see
+  // PlanResult::goal_footprint).
+  struct GoalValidationResult
+  {
+    bool is_valid;
+    std::optional<autoware_utils::LinearRing2d> goal_footprint;
+    std::optional<std::string> warning_message;
+  };
 
   /**
    * @brief check if the goal_footprint is within the lanelets closest to the goal plus the
@@ -96,7 +113,7 @@ protected:
    * @brief return true if (1)the goal is in parking area or (2)the goal is on the lanes and the
    * footprint around the goal does not overlap the lanes
    */
-  bool is_goal_valid(const geometry_msgs::msg::Pose & goal);
+  GoalValidationResult is_goal_valid(const geometry_msgs::msg::Pose & goal);
 
   /**
    * @brief project the specified goal pose onto the goal lanelet(the last preferred lanelet of
@@ -107,4 +124,4 @@ protected:
 
 }  // namespace autoware::mission_planner_universe::lanelet2
 
-#endif  // LANELET2_PLUGINS__DEFAULT_PLANNER_HPP_
+#endif  // AUTOWARE__MISSION_PLANNER_UNIVERSE__DEFAULT_PLANNER_HPP_
