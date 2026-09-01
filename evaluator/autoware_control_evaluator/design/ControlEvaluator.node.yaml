@@ -51,7 +51,7 @@ subscribers:
 
 publishers:
   - name: metrics
-    message_type: autoware_control_msgs/msg/ControlEvaluation
+    message_type: tier4_metric_msgs/msg/MetricArray
 
 # parameters
 param_files:
