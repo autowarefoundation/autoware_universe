@@ -15,6 +15,9 @@
 import math
 import threading
 
+from autoware_perception_msgs.msg import TrafficLightElement
+from autoware_perception_msgs.msg import TrafficLightGroup
+from autoware_perception_msgs.msg import TrafficLightGroupArray
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
@@ -101,6 +104,20 @@ class carla_ros2_interface(object):
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
             "flatten_steering_curve": (rclpy.Parameter.Type.BOOL, False),
+            # Publish CARLA traffic-light states as an Autoware
+            # TrafficLightGroupArray on
+            # /perception/traffic_light_recognition/traffic_signals.
+            "publish_traffic_lights": (rclpy.Parameter.Type.BOOL, False),
+            # Set every CARLA traffic light to green and freeze it there at
+            # startup (handled in carla_autoware). Useful for camera-less
+            # closed-loop runs that have no traffic-light recognition and would
+            # otherwise hold at every signalized stop line.
+            "force_green_traffic_lights": (rclpy.Parameter.Type.BOOL, False),
+            # Optional CARLA OpenDRIVE signal id -> Autoware traffic-light group
+            # id map, formatted "opendrive_id:group_id,opendrive_id:group_id".
+            # Empty uses the OpenDRIVE signal id directly as the group id; when a
+            # map is given, lights without an entry are not published.
+            "traffic_light_id_map": (rclpy.Parameter.Type.STRING, ""),
         }
 
         self.param_values = {}
@@ -157,6 +174,12 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state = self.ros2_node.create_publisher(
             HazardLightsReport, "/vehicle/status/hazard_lights_status", 1
         )
+        if self.param_values.get("publish_traffic_lights", False):
+            self.pub_traffic_signals = self.ros2_node.create_publisher(
+                TrafficLightGroupArray,
+                "/perception/traffic_light_recognition/traffic_signals",
+                1,
+            )
 
     def _initialize_subscriptions(self):
         """Initialize all ROS 2 subscriptions."""
@@ -318,7 +341,12 @@ class carla_ros2_interface(object):
         self.pub_camera_info = {}
         self.pub_lidar = {}
         self.pub_imu = None
+        self.pub_traffic_signals = None
         self.camera_info_cache = {}
+
+        # Traffic-light publishing caches (populated lazily on first tick).
+        self._traffic_light_actors = None
+        self._traffic_light_id_map_cache = None
 
         # Vehicle and control state
         self.prev_timestamp = None
@@ -1021,6 +1049,98 @@ class carla_ros2_interface(object):
         odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
         self.pub_gt_odom.publish(odom)
 
+    def _get_traffic_light_actors(self):
+        """Return (and cache) the world's traffic-light actors.
+
+        Traffic lights are static actors that do not spawn or despawn during a
+        run, so the world is queried only once and the result is reused every
+        tick.
+        """
+        if self._traffic_light_actors is not None:
+            return self._traffic_light_actors
+        world = CarlaDataProvider.get_world()
+        if world is None:
+            return None
+        self._traffic_light_actors = list(world.get_actors().filter("*traffic_light*"))
+        self.logger.info(
+            f"Publishing states for {len(self._traffic_light_actors)} CARLA traffic lights"
+        )
+        return self._traffic_light_actors
+
+    def _traffic_light_id_map(self):
+        """Parse and cache the OpenDRIVE-signal-id -> group-id map parameter."""
+        if self._traffic_light_id_map_cache is not None:
+            return self._traffic_light_id_map_cache
+        raw = str(self.param_values.get("traffic_light_id_map", "") or "").strip()
+        mapping = {}
+        for item in raw.split(","):
+            item = item.strip()
+            if not item:
+                continue
+            opendrive_str, group_str = item.split(":")
+            mapping[int(opendrive_str)] = int(group_str)
+        self._traffic_light_id_map_cache = mapping
+        return mapping
+
+    def _resolve_traffic_light_group_id(self, actor, id_map):
+        """Resolve a CARLA traffic-light actor to an Autoware group id.
+
+        With a non-empty id map, only lights present in the map are published
+        (unmapped lights return None); otherwise the OpenDRIVE signal id is used
+        directly as the group id.
+        """
+        try:
+            opendrive_id = int(actor.get_opendrive_id())
+        except (ValueError, RuntimeError):
+            return None
+        if id_map:
+            return id_map.get(opendrive_id)
+        return opendrive_id
+
+    @staticmethod
+    def _carla_state_to_autoware_color(state):
+        """Map a carla.TrafficLightState to a TrafficLightElement color."""
+        if state == carla.TrafficLightState.Red:
+            return TrafficLightElement.RED
+        if state == carla.TrafficLightState.Yellow:
+            return TrafficLightElement.AMBER
+        if state == carla.TrafficLightState.Green:
+            return TrafficLightElement.GREEN
+        return TrafficLightElement.UNKNOWN
+
+    def _publish_traffic_lights(self):
+        """Publish CARLA traffic-light states as a TrafficLightGroupArray.
+
+        No-op unless publish_traffic_lights is enabled (the publisher only
+        exists then). Each CARLA traffic light is reported as a solid circular
+        signal whose color reflects the current CARLA state; when
+        force_green_traffic_lights is set the lights are frozen green in CARLA,
+        so this naturally publishes green for all of them.
+        """
+        if self.pub_traffic_signals is None:
+            return
+        actors = self._get_traffic_light_actors()
+        if not actors:
+            return
+        id_map = self._traffic_light_id_map()
+
+        msg = TrafficLightGroupArray()
+        msg.stamp = self.get_msg_header(frame_id="map").stamp
+        for actor in actors:
+            group_id = self._resolve_traffic_light_group_id(actor, id_map)
+            if group_id is None:
+                continue
+            group = TrafficLightGroup()
+            group.traffic_light_group_id = group_id
+            element = TrafficLightElement()
+            element.color = self._carla_state_to_autoware_color(actor.get_state())
+            element.shape = TrafficLightElement.CIRCLE
+            element.status = TrafficLightElement.SOLID_ON
+            element.confidence = 1.0
+            group.elements.append(element)
+            msg.traffic_light_groups.append(group)
+        self.pub_traffic_signals.publish(msg)
+
     def _publish_sensor_data(self, key, data):
         """Publish one sensor's data, dispatching on its sensor type.
 
@@ -1096,6 +1216,9 @@ class carla_ros2_interface(object):
 
         # Publish ego vehicle status
         self.ego_status()
+
+        # Publish CARLA traffic-light states (no-op unless enabled)
+        self._publish_traffic_lights()
 
         # Thread-safe read of current control command
         with self._state_lock:

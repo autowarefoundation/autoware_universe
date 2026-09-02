@@ -160,6 +160,9 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `use_light_weight_sensor_mapping` | bool   | False                                                                             | If True, uses `sensor_mapping_light_weight.yaml` instead of the default `sensor_mapping.yaml` to reduce simulator load. See [Sensor Mapping (CARLA-specific)](#2-sensor-mapping-carla-specific) for details.        |
 | `sensor_mapping_file`             | string | "$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"           | Path to sensor mapping YAML configuration file. When `use_light_weight_sensor_mapping` is True, this defaults to `config/sensor_mapping_light_weight.yaml`.                                                         |
 | `config_file`                     | string | "$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml" | Control mapping file to be used in `autoware_raw_vehicle_cmd_converter`. Current control are calibrated based on `vehicle.toyota.prius` Blueprints ID in CARLA. Changing the vehicle type may need a recalibration. |
+| `publish_traffic_lights`          | bool   | False                                                                             | Publish CARLA traffic-light states on `/perception/traffic_light_recognition/traffic_signals` as an `autoware_perception_msgs/TrafficLightGroupArray`. See [Traffic Light Recognition](#traffic-light-recognition). |
+| `force_green_traffic_lights`      | bool   | False                                                                             | Set every CARLA traffic light to green and freeze it there at startup. Useful for camera-less closed-loop runs that have no traffic-light recognition and would otherwise hold at every signalized stop line.       |
+| `traffic_light_id_map`            | string | ""                                                                                | Optional CARLA OpenDRIVE signal id to Autoware traffic-light group id map, formatted `opendrive_id:group_id,opendrive_id:group_id`. Empty uses the OpenDRIVE signal id directly; with a map, unmapped lights are not published. |
 
 ### Sensor Configuration
 
@@ -334,6 +337,14 @@ The maps provided by the Carla Simulator ([Carla Lanelet2 Maps](https://bitbucke
 
 - When using the TIER IV Vector Map Builder, you must convert the PCD format from `binary_compressed` to `ascii`. You can use `pcl_tools` for this conversion.
 - For reference, an example of Town01 with added traffic lights at one intersection can be downloaded [here](https://drive.google.com/drive/folders/1QFU0p3C8NW71sT5wwdnCKXoZFQJzXfTG?usp=sharing).
+
+### Publishing CARLA Traffic-Light States
+
+Setting `publish_traffic_lights:=true` makes the bridge publish the CARLA server's traffic-light states directly on `/perception/traffic_light_recognition/traffic_signals`, bypassing camera-based recognition. Each CARLA traffic light is reported as a solid circular signal whose color follows the CARLA state (`Red`/`Yellow`/`Green` map to `RED`/`AMBER`/`GREEN`; anything else is `UNKNOWN`).
+
+Autoware groups traffic signals by `traffic_light_group_id`, which is the regulatory element id in the lanelet2 map. By default the CARLA OpenDRIVE signal id (`Actor.get_opendrive_id()`) is used as the group id, which matches lanelet2 maps generated so that regulatory element ids preserve the OpenDRIVE signal ids. When your map uses different ids, provide `traffic_light_id_map:="opendrive_id:group_id,..."` to translate them; lights without an entry are then omitted.
+
+To let the ego proceed through all intersections without any recognition setup — for example in camera-less closed-loop runs — set `force_green_traffic_lights:=true`. At startup this sets every CARLA traffic light to green and freezes it; combined with `publish_traffic_lights:=true` the frozen green states are also published on the topic above.
 
 ## Tips
 

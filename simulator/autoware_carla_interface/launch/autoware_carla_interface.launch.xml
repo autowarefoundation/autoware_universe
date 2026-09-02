@@ -52,6 +52,9 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
+    <arg name="publish_traffic_lights" default="false" description="Publish CARLA traffic-light states on /perception/traffic_light_recognition/traffic_signals"/>
+    <arg name="force_green_traffic_lights" default="false" description="Set every CARLA traffic light to green and freeze it there at startup (for camera-less closed-loop runs)"/>
+    <arg name="traffic_light_id_map" default="" description="Optional CARLA OpenDRIVE signal id to Autoware group id map, formatted &quot;opendrive_id:group_id,...&quot;; empty uses the OpenDRIVE signal id directly"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -79,6 +82,9 @@
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
       <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
+      <param name="publish_traffic_lights" value="$(var publish_traffic_lights)"/>
+      <param name="force_green_traffic_lights" value="$(var force_green_traffic_lights)"/>
+      <param name="traffic_light_id_map" value="$(var traffic_light_id_map)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>

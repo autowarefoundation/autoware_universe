@@ -328,6 +328,24 @@ class InitializeInterface(object):
         for vehicle in vehicles:
             vehicle.set_autopilot(True)
 
+    def _force_green_traffic_lights(self):
+        """Set every CARLA traffic light to green and freeze it there.
+
+        Camera-less closed-loop runs have no traffic-light recognition, so the
+        planner would otherwise hold indefinitely at every signalized stop
+        line. Freezing all lights green lets the ego proceed while still
+        exercising the rest of the stack. When publish_traffic_lights is also
+        enabled, carla_ros publishes these frozen green states on
+        /perception/traffic_light_recognition/traffic_signals.
+        """
+        traffic_lights = self.world.get_actors().filter("*traffic_light*")
+        count = 0
+        for traffic_light in traffic_lights:
+            traffic_light.set_state(carla.TrafficLightState.Green)
+            traffic_light.freeze(True)
+            count += 1
+        print(f"INFO: Forced {count} traffic lights to green and froze them.", flush=True)
+
     def load_world(self):
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
@@ -388,6 +406,9 @@ class InitializeInterface(object):
 
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
+
+        if self.interface.param_values.get("force_green_traffic_lights", False):
+            self._force_green_traffic_lights()
 
         if self.use_traffic_manager:
             self._setup_traffic_manager(client)
