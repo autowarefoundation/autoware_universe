@@ -223,14 +223,42 @@
               "type": "integer",
               "default": 5,
               "minimum": 1,
-              "description": "Number of leading segments of the previous trajectory searched for the closest one. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected."
+              "description": "Number of leading segments of the previous trajectory the closest point is searched in. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected."
+            },
+            "min_speed_mps": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Ego speed [m/s] below which the snap is skipped and the raw ego pose is kept. When nearly stopped the leading segments of the previous trajectory are only centimetres long and their direction is dominated by model noise."
+            },
+            "yaw_source": {
+              "type": "string",
+              "default": "polyline_tangent",
+              "enum": ["polyline_tangent", "predicted_heading"],
+              "description": "Heading of the snapped pose. 'polyline_tangent': tangent of the spline through the previous trajectory's xy positions, averaged over +-yaw_fit_half_window_m of arc length around the snapped point (robust to noise in the model's heading channel). 'predicted_heading': the vertex headings interpolated at the snapped point."
+            },
+            "yaw_fit_half_window_m": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Arc length [m] on each side of the snapped point over which the spline tangent is averaged when yaw_source is 'polyline_tangent'."
+            },
+            "yaw_fit_min_length_m": {
+              "type": "number",
+              "default": 0.2,
+              "minimum": 0,
+              "description": "Minimum total arc length [m] of the tangent fit window. Below it the geometry carries no reliable heading and the raw localization heading is used for the snapped pose instead."
             }
           },
           "required": [
             "enable",
             "max_position_error_m",
             "max_yaw_error_deg",
-            "max_search_segment_count"
+            "max_search_segment_count",
+            "min_speed_mps",
+            "yaw_source",
+            "yaw_fit_half_window_m",
+            "yaw_fit_min_length_m"
           ]
         },
         "guidance": {
