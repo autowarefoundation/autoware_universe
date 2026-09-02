@@ -157,7 +157,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `use_traffic_manager`             | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                         |
 | `max_real_delta_seconds`          | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                  |
 | `carla_map`                       | string | ""                                                                                | Explicit CARLA level name. When non-empty it overrides the name derived from `map_path`; useful for CARLA 0.10 levels whose name differs from the Autoware map directory. Empty reproduces the current behavior.     |
-| `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Default False leaves the world settings unchanged.                                                                                  |
+| `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default `False` (re-)enables rendering even if the server was started headless; set `True` to keep rendering off.                    |
 | `force_load_world`                | bool   | False                                                                             | Always reload the world with `client.load_world()` instead of `load_world_if_different()`. Default False reproduces the current call (with a version-tolerant fallback).                                             |
 | `map_origin_x`                    | double | 0.0                                                                               | X offset from the CARLA world origin to the Autoware map frame origin, for levels authored with their own local origin. Default 0.0 is the identity (no change).                                                     |
 | `map_origin_y`                    | double | 0.0                                                                               | Y offset from the CARLA world origin to the Autoware map frame origin. Default 0.0 is the identity (no change).                                                                                                      |
@@ -196,8 +196,10 @@ sample offsets (dx, dy in meters)
 - Taking the maximum selects the road surface rather than a lower seam or gap,
   so the vehicle sits on top of the road instead of sinking into it.
 
-On a CARLA API without `ground_projection`, snapping is skipped with a warning
-and the previous fixed z-offset is used, so enabling the flag never raises.
+On a CARLA API without `ground_projection`, snapping is skipped and the previous
+fixed z-offset is used, so enabling the flag never raises. The spawn-point path
+logs a warning when it falls back; the RViz initial-pose fallback is silent (and
+with the default random spawn the spawn-point path is not exercised at all).
 
 ### Sensor Configuration
 
