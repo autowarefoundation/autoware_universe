@@ -28,12 +28,13 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
@@ -41,7 +42,7 @@ using autoware::trajectory_processor::plugin::ProcessingResult;
 using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
+using autoware::trajectory_processor::plugin::ContinuousJerkSmoother;
 using autoware_internal_planning_msgs::msg::VelocityLimit;
 
 struct TrajectoryVelocityOptimizerParams
@@ -77,11 +78,11 @@ protected:
 private:
   std::shared_ptr<ContinuousJerkSmoother> continuous_jerk_smoother_{nullptr};
   TrajectoryVelocityOptimizerParams velocity_params_;
-  std::shared_ptr<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>
+  autoware::agnocast_wrapper::polling::PollingSubscriber<VelocityLimit>::SharedPtr
     sub_planning_velocity_;
-  rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
+  PublisherHandle<VelocityLimit> pub_velocity_limit_;
 };
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_

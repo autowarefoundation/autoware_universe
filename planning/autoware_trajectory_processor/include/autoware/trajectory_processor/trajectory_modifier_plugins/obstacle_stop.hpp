@@ -24,19 +24,20 @@
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
 using autoware::trajectory_processor::plugin::ProcessingResult;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
-using ModifierParams = trajectory_modifier_params::Params;
+using ModifierParams = trajectory_processor_params::Params;
 using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_internal_planning_msgs::msg::SafetyFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
@@ -88,10 +89,10 @@ private:
   std::unordered_map<utils::obstacle_stop::ObjectType, double> object_decel_map_;
 
   MarkerArray marker_array_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_filtered_pointcloud_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  PublisherHandle<visualization_msgs::msg::MarkerArray> debug_viz_pub_;
+  PublisherHandle<PointCloud2> pub_filtered_pointcloud_;
+  PublisherHandle<PointCloud2> pub_clustered_pointcloud_;
+  PublisherHandle<StringStamped> pub_debug_text_;
 
   void check_obstacles(const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
   std::optional<CollisionPoint> check_predicted_objects(
@@ -104,6 +105,6 @@ private:
   void publish_debug_string(bool is_safe) const;
 };
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_

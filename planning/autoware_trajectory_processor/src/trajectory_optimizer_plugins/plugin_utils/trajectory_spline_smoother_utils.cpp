@@ -27,7 +27,7 @@
 #include <cmath>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_spline_smoother_utils
+namespace autoware::trajectory_processor::plugin::trajectory_spline_smoother_utils
 {
 
 using autoware::experimental::trajectory::interpolator::AkimaSpline;
@@ -67,7 +67,7 @@ void apply_spline(
   double last_s{0.0};
   for (auto s = 0.0; s <= trajectory_interpolation_util->length(); s += ds) {
     auto p = trajectory_interpolation_util->compute(s);
-    if (!autoware::trajectory_optimizer::utils::validate_point(p)) {
+    if (!autoware::trajectory_processor::utils::validate_point(p)) {
       continue;
     }
     output_points.push_back(p);
@@ -88,11 +88,11 @@ void apply_spline(
   }
 
   if (preserve_original_orientation) {
-    autoware::trajectory_optimizer::utils::copy_trajectory_orientation(
+    autoware::trajectory_processor::utils::copy_trajectory_orientation(
       original_traj_points, output_points, max_distance_discrepancy_m, M_PI);
   }
 
   traj_points = output_points;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_spline_smoother_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_spline_smoother_utils

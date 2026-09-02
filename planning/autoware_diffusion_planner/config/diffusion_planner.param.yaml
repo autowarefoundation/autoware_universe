@@ -36,6 +36,14 @@
     delay_step: 0
     line_string_max_step_m: 5.0
     use_time_interpolation: false
+    object_motion_resampling:
+      enable: true                    # re-time neighbor histories onto a constant 0.1s grid anchored at the ego stamp
+      max_extrapolation_time: 0.5     # [s]  max extrapolation horizon (both forward from newest and backward from oldest observation)
+    ego_snap_to_prev_trajectory:
+      enable: false                   # snap the ego pose onto the closest segment of the previous planning trajectory
+      max_position_error_m: 0.3       # [m]   skip the snap when the actual ego pose is farther than this from the snapped pose
+      max_yaw_error_deg: 5.0          # [deg] skip the snap when the heading differs by more than this from the snapped pose
+      max_search_segment_count: 5     # number of leading segments of the previous trajectory searched for the closest one
     planning_factor:
       enable_stop: true
       enable_slowdown: false

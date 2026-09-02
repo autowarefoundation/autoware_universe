@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
 
 void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points)
@@ -67,50 +67,73 @@ double get_detection_length(
   return forward_traj_length + margin;
 }
 
-TrajectoryPoints extend_trajectory(
-  const TrajectoryPoints & trajectory_points, const double length, const double wheelbase_length)
+std::optional<std::pair<double, double>> get_curvature_at_end(
+  const TrajectoryPoints & trajectory_points, const double lookback_distance)
+{
+  // need at least 3 points to calculate curvature
+  if (trajectory_points.size() < 3) return std::nullopt;
+
+  const auto & last_p = trajectory_points.back();
+  const auto lookback_pose = motion_utils::calcLongitudinalOffsetPose(
+    trajectory_points, trajectory_points.size() - 1, -1.0 * lookback_distance);
+  if (!lookback_pose) return std::nullopt;
+
+  const auto mid_pose = motion_utils::calcLongitudinalOffsetPose(
+    trajectory_points, trajectory_points.size() - 1, -1.0 * lookback_distance / 2.0);
+  if (!mid_pose) return std::nullopt;
+
+  double curvature = 0.0;
+  try {
+    curvature = autoware_utils_geometry::calc_curvature(
+      lookback_pose.value().position, mid_pose.value().position, last_p.pose.position);
+  } catch (const std::exception &) {
+    return std::nullopt;
+  }
+
+  const auto yaw =
+    autoware_utils_geometry::calc_azimuth_angle(mid_pose.value().position, last_p.pose.position);
+  return std::make_pair(curvature, yaw);
+}
+
+TrajectoryPoints extend_trajectory(const TrajectoryPoints & trajectory_points, const double length)
 {
   if (length < 1e-3 || trajectory_points.empty()) return trajectory_points;
 
+  TrajectoryPoints extended_trajectory = trajectory_points;
+
   const auto & last_p = trajectory_points.back();
-  const auto yaw_last = tf2::getYaw(last_p.pose.orientation);
   constexpr double lookback_distance = 2.0;  // [m]
-  const auto lookback_pose = motion_utils::calcLongitudinalOffsetPose(
-    trajectory_points, trajectory_points.size() - 1, -1.0 * lookback_distance);
+  const auto curvature_at_end = get_curvature_at_end(trajectory_points, lookback_distance);
+  const auto [curvature, yaw] = curvature_at_end
+                                  ? curvature_at_end.value()
+                                  : std::pair{0.0, tf2::getYaw(last_p.pose.orientation)};
 
-  auto steering_angle = 0.0;
-  if (lookback_pose) {
-    const auto lookback_yaw = tf2::getYaw(lookback_pose.value().orientation);
-    const auto delta_yaw = autoware_utils_geometry::normalize_radian(yaw_last - lookback_yaw);
-    const auto k = delta_yaw / lookback_distance;
-    steering_angle = std::atan(k * wheelbase_length);
-  }
-
-  if (std::abs(steering_angle) < 1e-3) {
-    auto extended_trajectory = trajectory_points;
+  const auto end_vel = last_p.longitudinal_velocity_mps;
+  constexpr double low_speed_threshold = 0.5;
+  constexpr double low_curvature_threshold = 1e-3;
+  if (std::abs(curvature) < low_curvature_threshold || end_vel < low_speed_threshold) {
     auto p = trajectory_points.back();
+    p.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
     p.pose = autoware_utils::calc_offset_pose(p.pose, length, 0, 0);
     extended_trajectory.push_back(p);
     return extended_trajectory;
   }
 
-  const auto turn_radius = wheelbase_length / std::tan(steering_angle);
-  const auto yaw = tf2::getYaw(last_p.pose.orientation);
-
+  const auto turn_radius = 1.0 / curvature;
   constexpr double step = 0.5;
-  TrajectoryPoints extended_trajectory;
+  TrajectoryPoints extension_points;
   for (auto d = length; d > 0; d -= step) {
     auto p = last_p;
     const auto beta = d / turn_radius;
     p.pose.position.x += turn_radius * (std::sin(yaw + beta) - std::sin(yaw));
     p.pose.position.y += turn_radius * (std::cos(yaw) - std::cos(yaw + beta));
     p.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw + beta);
-    extended_trajectory.push_back(p);
+    extension_points.push_back(p);
   }
-  std::reverse(extended_trajectory.begin(), extended_trajectory.end());
+  std::reverse(extension_points.begin(), extension_points.end());
 
   extended_trajectory.insert(
-    extended_trajectory.begin(), trajectory_points.begin(), trajectory_points.end());
+    extended_trajectory.end(), extension_points.begin(), extension_points.end());
   return extended_trajectory;
 }
 
@@ -137,7 +160,7 @@ TrajectoryShape get_trajectory_shape(
       return motion_utils::cropForwardPoints(
         trajectory_points, ego_pose.position, start_idx, detection_length);
     }
-    return extend_trajectory(trajectory_points, stop_margin, vehicle_info.wheel_base_m);
+    return extend_trajectory(trajectory_points, stop_margin);
   });
 
   autoware_utils_geometry::LineString2d ls_front_right;
@@ -312,13 +335,13 @@ ObjectState get_object_state_at_time(
     motion_utils::findNearestSegmentIndex(trajectory_points, predicted_obj_pose.position);
   const auto p1 = trajectory_points.at(nearest_seg).pose.position;
   const auto p2 = trajectory_points.at(nearest_seg + 1).pose.position;
-  auto lon_vel = std::invoke([&]() -> double {
+  auto lon_vel = [&]() {
     const auto traj_dir = Eigen::Vector2d(p2.x - p1.x, p2.y - p1.y).normalized();
     const Eigen::Rotation2Dd obj_rot(tf2::getYaw(predicted_obj_pose.orientation));
     const auto obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
     const auto obj_vel_vector = obj_rot * Eigen::Vector2d(obj_vel.x, obj_vel.y);
     return std::max(0.0, obj_vel_vector.dot(traj_dir));
-  });
+  }();
 
   const auto obj_polygon = autoware_utils::to_polygon2d(predicted_obj_pose, object.shape);
   auto min_arc_length = std::numeric_limits<double>::max();
@@ -356,9 +379,15 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const PredictedObjects & target_objects, const ObjectDecelMap & object_decel_map,
   const double ego_decel, const double reaction_time, const double safety_margin,
-  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object)
+  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object,
+  const bool use_rss_check)
 {
   if (target_objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
+
+  // If RSS check is disabled, get the nearest object collision by pure geometric overlap.
+  if (!use_rss_check) {
+    return get_nearest_object_collision(trajectory_points, target_objects, colliding_object);
+  }
 
   const auto ego_front_offset = vehicle_info.max_longitudinal_offset_m;
 
@@ -384,14 +413,16 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   geometry_msgs::msg::Point nearest_collision_point;
   bool found_collision = false;
   bool is_dynamic_collision = false;
-  auto curr_arc_length = 0.0;
-  auto last_p = trajectory_points.front().pose.position;
-  for (const auto & traj_p : trajectory_points) {
-    const auto t = rclcpp::Duration(traj_p.time_from_start).seconds();
-    if (t > lookahead_horizon) break;
-    curr_arc_length += autoware_utils::calc_distance2d(last_p, traj_p.pose.position);
-    const auto target_ego_vel = traj_p.longitudinal_velocity_mps;
-    for (const auto & object : target_objects.objects) {
+
+  for (const auto & object : target_objects.objects) {
+    auto last_p = trajectory_points.front().pose.position;
+    auto curr_arc_length = 0.0;
+    for (const auto & traj_p : trajectory_points) {
+      const auto t = rclcpp::Duration(traj_p.time_from_start).seconds();
+      if (t > lookahead_horizon) break;
+      curr_arc_length += autoware_utils::calc_distance2d(last_p, traj_p.pose.position);
+      last_p = traj_p.pose.position;
+      const auto target_ego_vel = traj_p.longitudinal_velocity_mps;
       const auto obj_state = get_object_state_at_time(trajectory_points, object, t);
       const auto [safe, dynamic] =
         is_safe(object, obj_state.arc_length, obj_state.lon_vel, curr_arc_length, target_ego_vel);
@@ -403,8 +434,8 @@ std::optional<CollisionPoint> get_nearest_object_collision(
         nearest_collision_point = obj_state.nearest_point;
         is_dynamic_collision = dynamic;
       }
+      break;
     }
-    last_p = traj_p.pose.position;
   }
 
   if (!found_collision) return std::nullopt;
@@ -589,13 +620,14 @@ void ObstacleTracker::update_objects(
         existing_object.object.kinematics.initial_pose_with_covariance.pose.position);
       if (distance > min_distance) continue;
       // ignore orientation difference for cylinder objects
+      const bool is_symmetric =
+        std::abs(object.shape.dimensions.x - object.shape.dimensions.y) < 0.1;
       const auto yaw_diff =
-        object.shape.type == autoware_perception_msgs::msg::Shape::CYLINDER
-          ? 0.0
-          : std::abs(
-              autoware_utils_geometry::calc_yaw_deviation(
-                object.kinematics.initial_pose_with_covariance.pose,
-                existing_object.object.kinematics.initial_pose_with_covariance.pose));
+        is_symmetric ? 0.0
+                     : std::abs(
+                         autoware_utils_geometry::calc_yaw_deviation(
+                           object.kinematics.initial_pose_with_covariance.pose,
+                           existing_object.object.kinematics.initial_pose_with_covariance.pose));
       if (yaw_diff > object_yaw_th_) continue;
       min_distance = distance;
       closest_uuid = uuid;
@@ -671,4 +703,4 @@ void ObstacleTracker::update_points(
   }
 }
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop

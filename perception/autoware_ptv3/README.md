@@ -65,8 +65,16 @@ therefore guard against `NaN` before using the `entropy` field.
 
 {{ json_to_markdown("perception/autoware_ptv3/schema/ml_package_ptv3.schema.json") }}
 
-`filter.*` parameters are configured in `config/ptv3.param.yaml`, while class metadata and the
-visualization `palette` are configured in `config/ml_package_ptv3_seg3d_head.param.yaml`.
+`filter.*` and `class_mapping.*` parameters are configured in `config/ptv3.param.yaml`, while
+class metadata and the visualization `palette` are configured in
+`config/ml_package_ptv3_seg3d_head.param.yaml`.
+
+`segmentation3d.class_mapping` maps each segmentation class name to the
+`autoware::point_types::PointCloudClassification` value published in the segmentation point cloud's
+`class_id` field. Its keys must match `segmentation3d.class_names` exactly, and every entry of
+`class_names` must be present — the node fails to start otherwise, naming the missing class. This
+makes the consolidation of model classes (for example `traffic_cone`, `debris` and `vertical_thin`
+into `HAZARD`) a configuration choice rather than a compile-time constant.
 
 ### The `build_only` option
 

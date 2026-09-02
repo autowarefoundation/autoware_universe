@@ -17,7 +17,7 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
-#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
@@ -40,10 +40,10 @@
 
 namespace
 {
-using autoware::trajectory_modifier::plugin::ObstacleStop;
 using autoware::trajectory_processor::TrajectoryProcessorContext;
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ObstacleStop;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::test::process_plugin;
 using autoware_perception_msgs::msg::ObjectClassification;
@@ -243,8 +243,8 @@ protected:
     p.obstacle_tracking.pcd_distance_th = 0.5;
     p.obstacle_tracking.grace_period = 0.5;
 
-    p.objects.object_types = {"car"};
-    p.objects.max_velocity_th = 1.0;
+    p.objects.target_objects.bbox = {"car"};
+    p.objects.target_objects.polygon = {"car"};
 
     p.pointcloud.height_buffer = 0.5;
     p.pointcloud.min_height = 0.2;
@@ -268,7 +268,7 @@ protected:
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<ObstacleStop> plugin_;
-  trajectory_modifier_params::Params params_;
+  trajectory_processor_params::Params params_;
   std::shared_ptr<TrajectoryProcessorContext> context_;
 };
 
