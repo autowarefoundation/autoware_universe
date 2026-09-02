@@ -16,30 +16,20 @@
 
 #include <gtest/gtest.h>
 
-#include <iostream>
-
-constexpr int loop_limit = 10;
-
 TEST(TestSuite, ChangeStopMode)
 {
   auto [mock, main] = create_main_logic();
-  for (int i = 0; i < loop_limit; ++i) {
-    main->update();
-    mock->update();
-    if (mock->operation_mode_state && !mock->operation_mode_state->is_in_transition) break;
-  }
+  wait_transition(mock, main.get());
+  EXPECT_EQ(mock->trajectory_source.id, 101);
   EXPECT_EQ(mock->command_source.id, 11);
 }
 
 TEST(TestSuite, ChangeAutonomousMode)
 {
   auto [mock, main] = create_main_logic();
+  wait_transition(mock, main.get());
   main->change_operation_mode(OperationMode::kAutonomous);
-  for (int i = 0; i < loop_limit; ++i) {
-    main->update();
-    mock->update();
-    if (mock->operation_mode_state && !mock->operation_mode_state->is_in_transition) break;
-  }
-  EXPECT_EQ(mock->trajectory_source.id, 100);
+  wait_transition(mock, main.get());
+  EXPECT_EQ(mock->trajectory_source.id, 101);
   EXPECT_EQ(mock->command_source.id, 12);
 }

@@ -48,7 +48,7 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(test_${PROJECT_NAME}
     "test/util/mock.cpp"
     "test/util/util.cpp"
-    "test/test.cpp"
+    "test/test_transition.cpp"
   )
   target_include_directories(test_${PROJECT_NAME} PRIVATE
     "src"

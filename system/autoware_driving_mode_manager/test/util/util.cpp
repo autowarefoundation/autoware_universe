@@ -23,6 +23,13 @@
 
 InitData create_init_logic()
 {
+  PlatformModeTask::timeout = 1.0;
+  TrajectorySourceTask::timeout = 1.0;
+  CommandSourceTask::timeout = 1.0;
+  CommandFilterTask::timeout = 1.0;
+  WaitModeActiveTask::timeout = 1.0;
+  WaitModeStableTask::timeout = 5.0;
+
   auto plugin = std::make_shared<DefaultPlugin>();
   auto mock = std::make_unique<MockInterface>();
   InitData data;
@@ -51,4 +58,13 @@ void init_logic(ManagerInit & init)
   init.on_command_filter(CommandFilter{false});
   init.on_vehicle_control_mode(PlatformMode::kAutoware);
   EXPECT_TRUE(init.is_ready());
+}
+
+void wait_transition(MockInterface * mock, ManagerMain * main, int loop_limit)
+{
+  for (int i = 0; i < loop_limit; ++i) {
+    main->update();
+    mock->update();
+    if (mock->operation_mode_state && !mock->operation_mode_state->is_in_transition) break;
+  }
 }

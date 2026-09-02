@@ -36,5 +36,6 @@ struct MainData
 InitData create_init_logic();
 MainData create_main_logic();
 void init_logic(ManagerInit & init);
+void wait_transition(MockInterface * mock, ManagerMain * main, int loop_limit = 10);
 
 #endif  // UTIL__UTIL_HPP_
