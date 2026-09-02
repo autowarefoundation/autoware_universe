@@ -705,7 +705,10 @@ CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & 
   if (num_fields == 9 && point_types::is_data_layout_compatible_with_point_xyziradrt(fields)) {
     return CloudFormat::XYZIRADRT;
   }
-  if (num_fields == 6 && point_types::is_data_layout_compatible_with_point_xyzirc(fields)) {
+  // A 6-field cloud can still be padded, so pin the stride preprocessing assumes.
+  if (
+    num_fields == 6 && point_types::is_data_layout_compatible_with_point_xyzirc(fields) &&
+    cloud.point_step == get_point_step(CloudFormat::XYZIRC)) {
     return CloudFormat::XYZIRC;
   }
   if (num_fields == 4 && point_types::is_data_layout_compatible_with_point_xyzi(fields)) {
