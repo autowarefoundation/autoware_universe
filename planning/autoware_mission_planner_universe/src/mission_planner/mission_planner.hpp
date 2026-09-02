@@ -18,11 +18,10 @@
 #include "arrival_checker.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
 
-#include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
+#include <autoware/mission_planner_universe/default_planner.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/ros/logger_level_configure.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
-#include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -74,8 +73,7 @@ public:
 
 private:
   ArrivalChecker arrival_checker_;
-  pluginlib::ClassLoader<PlannerPlugin> plugin_loader_;
-  std::shared_ptr<PlannerPlugin> planner_;
+  std::shared_ptr<lanelet2::DefaultPlanner> planner_;
 
   std::string map_frame_;
   tf2_ros::Buffer tf_buffer_;
@@ -97,6 +95,7 @@ private:
 
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_vector_map_;
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_marker_;
+  rclcpp::Publisher<MarkerArray>::SharedPtr pub_goal_footprint_marker_;
   Odometry::ConstSharedPtr odometry_;
   OperationModeState::ConstSharedPtr operation_mode_state_;
   LaneletMapBin::ConstSharedPtr map_ptr_;

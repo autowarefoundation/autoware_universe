@@ -58,7 +58,7 @@ private:
   bool is_stop_active_{false};
   std::optional<rclcpp::Time> last_obstacle_found_time_;
 
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_debug_text_;
 
   [[nodiscard]] bool check_inputs(const ModifierData & data) const;
 
