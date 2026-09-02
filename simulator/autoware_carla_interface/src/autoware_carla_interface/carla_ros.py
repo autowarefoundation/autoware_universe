@@ -93,6 +93,12 @@ class carla_ros2_interface(object):
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
             "flatten_steering_curve": (rclpy.Parameter.Type.BOOL, False),
+            # Nudge the ego physics body awake when launching from a standstill.
+            # Only needed on CARLA 0.10 (UE5/Chaos), where a stationary body is
+            # put to sleep and VehicleControl throttle does not wake it. Off by
+            # default so the supported 0.9.15 environment, where bodies never
+            # sleep, keeps its unmodified launch dynamics.
+            "wake_sleeping_physics": (rclpy.Parameter.Type.BOOL, False),
         }
 
         self.param_values = {}
@@ -779,7 +785,13 @@ class carla_ros2_interface(object):
         external set_target_velocity kick wakes the body). Nudge the body awake
         whenever the stack is trying to pull away from a standstill; once
         rolling (speed > 0.05 m/s) this no-ops. Needs ``_state_lock`` held.
+
+        Gated behind ``wake_sleeping_physics`` (off by default): the kick
+        overrides launch dynamics at every standstill start, so it must not run
+        on the supported CARLA 0.9.15 environment, whose bodies never sleep.
         """
+        if not self.param_values.get("wake_sleeping_physics", False):
+            return
         if out_cmd.throttle <= 0.0 or in_cmd.actuation.brake_cmd > 0.0:
             return
         if self._ego_speed_mps() >= 0.05:
