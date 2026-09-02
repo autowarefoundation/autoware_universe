@@ -78,8 +78,9 @@ std::string stageGridCoordName(const std::size_t stage_index)
   return "point_grid_coord_" + std::to_string(stage_index);
 }
 
-/// IO tensor names the artifact declares. TrtCommon parses the ONNX in its constructor, so this
-/// is available before setup() builds or loads the engine.
+/// IO tensor names TrtCommon reports: the parsed ONNX before setup(), the built or loaded engine
+/// after it. Enumerating is also the only way to ask without side effects, since TensorRT logs an
+/// error for every name an engine does not have.
 std::unordered_set<std::string> declaredTensors(const autoware::tensorrt_common::TrtCommon & trt)
 {
   std::unordered_set<std::string> names;
@@ -98,8 +99,6 @@ void checkEncoderContract(
   const PTv3Config & config, const std::unordered_set<std::string> & declared,
   const std::unordered_set<std::string> & supported)
 {
-  // Subset, not free-for-all: a tensor the node cannot supply would otherwise reach enqueue with
-  // no address bound at all, so refuse the artifact instead.
   std::vector<std::string> unsupported;
   for (const auto & name : declared) {
     if (supported.count(name) == 0) {
@@ -128,6 +127,32 @@ void checkEncoderContract(
       "Encoder ONNX is missing required tensor(s): [" + joinSortedNames(missing) +
       "]. Check that the artifact matches the configured encoder channels.");
   }
+}
+
+/// Bind a device address for an encoder input, skipping the ones this artifact does not declare.
+///
+/// Encoder variants that gate blocks off read a subset of the contract, and the exporter drops
+/// what the traced graph never consumes. Binding is therefore driven by the artifact rather than
+/// by name, so no single input needs a case of its own.
+void bindIfDeclared(
+  autoware::tensorrt_common::TrtCommon & trt, const std::unordered_set<std::string> & declared,
+  const std::string & name, void * data)
+{
+  if (declared.count(name) == 0) {
+    return;
+  }
+  trt.setTensorAddress(name.c_str(), data);
+}
+
+/// Set this frame's shape for an encoder input, skipping the ones this artifact does not declare.
+[[nodiscard]] bool setShapeIfDeclared(
+  autoware::tensorrt_common::TrtCommon & trt, const std::unordered_set<std::string> & declared,
+  const std::string & name, const nvinfer1::Dims & dims)
+{
+  if (declared.count(name) == 0) {
+    return true;
+  }
+  return trt.setInputShape(name.c_str(), dims);
 }
 
 }  // namespace
@@ -479,20 +504,20 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
     throw std::runtime_error("Failed to setup encoder TRT engine.");
   }
 
+  // Enumerate again, now that setup() has made the engine the source of IO, and keep the names:
+  // the per-frame paths ask which tensors exist, and asking TensorRT name by name would make it
+  // log an error for each one a gated artifact leaves out.
+  encoder_tensors_ = declaredTensors(*encoder_trt_ptr_);
+
+  // grid_coord, feat and the point features are required of every variant; checkEncoderContract
+  // has already refused an artifact missing any of them.
   encoder_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
   encoder_trt_ptr_->setTensorAddress("feat", feat_d_.get());
-  if (encoderDeclares("serialized_code")) {
-    encoder_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
-  }
+  bindIfDeclared(*encoder_trt_ptr_, encoder_tensors_, "serialized_code", serialized_code_d_.get());
   for (std::size_t stage = 0; stage < stage_feat_d_.size(); ++stage) {
     encoder_trt_ptr_->setTensorAddress(stageFeatureName(stage).c_str(), stage_feat_d_[stage].get());
   }
   bindSerializedPoolingAddresses();
-}
-
-bool PTv3TRT::encoderDeclares(const std::string & name) const
-{
-  return encoder_trt_ptr_->getTensorIOMode(name.c_str()) != nvinfer1::TensorIOMode::kNONE;
 }
 
 std::array<std::int64_t, 3> PTv3TRT::stageProfileCounts(const std::size_t stage_index) const
@@ -627,11 +652,7 @@ void PTv3TRT::bindSerializedPoolingAddresses()
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
     auto & buffers = serialized_pooling_stages_d_[stage];
     const auto bind = [this, &prefix](const std::string & field, void * data) {
-      const auto name = prefix + field;
-      if (!encoderDeclares(name)) {
-        return;
-      }
-      encoder_trt_ptr_->setTensorAddress(name.c_str(), data);
+      bindIfDeclared(*encoder_trt_ptr_, encoder_tensors_, prefix + field, data);
     };
     bind("indices", buffers.indices.get());
     bind("indptr", buffers.indptr.get());
@@ -681,11 +702,7 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
     const auto out_count = serialized_pooling_num_voxels_[stage + 1];
     const auto set_shape = [this, &prefix, &success](
                              const std::string & field, const nvinfer1::Dims & dims) {
-      const auto name = prefix + field;
-      if (!encoderDeclares(name)) {
-        return;
-      }
-      success &= encoder_trt_ptr_->setInputShape(name.c_str(), dims);
+      success &= setShapeIfDeclared(*encoder_trt_ptr_, encoder_tensors_, prefix + field, dims);
     };
     set_shape("indices", nvinfer1::Dims{1, {in_count}});
     set_shape("indptr", nvinfer1::Dims{1, {out_count + 1}});
@@ -1059,8 +1076,11 @@ bool PTv3TRT::preProcess(
 
   encoder_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
   encoder_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
-  if (encoderDeclares("serialized_code")) {
-    encoder_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+  if (!setShapeIfDeclared(
+        *encoder_trt_ptr_, encoder_tensors_, "serialized_code",
+        nvinfer1::Dims{2, {2, num_voxels_}})) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Failed to set serialized_code input shape.");
+    return false;
   }
 
   if (!setSerializedPoolingInputShapes()) {
