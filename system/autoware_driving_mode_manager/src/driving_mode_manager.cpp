@@ -14,6 +14,7 @@
 
 #include "driving_mode_manager.hpp"
 
+#include "core/task.hpp"
 #include "ros_interface.hpp"
 
 #include <memory>
@@ -41,6 +42,18 @@ DrivingModeManager::DrivingModeManager(const rclcpp::NodeOptions & options)
 
   const auto period = rclcpp::Rate(rate_).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer_init(); });
+
+  const auto gate_change_timeout = declare_parameter<double>("timeouts.gate_change");
+  PlatformModeTask::timeout = gate_change_timeout;
+  TrajectorySourceTask::timeout = gate_change_timeout;
+  CommandSourceTask::timeout = gate_change_timeout;
+  CommandFilterTask::timeout = gate_change_timeout;
+
+  const auto mode_active_timeout = declare_parameter<double>("timeouts.mode_active");
+  WaitModeActiveTask::timeout = mode_active_timeout;
+
+  const auto mode_stable_timeout = declare_parameter<double>("timeouts.mode_stable");
+  WaitModeStableTask::timeout = mode_stable_timeout;
 }
 
 void DrivingModeManager::on_timer_init()
