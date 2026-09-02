@@ -426,14 +426,30 @@ class InitializeInterface(object):
                 self.prev_tick_wall_time = time.time()
                 self.bridge_loop._tick_sensor(timestamp)
 
+    @staticmethod
+    def _next_frame(frame_queue):
+        """Block for the next frame; drain to the newest one if several queued.
+
+        Returns (timestamp, skipped) where timestamp is None when no frame
+        arrived within the timeout (the tick owner is not running yet, or has
+        stopped). Skipped frames are dropped because sensor data is perishable.
+        """
+        try:
+            timestamp = frame_queue.get(timeout=1.0)
+        except queue.Empty:
+            return None, 0
+        skipped = 0
+        while not frame_queue.empty():  # single consumer: get_nowait cannot fail
+            timestamp = frame_queue.get_nowait()
+            skipped += 1
+        return timestamp, skipped
+
     def _run_bridge_follower(self):
         """Consume the frames another client ticks, without ticking the world.
 
         Frames arrive through world.on_tick() rather than wait_for_tick(),
         which only reports the frames that arrive while it is being awaited
-        and so loses one whenever an iteration runs long. When this loop does
-        fall behind it drains the queue to the newest frame, because sensor
-        data is perishable.
+        and so loses one whenever an iteration runs long.
         """
         world = CarlaDataProvider.get_world()
         frame_queue = queue.Queue()
@@ -443,18 +459,9 @@ class InitializeInterface(object):
         skipped_total = 0
         try:
             while self.bridge_loop.running:
-                try:
-                    timestamp = frame_queue.get(timeout=1.0)
-                except queue.Empty:
-                    # The tick owner is not running yet, or has stopped.
+                timestamp, skipped = self._next_frame(frame_queue)
+                if timestamp is None:
                     continue
-                skipped = 0
-                while True:
-                    try:
-                        timestamp = frame_queue.get_nowait()
-                        skipped += 1
-                    except queue.Empty:
-                        break
                 if skipped:
                     skipped_total += skipped
                     logger.warning(
