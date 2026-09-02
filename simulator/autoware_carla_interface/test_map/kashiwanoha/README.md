@@ -1,8 +1,8 @@
 # Kashiwanoha test map
 
 `kashiwanoha.xodr` is the OpenDRIVE for a real site, the Kashiwanoha Campus area in Kashiwa, Chiba,
-converted from a lanelet2 map this repository already carries. It is here because CARLA has no map
-of this area, so the OpenDRIVE is the one piece that cannot be obtained elsewhere.
+converted from a lanelet2 map this repository already carries. CARLA has no map of this area, so it
+needs the road network in a form it can build a world from.
 
 Follow the [package README](../../README.md) for everything else: installing CARLA, building, and
 launching. Only what differs from the CARLA towns described there is written below.
@@ -79,14 +79,7 @@ Converted from `planning/autoware_diffusion_planner/test_map/lanelet2_map.osm` (
 `4fe358f2d1e182dc76de296e5619086f8d8ad2fcab3e6d8f99f6e3d724a84e6d`) with
 [tier4/autoware_lanelet2_to_opendrive] v2.62.0, targeting CARLA, using the origin above and
 left-hand traffic. No manual edits were made to the network: every merge, move, delete and remove
-operation the converter offers was left empty. The result passes the ASAM OpenDRIVE quality checker.
-Being derived from a file in this repository, it carries the same Apache-2.0 license.
+operation the converter offers was left empty. Being derived from a file in this repository, it
+carries the same Apache-2.0 license.
 
 [tier4/autoware_lanelet2_to_opendrive]: https://github.com/tier4/autoware_lanelet2_to_opendrive
-
-## The map itself
-
-293.6 m east to west by 435.7 m north to south, 190 lanelets and 10 traffic lights. Its lane widths
-and curvature are those of a real site rather than of a CARLA town, so a goal pose on one of the
-narrower lanes is rejected with `Goal's footprint exceeds lane!`; moving it to a wider stretch
-clears it. Traffic light recognition was not exercised.
