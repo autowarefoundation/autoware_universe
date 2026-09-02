@@ -226,6 +226,12 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.max_search_segment_count", 5);
   params_.ego_snap_to_prev_trajectory.min_speed_mps =
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.min_speed_mps", 1.0);
+  params_.ego_snap_to_prev_trajectory.limit_mode =
+    this->declare_parameter<std::string>("ego_snap_to_prev_trajectory.limit_mode", "bound");
+  params_.ego_snap_to_prev_trajectory.correction_gain =
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.correction_gain", 0.1);
+  params_.ego_snap_to_prev_trajectory.history_prefix_count =
+    this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.history_prefix_count", 10);
   params_.ego_snap_to_prev_trajectory.yaw_source = this->declare_parameter<std::string>(
     "ego_snap_to_prev_trajectory.yaw_source", "polyline_tangent");
   params_.ego_snap_to_prev_trajectory.yaw_fit_half_window_m =
@@ -367,6 +373,15 @@ SetParametersResult DiffusionPlanner::on_parameter(
       parameters, "ego_snap_to_prev_trajectory.min_speed_mps",
       temp_params.ego_snap_to_prev_trajectory.min_speed_mps);
     update_param<std::string>(
+      parameters, "ego_snap_to_prev_trajectory.limit_mode",
+      temp_params.ego_snap_to_prev_trajectory.limit_mode);
+    update_param<double>(
+      parameters, "ego_snap_to_prev_trajectory.correction_gain",
+      temp_params.ego_snap_to_prev_trajectory.correction_gain);
+    update_param<int64_t>(
+      parameters, "ego_snap_to_prev_trajectory.history_prefix_count",
+      temp_params.ego_snap_to_prev_trajectory.history_prefix_count);
+    update_param<std::string>(
       parameters, "ego_snap_to_prev_trajectory.yaw_source",
       temp_params.ego_snap_to_prev_trajectory.yaw_source);
     update_param<double>(
@@ -389,13 +404,26 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "guidance.centerline_guidance.start_time_s",
       temp_params.centerline_guidance_start_time_s);
-    if (const auto & yaw_source = temp_params.ego_snap_to_prev_trajectory.yaw_source;
-        yaw_source != "predicted_heading" && yaw_source != "polyline_tangent") {
-      SetParametersResult result;
-      result.successful = false;
-      result.reason =
-        "ego_snap_to_prev_trajectory.yaw_source must be 'predicted_heading' or 'polyline_tangent'";
-      return result;
+    {
+      const auto & snap = temp_params.ego_snap_to_prev_trajectory;
+      std::string reason;
+      if (snap.yaw_source != "predicted_heading" && snap.yaw_source != "polyline_tangent") {
+        reason =
+          "ego_snap_to_prev_trajectory.yaw_source must be 'predicted_heading' or "
+          "'polyline_tangent'";
+      } else if (snap.limit_mode != "reject" && snap.limit_mode != "bound") {
+        reason = "ego_snap_to_prev_trajectory.limit_mode must be 'reject' or 'bound'";
+      } else if (snap.correction_gain < 0.0 || snap.correction_gain > 1.0) {
+        reason = "ego_snap_to_prev_trajectory.correction_gain must be in [0, 1]";
+      } else if (snap.history_prefix_count < 0) {
+        reason = "ego_snap_to_prev_trajectory.history_prefix_count must be >= 0";
+      }
+      if (!reason.empty()) {
+        SetParametersResult result;
+        result.successful = false;
+        result.reason = reason;
+        return result;
+      }
     }
     if (temp_params.trt_precision != "fp32" && temp_params.trt_precision != "fp16") {
       SetParametersResult result;

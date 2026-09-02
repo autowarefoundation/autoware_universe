@@ -231,6 +231,19 @@
               "minimum": 0,
               "description": "Ego speed [m/s] below which the snap is skipped and the raw ego pose is kept. When nearly stopped the leading segments of the previous trajectory are only centimetres long and their direction is dominated by model noise."
             },
+            "limit_mode": {
+              "type": "string",
+              "default": "bound",
+              "enum": ["bound", "reject"],
+              "description": "Behaviour at the error limits. 'bound': the snapped pose is pulled toward the raw pose so it never differs by more than max_position_error_m / max_yaw_error_deg (continuous, no step). 'reject': the snap is skipped for the frame and the raw pose is used."
+            },
+            "correction_gain": {
+              "type": "number",
+              "default": 0.1,
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Bound mode only. Fraction of the (raw - snapped) residual re-injected into the snapped pose every frame. 0 keeps the pose exactly on the previous plan; 0.1 lets the virtual pose follow reality with a time constant of about 10 frames."
+            },
             "yaw_source": {
               "type": "string",
               "default": "polyline_tangent",
@@ -248,6 +261,12 @@
               "default": 0.2,
               "minimum": 0,
               "description": "Minimum total arc length [m] of the tangent fit window. Below it the geometry carries no reliable heading and the raw localization heading is used for the snapped pose instead."
+            },
+            "history_prefix_count": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 0,
+              "description": "Number of earlier ego poses (the virtual poses of the previous frames) prepended to the previous trajectory before snapping. They extend the spline behind the snapped point so the tangent window stays symmetric and long although the ego is always within the first metre of the previous trajectory."
             }
           },
           "required": [
@@ -256,9 +275,12 @@
             "max_yaw_error_deg",
             "max_search_segment_count",
             "min_speed_mps",
+            "limit_mode",
+            "correction_gain",
             "yaw_source",
             "yaw_fit_half_window_m",
-            "yaw_fit_min_length_m"
+            "yaw_fit_min_length_m",
+            "history_prefix_count"
           ]
         },
         "guidance": {

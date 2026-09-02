@@ -28,6 +28,7 @@
 
 #include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 
 #ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 #include "autoware/diffusion_planner/inference/onnxruntime_inference.hpp"
@@ -385,9 +386,25 @@ DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic
   // The previous trajectory is the polyline formed by the previous planning start pose followed
   // by the previous ego prediction (batch 0, agent 0), i.e. OUTPUT_T + 1 vertices spaced by one
   // prediction time step.
+  // It is preceded by up to history_prefix_count distinct earlier ego poses (newest of them is the
+  // previous planning start itself, so it is skipped) to extend the spline behind the ego.
   const auto & prev_poses = last_agent_poses_map_[0][0];
-  std::vector<Eigen::Matrix4d> prev_trajectory;
-  prev_trajectory.reserve(prev_poses.size() + 1);
+  std::vector<Eigen::Matrix4d> prefix;
+  for (auto it = ego_history_.rbegin(); it != ego_history_.rend(); ++it) {
+    if (static_cast<int64_t>(prefix.size()) >= snap_params.history_prefix_count) {
+      break;
+    }
+    const Eigen::Matrix4d pose = utils::pose_to_matrix4d(it->pose.pose);
+    const Eigen::Matrix4d & next =
+      prefix.empty() ? last_ego_to_map_transform_.value() : prefix.back();
+    constexpr double MIN_SPACING_M = 0.05;
+    if ((pose.block<2, 1>(0, 3) - next.block<2, 1>(0, 3)).norm() < MIN_SPACING_M) {
+      continue;
+    }
+    prefix.push_back(pose);
+  }
+  std::vector<Eigen::Matrix4d> prev_trajectory(prefix.rbegin(), prefix.rend());
+  prev_trajectory.reserve(prefix.size() + prev_poses.size() + 1);
   prev_trajectory.push_back(last_ego_to_map_transform_.value());
   prev_trajectory.insert(prev_trajectory.end(), prev_poses.begin(), prev_poses.end());
 
@@ -395,8 +412,8 @@ DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic
   const std::optional<utils::TrajectorySnap> snap = utils::snap_point_to_trajectory(
     position.x, position.y, prev_trajectory,
     utils::TrajectorySnapOptions{
-      snap_params.max_search_segment_count, snap_params.yaw_fit_half_window_m,
-      snap_params.yaw_fit_min_length_m});
+      static_cast<int64_t>(prefix.size()), snap_params.max_search_segment_count,
+      snap_params.yaw_fit_half_window_m, snap_params.yaw_fit_min_length_m});
   if (!snap) {
     return std::nullopt;
   }
@@ -411,25 +428,30 @@ DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic
                                ? snap->tangent_yaw.value_or(current_yaw)
                                : snap->heading_yaw;
 
-  // Reject the snap when the actual ego pose is too far (in position or heading) from the snapped
-  // pose: the previous planning trajectory then no longer reflects reality (e.g. large tracking
-  // error or a disturbance) and keeping the raw ego pose is safer than forcing it onto a stale
-  // trajectory.
-  const double position_error_m =
-    std::hypot(position.x - snap->position.x(), position.y - snap->position.y());
-  const double yaw_error_deg =
-    std::abs(autoware_utils_math::normalize_radian(current_yaw - snapped_yaw)) * 180.0 / M_PI;
-  if (
-    position_error_m > snap_params.max_position_error_m ||
-    yaw_error_deg > snap_params.max_yaw_error_deg) {
-    return std::nullopt;
+  // The previous planning trajectory may no longer reflect reality (large tracking error, a
+  // disturbance): the snapped pose is kept within max_position_error_m / max_yaw_error_deg of the
+  // raw pose, either by skipping the snap ("reject") or by bounding it continuously ("bound").
+  const Eigen::Vector2d real_position(position.x, position.y);
+  const double max_yaw_error_rad = autoware_utils_math::deg2rad(snap_params.max_yaw_error_deg);
+  utils::BoundedPose virtual_pose{snap->position, snapped_yaw};
+  if (snap_params.limit_mode == "bound") {
+    virtual_pose = utils::bound_snapped_pose(
+      real_position, current_yaw, snap->position, snapped_yaw, snap_params.correction_gain,
+      snap_params.max_position_error_m, max_yaw_error_rad);
+  } else {
+    const double position_error_m = (real_position - snap->position).norm();
+    const double yaw_error_rad =
+      std::abs(autoware_utils_math::normalize_radian(current_yaw - snapped_yaw));
+    if (position_error_m > snap_params.max_position_error_m || yaw_error_rad > max_yaw_error_rad) {
+      return std::nullopt;
+    }
   }
 
   Eigen::Matrix4d snapped_pose = Eigen::Matrix4d::Identity();
   snapped_pose.block<3, 3>(0, 0) =
-    Eigen::AngleAxisd(snapped_yaw, Eigen::Vector3d::UnitZ()).toRotationMatrix();
-  snapped_pose(0, 3) = snap->position.x();
-  snapped_pose(1, 3) = snap->position.y();
+    Eigen::AngleAxisd(virtual_pose.yaw, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+  snapped_pose(0, 3) = virtual_pose.position.x();
+  snapped_pose(1, 3) = virtual_pose.position.y();
   snapped_pose(2, 3) = kinematic_state.pose.pose.position.z;
   return std::make_pair(
     snapped_pose, snap->interpolation_index * constants::PREDICTION_TIME_STEP_S);

@@ -133,6 +133,19 @@ struct EgoSnapParams
   // Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose.
   double max_yaw_error_deg;
 
+  // What happens at the error limits:
+  //  - "reject": the snap is skipped for the frame and the raw pose is used (a step in the ego pose
+  //    and in the ego history whenever the limit is crossed).
+  //  - "bound": the snapped pose is pulled toward the raw pose so it never exceeds the limits
+  //    (utils::bound_snapped_pose); continuous, no step.
+  std::string limit_mode;
+
+  // Fraction of the (raw - snapped) residual re-injected into the snapped pose every frame, in
+  // [0, 1]. 0 keeps the pose exactly on the previous plan; small values let the virtual pose follow
+  // reality with a time constant of about 1 / gain frames instead of accumulating tracking error
+  // until the limit is hit. Only used with limit_mode "bound".
+  double correction_gain;
+
   // Number of leading segments of the previous trajectory searched for the closest one. The
   // planning cycle only advances the ego by ~1 segment, so a small window is enough and it keeps
   // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
@@ -154,6 +167,12 @@ struct EgoSnapParams
   std::string yaw_source;
   double yaw_fit_half_window_m;
   double yaw_fit_min_length_m;
+
+  // Number of earlier ego poses (from the ego history, i.e. the virtual poses of the previous
+  // frames) prepended to the previous trajectory before snapping. They extend the spline behind the
+  // snapped point so the tangent window stays symmetric and long even though the ego is always
+  // within the first metre of the previous trajectory.
+  int64_t history_prefix_count;
 };
 
 struct DiffusionPlannerParams

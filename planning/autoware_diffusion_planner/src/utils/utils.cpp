@@ -20,6 +20,7 @@
 #include "autoware/trajectory/utils/closest.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_math/normalization.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -185,8 +186,11 @@ std::optional<double> windowed_tangent_yaw(
   const autoware::experimental::trajectory::Trajectory<geometry_msgs::msg::Pose> & trajectory,
   const double s, const double half_window_m, const double min_length_m)
 {
-  const double lo = std::max(0.0, s - half_window_m);
-  const double hi = std::min(trajectory.length(), s + half_window_m);
+  // Symmetric window: shrink it when it would run past either end so the mean is not biased
+  // toward one side of the snapped point (the point sits close to the start of a prediction).
+  const double half = std::min({half_window_m, s, trajectory.length() - s});
+  const double lo = s - half;
+  const double hi = s + half;
   if (hi - lo < min_length_m) {
     return std::nullopt;
   }
@@ -213,9 +217,13 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
   if (options.max_search_segment_count < 1) {
     throw std::runtime_error("snap_point_to_trajectory requires max_search_segment_count >= 1");
   }
+  if (options.prefix_count < 0) {
+    throw std::runtime_error("snap_point_to_trajectory requires prefix_count >= 0");
+  }
 
   const std::vector<geometry_msgs::msg::Pose> poses = leading_distinct_poses(polyline);
-  if (poses.size() < 2) {
+  const size_t prefix = static_cast<size_t>(options.prefix_count);
+  if (poses.size() < prefix + 2) {
     return std::nullopt;
   }
   const auto trajectory =
@@ -224,14 +232,19 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
     return std::nullopt;
   }
 
-  const std::vector<double> bases = trajectory->get_underlying_bases();
+  // Bases of the trajectory proper: vertex `prefix` is the trajectory start (s_start).
+  const std::vector<double> all_bases = trajectory->get_underlying_bases();
+  const std::vector<double> bases(all_bases.begin() + prefix, all_bases.end());
+  const double search_start_s = bases.front();
   const double search_end_s = bases[std::min<size_t>(
     static_cast<size_t>(options.max_search_segment_count), bases.size() - 1)];
   geometry_msgs::msg::Point query;
   query.x = query_x;
   query.y = query_y;
   const std::optional<double> s = autoware::experimental::trajectory::closest_with_constraint(
-    *trajectory, query, [search_end_s](const double & s) { return s <= search_end_s; });
+    *trajectory, query, [search_start_s, search_end_s](const double & s) {
+      return search_start_s <= s && s <= search_end_s;
+    });
   if (!s) {
     return std::nullopt;
   }
@@ -243,6 +256,34 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
     autoware_utils_geometry::get_rpy(snapped.orientation).z,
     windowed_tangent_yaw(
       *trajectory, *s, options.yaw_fit_half_window_m, options.yaw_fit_min_length_m)};
+  ;
+}
+
+BoundedPose bound_snapped_pose(
+  const Eigen::Vector2d & real_position, const double real_yaw,
+  const Eigen::Vector2d & snapped_position, const double snapped_yaw, const double correction_gain,
+  const double max_position_error_m, const double max_yaw_error_rad)
+{
+  if (correction_gain < 0.0 || correction_gain > 1.0) {
+    throw std::runtime_error("bound_snapped_pose requires correction_gain in [0, 1]");
+  }
+  if (max_position_error_m <= 0.0 || max_yaw_error_rad <= 0.0) {
+    throw std::runtime_error("bound_snapped_pose requires positive error limits");
+  }
+  const double keep = 1.0 - correction_gain;
+
+  Eigen::Vector2d residual = keep * (real_position - snapped_position);
+  const double norm = residual.norm();
+  if (norm > max_position_error_m) {
+    residual *= max_position_error_m / norm;
+  }
+
+  const double yaw_residual = std::clamp(
+    keep * autoware_utils_math::normalize_radian(real_yaw - snapped_yaw), -max_yaw_error_rad,
+    max_yaw_error_rad);
+
+  return BoundedPose{
+    real_position - residual, autoware_utils_math::normalize_radian(real_yaw - yaw_residual)};
 }
 
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)

@@ -194,7 +194,7 @@ std::vector<Eigen::Matrix4d> straight_polyline(const size_t count, const double 
   return polyline;
 }
 
-constexpr utils::TrajectorySnapOptions default_options{5, 1.0, 0.2};
+constexpr utils::TrajectorySnapOptions default_options{0, 5, 1.0, 0.2};
 }  // namespace
 
 // A query point lying exactly on a vertex of a straight polyline is a no-op: same position, same
@@ -233,7 +233,7 @@ TEST_F(UtilsTest, SnapPointToTrajectoryLateralOffset)
 TEST_F(UtilsTest, SnapPointToTrajectoryRespectsSearchWindow)
 {
   const auto polyline = straight_polyline(10, 1.0);
-  const utils::TrajectorySnapOptions options{3, 1.0, 0.2};
+  const utils::TrajectorySnapOptions options{0, 3, 1.0, 0.2};
 
   const auto snap = utils::snap_point_to_trajectory(8.0, 0.0, polyline, options);
 
@@ -273,7 +273,9 @@ TEST_F(UtilsTest, SnapPointToTrajectoryTangentIsRobustToPositionJitter)
     polyline.push_back(make_pose(static_cast<double>(i) * 0.1, jitter_y, 0.0));
   }
 
-  const auto snap = utils::snap_point_to_trajectory(0.35, 0.0, polyline, default_options);
+  // 1.35 m from the start so the symmetric +-1 m window is not clipped.
+  const auto snap = utils::snap_point_to_trajectory(
+    1.35, 0.0, polyline, utils::TrajectorySnapOptions{0, 20, 1.0, 0.2});
 
   ASSERT_TRUE(snap.has_value());
   ASSERT_TRUE(snap->tangent_yaw.has_value());
@@ -307,7 +309,7 @@ TEST_F(UtilsTest, SnapPointToTrajectoryTangentOnArc)
 TEST_F(UtilsTest, SnapPointToTrajectoryNoTangentOnTooShortWindow)
 {
   const auto polyline = straight_polyline(3, 0.05);  // 10 cm in total
-  const utils::TrajectorySnapOptions options{5, 1.0, 0.2};
+  const utils::TrajectorySnapOptions options{0, 5, 1.0, 0.2};
 
   const auto snap = utils::snap_point_to_trajectory(0.05, 0.0, polyline, options);
 
@@ -340,10 +342,108 @@ TEST_F(UtilsTest, SnapPointToTrajectoryReturnsNulloptOnDegeneratePolyline)
   EXPECT_FALSE(utils::snap_point_to_trajectory(0.0, 0.0, {}, default_options).has_value());
 }
 
+// The tangent window is symmetric around the snapped point: close to the start of the polyline it
+// shrinks instead of extending forward only, so a curve does not bias the heading into the turn.
+TEST_F(UtilsTest, SnapPointToTrajectoryTangentWindowIsSymmetricNearStart)
+{
+  constexpr double radius = 10.0;
+  std::vector<Eigen::Matrix4d> polyline;
+  for (size_t i = 0; i < 40; ++i) {
+    const double theta = static_cast<double>(i) * 0.25 / radius;  // 0.25 m arc steps
+    polyline.push_back(
+      make_pose(radius * std::sin(theta), radius * (1.0 - std::cos(theta)), theta));
+  }
+  const double query_theta = 0.5 / radius;  // 0.5 m from the start; a +-1 m window would clip
+  const auto snap = utils::snap_point_to_trajectory(
+    radius * std::sin(query_theta), radius * (1.0 - std::cos(query_theta)), polyline,
+    utils::TrajectorySnapOptions{0, 5, 1.0, 0.2});
+
+  ASSERT_TRUE(snap.has_value());
+  ASSERT_TRUE(snap->tangent_yaw.has_value());
+  // A forward-only window [0, 1.5] would average to ~0.075 rad; symmetric [0, 1.0] gives 0.05.
+  EXPECT_NEAR(*snap->tangent_yaw, query_theta, 2e-3);
+}
+
+// Prefix vertices extend the spline behind the trajectory start: the closest point is still
+// searched from the trajectory start, interpolation_index stays relative to it, and the tangent
+// window can now reach behind the snapped point instead of shrinking.
+TEST_F(UtilsTest, SnapPointToTrajectoryPrefixExtendsWindowBackwards)
+{
+  std::vector<Eigen::Matrix4d> polyline;
+  for (int i = -10; i < 20; ++i) {  // 10 prefix vertices at x<0, trajectory from x=0
+    const double jitter_y = (i % 2 == 0) ? 0.01 : -0.01;
+    polyline.push_back(make_pose(static_cast<double>(i) * 0.1, jitter_y, 0.0));
+  }
+  const utils::TrajectorySnapOptions options{10, 5, 1.0, 0.2};
+
+  // Query behind the trajectory start: must clamp onto the start, not onto the prefix.
+  const auto behind = utils::snap_point_to_trajectory(-0.5, 0.0, polyline, options);
+  ASSERT_TRUE(behind.has_value());
+  EXPECT_NEAR(behind->position.x(), 0.0, 1e-6);
+  EXPECT_NEAR(behind->interpolation_index, 0.0, 1e-6);
+
+  // Query 0.35 m in: a symmetric +-1 m window is available thanks to the prefix, so the jittered
+  // headings average out where a prefix-less polyline would only offer +-0.35 m.
+  const auto snap = utils::snap_point_to_trajectory(0.35, 0.0, polyline, options);
+  ASSERT_TRUE(snap.has_value());
+  EXPECT_NEAR(snap->interpolation_index, 3.5, 0.2);
+  ASSERT_TRUE(snap->tangent_yaw.has_value());
+  EXPECT_NEAR(*snap->tangent_yaw, 0.0, 0.02);
+}
+
+TEST_F(UtilsTest, BoundSnappedPoseKeepsSnappedPoseWhenGainIsZero)
+{
+  const auto b = utils::bound_snapped_pose(
+    Eigen::Vector2d(0.1, 0.2), 0.05, Eigen::Vector2d(0.0, 0.0), 0.0, 0.0, 0.3, 0.1);
+  EXPECT_NEAR(b.position.x(), 0.0, 1e-9);
+  EXPECT_NEAR(b.position.y(), 0.0, 1e-9);
+  EXPECT_NEAR(b.yaw, 0.0, 1e-9);
+}
+
+TEST_F(UtilsTest, BoundSnappedPoseLeaksResidualByGain)
+{
+  const auto b = utils::bound_snapped_pose(
+    Eigen::Vector2d(0.2, 0.0), 0.04, Eigen::Vector2d(0.0, 0.0), 0.0, 0.25, 0.3, 0.1);
+  // virtual = snapped + gain * (real - snapped)
+  EXPECT_NEAR(b.position.x(), 0.05, 1e-9);
+  EXPECT_NEAR(b.yaw, 0.01, 1e-9);
+}
+
+// Beyond the limits the pose is saturated at the limit from the real pose instead of being
+// rejected, so the output is continuous in the residual.
+TEST_F(UtilsTest, BoundSnappedPoseSaturatesAtLimits)
+{
+  const auto b = utils::bound_snapped_pose(
+    Eigen::Vector2d(0.0, 1.0), 0.5, Eigen::Vector2d(0.0, 0.0), 0.0, 0.0, 0.3, 0.1);
+  EXPECT_NEAR(b.position.x(), 0.0, 1e-9);
+  EXPECT_NEAR(b.position.y(), 0.7, 1e-9);  // 0.3 m from the real pose toward the snapped one
+  EXPECT_NEAR(b.yaw, 0.4, 1e-9);           // 0.1 rad from the real yaw toward the snapped one
+}
+
+TEST_F(UtilsTest, BoundSnappedPoseWrapsYaw)
+{
+  const auto b = utils::bound_snapped_pose(
+    Eigen::Vector2d::Zero(), M_PI - 0.01, Eigen::Vector2d::Zero(), -M_PI + 0.01, 0.0, 0.3, 0.1);
+  // The residual across the +-pi seam is 0.02 rad, not 2 pi - 0.02.
+  EXPECT_NEAR(std::abs(b.yaw), M_PI - 0.01, 1e-9);
+}
+
+TEST_F(UtilsTest, BoundSnappedPoseThrowsOnBadArguments)
+{
+  EXPECT_THROW(
+    utils::bound_snapped_pose(
+      Eigen::Vector2d::Zero(), 0.0, Eigen::Vector2d::Zero(), 0.0, 1.5, 0.3, 0.1),
+    std::runtime_error);
+  EXPECT_THROW(
+    utils::bound_snapped_pose(
+      Eigen::Vector2d::Zero(), 0.0, Eigen::Vector2d::Zero(), 0.0, 0.1, 0.0, 0.1),
+    std::runtime_error);
+}
+
 TEST_F(UtilsTest, SnapPointToTrajectoryThrowsOnNonPositiveSearchWindow)
 {
   const auto polyline = straight_polyline(3, 1.0);
-  const utils::TrajectorySnapOptions options{0, 1.0, 0.2};
+  const utils::TrajectorySnapOptions options{0, 0, 1.0, 0.2};
 
   EXPECT_THROW(utils::snap_point_to_trajectory(0.0, 0.0, polyline, options), std::runtime_error);
 }
