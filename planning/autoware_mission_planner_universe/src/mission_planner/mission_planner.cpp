@@ -19,6 +19,7 @@
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -73,8 +74,6 @@ ArrivalCheckerThreshold get_arrival_checker_threshold(rclcpp::Node & node)
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 : Node("mission_planner", options),
   arrival_checker_(get_arrival_checker_threshold(*this)),
-  plugin_loader_(
-    "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
   tf_buffer_(get_clock()),
   tf_listener_(tf_buffer_),
   odometry_(nullptr),
@@ -88,9 +87,20 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   minimum_reroute_length_ = declare_parameter<double>("minimum_reroute_length");
   allow_reroute_in_autonomous_mode_ = declare_parameter<bool>("allow_reroute_in_autonomous_mode");
   goal_lanelet_transparency_ = declare_parameter<float>("goal_lanelet_transparency");
-  planner_ = plugin_loader_.createSharedInstance(
-    "autoware::mission_planner_universe::lanelet2::DefaultPlanner");
-  planner_->initialize(this);
+
+  lanelet2::DefaultPlannerParameters default_planner_param;
+  default_planner_param.goal_angle_threshold_deg =
+    declare_parameter<double>("goal_angle_threshold_deg");
+  default_planner_param.enable_correct_goal_pose =
+    declare_parameter<bool>("enable_correct_goal_pose");
+  default_planner_param.consider_no_drivable_lanes =
+    declare_parameter<bool>("consider_no_drivable_lanes");
+  default_planner_param.check_footprint_inside_lanes =
+    declare_parameter<bool>("check_footprint_inside_lanes");
+  default_planner_param.allow_area = declare_parameter<bool>("allow_area", false);
+
+  const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
+  planner_ = std::make_shared<lanelet2::DefaultPlanner>(default_planner_param, vehicle_info);
 
   const auto durable_qos = rclcpp::QoS(1).transient_local();
   sub_odometry_ = create_subscription<Odometry>(
@@ -101,6 +111,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   sub_vector_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", durable_qos, std::bind(&MissionPlanner::on_map, this, _1));
   pub_marker_ = create_publisher<MarkerArray>("~/debug/route_marker", durable_qos);
+  pub_goal_footprint_marker_ = create_publisher<MarkerArray>("~/debug/goal_footprint", durable_qos);
 
   // NOTE: The route interface should be mutually exclusive by callback group.
   sub_modified_goal_ = create_subscription<PoseWithUuidStamped>(
@@ -207,6 +218,7 @@ void MissionPlanner::on_map(const LaneletMapBin::ConstSharedPtr msg)
   map_ptr_ = msg;
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_ptr_));
+  planner_->set_map(*map_ptr_);
 }
 
 Pose MissionPlanner::transform_pose(const Pose & pose, const Header & header)
@@ -619,14 +631,22 @@ LaneletRoute MissionPlanner::create_route(
   const Header & header, const std::vector<Pose> & waypoints, const Pose & start_pose,
   const Pose & goal_pose, const UUID & uuid, const bool allow_goal_modification)
 {
-  PlannerPlugin::RoutePoints points;
+  lanelet2::DefaultPlanner::RoutePoints points;
   points.push_back(start_pose);
   for (const auto & waypoint : waypoints) {
     points.push_back(transform_pose(waypoint, header));
   }
   points.push_back(transform_pose(goal_pose, header));
 
-  LaneletRoute route = planner_->plan(points);
+  const auto plan_result = planner_->plan(points);
+  if (plan_result.warning_message) {
+    RCLCPP_WARN(get_logger(), "%s", plan_result.warning_message->c_str());
+  }
+  if (plan_result.goal_footprint) {
+    pub_goal_footprint_marker_->publish(
+      lanelet2::DefaultPlanner::visualize_debug_footprint(*plan_result.goal_footprint));
+  }
+  LaneletRoute route = plan_result.route;
   route.header.stamp = header.stamp;
   route.header.frame_id = map_frame_;
   route.uuid = uuid;

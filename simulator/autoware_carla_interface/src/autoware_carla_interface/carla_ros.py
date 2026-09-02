@@ -29,6 +29,8 @@ import cv2
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import TransformStamped
+from nav_msgs.msg import Odometry
 import numpy
 import rclpy
 from rosgraph_msgs.msg import Clock
@@ -36,6 +38,7 @@ from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
+from tf2_msgs.msg import TFMessage
 from tier4_vehicle_msgs.msg import ActuationCommandStamped
 from tier4_vehicle_msgs.msg import ActuationStatusStamped
 from transforms3d.euler import euler2quat
@@ -76,12 +79,28 @@ class carla_ros2_interface(object):
             "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            "force_load_world": (rclpy.Parameter.Type.BOOL, False),
+            # Minimum throttle applied while accelerating from (near) standstill.
+            # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
+            # never start moving on the small throttle the actuation map yields
+            # at low target accelerations.
+            "min_positive_throttle": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "min_positive_throttle_speed_threshold": (rclpy.Parameter.Type.DOUBLE, 0.8),
             "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
+            # Publish the CARLA ground-truth localization (kinematic_state and
+            # the map->base_link TF) directly from the ego transform. Used by
+            # the E2E planning setup instead of the former carla_state_publisher
+            # GNSS round-trip, which duplicated these topics.
+            "publish_ground_truth_localization": (rclpy.Parameter.Type.BOOL, False),
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
+            # Replace the ego vehicle's speed-based steering curve with an
+            # identity curve (workaround for the corrupt curve data CARLA 0.10
+            # returns, which attenuates steering at driving speeds).
+            "flatten_steering_curve": (rclpy.Parameter.Type.BOOL, False),
         }
 
         self.param_values = {}
@@ -127,6 +146,11 @@ class carla_ros2_interface(object):
         self.pub_actuation_status = self.ros2_node.create_publisher(
             ActuationStatusStamped, "/vehicle/status/actuation_status", 1
         )
+        if self.param_values.get("publish_ground_truth_localization", False):
+            self.pub_gt_tf = self.ros2_node.create_publisher(TFMessage, "/tf", 10)
+            self.pub_gt_odom = self.ros2_node.create_publisher(
+                Odometry, "/localization/kinematic_state", 10
+            )
         self.pub_turn_indicators_state = self.ros2_node.create_publisher(
             TurnIndicatorsReport, "/vehicle/status/turn_indicators_status", 1
         )
@@ -300,6 +324,7 @@ class carla_ros2_interface(object):
         self.prev_timestamp = None
         self.prev_steer_output = 0.0
         self.tau = 0.2
+        self._max_steer_angle_rad = None
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -732,6 +757,31 @@ class carla_ros2_interface(object):
         self.prev_timestamp = self.timestamp
         return steer_output
 
+    def _ego_speed_mps(self):
+        """Return the ego speed in m/s (needs _state_lock held)."""
+        velocity = self.ego_actor.get_velocity()
+        return math.sqrt(
+            velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z
+        )
+
+    def _apply_min_positive_throttle(self, out_cmd, in_cmd):
+        """Enforce the standstill throttle floor on out_cmd (needs _state_lock held).
+
+        Heavy CARLA vehicles do not creep and never start moving on the small
+        throttle the actuation map yields at low target accelerations, so
+        while accelerating from (near) standstill the commanded throttle is
+        raised to at least min_positive_throttle. Disabled by default (0.0).
+        """
+        min_positive_throttle = self.param_values.get("min_positive_throttle", 0.0)
+        if min_positive_throttle <= 0.0 or out_cmd.throttle <= 0.0:
+            return
+        if in_cmd.actuation.brake_cmd > 0.0:
+            return
+        speed_threshold = self.param_values.get("min_positive_throttle_speed_threshold", 0.8)
+        if speed_threshold >= 0.0 and self._ego_speed_mps() > speed_threshold:
+            return
+        out_cmd.throttle = max(out_cmd.throttle, min_positive_throttle)
+
     def control_callback(self, in_cmd):
         """
         Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
@@ -741,25 +791,43 @@ class carla_ros2_interface(object):
         """
         out_cmd = carla.VehicleControl()
         out_cmd.throttle = in_cmd.actuation.accel_cmd
+        # Keep the vehicle in first gear with manual shifting so heavy vehicles
+        # respond to throttle immediately instead of idling in neutral.
+        out_cmd.gear = 1
+        out_cmd.manual_gear_shift = True
 
         with self._state_lock:
             # convert base on steer curve of the vehicle
             if not self.physics_control or not self.ego_actor:
                 return  # Skip if vehicle not initialized yet
 
-            steer_curve = self.physics_control.steering_curve
-            # numpy.interp requires the sample x-coordinates to be increasing.
-            # CARLA 0.10 can return the steering-curve points out of order,
-            # so sort by x before interpolating. On 0.9.x the curve is already
-            # sorted, making this a no-op.
-            steer_curve = sorted(steer_curve, key=lambda v: v.x)
-            current_vel = self.ego_actor.get_velocity()
-            max_steer_ratio = numpy.interp(
-                abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
-            )
-            out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
+            self._apply_min_positive_throttle(out_cmd, in_cmd)
+
+            # steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter
+            # passes control_cmd.steering_tire_angle through), while
+            # VehicleControl.steer expects a fraction of the wheel's max steer
+            # angle in [-1, 1]. Normalize by the max wheel angle; the sign flips
+            # because Autoware is CCW-positive and CARLA CW-positive.
+            # NOTE: no steering_curve multiplication here — the simulator applies
+            # its speed-based steering limit internally, and CARLA 0.10 returns
+            # corrupt curve data (duplicated/unsorted points) anyway.
+            steer_norm = -in_cmd.actuation.steer_cmd / self._max_wheel_steer_angle_rad()
+            steer_norm = max(-1.0, min(1.0, steer_norm))
+            out_cmd.steer = self.first_order_steering(steer_norm)
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
+
+    def _max_wheel_steer_angle_rad(self):
+        """Max steerable wheel angle [rad], cached from the vehicle physics.
+
+        Must be called with ``physics_control`` already available.
+        """
+        if self._max_steer_angle_rad is None:
+            max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
+            if max_deg <= 0.0:
+                max_deg = 70.0  # CARLA's usual front-wheel default
+            self._max_steer_angle_rad = math.radians(max_deg)
+        return self._max_steer_angle_rad
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
@@ -840,7 +908,11 @@ class carla_ros2_interface(object):
         out_vel_state.header = self.get_msg_header(frame_id="base_link")
         out_vel_state.longitudinal_velocity = ego_velocity[0]
         out_vel_state.lateral_velocity = ego_velocity[1]
-        out_vel_state.heading_rate = ego_transform.transform_vector(ego_angular_velocity).z
+        # CARLA reports the angular velocity in deg/s in Unreal's left-handed
+        # (CW-positive) frame, while ROS expects rad/s CCW-positive (REP-103):
+        # https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
+        # https://www.ros.org/reps/rep-0103.html
+        out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
 
         out_steering_state.stamp = out_vel_state.header.stamp
         out_steering_state.steering_tire_angle = -math.radians(steer_angle)
@@ -888,6 +960,100 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state.publish(out_hazard_lights_state)
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
+    def _publish_ground_truth_odometry(self):
+        """Publish /localization/kinematic_state and the map->base_link TF.
+
+        Both are derived from the CARLA ground-truth ego transform, replacing
+        the former carla_state_publisher GNSS round-trip. CARLA reports both
+        velocities in its world frame, so each is rotated into the ego body
+        frame before the CARLA-to-ROS (REP-103) conversion; the angular rate
+        additionally converts deg/s to rad/s with the axis signs used by the
+        official ros-bridge (x, -y, -z):
+        https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
+        https://www.ros.org/reps/rep-0103.html
+        https://github.com/carla-simulator/ros-bridge/blob/master/carla_common/src/carla_common/transforms.py
+
+        No-op unless publish_ground_truth_localization is enabled (the
+        publishers only exist when it is).
+        """
+        if not self.param_values.get("publish_ground_truth_localization", False):
+            return
+        with self._state_lock:
+            if not self.ego_actor:
+                return
+            ego_transform = self.ego_actor.get_transform()
+            ego_vel = self.ego_actor.get_velocity()
+            ego_ang_vel = self.ego_actor.get_angular_velocity()
+
+        header = self.get_msg_header(frame_id="map")
+        pose = Pose()
+        pose.position = carla_location_to_ros_point(
+            ego_transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
+        pose.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
+
+        tf_stamped = TransformStamped()
+        tf_stamped.header = header
+        tf_stamped.child_frame_id = "base_link"
+        tf_stamped.transform.translation.x = pose.position.x
+        tf_stamped.transform.translation.y = pose.position.y
+        tf_stamped.transform.translation.z = pose.position.z
+        tf_stamped.transform.rotation = pose.orientation
+        self.pub_gt_tf.publish(TFMessage(transforms=[tf_stamped]))
+
+        odom = Odometry()
+        odom.header = header
+        odom.child_frame_id = "base_link"
+        odom.pose.pose = pose
+        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
+        inv_rot_mat = trans_mat[0:3, 0:3].T
+        vel_vec = numpy.array([ego_vel.x, ego_vel.y, ego_vel.z]).reshape(3, 1)
+        body_vel = (inv_rot_mat @ vel_vec).T[0]
+        odom.twist.twist.linear.x = float(body_vel[0])
+        odom.twist.twist.linear.y = float(-body_vel[1])
+        odom.twist.twist.linear.z = float(body_vel[2])
+        ang_vel_vec = numpy.array([ego_ang_vel.x, ego_ang_vel.y, ego_ang_vel.z]).reshape(3, 1)
+        body_ang_vel = (inv_rot_mat @ ang_vel_vec).T[0]
+        odom.twist.twist.angular.x = math.radians(float(body_ang_vel[0]))
+        odom.twist.twist.angular.y = -math.radians(float(body_ang_vel[1]))
+        odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
+        self.pub_gt_odom.publish(odom)
+
+    def _publish_sensor_data(self, key, data):
+        """Publish one sensor's data, dispatching on its sensor type.
+
+        Camera and lidar conversion/publishing run on per-sensor worker
+        threads: publishing multi-megabyte messages inline (reliable-QoS
+        camera images in particular block on DDS flow control) would stall
+        the simulation loop and slow simulation time itself. Frequency
+        gating and registry bookkeeping stay on the calling thread so the
+        registry is never accessed concurrently.
+        """
+        sensor_type = self.id_to_sensor_type_map.get(key)
+        if not sensor_type:
+            self.logger.warning(
+                f"Unknown sensor ID '{key}' received from CARLA - skipping. "
+                f"This may indicate a sensor configuration mismatch."
+            )
+            return
+
+        if sensor_type == "sensor.camera.rgb":
+            if not self.checkFrequency(key):
+                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
+        elif sensor_type == "sensor.other.gnss":
+            self.pose()
+        elif sensor_type == "sensor.lidar.ray_cast":
+            if not self.checkFrequency(key):
+                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
+                self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
+        elif sensor_type == "sensor.other.imu":
+            self.imu(data[1])
+        else:
+            self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+
     def run_step(self, input_data, timestamp):
         """
         Execute main simulation step for publishing sensor data and getting control commands.
@@ -919,37 +1085,11 @@ class carla_ros2_interface(object):
         obj_clock.clock = Time(sec=seconds, nanosec=nanoseconds)
         self.clock_publisher.publish(obj_clock)
 
+        self._publish_ground_truth_odometry()
+
         # publish data of all sensors
         for key, data in input_data.items():
-            # Safely get sensor type with fallback
-            sensor_type = self.id_to_sensor_type_map.get(key)
-            if not sensor_type:
-                self.logger.warning(
-                    f"Unknown sensor ID '{key}' received from CARLA - skipping. "
-                    f"This may indicate a sensor configuration mismatch."
-                )
-                continue
-
-            # Camera and lidar conversion/publishing run on per-sensor worker
-            # threads: publishing multi-megabyte messages inline (reliable-QoS
-            # camera images in particular block on DDS flow control) would
-            # stall this loop and slow simulation time itself. Frequency
-            # gating and registry bookkeeping stay on this thread so the
-            # registry is never accessed concurrently.
-            if sensor_type == "sensor.camera.rgb":
-                if not self.checkFrequency(key):
-                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                    self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
-            elif sensor_type == "sensor.other.gnss":
-                self.pose()
-            elif sensor_type == "sensor.lidar.ray_cast":
-                if not self.checkFrequency(key):
-                    self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                    self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
-            elif sensor_type == "sensor.other.imu":
-                self.imu(data[1])
-            else:
-                self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+            self._publish_sensor_data(key, data)
 
         # Push turn indicator / hazard lights to CARLA before reading status back.
         self.apply_light_state()
