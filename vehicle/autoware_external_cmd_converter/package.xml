@@ -14,6 +14,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_adapi_v1_msgs</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_control_msgs</depend>
   <depend>autoware_raw_vehicle_cmd_converter</depend>
   <depend>autoware_test_utils</depend>

@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::detected_object_feature_remover::DetectedObjectFeatureRemoverNode
+  plugin: autoware::detected_object_feature_remover::DetectedObjectFeatureRemover
   executable: detected_object_feature_remover_node
   node_output: screen
 

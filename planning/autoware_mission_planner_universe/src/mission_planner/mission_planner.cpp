@@ -19,6 +19,7 @@
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -55,7 +56,7 @@ std::string route_state_to_string(const uint8_t state)
   }
 }
 
-ArrivalCheckerThreshold get_arrival_checker_threshold(rclcpp::Node & node)
+ArrivalCheckerThreshold get_arrival_checker_threshold(autoware::agnocast_wrapper::Node & node)
 {
   ArrivalCheckerThreshold threshold;
   threshold.angle =
@@ -71,12 +72,10 @@ ArrivalCheckerThreshold get_arrival_checker_threshold(rclcpp::Node & node)
 }  // namespace
 
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
-: Node("mission_planner", options),
+: autoware::agnocast_wrapper::Node("mission_planner", options),
   arrival_checker_(get_arrival_checker_threshold(*this)),
-  plugin_loader_(
-    "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
   tf_buffer_(get_clock()),
-  tf_listener_(tf_buffer_),
+  tf_listener_(tf_buffer_, *this),
   odometry_(nullptr),
   map_ptr_(nullptr)
 {
@@ -88,9 +87,20 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   minimum_reroute_length_ = declare_parameter<double>("minimum_reroute_length");
   allow_reroute_in_autonomous_mode_ = declare_parameter<bool>("allow_reroute_in_autonomous_mode");
   goal_lanelet_transparency_ = declare_parameter<float>("goal_lanelet_transparency");
-  planner_ = plugin_loader_.createSharedInstance(
-    "autoware::mission_planner_universe::lanelet2::DefaultPlanner");
-  planner_->initialize(this);
+
+  lanelet2::DefaultPlannerParameters default_planner_param;
+  default_planner_param.goal_angle_threshold_deg =
+    declare_parameter<double>("goal_angle_threshold_deg");
+  default_planner_param.enable_correct_goal_pose =
+    declare_parameter<bool>("enable_correct_goal_pose");
+  default_planner_param.consider_no_drivable_lanes =
+    declare_parameter<bool>("consider_no_drivable_lanes");
+  default_planner_param.check_footprint_inside_lanes =
+    declare_parameter<bool>("check_footprint_inside_lanes");
+  default_planner_param.allow_area = declare_parameter<bool>("allow_area", false);
+
+  const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
+  planner_ = std::make_shared<lanelet2::DefaultPlanner>(default_planner_param, vehicle_info);
 
   const auto durable_qos = rclcpp::QoS(1).transient_local();
   sub_odometry_ = create_subscription<Odometry>(
@@ -101,6 +111,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   sub_vector_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", durable_qos, std::bind(&MissionPlanner::on_map, this, _1));
   pub_marker_ = create_publisher<MarkerArray>("~/debug/route_marker", durable_qos);
+  pub_goal_footprint_marker_ = create_publisher<MarkerArray>("~/debug/goal_footprint", durable_qos);
 
   // NOTE: The route interface should be mutually exclusive by callback group.
   sub_modified_goal_ = create_subscription<PoseWithUuidStamped>(
@@ -122,11 +133,13 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   // Route state will be published when the node gets ready for route api after initialization,
   // otherwise the mission planner rejects the request for the API.
   using namespace std::literals::chrono_literals;
-  data_check_timer_ =
-    rclcpp::create_timer(this, get_clock(), 0.1s, [this] { check_initialization(); });
+  data_check_timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), 0.1s, [this] { check_initialization(); });
   is_mission_planner_ready_ = false;
 
-  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
+  logger_configure_ =
+    std::make_unique<autoware_utils::BasicLoggerLevelConfigure<autoware::agnocast_wrapper::Node>>(
+      this);
   pub_processing_time_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/debug/processing_time_ms", 1);
 }
@@ -184,7 +197,7 @@ void MissionPlanner::check_initialization()
   data_check_timer_ = nullptr;
 }
 
-void MissionPlanner::on_odometry(const Odometry::ConstSharedPtr msg)
+void MissionPlanner::on_odometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) & msg)
 {
   odometry_ = msg;
   arrival_checker_.update(*msg);
@@ -197,16 +210,18 @@ void MissionPlanner::on_odometry(const Odometry::ConstSharedPtr msg)
   }
 }
 
-void MissionPlanner::on_operation_mode_state(const OperationModeState::ConstSharedPtr msg)
+void MissionPlanner::on_operation_mode_state(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(OperationModeState) & msg)
 {
   operation_mode_state_ = msg;
 }
 
-void MissionPlanner::on_map(const LaneletMapBin::ConstSharedPtr msg)
+void MissionPlanner::on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
   map_ptr_ = msg;
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_ptr_));
+  planner_->set_map(*map_ptr_);
 }
 
 Pose MissionPlanner::transform_pose(const Pose & pose, const Header & header)
@@ -229,7 +244,8 @@ void MissionPlanner::change_state(RouteState::_state_type state)
   pub_state_->publish(state_);
 }
 
-void MissionPlanner::on_modified_goal(const PoseWithUuidStamped::ConstSharedPtr msg)
+void MissionPlanner::on_modified_goal(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PoseWithUuidStamped) & msg)
 {
   RCLCPP_INFO(get_logger(), "Received modified goal.");
 
@@ -316,7 +332,7 @@ void MissionPlanner::on_set_lanelet_route(
   }
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.take_data();
+    const auto reroute_availability = sub_reroute_availability_->take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         ResponseCode::ERROR_INVALID_STATE,
@@ -395,7 +411,7 @@ void MissionPlanner::on_set_preferred_primitive(
                           : false;
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.take_data();
+    const auto reroute_availability = sub_reroute_availability_->take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
@@ -470,7 +486,7 @@ void MissionPlanner::on_set_waypoint_route(
                           : false;
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.take_data();
+    const auto reroute_availability = sub_reroute_availability_->take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         ResponseCode::ERROR_INVALID_STATE,
@@ -619,14 +635,22 @@ LaneletRoute MissionPlanner::create_route(
   const Header & header, const std::vector<Pose> & waypoints, const Pose & start_pose,
   const Pose & goal_pose, const UUID & uuid, const bool allow_goal_modification)
 {
-  PlannerPlugin::RoutePoints points;
+  lanelet2::DefaultPlanner::RoutePoints points;
   points.push_back(start_pose);
   for (const auto & waypoint : waypoints) {
     points.push_back(transform_pose(waypoint, header));
   }
   points.push_back(transform_pose(goal_pose, header));
 
-  LaneletRoute route = planner_->plan(points);
+  const auto plan_result = planner_->plan(points);
+  if (plan_result.warning_message) {
+    RCLCPP_WARN(get_logger(), "%s", plan_result.warning_message->c_str());
+  }
+  if (plan_result.goal_footprint) {
+    pub_goal_footprint_marker_->publish(
+      lanelet2::DefaultPlanner::visualize_debug_footprint(*plan_result.goal_footprint));
+  }
+  LaneletRoute route = plan_result.route;
   route.header.stamp = header.stamp;
   route.header.frame_id = map_frame_;
   route.uuid = uuid;
