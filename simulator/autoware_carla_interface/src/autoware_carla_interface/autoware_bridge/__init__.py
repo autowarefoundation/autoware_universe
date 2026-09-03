@@ -14,9 +14,8 @@
 
 """Autoware side of the CARLA scenario ``AutowareBridge``.
 
-Splatsim-consistent topology: the scenario library hosts the ``AutowareBridge``
-gRPC server and this package is the client that dials it (mirroring
-``splatsim/grpc_client.py`` against a Docker-launched server).  The client pulls
+Topology: the scenario library hosts the ``AutowareBridge`` gRPC server and this
+package is the client that launches (in Docker) and dials it.  The client pulls
 the scenario's mission (initial pose + goal) via ``GetMission`` and pushes a
 single readiness flag via ``ReportReadiness``.
 

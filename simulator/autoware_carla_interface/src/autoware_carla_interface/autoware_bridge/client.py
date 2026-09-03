@@ -16,9 +16,9 @@
 
 This is the Autoware side of the (deliberately tiny) contract: pull the mission
 once it is available (``GetMission``) and push a single readiness flag
-(``ReportReadiness``).  It mirrors ``splatsim/grpc_client.py`` -- an
-``insecure_channel`` to a server the interface node launches/dials -- but is kept
-free of ``rclpy`` so it can be unit tested against an in-process server.
+(``ReportReadiness``).  It opens an ``insecure_channel`` to a server the interface
+node launches and dials, and is kept free of ``rclpy`` so it can be unit tested
+against an in-process server.
 """
 
 from __future__ import annotations
