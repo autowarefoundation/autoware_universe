@@ -65,6 +65,16 @@
     />
     <arg name="bridge_address" default="localhost:50052" description="host:port of the scenario-library AutowareBridge gRPC server to dial"/>
     <arg name="auto_engage" default="true" description="Auto change_to_autonomous once localization is initialized, the route is set, and autonomous mode is available (scenario/sim only)"/>
+    <arg
+      name="initialize_localization"
+      default="true"
+      description="Call /api/localization/initialize from the mission initial pose; set false for stacks that localize outside the AD API (CARLA ground-truth / E2E, localization:=false)"
+    />
+    <arg
+      name="require_localization_initialized"
+      default="true"
+      description="Require LocalizationInitializationState=INITIALIZED for readiness; set false alongside initialize_localization for ground-truth / E2E localization"
+    />
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -102,6 +112,8 @@
       <param name="scenario" value="$(var with_scenario)"/>
       <param name="bridge_address" value="$(var bridge_address)"/>
       <param name="auto_engage" value="$(var auto_engage)"/>
+      <param name="initialize_localization" value="$(var initialize_localization)"/>
+      <param name="require_localization_initialized" value="$(var require_localization_initialized)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>

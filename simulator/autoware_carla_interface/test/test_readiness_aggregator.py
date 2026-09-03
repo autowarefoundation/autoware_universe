@@ -75,3 +75,15 @@ def test_regressed_localization_clears_flags():
 
     agg.update_localization(2)  # INITIALIZING
     assert agg.ready is False
+
+
+def test_localization_not_required_for_ground_truth_stacks():
+    # localization:=false / E2E: readiness must not need INITIALIZED localization.
+    agg = ReadinessAggregator(require_localization=False)
+    agg.update_routing(ROUTE_STATE_SET)
+    agg.update_operation_mode(
+        mode=OPERATION_MODE_AUTONOMOUS, is_control_enabled=True, is_autonomous_available=True
+    )
+    assert agg.localization_initialized is False  # never initialized
+    assert agg.can_engage is True
+    assert agg.ready is True
