@@ -12,8 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/component_interface_specs/control.hpp"
 #include "autoware/component_interface_specs_universe/control.hpp"
 #include "gtest/gtest.h"
+
+#include <type_traits>
+
+// Proves the universe symbols are re-exports of the canonical core types, not
+// redefinitions: consumers see one definition, one version authority.
+TEST(control_universe, reexports_core)
+{
+  namespace core = autoware::component_interface_specs::control;
+  namespace universe = autoware::component_interface_specs_universe::control;
+  static_assert(std::is_same_v<universe::ControlCommand, core::ControlCommand>);
+  static_assert(std::is_same_v<universe::GearCommand, core::GearCommand>);
+  SUCCEED();
+}
 
 TEST(control, interface)
 {

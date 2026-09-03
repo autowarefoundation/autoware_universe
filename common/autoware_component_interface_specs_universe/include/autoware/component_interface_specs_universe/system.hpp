@@ -15,46 +15,20 @@
 #ifndef AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__SYSTEM_HPP_
 #define AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__SYSTEM_HPP_
 
-#include <rclcpp/qos.hpp>
+#include <autoware/component_interface_specs/system.hpp>
 
-#include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
-#include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
-#include <autoware_system_msgs/srv/change_autoware_control.hpp>
-#include <autoware_system_msgs/srv/change_operation_mode.hpp>
-
+// Re-export the core specs so universe consumers keep resolving the canonical
+// (single-version-authority) type; core is the sole definition and version authority.
+// MrmState was promoted from universe to core; existing consumers keep
+// compiling unchanged via this re-export, since the type identity is preserved.
 namespace autoware::component_interface_specs_universe::system
 {
-
-struct MrmState
-{
-  using Message = autoware_adapi_v1_msgs::msg::MrmState;
-  static constexpr char name[] = "/system/fail_safe/mrm_state";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
-struct ChangeAutowareControl
-{
-  using Service = autoware_system_msgs::srv::ChangeAutowareControl;
-  static constexpr char name[] = "/system/operation_mode/change_autoware_control";
-};
-
-struct ChangeOperationMode
-{
-  using Service = autoware_system_msgs::srv::ChangeOperationMode;
-  static constexpr char name[] = "/system/operation_mode/change_operation_mode";
-};
-
-struct OperationModeState
-{
-  using Message = autoware_adapi_v1_msgs::msg::OperationModeState;
-  static constexpr char name[] = "/system/operation_mode/state";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
-};
-
+using autoware::component_interface_specs::system::ChangeAutowareControl;
+using autoware::component_interface_specs::system::ChangeOperationMode;
+using autoware::component_interface_specs::system::MrmState;
+using autoware::component_interface_specs::system::OperationModeState;
+using autoware::component_interface_specs::system::Specs;
+using autoware::component_interface_specs::system::version;
 }  // namespace autoware::component_interface_specs_universe::system
 
 #endif  // AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__SYSTEM_HPP_

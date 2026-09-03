@@ -39,6 +39,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <cstddef>
 #include <deque>
 #include <memory>
 #include <string>
@@ -73,6 +74,25 @@ CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, intensity)
 CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, return_type);
 CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, channel);
 
+struct InputBoundsParams
+{
+  std::size_t max_input_point_count{};
+  int max_ring_count{};
+  int max_points_per_ring{};
+  std::size_t max_twist_subscriber_queue_size{};
+  std::size_t max_imu_subscriber_queue_size{};
+  std::size_t max_twist_queue_size{};
+  std::size_t max_imu_queue_size{};
+};
+
+struct InputBoundsStatus
+{
+  std::size_t input_point_count{};
+  std::size_t truncated_point_count{};
+  std::size_t dropped_twist_count{};
+  std::size_t dropped_imu_count{};
+};
+
 class CudaPointcloudPreprocessorNode : public rclcpp::Node
 {
 public:
@@ -83,11 +103,10 @@ private:
     const std::string & target_frame, const std::string & source_frame,
     tf2::Transform * tf2_transform_ptr);
 
-  // Callback
   void pointcloudCallback(AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2)
                             input_pointcloud_msg_ptr);
-  void twistCallback(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
-  void imuCallback(const sensor_msgs::msg::Imu & imu_msg);
+  void insertTwistMessage(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
+  void insertImuMessage(const sensor_msgs::msg::Imu & imu_msg);
 
   // Helper Functions
   [[nodiscard]] bool validatePointcloudLayout(
@@ -119,6 +138,8 @@ private:
   bool use_imu_;
   double processing_time_threshold_sec_;
   double timestamp_mismatch_fraction_threshold_;
+  InputBoundsParams input_bounds_params_{};
+  InputBoundsStatus latest_input_bounds_status_{};
 
   std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue_;
   std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;

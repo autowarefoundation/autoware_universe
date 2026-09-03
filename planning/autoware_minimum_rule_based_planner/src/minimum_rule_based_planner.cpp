@@ -14,6 +14,8 @@
 
 #include "minimum_rule_based_planner.hpp"
 
+#include "autoware/trajectory_processor/trajectory_processor_parameters.hpp"
+
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -33,14 +35,12 @@ namespace autoware::minimum_rule_based_planner
 
 namespace
 {
-trajectory_optimizer::TrajectoryOptimizerData make_optimizer_data(
+trajectory_processor::TrajectoryProcessorData make_optimizer_data(
   const MinimumRuleBasedPlannerNode::InputData & input_data)
 {
-  trajectory_optimizer::TrajectoryOptimizerData data;
-  data.current_odometry = *input_data.odometry_ptr;
-  if (input_data.acceleration_ptr) {
-    data.current_acceleration = *input_data.acceleration_ptr;
-  }
+  trajectory_processor::TrajectoryProcessorData data;
+  data.current_odometry = input_data.odometry_ptr;
+  data.current_acceleration = input_data.acceleration_ptr;
   return data;
 }
 
@@ -57,9 +57,11 @@ minimum_rule_based_planner::plugin::ModifierData make_modifier_data(
 }  // namespace
 
 MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptions & options)
-: rclcpp::Node("minimum_rule_based_planner_node", options),
+: autoware::agnocast_wrapper::Node("minimum_rule_based_planner_node", options),
   generator_uuid_(autoware_utils_uuid::generate_uuid()),
   vehicle_info_(vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()),
+  optimizer_context_(
+    std::make_shared<autoware::trajectory_processor::TrajectoryProcessorContext>(this)),
   modifier_plugin_loader_(
     "autoware_minimum_rule_based_planner",
     "autoware::minimum_rule_based_planner::plugin::PluginInterface"),
@@ -67,6 +69,25 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
 {
   param_listener_ =
     std::make_shared<::minimum_rule_based_planner::ParamListener>(get_node_parameters_interface());
+
+  route_subscriber_ = namespace_polling::create_polling_subscriber<
+    LaneletRoute, namespace_polling::polling_policy::Newest>(
+    this, "~/input/route", rclcpp::QoS{1}.transient_local());
+  vector_map_subscriber_ = namespace_polling::create_polling_subscriber<
+    LaneletMapBin, namespace_polling::polling_policy::Newest>(
+    this, "~/input/vector_map", rclcpp::QoS{1}.transient_local());
+  odometry_subscriber_ =
+    namespace_polling::create_polling_subscriber<Odometry>(this, "~/input/odometry");
+  acceleration_subscriber_ =
+    namespace_polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+      this, "~/input/acceleration");
+  objects_subscriber_ =
+    namespace_polling::create_polling_subscriber<PredictedObjects>(this, "~/input/objects");
+  pointcloud_subscriber_ = namespace_polling::create_polling_subscriber<PointCloud2>(
+    this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos());
+  test_path_with_lane_id_subscriber_ = namespace_polling::create_polling_subscriber<
+    PathWithLaneId, namespace_polling::polling_policy::Newest>(
+    this, "~/input/test/path_with_lane_id");
 
   pub_trajectories_ =
     this->create_publisher<CandidateTrajectories>("~/output/candidate_trajectories", 1);
@@ -90,7 +111,7 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
 
   path_planner_ =
     std::make_unique<PathPlanner>(get_logger(), get_clock(), time_keeper_, params_, vehicle_info_);
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), rclcpp::Rate(params_.planning_frequency_hz).period(),
     std::bind(&MinimumRuleBasedPlannerNode::on_timer, this));
 
@@ -99,18 +120,19 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
 
 void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
 {
-  // Create plugin loader for autoware_trajectory_optimizer
+  // Create the common loader for optimizer plugins exported by autoware_trajectory_processor.
   plugin_loader_ = std::make_unique<OptimizerPluginLoader>(
-    "autoware_trajectory_optimizer",
-    "autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase");
+    "autoware_trajectory_processor",
+    "autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase");
 
   auto try_load_optimizer_plugin = [&](const std::string & plugin_path, const std::string & name)
     -> std::shared_ptr<OptimizerPluginInterface> {
-    trajectory_optimizer::TrajectoryOptimizerParams optimizer_params;
-    optimizer_params.use_eb_smoother = true;
+    trajectory_processor::TrajectoryProcessorParams processor_params;
+    processor_params.use_eb_smoother = true;
     try {
       auto plugin = plugin_loader_->createSharedInstance(plugin_path);
-      plugin->initialize(name, this, time_keeper_, optimizer_params);
+      plugin->initialize(
+        plugin_path, name, this, time_keeper_, optimizer_context_, processor_params);
       pub_debug_optimizer_module_trajectories_[plugin->get_name()] =
         this->create_publisher<Trajectory>(
           "~/debug/optimizer/" + plugin->get_name() + "/trajectory", 1);
@@ -124,7 +146,7 @@ void MinimumRuleBasedPlannerNode::load_optimizer_plugins()
   };
 
   path_smoother_ = try_load_optimizer_plugin(
-    "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer", "eb_smoother");
+    "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer", "eb_smoother");
 
   // Set up velocity optimizer
   // NOTE(odashima):
@@ -351,7 +373,7 @@ Trajectory MinimumRuleBasedPlannerNode::smooth_trajectory(
   if (path_smoother_) {
     autoware_utils_debug::ScopedTimeTrack st_path_smoother(
       path_smoother_->get_name(), *time_keeper_);
-    path_smoother_->optimize_trajectory(trajectory_points, optimizer_data);
+    path_smoother_->process(trajectory_points, optimizer_data);
     if (params_.debug.enable_optimizer_trajectory) {
       publish_debug_trajectory(path_smoother_->get_name(), trajectory_points);
     }
@@ -449,7 +471,7 @@ MinimumRuleBasedPlannerNode::InputData MinimumRuleBasedPlannerNode::take_data()
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   InputData input_data;
 
-  if (const auto msg = route_subscriber_.take_data()) {
+  if (const auto msg = route_subscriber_->take_data()) {
     if (!msg->segments.empty()) {
       route_ptr_ = msg;
     } else {
@@ -458,32 +480,32 @@ MinimumRuleBasedPlannerNode::InputData MinimumRuleBasedPlannerNode::take_data()
   }
   input_data.route_ptr = route_ptr_;
 
-  if (const auto msg = vector_map_subscriber_.take_data()) {
+  if (const auto msg = vector_map_subscriber_->take_data()) {
     lanelet_map_bin_ptr_ = msg;
   }
   input_data.lanelet_map_bin_ptr = lanelet_map_bin_ptr_;
 
-  if (const auto msg = odometry_subscriber_.take_data()) {
+  if (const auto msg = odometry_subscriber_->take_data()) {
     odometry_ptr_ = msg;
   }
   input_data.odometry_ptr = odometry_ptr_;
 
-  if (const auto msg = acceleration_subscriber_.take_data()) {
+  if (const auto msg = acceleration_subscriber_->take_data()) {
     acceleration_ptr_ = msg;
   }
   input_data.acceleration_ptr = acceleration_ptr_;
 
-  if (const auto msg = objects_subscriber_.take_data()) {
+  if (const auto msg = objects_subscriber_->take_data()) {
     predicted_objects_ptr_ = msg;
   }
   input_data.predicted_objects_ptr = predicted_objects_ptr_;
 
-  if (const auto msg = pointcloud_subscriber_.take_data()) {
+  if (const auto msg = pointcloud_subscriber_->take_data()) {
     obstacle_pointcloud_ptr_ = msg;
   }
   input_data.obstacle_pointcloud_ptr = obstacle_pointcloud_ptr_;
 
-  if (const auto msg = test_path_with_lane_id_subscriber_.take_data()) {
+  if (const auto msg = test_path_with_lane_id_subscriber_->take_data()) {
     test_path_with_lane_id_ptr = msg;
   }
   input_data.test_path_with_lane_id_ptr = test_path_with_lane_id_ptr;

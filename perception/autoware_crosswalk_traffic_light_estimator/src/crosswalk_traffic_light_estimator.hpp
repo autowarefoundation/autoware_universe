@@ -46,7 +46,7 @@ public:
 
   bool is_map_loaded() const;
 
-  TrafficSignalArray estimate(const TrafficSignalArray & msg, const rclcpp::Time & current_time);
+  TrafficSignalArray estimate(const TrafficSignalArray & msg);
 
   std::vector<lanelet::Id> find_unregistered_traffic_light_group_ids(
     const TrafficSignalArray & msg) const;

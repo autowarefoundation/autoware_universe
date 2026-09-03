@@ -15,16 +15,24 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_goal_pose_visualizer_com
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
+ament_auto_add_library(${PROJECT_NAME}_lanelet2_plugins SHARED
+  src/lanelet2_plugins/default_planner.cpp
+  src/lanelet2_plugins/utility_functions.cpp
+)
+
 ament_auto_add_library(${PROJECT_NAME}_component SHARED
   src/mission_planner/arrival_checker.cpp
   src/mission_planner/service_utils.cpp
   src/mission_planner/mission_planner.cpp
   src/mission_planner/route_selector.cpp
 )
+target_link_libraries(${PROJECT_NAME}_component ${PROJECT_NAME}_lanelet2_plugins)
 
-rclcpp_components_register_node(${PROJECT_NAME}_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::mission_planner_universe::MissionPlanner"
   EXECUTABLE mission_planner
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
@@ -33,12 +41,6 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   ROS2_EXECUTOR MultiThreadedExecutor
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
-
-ament_auto_add_library(${PROJECT_NAME}_lanelet2_plugins SHARED
-  src/lanelet2_plugins/default_planner.cpp
-  src/lanelet2_plugins/utility_functions.cpp
-)
-pluginlib_export_plugin_description_file(autoware_mission_planner_universe plugins/plugin_description.xml)
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
@@ -50,6 +52,20 @@ if(BUILD_TESTING)
   )
   ament_target_dependencies(test_${PROJECT_NAME}
     autoware_test_utils
+  )
+
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_arrival_checker
+    test/test_arrival_checker.cpp
+    src/mission_planner/arrival_checker.cpp
+  )
+  ament_target_dependencies(test_${PROJECT_NAME}_arrival_checker
+    autoware_utils
+    autoware_planning_msgs
+    geometry_msgs
+    nav_msgs
+    rclcpp
+    tf2
+    tf2_geometry_msgs
   )
 endif()
 

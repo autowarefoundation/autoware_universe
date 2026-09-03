@@ -36,14 +36,14 @@ using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils_geometry::MultiPolygon2d;
 using autoware_utils_geometry::Polygon2d;
-using trajectory_modifier::utils::obstacle_stop::CollisionPoint;
-using trajectory_modifier::utils::obstacle_stop::DebugData;
-using trajectory_modifier::utils::obstacle_stop::ObjectDecelMap;
-using trajectory_modifier::utils::obstacle_stop::ObjectType;
+using trajectory_processor::utils::obstacle_stop::CollisionPoint;
+using trajectory_processor::utils::obstacle_stop::DebugData;
+using trajectory_processor::utils::obstacle_stop::ObjectDecelMap;
+using trajectory_processor::utils::obstacle_stop::ObjectType;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using trajectory_modifier::utils::obstacle_stop::PointCloud2;
+using trajectory_processor::utils::obstacle_stop::PointCloud2;
 
 class ObstacleStop : public PluginInterface
 {
@@ -59,8 +59,8 @@ public:
     {
       const auto & p = params_.objects;
       object_filter_->set_params(
-        p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
-        p.safety_buffer);
+        p.target_objects.bbox, p.target_objects.polygon, p.stopped_velocity_th,
+        p.max_lateral_velocity_th, p.safety_buffer);
     }
 
     {
@@ -95,15 +95,15 @@ private:
 
   DebugData debug_data_;
 
-  std::unique_ptr<trajectory_modifier::utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
+  std::unique_ptr<trajectory_processor::utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
 
-  std::unique_ptr<trajectory_modifier::utils::obstacle_stop::ObjectFilter> object_filter_;
+  std::unique_ptr<trajectory_processor::utils::obstacle_stop::ObjectFilter> object_filter_;
 
   ObjectDecelMap object_decel_map_;
 
-  rclcpp::Publisher<MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) debug_viz_pub_;
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_clustered_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_debug_text_;
 
   void update_object_decel_map()
   {

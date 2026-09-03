@@ -16,8 +16,7 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_HPP_  // NOLINT
 
 #include "autoware/trajectory_processor/acados_interface.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -27,12 +26,18 @@
 
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 
 struct TemporalMPTParams
 {
@@ -49,53 +54,51 @@ struct TemporalMPTParams
   bool log_replay_fixture_to_console{false};
 };
 
-class TrajectoryTemporalMPTOptimizer : public TrajectoryOptimizerPluginBase
+class TrajectoryTemporalMPTOptimizer : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectoryTemporalMPTOptimizer() = default;
 
-  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
 
-  void update_params(const TrajectoryOptimizerParams & params) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
 protected:
-  void on_initialize(const TrajectoryOptimizerParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   std::unique_ptr<temporal_mpt::AcadosInterface> acados_interface_;
   TemporalMPTParams mpt_params_;
 
   void set_mpt_params(
-    const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params);
+    const trajectory_processor_params::Params::TrajectoryTemporalMptOptimizer & params);
   void create_or_reset_solver();
   void update_bicycle_geometry_from_vehicle();
   void apply_solver_model_parameters();
   void log_debug_info(
     const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_snapshot,
     const temporal_mpt::AcadosSolution & solution, size_t start_idx, size_t terminal_idx,
-    const TrajectoryOptimizerData & data, const TrajectoryPoints & traj_points);
+    const TrajectoryProcessorData & data, const TrajectoryPoints & traj_points);
   void write_temporal_mpt_replay_fixture(
     const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_trajectory,
     int acados_status);
   void ensure_debug_publishers();
   void log_acados_solve_debug(
     int acados_status, const std::array<double, temporal_mpt::NX> & x0, size_t start_idx,
-    size_t terminal_idx, const TrajectoryOptimizerData & data,
+    size_t terminal_idx, const TrajectoryProcessorData & data,
     const TrajectoryPoints & traj_points) const;
   void publish_temporal_mpt_debug_io(
     const TrajectoryPoints & reference_before, const nav_msgs::msg::Odometry & initial_odom,
     const temporal_mpt::AcadosSolution & solution);
 
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr debug_input_trajectory_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr debug_input_initial_state_pub_;
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr
-    debug_output_trajectory_pub_;
-  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr debug_solve_status_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_control_accel_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_control_delta_cmd_pub_;
+  PublisherHandle<autoware_planning_msgs::msg::Trajectory> debug_input_trajectory_pub_;
+  PublisherHandle<nav_msgs::msg::Odometry> debug_input_initial_state_pub_;
+  PublisherHandle<autoware_planning_msgs::msg::Trajectory> debug_output_trajectory_pub_;
+  PublisherHandle<std_msgs::msg::Int32> debug_solve_status_pub_;
+  PublisherHandle<std_msgs::msg::Float64MultiArray> debug_control_accel_pub_;
+  PublisherHandle<std_msgs::msg::Float64MultiArray> debug_control_delta_cmd_pub_;
 };
 
-}  // namespace autoware::trajectory_optimizer::plugin
-// clang-format off
+}  // namespace autoware::trajectory_processor::plugin
+   // clang-format off
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_HPP_  // NOLINT
-// clang-format on

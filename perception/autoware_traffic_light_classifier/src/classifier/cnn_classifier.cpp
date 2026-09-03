@@ -22,18 +22,19 @@
 #include <boost/algorithm/string/split.hpp>
 
 #include <algorithm>
-#include <fstream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-// ============================= CNNClassifierCore =============================
+// ============================= CNNClassifier =============================
 // Node-free CNN (TensorRT) classification core.
 
-CNNClassifierCore::CNNClassifierCore(const CNNConfig & config)
+CNNClassifier::CNNClassifier(const CNNConfig & config)
 {
   if (config.mean.size() != 3 || config.std.size() != 3) {
     throw std::invalid_argument("mean and std must be of size 3");
@@ -44,7 +45,7 @@ CNNClassifierCore::CNNClassifierCore(const CNNConfig & config)
   batch_size_ = classifier_->getBatchSize();
 }
 
-CNNClassifierCore::ClassifierResult CNNClassifierCore::classify(const std::vector<cv::Mat> & images)
+CNNClassifier::ClassifierResult CNNClassifier::infer(const std::vector<cv::Mat> & images)
 {
   ClassifierResult result;
   result.signals.signals.resize(images.size());
@@ -82,7 +83,7 @@ CNNClassifierCore::ClassifierResult CNNClassifierCore::classify(const std::vecto
   return result;
 }
 
-std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifierCore::decode_label(
+std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifier::decode_label(
   const std::string & label, float confidence)
 {
   // label names are assumed to be comma-separated to represent each lamp
@@ -100,19 +101,19 @@ std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifierCore::
       // found "-" delimiter in the label string
       std::vector<std::string> color_and_shape;
       boost::algorithm::split(color_and_shape, lamp_label, boost::is_any_of("-"));
-      element.color = utils::convertColorStringtoT4(color_and_shape.at(0));
-      element.shape = utils::convertShapeStringtoT4(color_and_shape.at(1));
+      element.color = utils::convert_color_string_to_t4(color_and_shape.at(0));
+      element.shape = utils::convert_shape_string_to_t4(color_and_shape.at(1));
     } else {
       if (lamp_label == std::string("unknown")) {
         // if the label is unknown, set UNKNOWN to color and shape
         element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      } else if (utils::isColorLabel(lamp_label)) {
-        element.color = utils::convertColorStringtoT4(lamp_label);
+      } else if (utils::is_color_label(lamp_label)) {
+        element.color = utils::convert_color_string_to_t4(lamp_label);
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
       } else {
         element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-        element.shape = utils::convertShapeStringtoT4(lamp_label);
+        element.shape = utils::convert_shape_string_to_t4(lamp_label);
       }
     }
     element.confidence = confidence;
@@ -121,15 +122,15 @@ std::vector<tier4_perception_msgs::msg::TrafficLightElement> CNNClassifierCore::
   return elements;
 }
 
-cv::Mat CNNClassifierCore::make_debug_image(
+cv::Mat CNNClassifier::make_debug_image(
   const cv::Mat & roi_image, const tier4_perception_msgs::msg::TrafficLight & signal)
 {
   float confidence = 0.0f;
   std::string label;
   for (std::size_t i = 0; i < signal.elements.size(); i++) {
     const auto & light = signal.elements.at(i);
-    const auto light_label =
-      utils::convertColorT4toString(light.color) + "-" + utils::convertShapeT4toString(light.shape);
+    const auto light_label = utils::convert_color_t4_to_string(light.color) + "-" +
+                             utils::convert_shape_t4_to_string(light.shape);
     label += light_label;
     // all lamp confidences are the same
     confidence = light.confidence;
@@ -151,96 +152,37 @@ cv::Mat CNNClassifierCore::make_debug_image(
   return debug_image;
 }
 
-// ============================== CNNClassifier ==============================
-// ROS adapter: declares parameters, reads the label file, publishes debug images, and
-// delegates classification to the Node-free core.
+// classify() and make_debug_image() implement ClassifierInterface: they wrap infer() with the
+// caller-signal mapping and the batch debug composition.
 
-namespace
+std::optional<tier4_perception_msgs::msg::TrafficLightArray> CNNClassifier::classify(
+  const std::vector<cv::Mat> & images)
 {
-// Read the label file into a vector of lines. Logs and throws std::runtime_error if the
-// file cannot be opened, so a misconfigured path fails node construction fast rather than
-// leaving the classifier with an empty label table (which would be an out-of-range
-// lookup at inference time).
-std::vector<std::string> read_label_file(rclcpp::Node * node, const std::string & filepath)
-{
-  std::ifstream labels_file(filepath);
-  if (!labels_file.is_open()) {
-    RCLCPP_ERROR(node->get_logger(), "Could not open label file. [%s]", filepath.c_str());
-    throw std::runtime_error("Could not open label file: " + filepath);
-  }
-  std::vector<std::string> labels;
-  std::string label;
-  while (std::getline(labels_file, label)) {
-    labels.push_back(label);
-  }
-  return labels;
-}
-
-// Declare the CNN parameters on `node`, read the label file, and return the resulting
-// config. ROS params cannot load std::vector<float>, so mean/std are declared as
-// std::vector<double> and narrowed here -- keeping that quirk in the adapter so the core
-// sees plain std::vector<float>.
-CNNConfig declare_cnn_config(rclcpp::Node * node)
-{
-  const std::string precision = node->declare_parameter<std::string>("precision");
-  const std::string label_path = node->declare_parameter<std::string>("label_path");
-  const std::string model_path = node->declare_parameter<std::string>("model_path");
-  const auto mean_d = node->declare_parameter<std::vector<double>>("mean");
-  const auto std_d = node->declare_parameter<std::vector<double>>("std");
-
-  CNNConfig config;
-  config.model_path = model_path;
-  config.precision = precision;
-  config.labels = read_label_file(node, label_path);
-  config.mean = std::vector<float>(mean_d.begin(), mean_d.end());
-  config.std = std::vector<float>(std_d.begin(), std_d.end());
-  return config;
-}
-}  // namespace
-
-CNNClassifier::CNNClassifier(rclcpp::Node * node_ptr)
-: node_ptr_(node_ptr), core_(declare_cnn_config(node_ptr))
-{
-  image_pub_ = image_transport::create_publisher(
-    node_ptr_, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
-}
-
-bool CNNClassifier::getTrafficSignals(
-  const std::vector<cv::Mat> & images,
-  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
-{
-  if (images.size() != traffic_signals.signals.size()) {
-    RCLCPP_WARN(node_ptr_->get_logger(), "image number should be equal to traffic signal number!");
-    return false;
-  }
-
-  const CNNClassifierCore::ClassifierResult result = core_.classify(images);
+  ClassifierResult result = infer(images);
   if (!result.success) {
-    RCLCPP_ERROR(node_ptr_->get_logger(), "failed to classify traffic light image by cnn");
-    return false;
+    return std::nullopt;
   }
 
-  // Publish one debug image per ROI only when a debug consumer is attached.
-  if (0 < image_pub_.getNumSubscribers()) {
-    for (size_t i = 0; i < images.size(); i++) {
-      const auto debug_image_msg =
-        cv_bridge::CvImage(
-          std_msgs::msg::Header(), "rgb8",
-          CNNClassifierCore::make_debug_image(images[i], result.signals.signals[i]))
-          .toImageMsg();
-      image_pub_.publish(debug_image_msg);
+  // Keep the per-image classification so make_debug_image can render it afterwards.
+  last_signals_ = result.signals;
+
+  return std::move(result.signals);
+}
+
+cv::Mat CNNClassifier::make_debug_image(const std::vector<cv::Mat> & images) const
+{
+  // Stack each ROI's debug view (fixed 200 px wide) into one vertical strip.
+  cv::Mat debug_image;
+  const size_t count = std::min(images.size(), last_signals_.signals.size());
+  for (size_t i = 0; i < count; i++) {
+    cv::Mat strip = CNNClassifier::make_debug_image(images[i], last_signals_.signals[i]);
+    if (debug_image.empty()) {
+      debug_image = strip;
+    } else {
+      cv::vconcat(debug_image, strip, debug_image);
     }
   }
-
-  // Attach the core's per-image elements to the caller's pre-populated signals,
-  // preserving the traffic_light_id / traffic_light_type set upstream.
-  for (size_t i = 0; i < traffic_signals.signals.size(); i++) {
-    auto & elements = traffic_signals.signals[i].elements;
-    const auto & classified = result.signals.signals[i].elements;
-    elements.insert(elements.end(), classified.begin(), classified.end());
-  }
-
-  return true;
+  return debug_image;
 }
 
 }  // namespace autoware::traffic_light

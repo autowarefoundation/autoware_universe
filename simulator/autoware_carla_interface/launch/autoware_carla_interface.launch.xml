@@ -16,10 +16,30 @@
     <arg name="fixed_delta_seconds" default="0.05" description="Time step for CARLA, FPS=1/value"/>
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
+    <arg name="spawn_point_ground_snap" default="False" description="Snap the ego spawn point and RViz initial pose onto CARLA map geometry via ground_projection"/>
+    <arg name="spawn_point_ground_offset_z" default="0.5" description="Z offset added above the projected ground when ground-snapping the spawn point"/>
+    <arg name="initial_pose_ground_offset_z" default="1.0" description="Z offset added above the projected ground when ground-snapping the RViz initial pose"/>
+    <arg name="force_load_world" default="False" description="Always reload the CARLA world with client.load_world() instead of load_world_if_different()"/>
+    <arg name="min_positive_throttle" default="0.0" description="Minimum throttle applied while accelerating from (near) standstill; heavy CARLA vehicles never start on small actuation-map throttle"/>
+    <arg name="min_positive_throttle_speed_threshold" default="0.8" description="Apply min_positive_throttle only below this speed [m/s]; negative = always"/>
+    <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
+    <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
+    <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
 
-    <let name="carla_map" value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"/>
+    <arg
+      name="carla_map"
+      default=""
+      description="Explicit CARLA map/level name. When non-empty it overrides the name derived from map_path; useful for CARLA levels whose name differs from the Autoware map directory"
+    />
 
-    <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map)'"/>
+    <let name="carla_map_resolved" value="$(var carla_map)" if="$(eval &quot;'$(var carla_map)'.strip() != ''&quot;)"/>
+    <let
+      name="carla_map_resolved"
+      value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"
+      unless="$(eval &quot;'$(var carla_map)'.strip() != ''&quot;)"
+    />
+
+    <log message="[CARLA Interface] Map Path: '$(var map_path)', carla_map override: '$(var carla_map)' -> Loading CARLA Map: '$(var carla_map_resolved)'"/>
 
     <!-- Sensor Configuration -->
     <arg
@@ -31,6 +51,7 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping_light_weight.yaml" if="$(var use_light_weight_sensor_mapping)"/>
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
+    <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -39,14 +60,25 @@
       <param name="timeout" value="$(var timeout)"/>
       <param name="sync_mode" value="$(var sync_mode)"/>
       <param name="fixed_delta_seconds" value="$(var fixed_delta_seconds)"/>
-      <param name="carla_map" value="$(var carla_map)"/>
+      <param name="carla_map" value="$(var carla_map_resolved)"/>
       <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name)"/>
       <param name="spawn_point" value="$(var spawn_point)"/>
       <param name="vehicle_type" value="$(var vehicle_type)"/>
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
+      <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
+      <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
+      <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
+      <param name="force_load_world" value="$(var force_load_world)"/>
+      <param name="min_positive_throttle" value="$(var min_positive_throttle)"/>
+      <param name="min_positive_throttle_speed_threshold" value="$(var min_positive_throttle_speed_threshold)"/>
+      <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
+      <param name="map_origin_x" value="$(var map_origin_x)"/>
+      <param name="map_origin_y" value="$(var map_origin_y)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
+      <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>
+      <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>
@@ -72,20 +104,8 @@
          These relays subscribe the raw image, which forces the interface to
          convert and publish every CAM_FRONT frame; skip them in light-weight
          mode like the republish nodes below. -->
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_image_relay"
-      args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
-    <node
-      pkg="topic_tools"
-      exec="relay"
-      name="traffic_light_camera_info_relay"
-      args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
-      unless="$(var use_light_weight_sensor_mapping)"
-    />
+    <node pkg="topic_tools" exec="relay" name="traffic_light_image_relay" args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"/>
+    <node pkg="topic_tools" exec="relay" name="traffic_light_camera_info_relay" args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"/>
 
     <!-- Image transport nodes to create compressed versions for all cameras -->
     <node
@@ -93,7 +113,6 @@
       exec="republish"
       name="cam_front_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <node
@@ -136,7 +155,6 @@
       exec="republish"
       name="traffic_light_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
-      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <!-- Multi-camera combiner for RViz visualization -->
@@ -144,31 +162,19 @@
 
     <!-- E2E Planning Infrastructure -->
     <group if="$(var use_e2e_planning)">
-      <!-- Convert vehicle velocity report to twist -->
-      <include file="$(find-pkg-share autoware_vehicle_velocity_converter)/launch/vehicle_velocity_converter.launch.xml">
-        <arg name="input_vehicle_velocity_topic" value="/vehicle/status/velocity_status"/>
-        <arg name="output_twist_with_covariance" value="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
-      </include>
+      <!-- localization/kinematic_state and the map->base_link TF are published
+           directly from the CARLA ground truth by the interface node
+           (publish_ground_truth_localization); the former GNSS round-trip via
+           vehicle_velocity_converter + carla_state_publisher duplicated those
+           topics with additional latency. -->
 
-      <!-- Publish Odometry (localization/kinematic_state) from CARLA pose + twist -->
-      <node pkg="autoware_carla_interface" exec="carla_state_publisher" name="carla_state_publisher" output="screen">
-        <param name="use_sim_time" value="$(var use_sim_time)"/>
-        <param name="frame_id" value="map"/>
-        <param name="child_frame_id" value="base_link"/>
-        <param name="publish_tf" value="true"/>
-        <param name="max_time_diff_sec" value="0.3"/>
-        <remap from="~/input/pose_with_covariance" to="/sensing/gnss/pose_with_covariance"/>
-        <remap from="~/input/twist_with_covariance" to="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
-        <remap from="~/output/odometry" to="/localization/kinematic_state"/>
-      </node>
-
-      <!-- Derive acceleration from twist -->
+      <!-- Derive acceleration from the ground-truth odometry -->
       <node pkg="autoware_twist2accel" exec="autoware_twist2accel_node" name="twist2accel" output="screen">
         <param name="use_sim_time" value="$(var use_sim_time)"/>
         <param from="$(find-pkg-share autoware_twist2accel)/config/twist2accel.param.yaml"/>
-        <param name="use_odom" value="false"/>
+        <param name="use_odom" value="true"/>
         <param name="accel_lowpass_gain" value="0.5"/>
-        <remap from="input/twist" to="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+        <remap from="input/odom" to="/localization/kinematic_state"/>
         <remap from="output/accel" to="/localization/acceleration"/>
       </node>
 

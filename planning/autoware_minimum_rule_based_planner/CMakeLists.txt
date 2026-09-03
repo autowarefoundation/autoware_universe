@@ -37,7 +37,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_lib
   PLUGIN "autoware::minimum_rule_based_planner::MinimumRuleBasedPlannerNode"
   EXECUTABLE ${PROJECT_NAME}_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
@@ -50,6 +50,8 @@ ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
 target_include_directories(${PROJECT_NAME}_plugins PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/plugins
 )
+
+autoware_agnocast_wrapper_setup(${PROJECT_NAME}_plugins)
 
 target_link_libraries(${PROJECT_NAME}_plugins
   ${PROJECT_NAME}_lib

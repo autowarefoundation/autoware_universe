@@ -15,22 +15,29 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
+using ModifierParams = trajectory_processor_params::Params;
 using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_internal_planning_msgs::msg::SafetyFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
@@ -43,28 +50,29 @@ using utils::obstacle_stop::DebugData;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
-class ObstacleStop : public TrajectoryModifierPluginBase
+class ObstacleStop : public TrajectoryProcessorPluginBase
 {
 public:
   ObstacleStop() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
+  ProcessingResult process(
+    TrajectoryPoints & traj_points, TrajectoryProcessorData & input) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & input) override;
+    const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
 
-  void update_params(const TrajectoryModifierParams & params) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
-  const TrajectoryModifierParams::ObstacleStop & get_params() const { return params_; }
+  const ModifierParams::ObstacleStop & get_params() const { return params_; }
 
   void publish_debug_data([[maybe_unused]] const std::string & ns) const override;
 
 protected:
-  void on_initialize(const TrajectoryModifierParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
-  TrajectoryModifierParams::ObstacleStop params_;
-  TrajectoryModifierParams::StoppingConstraints stopping_params_;
+  ModifierParams::ObstacleStop params_;
+  ModifierParams::StoppingConstraints stopping_params_;
 
   std::optional<CollisionPoint> nearest_collision_point_;
 
@@ -81,22 +89,22 @@ private:
   std::unordered_map<utils::obstacle_stop::ObjectType, double> object_decel_map_;
 
   MarkerArray marker_array_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_filtered_pointcloud_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  PublisherHandle<visualization_msgs::msg::MarkerArray> debug_viz_pub_;
+  PublisherHandle<PointCloud2> pub_filtered_pointcloud_;
+  PublisherHandle<PointCloud2> pub_clustered_pointcloud_;
+  PublisherHandle<StringStamped> pub_debug_text_;
 
-  void check_obstacles(const TrajectoryPoints & traj_points, const InputData & input);
+  void check_obstacles(const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
   std::optional<CollisionPoint> check_predicted_objects(
-    const TrajectoryPoints & traj_points, const InputData & input);
+    const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
   std::optional<CollisionPoint> check_pointcloud(
-    const TrajectoryPoints & traj_points, const InputData & input);
+    const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
 
-  bool set_stop_point(TrajectoryPoints & traj_points, const InputData & input);
+  bool set_stop_point(TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
 
   void publish_debug_string(bool is_safe) const;
 };
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
