@@ -62,6 +62,7 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
   params_.input_twist_topic_type = declare_parameter<std::string>("input_twist_topic_type");
   params_.input_topics = declare_parameter<std::vector<std::string>>("input_topics");
   params_.output_frame = declare_parameter<std::string>("output_frame");
+  const auto output_point_type = declare_parameter<std::string>("output_point_type");
 
   if (params_.input_topics.empty()) {
     throw std::runtime_error("Need a 'input_topics' parameter to be set before continuing.");
@@ -72,6 +73,14 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
 
   if (params_.output_frame.empty()) {
     throw std::runtime_error("Need an 'output_frame' parameter to be set before continuing.");
+  }
+
+  if (output_point_type == "XYZIRC") {
+    params_.output_point_type = OutputPointType::XYZIRC;
+  } else if (output_point_type == "XYZIRCT") {
+    params_.output_point_type = OutputPointType::XYZIRCT;
+  } else {
+    throw std::runtime_error("output_point_type must be 'XYZIRC' or 'XYZIRCT'");
   }
 
   params_.matching_strategy = declare_parameter<std::string>("matching_strategy.type");
@@ -108,7 +117,8 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
   // Combine cloud handler
   combine_cloud_handler_ = std::make_shared<CombineCloudHandler<MsgTraits>>(
     *this, params_.input_topics, params_.output_frame, params_.is_motion_compensated,
-    params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud);
+    params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud,
+    params_.output_point_type);
 
   // Diagnostic Updater
   diagnostics_interface_ =
@@ -178,12 +188,14 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
   double cloud_arrival_time = this->get_clock()->now().seconds();
   manage_collector_list();
 
-  if (!utils::is_data_layout_compatible_with_point_xyzirc(*input_ptr)) {
-    RCLCPP_ERROR(
-      get_logger(), "The pointcloud layout is not compatible with PointXYZIRC. Aborting");
+  if (!combine_cloud_handler_->is_input_layout_supported(*input_ptr)) {
+    RCLCPP_ERROR_ONCE(
+      get_logger(), "The pointcloud layout of '%s' is not supported for output_point_type %s. Dropping.",
+      topic_name.c_str(),
+      params_.output_point_type == OutputPointType::XYZIRCT ? "XYZIRCT" : "XYZIRC");
 
     if (utils::is_data_layout_compatible_with_point_xyzi(*input_ptr)) {
-      RCLCPP_ERROR(
+      RCLCPP_ERROR_ONCE(
         get_logger(),
         "The pointcloud layout is compatible with PointXYZI. You may be using legacy code/data");
     }

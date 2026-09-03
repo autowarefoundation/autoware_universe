@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_COMBINE_CLOUD_HANDLER_KERNEL_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_COMBINE_CLOUD_HANDLER_KERNEL_HPP_
 
+#include <autoware/point_types/types.hpp>
+
 #include <cuda_runtime.h>
 
 #include <cstdint>
@@ -38,19 +40,13 @@ struct TransformStruct
   float m33;
 };
 
-struct PointTypeStruct
-{
-  float x;
-  float y;
-  float z;
-  std::uint8_t intensity;
-  std::uint8_t return_type;
-  std::uint16_t channel;
-};
-
+/// Applies `transform` to `input_points` and writes the result to `output_points`. PointT is
+/// autoware::point_types::PointXYZIRC or PointXYZIRCT; for the latter, `time_offset_ns` is added
+/// to every point's time_stamp.
+template <typename PointT>
 void transform_launch(
-  const PointTypeStruct * input_points, int num_points, TransformStruct transform,
-  PointTypeStruct * output_points, cudaStream_t & stream);
+  const PointT * input_points, int num_points, TransformStruct transform,
+  std::uint32_t time_offset_ns, PointT * output_points, cudaStream_t & stream);
 
 }  // namespace autoware::pointcloud_preprocessor
 

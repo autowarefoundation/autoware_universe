@@ -76,6 +76,12 @@
           "minLength": 1,
           "description": "Output frame."
         },
+        "output_point_type": {
+          "type": "string",
+          "enum": ["XYZIRC", "XYZIRCT"],
+          "default": "XYZIRC",
+          "description": "Point type of the published clouds. XYZIRCT additionally carries each point's time_stamp in nanoseconds relative to the published header stamp and requires every input cloud to provide a time_stamp field. Inputs that cannot be converted are dropped."
+        },
         "matching_strategy": {
           "type": "object",
           "properties": {
@@ -138,6 +144,7 @@
         "input_twist_topic_type",
         "input_topics",
         "output_frame",
+        "output_point_type",
         "matching_strategy"
       ]
     }
