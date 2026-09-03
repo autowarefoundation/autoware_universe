@@ -23,9 +23,11 @@ ament_target_dependencies(autoware_planning_validator_component
   autoware_agnocast_wrapper
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::planning_validator::PlanningValidatorNode"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 # invalid trajectory publisher (for debug)
