@@ -26,11 +26,12 @@
 
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
@@ -70,7 +71,7 @@ private:
   TemporalMPTParams mpt_params_;
 
   void set_mpt_params(
-    const trajectory_optimizer_node_params::Params::TrajectoryTemporalMptOptimizer & params);
+    const trajectory_processor_params::Params::TrajectoryTemporalMptOptimizer & params);
   void create_or_reset_solver();
   void update_bicycle_geometry_from_vehicle();
   void apply_solver_model_parameters();
@@ -90,15 +91,14 @@ private:
     const TrajectoryPoints & reference_before, const nav_msgs::msg::Odometry & initial_odom,
     const temporal_mpt::AcadosSolution & solution);
 
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr debug_input_trajectory_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr debug_input_initial_state_pub_;
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr
-    debug_output_trajectory_pub_;
-  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr debug_solve_status_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_control_accel_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_control_delta_cmd_pub_;
+  PublisherHandle<autoware_planning_msgs::msg::Trajectory> debug_input_trajectory_pub_;
+  PublisherHandle<nav_msgs::msg::Odometry> debug_input_initial_state_pub_;
+  PublisherHandle<autoware_planning_msgs::msg::Trajectory> debug_output_trajectory_pub_;
+  PublisherHandle<std_msgs::msg::Int32> debug_solve_status_pub_;
+  PublisherHandle<std_msgs::msg::Float64MultiArray> debug_control_accel_pub_;
+  PublisherHandle<std_msgs::msg::Float64MultiArray> debug_control_delta_cmd_pub_;
 };
 
-}  // namespace autoware::trajectory_optimizer::plugin
-// clang-format off
+}  // namespace autoware::trajectory_processor::plugin
+   // clang-format off
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_TEMPORAL_MPT_OPTIMIZER_HPP_  // NOLINT

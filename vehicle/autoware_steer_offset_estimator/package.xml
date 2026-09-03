@@ -24,6 +24,8 @@
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
   <depend>tl_expected</depend>
   <depend>yaml_cpp_vendor</depend>
   <exec_depend>autoware_global_parameter_loader</exec_depend>

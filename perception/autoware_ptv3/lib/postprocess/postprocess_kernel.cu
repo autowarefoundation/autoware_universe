@@ -20,111 +20,11 @@
 
 #include <math_constants.h>
 
-#include <algorithm>
-#include <cctype>
 #include <stdexcept>
-#include <vector>
 
 namespace autoware::ptv3
 {
-namespace
-{
 using autoware::point_types::PointCloudClassification;
-
-/**
- * @brief Convert a PTv3 class name to the consolidated PointCloudClassification value.
- *
- * @details The input class name is normalized to uppercase before comparison, so matching is
- * case-insensitive for ASCII letters. Expected names are derived from
- * segmentation3d.class_names (e.g., car, truck, traffic_cone, drivable_flat).
- *
- * Mapping:
- * - car -> CAR
- * - truck -> TRUCK
- * - bus -> BUS
- * - bicycle -> BICYCLE
- * - pedestrian -> PEDESTRIAN
- * - traffic_cone -> HAZARD
- * - debris -> HAZARD
- * - vertical_thin -> HAZARD
- * - barrier -> STRUCTURE
- * - drivable_flat -> FLAT_SURFACE
- * - non_drivable_flat -> FLAT_SURFACE
- * - building -> STRUCTURE
- * - static_clutter -> STRUCTURE
- * - vegetation -> VEGETATION
- * - noise -> NOISE
- *
- * @param class_name PTv3 class name string from runtime configuration.
- * @return PointCloudClassification enum value encoded as std::uint8_t.
- * @throws std::runtime_error if class_name is not supported.
- */
-std::uint8_t classificationFromClassName(const std::string & class_name)
-{
-  std::string normalized_class_name = class_name;
-  std::transform(
-    normalized_class_name.begin(), normalized_class_name.end(), normalized_class_name.begin(),
-    [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
-
-  if (normalized_class_name == "CAR") {
-    return static_cast<std::uint8_t>(PointCloudClassification::CAR);
-  }
-  if (normalized_class_name == "TRUCK") {
-    return static_cast<std::uint8_t>(PointCloudClassification::TRUCK);
-  }
-  if (normalized_class_name == "BUS") {
-    return static_cast<std::uint8_t>(PointCloudClassification::BUS);
-  }
-  if (normalized_class_name == "BICYCLE") {
-    return static_cast<std::uint8_t>(PointCloudClassification::BICYCLE);
-  }
-  if (normalized_class_name == "PEDESTRIAN") {
-    return static_cast<std::uint8_t>(PointCloudClassification::PEDESTRIAN);
-  }
-  if (
-    normalized_class_name == "TRAFFIC_CONE" || normalized_class_name == "DEBRIS" ||
-    normalized_class_name == "VERTICAL_THIN") {
-    return static_cast<std::uint8_t>(PointCloudClassification::HAZARD);
-  }
-  if (normalized_class_name == "DRIVABLE_FLAT" || normalized_class_name == "NON_DRIVABLE_FLAT") {
-    return static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
-  }
-  if (
-    normalized_class_name == "BARRIER" || normalized_class_name == "BUILDING" ||
-    normalized_class_name == "STATIC_CLUTTER") {
-    return static_cast<std::uint8_t>(PointCloudClassification::STRUCTURE);
-  }
-  if (normalized_class_name == "VEGETATION") {
-    return static_cast<std::uint8_t>(PointCloudClassification::VEGETATION);
-  }
-  if (normalized_class_name == "NOISE") {
-    return static_cast<std::uint8_t>(PointCloudClassification::NOISE);
-  }
-
-  throw std::runtime_error(
-    "Unexpected PTv3 class name in segmentation3d.class_names: '" + class_name + "'");
-}
-
-/**
- * @brief Build lookup table from runtime class_names index to segmented class_id
- * (PointCloudClassification).
- * @details The model output label index is determined by class_names order in parameters. This
- * lookup keeps postprocess robust even when class_names order changes.
- *
- * @param class_names List of PTv3 class names from runtime configuration.
- * @return Lookup table mapping class_id to PointCloudClassification.
- */
-std::vector<std::uint8_t> makeClassIdToClassificationLut(
-  const std::vector<std::string> & class_names)
-{
-  std::vector<std::uint8_t> lut(
-    class_names.size(), static_cast<std::uint8_t>(PointCloudClassification::INVALID));
-  for (std::size_t i = 0; i < class_names.size(); ++i) {
-    lut[i] = classificationFromClassName(class_names[i]);
-  }
-  return lut;
-}
-}  // namespace
 
 __global__ void createVisualizationPointcloudKernel(
   const float4 * input_features, const float * colors, const std::int64_t * labels,
@@ -394,13 +294,13 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
     color_map_d_.get(), config_.colors_rgb_.data(), config_.colors_rgb_.size() * sizeof(float),
     cudaMemcpyHostToDevice, stream_);
 
+  // The LUT is resolved from segmentation3d.class_mapping when PTv3Config is built.
   class_id_to_classification_d_ =
-    autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.segmentation_class_names_.size());
-  const auto class_id_to_classification_lut =
-    makeClassIdToClassificationLut(config_.segmentation_class_names_);
+    autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.class_id_to_classification_.size());
   cudaMemcpyAsync(
-    class_id_to_classification_d_.get(), class_id_to_classification_lut.data(),
-    class_id_to_classification_lut.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice, stream_);
+    class_id_to_classification_d_.get(), config_.class_id_to_classification_.data(),
+    config_.class_id_to_classification_.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice,
+    stream_);
 
   if (!config_.filter_class_indices_.empty()) {
     filter_class_indices_d_ =

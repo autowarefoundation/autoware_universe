@@ -20,18 +20,19 @@
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 using autoware::trajectory_processor::TrajectoryProcessorData;
 using autoware::trajectory_processor::TrajectoryProcessorParams;
 using autoware::trajectory_processor::plugin::ProcessingResult;
 using autoware::trajectory_processor::plugin::TrajectoryPoints;
 using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
-using ModifierParams = trajectory_modifier_params::Params;
+using ModifierParams = trajectory_processor_params::Params;
 using autoware_internal_debug_msgs::msg::StringStamped;
 
 class SurroundObstacleStop : public TrajectoryProcessorPluginBase
@@ -64,7 +65,7 @@ private:
   bool is_stop_active_{false};
   std::optional<rclcpp::Time> last_obstacle_found_time_;
 
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  PublisherHandle<StringStamped> pub_debug_text_;
 
   [[nodiscard]] bool check_inputs(const TrajectoryProcessorData & input) const;
 
@@ -80,6 +81,6 @@ private:
   void publish_debug_string(bool is_active) const;
 };
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__SURROUND_OBSTACLE_STOP_HPP_

@@ -205,7 +205,13 @@ class SensorRegistry:
             return True
 
         time_diff = current_time - sensor.last_publish_time
-        return time_diff >= (1.0 / sensor.frequency_hz)
+        # A sensor producing at exactly the publish rate lands on time_diff
+        # values that fall a float rounding step short of the period, and
+        # those frames are dropped. The next frame then arrives a whole period
+        # late, so the sensor publishes at a fraction of the rate it was
+        # configured for. The tolerance is orders of magnitude below any
+        # simulation step, so it cannot let a genuinely early frame through.
+        return time_diff >= (1.0 / sensor.frequency_hz) - 1e-9
 
     def get_all_sensors(self) -> Dict[str, SensorConfig]:
         """

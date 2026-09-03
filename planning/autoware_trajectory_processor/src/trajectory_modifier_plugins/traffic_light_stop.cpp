@@ -48,17 +48,14 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
 }
 }  // namespace
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void TrafficLightStop::on_initialize([[maybe_unused]] const TrajectoryProcessorParams & params)
 {
-  const auto node_ptr = get_node_ptr();
-  planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "modifier_traffic_light_stop");
+  init_planning_factor_interface("modifier_traffic_light_stop");
 
-  pub_debug_text_ = node_ptr->create_publisher<StringStamped>("~/traffic_light_stop/debug/text", 1);
+  pub_debug_text_ = make_publisher<StringStamped>("~/traffic_light_stop/debug/text");
 
   enabled_ = params.use_traffic_light_stop;
   params_ = params.traffic_light_stop;
@@ -86,7 +83,7 @@ bool TrafficLightStop::is_trajectory_modification_required(
   if (!enabled_ || !check_inputs(input)) return false;
 
   if (!checker_) {
-    RCLCPP_ERROR(get_node_ptr()->get_logger(), "Compliance checker is not initialized.");
+    RCLCPP_ERROR(get_logger(), "Compliance checker is not initialized.");
     return false;
   }
 
@@ -127,7 +124,7 @@ bool TrafficLightStop::check_traffic_lights(
   debug_data_.nearest_violation_arc_length = nearest_it->arc_length_to_cross_point;
 
   RCLCPP_WARN_THROTTLE(
-    get_node_ptr()->get_logger(), *get_clock(), 1000,
+    get_logger(), *get_clock(), 1000,
     "[TM TrafficLightStop] Detected traffic light violation at arc length %f m",
     nearest_it->arc_length_to_cross_point);
   return true;
@@ -163,7 +160,7 @@ bool TrafficLightStop::set_stop_point(
 
   if (utils::stop_point_exists(traj_points, target_stop_point_arc_length)) {
     RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "[TM TrafficLightStop] Preceding (or duplicate) stop point exists, skip inserting stop "
       "point");
     return false;
@@ -171,18 +168,9 @@ bool TrafficLightStop::set_stop_point(
 
   if (
     target_stop_point_arc_length < stopping_params_.arrived_distance_threshold ||
-    !utils::insert_stop_point(traj_points, target_stop_point_arc_length, trajectory_length)) {
-    traj_points = std::invoke([&]() {
-      TrajectoryPoints stop_points;
-      auto p = traj_points.front();
-      p.longitudinal_velocity_mps = 0.0;
-      p.acceleration_mps2 = 0.0;
-      p.time_from_start = rclcpp::Duration::from_seconds(0.0);
-      stop_points.push_back(p);
-      p.time_from_start = rclcpp::Duration::from_seconds(trajectory_time_step_);
-      stop_points.push_back(p);
-      return stop_points;
-    });
+    !utils::insert_stop_point(traj_points, target_stop_point_arc_length)) {
+    utils::replace_trajectory_with_stop_point(
+      traj_points, input.current_odometry->pose.pose, trajectory_time_step_);
   }
 
   const auto & stop_pose = traj_points.back().pose;
@@ -197,7 +185,7 @@ bool TrafficLightStop::set_stop_point(
   debug_data_.stop_point_arc_length = target_stop_point_arc_length;
 
   RCLCPP_WARN_THROTTLE(
-    get_node_ptr()->get_logger(), *get_clock(), 1000,
+    get_logger(), *get_clock(), 1000,
     "[TM TrafficLightStop] Inserted stop point at arc length %f m", target_stop_point_arc_length);
   return true;
 }
@@ -223,12 +211,12 @@ void TrafficLightStop::publish_debug_string() const
   StringStamped string_stamp;
   string_stamp.stamp = get_clock()->now();
   string_stamp.data = ss.str();
-  pub_debug_text_->publish(string_stamp);
+  pub_debug_text_(string_stamp);
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::TrafficLightStop,
+  autoware::trajectory_processor::plugin::TrafficLightStop,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

@@ -15,7 +15,7 @@
 //
 // Unit tests for the ROS-free classification core (TrafficLightClassifier).
 //
-// classify() is exercised directly over an in-memory cv::Mat and a
+// classify() is exercised directly over an in-memory sensor_msgs::msg::Image and a
 // TrafficLightRoiArray, with a hand-written FakeClassifier standing in for the
 // real backend. This isolates the per-ROI orchestration (type filtering,
 // cropping, exposure handling, UNKNOWN-append, ordering, the classifier-failure
@@ -27,7 +27,7 @@
 //   * The concrete lamp color/shape a real backend assigns -- the fake stamps a
 //     fixed color, so only the slots/ids/exposure structure is pinned.
 //   * compute_brightness on real camera frames -- covered by test_utils.
-//   * Node wiring (pub/sub, diagnostics, header stamping, sync) -- covered by
+//   * Node wiring (pub/sub, diagnostics, sync) -- covered by
 //     test_traffic_light_classifier_integration.
 //
 
@@ -36,10 +36,18 @@
 
 #include <opencv2/core/core.hpp>
 
+#include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/header.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
+
+// cppcheck-suppress preprocessorErrorDirective
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+#include <cv_bridge/cv_bridge.hpp>
+#else
+#include <cv_bridge/cv_bridge.h>
+#endif
 
 #include <gtest/gtest.h>
 
@@ -128,19 +136,27 @@ public:
   }
 };
 
-cv::Mat make_solid_image(const cv::Scalar & color, int width = 16, int height = 16)
+// The rgb8 image message classify() consumes directly. frame_id is fixed to
+// "camera_frame" for every test; the header-propagation tests assert against that constant.
+sensor_msgs::msg::Image make_image_message(
+  const cv::Scalar & color, int width = 16, int height = 16)
 {
-  return cv::Mat(height, width, CV_8UC3, color);
+  std_msgs::msg::Header header;
+  header.frame_id = "camera_frame";
+  return *cv_bridge::CvImage(header, "rgb8", cv::Mat(height, width, CV_8UC3, color)).toImageMsg();
 }
 
-// A 32x16 image split into two 16x16 halves: left painted `left`, right painted
-// `right`. Pairs with two side-by-side ROIs (x=0 and x=16) so each ROI crops a
-// distinctly colored region.
-cv::Mat make_left_right_image(const cv::Scalar & left, const cv::Scalar & right)
+// A 32x16 image message split into two 16x16 halves: left painted `left`, right painted
+// `right`. Pairs with two side-by-side ROIs (x=0 and x=16) so each ROI crops a distinctly
+// colored region. frame_id is fixed to "camera_frame", as in make_image_message.
+sensor_msgs::msg::Image make_left_right_image_message(
+  const cv::Scalar & left, const cv::Scalar & right)
 {
   cv::Mat mat(/*rows=*/16, /*cols=*/32, CV_8UC3, left);
   mat(cv::Rect(/*x=*/16, /*y=*/0, /*width=*/16, /*height=*/16)).setTo(right);
-  return mat;
+  std_msgs::msg::Header header;
+  header.frame_id = "camera_frame";
+  return *cv_bridge::CvImage(header, "rgb8", mat).toImageMsg();
 }
 
 TrafficLightRoi make_roi(
@@ -229,7 +245,7 @@ TEST_F(TrafficLightClassifierTest, RoiImagesAreClassifiedSubsetForwardedToDebug)
   //   id=2 zero-sized car  -> appended to signals as UNKNOWN, NOT in roi_images
   //   id=3 pedestrian type -> dropped entirely (in neither)
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));
   rois.rois.push_back(make_zero_sized_roi(/*id=*/2));
@@ -238,7 +254,7 @@ TEST_F(TrafficLightClassifierTest, RoiImagesAreClassifiedSubsetForwardedToDebug)
   // Act
   const auto result = classifier.classify(image, rois);
   ASSERT_TRUE(result.has_value());
-  classifier.make_debug_image(result->roi_images);
+  classifier.make_debug_image(*result);
 
   // Assert: roi_images holds only the 1 classified ROI -- distinct from both the 3
   // inputs and the 2 output signals (classified + appended-UNKNOWN) -- and that same
@@ -257,7 +273,7 @@ TEST_F(TrafficLightClassifierTest, RejectsBackendSignalCountMismatch)
   // Arrange -- one valid ROI, but the backend is rigged to return one more signal than images.
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
   fake_classifier_->extra_signals = 1;
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));
 
@@ -269,14 +285,15 @@ TEST_F(TrafficLightClassifierTest, RejectsBackendSignalCountMismatch)
 }
 
 // --------------------------------------------------------------------------
-// No ROIs -> empty result, no exposure flags, and the backend is never invoked
-// (the images batch is empty, so classify() skips it).
+// No ROIs -> classify() takes its empty-input short-circuit: empty result,
+// no exposure flags, the backend is never invoked, and the image is never
+// decoded -- yet the header is still stamped from the input image message.
 // --------------------------------------------------------------------------
 TEST_F(TrafficLightClassifierTest, EmptyRoisYieldEmptyResult)
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   const TrafficLightRoiArray rois;  // no rois
 
   // Act
@@ -288,6 +305,7 @@ TEST_F(TrafficLightClassifierTest, EmptyRoisYieldEmptyResult)
   EXPECT_FALSE(result->detected_over_exposure);
   EXPECT_FALSE(result->detected_under_exposure);
   EXPECT_EQ(fake_classifier_->call_count, 0);
+  EXPECT_EQ(result->signals.header.frame_id, "camera_frame");
 }
 
 // --------------------------------------------------------------------------
@@ -298,7 +316,7 @@ TEST_F(TrafficLightClassifierTest, NonMatchingTypeRoiIsDropped)
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_roi(/*id=*/1, pedestrian_type, 0, 0, 16, 16));
 
@@ -319,7 +337,7 @@ TEST_F(TrafficLightClassifierTest, ZeroSizedMatchingRoiAppendedAsUnknown)
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_zero_sized_roi(/*id=*/1));
 
@@ -338,14 +356,13 @@ TEST_F(TrafficLightClassifierTest, ZeroSizedMatchingRoiAppendedAsUnknown)
 
 // --------------------------------------------------------------------------
 // A valid ROI is classified into exactly one element with id/type propagated.
-// The result header is left default-constructed: stamping it is the node's job,
-// and classify() must not touch it.
+// The result header is stamped from the input image message's header.
 // --------------------------------------------------------------------------
-TEST_F(TrafficLightClassifierTest, ValidRoiIsClassifiedAndHeaderLeftUnset)
+TEST_F(TrafficLightClassifierTest, ValidRoiIsClassifiedAndHeaderPropagatedFromImage)
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/7));
 
@@ -361,8 +378,7 @@ TEST_F(TrafficLightClassifierTest, ValidRoiIsClassifiedAndHeaderLeftUnset)
   ASSERT_EQ(signal.elements.size(), 1u);
   EXPECT_EQ(signal.elements[0].color, TrafficLightElement::GREEN);  // backend result preserved
   EXPECT_EQ(fake_classifier_->call_count, 1);
-  // Header intentionally untouched by the core.
-  EXPECT_EQ(result->signals.header, std_msgs::msg::Header{});
+  EXPECT_EQ(result->signals.header.frame_id, "camera_frame");
 }
 
 // --------------------------------------------------------------------------
@@ -373,7 +389,7 @@ TEST_F(TrafficLightClassifierTest, MultipleValidRoisMapToOrderedSlots)
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_solid_image(gray, /*width=*/32);
+  const auto image = make_image_message(gray, /*width=*/32);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));
   rois.rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));
@@ -400,7 +416,7 @@ TEST_F(TrafficLightClassifierTest, ValidThenZeroSizedRoiOrdering)
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_zero_sized_roi(/*id=*/1));  // appended last as UNKNOWN
   rois.rois.push_back(make_valid_roi(/*id=*/2));       // classified, leads the output
@@ -427,7 +443,7 @@ TEST_F(TrafficLightClassifierTest, CropHandedToBackendMatchesRoiGeometry)
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
-  const auto image = make_left_right_image(red, blue);
+  const auto image = make_left_right_image_message(red, blue);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));            // left half (red)
   rois.rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));  // right half (blue)
@@ -454,7 +470,7 @@ TEST_F(TrafficLightClassifierTest, OverExposedRoiOverwrittenWithUnknownAndFlagge
 {
   // Arrange
   auto classifier = make_classifier(/*over=*/0.85, no_under_threshold);
-  const auto image = make_solid_image(white);
+  const auto image = make_image_message(white);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));
 
@@ -479,7 +495,7 @@ TEST_F(TrafficLightClassifierTest, UnderExposedRoiOverwrittenWithUnknownAndFlagg
 {
   // Arrange
   auto classifier = make_classifier(no_over_threshold, /*under=*/-0.85);
-  const auto image = make_solid_image(black);
+  const auto image = make_image_message(black);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));
 
@@ -504,7 +520,7 @@ TEST_F(TrafficLightClassifierTest, OnlyExposedSlotIsOverwritten)
 {
   // Arrange
   auto classifier = make_classifier(/*over=*/0.85, no_under_threshold);
-  const auto image = make_left_right_image(gray, white);  // left normal, right over-exposed
+  const auto image = make_left_right_image_message(gray, white);  // left normal, right over-exposed
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));            // normal (left half)
   rois.rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));  // over-exposed (right half)
@@ -536,7 +552,7 @@ TEST_F(TrafficLightClassifierTest, OverAndUnderExposureInSameCall)
 {
   // Arrange
   auto classifier = make_classifier(/*over=*/0.85, /*under=*/-0.85);
-  const auto image = make_left_right_image(white, black);  // left over, right under
+  const auto image = make_left_right_image_message(white, black);  // left over, right under
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));            // over-exposed (left half)
   rois.rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));  // under-exposed (right half)
@@ -563,7 +579,7 @@ TEST_F(TrafficLightClassifierTest, BackendFailureReturnsNullopt)
   // Arrange
   auto classifier = make_classifier(no_over_threshold, no_under_threshold);
   fake_classifier_->succeed = false;
-  const auto image = make_solid_image(gray);
+  const auto image = make_image_message(gray);
   TrafficLightRoiArray rois;
   rois.rois.push_back(make_valid_roi(/*id=*/1));
 

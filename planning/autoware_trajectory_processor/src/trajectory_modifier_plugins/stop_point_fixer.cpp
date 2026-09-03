@@ -20,15 +20,12 @@
 
 #include <memory>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void StopPointFixer::on_initialize(const TrajectoryProcessorParams & params)
 {
-  const auto node_ptr = get_node_ptr();
-  planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "stop_point_fixer");
+  init_planning_factor_interface("stop_point_fixer");
 
   params_ = params.stop_point_fixer;
   enabled_ = params.use_stop_point_fixer;
@@ -88,10 +85,9 @@ ProcessingResult StopPointFixer::process(
 
   utils::replace_trajectory_with_stop_point(
     traj_points, input.current_odometry->pose.pose, trajectory_time_step_);
-  auto clock_ptr = get_node_ptr()->get_clock();
+  auto clock_ptr = get_clock();
   RCLCPP_DEBUG_THROTTLE(
-    get_node_ptr()->get_logger(), *clock_ptr, 5000,
-    "StopPointFixer: Replaced trajectory with stop point.");
+    get_logger(), *clock_ptr, 5000, "StopPointFixer: Replaced trajectory with stop point.");
 
   // Add PlanningFactor for the stop decision
   const auto & ego_pose = input.current_odometry->pose.pose;
@@ -101,9 +97,9 @@ ProcessingResult StopPointFixer::process(
   return ProcessingResult::Modified;
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::StopPointFixer,
+  autoware::trajectory_processor::plugin::StopPointFixer,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)
