@@ -100,14 +100,8 @@ def _origin_from_usdz(usdz_path: str):
     return float(lat), float(lon)
 
 
-def _parse_geo_reference(xodr_xml: str):
-    """Extract ``(lat_0, lon_0)`` from the OpenDRIVE ``<geoReference>`` PROJ string.
-
-    This is the geographic origin of the CARLA world / ROS-map ENU frame that the
-    streamed splatsim poses are expressed in.  It is distinct from the usdz scene
-    ecef_anchor (which places the 3DGS gaussians and is handled by the tileset
-    transform); conflating the two is what misaligns the LiDAR to zero points.
-    """
+def _extract_proj_string(xodr_xml: str) -> str:
+    """Return the PROJ string held in the OpenDRIVE ``<geoReference>`` element."""
     import re
     import xml.etree.ElementTree as ET
 
@@ -117,15 +111,25 @@ def _parse_geo_reference(xodr_xml: str):
         re.DOTALL,
     )
     if match:
-        proj_string = match.group(1).strip()
-    else:
-        root = ET.fromstring(xodr_xml)
-        geo_ref = root.find(".//geoReference")
-        if geo_ref is not None and geo_ref.text:
-            proj_string = geo_ref.text.strip()
-        else:
-            raise ValueError("No <geoReference> found in OpenDRIVE XML")
+        return match.group(1).strip()
 
+    geo_ref = ET.fromstring(xodr_xml).find(".//geoReference")
+    if geo_ref is not None and geo_ref.text:
+        return geo_ref.text.strip()
+    raise ValueError("No <geoReference> found in OpenDRIVE XML")
+
+
+def _parse_geo_reference(xodr_xml: str):
+    """Extract ``(lat_0, lon_0)`` from the OpenDRIVE ``<geoReference>`` PROJ string.
+
+    This is the geographic origin of the CARLA world / ROS-map ENU frame that the
+    streamed splatsim poses are expressed in.  It is distinct from the usdz scene
+    ecef_anchor (which places the 3DGS gaussians and is handled by the tileset
+    transform); conflating the two is what misaligns the LiDAR to zero points.
+    """
+    import re
+
+    proj_string = _extract_proj_string(xodr_xml)
     lat_match = re.search(r"\+lat_0=([0-9eE.+-]+)", proj_string)
     lon_match = re.search(r"\+lon_0=([0-9eE.+-]+)", proj_string)
     if lat_match is None or lon_match is None:

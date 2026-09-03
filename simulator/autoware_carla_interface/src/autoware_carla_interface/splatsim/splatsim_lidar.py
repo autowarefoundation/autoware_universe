@@ -147,8 +147,8 @@ class SplatSimLidar:
             # The LiDAR path never uses the camera pipeline, but newer splatsim
             # servers run a camera warmup render inside Initialize. Leaving the
             # intrinsics unset builds a 0x0 camera whose CUDA tile grid divides
-            # by zero (SIGFPE, uncatchable server-side), so send a small valid
-            # placeholder camera instead.
+            # by zero, a fatal floating-point exception the server cannot catch,
+            # so send a small valid placeholder camera instead.
             intrinsics=pb2.CameraIntrinsics(
                 fx=32.0, fy=32.0, cx=32.0, cy=32.0, width=64, height=64
             ),
