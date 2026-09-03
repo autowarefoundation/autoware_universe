@@ -21,6 +21,9 @@
 #include "autoware/pointcloud_preprocessor/concatenate_data/concatenation_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/time_utils.hpp"
 
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/msg/point_field.hpp>
@@ -42,6 +45,7 @@ using autoware::pointcloud_preprocessor::ConcatenatedFrameStatus;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
 using autoware::pointcloud_preprocessor::LateCloudPolicy;
 using autoware::pointcloud_preprocessor::MatchingStrategyType;
+using autoware::pointcloud_preprocessor::OutputPointFormat;
 using autoware::pointcloud_preprocessor::parse_matching_strategy;
 using CloudConcatenator =
   autoware::pointcloud_preprocessor::CloudConcatenator<sensor_msgs::msg::PointCloud2>;
@@ -54,8 +58,8 @@ constexpr std::size_t kPointsPerCloud = 3;
 const std::vector<double> kOffsets = {0.0, 0.04, 0.08};
 const std::vector<double> kNoise = {0.01, 0.01, 0.01};
 
-// Minimal x/y/z FLOAT32 cloud in the output frame (so no extrinsic is needed);
-// convert_to_xyzirc_cloud upgrades it to the XYZIRC layout internally.
+// Minimal XYZIRC cloud (the layout the node accepts) in the output frame, so no extrinsic is
+// needed.
 sensor_msgs::msg::PointCloud2::ConstSharedPtr make_cloud(
   int32_t sec, uint32_t nanosec, const char * frame_id = kOutputFrame)
 {
@@ -65,23 +69,15 @@ sensor_msgs::msg::PointCloud2::ConstSharedPtr make_cloud(
   cloud->header.frame_id = frame_id;
   cloud->height = 1;
   cloud->width = kPointsPerCloud;
-
-  auto field = [](const char * name, uint32_t offset) {
-    sensor_msgs::msg::PointField f;
-    f.name = name;
-    f.offset = offset;
-    f.datatype = sensor_msgs::msg::PointField::FLOAT32;
-    f.count = 1;
-    return f;
-  };
-  cloud->fields = {field("x", 0), field("y", 4), field("z", 8)};
+  cloud->fields = autoware::point_types::create_fields_point_xyzirc();
   cloud->is_bigendian = false;
-  cloud->point_step = 12;
+  cloud->point_step = sizeof(autoware::point_types::PointXYZIRC);
   cloud->row_step = cloud->point_step * cloud->width;
   cloud->is_dense = true;
 
-  cloud->data.resize(cloud->row_step);
-  const float points[kPointsPerCloud][3] = {{10.f, 0.f, 1.f}, {0.f, 10.f, 2.f}, {0.f, 0.f, 10.f}};
+  const autoware::point_types::PointXYZIRC points[kPointsPerCloud] = {
+    {10.f, 0.f, 1.f, 0, 0, 0}, {0.f, 10.f, 2.f, 0, 0, 0}, {0.f, 0.f, 10.f, 0, 0, 0}};
+  cloud->data.resize(sizeof(points));
   std::memcpy(cloud->data.data(), points, sizeof(points));
   return cloud;
 }
@@ -89,7 +85,8 @@ sensor_msgs::msg::PointCloud2::ConstSharedPtr make_cloud(
 CloudConcatenator make_naive_concatenator(double timeout_sec = 0.2)
 {
   return CloudConcatenator(
-    kInputTopics, kOutputFrame, timeout_sec, /*is_motion_compensated=*/false,
+    kInputTopics, kOutputFrame, OutputPointFormat::XYZIRC, timeout_sec,
+    /*is_motion_compensated=*/false,
     /*publish_synchronized_pointcloud=*/false,
     /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::naive);
 }
@@ -97,7 +94,8 @@ CloudConcatenator make_naive_concatenator(double timeout_sec = 0.2)
 CloudConcatenator make_advanced_concatenator(double timeout_sec = 0.2)
 {
   return CloudConcatenator(
-    kInputTopics, kOutputFrame, timeout_sec, /*is_motion_compensated=*/false,
+    kInputTopics, kOutputFrame, OutputPointFormat::XYZIRC, timeout_sec,
+    /*is_motion_compensated=*/false,
     /*publish_synchronized_pointcloud=*/false,
     /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::advanced, kOffsets,
     kNoise);
@@ -133,8 +131,8 @@ TEST(CloudConcatenatorConstruction, DuplicateInputTopicIsRejected)
   // the timeout path. Reject it at construction instead.
   const auto construct_with_duplicate_topic = [] {
     return CloudConcatenator(
-      {"lidar_top", "lidar_left", "lidar_top"}, kOutputFrame, 0.2, false, false, false,
-      MatchingStrategyType::naive);
+      {"lidar_top", "lidar_left", "lidar_top"}, kOutputFrame, OutputPointFormat::XYZIRC, 0.2, false,
+      false, false, MatchingStrategyType::naive);
   };
 
   // Act & Assert
@@ -146,7 +144,8 @@ TEST(CloudConcatenatorConstruction, AdvancedRequiresOffsetsAndNoiseWindow)
   // Arrange
   const auto construct_without_offsets = [] {
     return CloudConcatenator(
-      kInputTopics, kOutputFrame, 0.2, false, false, false, MatchingStrategyType::advanced);
+      kInputTopics, kOutputFrame, OutputPointFormat::XYZIRC, 0.2, false, false, false,
+      MatchingStrategyType::advanced);
   };
 
   // Act & Assert
@@ -159,8 +158,8 @@ TEST(CloudConcatenatorConstruction, AdvancedRejectsMismatchedSizes)
   // Size validation is delegated to AdvancedMatchingPolicy (shared with the node).
   const auto construct_with_too_few_offsets = [] {
     return CloudConcatenator(
-      kInputTopics, kOutputFrame, 0.2, false, false, false, MatchingStrategyType::advanced,
-      std::vector<double>{0.0, 0.04}, kNoise);
+      kInputTopics, kOutputFrame, OutputPointFormat::XYZIRC, 0.2, false, false, false,
+      MatchingStrategyType::advanced, std::vector<double>{0.0, 0.04}, kNoise);
   };
 
   // Act & Assert
@@ -280,7 +279,7 @@ TEST(CloudConcatenator, ClockGoingBackwardsKeepsLiveCollectorsOverStaleOnes)
   // Arrange
   // Two partial frames are open when the bag restarts.
   CloudConcatenator concatenator(
-    kInputTopics, kOutputFrame, /*timeout_sec=*/0.2, false, false, false,
+    kInputTopics, kOutputFrame, OutputPointFormat::XYZIRC, /*timeout_sec=*/0.2, false, false, false,
     MatchingStrategyType::advanced, kOffsets, kNoise, /*max_open_collectors=*/3);
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.0));
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 500'000'000), 100.1));
@@ -393,8 +392,8 @@ TEST(CloudConcatenator, MaxOpenCollectorsDropsOldestUnpublished)
   // Cap of 2 open collectors (the node uses its historical pool size). Two lidar_top clouds with
   // stamps far outside each other's windows fill it with two collectors.
   CloudConcatenator concatenator(
-    kInputTopics, kOutputFrame, /*timeout_sec=*/10.0, false, false, false,
-    MatchingStrategyType::advanced, kOffsets, kNoise, /*max_open_collectors=*/2);
+    kInputTopics, kOutputFrame, OutputPointFormat::XYZIRC, /*timeout_sec=*/10.0, false, false,
+    false, MatchingStrategyType::advanced, kOffsets, kNoise, /*max_open_collectors=*/2);
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.0));
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(11, 0), 100.1));
 
@@ -580,8 +579,8 @@ CloudConcatenator make_concatenator(MatchingStrategyType strategy, LateCloudPoli
 {
   const bool advanced = strategy == MatchingStrategyType::advanced;
   return CloudConcatenator(
-    kInputTopics, kOutputFrame, /*timeout_sec=*/0.2, false, false, false, strategy,
-    advanced ? std::optional(kOffsets) : std::nullopt,
+    kInputTopics, kOutputFrame, OutputPointFormat::XYZIRC, /*timeout_sec=*/0.2, false, false, false,
+    strategy, advanced ? std::optional(kOffsets) : std::nullopt,
     advanced ? std::optional(kNoise) : std::nullopt,
     /*max_open_collectors=*/0, policy);
 }
