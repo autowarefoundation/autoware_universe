@@ -54,12 +54,14 @@
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
 
     <!-- Scenario AutowareBridge (closed-loop with the CARLA scenario library).
-         Pass ego_vehicle_role_name:=Ego so the scenario framework can attach to
-         the ego this interface node spawns. -->
+         Set with_scenario:=<docker-image-ref>#<scenario-name> to run a scenario
+         closed loop; empty (the default) leaves the bridge off, i.e. the current
+         behavior. Pass ego_vehicle_role_name:=Ego so the scenario framework can
+         attach to the ego this interface node spawns. -->
     <arg
-      name="launch_autoware_bridge"
-      default="false"
-      description="Launch the autoware_bridge node that drives Autoware from a scenario mission over gRPC and reports readiness (opt-in; the CARLA scenario framework passes true)"
+      name="with_scenario"
+      default=""
+      description="Run a CARLA scenario closed loop, as '&lt;docker-image-ref&gt;#&lt;scenario-name&gt;' (the '#' separates the image from the scenario, since image refs use ':' '@' '/'); the image half alone runs the image default. Empty (default) disables the autoware_bridge node (current behavior)."
     />
     <arg name="bridge_address" default="localhost:50052" description="host:port of the scenario-library AutowareBridge gRPC server to dial"/>
     <arg name="auto_engage" default="true" description="Auto change_to_autonomous once localization is initialized, the route is set, and autonomous mode is available (scenario/sim only)"/>
@@ -92,10 +94,12 @@
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
     </node>
 
-    <!-- Scenario bridge: pull the mission (initial pose + goal) from the scenario
-         library over gRPC, drive Autoware's localization init / routing / engage,
-         and report readiness back. -->
-    <node pkg="autoware_carla_interface" exec="autoware_bridge" name="autoware_bridge" output="screen" if="$(var launch_autoware_bridge)">
+    <!-- Scenario bridge: launch the scenario package's Docker image (named by
+         with_scenario), which hosts the gRPC server, then pull the mission and
+         drive Autoware's localization init / routing / engage and report readiness.
+         Only launched when with_scenario is non-empty. -->
+    <node pkg="autoware_carla_interface" exec="autoware_bridge" name="autoware_bridge" output="screen" if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)">
+      <param name="scenario" value="$(var with_scenario)"/>
       <param name="bridge_address" value="$(var bridge_address)"/>
       <param name="auto_engage" value="$(var auto_engage)"/>
     </node>
