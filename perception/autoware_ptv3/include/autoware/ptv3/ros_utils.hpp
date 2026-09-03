@@ -19,11 +19,13 @@
 #include "autoware/ptv3/utils.hpp"
 
 #include <autoware/point_types/types.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #define CHECK_OFFSET(structure1, structure2, field)             \
@@ -67,6 +69,22 @@ void box3d_to_detected_object(
  * @return Matching ObjectClassification label, or UNKNOWN.
  */
 std::uint8_t get_classification_type(const std::string & class_name);
+
+/**
+ * @brief Declare and resolve segmentation3d.class_mapping.
+ *
+ * @details One `segmentation3d.class_mapping.<class_name>` parameter is declared per entry of
+ * class_names, so mapping entries for classes the loaded model does not output are never read.
+ *
+ * @param node Node used to declare the parameters.
+ * @param class_names Segmentation class names from segmentation3d.class_names.
+ * @param descriptor Descriptor applied to each declared parameter.
+ * @return Class name to PointCloudClassification name, one entry per class name.
+ * @throws std::runtime_error if a class name has no entry in the mapping.
+ */
+std::unordered_map<std::string, std::string> declare_class_mapping(
+  rclcpp::Node & node, const std::vector<std::string> & class_names,
+  const rcl_interfaces::msg::ParameterDescriptor & descriptor);
 
 }  // namespace autoware::ptv3
 

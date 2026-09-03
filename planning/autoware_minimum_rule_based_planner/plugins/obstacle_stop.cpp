@@ -31,30 +31,31 @@
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
-using autoware::trajectory_modifier::utils::clamp_stop_point_arc_length;
-using autoware::trajectory_modifier::utils::insert_stop_point;
-using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_object_collision;
-using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_pcd_collision;
-using autoware::trajectory_modifier::utils::obstacle_stop::get_trajectory_shape;
-using autoware::trajectory_modifier::utils::obstacle_stop::PointCloud;
+using autoware::trajectory_processor::utils::clamp_stop_point_arc_length;
+using autoware::trajectory_processor::utils::insert_stop_point;
+using autoware::trajectory_processor::utils::replace_trajectory_with_stop_point;
+using autoware::trajectory_processor::utils::obstacle_stop::get_nearest_object_collision;
+using autoware::trajectory_processor::utils::obstacle_stop::get_nearest_pcd_collision;
+using autoware::trajectory_processor::utils::obstacle_stop::get_trajectory_shape;
+using autoware::trajectory_processor::utils::obstacle_stop::PointCloud;
 
 void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
 {
   params_ = params.obstacle_stop;
 
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      get_node_ptr(), "backup_planner_obstacle_stop");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(get_node_ptr(), "backup_planner_obstacle_stop");
 
   pointcloud_filter_ =
-    std::make_unique<trajectory_modifier::utils::obstacle_stop::PointCloudFilter>(
+    std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
       params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,
       params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
       params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
       params_.pointcloud.clustering.max_size);
 
-  object_filter_ = std::make_unique<trajectory_modifier::utils::obstacle_stop::ObjectFilter>(
-    params_.objects.object_types, params_.objects.max_velocity_th,
+  object_filter_ = std::make_unique<trajectory_processor::utils::obstacle_stop::ObjectFilter>(
+    params_.objects.target_objects.bbox, params_.objects.target_objects.polygon,
     params_.objects.stopped_velocity_th, params_.objects.max_lateral_velocity_th,
     params_.objects.safety_buffer);
 
@@ -161,22 +162,10 @@ void ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const Modifier
     data.acceleration_ptr->accel.accel.linear.x, params_.nominal_stopping_decel,
     params_.stopping_jerk);
 
-  if (!insert_stop_point(
-        traj_points, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length))
-    return;
-
   if (
     target_stop_point_arc_length < params_.arrived_distance_threshold ||
-    !insert_stop_point(
-      traj_points, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length)) {
-    auto p = traj_points.front();
-    traj_points.clear();
-    p.longitudinal_velocity_mps = 0.0;
-    p.acceleration_mps2 = 0.0;
-    p.time_from_start = rclcpp::Duration::from_seconds(0.0);
-    traj_points.push_back(p);
-    p.time_from_start = rclcpp::Duration::from_seconds(0.1);
-    traj_points.push_back(p);
+    !insert_stop_point(traj_points, target_stop_point_arc_length)) {
+    replace_trajectory_with_stop_point(traj_points, data.odometry_ptr->pose.pose);
   }
 
   const auto & stop_pose = traj_points.back().pose;
@@ -205,18 +194,11 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
     debug_data_.target_polygons);
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
-  // TODO(Quda): Port the latest modifier logic
-  std::optional<CollisionPoint> collision_point;
-  if (params_.rss_params.enable) {
-    collision_point = get_nearest_object_collision(
-      traj_points, context_->vehicle_info, predicted_objects, object_decel_map_,
-      params_.rss_params.ego_decel, params_.rss_params.reaction_time,
-      params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
-      params_.rss_params.lookahead_horizon, colliding_object);
-  } else {
-    collision_point =
-      get_nearest_object_collision(traj_points, predicted_objects, colliding_object);
-  }
+  auto collision_point = get_nearest_object_collision(
+    traj_points, context_->vehicle_info, predicted_objects, object_decel_map_,
+    params_.rss_params.ego_decel, params_.rss_params.reaction_time,
+    params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
+    params_.rss_params.lookahead_horizon, colliding_object, params_.rss_params.enable);
 
   if (collision_point) debug_data_.colliding_object = colliding_object;
   return collision_point;

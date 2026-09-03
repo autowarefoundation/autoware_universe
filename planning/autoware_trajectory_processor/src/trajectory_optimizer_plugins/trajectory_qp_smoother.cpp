@@ -14,7 +14,6 @@
 
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
 
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_processor/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -30,18 +29,17 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
-void TrajectoryQPSmoother::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryQPSmoother::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
   enabled_ = params.use_qp_smoother;
   qp_params_ = params.trajectory_qp_smoother;
 
   // Log configuration at startup
   RCLCPP_DEBUG(
-    node_ptr->get_logger(),
+    get_logger(),
     "QP Smoother: velocity-based fidelity = %s, constrained points = [start: %d, end: %d]",
     qp_params_.use_velocity_based_fidelity ? "ENABLED" : "DISABLED",
     static_cast<int>(qp_params_.num_constrained_points_start),
@@ -49,26 +47,25 @@ void TrajectoryQPSmoother::on_initialize(const TrajectoryOptimizerParams & param
 
   if (qp_params_.use_velocity_based_fidelity) {
     RCLCPP_DEBUG(
-      node_ptr->get_logger(),
-      "QP Smoother: v_threshold=%.2f m/s, sigmoid_k=%.1f, w_range=[%.2f, %.2f]",
+      get_logger(), "QP Smoother: v_threshold=%.2f m/s, sigmoid_k=%.1f, w_range=[%.2f, %.2f]",
       qp_params_.velocity_threshold_mps, qp_params_.sigmoid_sharpness,
       qp_params_.min_fidelity_weight, qp_params_.max_fidelity_weight);
   }
 }
 
-void TrajectoryQPSmoother::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryQPSmoother::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_qp_smoother;
   qp_params_ = params.trajectory_qp_smoother;
 }
 
-void TrajectoryQPSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryQPSmoother::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
   if (!enabled_) {
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Minimum points needed: base requirement (5) or total constrained points + 1 free point
@@ -80,10 +77,10 @@ void TrajectoryQPSmoother::optimize_trajectory(
 
   if (traj_points.size() < min_points_for_optimization) {
     RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+      get_logger(), *get_clock(), 5000,
       "QP Smoother: Trajectory too short (%zu points < %zu required), skipping optimization",
       traj_points.size(), min_points_for_optimization);
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Check minimum path length (skip optimization for very short paths)
@@ -92,10 +89,10 @@ void TrajectoryQPSmoother::optimize_trajectory(
 
   if (path_length < min_path_length_m) {
     RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+      get_logger(), *get_clock(), 5000,
       "QP Smoother: Path too short (%.2f m < %.2f m), skipping optimization", path_length,
       min_path_length_m);
-    return;
+    return ProcessingResult::Unchanged;
   }
 
   // Store original trajectory for orientation correction
@@ -105,10 +102,10 @@ void TrajectoryQPSmoother::optimize_trajectory(
   TrajectoryPoints smoothed_trajectory;
   if (!solve_qp_problem(traj_points, data.semantic_speed_tracker, smoothed_trajectory)) {
     RCLCPP_ERROR_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "QP Smoother: Optimization FAILED, using original trajectory. Check previous error "
       "messages!");
-    return;
+    return ProcessingResult::Unchanged;
   }
   // Copy orientations from original trajectory
   if (qp_params_.preserve_input_trajectory_orientation) {
@@ -117,6 +114,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
   }
 
   traj_points = smoothed_trajectory;
+  return ProcessingResult::Modified;
 }
 
 bool TrajectoryQPSmoother::solve_qp_problem(
@@ -149,7 +147,7 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   // Check solution status
   if (result.solution_status != 1) {
     RCLCPP_ERROR(
-      get_node_ptr()->get_logger(),
+      get_logger(),
       "QP Smoother: Optimization FAILED! Status: %d (%s), Iterations: %d, N=%d points",
       result.solution_status, osqp_solver.getStatusMessage().c_str(), result.iteration_status, N);
     return false;
@@ -160,7 +158,7 @@ bool TrajectoryQPSmoother::solve_qp_problem(
     result.primal_solution.begin(), result.primal_solution.end(),
     [](const auto v) { return std::isnan(v); });
   if (has_nan) {
-    RCLCPP_WARN(get_node_ptr()->get_logger(), "QP Smoother: Solution contains NaN values");
+    RCLCPP_WARN(get_logger(), "QP Smoother: Solution contains NaN values");
     return false;
   }
 
@@ -195,7 +193,7 @@ bool TrajectoryQPSmoother::solve_qp_problem(
 
   // Diagnostic logging with velocity, acceleration, and jerk metrics
   RCLCPP_DEBUG_THROTTLE(
-    get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+    get_logger(), *get_clock(), 5000,
     "QP Smoother: N=%d, dt=%.3f, iters=%d, obj=%.2e, "
     "v=[%.2f, %.2f] m/s, a=[%.2f, %.2f] m/s², "
     "jerk=[avg=%.2f, max=%.2f] m/s³, path_dev=[avg=%.3f, max=%.3f]m",
@@ -476,9 +474,9 @@ std::vector<double> TrajectoryQPSmoother::compute_velocity_based_weights(
   return weights;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryQPSmoother,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

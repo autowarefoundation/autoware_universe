@@ -109,8 +109,14 @@ bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
     builder_config_->addOptimizationProfile(profile);
   }
 
-  // Apply dtype overrides from NetworkIO to the parsed network inputs and outputs.
-  if (network_io_) {
+  // Apply dtype overrides from NetworkIO to the parsed network inputs and outputs. Strongly
+  // typed networks do not allow overrides; requested dtypes are still validated by
+  // validateNetworkIO.
+  if (network_io_ && isStronglyTyped()) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kINFO,
+      "Strongly typed network: NetworkIO dtype overrides are not applied");
+  } else if (network_io_) {
     const auto apply_dtype = [&](nvinfer1::ITensor * tensor, const char * io_type) {
       if (!tensor) return;
       const auto it = std::find_if(network_io_->begin(), network_io_->end(), [&](const auto & io) {
@@ -194,71 +200,62 @@ std::string TrtCommon::getPrecision() const
 
 const char * TrtCommon::getIOTensorName(const int32_t index) const
 {
-  if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
-    if (!network_) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
-      return nullptr;
-    }
-    auto num_inputs = network_->getNbInputs();
-    auto num_outputs = network_->getNbOutputs();
-    if (index < 0 || index >= num_inputs + num_outputs) {
-      logger_->log(
-        nvinfer1::ILogger::Severity::kERROR,
-        "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
-      return nullptr;
-    }
-    if (index < num_inputs) {
-      return network_->getInput(index)->getName();
-    }
-    return network_->getOutput(index - num_inputs)->getName();
+  if (!network_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
+    return nullptr;
   }
-
-  return engine_->getIOTensorName(index);
+  if (engine_) {
+    return engine_->getIOTensorName(index);
+  }
+  // Before setup() the parsed network is the only source of IO, and reading it is supported:
+  // it is how a caller inspects what the model declares before the engine exists.
+  const auto num_inputs = network_->getNbInputs();
+  const auto num_outputs = network_->getNbOutputs();
+  if (index < 0 || index >= num_inputs + num_outputs) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kERROR,
+      "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
+    return nullptr;
+  }
+  if (index < num_inputs) {
+    return network_->getInput(index)->getName();
+  }
+  return network_->getOutput(index - num_inputs)->getName();
 }
 
 int32_t TrtCommon::getNbIOTensors() const
 {
-  if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
-    if (!network_) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
-      return 0;
-    }
-    return network_->getNbInputs() + network_->getNbOutputs();
+  if (!network_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
+    return 0;
   }
-  return engine_->getNbIOTensors();
+  if (engine_) {
+    return engine_->getNbIOTensors();
+  }
+  return network_->getNbInputs() + network_->getNbOutputs();
 }
 
 nvinfer1::Dims TrtCommon::getTensorShape(const int32_t index) const
 {
-  if (!engine_) {
-    logger_->log(
-      nvinfer1::ILogger::Severity::kWARNING,
-      "Engine is not initialized. Retrieving data from network");
-    if (!network_) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
-      return nvinfer1::Dims{};
-    }
-    auto num_inputs = network_->getNbInputs();
-    auto num_outputs = network_->getNbOutputs();
-    if (index < 0 || index >= num_inputs + num_outputs) {
-      logger_->log(
-        nvinfer1::ILogger::Severity::kERROR,
-        "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
-      return nvinfer1::Dims{};
-    }
-    if (index < num_inputs) {
-      return network_->getInput(index)->getDimensions();
-    }
-    return network_->getOutput(index - num_inputs)->getDimensions();
+  if (!network_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Network is not initialized");
+    return nvinfer1::Dims{};
   }
-  auto const & name = getIOTensorName(index);
-  return getTensorShape(name);
+  if (engine_) {
+    return getTensorShape(getIOTensorName(index));
+  }
+  const auto num_inputs = network_->getNbInputs();
+  const auto num_outputs = network_->getNbOutputs();
+  if (index < 0 || index >= num_inputs + num_outputs) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kERROR,
+      "Invalid index for I/O tensor: %d. Total I/O tensors: %d", index, num_inputs + num_outputs);
+    return nvinfer1::Dims{};
+  }
+  if (index < num_inputs) {
+    return network_->getInput(index)->getDimensions();
+  }
+  return network_->getOutput(index - num_inputs)->getDimensions();
 }
 
 nvinfer1::Dims TrtCommon::getTensorShape(const char * tensor_name) const
@@ -502,13 +499,15 @@ bool TrtCommon::initialize()
     return false;
   }
 
-#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH < 100000
-  const auto explicit_batch =
-    1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
-  network_ = TrtUniquePtr<nvinfer1::INetworkDefinition>(builder_->createNetworkV2(explicit_batch));
-#else
-  network_ = TrtUniquePtr<nvinfer1::INetworkDefinition>(builder_->createNetworkV2(0));
-#endif
+  uint32_t network_flags = 0;
+  if (isStronglyTyped()) {
+    network_flags |=
+      1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kSTRONGLY_TYPED);
+    logger_->log(
+      nvinfer1::ILogger::Severity::kINFO,
+      "Building a strongly typed network; tensor precisions are taken from the model itself");
+  }
+  network_ = TrtUniquePtr<nvinfer1::INetworkDefinition>(builder_->createNetworkV2(network_flags));
 
   if (!network_) {
     logger_->log(nvinfer1::ILogger::Severity::kERROR, "Fail to create network");
@@ -527,7 +526,9 @@ bool TrtCommon::initialize()
       nvinfer1::ILogger::Severity::kINFO, "Number of DLAs supported: %d", num_available_dla);
     builder_config_->setDefaultDeviceType(nvinfer1::DeviceType::kDLA);
     builder_config_->setDLACore(trt_config_->dla_core_id);
-    builder_config_->setFlag(nvinfer1::BuilderFlag::kPREFER_PRECISION_CONSTRAINTS);
+    if (!isStronglyTyped()) {
+      builder_config_->setFlag(nvinfer1::BuilderFlag::kPREFER_PRECISION_CONSTRAINTS);
+    }
     builder_config_->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
   }
   if (trt_config_->precision == "fp16") {
@@ -550,6 +551,11 @@ bool TrtCommon::initialize()
   }
 
   return true;
+}
+
+bool TrtCommon::isStronglyTyped() const
+{
+  return trt_config_->precision == "strongly-typed";
 }
 
 bool TrtCommon::buildEngineFromOnnx()
@@ -600,7 +606,6 @@ bool TrtCommon::buildEngineFromOnnx()
 
 bool TrtCommon::validateEngine()
 {
-#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH >= 80600
   std::ifstream engine_file(trt_config_->engine_path);
   std::stringstream engine_buffer;
   engine_buffer << engine_file.rdbuf();
@@ -622,7 +627,6 @@ bool TrtCommon::validateEngine()
       NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
     return false;
   }
-#endif
   return true;
 }
 

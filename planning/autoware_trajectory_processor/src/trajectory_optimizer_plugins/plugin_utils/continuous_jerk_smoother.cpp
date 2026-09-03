@@ -25,7 +25,7 @@
 #include <memory>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 ContinuousJerkSmoother::ContinuousJerkSmoother(const ContinuousJerkSmootherParams & params)
@@ -285,4 +285,4 @@ bool ContinuousJerkSmoother::apply(
   return true;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin

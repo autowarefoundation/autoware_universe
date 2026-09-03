@@ -32,24 +32,25 @@ We trained the models using <https://github.com/open-mmlab/mmdetection3d>.
 
 Note that these parameters are associated with ONNX file, predefined during the training phase. Be careful to change ONNX file as well when changing this parameter. Also, whenever you update the ONNX file, do NOT forget to check these values.
 
-{{ json_to_markdown("perception/autoware_lidar_centerpoint/schema/centerpoint_ml_package.schema.json") }}
+{{ json_to_markdown("perception/autoware_lidar_centerpoint/schema/ml_package.schema.json") }}
 
 ### Core Parameters
 
-| Name                                             | Type         | Default Value             | Description                                                   |
-| ------------------------------------------------ | ------------ | ------------------------- | ------------------------------------------------------------- |
-| `encoder_onnx_path`                              | string       | `""`                      | path to VoxelFeatureEncoder ONNX file                         |
-| `encoder_engine_path`                            | string       | `""`                      | path to VoxelFeatureEncoder TensorRT Engine file              |
-| `head_onnx_path`                                 | string       | `""`                      | path to DetectionHead ONNX file                               |
-| `head_engine_path`                               | string       | `""`                      | path to DetectionHead TensorRT Engine file                    |
-| `build_only`                                     | bool         | `false`                   | shutdown the node after TensorRT engine file is built         |
-| `trt_precision`                                  | string       | `fp16`                    | TensorRT inference precision: `fp32` or `fp16`                |
-| `post_process_params.yaw_norm_thresholds`        | list[double] | [0.3, 0.3, 0.3, 0.3, 0.0] | An array of distance threshold values of norm of yaw [rad].   |
-| `post_process_params.iou_nms_search_distance_2d` | double       | -                         | If two objects are farther than the value, NMS isn't applied. |
-| `post_process_params.iou_nms_threshold`          | double       | -                         | IoU threshold for the IoU-based Non Maximum Suppression       |
-| `post_process_params.has_twist`                  | boolean      | false                     | Indicates whether the model outputs twist value.              |
-| `densification_params.world_frame_id`            | string       | `map`                     | the world frame id to fuse multi-frame pointcloud             |
-| `densification_params.num_past_frames`           | int          | `1`                       | the number of past frames to fuse with the current frame      |
+{{ json_to_markdown("perception/autoware_lidar_centerpoint/schema/centerpoint_common.schema.json") }}
+
+### Detection Class Remapper
+
+{{ json_to_markdown("perception/autoware_lidar_centerpoint/schema/detection_class_remapper.schema.json") }}
+
+### Launch Parameters
+
+These are given by the launch file and are not part of any parameter file.
+
+| Name          | Type   | Default Value                             | Description                                                                            |
+| ------------- | ------ | ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `model_path`  | string | `$(var data_path)/lidar_centerpoint/base` | directory containing the model artifacts; relative manifest entries resolve against it |
+| `build_only`  | bool   | `false`                                   | shutdown the node after TensorRT engine file is built                                  |
+| `logger_name` | string | `lidar_centerpoint`                       | logger name used for the node logs and debug topics                                    |
 
 ### The `build_only` option
 
@@ -57,8 +58,10 @@ The `autoware_lidar_centerpoint` node has `build_only` option to build the Tenso
 Although it is preferred to move all the ROS parameters in `.param.yaml` file in Autoware Universe, the `build_only` option is not moved to the `.param.yaml` file for now, because it may be used as a flag to execute the build as a pre-task. You can execute with the following command:
 
 ```bash
-ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_tiny model_path:=/home/autoware/autoware_data/ml_models/lidar_centerpoint model_param_path:=$(ros2 pkg prefix autoware_lidar_centerpoint --share)/config/centerpoint_tiny.param.yaml build_only:=true
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_path:=/home/autoware/autoware_data/ml_models/lidar_centerpoint/base build_only:=true
 ```
+
+`model_path` points at the variant folder (`base`/`tiny`/`sigma`/`short_range`) of the model bundle; the engine files are written there.
 
 ## Assumptions / Known limits
 
@@ -66,10 +69,21 @@ ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=
 
 ## Trained Models
 
-You can download the onnx format of trained models by clicking on the links below.
+Trained models are hosted on Hugging Face at [AutowareFoundation/lidar_centerpoint](https://huggingface.co/AutowareFoundation/lidar_centerpoint) and downloaded to `~/autoware_data/ml_models/lidar_centerpoint/` by the ansible artifacts role (pinned to tag `v4.1`).
 
-- Centerpoint: [pts_voxel_encoder_centerpoint.onnx](https://awf.ml.dev.web.auto/perception/models/centerpoint/v2/pts_voxel_encoder_centerpoint.onnx), [pts_backbone_neck_head_centerpoint.onnx](https://awf.ml.dev.web.auto/perception/models/centerpoint/v2/pts_backbone_neck_head_centerpoint.onnx)
-- Centerpoint tiny: [pts_voxel_encoder_centerpoint_tiny.onnx](https://awf.ml.dev.web.auto/perception/models/centerpoint/v2/pts_voxel_encoder_centerpoint_tiny.onnx), [pts_backbone_neck_head_centerpoint_tiny.onnx](https://awf.ml.dev.web.auto/perception/models/centerpoint/v2/pts_backbone_neck_head_centerpoint_tiny.onnx)
+The bundle holds one self-contained folder per variant; the perception launcher (`lidar_dnn_detector.launch.xml`) selects the folder from the model name, and `lidar_centerpoint.launch.xml` takes the folder directly as `model_path`:
+
+```text
+lidar_centerpoint/
+├── base/         # model_name: centerpoint
+├── tiny/         # model_name: centerpoint_tiny
+├── sigma/        # model_name: centerpoint_sigma
+└── short_range/  # model_name: centerpoint_short_range
+```
+
+Every variant folder contains the same file set: `pts_voxel_encoder.onnx`, `pts_backbone_neck_head.onnx`, `ml_package.param.yaml` and `detection_class_remapper.param.yaml`. TensorRT engine files are built locally into the variant folder on first launch (or via `build_only:=true`).
+
+`ml_package.param.yaml` declares the bundle version. The node reads major version 4 from minor version 1 upward and aborts otherwise, so a version error means the bundle has to be refreshed with the ansible artifacts role of the [autoware](https://github.com/autowarefoundation/autoware) repository. A minor bump can add manifest entries the node requires.
 
 `Centerpoint` was trained in `nuScenes` (~28k lidar frames) [8] and TIER IV's internal database (~11k lidar frames) for 60 epochs.
 `Centerpoint tiny` was trained in `Argoverse 2` (~110k lidar frames) [9] and TIER IV's internal database (~11k lidar frames) for 20 epochs.
@@ -238,62 +252,55 @@ You can find it in `mmdetection3d/projects/AutowareCenterPoint` file.
 python projects/AutowareCenterPoint/centerpoint_onnx_converter.py --cfg projects/AutowareCenterPoint/configs/centerpoint_custom.py --ckpt work_dirs/centerpoint_custom/YOUR_BEST_MODEL.pth --work-dir ./work_dirs/onnx_models
 ```
 
-#### Create the config file for the custom model
+#### Create the ml_package file for the custom model
 
-Create a new config file named **centerpoint_custom.param.yaml** under the config file directory of the autoware_lidar_centerpoint node. Sets the parameters of the config file like
-point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file.
-
-```yaml
-/**:
-  ros__parameters:
-    class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
-    point_feature_size: 4
-    max_voxel_size: 40000
-    point_cloud_range: [-51.2, -51.2, -3.0, 51.2, 51.2, 5.0]
-    voxel_size: [0.2, 0.2, 8.0]
-    downsample_factor: 1
-    encoder_in_feature_size: 9
-    # post-process params
-    circle_nms_dist_threshold: 0.5
-    iou_nms_search_distance_2d: 10.0
-    iou_nms_threshold: 0.1
-    yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
-```
+Rename the exported ONNX files to `pts_voxel_encoder.onnx` and `pts_backbone_neck_head.onnx`, and create a **ml_package.param.yaml** next to them. Set the model parameters like
+point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file. The [ML Model Parameters](#ml-model-parameters) table lists every entry with its default; `version` has to be declared as well, or the node aborts at startup.
 
 #### Launch the lidar_centerpoint node
 
 ```bash
 cd /YOUR/AUTOWARE/PATH/Autoware
 source install/setup.bash
-ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml  model_name:=centerpoint_custom  model_path:=/PATH/TO/ONNX/FILE/
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_path:=/PATH/TO/MODEL_FOLDER/
 ```
+
+`model_path` is used as given: the directory must contain the ONNX files, `ml_package.param.yaml` and `detection_class_remapper.param.yaml`.
 
 #### Launch the lidar_short_range_centerpoint node
 
-It also provides short_range detections using CenterPoint:
+It also provides short_range detections using CenterPoint, served from the `short_range/` folder of the model bundle:
 
 ```bash
 cd /YOUR/AUTOWARE/PATH/Autoware
 source install/setup.bash
-ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_short_range model_path:=/PATH/TO/ONNX/FILE/
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_path:=$HOME/autoware_data/ml_models/lidar_centerpoint/short_range
 ```
 
 ### Changelog
 
+#### v4.1 (2026/08)
+
+`ml_package.param.yaml` gained `version` and `model_params.yaw_norm_thresholds`, the latter moved out of `centerpoint_common.param.yaml` because it is indexed by the predicted class. `deploy_metadata.yaml` is gone. Bundles of `v4.0` and earlier are rejected at startup.
+
+#### v4.0 (2026/07)
+
+The model bundle moved to per-variant folders (`base`/`tiny`/`sigma`/`short_range`) with uniform file names, hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/lidar_centerpoint/tree/v4.0). `sigma` and `short_range` weights are published for the first time. Earlier revisions remain available as tags on the same repository (`v3.0` = flat layout). The `v1` and `v0` files below are not distributed any more.
+
 #### v1 (2022/07/06)
 
-| Name               | URLs                                                                                                     | Description                                                                                                                        |
-| ------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `centerpoint`      | [pts_voxel_encoder][v1-encoder-centerpoint] <br> [pts_backbone_neck_head][v1-head-centerpoint]           | There is a single change due to the limitation in the implementation of this package. `num_filters=[32, 32]` of `PillarFeatureNet` |
-| `centerpoint_tiny` | [pts_voxel_encoder][v1-encoder-centerpoint-tiny] <br> [pts_backbone_neck_head][v1-head-centerpoint-tiny] | The same model as `default` of `v0`.                                                                                               |
+| Name               | Files                                             | Description                                                                                                                        |
+| ------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `centerpoint`      | `pts_voxel_encoder` <br> `pts_backbone_neck_head` | There is a single change due to the limitation in the implementation of this package. `num_filters=[32, 32]` of `PillarFeatureNet` |
+| `centerpoint_tiny` | `pts_voxel_encoder` <br> `pts_backbone_neck_head` | The same model as `default` of `v0`.                                                                                               |
 
 These changes are compared with [this configuration](https://github.com/tianweiy/CenterPoint/blob/v0.2/configs/waymo/pp/waymo_centerpoint_pp_two_pfn_stride1_3x.py).
 
 #### v0 (2021/12/03)
 
-| Name      | URLs                                                                                   | Description                                                                                                                                          |
-| --------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `default` | [pts_voxel_encoder][v0-encoder-default] <br> [pts_backbone_neck_head][v0-head-default] | There are two changes from the original CenterPoint architecture. `num_filters=[32]` of `PillarFeatureNet` and `ds_layer_strides=[2, 2, 2]` of `RPN` |
+| Name      | Files                                             | Description                                                                                                                                          |
+| --------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default` | `pts_voxel_encoder` <br> `pts_backbone_neck_head` | There are two changes from the original CenterPoint architecture. `num_filters=[32]` of `PillarFeatureNet` and `ds_layer_strides=[2, 2, 2]` of `RPN` |
 
 ## (Optional) Error detection and handling
 
@@ -345,13 +352,6 @@ Example:
   Currently, this package can't handle the chattering obstacles well. We plan to add some probabilistic filters in the perception layer to improve it.
   Also, there are some parameters that should be global(e.g. vehicle size, max steering, etc.). These will be refactored and defined as global parameters so that we can share the same parameters between different nodes.
 -->
-
-[v0-encoder-default]: https://awf.ml.dev.web.auto/perception/models/pts_voxel_encoder_default.onnx
-[v0-head-default]: https://awf.ml.dev.web.auto/perception/models/pts_backbone_neck_head_default.onnx
-[v1-encoder-centerpoint]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_voxel_encoder_centerpoint.onnx
-[v1-head-centerpoint]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_backbone_neck_head_centerpoint.onnx
-[v1-encoder-centerpoint-tiny]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_voxel_encoder_centerpoint_tiny.onnx
-[v1-head-centerpoint-tiny]: https://awf.ml.dev.web.auto/perception/models/centerpoint/v1/pts_backbone_neck_head_centerpoint_tiny.onnx
 
 ## Acknowledgment: deepen.ai's 3D Annotation Tools Contribution
 

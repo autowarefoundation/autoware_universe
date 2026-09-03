@@ -115,7 +115,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/detection_class_remapper.cpp
-    lib/postprocess/non_maximum_suppression.cpp
     lib/preprocess/voxel_generator.cpp
     lib/preprocess/pointcloud_densification.cpp
     lib/preprocess/precomputed_features.cpp
@@ -175,7 +174,7 @@ else()
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
   )

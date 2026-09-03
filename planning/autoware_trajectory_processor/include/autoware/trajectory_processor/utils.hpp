@@ -17,7 +17,6 @@
 
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_structs.hpp"
 
 #include <rclcpp/logger.hpp>
 
@@ -34,7 +33,7 @@
 #include <memory>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::utils
+namespace autoware::trajectory_processor::utils
 {
 
 using autoware::path_smoother::CommonParam;
@@ -111,6 +110,6 @@ void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt = false,
   const double constant_dt = 0.1);
 
-};  // namespace autoware::trajectory_optimizer::utils
+};  // namespace autoware::trajectory_processor::utils
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__UTILS_HPP_

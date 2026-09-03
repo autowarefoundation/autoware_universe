@@ -13,10 +13,11 @@
 // limitations under the License.
 
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/surround_obstacle_stop.hpp"
+#include "trajectory_processor_test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
-#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
@@ -39,10 +40,12 @@
 
 namespace
 {
-using autoware::trajectory_modifier::TrajectoryModifierContext;
-using autoware::trajectory_modifier::plugin::InputData;
-using autoware::trajectory_modifier::plugin::SurroundObstacleStop;
-using autoware::trajectory_modifier::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::TrajectoryProcessorContext;
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::SurroundObstacleStop;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::test::process_plugin;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -157,13 +160,13 @@ sensor_msgs::msg::PointCloud2::ConstSharedPtr make_pointcloud_in_base_link(
   return std::make_shared<const sensor_msgs::msg::PointCloud2>(cloud);
 }
 
-InputData create_input_data(
+TrajectoryProcessorData create_input_data(
   Odometry::ConstSharedPtr current_odometry,
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration,
   PredictedObjects::ConstSharedPtr predicted_objects = nullptr,
   sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud = nullptr)
 {
-  InputData input;
+  TrajectoryProcessorData input;
   input.current_odometry = std::move(current_odometry);
   input.current_acceleration = std::move(current_acceleration);
   input.predicted_objects = std::move(predicted_objects);
@@ -205,10 +208,11 @@ protected:
 
     set_up_default_params();
 
-    context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
+    context_ = std::make_shared<TrajectoryProcessorContext>(node_.get());
     plugin_ = std::make_unique<SurroundObstacleStop>();
     plugin_->initialize(
-      "test_surround_obstacle_stop", node_.get(), time_keeper_, context_, params_);
+      "test_surround_obstacle_stop", node_.get(), time_keeper_, context_,
+      TrajectoryProcessorParams{params_});
   }
 
   void TearDown() override
@@ -230,7 +234,8 @@ protected:
     auto & p = params_.surround_obstacle_stop;
     p.use_objects = true;
     p.use_pointcloud = true;
-    p.object_types = {"car"};
+    p.target_objects.bbox = {"car"};
+    p.target_objects.polygon = {"car"};
     p.hysteresis_distance = 0.5;
     p.hysteresis_time = 0.0;
     p.ego_stopped_vel_th = 0.1;
@@ -238,7 +243,7 @@ protected:
     p.side_distance_th.pointcloud = 1.0;
   }
 
-  InputData make_stopped_input(
+  TrajectoryProcessorData make_stopped_input(
     PredictedObjects::ConstSharedPtr predicted_objects = nullptr,
     sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud = nullptr)
   {
@@ -251,18 +256,18 @@ protected:
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<SurroundObstacleStop> plugin_;
-  trajectory_modifier_params::Params params_;
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  trajectory_processor_params::Params params_;
+  std::shared_ptr<TrajectoryProcessorContext> context_;
 };
 
 TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenDisabled)
 {
   params_.use_surround_obstacle_stop = false;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
   auto trajectory = create_straight_trajectory(10.0, 0.0);
   const auto input = make_stopped_input(make_predicted_objects(0.0, 4.0));
 
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   EXPECT_FALSE(modified);
 }
@@ -275,7 +280,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenEgoMoving)
   const auto input =
     create_input_data(make_odometry(0.0, 0.0, 5.0, current_time), make_acceleration(0.0), objects);
 
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   EXPECT_FALSE(modified);
 }
@@ -285,7 +290,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenNoObstacles
   auto trajectory = create_straight_trajectory(10.0, 0.0);
   const auto input = make_stopped_input();
 
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   EXPECT_FALSE(modified);
 }
@@ -296,7 +301,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenObstacleIsF
   auto objects = make_predicted_objects(0.0, 10.0);
   const auto input = make_stopped_input(objects);
 
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   EXPECT_FALSE(modified);
 }
@@ -307,7 +312,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenNearObjectDete
   auto objects = make_predicted_objects(0.0, 2.5);
   const auto input = make_stopped_input(objects);
 
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   ASSERT_TRUE(modified);
   expect_stop_trajectory_at_ego(trajectory);
@@ -318,14 +323,14 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenNearObjectDete
   auto trajectory = create_straight_trajectory(10.0, 0.0);
   auto objects = make_predicted_objects(0.0, 2.5);
   auto input = make_stopped_input(objects);
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
   ASSERT_TRUE(modified);
   expect_stop_trajectory_at_ego(trajectory);
 
   trajectory = create_straight_trajectory(10.0, 0.0);
   objects = make_predicted_objects(0.0, 3.0);
   input = make_stopped_input(objects);
-  const bool modified_with_hysteresis = plugin_->modify_trajectory(trajectory, input);
+  const bool modified_with_hysteresis = process_plugin(*plugin_, trajectory, input);
   ASSERT_TRUE(modified_with_hysteresis);
   expect_stop_trajectory_at_ego(trajectory);
 }
@@ -336,7 +341,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenNearbyPointclo
   const auto pointcloud = make_pointcloud_in_base_link(0.0, 1.5, 0.5);
   const auto input = make_stopped_input(nullptr, pointcloud);
 
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   ASSERT_TRUE(modified);
   expect_stop_trajectory_at_ego(trajectory);
@@ -345,17 +350,17 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenNearbyPointclo
 TEST_F(SurroundObstacleStopIntegrationTest, StopStatePersistsDuringHysteresisTime)
 {
   params_.surround_obstacle_stop.hysteresis_time = 0.2;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
   auto trajectory = create_straight_trajectory(10.0, 5.0);
   auto objects = make_predicted_objects(0.0, 2.5);
   const auto nearby_input = make_stopped_input(objects);
-  ASSERT_TRUE(plugin_->modify_trajectory(trajectory, nearby_input));
+  ASSERT_TRUE(process_plugin(*plugin_, trajectory, nearby_input));
   expect_stop_trajectory_at_ego(trajectory);
 
   trajectory = create_straight_trajectory(10.0, 5.0);
   objects = make_predicted_objects(0.0, 10.0);
   const auto far_input = make_stopped_input(objects);
-  const bool modified_within_hysteresis = plugin_->modify_trajectory(trajectory, far_input);
+  const bool modified_within_hysteresis = process_plugin(*plugin_, trajectory, far_input);
 
   ASSERT_TRUE(modified_within_hysteresis);
   expect_stop_trajectory_at_ego(trajectory);
@@ -363,7 +368,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, StopStatePersistsDuringHysteresisTim
   std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
   trajectory = create_straight_trajectory(10.0, 5.0);
-  const bool modified_after_hysteresis = plugin_->modify_trajectory(trajectory, far_input);
+  const bool modified_after_hysteresis = process_plugin(*plugin_, trajectory, far_input);
 
   EXPECT_FALSE(modified_after_hysteresis);
 }

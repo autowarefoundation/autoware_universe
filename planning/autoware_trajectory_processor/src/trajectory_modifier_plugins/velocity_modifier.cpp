@@ -22,14 +22,14 @@
 #include <cmath>
 #include <utility>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 using autoware::experimental::trajectory::interpolator::AkimaSpline;
 using InterpolationTrajectory =
   autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
 
-void VelocityModifier::on_initialize(const TrajectoryModifierParams & params)
+void VelocityModifier::on_initialize(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_velocity_modifier;
   trajectory_time_step_ = params.trajectory_time_step;
@@ -37,7 +37,7 @@ void VelocityModifier::on_initialize(const TrajectoryModifierParams & params)
 }
 
 bool VelocityModifier::is_trajectory_modification_required(
-  const TrajectoryPoints & traj_points, [[maybe_unused]] const InputData & input)
+  const TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryProcessorData & input)
 {
   if (traj_points.size() < 2) return false;
 
@@ -62,12 +62,15 @@ bool VelocityModifier::is_trajectory_modification_required(
   return std::abs(a_prev - expected_accel) > tolerance;
 }
 
-bool VelocityModifier::modify_trajectory(TrajectoryPoints & traj_points, const InputData & input)
+ProcessingResult VelocityModifier::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & input)
 {
-  if (!enabled_ || !is_trajectory_modification_required(traj_points, input)) return false;
+  if (!enabled_ || !is_trajectory_modification_required(traj_points, input)) {
+    return ProcessingResult::Unchanged;
+  }
 
   const auto stop_idx = autoware::motion_utils::searchZeroVelocityIndex(traj_points);
-  if (!stop_idx.has_value() || stop_idx.value() == 0) return false;
+  if (!stop_idx.has_value() || stop_idx.value() == 0) return ProcessingResult::Unchanged;
 
   auto trajectory = traj_points;
 
@@ -94,20 +97,20 @@ bool VelocityModifier::modify_trajectory(TrajectoryPoints & traj_points, const I
       .build(trajectory);
   if (!trajectory_interpolation_util) {
     RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "[TM VelocityModifier] Failed to build interpolation trajectory");
-    return false;
+    return ProcessingResult::Unchanged;
   }
 
   const auto dt = trajectory_time_step_;
 
   if (dt < 1e-3) {
     RCLCPP_ERROR_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "[TM VelocityModifier] Invalid trajectory time step: %f, unable to interpolate trajectory",
       dt);
     traj_points = std::move(trajectory);
-    return true;
+    return ProcessingResult::Modified;
   }
 
   const auto s_max = trajectory_interpolation_util->length();
@@ -139,7 +142,7 @@ bool VelocityModifier::modify_trajectory(TrajectoryPoints & traj_points, const I
     traj_points.push_back(p);
   }
 
-  return true;
+  return ProcessingResult::Modified;
 }
 
 size_t VelocityModifier::update_velocities(
@@ -176,9 +179,9 @@ size_t VelocityModifier::update_velocities(
   return vel_update_start_index;
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::VelocityModifier,
-  autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase)
+  autoware::trajectory_processor::plugin::VelocityModifier,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

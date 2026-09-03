@@ -16,37 +16,45 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__SURROUND_OBSTACLE_STOP_HPP_
 
 #include "autoware/obstacle_proximity_checker/obstacle_proximity_checker.hpp"
-#include "autoware/trajectory_processor/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
+using ModifierParams = trajectory_processor_params::Params;
 using autoware_internal_debug_msgs::msg::StringStamped;
 
-class SurroundObstacleStop : public TrajectoryModifierPluginBase
+class SurroundObstacleStop : public TrajectoryProcessorPluginBase
 {
 public:
   SurroundObstacleStop() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
+  ProcessingResult process(
+    TrajectoryPoints & traj_points, TrajectoryProcessorData & input) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & input) override;
+    const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);
 
-  void update_params(const TrajectoryModifierParams & params) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
-  const TrajectoryModifierParams::SurroundObstacleStop & get_params() const { return params_; }
+  const ModifierParams::SurroundObstacleStop & get_params() const { return params_; }
 
 protected:
-  void on_initialize(const TrajectoryModifierParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
-  TrajectoryModifierParams::SurroundObstacleStop params_;
+  ModifierParams::SurroundObstacleStop params_;
 
   std::unique_ptr<obstacle_proximity_checker::ProximityChecker> proximity_checker_;
 
@@ -57,14 +65,14 @@ private:
   bool is_stop_active_{false};
   std::optional<rclcpp::Time> last_obstacle_found_time_;
 
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  PublisherHandle<StringStamped> pub_debug_text_;
 
-  [[nodiscard]] bool check_inputs(const InputData & input) const;
+  [[nodiscard]] bool check_inputs(const TrajectoryProcessorData & input) const;
 
   [[nodiscard]] obstacle_proximity_checker::Inputs to_proximity_checker_inputs(
-    const InputData & input) const;
+    const TrajectoryProcessorData & input) const;
 
-  [[nodiscard]] bool is_obstacle_nearby(const InputData & input);
+  [[nodiscard]] bool is_obstacle_nearby(const TrajectoryProcessorData & input);
 
   std::optional<geometry_msgs::msg::TransformStamped> get_transform(
     const std::string & source, const std::string & target, const rclcpp::Time & stamp,
@@ -73,6 +81,6 @@ private:
   void publish_debug_string(bool is_active) const;
 };
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__SURROUND_OBSTACLE_STOP_HPP_
