@@ -313,10 +313,8 @@ private:
   autoware::agnocast_wrapper::polling::PollingSubscriber<OperationModeState>::SharedPtr
     sub_operational_state_;
   autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr
-    sub_reference_traj_;
-  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr
-    sub_predicted_traj_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Trajectory>::SharedPtr sub_predicted_traj_;
   autoware::agnocast_wrapper::polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
     sub_measured_acc_;
   AUTOWARE_PUBLISHER_PTR(ControlValidatorStatus) pub_status_;

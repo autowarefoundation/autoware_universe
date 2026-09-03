@@ -267,12 +267,10 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
   sub_kinematics_ =
     autoware::agnocast_wrapper::polling::create_polling_subscriber<nav_msgs::msg::Odometry>(
       this, "~/input/kinematics", 1);
-  sub_reference_traj_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
-      this, "~/input/reference_trajectory", 1);
-  sub_predicted_traj_ =
-    autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
-      this, "~/input/predicted_trajectory", 1);
+  sub_reference_traj_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+    this, "~/input/reference_trajectory", 1);
+  sub_predicted_traj_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<Trajectory>(
+    this, "~/input/predicted_trajectory", 1);
   sub_measured_acc_ =
     autoware::agnocast_wrapper::polling::create_polling_subscriber<AccelWithCovarianceStamped>(
       this, "~/input/measured_acceleration", 1);
