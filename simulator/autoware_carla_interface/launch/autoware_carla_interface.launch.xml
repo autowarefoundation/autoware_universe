@@ -77,6 +77,17 @@
       description="Optional override 'opendrive_id:group_id[|group_id...],...' that pins a CARLA signal id to one or more Autoware group ids, taking precedence over position matching"
     />
 
+    <!-- Scenario AutowareBridge (closed-loop with the CARLA scenario library).
+         Pass ego_vehicle_role_name:=Ego so the scenario framework can attach to
+         the ego this interface node spawns. -->
+    <arg
+      name="launch_autoware_bridge"
+      default="false"
+      description="Launch the autoware_bridge node that drives Autoware from a scenario mission over gRPC and reports readiness (opt-in; the CARLA scenario framework passes true)"
+    />
+    <arg name="bridge_address" default="localhost:50052" description="host:port of the scenario-library AutowareBridge gRPC server to dial"/>
+    <arg name="auto_engage" default="true" description="Auto change_to_autonomous once localization is initialized, the route is set, and autonomous mode is available (scenario/sim only)"/>
+
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
       <param name="host" value="$(var host)"/>
@@ -111,6 +122,14 @@
       <param name="traffic_light.match_distance" value="$(var traffic_light.match_distance)"/>
       <param name="traffic_light.match_ratio" value="$(var traffic_light.match_ratio)"/>
       <param name="traffic_light.id_map" value="$(var traffic_light.id_map)"/>
+    </node>
+
+    <!-- Scenario bridge: pull the mission (initial pose + goal) from the scenario
+         library over gRPC, drive Autoware's localization init / routing / engage,
+         and report readiness back. -->
+    <node pkg="autoware_carla_interface" exec="autoware_bridge" name="autoware_bridge" output="screen" if="$(var launch_autoware_bridge)">
+      <param name="bridge_address" value="$(var bridge_address)"/>
+      <param name="auto_engage" value="$(var auto_engage)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>

@@ -53,6 +53,7 @@ install(PROGRAMS
   scripts/autoware_carla_interface
   scripts/multi_camera_combiner
   scripts/spectator_follow
+  scripts/autoware_bridge
   DESTINATION lib/${PROJECT_NAME}
 )
 
