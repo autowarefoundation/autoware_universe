@@ -39,8 +39,6 @@ void cuda_check_error(const ::cudaError_t e, F && f, N && n)
 }
 }  // namespace autoware::cuda_utils
 
-#ifndef CHECK_CUDA_ERROR
 #define CHECK_CUDA_ERROR(e) (autoware::cuda_utils::cuda_check_error(e, __FILE__, __LINE__))
-#endif
 
 #endif  // AUTOWARE__CUDA_UTILS__CUDA_CHECK_ERROR_HPP_
