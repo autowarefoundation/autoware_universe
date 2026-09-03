@@ -44,7 +44,7 @@
       max_position_error_m: 0.3       # [m]   skip the snap when the actual ego pose is farther than this from the snapped pose
       max_yaw_error_deg: 5.0          # [deg] skip the snap when the heading differs by more than this from the snapped pose
       max_search_segment_count: 5     # number of leading segments of the previous trajectory searched for the closest one
-      min_speed_mps: 1.0              # [m/s] skip the snap below this speed (short, noisy leading segments carry no heading information)
+      min_speed_mps: 0.0              # [m/s] skip the snap below this speed; measured worse than no gate, so disabled by default
       limit_mode: "bound"             # "bound": keep the snapped pose within the error limits of the raw pose (continuous); "reject": skip the snap when a limit is exceeded
       correction_gain: 0.1            # fraction of the raw-vs-snapped residual re-injected per frame (bound mode); 0 = stay exactly on the previous plan
       yaw_source: "polyline_tangent"  # "polyline_tangent" (spline tangent of the previous trajectory, averaged over the fit window) or "predicted_heading" (model heading channel)

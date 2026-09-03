@@ -225,7 +225,7 @@ void DiffusionPlanner::set_up_params()
   params_.ego_snap_to_prev_trajectory.max_search_segment_count =
     this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.max_search_segment_count", 5);
   params_.ego_snap_to_prev_trajectory.min_speed_mps =
-    this->declare_parameter<double>("ego_snap_to_prev_trajectory.min_speed_mps", 1.0);
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.min_speed_mps", 0.0);
   params_.ego_snap_to_prev_trajectory.limit_mode =
     this->declare_parameter<std::string>("ego_snap_to_prev_trajectory.limit_mode", "bound");
   params_.ego_snap_to_prev_trajectory.correction_gain =

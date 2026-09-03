@@ -227,9 +227,9 @@
             },
             "min_speed_mps": {
               "type": "number",
-              "default": 1.0,
+              "default": 0.0,
               "minimum": 0,
-              "description": "Ego speed [m/s] below which the snap is skipped and the raw ego pose is kept. When nearly stopped the leading segments of the previous trajectory are only centimetres long and their direction is dominated by model noise."
+              "description": "Ego speed [m/s] below which the snap is skipped and the raw ego pose is kept. Defaults to 0 (no gate): each entry into and exit from the gate is a step in the pose fed to the model, which measured worse in closed loop than leaving the gate off. The tangent-heading fallback already covers the stopped case."
             },
             "limit_mode": {
               "type": "string",
