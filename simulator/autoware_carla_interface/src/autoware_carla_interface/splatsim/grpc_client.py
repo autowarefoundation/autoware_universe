@@ -36,9 +36,10 @@ class _PoseStream:
     transport never accumulates a stale backlog.
     """
 
-    def __init__(self, name: str, rpc: Callable) -> None:
+    def __init__(self, name: str, rpc: Callable, msg_cls) -> None:
         self._name = name
         self._rpc = rpc
+        self._msg_cls = msg_cls  # gRPC message wrapping each pose (CameraData / LidarData)
         self._latest_pose = None
         self._pose_lock = threading.Lock()
         self._new_pose = threading.Event()
@@ -73,6 +74,10 @@ class _PoseStream:
                 f"{self._name} gRPC send #{self._send_count}: "
                 f"pos=({p.x:.4f}, {p.y:.4f}, {p.z:.4f})"
             )
+
+    def send_pose(self, sec: int, nanosec: int, pose: pb2.Pose) -> None:
+        """Wrap ``pose`` at ``(sec, nanosec)`` in this stream's message type and send it."""
+        self.send(self._msg_cls(stamp=pb2.Timestamp(sec=sec, nanosec=nanosec), pose=pose))
 
     def close(self) -> pb2.StreamSummary | None:
         """Signal end-of-stream and wait for the background thread."""
@@ -134,8 +139,8 @@ class SplatSimGrpcClient:
         self._address = address
         self._channel = grpc.insecure_channel(address)
         self._stub = pb2_grpc.RenderingServiceStub(self._channel)
-        self._camera_stream = _PoseStream("camera", self._stub.StreamCameraData)
-        self._lidar_stream = _PoseStream("LiDAR", self._stub.StreamLidarData)
+        self._camera_stream = _PoseStream("camera", self._stub.StreamCameraData, pb2.CameraData)
+        self._lidar_stream = _PoseStream("LiDAR", self._stub.StreamLidarData, pb2.LidarData)
 
     def _call_initialize(self, name: str, rpc: Callable, request) -> pb2.InitializeResponse:
         """Send an initialize-style RPC.  Blocks until the server finishes loading."""
@@ -164,23 +169,6 @@ class SplatSimGrpcClient:
             ),
         )
 
-    def _send_pose(
-        self,
-        stream: _PoseStream,
-        msg_cls,
-        sec: int,
-        nanosec: int,
-        position: tuple[float, float, float],
-        rotation_wxyz: tuple[float, float, float, float],
-    ) -> None:
-        """Wrap a timestamped pose in ``msg_cls`` and push it onto ``stream``."""
-        stream.send(
-            msg_cls(
-                stamp=pb2.Timestamp(sec=sec, nanosec=nanosec),
-                pose=self._make_pose(position, rotation_wxyz),
-            )
-        )
-
     # ── camera streaming ──────────────────────────────────────────────
 
     def start_stream(self) -> None:
@@ -195,7 +183,7 @@ class SplatSimGrpcClient:
         rotation_wxyz: tuple[float, float, float, float],
     ) -> None:
         """Store the latest camera pose for the background stream."""
-        self._send_pose(self._camera_stream, pb2.CameraData, sec, nanosec, position, rotation_wxyz)
+        self._camera_stream.send_pose(sec, nanosec, self._make_pose(position, rotation_wxyz))
 
     def close_stream(self) -> pb2.StreamSummary | None:
         """Signal end-of-stream and wait for the background thread."""
@@ -223,7 +211,7 @@ class SplatSimGrpcClient:
         rotation_wxyz: tuple[float, float, float, float],
     ) -> None:
         """Store the latest base_link pose for the background LiDAR stream."""
-        self._send_pose(self._lidar_stream, pb2.LidarData, sec, nanosec, position, rotation_wxyz)
+        self._lidar_stream.send_pose(sec, nanosec, self._make_pose(position, rotation_wxyz))
 
     def close_lidar_stream(self) -> pb2.StreamSummary | None:
         """Signal end-of-stream and wait for the background LiDAR thread."""
