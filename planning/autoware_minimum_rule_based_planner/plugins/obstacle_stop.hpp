@@ -59,8 +59,8 @@ public:
     {
       const auto & p = params_.objects;
       object_filter_->set_params(
-        p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
-        p.safety_buffer);
+        p.target_objects.bbox, p.target_objects.polygon, p.stopped_velocity_th,
+        p.max_lateral_velocity_th, p.safety_buffer);
     }
 
     {
@@ -101,9 +101,9 @@ private:
 
   ObjectDecelMap object_decel_map_;
 
-  rclcpp::Publisher<MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) debug_viz_pub_;
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_clustered_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_debug_text_;
 
   void update_object_decel_map()
   {
