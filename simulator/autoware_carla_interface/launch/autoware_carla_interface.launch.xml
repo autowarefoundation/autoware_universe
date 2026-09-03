@@ -25,6 +25,7 @@
     <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
     <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
     <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
+    <arg name="publish_ground_truth_objects" default="False" description="Publish every CARLA vehicle except the ego to the perception detection topic, bypassing sensor based detection"/>
 
     <arg
       name="carla_map"
@@ -75,6 +76,7 @@
       <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>
       <param name="map_origin_y" value="$(var map_origin_y)"/>
+      <param name="publish_ground_truth_objects" value="$(var publish_ground_truth_objects)"/>
       <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
       <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>

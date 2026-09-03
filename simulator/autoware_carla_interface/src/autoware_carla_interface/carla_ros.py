@@ -15,6 +15,11 @@
 import math
 import threading
 
+from autoware_perception_msgs.msg import DetectedObject
+from autoware_perception_msgs.msg import DetectedObjectKinematics
+from autoware_perception_msgs.msg import DetectedObjects
+from autoware_perception_msgs.msg import ObjectClassification
+from autoware_perception_msgs.msg import Shape
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
@@ -57,6 +62,15 @@ from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
+# CARLA blueprint base_type -> Autoware label (anything unlisted falls back to CAR)
+BASE_TYPE_TO_LABEL = {
+    "car": ObjectClassification.CAR,
+    "truck": ObjectClassification.TRUCK,
+    "van": ObjectClassification.TRUCK,
+    "motorcycle": ObjectClassification.MOTORCYCLE,
+    "bicycle": ObjectClassification.BICYCLE,
+}
+
 
 class carla_ros2_interface(object):
 
@@ -94,6 +108,7 @@ class carla_ros2_interface(object):
             "publish_ground_truth_localization": (rclpy.Parameter.Type.BOOL, False),
             "map_origin_x": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "map_origin_y": (rclpy.Parameter.Type.DOUBLE, 0.0),
+            "publish_ground_truth_objects": (rclpy.Parameter.Type.BOOL, False),
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
@@ -157,6 +172,12 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state = self.ros2_node.create_publisher(
             HazardLightsReport, "/vehicle/status/hazard_lights_status", 1
         )
+
+        self.pub_ground_truth_objects = None
+        if self.param_values["publish_ground_truth_objects"]:
+            self.pub_ground_truth_objects = self.ros2_node.create_publisher(
+                DetectedObjects, "/perception/object_recognition/detection/objects", 1
+            )
 
     def _initialize_subscriptions(self):
         """Initialize all ROS 2 subscriptions."""
@@ -328,6 +349,10 @@ class carla_ros2_interface(object):
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
+        # Per-actor constants for ground truth objects: (label, dimensions), None for non-vehicles
+        self.ground_truth_world = None
+        self.ground_truth_tick_id = None
+        self.ground_truth_static = {}
         self.current_control = carla.VehicleControl()
         self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
         self.current_hazard_lights = HazardLightsCommand.DISABLE
@@ -1054,6 +1079,103 @@ class carla_ros2_interface(object):
         else:
             self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
 
+    def start_ground_truth_objects(self):
+        """Register the ground truth object publisher on CARLA's tick callback."""
+        with self._state_lock:
+            ego_actor = self.ego_actor
+        if ego_actor is None:
+            return
+        self.ground_truth_world = ego_actor.get_world()
+        self.ground_truth_tick_id = self.ground_truth_world.on_tick(self.ground_truth_objects)
+        self.logger.info("Publishing ground truth objects on every CARLA tick")
+
+    def stop_ground_truth_objects(self):
+        """Unregister the tick callback, if one was registered."""
+        if self.ground_truth_tick_id is not None:
+            self.ground_truth_world.remove_on_tick(self.ground_truth_tick_id)
+            self.ground_truth_tick_id = None
+
+    def learn_ground_truth_actors(self, actor_ids):
+        """Look up the class and size of new actors; ids CARLA no longer has get None."""
+        for actor in self.ground_truth_world.get_actors(actor_ids):
+            if not actor.type_id.startswith("vehicle."):
+                self.ground_truth_static[actor.id] = None
+                continue
+            extent = actor.bounding_box.extent
+            label = BASE_TYPE_TO_LABEL.get(
+                actor.attributes.get("base_type"), ObjectClassification.CAR
+            )
+            dimensions = (float(extent.x * 2.0), float(extent.y * 2.0), float(extent.z * 2.0))
+            self.ground_truth_static[actor.id] = (label, dimensions)
+        for actor_id in actor_ids:
+            self.ground_truth_static.setdefault(actor_id, None)
+
+    def update_ground_truth_actors(self, snapshot):
+        """Learn the actors new to this snapshot, and forget the ones that left it."""
+        present = {actor_snapshot.id for actor_snapshot in snapshot}
+        unknown = present.difference(self.ground_truth_static)
+        if unknown:
+            self.learn_ground_truth_actors(list(unknown))
+        for actor_id in set(self.ground_truth_static).difference(present):
+            del self.ground_truth_static[actor_id]
+
+    def ground_truth_detection(self, transform, label, dimensions):
+        """Build one detection from pose, label and dimensions; velocity is left to the tracker."""
+        obj = DetectedObject()
+        obj.existence_probability = 1.0
+
+        classification = ObjectClassification()
+        classification.label = label
+        classification.probability = 1.0
+        obj.classification.append(classification)
+
+        obj.kinematics.pose_with_covariance.pose.position = carla_location_to_ros_point(
+            transform.location,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
+        )
+        obj.kinematics.pose_with_covariance.pose.orientation = carla_rotation_to_ros_quaternion(
+            transform.rotation
+        )
+        obj.kinematics.orientation_availability = DetectedObjectKinematics.AVAILABLE
+        obj.kinematics.has_position_covariance = False
+        obj.kinematics.has_twist = False
+        obj.kinematics.has_twist_covariance = False
+
+        obj.shape.type = Shape.BOUNDING_BOX
+        obj.shape.dimensions.x, obj.shape.dimensions.y, obj.shape.dimensions.z = dimensions
+        return obj
+
+    def ground_truth_objects(self, snapshot):
+        """Tick callback; CARLA drops exceptions raised here, so log them instead."""
+        try:
+            self.publish_ground_truth_objects(snapshot)
+        except Exception as e:
+            self.logger.warning(f"Ground truth objects skipped: {e}", throttle_duration_sec=5.0)
+
+    def publish_ground_truth_objects(self, snapshot):
+        """Publish every CARLA vehicle except the ego as a ground truth detection."""
+        with self._state_lock:
+            ego_actor = self.ego_actor
+        if ego_actor is None:
+            return
+        ego_id = ego_actor.id
+
+        self.update_ground_truth_actors(snapshot)
+
+        # Bridge clock, not snapshot.timestamp: /clock starts at the bridge's attach, not the server's
+        msg = DetectedObjects()
+        msg.header = self.get_msg_header(frame_id="map")
+        for actor_snapshot in snapshot:
+            static = self.ground_truth_static.get(actor_snapshot.id)
+            if static is None or actor_snapshot.id == ego_id:
+                continue
+            label, dimensions = static
+            msg.objects.append(
+                self.ground_truth_detection(actor_snapshot.get_transform(), label, dimensions)
+            )
+        self.pub_ground_truth_objects.publish(msg)
+
     def run_step(self, input_data, timestamp):
         """
         Execute main simulation step for publishing sensor data and getting control commands.
@@ -1097,6 +1219,10 @@ class carla_ros2_interface(object):
         # Publish ego vehicle status
         self.ego_status()
 
+        # The ego actor exists only after the first frame
+        if self.pub_ground_truth_objects is not None and self.ground_truth_tick_id is None:
+            self.start_ground_truth_objects()
+
         # Thread-safe read of current control command
         with self._state_lock:
             return self.current_control
@@ -1109,6 +1235,9 @@ class carla_ros2_interface(object):
         process hanging and publisher leaks.
 
         """
+        # Stop the tick callback before destroying the publisher it writes to
+        self.stop_ground_truth_objects()
+
         # Stop publish workers before destroying the publishers they use
         for worker in self._publish_workers.values():
             worker.stop()
