@@ -20,11 +20,15 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <lanelet2_core/Exceptions.h>
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
+#include <tf2/exceptions.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <memory>
 #include <optional>
@@ -34,6 +38,46 @@
 
 namespace autoware::traffic_light
 {
+
+namespace
+{
+std::optional<tf2::Transform> lookup_map_to_frame_transform(
+  const tf2::BufferCore & tf_buffer, const std::string & frame_id, const rclcpp::Time & time)
+{
+  try {
+    const auto tf2_time_point = tf2::TimePoint(std::chrono::nanoseconds(time.nanoseconds()));
+    const geometry_msgs::msg::TransformStamped transform =
+      tf_buffer.lookupTransform("map", frame_id, tf2_time_point);
+    tf2::Transform tf;
+    tf2::fromMsg(transform.transform, tf);
+    return tf;
+  } catch (const tf2::TransformException & ex) {
+    return std::nullopt;
+  }
+}
+
+std::vector<StampedTransform> fetch_tf_map2camera_samples(
+  const tf2::BufferCore & tf_buffer, const std::string & frame_id, const rclcpp::Time & stamp,
+  double min_timestamp_offset, double max_timestamp_offset)
+{
+  std::vector<StampedTransform> tf_map2camera_samples;
+
+  const rclcpp::Time t1 = stamp + rclcpp::Duration::from_seconds(min_timestamp_offset);
+  const rclcpp::Time t2 = stamp + rclcpp::Duration::from_seconds(max_timestamp_offset);
+  const rclcpp::Duration interval = rclcpp::Duration::from_seconds(0.01);
+  for (auto t = t1; t <= t2; t += interval) {
+    if (const auto tf = lookup_map_to_frame_transform(tf_buffer, frame_id, t)) {
+      tf_map2camera_samples.push_back({t, *tf});
+    }
+  }
+
+  if (const auto tf = lookup_map_to_frame_transform(tf_buffer, frame_id, stamp)) {
+    tf_map2camera_samples.push_back({stamp, *tf});
+  }
+
+  return tf_map2camera_samples;
+}
+}  // namespace
 
 TrafficLightMapBasedDetector::TrafficLightMapBasedDetector(
   const TrafficLightMapBasedDetectorConfig & config,
@@ -186,13 +230,15 @@ TrafficLightMapBasedDetectorConfig make_expect_roi_config(
 }
 
 DetectionResult TrafficLightMapBasedDetector::detect(
-  const std::vector<StampedTransform> & tf_map2camera_samples,
-  const sensor_msgs::msg::CameraInfo & camera_info) const
+  const tf2::BufferCore & tf_buffer, const sensor_msgs::msg::CameraInfo & camera_info) const
 {
   DetectionResult result;
   result.rough_rois.header = camera_info.header;
   result.expect_rois.header = camera_info.header;
 
+  const auto tf_map2camera_samples = fetch_tf_map2camera_samples(
+    tf_buffer, camera_info.header.frame_id, camera_info.header.stamp, config_.min_timestamp_offset,
+    config_.max_timestamp_offset);
   if (tf_map2camera_samples.empty()) {
     return result;
   }

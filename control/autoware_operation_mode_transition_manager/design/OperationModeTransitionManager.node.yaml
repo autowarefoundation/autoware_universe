@@ -31,21 +31,37 @@ subscribers:
   - name: gate_operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
     remap_target: gate_operation_mode
+  # legacy interfaces: node-side names are fixed
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
+    remap_target: /api/autoware/get/engage
+  - name: current_gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+    remap_target: /control/current_gate_mode
+  - name: current_selector_mode
+    message_type: tier4_control_msgs/msg/ExternalCommandSelectorMode
+    remap_target: /control/external_cmd_selector/current_selector_mode
 
 publishers:
   - name: operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  # shared with external operators; multiple publishers
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
+    global: /autoware/engage
+    remap_target: /autoware/engage
   - name: gate_mode_cmd
     message_type: tier4_control_msgs/msg/GateMode
+    global: /control/gate_mode_cmd
+    remap_target: /control/gate_mode_cmd
 
 clients:
   - name: control_mode_request
     message_type: autoware_vehicle_msgs/srv/ControlModeCommand
     remap_target: control_mode_request
+  - name: select_external_command
+    message_type: tier4_control_msgs/srv/ExternalCommandSelect
+    remap_target: /control/external_cmd_selector/select_external_command
 
 # parameters
 param_files:
