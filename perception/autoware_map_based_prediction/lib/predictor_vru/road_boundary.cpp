@@ -30,7 +30,8 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_set>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::map_based_prediction
@@ -42,16 +43,10 @@ namespace
 // points lying exactly on (or just outside) the crosswalk edge are still recognised as inside.
 constexpr double kCrosswalkContainmentMargin = 0.5;  // [m]
 
-bool does_path_cross_boundary(
-  const lanelet::BasicLineString2d & predicted_path,
-  const lanelet::ConstLineString3d & boundary_line)
-{
-  return boost::geometry::intersects(
-    predicted_path, lanelet::utils::to2D(boundary_line.basicLineString()));
-}
-
 std::optional<lanelet::ConstLanelet> find_crosswalk_at_point(
-  const lanelet::LaneletMap * crosswalk_layer, const lanelet::BasicPoint2d & point)
+  const lanelet::LaneletMap * crosswalk_layer,
+  const RoadBoundaryModule::CrosswalkPolygonMap & crosswalk_polygons,
+  const lanelet::BasicPoint2d & point)
 {
   if (!crosswalk_layer) {
     return std::nullopt;
@@ -62,7 +57,7 @@ std::optional<lanelet::ConstLanelet> find_crosswalk_at_point(
     // distance() is 0 when the point is inside the polygon and the gap to the edge otherwise, so
     // this is equivalent to a within() test against a polygon expanded by the margin.
     if (
-      boost::geometry::distance(point, crosswalk.polygon2d().basicPolygon()) <=
+      boost::geometry::distance(point, crosswalk_polygons.at(crosswalk.id())) <=
       kCrosswalkContainmentMargin) {
       return crosswalk;
     }
@@ -75,22 +70,21 @@ std::optional<lanelet::ConstLanelet> find_crosswalk_at_point(
 // red (no signal or non-red) i.e. a legitimate crossing. An intersection outside any crosswalk, or
 // inside a crosswalk with a red signal, is a cuttable jump-out.
 bool segment_has_cuttable_crossing(
-  const lanelet::BasicLineString2d & path_segment, const lanelet::ConstLineString3d & boundary,
+  const lanelet::BasicLineString2d & path_segment, const lanelet::BasicLineString2d & boundary_2d,
   const lanelet::LaneletMap * crosswalk_layer,
+  const RoadBoundaryModule::CrosswalkPolygonMap & crosswalk_polygons,
   const RoadBoundaryModule::CrosswalkSignalRedFn & is_crosswalk_signal_red)
 {
-  const auto boundary_2d = lanelet::utils::to2D(boundary).basicLineString();
-  if (!boost::geometry::intersects(path_segment, boundary_2d)) {
-    return false;
-  }
   lanelet::BasicPoints2d intersections;
   boost::geometry::intersection(path_segment, boundary_2d, intersections);
-  // Fall back to cutting when the intersection points cannot be resolved (e.g. collinear overlap).
+  // No points either for a disjoint segment or for a collinear overlap that cannot be resolved
+  // into points; the latter falls back to cutting.
   if (intersections.empty()) {
-    return true;
+    return boost::geometry::intersects(path_segment, boundary_2d);
   }
   for (const auto & intersection : intersections) {
-    const auto crosswalk = find_crosswalk_at_point(crosswalk_layer, intersection);
+    const auto crosswalk =
+      find_crosswalk_at_point(crosswalk_layer, crosswalk_polygons, intersection);
     const bool exempt = crosswalk.has_value() && !is_crosswalk_signal_red(crosswalk.value());
     if (!exempt) {
       return true;
@@ -101,6 +95,7 @@ bool segment_has_cuttable_crossing(
 
 std::optional<size_t> find_road_boundary_crossing_index(
   const lanelet::LaneletMap & road_boundary_layer, const lanelet::LaneletMap * crosswalk_layer,
+  const RoadBoundaryModule::CrosswalkPolygonMap & crosswalk_polygons,
   const RoadBoundaryModule::CrosswalkSignalRedFn & is_crosswalk_signal_red,
   const PredictedPath & predicted_path)
 {
@@ -109,18 +104,15 @@ std::optional<size_t> find_road_boundary_crossing_index(
     return std::nullopt;
   }
 
-  lanelet::BasicLineString2d predicted_path_ls;
-  predicted_path_ls.reserve(path.size());
-  for (const auto & pt : path) {
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
-  }
+  const auto predicted_path_ls = utils::to_linestring_2d(path, path.size() - 1);
 
   const auto candidates =
     road_boundary_layer.lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
-  std::vector<lanelet::ConstLineString3d> crossed_boundaries{};
+  std::vector<lanelet::BasicLineString2d> crossed_boundaries{};
   for (const auto & candidate : candidates) {
-    if (does_path_cross_boundary(predicted_path_ls, candidate)) {
-      crossed_boundaries.push_back(candidate);
+    auto boundary_2d = lanelet::utils::to2D(candidate.basicLineString());
+    if (boost::geometry::intersects(predicted_path_ls, boundary_2d)) {
+      crossed_boundaries.push_back(std::move(boundary_2d));
     }
   }
   if (crossed_boundaries.empty()) {
@@ -130,10 +122,11 @@ std::optional<size_t> find_road_boundary_crossing_index(
   for (auto i = 0UL; i + 1 < predicted_path_ls.size(); ++i) {
     const lanelet::BasicLineString2d path_segment(
       lanelet::BasicPoints2d{predicted_path_ls.at(i), predicted_path_ls.at(i + 1)});
-    for (const auto & boundary : crossed_boundaries) {
+    for (const auto & boundary_2d : crossed_boundaries) {
       if (
         segment_has_cuttable_crossing(
-          path_segment, boundary, crosswalk_layer, is_crosswalk_signal_red)) {
+          path_segment, boundary_2d, crosswalk_layer, crosswalk_polygons,
+          is_crosswalk_signal_red)) {
         return i;
       }
     }
@@ -144,14 +137,14 @@ std::optional<size_t> find_road_boundary_crossing_index(
 
 void RoadBoundaryModule::build_from_map(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr)
 {
+  road_boundary_layer_ = nullptr;
+  crosswalk_layer_ = nullptr;
+  crosswalk_polygons_.clear();
   if (!lanelet_map_ptr) {
-    road_boundary_layer_ = nullptr;
-    crosswalk_layer_ = nullptr;
     return;
   }
 
-  lanelet::LineStrings3d boundaries;
-  std::unordered_set<lanelet::Id> added_ids;
+  std::unordered_map<lanelet::Id, std::pair<lanelet::LineString3d, size_t>> bound_usage;
   lanelet::ConstLanelets crosswalks;
   for (const auto & lanelet : lanelet_map_ptr->laneletLayer) {
     const std::string subtype = lanelet.attributeOr(lanelet::AttributeName::Subtype, "none");
@@ -165,14 +158,27 @@ void RoadBoundaryModule::build_from_map(std::shared_ptr<lanelet::LaneletMap> lan
       continue;
     }
     for (const auto & bound : {lanelet.leftBound(), lanelet.rightBound()}) {
-      if (added_ids.insert(bound.id()).second) {
-        boundaries.emplace_back(
-          std::const_pointer_cast<lanelet::LineStringData>(bound.constData()));
-      }
+      auto [it, inserted] = bound_usage.try_emplace(
+        bound.id(),
+        lanelet::LineString3d(std::const_pointer_cast<lanelet::LineStringData>(bound.constData())),
+        0UL);
+      ++it->second.second;
+    }
+  }
+  // A bound shared by two road-subtype lanelets is an interior lane divider; a path coming from
+  // outside the road always reaches an outer edge first, so dividers are never the first crossing
+  // and are left out of the layer.
+  lanelet::LineStrings3d boundaries;
+  for (auto & [id, bound_with_usage] : bound_usage) {
+    if (bound_with_usage.second == 1) {
+      boundaries.push_back(bound_with_usage.first);
     }
   }
   road_boundary_layer_ = lanelet::utils::createMap(boundaries);
   crosswalk_layer_ = lanelet::utils::createConstMap(crosswalks, {});
+  for (const auto & crosswalk : crosswalks) {
+    crosswalk_polygons_.emplace(crosswalk.id(), crosswalk.polygon2d().basicPolygon());
+  }
 }
 
 std::vector<PredictedPath> RoadBoundaryModule::cut_paths_crossing_road_boundary(
@@ -194,7 +200,8 @@ std::vector<PredictedPath> RoadBoundaryModule::cut_paths_crossing_road_boundary(
 
   for (PredictedPath & predicted_path : cut_paths) {
     const std::optional<size_t> crossing_index = find_road_boundary_crossing_index(
-      *road_boundary_layer_, crosswalk_layer_.get(), is_crosswalk_signal_red, predicted_path);
+      *road_boundary_layer_, crosswalk_layer_.get(), crosswalk_polygons_, is_crosswalk_signal_red,
+      predicted_path);
     if (!crossing_index) {
       continue;
     }
