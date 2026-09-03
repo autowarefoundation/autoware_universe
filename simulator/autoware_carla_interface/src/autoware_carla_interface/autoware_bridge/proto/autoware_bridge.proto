@@ -17,15 +17,12 @@
 // (proto/alpasim_grpc/v0/egodriver.proto), which is a driving-policy interface.
 // Autoware drives the ego itself through the ROS 2 interface node.
 //
-// Topology (splatsim-consistent): the SERVER is hosted by the scenario library
-// and the autoware_carla_interface node is the CLIENT, matching splatsim, where
-// the interface node runs a gRPC client (splatsim/grpc_client.py) against a
-// server launched in Docker (splatsim/docker_manager.py). Here the interface
-// node likewise launches the scenario-library container and then dials this
-// AutowareBridge server. Keeping the interface node a client lets it reuse that
-// existing splatsim client/Docker-launch scaffolding, and keeps the scenario
-// library free of any ROS 2 dependency (all ROS 2 / Autoware AD API I/O lives on
-// the client, inside the interface node).
+// Topology: the SERVER is hosted by the scenario library and the
+// autoware_carla_interface node is the CLIENT. The interface node launches the
+// scenario-library container and then dials this AutowareBridge server. Keeping
+// the interface node a client keeps the scenario library free of any ROS 2
+// dependency (all ROS 2 / Autoware AD API I/O lives on the client, inside the
+// interface node).
 //
 // Because only the client initiates, the two RPCs are direction-inverted from a
 // "framework pushes" contract: the client PULLS the mission (GetMission) and
@@ -44,9 +41,7 @@ syntax = "proto3";
 
 package autoware_carla_scenario.autoware_bridge.v0;
 
-// Shared physics primitives. These deliberately mirror the splatsim proto
-// (tier4/splatsim proto/splatsim/v1/rendering_service.proto) by name and shape
-// so the two stacks can converge on a common set of physics types later.
+// Shared physics primitives (a plain 3-vector and a wxyz quaternion).
 message Vector3 {
   double x = 1;
   double y = 2;
@@ -54,8 +49,7 @@ message Vector3 {
 }
 
 message Quaternion {
-  // wxyz convention (matching the splatsim / gsplat and alpasim common.Quat
-  // convention). The interface node converts to/from ROS geometry_msgs
+  // wxyz convention. The interface node converts to/from ROS geometry_msgs
   // (xyzw) internally.
   double w = 1;
   double x = 2;

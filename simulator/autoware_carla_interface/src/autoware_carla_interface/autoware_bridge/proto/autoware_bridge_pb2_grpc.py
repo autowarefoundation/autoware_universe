@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 # Generated from autoware_bridge/proto/autoware_bridge.proto -- do not edit.
-# The .proto is vendored verbatim from hakuturu583/autoware_lanelet2_to_opendrive
+# The .proto is vendored from hakuturu583/autoware_lanelet2_to_opendrive
 # (autoware_carla_scenario/proto/autoware_bridge/v0); its `package` is kept so the
 # gRPC service name matches the scenario-library server this client dials.
 
