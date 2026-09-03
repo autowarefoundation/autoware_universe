@@ -42,7 +42,9 @@ class ScenarioContainerManager:
 
     Args:
         image: Container image that runs the scenario server.
-        command: Command the container runs to start the server.
+        command: Arguments passed to the image entrypoint (a list, never a shell
+            string, so they need no escaping), or ``None`` to use the image's
+            default command.
         grpc_port: Port the server listens on (published via host networking).
         container_name: Name to reuse an already-running container by.
     """
@@ -51,7 +53,7 @@ class ScenarioContainerManager:
         self,
         image: str,
         *,
-        command: str,
+        command: list[str] | None = None,
         grpc_port: int = 50052,
         container_name: str = "autoware_scenario_bridge",
     ) -> None:
