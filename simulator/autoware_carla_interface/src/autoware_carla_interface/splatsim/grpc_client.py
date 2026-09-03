@@ -156,6 +156,21 @@ class SplatSimGrpcClient:
         """Send ``Initialize`` RPC.  Blocks until the server finishes loading."""
         return self._call_initialize("Initialize", self._stub.Initialize, request)
 
+    def set_lod(self, enabled: bool) -> None:
+        """Toggle distance-adaptive LoD at runtime via the ``SetLod`` RPC.
+
+        Needed to turn LoD *off*: ``enable_lod`` in ``InitializeRequest`` is a
+        plain proto3 bool, so an unset/false value is indistinguishable on the
+        wire and the server keeps its LoD-on default. Older servers may not
+        implement ``SetLod``; the failure is logged rather than raised so it
+        never aborts sensor initialization.
+        """
+        try:
+            resp = self._stub.SetLod(pb2.SetLodRequest(enabled=enabled))
+            _rlog.warn(f"SetLod(enabled={enabled}) -> effective={resp.enabled}: {resp.message}")
+        except grpc.RpcError as exc:
+            _rlog.error(f"SetLod(enabled={enabled}) RPC failed (server may predate SetLod): {exc}")
+
     @staticmethod
     def _make_pose(position, rotation_wxyz) -> pb2.Pose:
         """Build a gRPC ``Pose`` from a position and a wxyz quaternion."""

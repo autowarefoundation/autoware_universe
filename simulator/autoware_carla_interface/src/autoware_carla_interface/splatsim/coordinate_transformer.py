@@ -88,19 +88,31 @@ def _quaternion_xyzw_to_rotation_matrix(
 def parse_tileset_transform(
     tileset_path: str,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    """Read the root tile's ECEF rotation & translation from ``tileset.json``.
+    """Read the scene's ECEF rotation & translation from a splatsim ``.usdz``.
+
+    ``splatsim_tileset_path`` points at a ``.usdz`` ZIP bundle whose
+    ``scene.json`` stores ``world.ecef_anchor``: the 4x4 (row-major) ENU->ECEF
+    transform aligning the recentred scene frame to ECEF. Its 3x3 block is the
+    scene->ECEF rotation and its translation column is the ECEF translation —
+    exactly what the gRPC server reports in ``InitializeResponse`` and what this
+    fallback must return when the server omits it.
 
     Returns ``(ecef_rotation_3x3, ecef_translation_3)`` both as float64.
     """
-    with open(tileset_path) as f:
-        data = json.load(f)
+    import zipfile
 
-    # Navigate to root tile transform — 3D Tiles stores a flat 16-element
-    # column-major array.
-    root = data.get("root", data)
-    transform_flat = root["transform"]
-    T = np.array(transform_flat, dtype=np.float64).reshape(4, 4).T  # col→row major
-    return T[:3, :3].copy(), T[:3, 3].copy()
+    try:
+        with zipfile.ZipFile(tileset_path) as zf:
+            with zf.open("scene.json") as f:
+                scene = json.load(f)
+        anchor = np.array(scene["world"]["ecef_anchor"], dtype=np.float64).reshape(4, 4)
+    except (KeyError, OSError, zipfile.BadZipFile, ValueError) as exc:
+        raise RuntimeError(
+            f"Could not read 'scene.json' -> world.ecef_anchor from splatsim scene "
+            f"'{tileset_path}'. A splatsim .usdz bundle is required to derive the "
+            f"ECEF transform when the gRPC server does not report one."
+        ) from exc
+    return anchor[:3, :3].copy(), anchor[:3, 3].copy()
 
 
 def resolve_ecef_transform(
@@ -108,8 +120,8 @@ def resolve_ecef_transform(
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Return the scene's ``(ecef_rotation_3x3, ecef_translation_3)``.
 
-    Prefer the transform reported by the gRPC server; fall back to parsing the
-    local ``tileset.json`` when the server omits it.
+    Prefer the transform reported by the gRPC server; fall back to the scene's
+    own ``.usdz`` ``scene.json`` (world.ecef_anchor) when the server omits it.
     """
     if resp.ecef_rotation:
         ecef_rot = np.array(resp.ecef_rotation, dtype=np.float64).reshape(3, 3)
@@ -119,7 +131,7 @@ def resolve_ecef_transform(
         )
         _rlog.warn("Using ECEF transform from gRPC server")
         return ecef_rot, ecef_trans
-    _rlog.warn("gRPC server did not return ECEF transform; falling back to parse_tileset_transform")
+    _rlog.warn("gRPC server did not return ECEF transform; falling back to scene.json ecef_anchor")
     return parse_tileset_transform(tileset_path)
 
 

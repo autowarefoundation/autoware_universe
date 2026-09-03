@@ -656,10 +656,19 @@ class carla_ros2_interface(object):
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
+        # Invert exactly the offset the localization publisher applied, so a
+        # pose picked off the published map frame maps back to the right CARLA
+        # coordinates. In splatsim mode _publish_localization shifts by the
+        # derived MGRS offset; otherwise the ground-truth path uses map_origin.
+        if self.render_with_splatsim:
+            origin_x, origin_y = self._mgrs_offset_x, self._mgrs_offset_y
+        else:
+            origin_x = self.param_values["map_origin_x"]
+            origin_y = self.param_values["map_origin_y"]
         carla_pose_transform = ros_pose_to_carla_transform(
             pose,
-            origin_x=self.param_values["map_origin_x"],
-            origin_y=self.param_values["map_origin_y"],
+            origin_x=origin_x,
+            origin_y=origin_y,
         )
 
         # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
@@ -1146,7 +1155,15 @@ class carla_ros2_interface(object):
 
         No-op unless publish_ground_truth_localization is enabled (the
         publishers only exist when it is).
+
+        In splatsim mode ``_publish_localization`` is the single source of
+        ``/localization/kinematic_state`` and the map->base_link TF (it applies
+        the derived MGRS offsets). Publishing here as well would emit a second,
+        contradictory pose in the ``map_origin`` frame with the same timestamp,
+        so this ground-truth path stands down whenever splatsim is rendering.
         """
+        if self.render_with_splatsim:
+            return
         if not self.param_values.get("publish_ground_truth_localization", False):
             return
         with self._state_lock:
@@ -1333,6 +1350,9 @@ class carla_ros2_interface(object):
         self.pub_initialpose3d = self.ros2_node.create_publisher(
             PoseWithCovarianceStamped, "/initialpose3d", 10
         )
+        # /initialpose3d is a one-shot initialization command; it is published
+        # only on the first localization tick (see _publish_localization).
+        self._initialpose3d_published = False
 
     def _init_geo_transform(self):
         """Resolve the splatsim geographic origin and its MGRS offset.
@@ -1690,7 +1710,14 @@ class carla_ros2_interface(object):
         pose_stamped.header = header
         pose_stamped.pose = pose
         self.pub_fusion_pose.publish(pose_stamped)
-        self.pub_initialpose3d.publish(pose_cov)
+
+        # /initialpose3d is a one-shot initialization command. When Yabloc is
+        # active it is remapped to the particle filter's initialize_particles,
+        # so re-publishing every tick would continuously reset localization and
+        # prevent it from converging. Send it once to initialize, no more.
+        if not self._initialpose3d_published:
+            self.pub_initialpose3d.publish(pose_cov)
+            self._initialpose3d_published = True
 
     # ── Shutdown ──────────────────────────────────────────────────────────
 

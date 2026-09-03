@@ -156,6 +156,10 @@ class SplatSimLidar:
         resp = self._grpc.initialize(init_request)
         if not resp.success:
             raise RuntimeError(f"splatsim Initialize failed: {resp.message}")
+        # enable_lod in InitializeRequest can only turn LoD on; disabling needs
+        # the explicit SetLod RPC (see grpc_client.set_lod / the proto note).
+        if not config.enable_lod:
+            self._grpc.set_lod(False)
         return resp
 
     def _build_transformer(
