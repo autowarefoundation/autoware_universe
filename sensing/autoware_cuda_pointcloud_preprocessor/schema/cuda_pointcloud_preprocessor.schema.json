@@ -11,6 +11,12 @@
           "description": "The undistortion algorithm is based on a base frame, which must be the same as the twist frame.",
           "default": "base_link"
         },
+        "output_point_type": {
+          "type": "string",
+          "enum": ["XYZIRC", "XYZIRCT"],
+          "description": "Point type of the published cloud. XYZIRCT additionally carries each point's time_stamp (nanoseconds relative to the header stamp), copied from the input.",
+          "default": "XYZIRC"
+        },
         "use_imu": {
           "type": "boolean",
           "description": "Use IMU angular velocity, otherwise, use twist angular velocity.",
@@ -116,6 +122,7 @@
       },
       "required": [
         "base_frame",
+        "output_point_type",
         "use_imu",
         "use_3d_distortion_correction",
         "distance_ratio",
