@@ -43,6 +43,7 @@ import numpy as np
 from numpy.typing import NDArray
 from pyproj import Transformer
 import rclpy
+from scipy.spatial.transform import Rotation
 
 _rlog = rclpy.logging.get_logger("splatsim_coord")
 
@@ -67,31 +68,8 @@ def _rotation_matrix_to_quaternion_wxyz(
     R: NDArray[np.float64],
 ) -> tuple[float, float, float, float]:
     """Convert a 3x3 rotation matrix to ``(w, x, y, z)`` quaternion."""
-    trace = R[0, 0] + R[1, 1] + R[2, 2]
-    if trace > 0:
-        s = 0.5 / np.sqrt(trace + 1.0)
-        w = 0.25 / s
-        x = (R[2, 1] - R[1, 2]) * s
-        y = (R[0, 2] - R[2, 0]) * s
-        z = (R[1, 0] - R[0, 1]) * s
-    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
-        s = 2.0 * np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
-        w = (R[2, 1] - R[1, 2]) / s
-        x = 0.25 * s
-        y = (R[0, 1] + R[1, 0]) / s
-        z = (R[0, 2] + R[2, 0]) / s
-    elif R[1, 1] > R[2, 2]:
-        s = 2.0 * np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
-        w = (R[0, 2] - R[2, 0]) / s
-        x = (R[0, 1] + R[1, 0]) / s
-        y = 0.25 * s
-        z = (R[1, 2] + R[2, 1]) / s
-    else:
-        s = 2.0 * np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
-        w = (R[1, 0] - R[0, 1]) / s
-        x = (R[0, 2] + R[2, 0]) / s
-        y = (R[1, 2] + R[2, 1]) / s
-        z = 0.25 * s
+    # SciPy returns the scalar-last ``(x, y, z, w)`` convention.
+    x, y, z, w = Rotation.from_matrix(R).as_quat()
     return (float(w), float(x), float(y), float(z))
 
 
@@ -102,15 +80,9 @@ def _quaternion_xyzw_to_rotation_matrix(
     w: float,
 ) -> NDArray[np.float64]:
     """Convert ROS quaternion ``(x, y, z, w)`` to a 3x3 rotation matrix."""
-    R = np.array(
-        [
-            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
-        ],
-        dtype=np.float64,
-    )
-    return R
+    # SciPy's ``from_quat`` already expects the scalar-last ``(x, y, z, w)``
+    # ROS convention and normalizes the input.
+    return Rotation.from_quat([x, y, z, w]).as_matrix()
 
 
 def parse_tileset_transform(

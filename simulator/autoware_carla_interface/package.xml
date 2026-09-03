@@ -18,6 +18,7 @@
   <exec_depend>python3-grpcio</exec_depend>
   <exec_depend>python3-protobuf</exec_depend>
   <exec_depend>python3-pyproj</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_perception_msgs</depend>
