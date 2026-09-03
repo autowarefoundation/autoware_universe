@@ -53,6 +53,17 @@
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
 
+    <!-- Scenario AutowareBridge (closed-loop with the CARLA scenario library).
+         Pass ego_vehicle_role_name:=Ego so the scenario framework can attach to
+         the ego this interface node spawns. -->
+    <arg
+      name="launch_autoware_bridge"
+      default="false"
+      description="Launch the autoware_bridge node that drives Autoware from a scenario mission over gRPC and reports readiness (opt-in; the CARLA scenario framework passes true)"
+    />
+    <arg name="bridge_address" default="localhost:50052" description="host:port of the scenario-library AutowareBridge gRPC server to dial"/>
+    <arg name="auto_engage" default="true" description="Auto change_to_autonomous once localization is initialized, the route is set, and autonomous mode is available (scenario/sim only)"/>
+
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
       <param name="host" value="$(var host)"/>
@@ -79,6 +90,14 @@
       <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
       <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
+    </node>
+
+    <!-- Scenario bridge: pull the mission (initial pose + goal) from the scenario
+         library over gRPC, drive Autoware's localization init / routing / engage,
+         and report readiness back. -->
+    <node pkg="autoware_carla_interface" exec="autoware_bridge" name="autoware_bridge" output="screen" if="$(var launch_autoware_bridge)">
+      <param name="bridge_address" value="$(var bridge_address)"/>
+      <param name="auto_engage" value="$(var auto_engage)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>

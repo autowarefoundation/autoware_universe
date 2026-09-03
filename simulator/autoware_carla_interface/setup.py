@@ -18,6 +18,7 @@ setup(
         "console_scripts": [
             "autoware_carla_interface = autoware_carla_interface.carla_autoware:main",
             "multi_camera_combiner = autoware_carla_interface.multi_camera_combiner_node:main",
+            "autoware_bridge = autoware_carla_interface.autoware_bridge.node:main",
         ],
     },
     package_dir={"": "src"},
