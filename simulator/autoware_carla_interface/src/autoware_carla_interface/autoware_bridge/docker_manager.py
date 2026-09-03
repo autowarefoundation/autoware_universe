@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Splatsim-style Docker launch for the scenario-library gRPC server.
+"""Docker launch for the scenario-library gRPC server.
 
 The interface node launches the scenario-library container (which hosts the
-``AutowareBridge`` server) and then dials it with :class:`AutowareBridgeClient`,
-mirroring ``splatsim/docker_manager.py`` (which launches the renderer server the
-splatsim client connects to).  ``--network=host`` keeps the gRPC endpoint on
-``localhost`` and lets the container share the CARLA world / DDS with the host.
+``AutowareBridge`` server) and then dials it with :class:`AutowareBridgeClient`.
+``--network=host`` keeps the gRPC endpoint on ``localhost`` and lets the container
+share the CARLA world / DDS with the host.
 
 This is optional: when the scenario server is started out of band (e.g. in CI or
-by hand), set ``launch_scenario_container:=false`` and point ``bridge_address``
-at it directly.  ``docker`` is imported lazily so the node does not hard-depend
-on the SDK when the container launch is disabled.
+by hand), leave ``with_scenario`` empty and point ``bridge_address`` at it
+directly.  ``docker`` is imported lazily so the node does not hard-depend on the
+SDK when the container launch is disabled.
 """
 
 from __future__ import annotations
@@ -101,7 +100,7 @@ class ScenarioContainerManager:
             name=self._container_name,
             detach=True,
             # Host networking keeps the gRPC endpoint on localhost and shares the
-            # CARLA world / DDS with the host, matching the splatsim launch.
+            # CARLA world / DDS with the host.
             network_mode="host",
             remove=True,
         )

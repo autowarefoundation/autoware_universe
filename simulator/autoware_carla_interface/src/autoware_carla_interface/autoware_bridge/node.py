@@ -140,7 +140,7 @@ class AutowareBridgeNode(Node):
         scenario_spec = self.declare_parameter("scenario", "").get_parameter_value().string_value
 
         # Optionally launch the scenario package's Docker image (which hosts the
-        # gRPC server) before dialling it, splatsim-style.
+        # gRPC server) before dialling it.
         self._container = self._start_scenario_container(scenario_spec)
 
         self._client = AutowareBridgeClient(self._bridge_address)
