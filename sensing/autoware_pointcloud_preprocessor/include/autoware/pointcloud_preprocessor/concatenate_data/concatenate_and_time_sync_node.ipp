@@ -190,7 +190,8 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
 
   if (!combine_cloud_handler_->is_input_layout_supported(*input_ptr)) {
     RCLCPP_ERROR_ONCE(
-      get_logger(), "The pointcloud layout of '%s' is not supported for output_point_type %s. Dropping.",
+      get_logger(),
+      "The pointcloud layout of '%s' is not supported for output_point_type %s. Dropping.",
       topic_name.c_str(),
       params_.output_point_type == OutputPointType::XYZIRCT ? "XYZIRCT" : "XYZIRC");
 
