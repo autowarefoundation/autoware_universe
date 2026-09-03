@@ -59,8 +59,15 @@ class ReadinessAggregator:
       mode available: the precondition for calling ``change_to_autonomous``.
     * :attr:`ready` - localization initialized, route set, and Autoware now in
       AUTONOMOUS with control enabled: the flag pushed to the scenario framework.
+
+    ``require_localization`` folds in the localization state.  Set it ``False`` for
+    stacks that do not localize through the AD API -- e.g. a CARLA ground-truth /
+    E2E-planner setup (``localization:=false``), where ``/localization/kinematic_state``
+    is published directly and ``LocalizationInitializationState`` never reaches
+    INITIALIZED.  It defaults to ``True`` to match the mainline flow.
     """
 
+    require_localization: bool = True
     localization_initialized: bool = False
     route_set: bool = False
     autonomous_available: bool = False
@@ -82,11 +89,16 @@ class ReadinessAggregator:
         self.autonomous_engaged = mode == OPERATION_MODE_AUTONOMOUS and is_control_enabled
 
     @property
+    def _localization_ok(self) -> bool:
+        """Whether localization is satisfied (always ``True`` when not required)."""
+        return self.localization_initialized or not self.require_localization
+
+    @property
     def can_engage(self) -> bool:
         """Whether ``change_to_autonomous`` may be called now."""
-        return self.localization_initialized and self.route_set and self.autonomous_available
+        return self._localization_ok and self.route_set and self.autonomous_available
 
     @property
     def ready(self) -> bool:
         """Whether Autoware is initialized, routed, engaged, and driving."""
-        return self.localization_initialized and self.route_set and self.autonomous_engaged
+        return self._localization_ok and self.route_set and self.autonomous_engaged

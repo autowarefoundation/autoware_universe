@@ -19,13 +19,18 @@ server (issue #9).  It owns the whole startup sequence and exposes only a single
 readiness flag back to the framework:
 
 1. poll ``GetMission`` until the scenario hands over an initial pose + goal;
-2. initialize localization at the initial pose (``/api/localization/initialize``);
+2. initialize localization at the initial pose (``/api/localization/initialize``) --
+   skipped when ``initialize_localization`` is False (ground-truth / E2E stacks);
 3. set the route to the goal (``/api/routing/set_route_points``);
-4. once localization is INITIALIZED, the route is SET, and autonomous mode is
+4. once localization is satisfied, the route is SET, and autonomous mode is
    available, engage once (``/api/operation_mode/change_to_autonomous``), gated
    behind ``auto_engage`` (scenario/sim only);
 5. aggregate localization/routing/operation-mode state into a single readiness
-   flag and push it back with ``ReportReadiness``.
+   flag and push it back with ``ReportReadiness``.  ``require_localization_initialized``
+   controls whether localization is part of "ready".
+
+This replaces the manual ``ros2 service call`` goal + engage flow (e.g.
+``run_odaiba_outbound.sh``) with a scenario-driven one.
 
 High-bandwidth data (sensors, control, ``/clock``, tf) never flows over the
 bridge; it stays on ROS 2 topics and direct CARLA control in the interface node.
@@ -128,6 +133,19 @@ class AutowareBridgeNode(Node):
         self._auto_engage = (
             self.declare_parameter("auto_engage", True).get_parameter_value().bool_value
         )
+        # Localization is a configurable step so the node fits both the mainline
+        # AD API flow and stacks that localize outside it (CARLA ground-truth /
+        # E2E, localization:=false).  Defaults match the mainline; set both False
+        # to skip the /api/localization/initialize call and drop the localization
+        # requirement from readiness.
+        self._initialize_localization = (
+            self.declare_parameter("initialize_localization", True).get_parameter_value().bool_value
+        )
+        require_localization = (
+            self.declare_parameter("require_localization_initialized", True)
+            .get_parameter_value()
+            .bool_value
+        )
         self._map_frame = (
             self.declare_parameter("map_frame", "map").get_parameter_value().string_value
         )
@@ -144,7 +162,7 @@ class AutowareBridgeNode(Node):
         self._container = self._start_scenario_container(scenario_spec)
 
         self._client = AutowareBridgeClient(self._bridge_address)
-        self._aggregator = ReadinessAggregator()
+        self._aggregator = ReadinessAggregator(require_localization=require_localization)
 
         self._mission: Optional[pb2.GetMissionResponse] = None
         self._engage_requested = False
@@ -258,7 +276,18 @@ class AutowareBridgeNode(Node):
         self._set_route(mission.goal)
 
     def _initialize_localization(self, initial_pose: pb2.Pose) -> None:
-        """Call ``/api/localization/initialize`` at *initial_pose*."""
+        """Call ``/api/localization/initialize`` at *initial_pose*.
+
+        Skipped (no-op) when ``initialize_localization`` is ``False`` -- for stacks
+        that localize outside the AD API (CARLA ground-truth / E2E).  The mainline
+        call is kept below, gated by the parameter.
+        """
+        if not self._initialize_localization:
+            self.get_logger().info(
+                "localization init skipped (initialize_localization=false; "
+                "localization is handled outside the AD API)"
+            )
+            return
         if not self._init_cli.wait_for_service(timeout_sec=self._rpc_timeout_s):
             self.get_logger().error(
                 f"{LOCALIZATION_INITIALIZE_SERVICE} unavailable; localization "
