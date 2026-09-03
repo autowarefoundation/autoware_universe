@@ -62,8 +62,7 @@ from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 
-# CARLA vehicle blueprints carry a base_type attribute; map it to the closest
-# Autoware label. Anything unlisted falls back to CAR.
+# CARLA blueprint base_type -> Autoware label (anything unlisted falls back to CAR)
 BASE_TYPE_TO_LABEL = {
     "car": ObjectClassification.CAR,
     "truck": ObjectClassification.TRUCK,
@@ -350,10 +349,7 @@ class carla_ros2_interface(object):
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
-        # Ground truth objects are built from CARLA's tick snapshot, which carries only
-        # ids and poses. Everything about an actor that never changes is looked up once
-        # and kept here: (label, dimensions) for a vehicle to report, None for anything
-        # else, so sensors and traffic lights are not asked about again either.
+        # Per-actor constants for ground truth objects: (label, dimensions), None for non-vehicles
         self.ground_truth_world = None
         self.ground_truth_tick_id = None
         self.ground_truth_static = {}
@@ -1084,11 +1080,7 @@ class carla_ros2_interface(object):
             self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
 
     def start_ground_truth_objects(self):
-        """Publish ground truth objects on CARLA's tick callback.
-
-        Publishing from the tick keeps the objects on the world's cadence and off the
-        sensor path, where the loop only runs once every sensor has delivered its frame.
-        """
+        """Register the ground truth object publisher on CARLA's tick callback."""
         with self._state_lock:
             ego_actor = self.ego_actor
         if ego_actor is None:
@@ -1104,12 +1096,7 @@ class carla_ros2_interface(object):
             self.ground_truth_tick_id = None
 
     def learn_ground_truth_actors(self, actor_ids):
-        """Record what a snapshot cannot say about these actors: class and size.
-
-        Queries the server once per actor rather than once per tick. Ids CARLA does not
-        return have already been destroyed, and are recorded as nothing to report so they
-        are not asked about again.
-        """
+        """Look up the class and size of new actors; ids CARLA no longer has get None."""
         for actor in self.ground_truth_world.get_actors(actor_ids):
             if not actor.type_id.startswith("vehicle."):
                 self.ground_truth_static[actor.id] = None
@@ -1133,12 +1120,7 @@ class carla_ros2_interface(object):
             del self.ground_truth_static[actor_id]
 
     def ground_truth_detection(self, transform, label, dimensions):
-        """Build one detection from an actor's pose and what is known about it.
-
-        Velocity is deliberately left to the tracker: the snapshot reports it in the world
-        frame, and publishing it would need a rotation into the object frame that is easy
-        to get wrong. A wrong twist is worse for prediction than no twist at all.
-        """
+        """Build one detection from pose, label and dimensions; velocity is left to the tracker."""
         obj = DetectedObject()
         obj.existence_probability = 1.0
 
@@ -1165,41 +1147,23 @@ class carla_ros2_interface(object):
         return obj
 
     def ground_truth_objects(self, snapshot):
-        """Tick callback wrapper that keeps failures visible.
-
-        CARLA's tick dispatcher swallows whatever a callback raises, so a failure here
-        would otherwise stop the objects silently. Report it, throttled because a cause
-        that lasts would repeat at the tick rate, and skip the cycle.
-        """
+        """Tick callback; CARLA drops exceptions raised here, so log them instead."""
         try:
             self.publish_ground_truth_objects(snapshot)
-        except Exception as e:  # noqa: BLE001 - a callback must not raise into CARLA
+        except Exception as e:
             self.logger.warning(f"Ground truth objects skipped: {e}", throttle_duration_sec=5.0)
 
     def publish_ground_truth_objects(self, snapshot):
-        """Publish every CARLA vehicle except the ego as a ground truth detection.
-
-        Feeds the perception stack from the simulator instead of from sensor data, so
-        tracking and prediction keep running on the real Autoware nodes downstream.
-        Pedestrians are not covered yet.
-
-        Poses come out of the tick snapshot, so a tick costs no round trip to the server
-        and every object carries the pose of the same frame as every other object.
-        """
+        """Publish every CARLA vehicle except the ego as a ground truth detection."""
         with self._state_lock:
             ego_actor = self.ego_actor
         if ego_actor is None:
             return
         ego_id = ego_actor.id
 
-        # Anything raised below skips the whole cycle rather than publishing a partial
-        # list: a list that is missing vehicles reads to the tracker as vehicles that
-        # disappeared.
         self.update_ground_truth_actors(snapshot)
 
-        # Stamped from the bridge's own clock, not from snapshot.timestamp: the latter
-        # counts from when the CARLA server started, while /clock counts from when this
-        # bridge attached to it, and the tracker drops what does not line up with /clock.
+        # Bridge clock, not snapshot.timestamp: /clock starts at the bridge's attach, not the server's
         msg = DetectedObjects()
         msg.header = self.get_msg_header(frame_id="map")
         for actor_snapshot in snapshot:
@@ -1255,8 +1219,7 @@ class carla_ros2_interface(object):
         # Publish ego vehicle status
         self.ego_status()
 
-        # The ego actor only exists once the first frame arrives; from then on the
-        # objects follow CARLA's ticks and no longer depend on this loop.
+        # The ego actor exists only after the first frame
         if self.pub_ground_truth_objects is not None and self.ground_truth_tick_id is None:
             self.start_ground_truth_objects()
 
