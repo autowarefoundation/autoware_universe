@@ -80,7 +80,7 @@ void TrafficReaderService::run()
 
     // Accept a new connection
     boost::system::error_code error_code;
-    acceptor_->accept(*socket_, error_code);
+    error_code = acceptor_->accept(*socket_, error_code);
 
     if (error_code) {
       syslog(LOG_ERR, "Failed to accept new connection. %s\n", error_code.message().c_str());
