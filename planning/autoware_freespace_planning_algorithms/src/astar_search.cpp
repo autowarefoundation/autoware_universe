@@ -130,7 +130,7 @@ void AstarSearch::resetData()
   // point to deleted node.
   openlist_ = std::priority_queue<AstarNode *, std::vector<AstarNode *>, NodeComparison>();
   const int nb_of_grid_nodes = costmap_.info.width * costmap_.info.height;
-  const int total_astar_node_count = nb_of_grid_nodes * planner_common_param_.theta_size;
+  const int total_astar_node_count = nb_of_grid_nodes * planner_common_param_.theta_size * 2;
   graph_.assign(total_astar_node_count, AstarNode{});
   col_free_distance_map_.assign(nb_of_grid_nodes, std::numeric_limits<double>::max());
   shifted_goal_pose_ = {};
@@ -257,7 +257,7 @@ void AstarSearch::setStartNode(const double cost_offset)
 {
   const auto index = pose2index(costmap_, start_pose_, planner_common_param_.theta_size);
   // Set start node
-  AstarNode * start_node = &graph_[getKey(index)];
+  AstarNode * start_node = &graph_[getKey(index, false)];
   const double initial_cost = estimateCost(start_pose_, index) + cost_offset;
   start_node->set(start_pose_, 0.0, initial_cost, 0, false);
   start_node->dir_distance = 0.0;
@@ -317,15 +317,21 @@ bool AstarSearch::search()
 void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
 {
   const auto current_pose = node2pose(current_node);
+  const bool is_direction_switch =
+    current_node.parent != nullptr && is_back != current_node.is_back;
   const double direction = (is_back == is_backward_search_) ? 1.0 : -1.0;
-  const double distance = getExpansionDistance(current_node) * direction;
+  const double expansion_distance =
+    astar_param_.prevent_dry_steering && is_direction_switch
+      ? min_expansion_dist_
+      : getExpansionDistance(current_node);
+  const double distance = expansion_distance * direction;
   int steering_index = -1 * planner_common_param_.turning_steps;
   for (; steering_index <= planner_common_param_.turning_steps; ++steering_index) {
-    // skip expansion back to parent
-    if (
-      current_node.parent != nullptr && is_back != current_node.is_back &&
-      steering_index == current_node.steering_index) {
-      continue;
+    // Keep the current steering angle when switching between forward and reverse.
+    if (astar_param_.prevent_dry_steering) {
+      if (is_direction_switch && steering_index != current_node.steering_index) {
+        continue;
+      }
     }
 
     const double steering = static_cast<double>(steering_index) * steering_resolution_;
@@ -335,7 +341,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
 
     if (isOutOfRange(next_index) || isObs(next_index)) continue;
 
-    AstarNode * next_node = &graph_[getKey(next_index)];
+    AstarNode * next_node = &graph_[getKey(next_index, is_back)];
     if (next_node->status == NodeStatus::Closed || detectCollision(next_index)) continue;
 
     // Check intermediate points along the arc for collision
@@ -356,8 +362,6 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
     }
 
     const auto obs_edt = getObstacleEDT(next_index);
-    const bool is_direction_switch =
-      (current_node.parent != nullptr) && (is_back != current_node.is_back);
 
     double total_weight = 1.0;
     total_weight += getSteeringCost(steering_index);
