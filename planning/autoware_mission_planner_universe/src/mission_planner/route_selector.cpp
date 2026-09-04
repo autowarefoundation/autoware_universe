@@ -15,7 +15,6 @@
 #include "route_selector.hpp"
 
 #include <autoware/mission_planner_universe/service_utils.hpp>
-#include <autoware/qos_utils/qos_compatibility.hpp>
 
 #include <array>
 #include <memory>

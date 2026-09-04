@@ -15,6 +15,7 @@
 #ifndef GOAL_POSE_VISUALIZER__GOAL_POSE_VISUALIZER_HPP_
 #define GOAL_POSE_VISUALIZER__GOAL_POSE_VISUALIZER_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
