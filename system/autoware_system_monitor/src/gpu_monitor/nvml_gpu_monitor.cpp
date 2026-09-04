@@ -33,6 +33,45 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+// NVML 13 (CUDA 13) deprecated nvmlDeviceGetTemperature() and
+// nvmlDeviceGetCurrentClocksThrottleReasons() in favor of the V / Event variants.
+// These thin wrappers select the appropriate API at compile time so the monitor
+// keeps building on both CUDA 13+ and older toolkits.
+nvmlReturn_t getGpuTemperature(nvmlDevice_t device, int * temp)
+{
+#if defined(NVML_API_VERSION) && NVML_API_VERSION >= 13
+  nvmlTemperature_t temperature_info{};
+  temperature_info.version = nvmlTemperature_v1;
+  temperature_info.sensorType = NVML_TEMPERATURE_GPU;
+  const nvmlReturn_t ret = nvmlDeviceGetTemperatureV(device, &temperature_info);
+  if (ret == NVML_SUCCESS) {
+    // nvmlTemperature_t::temperature is signed; keep it signed so a sub-zero
+    // reading is not wrapped into a huge unsigned value (false over-temperature).
+    *temp = temperature_info.temperature;
+  }
+  return ret;
+#else
+  unsigned int temperature = 0;
+  const nvmlReturn_t ret = nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temperature);
+  if (ret == NVML_SUCCESS) {
+    *temp = static_cast<int>(temperature);
+  }
+  return ret;
+#endif
+}
+
+nvmlReturn_t getClocksEventReasons(nvmlDevice_t device, unsigned long long * reasons)  // NOLINT
+{
+#if defined(NVML_API_VERSION) && NVML_API_VERSION >= 13
+  return nvmlDeviceGetCurrentClocksEventReasons(device, reasons);
+#else
+  return nvmlDeviceGetCurrentClocksThrottleReasons(device, reasons);
+#endif
+}
+}  // namespace
+
 GPUMonitor::GPUMonitor(const rclcpp::NodeOptions & options) : GPUMonitorBase("gpu_monitor", options)
 {
   nvmlReturn_t ret = nvmlInit();
@@ -109,8 +148,8 @@ void GPUMonitor::checkTemp(diagnostic_updater::DiagnosticStatusWrapper & stat)
   }
 
   for (auto itr = gpus_.begin(); itr != gpus_.end(); ++itr, ++index) {
-    unsigned int temp = 0;
-    ret = nvmlDeviceGetTemperature(itr->device, NVML_TEMPERATURE_GPU, &temp);
+    int temp = 0;
+    ret = getGpuTemperature(itr->device, &temp);
     if (ret != NVML_SUCCESS) {
       stat.summary(DiagStatus::ERROR, "Failed to retrieve the current temperature");
       stat.add(fmt::format("GPU {}: name", index), itr->name);
@@ -356,7 +395,7 @@ void GPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
     }
 
     unsigned long long clocksThrottleReasons = 0LL;  // NOLINT
-    ret = nvmlDeviceGetCurrentClocksThrottleReasons(itr->device, &clocksThrottleReasons);
+    ret = getClocksEventReasons(itr->device, &clocksThrottleReasons);
     if (ret != NVML_SUCCESS) {
       stat.summary(DiagStatus::ERROR, "Failed to retrieve current clocks throttling reasons");
       stat.add(fmt::format("GPU {}: name", index), itr->name);
@@ -477,14 +516,14 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus() const
       continue;
     }
 
-    unsigned int temp = 0;
-    ret = nvmlDeviceGetTemperature(itr->device, NVML_TEMPERATURE_GPU, &temp);
+    int temp = 0;
+    ret = getGpuTemperature(itr->device, &temp);
     if (ret != NVML_SUCCESS) {
       continue;
     }
 
     unsigned long long clocksThrottleReasons = 0LL;  // NOLINT
-    ret = nvmlDeviceGetCurrentClocksThrottleReasons(itr->device, &clocksThrottleReasons);
+    ret = getClocksEventReasons(itr->device, &clocksThrottleReasons);
     if (ret != NVML_SUCCESS) {
       continue;
     }
@@ -510,7 +549,7 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus() const
     gpu_status.name = itr->name;
     gpu_status.usage = static_cast<float>(utilization.gpu);
     gpu_status.clock = static_cast<int>(clock);
-    gpu_status.temperature = static_cast<int>(temp);
+    gpu_status.temperature = temp;
     gpu_status.thermal_throttling = thermal_throttling;
     gpu_status_list.push_back(gpu_status);
   }
