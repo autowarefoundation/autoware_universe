@@ -23079,6 +23079,54 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td>Parameter to limit the simulation speed below <code>fixed_delta_seconds</code></td>
 </tr>
 <tr>
+<td><code>carla_map</code></td>
+<td>string</td>
+<td>""</td>
+<td>Explicit CARLA level name. When non-empty it overrides the name derived from <code>map_path</code>; useful for CARLA 0.10 levels whose name differs from the Autoware map directory. Empty reproduces the current behavior.</td>
+</tr>
+<tr>
+<td><code>no_rendering_mode</code></td>
+<td>bool</td>
+<td>False</td>
+<td>Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default <code>False</code> (re-)enables rendering even if the server was started headless; set <code>True</code> to keep rendering off.</td>
+</tr>
+<tr>
+<td><code>force_load_world</code></td>
+<td>bool</td>
+<td>False</td>
+<td>Always reload the world with <code>client.load_world()</code> instead of <code>load_world_if_different()</code>. Default False reproduces the current call (with a version-tolerant fallback).</td>
+</tr>
+<tr>
+<td><code>map_origin_x</code></td>
+<td>double</td>
+<td>0.0</td>
+<td>X offset from the CARLA world origin to the Autoware map frame origin, for levels authored with their own local origin. Default 0.0 is the identity (no change).</td>
+</tr>
+<tr>
+<td><code>map_origin_y</code></td>
+<td>double</td>
+<td>0.0</td>
+<td>Y offset from the CARLA world origin to the Autoware map frame origin. Default 0.0 is the identity (no change).</td>
+</tr>
+<tr>
+<td><code>spawn_point_ground_snap</code></td>
+<td>bool</td>
+<td>False</td>
+<td>Snap the ego spawn point and the RViz initial pose onto CARLA map geometry via <code>ground_projection</code> (see <a href="#ground-snapping">Ground snapping</a>). Default False leaves the spawn point and the fixed z-offset unchanged.</td>
+</tr>
+<tr>
+<td><code>spawn_point_ground_offset_z</code></td>
+<td>double</td>
+<td>0.5</td>
+<td>Z offset added above the projected ground when ground-snapping the spawn point (only used when <code>spawn_point_ground_snap</code> is True).</td>
+</tr>
+<tr>
+<td><code>initial_pose_ground_offset_z</code></td>
+<td>double</td>
+<td>1.0</td>
+<td>Z offset added above the projected ground when ground-snapping the RViz initial pose (only used when <code>spawn_point_ground_snap</code> is True).</td>
+</tr>
+<tr>
 <td><code>sensor_kit_name</code></td>
 <td>string</td>
 <td>"carla_sensor_kit_description"</td>
@@ -23110,6 +23158,33 @@ This ros package enables communication between Autoware and CARLA for autonomous
 </tr>
 </tbody>
 </table>
+<h4 id="ground-snapping">Ground snapping<a class="headerlink" href="#ground-snapping" title="Permanent link">#</a></h4>
+<p>When <code>spawn_point_ground_snap</code> is enabled, the ego spawn point and the RViz "2D
+Pose Estimate" initial pose are snapped onto the CARLA map geometry instead of
+using a fixed z-offset. This helps on levels (e.g. some CARLA 0.10 maps) where
+the map-frame z does not match the terrain, where a fixed offset can drop the
+vehicle far above or below the road.</p>
+<p>The ground height is obtained with <code>world.ground_projection</code>, casting a ray down
+from <code>z = 1000 m</code>. Rather than probing only the target <code>(x, y)</code>, a small
+cross-shaped neighborhood is sampled and the <strong>highest</strong> ground hit is used:</p>
+<div class="highlight"><pre><span></span><code>sample offsets (dx, dy in meters)
+              (0, +1.5)
+              (0, +0.75)
+  (-1.5, 0) (-0.75, 0) (0, 0) (+0.75, 0) (+1.5, 0)
+              (0, -0.75)
+              (0, -1.5)
+</code></pre></div>
+<ul>
+<li>Sampling a neighborhood (9 points) makes the result robust: a single ray can
+  miss through a mesh gap or land in a gutter/curb seam and return a height
+  below the road.</li>
+<li>Taking the maximum selects the road surface rather than a lower seam or gap,
+  so the vehicle sits on top of the road instead of sinking into it.</li>
+</ul>
+<p>On a CARLA API without <code>ground_projection</code>, snapping is skipped and the previous
+fixed z-offset is used, so enabling the flag never raises. The spawn-point path
+logs a warning when it falls back; the RViz initial-pose fallback is silent (and
+with the default random spawn the spawn-point path is not exercised at all).</p>
 <h3 id="sensor-configuration">Sensor Configuration<a class="headerlink" href="#sensor-configuration" title="Permanent link">#</a></h3>
 <p>The interface uses the <strong><code>carla_sensor_kit</code></strong> which provides 6 cameras for 360-degree coverage, LiDAR, IMU, and GNSS sensors. Sensor configurations are dynamically loaded from Autoware sensor kit calibration files through two configuration files:</p>
 <h4 id="1-sensor-kit-calibration-from-autoware-sensor-kit">1. Sensor Kit Calibration (from Autoware sensor kit)<a class="headerlink" href="#1-sensor-kit-calibration-from-autoware-sensor-kit" title="Permanent link">#</a></h4>
