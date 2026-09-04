@@ -92,8 +92,7 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(
-    test_manager->testWithAbnormalTrajectory(ros_node, input_trajectory_topic));
+  ASSERT_NO_THROW(test_manager->testWithAbnormalTrajectory(ros_node, input_trajectory_topic));
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
