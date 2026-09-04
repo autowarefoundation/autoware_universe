@@ -30,9 +30,10 @@ Coordinate contract (splatsim v2 / v25 ENU usdz, verified against the server):
 To reproduce the exact viewpoint of the real CARLA LiDAR the extrinsic is taken
 from the same actor-relative spawn pose CARLA used (``cfg.transform``), converted
 from CARLA (Y-right) to ROS base_link (Y-left).  Because this integration
-publishes the CARLA actor pose *as* base_link (see ``_publish_localization``),
-the streamed pose is the actor pose and the extrinsic stays actor-relative --
-identical placement to the CARLA sensor.
+publishes the CARLA actor pose *as* base_link (via the ground-truth
+localization path ``_publish_ground_truth_odometry``), the streamed pose is the
+actor pose and the extrinsic stays actor-relative -- identical placement to the
+CARLA sensor.
 """
 
 from __future__ import annotations

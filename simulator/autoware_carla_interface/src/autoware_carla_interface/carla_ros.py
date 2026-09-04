@@ -15,9 +15,6 @@
 import math
 import threading
 
-from autoware_adapi_v1_msgs.msg import LocalizationInitializationState
-from autoware_perception_msgs.msg import PredictedObjects
-from autoware_perception_msgs.msg import TrafficLightGroupArray
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
@@ -30,23 +27,15 @@ from builtin_interfaces.msg import Time
 import carla
 import cv2
 from cv_bridge import CvBridge
-from geometry_msgs.msg import AccelWithCovarianceStamped
 from geometry_msgs.msg import Pose
-from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import TransformStamped
-from nav_msgs.msg import OccupancyGrid
 from nav_msgs.msg import Odometry
 import numpy
 import rclpy
-from rclpy.qos import DurabilityPolicy
-from rclpy.qos import QoSProfile
-from rclpy.qos import ReliabilityPolicy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
-from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
 from tf2_msgs.msg import TFMessage
@@ -431,10 +420,6 @@ class carla_ros2_interface(object):
         self._initialize_subscriptions()
         self._initialize_status_publishers()
 
-        # SplatSim: create dummy perception and localization publishers
-        if self.render_with_splatsim:
-            self._initialize_splatsim_publishers()
-
         # Start ROS 2 spin thread (Thread Safety: Shared state protected by self._state_lock)
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
         self.spin_thread.start()
@@ -492,10 +477,7 @@ class carla_ros2_interface(object):
         self._splatsim_lidars = []
         self._splatsim_lidar_configs = []
         self._geo_transform_ready = False
-        self._mgrs_offset_x = 0.0
-        self._mgrs_offset_y = 0.0
         self._proj_origin = (0.0, 0.0)
-        self._latest_imu_accel = None
 
     def _ros_context_ok(self):
         return not self._shutting_down and rclpy.ok()
@@ -656,19 +638,10 @@ class carla_ros2_interface(object):
     def initialpose_callback(self, data):
         """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
-        # Invert exactly the offset the localization publisher applied, so a
-        # pose picked off the published map frame maps back to the right CARLA
-        # coordinates. In splatsim mode _publish_localization shifts by the
-        # derived MGRS offset; otherwise the ground-truth path uses map_origin.
-        if self.render_with_splatsim:
-            origin_x, origin_y = self._mgrs_offset_x, self._mgrs_offset_y
-        else:
-            origin_x = self.param_values["map_origin_x"]
-            origin_y = self.param_values["map_origin_y"]
         carla_pose_transform = ros_pose_to_carla_transform(
             pose,
-            origin_x=origin_x,
-            origin_y=origin_y,
+            origin_x=self.param_values["map_origin_x"],
+            origin_y=self.param_values["map_origin_y"],
         )
 
         # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
@@ -894,14 +867,6 @@ class carla_ros2_interface(object):
             self.sensor_registry.update_sensor_timestamp("imu", self.timestamp)
         else:
             self.logger.warning("IMU publisher not initialized")
-
-        # Cache acceleration for splatsim localization publishing
-        if self.render_with_splatsim:
-            self._latest_imu_accel = (
-                imu_msg.linear_acceleration.x,
-                imu_msg.linear_acceleration.y,
-                imu_msg.linear_acceleration.z,
-            )
 
     def first_order_steering(self, steer_input):
         """
@@ -1154,16 +1119,9 @@ class carla_ros2_interface(object):
         https://github.com/carla-simulator/ros-bridge/blob/master/carla_common/src/carla_common/transforms.py
 
         No-op unless publish_ground_truth_localization is enabled (the
-        publishers only exist when it is).
-
-        In splatsim mode ``_publish_localization`` is the single source of
-        ``/localization/kinematic_state`` and the map->base_link TF (it applies
-        the derived MGRS offsets). Publishing here as well would emit a second,
-        contradictory pose in the ``map_origin`` frame with the same timestamp,
-        so this ground-truth path stands down whenever splatsim is rendering.
+        publishers only exist when it is). This is the single ground-truth
+        localization source for both the E2E setup and splatsim mode.
         """
-        if self.render_with_splatsim:
-            return
         if not self.param_values.get("publish_ground_truth_localization", False):
             return
         with self._state_lock:
@@ -1306,54 +1264,6 @@ class carla_ros2_interface(object):
 
     # ── SplatSim integration methods ──────────────────────────────────────
 
-    def _initialize_splatsim_publishers(self):
-        """Create publishers for dummy perception and localization (splatsim mode)."""
-        self.pub_empty_objects = self.ros2_node.create_publisher(
-            PredictedObjects, "/perception/object_recognition/objects", 1
-        )
-        self.pub_empty_pointcloud = self.ros2_node.create_publisher(
-            PointCloud2, "/perception/obstacle_segmentation/pointcloud", 1
-        )
-        self.pub_empty_traffic_signals = self.ros2_node.create_publisher(
-            TrafficLightGroupArray,
-            "/perception/traffic_light_recognition/traffic_signals",
-            1,
-        )
-        self.pub_empty_occupancy_grid = self.ros2_node.create_publisher(
-            OccupancyGrid, "/perception/occupancy_grid_map/map", 1
-        )
-        self.pub_tf = self.ros2_node.create_publisher(TFMessage, "/tf", 10)
-        self.pub_localization_odom = self.ros2_node.create_publisher(
-            Odometry, "/localization/kinematic_state", 10
-        )
-        self.pub_localization_pose = self.ros2_node.create_publisher(
-            PoseWithCovarianceStamped,
-            "/localization/pose_estimator/pose_with_covariance",
-            10,
-        )
-        self.pub_localization_accel = self.ros2_node.create_publisher(
-            AccelWithCovarianceStamped, "/localization/acceleration", 10
-        )
-        loc_init_qos = QoSProfile(
-            depth=1,
-            reliability=ReliabilityPolicy.RELIABLE,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
-        )
-        self.pub_localization_init_state = self.ros2_node.create_publisher(
-            LocalizationInitializationState,
-            "/localization/initialization_state",
-            loc_init_qos,
-        )
-        self.pub_fusion_pose = self.ros2_node.create_publisher(
-            PoseStamped, "/localization/pose_twist_fusion_filter/pose", 10
-        )
-        self.pub_initialpose3d = self.ros2_node.create_publisher(
-            PoseWithCovarianceStamped, "/initialpose3d", 10
-        )
-        # /initialpose3d is a one-shot initialization command; it is published
-        # only on the first localization tick (see _publish_localization).
-        self._initialpose3d_published = False
-
     def _init_geo_transform(self):
         """Resolve the splatsim geographic origin and its MGRS offset.
 
@@ -1369,10 +1279,6 @@ class carla_ros2_interface(object):
         """
         if self._geo_transform_ready:
             return
-        from autoware_lanelet2_extension_python.projection import MGRSProjector
-        import lanelet2.core
-        import lanelet2.io
-
         from .modules.carla_data_provider import CarlaDataProvider
 
         # Narrow the catch to the "no parsable geoReference" cases (e.g. CARLA
@@ -1401,18 +1307,8 @@ class carla_ros2_interface(object):
             f"origin=({self._proj_origin[0]:.8f}, {self._proj_origin[1]:.8f})"
         )
         lat_0, lon_0 = self._proj_origin
-
-        projector = MGRSProjector(lanelet2.io.Origin(lat_0, lon_0))
-        origin_gps = lanelet2.core.GPSPoint(lat_0, lon_0, 0.0)
-        origin_local = projector.forward(origin_gps)
-        self._mgrs_offset_x = origin_local.x
-        self._mgrs_offset_y = origin_local.y
-
         self._geo_transform_ready = True
-        self.logger.info(
-            f"GeoTransform initialized: lat_0={lat_0:.8f}, lon_0={lon_0:.8f}, "
-            f"mgrs_offset=({self._mgrs_offset_x:.1f}, {self._mgrs_offset_y:.1f})"
-        )
+        self.logger.info(f"GeoTransform initialized: lat_0={lat_0:.8f}, lon_0={lon_0:.8f}")
 
     def init_splatsim_cameras(self):
         """Create SplatSimRGBCamera instances for each camera sensor.
@@ -1571,20 +1467,19 @@ class carla_ros2_interface(object):
         return SplatSimLidarConfig(**kwargs)
 
     def _splatsim_tick(self, seconds, nanoseconds):
-        """Per-tick splatsim work: send poses, publish dummy perception/localization."""
+        """Per-tick splatsim work: forward the ego pose to the render containers.
+
+        Localization (``/localization/kinematic_state`` + the map->base_link TF)
+        is provided by the shared ground-truth path ``_publish_ground_truth_odometry``
+        that the E2E setup already uses; splatsim only renders sensors and does
+        not publish localization or perception.
+        """
         with self._state_lock:
             actor_matrix = (
                 self.ego_actor.get_transform().get_matrix() if self.ego_actor is not None else None
             )
         if actor_matrix is not None:
             self._send_splatsim_poses(actor_matrix, seconds, nanoseconds)
-
-        self._publish_dummy_perception()
-
-        with self._state_lock:
-            has_ego = self.ego_actor is not None
-        if has_ego:
-            self._publish_localization()
 
     def _send_splatsim_poses(self, actor_matrix, seconds, nanoseconds) -> None:
         """Forward the ego pose to every splatsim camera and LiDAR container."""
@@ -1594,130 +1489,6 @@ class carla_ros2_interface(object):
                 stamp_sec=seconds,
                 stamp_nanosec=nanoseconds,
             )
-
-    def _publish_dummy_perception(self) -> None:
-        """Publish empty perception outputs so downstream nodes keep ticking."""
-        header = self.get_msg_header(frame_id="map")
-
-        empty_objects = PredictedObjects()
-        empty_objects.header = header
-        self.pub_empty_objects.publish(empty_objects)
-
-        empty_pc = PointCloud2()
-        empty_pc.header = self.get_msg_header(frame_id="base_link")
-        empty_pc.fields = [
-            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
-            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
-            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
-            PointField(name="intensity", offset=12, datatype=PointField.UINT8, count=1),
-            PointField(name="return_type", offset=13, datatype=PointField.UINT8, count=1),
-            PointField(name="channel", offset=14, datatype=PointField.UINT16, count=1),
-        ]
-        empty_pc.point_step = 16
-        empty_pc.height = 1
-        empty_pc.width = 0
-        empty_pc.row_step = 0
-        empty_pc.is_dense = True
-        self.pub_empty_pointcloud.publish(empty_pc)
-
-        empty_tl = TrafficLightGroupArray()
-        empty_tl.stamp = header.stamp
-        self.pub_empty_traffic_signals.publish(empty_tl)
-
-        empty_og = OccupancyGrid()
-        empty_og.header = self.get_msg_header(frame_id="map")
-        empty_og.info.resolution = 0.5
-        empty_og.info.width = 0
-        empty_og.info.height = 0
-        self.pub_empty_occupancy_grid.publish(empty_og)
-
-    def _publish_localization(self):
-        """Publish localization data from CARLA ground truth (splatsim mode).
-
-        Position: CARLA → xodr (flip y) → MGRS absolute (add offset)
-        Orientation: 2D yaw only (CARLA CW+ → ROS CCW+)
-        """
-        header = self.get_msg_header(frame_id="map")
-
-        with self._state_lock:
-            carla_tf = self.ego_actor.get_transform()
-            ego_vel = self.ego_actor.get_velocity()
-            ego_ang_vel = self.ego_actor.get_angular_velocity()
-            trans_mat = numpy.array(carla_tf.get_matrix()).reshape(4, 4)
-
-        # Position
-        pose = Pose()
-        pose.position.x = carla_tf.location.x + self._mgrs_offset_x
-        pose.position.y = -carla_tf.location.y + self._mgrs_offset_y
-        pose.position.z = carla_tf.location.z
-
-        # Orientation (2D yaw only)
-        yaw = -math.radians(carla_tf.rotation.yaw)
-        qw = math.cos(yaw / 2.0)
-        qz = math.sin(yaw / 2.0)
-        pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
-
-        # /tf (map → base_link)
-        tf_stamped = TransformStamped()
-        tf_stamped.header = header
-        tf_stamped.child_frame_id = "base_link"
-        tf_stamped.transform.translation.x = pose.position.x
-        tf_stamped.transform.translation.y = pose.position.y
-        tf_stamped.transform.translation.z = pose.position.z
-        tf_stamped.transform.rotation = pose.orientation
-        self.pub_tf.publish(TFMessage(transforms=[tf_stamped]))
-
-        # /localization/kinematic_state (Odometry)
-        odom = Odometry()
-        odom.header = header
-        odom.child_frame_id = "base_link"
-        odom.pose.pose = pose
-        rot_mat = trans_mat[0:3, 0:3]
-        inv_rot_mat = rot_mat.T
-        vel_vec = numpy.array([ego_vel.x, ego_vel.y, ego_vel.z]).reshape(3, 1)
-        ego_velocity = (inv_rot_mat @ vel_vec).T[0]
-        odom.twist.twist.linear.x = float(ego_velocity[0])
-        odom.twist.twist.linear.y = float(-ego_velocity[1])
-        odom.twist.twist.linear.z = float(ego_velocity[2])
-        odom.twist.twist.angular.z = -math.radians(ego_ang_vel.z)
-        self.pub_localization_odom.publish(odom)
-
-        # Pose with covariance
-        pose_cov = PoseWithCovarianceStamped()
-        pose_cov.header = header
-        pose_cov.pose.pose = pose
-        pcov = pose_cov.pose.covariance
-        pcov[0] = pcov[7] = pcov[14] = pcov[21] = pcov[28] = pcov[35] = 0.0001
-        self.pub_localization_pose.publish(pose_cov)
-
-        # Acceleration
-        accel_msg = AccelWithCovarianceStamped()
-        accel_msg.header = self.get_msg_header(frame_id="base_link")
-        if self._latest_imu_accel is not None:
-            accel_msg.accel.accel.linear.x = self._latest_imu_accel[0]
-            accel_msg.accel.accel.linear.y = self._latest_imu_accel[1]
-            accel_msg.accel.accel.linear.z = self._latest_imu_accel[2]
-        self.pub_localization_accel.publish(accel_msg)
-
-        # Localization initialization state
-        init_state = LocalizationInitializationState()
-        init_state.stamp = header.stamp
-        init_state.state = LocalizationInitializationState.INITIALIZED
-        self.pub_localization_init_state.publish(init_state)
-
-        # Satisfy topic_state_monitors
-        pose_stamped = PoseStamped()
-        pose_stamped.header = header
-        pose_stamped.pose = pose
-        self.pub_fusion_pose.publish(pose_stamped)
-
-        # /initialpose3d is a one-shot initialization command. When Yabloc is
-        # active it is remapped to the particle filter's initialize_particles,
-        # so re-publishing every tick would continuously reset localization and
-        # prevent it from converging. Send it once to initialize, no more.
-        if not self._initialpose3d_published:
-            self.pub_initialpose3d.publish(pose_cov)
-            self._initialpose3d_published = True
 
     # ── Shutdown ──────────────────────────────────────────────────────────
 
