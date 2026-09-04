@@ -156,11 +156,35 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `fixed_delta_seconds`             | double | 0.05                                                                              | Time step for the simulation (related to client FPS)                                                                                                                                                                                                                                                                                                |
 | `use_traffic_manager`             | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                                                                                                                                                        |
 | `max_real_delta_seconds`          | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                                                                                                                                                 |
+| `tick_follower`                   | bool   | False                                                                             | If True, the bridge does not tick the CARLA world and instead follows the frames ticked by another client. See [Multi-client co-simulation](#multi-client-co-simulation).                                                                                                                                                                           |
 | `sensor_kit_name`                 | string | "carla_sensor_kit_description"                                                    | Name of the sensor kit package to use for sensor configuration. Should be the \*\_description package containing config/sensor_kit_calibration.yaml                                                                                                                                                                                                 |
 | `use_light_weight_sensor_mapping` | bool   | False                                                                             | If True, uses `sensor_mapping_light_weight.yaml` instead of the default `sensor_mapping.yaml` to reduce simulator load. See [Sensor Mapping (CARLA-specific)](#2-sensor-mapping-carla-specific) for details.                                                                                                                                        |
 | `sensor_mapping_file`             | string | "$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"           | Path to sensor mapping YAML configuration file. When `use_light_weight_sensor_mapping` is True, this defaults to `config/sensor_mapping_light_weight.yaml`.                                                                                                                                                                                         |
 | `config_file`                     | string | "$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml" | Control mapping file to be used in `autoware_raw_vehicle_cmd_converter`. Current control are calibrated based on `vehicle.toyota.prius` Blueprints ID in CARLA. Changing the vehicle type may need a recalibration.                                                                                                                                 |
 | `wake_sleeping_physics`           | bool   | False                                                                             | Nudge the ego physics body awake with a small `set_target_velocity` when launching from standstill. Only needed on CARLA 0.10 (UE5/Chaos), where a stationary body is put to sleep and `VehicleControl` throttle does not wake it. Leave `false` on the supported 0.9.15 environment, whose bodies never sleep, to keep unmodified launch dynamics. |
+
+### Multi-client co-simulation
+
+By default this bridge owns the CARLA simulation clock: its main loop calls `world.tick()` on every
+cycle. A server in synchronous mode advances one frame per `tick()` call, so a second client that
+also ticks, for example an external traffic simulator feeding background vehicles into the same
+server, makes the simulation advance more than once per intended step.
+
+Setting `tick_follower` to `True` puts the bridge in a passive mode. It no longer ticks the world in
+its main loop, and instead publishes sensor data, the clock and the ego control for the frames that
+the external client ticks. Exactly one client in the whole setup may own the clock.
+
+Two things to keep in mind when using this mode:
+
+- **Start the bridge before the tick owner.** Loading the world still ticks it a few times to bring
+  up the ego vehicle and its sensors, and those ticks must not race the external owner.
+- **The cadence belongs to the tick owner**, so `max_real_delta_seconds` no longer paces the loop.
+  Set `fixed_delta_seconds` to the step length that the owner uses.
+- **`/clock` starts at zero on the first frame that the bridge processes.** In this mode it stays a
+  constant offset behind the CARLA elapsed time: the idle time before the owner started.
+
+If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
+and reports how many it skipped through a throttled warning.
 
 ### Sensor Configuration
 
