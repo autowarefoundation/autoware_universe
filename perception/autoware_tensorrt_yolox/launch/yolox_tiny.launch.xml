@@ -6,6 +6,7 @@
   <arg name="input/image" default="/sensing/camera/camera0/image_rect_color"/>
   <arg name="output/objects" default="/perception/object_recognition/detection/rois0"/>
   <arg name="yolox_param_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_tiny.param.yaml"/>
+  <arg name="ml_package_param_path" default="$(var data_path)/tensorrt_yolox/ml_package_yolox.param.yaml"/>
   <arg name="model_path" default="$(var data_path)/tensorrt_yolox/yolox-tiny.onnx" description="model path"/>
   <arg name="label_path" default="$(var data_path)/tensorrt_yolox/label.txt" description="label path"/>
   <arg name="semantic_segmentation_color_map_path" default="$(var data_path)/tensorrt_yolox/semseg_color_map.csv" description="color map path"/>
@@ -30,6 +31,7 @@
     <remap from="~/in/image" to="$(var input/image)"/>
     <remap from="~/out/objects" to="$(var output/objects)"/>
     <param from="$(var yolox_param_path)" allow_substs="true"/>
+    <param from="$(var ml_package_param_path)" allow_substs="true"/>
     <param name="model_path" value="$(var model_path)"/>
     <param name="label_path" value="$(var label_path)"/>
     <param name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
