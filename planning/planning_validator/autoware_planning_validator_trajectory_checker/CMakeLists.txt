@@ -17,7 +17,9 @@ target_link_libraries(${PROJECT_NAME}
   ${autoware_planning_validator_LIBRARIES}
 )
 
-if(BUILD_TESTING)
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
   find_package(autoware_planning_validator_test_utils REQUIRED)
   ament_add_ros_isolated_gtest(test_autoware_planning_validator
     test/test_main.cpp
