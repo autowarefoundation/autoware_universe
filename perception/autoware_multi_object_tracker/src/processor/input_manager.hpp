@@ -22,6 +22,7 @@
 #include <autoware/agnocast_wrapper/node.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <deque>
 #include <functional>
@@ -46,6 +47,8 @@ public:
 
   std::optional<types::DynamicObjectList> processMessage(
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
+  std::optional<types::DynamicObjectList> processMessage(
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) msg);
   void push(const types::DynamicObjectList & objects, const types::AssociationResult & association);
   void push(
     const types::DynamicObjectList & objects, const types::AssociationResult & association,
@@ -72,6 +75,9 @@ public:
   rclcpp::Time getLatestMessageTime() const { return latest_message_time_; }
 
 private:
+  bool transformInPlace(types::DynamicObjectList & objects);
+  void applyChannelConfig(types::DynamicObjectList & objects) const;
+
   const types::InputChannel channel_;
   std::shared_ptr<Odometry> odometry_;
   rclcpp::Logger logger_;
@@ -105,6 +111,9 @@ public:
   std::optional<types::DynamicObjectList> processMessage(
     const size_t channel_index,
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
+  std::optional<types::DynamicObjectList> processMessage(
+    const size_t channel_index,
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) msg);
   void push(
     const size_t channel_index, const types::DynamicObjectList & objects,
     const types::AssociationResult & association);
