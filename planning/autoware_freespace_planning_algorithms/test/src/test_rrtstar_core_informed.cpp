@@ -16,6 +16,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <stack>
 #include <vector>
@@ -106,6 +108,52 @@ TEST(RRTStarCore, WithInformedOption)
       }
     }
     EXPECT_TRUE(is_feasible);
+  }
+}
+
+// The goal's cost must always equal the best cost among the nodes that
+// reached it (the nodes carrying a cost_to_goal); a goal update that missed
+// a node would silently keep a feasible but suboptimal link.
+void expectGoalCostMatchesBestReachedNode(const rrtstar_core::RRTStar & tree)
+{
+  double cost_min = inf;
+  for (const auto & node : tree.getNodes()) {
+    if (!node->cost_to_goal) {
+      continue;
+    }
+    cost_min = std::min(cost_min, *node->cost_from_start + *node->cost_to_goal);
+  }
+  if (std::isinf(cost_min)) {
+    EXPECT_FALSE(tree.isSolutionFound());
+    return;
+  }
+  ASSERT_TRUE(tree.isSolutionFound());
+  EXPECT_EQ(cost_min, tree.getSolutionCost());
+}
+
+TEST(RRTStarCore, GoalCostEqualsBestReachedNode)
+{
+  const rrtstar_core::Pose x_start{0.1, 0.1, 0};
+  const rrtstar_core::Pose x_goal{0.8, 0.8, 0.};
+
+  const rrtstar_core::Pose x_lo{0, 0, -6.28};
+  const rrtstar_core::Pose x_hi{1., 1., +6.28};
+
+  auto is_collision_free = [](const rrtstar_core::Pose & p) {
+    const double radius_squared = (p.x - 0.5) * (p.x - 0.5) + (p.y - 0.5) * (p.y - 0.5);
+    return radius_squared > 0.09;
+  };
+  const auto resolution = 0.01;
+  auto cspace = rrtstar_core::CSpace(x_lo, x_hi, 0.1, is_collision_free);
+  cspace.setSeed(12345);
+  auto algo = rrtstar_core::RRTStar(x_start, x_goal, 0.2, resolution, true, cspace);
+
+  for (int i = 0; i < 3000; i++) {
+    if (i % 200 == 1) {
+      algo.deleteNodeUsingBranchAndBound();
+    }
+    algo.extend();
+    expectGoalCostMatchesBestReachedNode(algo);
   }
 }
 
