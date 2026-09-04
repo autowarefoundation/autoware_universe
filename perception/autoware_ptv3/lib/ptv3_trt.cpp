@@ -66,12 +66,7 @@ std::string stageGridCoordName(const std::size_t stage_index)
 
 }  // namespace
 
-PTv3TRT::PTv3TRT(
-  const tensorrt_common::TrtCommonConfig & encoder_trt_config,
-  const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
-  const std::optional<tensorrt_common::TrtCommonConfig> & det3d_head_trt_config,
-  const PTv3Config & config)
-: config_(config)
+PTv3TRT::PTv3TRT(const PTv3Config & config) : config_(config)
 {
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("processing/inner");
@@ -80,6 +75,15 @@ PTv3TRT::PTv3TRT(
 
   createPointFields();
   initPtr();
+}
+
+PTv3TRT::PTv3TRT(
+  const tensorrt_common::TrtCommonConfig & encoder_trt_config,
+  const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
+  const std::optional<tensorrt_common::TrtCommonConfig> & det3d_head_trt_config,
+  const PTv3Config & config)
+: PTv3TRT(config)
+{
   initEncoderTrt(encoder_trt_config);
   if (config_.use_seg3d_head_) {
     if (!seg3d_head_trt_config.has_value()) {

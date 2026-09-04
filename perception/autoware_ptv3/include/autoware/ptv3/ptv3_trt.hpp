@@ -51,6 +51,18 @@ public:
     const PTv3Config & config);
   virtual ~PTv3TRT();
 
+protected:
+  /**
+   * @brief Construct the stream, point fields and device buffers, without any TensorRT engine.
+   *
+   * The public constructor delegates here, then loads the engines. Test-only entry point: the
+   * resulting object cannot infer.
+   *
+   * @param[in] config Node configuration.
+   */
+  explicit PTv3TRT(const PTv3Config & config);
+
+public:
   // cSpell:ignore probs
   bool infer(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
