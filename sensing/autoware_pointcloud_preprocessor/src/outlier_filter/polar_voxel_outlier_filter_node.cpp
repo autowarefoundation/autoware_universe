@@ -229,10 +229,8 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   // TODO(Koichi98): Remove this override once Filter base class supports agnocast_wrapper.
   // The aliasing shared_ptr bridge is needed because Filter::sub_input_ uses raw rclcpp types.
   sub_input_.reset();
-  // cppcheck-suppress unknownMacro
   agnocast_sub_input_ = AUTOWARE_CREATE_SUBSCRIPTION(
     PointCloud2, "input", rclcpp::SensorDataQoS().keep_last(max_queue_size_),
-    // cppcheck-suppress unknownMacro
     [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) msg) {
       auto holder =
         std::make_shared<AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2)>(std::move(msg));
