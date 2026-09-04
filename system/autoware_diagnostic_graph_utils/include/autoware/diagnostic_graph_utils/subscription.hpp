@@ -17,6 +17,7 @@
 
 #include "autoware/diagnostic_graph_utils/graph.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_system_msgs/msg/diag_graph_status.hpp>
@@ -30,8 +31,8 @@ class DiagGraphSubscription
 public:
   using CallbackType = std::function<void(DiagGraph::SharedPtr)>;
   DiagGraphSubscription();
-  DiagGraphSubscription(rclcpp::Node & node, size_t depth);
-  void subscribe(rclcpp::Node & node, size_t depth);
+  DiagGraphSubscription(autoware::agnocast_wrapper::Node & node, size_t depth);
+  void subscribe(autoware::agnocast_wrapper::Node & node, size_t depth);
   void register_create_callback(const CallbackType & callback);
   void register_update_callback(const CallbackType & callback);
 
@@ -40,8 +41,8 @@ private:
   using DiagGraphStatus = tier4_system_msgs::msg::DiagGraphStatus;
   void on_struct(const DiagGraphStruct & msg);
   void on_status(const DiagGraphStatus & msg);
-  rclcpp::Subscription<DiagGraphStruct>::SharedPtr sub_struct_;
-  rclcpp::Subscription<DiagGraphStatus>::SharedPtr sub_status_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStruct) sub_struct_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStatus) sub_status_;
 
   DiagGraph::SharedPtr graph_;
   CallbackType create_callback_;
