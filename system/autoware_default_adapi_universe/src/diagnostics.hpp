@@ -15,6 +15,8 @@
 #ifndef DIAGNOSTICS_HPP_
 #define DIAGNOSTICS_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/diag_graph_status.hpp>
@@ -28,7 +30,7 @@
 namespace autoware::default_adapi
 {
 
-class DiagnosticsNode : public rclcpp::Node
+class DiagnosticsNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit DiagnosticsNode(const rclcpp::NodeOptions & options);
@@ -59,13 +61,13 @@ private:
     const ExternalReset::Request::SharedPtr req, const ExternalReset::Response::SharedPtr res);
 
   rclcpp::CallbackGroup::SharedPtr group_cli_;
-  rclcpp::Publisher<ExternalGraphStruct>::SharedPtr pub_struct_;
-  rclcpp::Publisher<ExternalGraphStatus>::SharedPtr pub_status_;
-  rclcpp::Subscription<InternalGraphStruct>::SharedPtr sub_struct_;
-  rclcpp::Subscription<InternalGraphStatus>::SharedPtr sub_status_;
-  rclcpp::Service<ExternalReset>::SharedPtr srv_reset_;
-  rclcpp::Client<InternalReset>::SharedPtr cli_reset_;
-  rclcpp::Subscription<ExternalMrmState>::SharedPtr sub_mrm_state_;
+  AUTOWARE_PUBLISHER_PTR(ExternalGraphStruct) pub_struct_;
+  AUTOWARE_PUBLISHER_PTR(ExternalGraphStatus) pub_status_;
+  AUTOWARE_SUBSCRIPTION_PTR(InternalGraphStruct) sub_struct_;
+  AUTOWARE_SUBSCRIPTION_PTR(InternalGraphStatus) sub_status_;
+  AUTOWARE_SERVICE_PTR(ExternalReset) srv_reset_;
+  AUTOWARE_CLIENT_PTR(InternalReset) cli_reset_;
+  AUTOWARE_SUBSCRIPTION_PTR(ExternalMrmState) sub_mrm_state_;
 
   ExternalMrmState mrm_state_;
 };

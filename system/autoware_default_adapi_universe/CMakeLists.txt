@@ -25,10 +25,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 rclcpp_components_register_nodes(${PROJECT_NAME}
   "autoware::default_adapi::AutowareStateNode"
-  "autoware::default_adapi::DiagnosticsNode"
   "autoware::default_adapi::FailSafeNode"
   "autoware::default_adapi::HeartbeatNode"
-  "autoware::default_adapi::ManualControlNode"
   "autoware::default_adapi::MotionNode"
   "autoware::default_adapi::MrmRequestNode"
   "autoware::default_adapi::OperationModeNode"
@@ -39,6 +37,23 @@ rclcpp_components_register_nodes(${PROJECT_NAME}
   "autoware::default_adapi::VehicleMetricsNode"
   "autoware::default_adapi::VehicleInfoNode"
   "autoware::default_adapi::VehicleDoorNode"
+)
+
+# DiagnosticsNode derives from autoware::agnocast_wrapper::Node, which requires an AgnocastOnly
+# executor, so it also gets a standalone executable. on_reset() blocks on the reset client from
+# inside a service callback, so the executor has to serve the client's callback group on another
+# thread.
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::DiagnosticsNode"
+  EXECUTABLE diagnostics_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::ManualControlNode"
+  EXECUTABLE manual_control_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)

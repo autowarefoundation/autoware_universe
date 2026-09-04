@@ -16,6 +16,7 @@
   <depend>autoware_adapi_specs</depend>
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_adapi_version_msgs</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_component_interface_specs</depend>
   <depend>autoware_component_interface_specs_universe</depend>
   <depend>autoware_component_interface_utils</depend>
@@ -24,7 +25,6 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
-  <depend>autoware_qos_utils</depend>
   <depend>autoware_system_msgs</depend>
   <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_utils_rclcpp</depend>
