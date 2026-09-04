@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    rate: 10.0
+    plugin: "autoware::driving_mode_manager::DefaultPlugin"
+    enable_debug_topics: true
+    timeouts:
+      gate_change: 1.0
+      mode_active: 1.0
+      mode_stable: 5.0
