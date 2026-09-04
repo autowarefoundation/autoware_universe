@@ -105,8 +105,6 @@ bool PlanningValidatorNode::isDataReady()
 void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
 {
   auto & data = context_->data;
-  // Zero-copy: take_data() already returns std::shared_ptr<const T>, so assign it directly
-  // instead of copying the message into a freshly allocated shared_ptr.
   data->current_kinematics = sub_kinematics_->take_data();
   data->current_acceleration = sub_acceleration_->take_data();
   data->obstacle_pointcloud = sub_pointcloud_->take_data();
