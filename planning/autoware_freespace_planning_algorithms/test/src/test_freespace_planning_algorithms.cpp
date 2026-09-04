@@ -409,6 +409,39 @@ TEST(RRTStarTestSuite, InformedUpdate)
   EXPECT_TRUE(test_algorithm(AlgorithmType::RRTSTAR_INFORMED_UPDATE));
 }
 
+void expectIdenticalWaypoints(
+  const fpa::PlannerWaypoints & first, const fpa::PlannerWaypoints & second)
+{
+  ASSERT_EQ(first.waypoints.size(), second.waypoints.size());
+  for (size_t i = 0; i < first.waypoints.size(); ++i) {
+    EXPECT_EQ(first.waypoints[i].pose.pose, second.waypoints[i].pose.pose) << "waypoint " << i;
+    EXPECT_EQ(first.waypoints[i].is_back, second.waypoints[i].is_back) << "waypoint " << i;
+  }
+}
+
+// Re-planning a goal on the same instance must reproduce the first result
+// exactly: any state left behind by the intermediate search would change it.
+TEST(AstarSearchTestSuite, RepeatedPlanIsIdentical)
+{
+  const auto costmap_msg = construct_cost_map(150, 150, 0.2, 10);
+  auto astar = configure_astar(false);
+  astar->setMap(costmap_msg);
+
+  const auto start = create_pose_msg(start_pose);
+  const auto goal_a = create_pose_msg(goal_pose1);
+  const auto goal_b = create_pose_msg(goal_pose3);
+
+  ASSERT_TRUE(astar->makePlan(start, goal_a));
+  const auto first_result = astar->getWaypoints();
+
+  ASSERT_TRUE(astar->makePlan(start, goal_b));
+
+  ASSERT_TRUE(astar->makePlan(start, goal_a));
+  const auto second_result = astar->getWaypoints();
+
+  expectIdenticalWaypoints(first_result, second_result);
+}
+
 enum class MonotonicityType { INCREASING, DECREASING, NONE };
 struct MonotonicityTestParams
 {
