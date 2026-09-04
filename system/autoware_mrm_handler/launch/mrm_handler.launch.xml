@@ -24,6 +24,7 @@
 
   <!-- mrm_handler -->
   <node pkg="autoware_mrm_handler" exec="autoware_mrm_handler_node" name="mrm_handler" output="screen">
+    <!-- For using agnocast wrapper -->
     <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/operation_mode_availability" to="$(var input_operation_mode_availability)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
