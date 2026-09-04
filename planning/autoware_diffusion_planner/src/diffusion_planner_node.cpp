@@ -195,6 +195,12 @@ void DiffusionPlanner::set_up_params()
   params_.ignore_neighbors = this->declare_parameter<bool>("ignore_neighbors", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
+  rcl_interfaces::msg::ParameterDescriptor camp_parameter_descriptor;
+  camp_parameter_descriptor.read_only = true;
+  params_.camp_enabled =
+    this->declare_parameter<bool>("camp.enabled", false, camp_parameter_descriptor);
+  params_.camp_fixed_weight_model_path = this->declare_parameter<std::string>(
+    "camp.fixed_weight_model_path", "", camp_parameter_descriptor);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.0});
   params_.velocity_smoothing_window =
@@ -285,6 +291,10 @@ void DiffusionPlanner::load_model()
   RCLCPP_INFO_STREAM(
     get_logger(), "Loaded args_path=" << params_.args_path << " (hash="
                                       << compute_file_hash_hex(params_.args_path) << ")");
+  if (params_.camp_enabled) {
+    RCLCPP_INFO_STREAM(
+      get_logger(), "Loaded CAMP fixed-weight model=" << params_.camp_fixed_weight_model_path);
+  }
 }
 
 SetParametersResult DiffusionPlanner::on_parameter(
@@ -392,6 +402,21 @@ SetParametersResult DiffusionPlanner::on_parameter(
       result.reason += "; ONNX Runtime support is not available in this build";
 #endif
       return result;
+    }
+    if (temp_params.camp_enabled) {
+      const bool temperature_matches =
+        temp_params.temperature_list.size() == 8U && temp_params.temperature_list.front() == 0.0 &&
+        std::all_of(
+          temp_params.temperature_list.begin() + 1, temp_params.temperature_list.end(),
+          [](const double value) { return value == 1.0; });
+      if (
+        temp_params.model_type != "multi_step" || temp_params.batch_size != 8 ||
+        !temperature_matches || temp_params.shift_x) {
+        SetParametersResult result;
+        result.successful = false;
+        result.reason = "CAMP requires multi_step K=8, temperature=[0,1,...,1], and shift_x=false";
+        return result;
+      }
     }
     const bool model_paths_changed =
       temp_params.base_model_directory != previous_base_model_directory ||
@@ -606,6 +631,10 @@ void DiffusionPlanner::on_timer()
 
   const rclcpp::Time frame_time(frame_context->frame_time);
   InputDataMap input_data_map = core_->create_input_data(*frame_context);
+  const std::optional<CampTensorContext> camp_tensor_context =
+    core_->is_camp_enabled()
+      ? std::make_optional(core_->capture_camp_tensor_context(input_data_map))
+      : std::nullopt;
 
   publish_debug_markers(input_data_map, frame_context->ego_to_map_transform, frame_time);
 
@@ -656,13 +685,18 @@ void DiffusionPlanner::on_timer()
 
   PlannerOutput planner_output;
   try {
-    planner_output =
-      core_->create_planner_output(*inference_result, *frame_context, frame_time, generator_uuid_);
+    planner_output = core_->create_planner_output(
+      *inference_result, *frame_context, frame_time, generator_uuid_, camp_tensor_context);
   } catch (const std::exception & e) {
     RCLCPP_ERROR_STREAM(get_logger(), "Postprocessing failed: " << e.what());
     diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, e.what());
     diagnostics_inference_->publish(frame_time);
     return;
+  }
+
+  if (core_->is_camp_enabled()) {
+    diagnostics_inference_->add_key_value(
+      "camp_selected_candidate", static_cast<int64_t>(planner_output.selected_candidate_index));
   }
 
   if (!planner_output.denoising_steps.data.empty()) {
