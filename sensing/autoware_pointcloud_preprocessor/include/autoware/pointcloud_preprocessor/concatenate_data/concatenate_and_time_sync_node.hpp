@@ -24,6 +24,7 @@
 #include "cloud_collector.hpp"
 #include "collector_matcher.hpp"
 #include "combine_cloud_handler.hpp"
+#include "matching_strategy_type.hpp"
 #include "traits.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
@@ -89,7 +90,7 @@ private:
     std::string input_twist_topic_type;
     std::vector<std::string> input_topics;
     std::string output_frame;
-    std::string matching_strategy;
+    MatchingStrategyType matching_strategy;
   } params_;
 
   double current_concatenate_cloud_timestamp_{0.0};

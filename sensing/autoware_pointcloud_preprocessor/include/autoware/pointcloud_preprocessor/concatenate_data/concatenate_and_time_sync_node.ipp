@@ -74,15 +74,14 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
     throw std::runtime_error("Need an 'output_frame' parameter to be set before continuing.");
   }
 
-  params_.matching_strategy = declare_parameter<std::string>("matching_strategy.type");
+  params_.matching_strategy =
+    parse_matching_strategy(declare_parameter<std::string>("matching_strategy.type"));
 
-  if (params_.matching_strategy == "naive") {
-    collector_matcher_ = std::make_unique<NaiveCollectorMatcher<MsgTraits>>(*this);
-  } else if (params_.matching_strategy == "advanced") {
+  if (params_.matching_strategy == MatchingStrategyType::advanced) {
     collector_matcher_ =
       std::make_unique<AdvancedCollectorMatcher<MsgTraits>>(*this, params_.input_topics);
   } else {
-    throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
+    collector_matcher_ = std::make_unique<NaiveCollectorMatcher<MsgTraits>>(*this);
   }
 
   // Implementation independent subscribers
