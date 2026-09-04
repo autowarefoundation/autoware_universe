@@ -72,9 +72,9 @@ param_files:
   - name: common_param
     default: config/common_bevfusion.param.yaml
   - name: ml_package_param
-    default: ml_package_bevfusion_lidar.param.yaml
+    default: config/ml_package_bevfusion_lidar.param.yaml
   - name: class_remapper_param
-    default: detection_class_remapper.param.yaml
+    default: config/detection_class_remapper.param.yaml
 
 param_values:
   - name: use_compressed_images

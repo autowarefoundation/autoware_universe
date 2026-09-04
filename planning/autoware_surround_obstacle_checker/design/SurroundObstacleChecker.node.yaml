@@ -22,13 +22,9 @@ subscribers:
 
 publishers:
   - name: max_velocity
-    message_type: tier4_planning_msgs/msg/VelocityLimit
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
   - name: velocity_limit_clear_command
-    message_type: tier4_planning_msgs/msg/VelocityLimitClearCommand
-  - name: stop_reasons
-    message_type: tier4_planning_msgs/msg/StopReasonArray
-  - name: no_start_reason
-    message_type: tier4_planning_msgs/msg/StopReasonArray
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimitClearCommand
 
 # parameters
 param_files:

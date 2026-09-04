@@ -14,10 +14,10 @@ subscribers:
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: meas_to_tracked_latency
     message_type: autoware_internal_debug_msgs/msg/Float64Stamped
-    global: /perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms
+    remap_target: /perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms
   - name: prediction_latency
     message_type: autoware_internal_debug_msgs/msg/Float64Stamped
-    global: /perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms
+    remap_target: /perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms
 publishers:
   - name: perception_analytics
     message_type: tier4_metric_msgs/msg/MetricArray

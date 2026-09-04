@@ -30,13 +30,11 @@ publishers:
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: lateral_diagnostic
-    message_type: diagnostic_msgs/msg/DiagnosticStatus
+    message_type: autoware_internal_debug_msgs/msg/Float32MultiArrayStamped
   - name: slope_angle
-    message_type: std_msgs/msg/Float32Stamped
+    message_type: autoware_internal_debug_msgs/msg/Float32MultiArrayStamped
   - name: longitudinal_diagnostic
-    message_type: diagnostic_msgs/msg/DiagnosticStatus
-  - name: stop_reason
-    message_type: tier4_planning_msgs/msg/StopReasonArray
+    message_type: autoware_internal_debug_msgs/msg/Float32MultiArrayStamped
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
 

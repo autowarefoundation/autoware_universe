@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::lidar_apollo_instance_segmentation::LidarInstanceSegmentationNode
-  executable: lidar_apollo_instance_segmentation_node
+  executable: autoware_lidar_apollo_instance_segmentation_node
   node_output: screen
 
 # interfaces
