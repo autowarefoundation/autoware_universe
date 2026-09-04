@@ -47,7 +47,7 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::detection_by_tracker::DetectionByTracker"
   EXECUTABLE detection_by_tracker_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 ament_auto_package(INSTALL_TO_SHARE
