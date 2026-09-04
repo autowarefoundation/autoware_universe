@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_MAP_BASED_DETECTOR_HPP_
-#define TRAFFIC_LIGHT_MAP_BASED_DETECTOR_HPP_
-
-#include "traffic_light_map_based_detector_process.hpp"
+#ifndef AUTOWARE__TRAFFIC_LIGHT_MAP_BASED_DETECTOR__TRAFFIC_LIGHT_MAP_BASED_DETECTOR_HPP_
+#define AUTOWARE__TRAFFIC_LIGHT_MAP_BASED_DETECTOR__TRAFFIC_LIGHT_MAP_BASED_DETECTOR_HPP_
 
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <rclcpp/time.hpp>
@@ -38,6 +36,12 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#if __has_include(<image_geometry/pinhole_camera_model.hpp>)
+#include <image_geometry/pinhole_camera_model.hpp>  // for ROS 2 Jazzy or newer
+#else
+#include <image_geometry/pinhole_camera_model.h>  // for ROS 2 Humble or older
+#endif
 
 namespace autoware::traffic_light
 {
@@ -182,4 +186,4 @@ private:
 
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_MAP_BASED_DETECTOR_HPP_
+#endif  // AUTOWARE__TRAFFIC_LIGHT_MAP_BASED_DETECTOR__TRAFFIC_LIGHT_MAP_BASED_DETECTOR_HPP_

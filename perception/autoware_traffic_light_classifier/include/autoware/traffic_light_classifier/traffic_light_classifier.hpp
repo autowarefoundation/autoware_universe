@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_CLASSIFIER_HPP_
-#define TRAFFIC_LIGHT_CLASSIFIER_HPP_
-
-#include "classifier/classifier_interface.hpp"
+#ifndef AUTOWARE__TRAFFIC_LIGHT_CLASSIFIER__TRAFFIC_LIGHT_CLASSIFIER_HPP_
+#define AUTOWARE__TRAFFIC_LIGHT_CLASSIFIER__TRAFFIC_LIGHT_CLASSIFIER_HPP_
 
 #include <opencv2/core/core.hpp>
 
@@ -30,6 +28,8 @@
 
 namespace autoware::traffic_light
 {
+class ClassifierInterface;
+
 // ROS-free classification orchestration extracted from TrafficLightClassifierNode.
 // Owns the classifier backend and the per-ROI filtering / exposure / UNKNOWN-handling
 // logic; the node remains a thin adapter that handles I/O (params, pub/sub, diagnostics).
@@ -74,4 +74,4 @@ private:
 
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_CLASSIFIER_HPP_
+#endif  // AUTOWARE__TRAFFIC_LIGHT_CLASSIFIER__TRAFFIC_LIGHT_CLASSIFIER_HPP_

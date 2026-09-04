@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_BASED_SIGNAL_FILTER_HPP_
-#define MAP_BASED_SIGNAL_FILTER_HPP_
+#ifndef AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__MAP_BASED_SIGNAL_FILTER_HPP_
+#define AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__MAP_BASED_SIGNAL_FILTER_HPP_
 
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
@@ -77,4 +77,4 @@ private:
 
 }  // namespace autoware::traffic_light
 
-#endif  // MAP_BASED_SIGNAL_FILTER_HPP_
+#endif  // AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__MAP_BASED_SIGNAL_FILTER_HPP_

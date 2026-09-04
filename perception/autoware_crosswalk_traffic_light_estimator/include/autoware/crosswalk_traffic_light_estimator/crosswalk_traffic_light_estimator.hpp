@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR_HPP_
-#define CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR_HPP_
+#ifndef AUTOWARE__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR_HPP_
+#define AUTOWARE__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR_HPP_
 
-#include "flashing_detection.hpp"
+#include "autoware/crosswalk_traffic_light_estimator/flashing_detection.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>
@@ -87,4 +87,4 @@ private:
 
 }  // namespace autoware::crosswalk_traffic_light_estimator
 
-#endif  // CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR_HPP_
+#endif  // AUTOWARE__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR_HPP_

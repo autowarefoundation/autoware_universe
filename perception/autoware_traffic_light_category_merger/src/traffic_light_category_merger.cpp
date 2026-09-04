@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "traffic_light_category_merger.hpp"
+#include "autoware/traffic_light_category_merger/traffic_light_category_merger.hpp"
 
 namespace autoware::traffic_light
 {

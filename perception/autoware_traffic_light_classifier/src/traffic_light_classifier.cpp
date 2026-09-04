@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "traffic_light_classifier.hpp"
+#include "autoware/traffic_light_classifier/traffic_light_classifier.hpp"
 
+#include "classifier/classifier_interface.hpp"
 #include "traffic_light_classifier_process.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>

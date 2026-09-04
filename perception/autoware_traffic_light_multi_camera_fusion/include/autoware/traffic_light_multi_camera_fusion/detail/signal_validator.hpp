@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SIGNAL_VALIDATOR_HPP_
-#define SIGNAL_VALIDATOR_HPP_
+#ifndef AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__SIGNAL_VALIDATOR_HPP_
+#define AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__SIGNAL_VALIDATOR_HPP_
 
-#include "types.hpp"
+#include "autoware/traffic_light_multi_camera_fusion/detail/types.hpp"
 
 #include <unordered_set>
 #include <utility>
@@ -53,4 +53,4 @@ ConflictStatus check_conflict(const StateKey & state_a, const StateKey & state_b
 
 }  // namespace autoware::traffic_light
 
-#endif  // SIGNAL_VALIDATOR_HPP_
+#endif  // AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__SIGNAL_VALIDATOR_HPP_

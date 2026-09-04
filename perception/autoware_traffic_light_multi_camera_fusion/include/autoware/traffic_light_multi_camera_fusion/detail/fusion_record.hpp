@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_PROCESS_HPP_
-#define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_PROCESS_HPP_
+#ifndef AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__FUSION_RECORD_HPP_
+#define AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__FUSION_RECORD_HPP_
 
 #include <rclcpp/time.hpp>
 
@@ -98,4 +98,4 @@ FusionRecord generate_failsafe_record(FusionRecord base_record);
 }  // namespace utils
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_PROCESS_HPP_
+#endif  // AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__FUSION_RECORD_HPP_

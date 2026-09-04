@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TYPES_HPP_
-#define TYPES_HPP_
+#ifndef AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__TYPES_HPP_
+#define AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__TYPES_HPP_
 
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
 
@@ -29,4 +29,4 @@ using StateKey = std::vector<std::pair<
 
 }  // namespace autoware::traffic_light
 
-#endif  // TYPES_HPP_
+#endif  // AUTOWARE__TRAFFIC_LIGHT_MULTI_CAMERA_FUSION__DETAIL__TYPES_HPP_

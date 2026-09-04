@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef FLASHING_DETECTION_HPP_
-#define FLASHING_DETECTION_HPP_
+#ifndef AUTOWARE__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__FLASHING_DETECTION_HPP_
+#define AUTOWARE__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__FLASHING_DETECTION_HPP_
 
 #include <rclcpp/time.hpp>
 
@@ -67,4 +67,4 @@ private:
 
 }  // namespace autoware::crosswalk_traffic_light_estimator
 
-#endif  // FLASHING_DETECTION_HPP_
+#endif  // AUTOWARE__CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__FLASHING_DETECTION_HPP_

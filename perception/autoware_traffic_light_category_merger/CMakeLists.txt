@@ -8,10 +8,17 @@ autoware_package()
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_category_merger.cpp
+)
+
+ament_auto_add_library(${PROJECT_NAME}_node SHARED
   src/traffic_light_category_merger_node.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}_node
+  ${PROJECT_NAME}
+)
+
+rclcpp_components_register_node(${PROJECT_NAME}_node
   PLUGIN "autoware::traffic_light::TrafficLightCategoryMergerNode"
   EXECUTABLE traffic_light_category_merger_node)
 
@@ -31,7 +38,7 @@ if(BUILD_TESTING)
     test/test_traffic_light_category_merger_integration.cpp
   )
   target_link_libraries(test_traffic_light_category_merger_integration
-    ${PROJECT_NAME}
+    ${PROJECT_NAME}_node
   )
 endif()
 

@@ -15,7 +15,7 @@
 #ifndef TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 #define TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 
-#include "traffic_light_category_merger.hpp"
+#include "autoware/traffic_light_category_merger/traffic_light_category_merger.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

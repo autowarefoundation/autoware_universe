@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_NODE_HPP_
-#define AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_NODE_HPP_
+#ifndef IMAGE_TRANSPORT_DECOMPRESSOR_NODE_HPP_
+#define IMAGE_TRANSPORT_DECOMPRESSOR_NODE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -42,4 +42,4 @@ private:
 
 }  // namespace autoware::image_preprocessor
 
-#endif  // AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_NODE_HPP_
+#endif  // IMAGE_TRANSPORT_DECOMPRESSOR_NODE_HPP_

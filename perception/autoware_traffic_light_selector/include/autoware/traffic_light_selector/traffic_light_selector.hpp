@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_SELECTOR_HPP_
-#define TRAFFIC_LIGHT_SELECTOR_HPP_
-
-#include "traffic_light_selector_utils.hpp"
+#ifndef AUTOWARE__TRAFFIC_LIGHT_SELECTOR__TRAFFIC_LIGHT_SELECTOR_HPP_
+#define AUTOWARE__TRAFFIC_LIGHT_SELECTOR__TRAFFIC_LIGHT_SELECTOR_HPP_
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
@@ -48,4 +46,4 @@ TrafficLightRoiArray select(
 
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_SELECTOR_HPP_
+#endif  // AUTOWARE__TRAFFIC_LIGHT_SELECTOR__TRAFFIC_LIGHT_SELECTOR_HPP_

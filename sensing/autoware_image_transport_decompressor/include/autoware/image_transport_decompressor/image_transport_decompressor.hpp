@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
-#define IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
+#ifndef AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
+#define AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
 
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -34,4 +34,4 @@ sensor_msgs::msg::Image decompress(
 
 }  // namespace autoware::image_preprocessor::image_transport_decompressor
 
-#endif  // IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
+#endif  // AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
