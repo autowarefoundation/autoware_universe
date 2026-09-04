@@ -56,7 +56,7 @@ std::shared_ptr<PlanningValidatorNode> generateNode()
 
 void publishMandatoryTopics(
   std::shared_ptr<PlanningInterfaceTestManager> test_manager,
-  std::shared_ptr<PlanningValidatorNode> test_target_node)
+  rclcpp::Node::SharedPtr test_target_node)
 {
   // publish necessary topics from test_manager
   test_manager->publishInput(
@@ -81,34 +81,36 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
 {
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
+  const auto ros_node = test_target_node->get_rclcpp_node();
 
-  publishMandatoryTopics(test_manager, test_target_node);
+  publishMandatoryTopics(test_manager, ros_node);
 
   const std::string input_trajectory_topic = "planning_validator_node/input/trajectory";
 
   // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(ros_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
   ASSERT_NO_THROW(
-    test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
+    test_manager->testWithAbnormalTrajectory(ros_node, input_trajectory_topic));
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 {
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
+  const auto ros_node = test_target_node->get_rclcpp_node();
 
-  publishMandatoryTopics(test_manager, test_target_node);
+  publishMandatoryTopics(test_manager, ros_node);
 
   const std::string input_trajectory_topic = "planning_validator_node/input/trajectory";
   const std::string input_odometry_topic = "planning_validator_node/input/kinematics";
 
   // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(ros_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
+  ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(ros_node, input_odometry_topic));
 }
