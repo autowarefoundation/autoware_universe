@@ -56,7 +56,6 @@
       enable_stop_for_pointcloud: false
       stop_margin: 6.0 # [m]
       minimum_stop_margin: 3.0 # [m]
-      lateral_margin: 0.2     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
       duplicate_check_threshold: 0.5 # threshold to check if the stop point is already in the trajectory [m]
 
       obstacle_tracking:
@@ -71,14 +70,24 @@
         target_objects:
           bbox: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "unknown"]
           polygon: ["car", "truck", "bus", "trailer", "pedestrian", "hazard", "unknown"]
+          pointcloud: ["structure", "vegetation"]
         stopped_velocity_th: 0.3 # [m/s]
         max_lateral_velocity_th: 1.0 # [m/s] max lateral velocity (w.r.t ego traj) to consider for obstacle stop
         safety_buffer: 0.1 # [m] safety buffer to expand object shape
-
-      pointcloud:
-        target_types: ["structure", "vegetation"]
-        height_buffer: 0.5  # height buffer to add above ego height [m]
-        min_height: 0.2  # minimum height of pointcloud [m]
+        pointcloud_height_buffer: 0.2
+        pointcloud_min_height: 0.2
+        lateral_margin:
+          car: 0.1
+          truck: 0.1
+          bus: 0.1
+          trailer: 0.1
+          motorcycle: 0.1
+          bicycle: 0.1
+          pedestrian: 0.1
+          hazard: 0.1
+          structure: 0.1
+          vegetation: 0.1
+          unknown: 0.0
 
       rss_params:
         enable: true

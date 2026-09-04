@@ -25,8 +25,10 @@
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <boost/geometry/index/rtree.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_hash.hpp>
@@ -35,11 +37,13 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_processor::utils::obstacle_stop
@@ -55,6 +59,8 @@ using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware_utils_geometry::MultiPolygon2d;
+using autoware_utils_geometry::Point2d;
+using autoware_utils_geometry::Polygon2d;
 
 enum class ObjectType : uint8_t {
   UNKNOWN = 0,
@@ -117,6 +123,36 @@ inline static const std::unordered_map<PointCloudClassification, ObjectType>
     {PointCloudClassification::NOISE, ObjectType::NOISE},
     {PointCloudClassification::INVALID, ObjectType::UNKNOWN}};
 
+using ObjectDecelMap = std::unordered_map<ObjectType, double>;
+using LateralMarginMap = std::unordered_map<ObjectType, double>;
+
+inline ObjectType to_object_type(const PredictedObject & object)
+{
+  const auto label =
+    object.classification.empty()
+      ? ObjectClassification::UNKNOWN
+      : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  const auto it = classification_to_object_type.find(label);
+  return it != classification_to_object_type.end() ? it->second : ObjectType::UNKNOWN;
+}
+
+inline ObjectType to_object_type(const PointCloudClassification classification)
+{
+  const auto it = pcd_class_to_object_type.find(classification);
+  return it != pcd_class_to_object_type.end() ? it->second : ObjectType::UNKNOWN;
+}
+
+inline double get_lateral_margin(const LateralMarginMap & map, const ObjectType type)
+{
+  if (const auto it = map.find(type); it != map.end()) {
+    return it->second;
+  }
+  if (const auto it = map.find(ObjectType::UNKNOWN); it != map.end()) {
+    return it->second;
+  }
+  return 0.0;
+}
+
 struct CollisionPoint
 {
   geometry_msgs::msg::Point point;
@@ -161,24 +197,53 @@ struct ObjectState
   geometry_msgs::msg::Point nearest_point;
 };
 
+/// Ego vehicle footprint sampled along the detection trajectory.
+/// Queried as an OBB using TrajectoryShape extents plus a class-specific lateral margin.
+struct EgoFootprint
+{
+  geometry_msgs::msg::Pose pose;
+  size_t traj_index{0};    ///< nearest original trajectory index
+  double arc_length{0.0};  ///< arc length from trajectory start to this pose (baselink)
+};
+
+using FootprintNode = std::pair<autoware_utils_geometry::Box2d, size_t>;
+using FootprintRtree =
+  boost::geometry::index::rtree<FootprintNode, boost::geometry::index::rstar<16>>;
+
 struct TrajectoryShape
 {
-  MultiPolygon2d polygon;
   autoware_utils_geometry::Box2d bounding_box;
-  double trajectory_length;
-  double forward_traj_length;
+  double trajectory_length{0.0};
+  double forward_traj_length{0.0};
+  std::vector<EgoFootprint> footprints;
+  FootprintRtree rtree;
+  double ego_half_width{0.0};
+  double ego_front_offset{0.0};  ///< vehicle_info.max_longitudinal_offset_m
+  double ego_back_offset{0.0};   ///< -vehicle_info.min_longitudinal_offset_m
 
   [[nodiscard]] double ego_arc_length() const { return trajectory_length - forward_traj_length; }
 };
+
+struct TargetObject
+{
+  PredictedObject object;
+  Polygon2d polygon;
+  bool is_safe{false};
+  double distance_from_ego{0.0};
+  double safe_distance{0.0};
+
+  explicit TargetObject(const PredictedObject & object) : object(object) {}
+};
+using TargetObjects = std::vector<TargetObject>;
 
 struct DebugData
 {
   PointCloud2::SharedPtr filtered_points;
   PredictedObjects filtered_objects;
+  TargetObjects target_objects;
   MultiPolygon2d target_polygons;
   TrajectoryShape trajectory_shape;
   std::vector<geometry_msgs::msg::Point> target_pcd_points;
-  geometry_msgs::msg::Point active_collision_point;
   std::optional<PredictedObject> colliding_object;
   double ego_z = 0.0;  // cached for marker placement during publish_debug_data
 };
@@ -191,46 +256,53 @@ struct DebugData
 void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points);
 
 /**
- * @brief Build a 2D swept footprint of the ego vehicle along the portion of the path used for
- * obstacle detection.
- * @details The detection length combines stopping-distance logic (speed, deceleration, jerk,
- * margins) with the path ahead of the ego. The polygon is the union of vehicle footprints
- * sampled along that segment; the returned bounding box encloses that multi-polygon.
- * @param trajectory_points Full reference trajectory.
- * @param ego_pose Current ego pose on the trajectory.
- * @param vehicle_info Vehicle geometry for the footprint polygon.
- * @param ego_vel Current longitudinal speed [m/s].
- * @param ego_accel Current longitudinal acceleration [m/s^2].
- * @param decel Magnitude of comfortable deceleration used for stopping distance [m/s^2].
- * @param jerk Longitudinal jerk limit used for stopping distance [m/s^3].
- * @param stop_margin Extra longitudinal margin added to the detection range [m].
- * @param lateral_margin Lateral expansion of the footprint [m].
- * @param longitudinal_margin Longitudinal expansion of the footprint [m].
- * @return Swept shape, its axis-aligned bounding box, total trajectory length, and forward arc
- * length from the ego.
+ * @brief Build an R-tree of ego footprints along the obstacle-detection portion of the trajectory.
+ * @details Detection length combines stopping-distance logic with the path ahead of the ego.
+ * Footprints are sampled with a minimum spacing of 0.1 m and interpolated to a maximum spacing of
+ * 1.0 m. Each entry stores the pose, nearest original trajectory index, and arc length from the
+ * trajectory start. Vehicle extents are stored without extra lateral margin; class-specific
+ * expansion is applied at query time.
+ * @return TrajectoryShape with footprints, rtree, bounding box, lengths, and ego extents populated.
  */
-TrajectoryShape get_trajectory_shape(
+TrajectoryShape build_trajectory_footprint_index(
   const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & ego_pose,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double ego_vel,
-  const double ego_accel, const double decel, const double jerk, const double stop_margin,
-  const double lateral_margin = 0.0, const double longitudinal_margin = 0.0);
+  const double ego_accel, const double decel, const double jerk, const double stop_margin);
 
 /**
- * @brief Find the closest point-cloud obstacle inside the trajectory swept area.
- * @details Points inside `trajectory_shape.polygon` are considered; the collision is the one with
- * minimum arc length along `trajectory_points`. All inlier points are appended to
- * `target_pcd_points` for visualization or debugging.
- * @param trajectory_points Reference path for arc-length queries.
- * @param trajectory_shape Swept ego region from get_trajectory_shape().
+ * @brief Find ego footprints whose expanded OBB contains the given point.
+ * @details Coarse R-tree AABB query (inflated by `lat_margin`), then a precise vehicle-frame
+ * OBB test: x in [-ego_back_offset, ego_front_offset], |y| <= ego_half_width + lat_margin.
+ * @return Footprint indices sorted by increasing arc_length.
+ */
+std::vector<size_t> query_overlapping_footprints(
+  const TrajectoryShape & shape, const Point2d & point, const double lat_margin);
+
+/**
+ * @brief Find ego footprints that intersect the given object polygon.
+ * @details Coarse R-tree AABB query (inflated by `lat_margin`), then
+ * `autoware_utils_geometry::sat::intersects` in the footprint frame. The ego OBB (including
+ * `lat_margin`) is built once per query; each candidate only inverse-transforms the object.
+ * @return Footprint indices sorted by increasing arc_length.
+ */
+std::vector<size_t> query_overlapping_footprints(
+  const TrajectoryShape & shape, const Polygon2d & polygon, const double lat_margin);
+
+/**
+ * @brief Find the closest point-cloud obstacle that overlaps an ego footprint.
+ * @details Each point is queried against `trajectory_shape.rtree` with the lateral margin for its
+ * class. The collision is the inlier with minimum arc length (footprint arc length plus
+ * longitudinal offset in the vehicle frame). All inlier points are appended to `target_pcd_points`.
+ * @param trajectory_shape Ego footprint index from build_trajectory_footprint_index().
  * @param pointcloud Input points in the same frame as the trajectory.
- * @param[out] target_pcd_points Points that fell inside the trajectory polygon.
+ * @param lateral_margin_map Per-class lateral expansion of the ego footprint [m].
+ * @param[out] target_pcd_points Points that overlapped at least one footprint.
  * @return Nearest collision by arc length, or nullopt if the cloud is empty or none intersect.
  */
 std::optional<CollisionPoint> get_nearest_pcd_collision(
-  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
-  const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points);
-
-using ObjectDecelMap = std::unordered_map<ObjectType, double>;
+  const TrajectoryShape & trajectory_shape, const PointCloud::Ptr & pointcloud,
+  const LateralMarginMap & lateral_margin_map,
+  std::vector<geometry_msgs::msg::Point> & target_pcd_points);
 
 /**
  * @brief Find the nearest predicted object that is not longitudinally safe relative to the ego
@@ -258,11 +330,10 @@ using ObjectDecelMap = std::unordered_map<ObjectType, double>;
  * @return Collision geometry and arc length, or nullopt if inputs are invalid or objects are safe
  */
 std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points,
+  TargetObjects & target_objects, const TrajectoryPoints & trajectory_points,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-  const PredictedObjects & target_objects, const ObjectDecelMap & object_decel_map,
-  const double ego_decel, const double reaction_time, const double safety_margin,
-  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object,
+  const ObjectDecelMap & object_decel_map, const double ego_decel, const double reaction_time,
+  const double safety_margin, const double stopped_vel_th, const double lookahead_horizon,
   const bool use_rss_check = true);
 
 /// Filters predicted objects by semantic type, speed, and spatial relationship to the trajectory.
@@ -318,19 +389,20 @@ struct ObjectFilter
   }
 
   /**
-   * @brief Keep only objects that intersect the target region, dropping those leaving laterally.
-   * @details Objects disjoint from `target_area` are removed. Moving objects that are judged to be
-   * exiting the corridor (using lateral velocity and a short prediction horizon) are also removed.
-   * Polygons of retained objects are accumulated in `target_polygons`.
+   * @brief Keep only objects that intersect ego footprints, dropping those leaving laterally.
+   * @details Objects with no overlapping footprint (expanded by `lat_margin`) are removed. Moving
+   * objects judged to be exiting the corridor (using lateral velocity and a short prediction
+   * horizon) are also removed. Polygons of retained objects are accumulated in `target_polygons`.
    * @param[in,out] objects Predicted objects to filter in place.
    * @param trajectory_points Reference path for time and geometry queries.
-   * @param target_area Multi-polygon region of interest (e.g. expanded path).
+   * @param trajectory_shape Ego footprint index used for overlap queries.
+   * @param lateral_margin_map Per-class lateral expansion of the ego footprint [m].
    * @param[out] target_polygons Footprints of objects that remain after filtering.
    */
   void filter_by_target_area(
-    PredictedObjects & objects, const TrajectoryPoints & trajectory_points,
+    TargetObjects & target_objects, const TrajectoryPoints & trajectory_points,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-    const MultiPolygon2d & target_area, MultiPolygon2d & target_polygons);
+    const TrajectoryShape & trajectory_shape, const LateralMarginMap & lateral_margin_map);
 
   /**
    * @brief Update allow-listed types and velocity thresholds without reconstructing the filter.
@@ -457,8 +529,7 @@ struct ObstacleTracker
    * @param now Current stamp used for track aging and activation timing
    */
   void update_objects(
-    const PredictedObjects & objects, PredictedObjects & persistent_objects,
-    const rclcpp::Time & now);
+    const PredictedObjects & objects, TargetObjects & persistent_objects, const rclcpp::Time & now);
 
   /**
    * @brief Update tracked points

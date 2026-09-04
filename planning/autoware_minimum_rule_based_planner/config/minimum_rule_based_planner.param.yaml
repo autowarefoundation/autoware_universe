@@ -46,21 +46,30 @@
       stopping_jerk: 3.0 # [m/s^3]
       on_time_buffer: 0.5 # [s]
       off_time_buffer: 0.7 # [s]
-      lateral_margin: 0.2     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
       arrived_distance_threshold: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
 
       objects:
         target_objects:
           bbox: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "unknown"]
           polygon: ["car", "truck", "bus", "trailer", "pedestrian", "hazard", "unknown"]
+          pointcloud: ["structure", "vegetation"]
         stopped_velocity_th: 0.3 # velocity threshold for target object to be considered as stopped [m/s]
         max_lateral_velocity_th: 1.0 # maximum lateral velocity threshold for target object [m/s]
         safety_buffer: 0.1       # safety buffer to expand object shape [m]
-
-      pointcloud:
-        target_types: ["structure", "vegetation"]
-        height_buffer: 0.5  # height buffer to add above ego height [m]
-        min_height: 0.2  # minimum height of pointcloud [m]
+        pointcloud_height_buffer: 0.5
+        pointcloud_min_height: 0.2
+        lateral_margin:
+          car: 0.2
+          truck: 0.2
+          bus: 0.2
+          trailer: 0.2
+          motorcycle: 0.2
+          bicycle: 0.2
+          pedestrian: 0.2
+          hazard: 0.2
+          structure: 0.2
+          vegetation: 0.2
+          unknown: 0.2
 
       rss_params:
         enable: true

@@ -42,7 +42,6 @@
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>pluginlib</depend>
-  <depend>range-v3</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>rclpy</depend>
