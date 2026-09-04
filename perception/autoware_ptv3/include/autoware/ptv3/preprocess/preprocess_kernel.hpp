@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #ifndef AUTOWARE__PTV3__PREPROCESS__PREPROCESS_KERNEL_HPP_
 #define AUTOWARE__PTV3__PREPROCESS__PREPROCESS_KERNEL_HPP_
 
@@ -22,6 +21,7 @@
 
 #include <cuda_runtime_api.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -47,33 +47,49 @@ public:
   ~PreprocessCuda();
 
   /**
-   * @brief Crops, voxelizes and deduplicates the input cloud.
+   * @brief Crops and voxelizes the densified cloud into padded voxels.
    *
-   * The emitted voxels are sorted by their order-0 serialized code, which
-   * generateSerializedPoolingMetadata requires.
+   * `points` holds `(x, y, z, intensity, time_lag)` rows with the current frame as the leading
+   * `num_current_points` block. The crop drops out-of-range points and sweep ego ghosts;
+   * compaction preserves order, so the current frame stays the leading block of the cropped buffer
+   * (`num_cropped_current_points` rows). The emitted voxels are sorted by their order-0
+   * serialized code and hold the first `max_points_per_voxel` of their points in cropped order,
+   * zero padded, which mirrors the training-time hard voxelization. The ordering is also required
+   * by generateSerializedPoolingMetadata.
    *
-   * @param input_data Input cloud in `input_format` layout.
-   * @param input_format Point layout of `input_data`.
-   * @param num_points Number of points in `input_data`.
-   * @param voxel_features Output feature vector (x, y, z, intensity) per voxel.
+   * @param points Densified input rows, laid out [num_points, 5].
+   * @param num_points Number of densified rows.
+   * @param num_current_points Size of the leading current-frame block.
+   * @param voxels Output padded voxel points, laid out [num_voxels, max_points_per_voxel, 5].
+   * @param num_points_per_voxel Output valid point count per voxel.
    * @param voxel_coords Output grid coordinates, laid out [num_voxels, 3].
    * @param serialized_code Output serialized codes, laid out [num_orders, num_voxels].
-   * @param compact_points Output representative input point per voxel, in `input_format` layout.
-   * @param reconstruction_features Optional output feature vectors of every input point (FULL
-   * reconstruction) or of the in-range ones (PARTIAL). Skipped if nullptr.
-   * @param cropped_source_points Optional output of the in-range input points, in `input_format`
-   * layout. Skipped if nullptr.
-   * @param inverse_map Optional output mapping each in-range point to its voxel index. Skipped if
+   * @param inverse_map Optional output mapping each cropped point to its voxel index. Skipped if
    * nullptr.
    * @param num_cropped_points Output number of in-range points.
+   * @param num_cropped_current_points Output number of in-range current-frame points.
    * @return Number of unique voxels. May exceed max_num_voxels, in which case only the first
    * max_num_voxels voxels were written to the outputs.
    */
-  std::size_t generateFeatures(
-    const void * input_data, CloudFormat input_format, unsigned int num_points,
-    float * voxel_features, std::int32_t * voxel_coords, std::int64_t * serialized_code,
-    void * compact_points, float * reconstruction_features, void * cropped_source_points,
-    std::int64_t * inverse_map, std::size_t * num_cropped_points);
+  std::size_t generateVoxels(
+    const float * points, std::size_t num_points, std::size_t num_current_points, float * voxels,
+    std::int32_t * num_points_per_voxel, std::int32_t * voxel_coords,
+    std::int64_t * serialized_code, std::int64_t * inverse_map, std::size_t * num_cropped_points,
+    std::size_t * num_cropped_current_points);
+
+  /**
+   * @brief Compacts the in-range current-frame points of the original input message.
+   *
+   * Must run after generateVoxels, whose crop mask and indices it consumes.
+   *
+   * @param current_points Current-frame message points in `input_format` layout.
+   * @param input_format Point layout of `current_points`.
+   * @param num_current_points Number of current-frame points.
+   * @param output_points Output in-range points, in `input_format` layout.
+   */
+  void extractCurrentSourcePoints(
+    const void * current_points, CloudFormat input_format, std::size_t num_current_points,
+    void * output_points);
 
   /**
    * @brief Builds the per-stage pooling metadata the encoder graph consumes.
@@ -95,14 +111,14 @@ public:
 
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
   [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }
+  /// In-range densified rows in cropped order, current frame first.
+  [[nodiscard]] const float * croppedFeatures() const { return cropped_points_d_.get(); }
 
 private:
   PTv3Config config_;
   cudaStream_t stream_;
 
-  autoware::cuda_utils::CudaUniquePtr<float[]> points_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<float[]> cropped_points_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> cropped_input_points_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_mask_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_indices_d_{nullptr};
 
@@ -114,10 +130,13 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> sorted_code_indices_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> unique_mask_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> unique_indices_d_{nullptr};
+  // Position in the sorted cropped points where each voxel's run starts.
+  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> voxel_start_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> generate_voxels_workspace_d_{nullptr};
+  std::size_t generate_voxels_workspace_size_{0};
 
-  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> generate_feature_workspace_d_{nullptr};
-  std::size_t generate_feature_workspace_size_{0};
   autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_cropped_points_;
+  autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_cropped_current_points_;
   autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_unique_points_;
   cudaEvent_t num_cropped_points_copy_event_;
   cudaEvent_t num_unique_points_copy_event_;
@@ -142,8 +161,10 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
+
   int code_sort_end_bit_{64};
 };
+
 }  // namespace autoware::ptv3
 
 #endif  // AUTOWARE__PTV3__PREPROCESS__PREPROCESS_KERNEL_HPP_

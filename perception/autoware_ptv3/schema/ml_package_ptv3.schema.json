@@ -26,6 +26,12 @@
           "minItems": 3,
           "maxItems": 3
         },
+        "max_points_per_voxel": {
+          "type": "integer",
+          "description": "Padded point slots per voxel; the graph averages the valid slots. Matches the training voxelizer.",
+          "default": 32,
+          "minimum": 1
+        },
         "serialization_orders": {
           "type": "array",
           "items": [
@@ -66,6 +72,7 @@
       "required": [
         "point_cloud_range",
         "voxel_size",
+        "max_points_per_voxel",
         "serialization_orders",
         "pooling_strides",
         "enc_channels"

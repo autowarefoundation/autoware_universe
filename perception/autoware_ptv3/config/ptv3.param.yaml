@@ -5,6 +5,8 @@
     # network
     trt_precision: fp16
     cloud_capacity: 2000000
+    densification_world_frame_id: map
+    densification_num_past_frames: 1
     encoder:
       onnx_path: "$(var model_path)/$(var model_variant)_encoder.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_encoder.engine"

@@ -30,8 +30,10 @@
 
 namespace autoware::ptv3
 {
+
 namespace
 {
+
 struct NotEqual
 {
   template <typename T>
@@ -40,32 +42,28 @@ struct NotEqual
     return a != b;
   }
 };
+
 }  // namespace
 
 PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 : config_(config), stream_(stream)
 {
-  points_d_ = autoware::cuda_utils::make_unique<float[]>(
-    config_.cloud_capacity_ * config_.num_point_feature_size_);
-  cropped_points_d_ = autoware::cuda_utils::make_unique<float[]>(
-    config_.cloud_capacity_ * config_.num_point_feature_size_);
-  cropped_input_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
-    config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT));
-  crop_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-  crop_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
+  const auto capacity = static_cast<std::size_t>(config_.densified_cloud_capacity_);
+  cropped_points_d_ =
+    autoware::cuda_utils::make_unique<float[]>(capacity * config_.num_point_feature_size_);
+  crop_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
+  crop_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
 
   auto policy = thrust::cuda::par.on(stream_);
-
-  codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
-  sorted_codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
-  code_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-  sorted_code_indices_d_ =
-    autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-  unique_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-  unique_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-
+  codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(capacity);
+  sorted_codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(capacity);
+  code_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
+  sorted_code_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
+  unique_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
+  unique_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
+  voxel_start_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
   thrust::device_ptr<std::uint32_t> idx_ptr(code_indices_d_.get());
-  thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
+  thrust::sequence(policy, idx_ptr, idx_ptr + capacity, 0);
 
   // Serialized codes occupy 3 * serialization_depth_ bits, and pooling only right-shifts them, so
   // this bound holds for every stage. std::max guards serialization_depth_ == 0 (CUB requires
@@ -74,30 +72,27 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
   std::int64_t * int64_nullptr = nullptr;
   std::uint32_t * uint32_nullptr = nullptr;
-
   std::size_t sort_pair_workspace_size = 0;
   std::size_t inclusive_sum_workspace_size = 0;
   std::size_t adjacent_difference_workspace_size = 0;
-
   CHECK_CUDA_ERROR(
     cub::DeviceRadixSort::SortPairs(
       nullptr, sort_pair_workspace_size, int64_nullptr, int64_nullptr, uint32_nullptr,
-      uint32_nullptr, config_.cloud_capacity_, 0, 64, nullptr));
+      uint32_nullptr, capacity, 0, 64, nullptr));
   CHECK_CUDA_ERROR(
     cub::DeviceScan::InclusiveSum(
-      nullptr, inclusive_sum_workspace_size, uint32_nullptr, uint32_nullptr,
-      config_.cloud_capacity_));
+      nullptr, inclusive_sum_workspace_size, uint32_nullptr, uint32_nullptr, capacity));
   CHECK_CUDA_ERROR(
     cub::DeviceAdjacentDifference::SubtractLeftCopy(
-      nullptr, adjacent_difference_workspace_size, int64_nullptr, uint32_nullptr,
-      config_.cloud_capacity_, NotEqual{}));
-
-  generate_feature_workspace_size_ = std::max(
+      nullptr, adjacent_difference_workspace_size, int64_nullptr, uint32_nullptr, capacity,
+      NotEqual{}));
+  generate_voxels_workspace_size_ = std::max(
     {sort_pair_workspace_size, inclusive_sum_workspace_size, adjacent_difference_workspace_size});
-  generate_feature_workspace_d_ =
-    autoware::cuda_utils::make_unique<std::uint8_t[]>(generate_feature_workspace_size_);
+  generate_voxels_workspace_d_ =
+    autoware::cuda_utils::make_unique<std::uint8_t[]>(generate_voxels_workspace_size_);
 
   num_cropped_points_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
+  num_cropped_current_points_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
   num_unique_points_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
 
   const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
@@ -126,7 +121,6 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
     cudaEventCreateWithFlags(&num_cropped_points_copy_event_, cudaEventDisableTiming));
   CHECK_CUDA_ERROR(
     cudaEventCreateWithFlags(&num_unique_points_copy_event_, cudaEventDisableTiming));
-
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
@@ -140,100 +134,57 @@ PreprocessCuda::~PreprocessCuda()
   }
 }
 
-template <typename PointT>
-__global__ void points2FeaturesKernel(
-  const PointT * __restrict__ input_points, std::size_t points_size,
-  float4 * __restrict__ output_points)
-{
-  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= points_size) {
-    return;
-  }
-
-  const PointT & input_point = input_points[idx];
-  float4 & output_point = output_points[idx];
-  output_point.x = input_point.x;
-  output_point.y = input_point.y;
-  output_point.z = input_point.z;
-  output_point.w = static_cast<float>(input_point.intensity) / 255.f;
-}
-
-template <>
-__global__ void points2FeaturesKernel<CloudPointTypeXYZI>(
-  const CloudPointTypeXYZI * __restrict__ input_points, std::size_t points_size,
-  float4 * __restrict__ output_points)
-{
-  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= points_size) {
-    return;
-  }
-
-  const auto & input_point = input_points[idx];
-  auto & output_point = output_points[idx];
-  output_point.x = input_point.x;
-  output_point.y = input_point.y;
-  output_point.z = input_point.z;
-  output_point.w = input_point.intensity;
-}
-
-template <>
-__global__ void points2FeaturesKernel<CloudPointTypeXYZIRADRT>(
-  const CloudPointTypeXYZIRADRT * __restrict__ input_points, std::size_t points_size,
-  float4 * __restrict__ output_points)
-{
-  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= points_size) {
-    return;
-  }
-
-  const auto & input_point = input_points[idx];
-  auto & output_point = output_points[idx];
-  output_point.x = input_point.x;
-  output_point.y = input_point.y;
-  output_point.z = input_point.z;
-  output_point.w = input_point.intensity;
-}
-
+/**
+ * @brief Marks the densified rows the network consumes.
+ *
+ * Out-of-range rows are dropped. Sweep rows (non-zero time lag) within the close radius of the
+ * current lidar origin are ego ghosts left behind by ego motion; they are dropped like the
+ * training loader's remove_close. Current-frame rows near the origin stay.
+ */
 __global__ void cropKernel(
-  float4 * __restrict__ points, std::uint32_t * __restrict__ mask, int num_points, float min_x,
-  float min_y, float min_z, float max_x, float max_y, float max_z)
+  const float * __restrict__ points, std::uint32_t * __restrict__ mask, std::size_t num_points,
+  std::int64_t num_features, float min_x, float min_y, float min_z, float max_x, float max_y,
+  float max_z)
 {
-  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= num_points) {
     return;
   }
-  const float & x = points[idx].x;
-  const float & y = points[idx].y;
-  const float & z = points[idx].z;
-
-  mask[idx] = x >= min_x && x < max_x && y >= min_y && y < max_y && z >= min_z && z < max_z;
+  const float * point = &points[idx * num_features];
+  const float x = point[0];
+  const float y = point[1];
+  const float z = point[2];
+  // NaN coordinates mark ego ghosts poisoned by the sweep kernel; they fail every
+  // comparison and drop out here together with the out-of-range points.
+  const bool in_range =
+    x >= min_x && x < max_x && y >= min_y && y < max_y && z >= min_z && z < max_z;
+  mask[idx] = in_range;
 }
 
+/// Compacts the flagged elements of a typed array, preserving their order.
 template <typename scalar_t, typename mask_t>
 __global__ void extractIndicesKernel(
-  const scalar_t * __restrict__ input_data, mask_t * __restrict__ masks,
-  mask_t * __restrict__ indices, scalar_t * __restrict__ output_data, int num_points)
+  const scalar_t * __restrict__ input_data, const mask_t * __restrict__ masks,
+  const mask_t * __restrict__ indices, scalar_t * __restrict__ output_data, std::size_t num_points)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx < num_points && masks[idx] == 1) {
     output_data[indices[idx] - 1] = input_data[idx];
   }
 }
 
-template <typename scalar_t, typename mask_t>
-__global__ void extractIndicesKernel(
-  const scalar_t * __restrict__ input_data, mask_t * __restrict__ masks,
-  mask_t * __restrict__ indices1, mask_t * __restrict__ indices2,
-  scalar_t * __restrict__ output_data, int num_points, int max_num_voxels)
+/// Compacts the flagged feature rows, preserving their order.
+template <typename mask_t>
+__global__ void extractFeatureRowsKernel(
+  const float * __restrict__ input_data, const mask_t * __restrict__ masks,
+  const mask_t * __restrict__ indices, float * __restrict__ output_data, std::size_t num_points,
+  std::int64_t num_features)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx < num_points && masks[idx] == 1) {
-    // indices1 is a 1-based unique-voxel prefix-sum id. Scattered clouds can produce more unique
-    // voxels than max_num_voxels; drop the overflow here (mirrors the host-side clip in
-    // PTv3TRT::preProcess) instead of writing past the max_num_voxels-sized output buffer.
-    const auto out_index = static_cast<std::int64_t>(indices1[idx]) - 1;
-    if (out_index < max_num_voxels) {
-      output_data[out_index] = input_data[indices2[idx]];
+    const auto out_index = static_cast<std::size_t>(indices[idx] - 1);
+    for (std::int64_t feature = 0; feature < num_features; ++feature) {
+      output_data[out_index * num_features + feature] = input_data[idx * num_features + feature];
     }
   }
 }
@@ -241,14 +192,80 @@ __global__ void extractIndicesKernel(
 template <typename mask_t>
 __global__ void scatterInverseMapKernel(
   const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ sorted_code_indices,
-  std::int64_t * __restrict__ inverse_map, int num_points)
+  std::int64_t * __restrict__ inverse_map, std::size_t num_points)
 {
-  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= num_points) {
     return;
   }
-
   inverse_map[sorted_code_indices[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
+}
+
+/// Records where each voxel's run of sorted points starts.
+template <typename mask_t>
+__global__ void scatterVoxelStartKernel(
+  const mask_t * __restrict__ unique_mask, const mask_t * __restrict__ unique_indices,
+  mask_t * __restrict__ voxel_start, std::size_t num_points)
+{
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= num_points || unique_mask[idx] == 0) {
+    return;
+  }
+  voxel_start[unique_indices[idx] - 1] = static_cast<mask_t>(idx);
+}
+
+/**
+ * @brief Gathers the first `max_points_per_voxel` points of every voxel into its padded slots.
+ *
+ * Points are visited in sorted order, which is stable with respect to the cropped order, so the
+ * leading slots hold the earliest rows (current frame before sweeps), exactly like the
+ * training-time voxelizer. Voxels beyond `max_num_voxels` are dropped, mirroring the host-side
+ * clip.
+ */
+template <typename mask_t>
+__global__ void fillPaddedVoxelsKernel(
+  const float * __restrict__ cropped_points, const mask_t * __restrict__ sorted_code_indices,
+  const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ voxel_start,
+  std::size_t num_points, std::int64_t num_features, std::int64_t max_points_per_voxel,
+  std::int64_t max_num_voxels, float * __restrict__ voxels)
+{
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= num_points) {
+    return;
+  }
+  const auto voxel_index = static_cast<std::int64_t>(unique_indices[idx]) - 1;
+  if (voxel_index >= max_num_voxels) {
+    return;
+  }
+  const auto slot = static_cast<std::int64_t>(idx - voxel_start[voxel_index]);
+  if (slot >= max_points_per_voxel) {
+    return;
+  }
+  const float * point =
+    &cropped_points[static_cast<std::size_t>(sorted_code_indices[idx]) * num_features];
+  float * output = &voxels[(voxel_index * max_points_per_voxel + slot) * num_features];
+  for (std::int64_t feature = 0; feature < num_features; ++feature) {
+    output[feature] = point[feature];
+  }
+}
+
+/// Counts the valid points per voxel, saturating at `max_points_per_voxel`.
+template <typename mask_t>
+__global__ void countVoxelPointsKernel(
+  const mask_t * __restrict__ voxel_start, std::size_t num_voxels, std::size_t num_unique_voxels,
+  std::size_t num_points, std::int64_t max_points_per_voxel,
+  std::int32_t * __restrict__ num_points_per_voxel)
+{
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= num_voxels) {
+    return;
+  }
+  const auto begin = static_cast<std::size_t>(voxel_start[idx]);
+  const auto end =
+    idx + 1 < num_unique_voxels ? static_cast<std::size_t>(voxel_start[idx + 1]) : num_points;
+  const auto count = static_cast<std::int64_t>(end - begin);
+  num_points_per_voxel[idx] =
+    static_cast<std::int32_t>(count < max_points_per_voxel ? count : max_points_per_voxel);
 }
 
 /**
@@ -285,7 +302,9 @@ __device__ inline std::int64_t serializeCoord(
  * @brief Maps a point to its grid coordinate. Single helper so the voxelization key and the
  * serialization codes always place a point in the same cell.
  *
- * @param point Point position; only x, y and z are read.
+ * @param x Point position on the x axis.
+ * @param y Point position on the y axis.
+ * @param z Point position on the z axis.
  * @param voxel_size_x Voxel edge length on the x axis.
  * @param voxel_size_y Voxel edge length on the y axis.
  * @param voxel_size_z Voxel edge length on the z axis.
@@ -295,14 +314,14 @@ __device__ inline std::int64_t serializeCoord(
  * @return The grid coordinate.
  */
 __device__ inline int3 gridCoord(
-  const float4 & point, const float voxel_size_x, const float voxel_size_y,
+  const float x, const float y, const float z, const float voxel_size_x, const float voxel_size_y,
   const float voxel_size_z, const std::int32_t min_x, const std::int32_t min_y,
   const std::int32_t min_z)
 {
   return make_int3(
-    static_cast<std::int32_t>(std::floor(point.x / voxel_size_x) - min_x),
-    static_cast<std::int32_t>(std::floor(point.y / voxel_size_y) - min_y),
-    static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z));
+    static_cast<std::int32_t>(std::floor(x / voxel_size_x) - min_x),
+    static_cast<std::int32_t>(std::floor(y / voxel_size_y) - min_y),
+    static_cast<std::int32_t>(std::floor(z / voxel_size_z) - min_z));
 }
 
 /**
@@ -310,50 +329,43 @@ __device__ inline int3 gridCoord(
  *
  * The code is unique per grid cell, so sorting by it deduplicates voxels and leaves them in
  * order-0 serialization order.
- *
- * @param points Input points.
- * @param codes Output code per point.
- * @param num_points Number of points.
- * @param voxel_size_x Voxel edge length on the x axis.
- * @param voxel_size_y Voxel edge length on the y axis.
- * @param voxel_size_z Voxel edge length on the z axis.
- * @param min_x Grid origin on the x axis, in cells.
- * @param min_y Grid origin on the y axis, in cells.
- * @param min_z Grid origin on the z axis, in cells.
- * @param depth Serialization depth: bits per axis in the code.
  */
 __global__ void voxelizationCodeKernel(
-  const float4 * __restrict__ points, std::int64_t * __restrict__ codes, int num_points,
-  float voxel_size_x, float voxel_size_y, float voxel_size_z, std::int32_t min_x,
-  std::int32_t min_y, std::int32_t min_z, int depth)
+  const float * __restrict__ points, std::int64_t * __restrict__ codes, std::size_t num_points,
+  std::int64_t num_features, float voxel_size_x, float voxel_size_y, float voxel_size_z,
+  std::int32_t min_x, std::int32_t min_y, std::int32_t min_z, int depth)
 {
-  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= num_points) {
     return;
   }
-
-  const auto coord =
-    gridCoord(points[idx], voxel_size_x, voxel_size_y, voxel_size_z, min_x, min_y, min_z);
+  const float * point = &points[idx * num_features];
+  const auto coord = gridCoord(
+    point[0], point[1], point[2], voxel_size_x, voxel_size_y, voxel_size_z, min_x, min_y, min_z);
   codes[idx] = serializeCoord(coord.x, coord.y, coord.z, depth, false);
 }
 
+/**
+ * @brief Derives every voxel's grid coordinate and serialized codes from its first padded point.
+ *
+ * Slot 0 is always populated: a voxel exists because at least one point fell into it.
+ */
 __global__ void computeGridCoordsAndSerializationKernel(
-  const float4 * __restrict__ points, int3 * __restrict__ coords, std::int64_t * __restrict__ codes,
-  int num_points, float voxel_size_x, float voxel_size_y, float voxel_size_z, std::int32_t min_x,
-  std::int32_t min_y, std::int32_t min_z, int depth)
+  const float * __restrict__ voxels, std::int64_t row_stride, int3 * __restrict__ coords,
+  std::int64_t * __restrict__ codes, std::size_t num_voxels, float voxel_size_x, float voxel_size_y,
+  float voxel_size_z, std::int32_t min_x, std::int32_t min_y, std::int32_t min_z, int depth)
 {
   static_assert(sizeof(int3) == sizeof(std::int32_t) * 3, "int3 must be 12 bytes");
-  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
+  const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= num_voxels) {
     return;
   }
-
-  const auto coord =
-    gridCoord(points[idx], voxel_size_x, voxel_size_y, voxel_size_z, min_x, min_y, min_z);
+  const float * point = &voxels[idx * row_stride];
+  const auto coord = gridCoord(
+    point[0], point[1], point[2], voxel_size_x, voxel_size_y, voxel_size_z, min_x, min_y, min_z);
   coords[idx] = coord;
-
   codes[idx] = serializeCoord(coord.x, coord.y, coord.z, depth, false);
-  codes[idx + num_points] = serializeCoord(coord.x, coord.y, coord.z, depth, true);
+  codes[idx + num_voxels] = serializeCoord(coord.x, coord.y, coord.z, depth, true);
 }
 
 __global__ void setInitialStageCountKernel(
@@ -690,139 +702,55 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   }
 }
 
-std::size_t PreprocessCuda::generateFeatures(
-  const void * input_data, CloudFormat input_format, unsigned int num_points,
-  float * voxel_features, std::int32_t * voxel_coords, std::int64_t * serialized_code,
-  void * compact_points, float * reconstruction_features, void * cropped_source_points,
-  std::int64_t * inverse_map, std::size_t * output_num_cropped_points)
+std::size_t PreprocessCuda::generateVoxels(
+  const float * points, const std::size_t num_points, const std::size_t num_current_points,
+  float * voxels, std::int32_t * num_points_per_voxel, std::int32_t * voxel_coords,
+  std::int64_t * serialized_code, std::int64_t * inverse_map,
+  std::size_t * output_num_cropped_points, std::size_t * output_num_cropped_current_points)
 {
+  if (num_current_points == 0 || num_current_points > num_points) {
+    throw std::runtime_error(
+      "The current frame must form a non-empty leading block of the densified cloud.");
+  }
+  if (num_points > static_cast<std::size_t>(config_.densified_cloud_capacity_)) {
+    throw std::runtime_error("The densified cloud exceeds the preprocessing capacity.");
+  }
+
+  const auto num_features = config_.num_point_feature_size_;
   const auto num_blocks = divup(num_points, config_.threads_per_block_);
-  switch (input_format) {
-    case CloudFormat::XYZIRCAEDT:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZIRCAEDT *>(input_data), num_points,
-        reinterpret_cast<float4 *>(points_d_.get()));
-      break;
-    case CloudFormat::XYZIRADRT:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZIRADRT *>(input_data), num_points,
-        reinterpret_cast<float4 *>(points_d_.get()));
-      break;
-    case CloudFormat::XYZIRC:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZIRC *>(input_data), num_points,
-        reinterpret_cast<float4 *>(points_d_.get()));
-      break;
-    case CloudFormat::XYZI:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZI *>(input_data), num_points,
-        reinterpret_cast<float4 *>(points_d_.get()));
-      break;
-    default:
-      throw std::runtime_error("Unsupported input point cloud format.");
-  }
-
-  // FULL reconstruction preserves original input order, so copy features before range crop.
-  if (
-    config_.source_reconstruction_ == SourceReconstruction::FULL &&
-    reconstruction_features != nullptr) {
-    cudaMemcpyAsync(
-      reconstruction_features, points_d_.get(),
-      num_points * config_.num_point_feature_size_ * sizeof(float), cudaMemcpyDeviceToDevice,
-      stream_);
-  }
-
   cropKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), num_points,
-    config_.min_x_range_, config_.min_y_range_, config_.min_z_range_, config_.max_x_range_,
-    config_.max_y_range_, config_.max_z_range_);
-
+    points, crop_mask_d_.get(), num_points, num_features, config_.min_x_range_,
+    config_.min_y_range_, config_.min_z_range_, config_.max_x_range_, config_.max_y_range_,
+    config_.max_z_range_);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
   CHECK_CUDA_ERROR(
     cub::DeviceScan::InclusiveSum(
-      generate_feature_workspace_d_.get(), generate_feature_workspace_size_, crop_mask_d_.get(),
+      generate_voxels_workspace_d_.get(), generate_voxels_workspace_size_, crop_mask_d_.get(),
       crop_indices_d_.get(), num_points, stream_));
-
   *num_cropped_points_ = 0;
-
+  *num_cropped_current_points_ = 0;
   cudaMemcpyAsync(
     num_cropped_points_.get(), crop_indices_d_.get() + num_points - 1, sizeof(std::uint32_t),
     cudaMemcpyDeviceToHost, stream_);
-  CHECK_CUDA_ERROR(
-    cudaEventRecord(num_cropped_points_copy_event_, stream_));  // Lazy sync. use later
+  cudaMemcpyAsync(
+    num_cropped_current_points_.get(), crop_indices_d_.get() + num_current_points - 1,
+    sizeof(std::uint32_t), cudaMemcpyDeviceToHost, stream_);
+  CHECK_CUDA_ERROR(cudaEventRecord(num_cropped_points_copy_event_, stream_));
 
-  extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
-    reinterpret_cast<float4 *>(cropped_points_d_.get()), num_points);
-
-  // PARTIAL reconstruction publishes only in-range points, so compact features after range crop.
-  if (
-    config_.source_reconstruction_ == SourceReconstruction::PARTIAL &&
-    reconstruction_features != nullptr) {
-    extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-      reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
-      reinterpret_cast<float4 *>(reconstruction_features), num_points);
-  }
-
-  switch (input_format) {
-    case CloudFormat::XYZIRCAEDT:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZIRCAEDT *>(input_data), crop_mask_d_.get(),
-        crop_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZIRCAEDT *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_source_points), num_points);
-      }
-      break;
-    case CloudFormat::XYZIRADRT:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZIRADRT *>(input_data), crop_mask_d_.get(),
-        crop_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZIRADRT *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(), reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_source_points),
-          num_points);
-      }
-      break;
-    case CloudFormat::XYZIRC:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZIRC *>(input_data), crop_mask_d_.get(),
-        crop_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZIRC *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(), reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_source_points),
-          num_points);
-      }
-      break;
-    case CloudFormat::XYZI:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-        static_cast<const CloudPointTypeXYZI *>(input_data), crop_mask_d_.get(),
-        crop_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZI *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(), reinterpret_cast<CloudPointTypeXYZI *>(cropped_source_points),
-          num_points);
-      }
-      break;
-    default:
-      throw std::runtime_error("Unsupported input point cloud format.");
-  }
+  extractFeatureRowsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    points, crop_mask_d_.get(), crop_indices_d_.get(), cropped_points_d_.get(), num_points,
+    num_features);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   CHECK_CUDA_ERROR(cudaEventSynchronize(num_cropped_points_copy_event_));
-
   if (*num_cropped_points_ == 0) {
     *output_num_cropped_points = 0;
+    *output_num_cropped_current_points = 0;
     return 0;
   }
   *output_num_cropped_points = *num_cropped_points_;
+  *output_num_cropped_current_points = *num_cropped_current_points_;
+  const auto num_cropped_points = static_cast<std::size_t>(*num_cropped_points_);
 
   const auto coord_min_x =
     static_cast<std::int32_t>(std::floor(config_.min_x_range_ / config_.voxel_x_size_));
@@ -831,106 +759,113 @@ std::size_t PreprocessCuda::generateFeatures(
   const auto coord_min_z =
     static_cast<std::int32_t>(std::floor(config_.min_z_range_ / config_.voxel_z_size_));
 
-  const auto num_cropped_blocks = divup(*num_cropped_points_, config_.threads_per_block_);
-
+  const auto num_cropped_blocks = divup(num_cropped_points, config_.threads_per_block_);
   voxelizationCodeKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<float4 *>(cropped_points_d_.get()), codes_d_.get(), *num_cropped_points_,
+    cropped_points_d_.get(), codes_d_.get(), num_cropped_points, num_features,
     config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y,
     coord_min_z, config_.serialization_depth_);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-  // This sort both groups duplicates for the compaction below and leaves the voxels in order-0
-  // serialization order, which generateSerializedPoolingMetadata requires.
+  // This stable sort groups the points of every voxel in cropped order for the compaction below
+  // and leaves the voxels in order-0 serialization order, which
+  // generateSerializedPoolingMetadata requires.
   CHECK_CUDA_ERROR(
     cub::DeviceRadixSort::SortPairs(
-      reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
-      generate_feature_workspace_size_, codes_d_.get(), sorted_codes_d_.get(),
-      code_indices_d_.get(), sorted_code_indices_d_.get(), *num_cropped_points_, 0,
-      code_sort_end_bit_, stream_));
-
+      reinterpret_cast<void *>(generate_voxels_workspace_d_.get()), generate_voxels_workspace_size_,
+      codes_d_.get(), sorted_codes_d_.get(), code_indices_d_.get(), sorted_code_indices_d_.get(),
+      num_cropped_points, 0, code_sort_end_bit_, stream_));
   CHECK_CUDA_ERROR(
     cub::DeviceAdjacentDifference::SubtractLeftCopy(
-      generate_feature_workspace_d_.get(), generate_feature_workspace_size_, sorted_codes_d_.get(),
-      unique_mask_d_.get(), *num_cropped_points_, NotEqual{}, stream_));
-
+      generate_voxels_workspace_d_.get(), generate_voxels_workspace_size_, sorted_codes_d_.get(),
+      unique_mask_d_.get(), num_cropped_points, NotEqual{}, stream_));
   std::uint32_t one = 1;
   cudaMemcpyAsync(
     unique_mask_d_.get(), &one, sizeof(std::uint32_t), cudaMemcpyHostToDevice, stream_);
-
   CHECK_CUDA_ERROR(
     cub::DeviceScan::InclusiveSum(
-      generate_feature_workspace_d_.get(), generate_feature_workspace_size_, unique_mask_d_.get(),
-      unique_indices_d_.get(), *num_cropped_points_, stream_));
-
+      generate_voxels_workspace_d_.get(), generate_voxels_workspace_size_, unique_mask_d_.get(),
+      unique_indices_d_.get(), num_cropped_points, stream_));
   *num_unique_points_ = 0;
   cudaMemcpyAsync(
-    num_unique_points_.get(), unique_indices_d_.get() + *num_cropped_points_ - 1,
+    num_unique_points_.get(), unique_indices_d_.get() + num_cropped_points - 1,
     sizeof(std::uint32_t), cudaMemcpyDeviceToHost, stream_);
-  CHECK_CUDA_ERROR(
-    cudaEventRecord(num_unique_points_copy_event_, stream_));  // Lazy sync. use later
+  CHECK_CUDA_ERROR(cudaEventRecord(num_unique_points_copy_event_, stream_));
+  CHECK_CUDA_ERROR(cudaEventSynchronize(num_unique_points_copy_event_));
 
-  extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask_d_.get(),
-    unique_indices_d_.get(), sorted_code_indices_d_.get(),
-    reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_,
-    static_cast<int>(config_.max_num_voxels_));
+  // Only the first max_num_voxels voxels fit the output buffers. The true count is still returned
+  // so the caller logs the "over the limit" warning and clips consistently.
+  const auto num_unique_voxels = static_cast<std::size_t>(*num_unique_points_);
+  const auto num_voxels =
+    std::min(num_unique_voxels, static_cast<std::size_t>(config_.max_num_voxels_));
+  const auto max_points_per_voxel = config_.max_points_per_voxel_;
+
+  // Padding slots must read as zero, exactly like the training-time voxelizer's padding.
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    voxels, 0, num_voxels * max_points_per_voxel * num_features * sizeof(float), stream_));
+  scatterVoxelStartKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    unique_mask_d_.get(), unique_indices_d_.get(), voxel_start_d_.get(), num_cropped_points);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  fillPaddedVoxelsKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    cropped_points_d_.get(), sorted_code_indices_d_.get(), unique_indices_d_.get(),
+    voxel_start_d_.get(), num_cropped_points, num_features, max_points_per_voxel,
+    config_.max_num_voxels_, voxels);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+  const auto num_voxel_blocks = divup(num_voxels, config_.threads_per_block_);
+  countVoxelPointsKernel<<<num_voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+    voxel_start_d_.get(), num_voxels, num_unique_voxels, num_cropped_points, max_points_per_voxel,
+    num_points_per_voxel);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  computeGridCoordsAndSerializationKernel<<<
+    num_voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
+    voxels, max_points_per_voxel * num_features, reinterpret_cast<int3 *>(voxel_coords),
+    serialized_code, num_voxels, config_.voxel_x_size_, config_.voxel_y_size_,
+    config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z, config_.serialization_depth_);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
   if (inverse_map != nullptr) {
     scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-      unique_indices_d_.get(), sorted_code_indices_d_.get(), inverse_map, *num_cropped_points_);
+      unique_indices_d_.get(), sorted_code_indices_d_.get(), inverse_map, num_cropped_points);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
   }
 
+  return num_unique_voxels;
+}
+
+void PreprocessCuda::extractCurrentSourcePoints(
+  const void * current_points, const CloudFormat input_format, const std::size_t num_current_points,
+  void * output_points)
+{
+  const auto num_blocks = divup(num_current_points, config_.threads_per_block_);
   switch (input_format) {
     case CloudFormat::XYZIRCAEDT:
-      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
-        unique_mask_d_.get(), unique_indices_d_.get(), sorted_code_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_,
-        static_cast<int>(config_.max_num_voxels_));
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+        static_cast<const CloudPointTypeXYZIRCAEDT *>(current_points), crop_mask_d_.get(),
+        crop_indices_d_.get(), static_cast<CloudPointTypeXYZIRCAEDT *>(output_points),
+        num_current_points);
       break;
     case CloudFormat::XYZIRADRT:
-      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
-        unique_mask_d_.get(), unique_indices_d_.get(), sorted_code_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_,
-        static_cast<int>(config_.max_num_voxels_));
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+        static_cast<const CloudPointTypeXYZIRADRT *>(current_points), crop_mask_d_.get(),
+        crop_indices_d_.get(), static_cast<CloudPointTypeXYZIRADRT *>(output_points),
+        num_current_points);
       break;
     case CloudFormat::XYZIRC:
-      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
-        unique_mask_d_.get(), unique_indices_d_.get(), sorted_code_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_,
-        static_cast<int>(config_.max_num_voxels_));
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+        static_cast<const CloudPointTypeXYZIRC *>(current_points), crop_mask_d_.get(),
+        crop_indices_d_.get(), static_cast<CloudPointTypeXYZIRC *>(output_points),
+        num_current_points);
       break;
     case CloudFormat::XYZI:
-      extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()), unique_mask_d_.get(),
-        unique_indices_d_.get(), sorted_code_indices_d_.get(),
-        reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_,
-        static_cast<int>(config_.max_num_voxels_));
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+        static_cast<const CloudPointTypeXYZI *>(current_points), crop_mask_d_.get(),
+        crop_indices_d_.get(), static_cast<CloudPointTypeXYZI *>(output_points),
+        num_current_points);
       break;
     default:
       throw std::runtime_error("Unsupported input point cloud format.");
   }
-
-  CHECK_CUDA_ERROR(cudaEventSynchronize(num_unique_points_copy_event_));
-  const auto num_unique_points = static_cast<std::uint64_t>(*num_unique_points_);
-
-  // The extract kernels above dropped any voxels beyond max_num_voxels, so only the first
-  // max_num_voxels entries of voxel_features/voxel_coords/serialized_code are valid. Cap the count
-  // fed to the grid-coord kernel to that same limit; writing more would overrun those buffers
-  // (which are sized max_num_voxels) exactly as the unguarded extract did. The true count is still
-  // returned so the caller logs the "over the limit" warning and clips consistently.
-  const auto max_num_voxels_u = static_cast<std::uint64_t>(config_.max_num_voxels_);
-  const auto num_voxels_capped =
-    num_unique_points < max_num_voxels_u ? num_unique_points : max_num_voxels_u;
-
-  computeGridCoordsAndSerializationKernel<<<
-    num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<float4 *>(voxel_features), reinterpret_cast<int3 *>(voxel_coords),
-    serialized_code, static_cast<int>(num_voxels_capped), config_.voxel_x_size_,
-    config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z,
-    config_.serialization_depth_);
-
-  return num_unique_points;
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
 }
 
 }  // namespace autoware::ptv3

@@ -291,6 +291,15 @@
           "description": "Point cloud buffer capacity. Must be at least the maximum expected number of points per frame.",
           "minimum": 1
         },
+        "densification_world_frame_id": {
+          "type": "string",
+          "description": "World frame used to compensate the ego motion of cached sweeps."
+        },
+        "densification_num_past_frames": {
+          "type": "integer",
+          "description": "Number of past lidar frames concatenated with the current frame as network input.",
+          "minimum": 0
+        },
         "encoder": {
           "$ref": "#/definitions/encoder"
         },
@@ -305,6 +314,8 @@
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
+        "densification_world_frame_id",
+        "densification_num_past_frames",
         "encoder",
         "segmentation3d",
         "detection3d"
