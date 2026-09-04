@@ -135,4 +135,27 @@ struct UnmountDeviceInfo
  */
 typedef std::map<std::string, HddInfo> HddInfoList;
 
+// Keep this helper inline in the public header so the standalone hdd_reader executable and
+// its unit tests share the same validation logic without depending on a library target.
+inline bool validate_unmount_device_name(const std::string & part_device)
+{
+  if (part_device.empty()) {
+    return false;
+  }
+
+  if (part_device.rfind("/dev/", 0) != 0) {
+    return false;
+  }
+
+  const std::string forbidden_chars = ";|&<>$`\\\n\r\t \"'";
+  if (part_device.find_first_of(forbidden_chars) != std::string::npos) {
+    return false;
+  }
+
+  return part_device.find("/dev/") == 0 &&
+         (part_device.find("/dev/sd") == 0 || part_device.find("/dev/nvme") == 0 ||
+          part_device.find("/dev/mmcblk") == 0 || part_device.find("/dev/mapper/") == 0 ||
+          part_device.find("/dev/dm-") == 0);
+}
+
 #endif  // SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_

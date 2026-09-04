@@ -9,6 +9,7 @@
   "ignoreRegExpList": [],
   "words": [
     "blasfeo",
+    "cryptroot",
     "CUDA_HOSTDEV",
     "expl",
     "HPIPM",
@@ -23,6 +24,8 @@
     "libacados",
     "libtensorrt",
     "lichtblick",
+    "LUKS",
+    "mmcblk",
     "Psidot",
     "psidot",
     "Psi̇",
