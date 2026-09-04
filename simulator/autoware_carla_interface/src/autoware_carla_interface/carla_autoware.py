@@ -389,6 +389,11 @@ class InitializeInterface(object):
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
 
+        # World, map and ego are now all confirmed loaded: resolve the map
+        # origin from the final map and apply any initial pose that arrived
+        # (and was buffered) during startup.
+        self.interface.on_world_ready()
+
         if self.use_traffic_manager:
             self._setup_traffic_manager(client)
 

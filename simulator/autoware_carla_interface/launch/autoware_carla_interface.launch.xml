@@ -23,8 +23,16 @@
     <arg name="min_positive_throttle" default="0.0" description="Minimum throttle applied while accelerating from (near) standstill; heavy CARLA vehicles never start on small actuation-map throttle"/>
     <arg name="min_positive_throttle_speed_threshold" default="0.8" description="Apply min_positive_throttle only below this speed [m/s]; negative = always"/>
     <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
-    <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
-    <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
+    <arg
+      name="map_origin_x"
+      default="0.0"
+      description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 = auto-derive from the OpenDRIVE geoReference for georeferenced maps; stays 0.0 for stock CARLA towns)"
+    />
+    <arg
+      name="map_origin_y"
+      default="0.0"
+      description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 = auto-derive from the OpenDRIVE geoReference for georeferenced maps; stays 0.0 for stock CARLA towns)"
+    />
 
     <arg
       name="carla_map"
