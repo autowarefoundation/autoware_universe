@@ -15,6 +15,9 @@
 import math
 import threading
 
+from autoware_perception_msgs.msg import TrafficLightElement
+from autoware_perception_msgs.msg import TrafficLightGroup
+from autoware_perception_msgs.msg import TrafficLightGroupArray
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
@@ -56,6 +59,8 @@ from .modules.carla_utils import create_cloud
 from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
+from .modules.traffic_light_matcher import load_map_traffic_lights
+from .modules.traffic_light_matcher import match_traffic_lights
 
 
 def _parse_geo_reference(xodr_xml: str):
@@ -133,6 +138,37 @@ class carla_ros2_interface(object):
             # default so the supported 0.9.15 environment, where bodies never
             # sleep, keeps its unmodified launch dynamics.
             "wake_sleeping_physics": (rclpy.Parameter.Type.BOOL, False),
+            # Traffic-light bridging parameters, grouped under the
+            # "traffic_light." namespace so they stay together in `ros2 param list`.
+            #
+            # Publish the CARLA server's traffic-light states as an Autoware
+            # TrafficLightGroupArray on
+            # /perception/traffic_light_recognition/traffic_signals, bypassing
+            # camera-based recognition.
+            "traffic_light.publish": (rclpy.Parameter.Type.BOOL, False),
+            # Set every CARLA traffic light to green and freeze it there at
+            # startup (handled in carla_autoware). Useful for camera-less
+            # closed-loop runs that have no traffic-light recognition and would
+            # otherwise hold at every signalized stop line.
+            "traffic_light.force_green": (rclpy.Parameter.Type.BOOL, False),
+            # Path to the lanelet2 map (.osm). When set, each CARLA traffic
+            # light is matched by position to the map's traffic-light heads and
+            # its state is published under the matched regulatory-element
+            # (traffic_light_group) ids. Empty falls back to using the CARLA
+            # OpenDRIVE signal id directly as the group id.
+            "traffic_light.map_path": (rclpy.Parameter.Type.STRING, ""),
+            # Maximum head-to-head distance (m) accepted when matching a CARLA
+            # traffic light to a lanelet2 traffic-light head.
+            "traffic_light.match_distance": (rclpy.Parameter.Type.DOUBLE, 5.0),
+            # A position match is rejected as ambiguous when the closest head
+            # that resolves to a different regulatory element is nearly as close
+            # as the winner (nearest > ratio * second). Lower is stricter.
+            "traffic_light.match_ratio": (rclpy.Parameter.Type.DOUBLE, 0.6),
+            # Optional override, formatted "opendrive_id:group_id,...". Pins a
+            # CARLA OpenDRIVE signal id to an Autoware group id, taking
+            # precedence over position matching (use it to recover the few
+            # lights the matcher reports as ambiguous or unmatched).
+            "traffic_light.id_map": (rclpy.Parameter.Type.STRING, ""),
         }
 
         self.param_values = {}
@@ -189,6 +225,12 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state = self.ros2_node.create_publisher(
             HazardLightsReport, "/vehicle/status/hazard_lights_status", 1
         )
+        if self.param_values.get("traffic_light.publish", False):
+            self.pub_traffic_signals = self.ros2_node.create_publisher(
+                TrafficLightGroupArray,
+                "/perception/traffic_light_recognition/traffic_signals",
+                1,
+            )
 
     def _initialize_subscriptions(self):
         """Initialize all ROS 2 subscriptions."""
@@ -350,7 +392,15 @@ class carla_ros2_interface(object):
         self.pub_camera_info = {}
         self.pub_lidar = {}
         self.pub_imu = None
+        self.pub_traffic_signals = None
         self.camera_info_cache = {}
+
+        # Traffic-light publishing state, resolved lazily on the first tick that
+        # publishes (the CARLA world is not populated at construction time).
+        self._traffic_light_actors = None
+        # actor id -> [Autoware traffic_light_group_id, ...] resolved by the
+        # position matcher (or the OpenDRIVE-id fallback).
+        self._traffic_light_actor_groups = None
 
         # Vehicle and control state
         self.prev_timestamp = None
@@ -1168,6 +1218,191 @@ class carla_ros2_interface(object):
         odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
         self.pub_gt_odom.publish(odom)
 
+    def _carla_light_map_point(self, actor):
+        """Return a CARLA traffic light's head position in the Autoware map frame.
+
+        Uses the mean of the actor's light-box centres (the physical light heads,
+        ``get_light_boxes()`` reports them in world coordinates) rather than the
+        actor origin, which sits at the pole base and is offset from the heads the
+        lanelet2 map records. Falls back to the actor location if no boxes exist.
+
+        The CARLA→map offset is read via :meth:`_current_map_origin` (not the raw
+        ``map_origin_x/y`` parameters) so georeferenced maps, whose origin is
+        derived from the OpenDRIVE geoReference in ``on_world_ready`` while the
+        parameters stay at their zero default, transform the heads into the same
+        frame as the lanelet2 ``local_x/local_y`` coordinates and localization.
+        """
+        try:
+            boxes = actor.get_light_boxes()
+        except RuntimeError:
+            boxes = None
+        if boxes:
+            locations = [box.location for box in boxes]
+            carla_location = carla.Location(
+                x=sum(loc.x for loc in locations) / len(locations),
+                y=sum(loc.y for loc in locations) / len(locations),
+                z=sum(loc.z for loc in locations) / len(locations),
+            )
+        else:
+            carla_location = actor.get_location()
+        origin_x, origin_y = self._current_map_origin()
+        point = carla_location_to_ros_point(carla_location, origin_x=origin_x, origin_y=origin_y)
+        return (point.x, point.y)
+
+    def _parse_traffic_light_id_override(self):
+        """Parse the "opendrive_id:group_id,..." override into {opendrive_id: group_id}."""
+        raw = str(self.param_values.get("traffic_light.id_map", "") or "").strip()
+        override = {}
+        for item in raw.split(","):
+            item = item.strip()
+            if not item:
+                continue
+            opendrive_str, group_str = item.split(":")
+            override[int(opendrive_str)] = int(group_str)
+        return override
+
+    def _actor_opendrive_id(self, actor):
+        try:
+            return int(actor.get_opendrive_id())
+        except (ValueError, RuntimeError):
+            return None
+
+    def _resolve_traffic_light_groups(self):
+        """Resolve each CARLA traffic light to its Autoware group id(s), once.
+
+        Traffic lights are static actors, so the world is queried and the mapping
+        built on the first publishing tick and reused afterwards. Resolution order
+        per light:
+
+        1. ``traffic_light.id_map`` override (keyed by OpenDRIVE signal id) wins.
+        2. Otherwise, if a lanelet2 map is provided, the light is matched to the
+           nearest map head by position; ambiguous / too-far lights are dropped and
+           reported so they can be pinned via the override instead of mis-assigned.
+        3. Otherwise (no map), the OpenDRIVE signal id is used directly as the group
+           id, matching lanelet2 maps whose regulatory-element ids preserve it.
+        """
+        world = CarlaDataProvider.get_world()
+        if world is None:
+            return
+        self._traffic_light_actors = list(world.get_actors().filter("*traffic_light*"))
+        override = self._parse_traffic_light_id_override()
+
+        assignments = {}
+        # Apply the manual override first; these lights bypass matching entirely.
+        overridden = set()
+        for actor in self._traffic_light_actors:
+            opendrive_id = self._actor_opendrive_id(actor)
+            if opendrive_id is not None and opendrive_id in override:
+                assignments[actor.id] = [override[opendrive_id]]
+                overridden.add(actor.id)
+
+        map_path = str(self.param_values.get("traffic_light.map_path", "") or "").strip()
+        to_resolve = [a for a in self._traffic_light_actors if a.id not in overridden]
+
+        if map_path:
+            map_lights = load_map_traffic_lights(map_path)
+            carla_heads = [
+                (actor.id, self._actor_opendrive_id(actor), self._carla_light_map_point(actor))
+                for actor in to_resolve
+            ]
+            result = match_traffic_lights(
+                carla_heads,
+                map_lights,
+                distance_threshold=self.param_values["traffic_light.match_distance"],
+                ambiguity_ratio=self.param_values["traffic_light.match_ratio"],
+            )
+            assignments.update(result.assignments)
+            self._log_traffic_light_match(map_lights, result, override_count=len(overridden))
+        else:
+            # No map: fall back to OpenDRIVE signal id as the group id.
+            for actor in to_resolve:
+                opendrive_id = self._actor_opendrive_id(actor)
+                if opendrive_id is not None:
+                    assignments[actor.id] = [opendrive_id]
+            self.logger.info(
+                f"Publishing {len(assignments)} CARLA traffic lights using the OpenDRIVE "
+                f"signal id as the group id (no traffic_light.map_path set)"
+            )
+
+        self._traffic_light_actor_groups = assignments
+
+    def _log_traffic_light_match(self, map_lights, result, override_count):
+        """Log a per-light match report so a human can verify or override it."""
+        from .modules.traffic_light_matcher import MatchResult
+
+        ambiguous = [e for e in result.entries if e["status"] == MatchResult.AMBIGUOUS]
+        too_far = [e for e in result.entries if e["status"] == MatchResult.TOO_FAR]
+        self.logger.info(
+            f"Traffic-light matching: {result.matched_actor_count} matched, "
+            f"{len(ambiguous)} ambiguous, {len(too_far)} too far, "
+            f"{override_count} overridden "
+            f"(map has {len(map_lights)} heads / {map_lights.group_count} groups)"
+        )
+        for entry in ambiguous:
+            self.logger.warning(
+                f"  ambiguous CARLA light (opendrive_id={entry['opendrive_id']}): nearest "
+                f"{entry['nearest']:.2f} m vs {entry['second']:.2f} m to a different signal; "
+                f"not published (pin it via traffic_light.id_map if needed)"
+            )
+        for entry in too_far:
+            self.logger.warning(
+                f"  unmatched CARLA light (opendrive_id={entry['opendrive_id']}): nearest map "
+                f"head {entry['nearest']:.2f} m away exceeds the match distance; not published"
+            )
+
+    @staticmethod
+    def _carla_state_to_autoware_color(state):
+        """Map a carla.TrafficLightState to a TrafficLightElement color."""
+        if state == carla.TrafficLightState.Red:
+            return TrafficLightElement.RED
+        if state == carla.TrafficLightState.Yellow:
+            return TrafficLightElement.AMBER
+        if state == carla.TrafficLightState.Green:
+            return TrafficLightElement.GREEN
+        return TrafficLightElement.UNKNOWN
+
+    def _publish_traffic_lights(self):
+        """Publish CARLA traffic-light states as a TrafficLightGroupArray.
+
+        No-op unless traffic_light.publish is enabled (the publisher only exists
+        then). Each CARLA light is reported as a solid circular signal whose color
+        reflects the current CARLA state, published under every regulatory-element
+        (group) id it resolved to. When traffic_light.force_green is set the lights
+        are frozen green in CARLA, so this naturally publishes green for all of them.
+        """
+        if self.pub_traffic_signals is None:
+            return
+        if self._traffic_light_actor_groups is None:
+            self._resolve_traffic_light_groups()
+        if not self._traffic_light_actor_groups:
+            return
+
+        # Aggregate by group id: several physical heads (actors) can belong to the
+        # same regulatory element, and they show the same aspect, so one element per
+        # group is emitted.
+        group_colors = {}
+        for actor in self._traffic_light_actors:
+            group_ids = self._traffic_light_actor_groups.get(actor.id)
+            if not group_ids:
+                continue
+            color = self._carla_state_to_autoware_color(actor.get_state())
+            for group_id in group_ids:
+                group_colors[group_id] = color
+
+        msg = TrafficLightGroupArray()
+        msg.stamp = self.get_msg_header(frame_id="map").stamp
+        for group_id, color in group_colors.items():
+            group = TrafficLightGroup()
+            group.traffic_light_group_id = group_id
+            element = TrafficLightElement()
+            element.color = color
+            element.shape = TrafficLightElement.CIRCLE
+            element.status = TrafficLightElement.SOLID_ON
+            element.confidence = 1.0
+            group.elements.append(element)
+            msg.traffic_light_groups.append(group)
+        self.pub_traffic_signals.publish(msg)
+
     def _publish_sensor_data(self, key, data):
         """Publish one sensor's data, dispatching on its sensor type.
 
@@ -1243,6 +1478,9 @@ class carla_ros2_interface(object):
 
         # Publish ego vehicle status
         self.ego_status()
+
+        # Publish CARLA traffic-light states (no-op unless enabled)
+        self._publish_traffic_lights()
 
         # Thread-safe read of current control command
         with self._state_lock:
