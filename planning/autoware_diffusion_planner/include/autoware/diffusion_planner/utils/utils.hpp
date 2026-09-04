@@ -171,8 +171,7 @@ struct BoundedPose
  */
 BoundedPose bound_snapped_pose(
   const Eigen::Vector2d & real_position, double real_yaw, const Eigen::Vector2d & snapped_position,
-  double snapped_yaw, double snap_strength, double max_position_error_m,
-  double max_yaw_error_rad);
+  double snapped_yaw, double snap_strength, double max_position_error_m, double max_yaw_error_rad);
 
 /**
  * @brief Computes the inverse of a 4x4 transformation matrix.

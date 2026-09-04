@@ -278,8 +278,7 @@ BoundedPose bound_snapped_pose(
 
   const double yaw_residual = std::clamp(
     snap_strength * autoware_utils_math::normalize_radian(real_yaw - snapped_yaw),
-    -max_yaw_error_rad,
-    max_yaw_error_rad);
+    -max_yaw_error_rad, max_yaw_error_rad);
 
   return BoundedPose{
     real_position - residual, autoware_utils_math::normalize_radian(real_yaw - yaw_residual)};
