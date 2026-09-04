@@ -21,7 +21,10 @@ and `label_based_euclidean_cluster`.
 
 ### label_based_euclidean_cluster
 
-`LabelBasedEuclideanCluster` converts a semantically segmented pointcloud into `DetectedObjects`.
+The label-based pipeline first validates the `PointXYZCPE` layout and filters points by semantic
+probability in `PointCloudPreprocessor`. `LabelBasedEuclideanCluster` then groups the preprocessed
+points by label, clusters object-compatible labels, and returns `DetectedObjects` together with the
+remaining non-object semantic segments.
 
 See [docs/label-based-euclidean-cluster.md](./docs/label-based-euclidean-cluster.md) for the node-specific behavior and configuration details.
 
