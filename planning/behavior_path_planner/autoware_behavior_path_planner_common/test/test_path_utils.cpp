@@ -21,7 +21,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstddef>
+#include <limits>
 #include <vector>
 
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
@@ -248,4 +250,61 @@ TEST(BehaviorPathPlanningPathUtilTest, combinePath)
 
     i++;
   }
+}
+
+TEST(BehaviorPathPlanningPathUtilTest, restoreMissingLaneIds)
+{
+  using autoware::behavior_path_planner::utils::restoreMissingLaneIds;
+  using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+
+  PathWithLaneId source;
+  source.points = {
+    [] {
+      PathPointWithLaneId point;
+      point.point.pose = createPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+      point.lane_ids = {1};
+      return point;
+    }(),
+    [] {
+      PathPointWithLaneId point;
+      point.point.pose = createPose(5.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+      point.lane_ids = {2};
+      return point;
+    }(),
+    [] {
+      PathPointWithLaneId point;
+      point.point.pose = createPose(10.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+      point.lane_ids = {3};
+      return point;
+    }(),
+  };
+
+  PathWithLaneId target;
+  target.points = {
+    [] {
+      PathPointWithLaneId point;
+      point.point.pose = createPose(0.0, 2.0, 0.0, 0.0, 0.0, 0.0);
+      point.lane_ids = {1};
+      return point;
+    }(),
+    [] {
+      PathPointWithLaneId point;
+      point.point.pose = createPose(5.0, 2.0, 0.0, 0.0, 0.0, 0.0);
+      point.lane_ids = {1};
+      return point;
+    }(),
+    [] {
+      PathPointWithLaneId point;
+      point.point.pose = createPose(10.0, 2.0, 0.0, 0.0, 0.0, 0.0);
+      point.lane_ids = {3};
+      return point;
+    }(),
+  };
+
+  restoreMissingLaneIds(target, source);
+
+  ASSERT_EQ(target.points.size(), 3U);
+  EXPECT_NE(
+    std::find(target.points.at(1).lane_ids.begin(), target.points.at(1).lane_ids.end(), 2),
+    target.points.at(1).lane_ids.end());
 }
