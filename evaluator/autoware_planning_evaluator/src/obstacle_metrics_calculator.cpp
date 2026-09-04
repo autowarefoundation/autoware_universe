@@ -207,7 +207,6 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
     bool is_obstacle_traj_no_overlapping_ego_traj = false;
 
     std::string object_uuid = metrics::utils::uuid_to_string(object.object_id);
-    ;
     // ------------------------------------------------------------------------------------------------
     // 2. roughly check if obstacle trajectory is no overlapping with ego trajectory.
 
@@ -408,31 +407,85 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
     }
 
     // ------------------------------------------------------------------------------------------------
-    // 8. get `obstacle_drac` metrics
+    // 8. Obstacle DRAC (deceleration rate to avoid a crash)
+    //
+    // Model: from evaluation time t = 0, ego moves along the reference direction with constant
+    // deceleration d (v(t) = v0 - d*t, s(t) = v0*t - 0.5*d*t^2), where v0 is the first ego
+    // trajectory point speed.
+    //
+    // Each collision sample on the obstacle path is anchored to obstacle time t2
+    // (time_from_start_s at that sample). The arc-length cap s_cap is the distance_from_start_m
+    // of the last ego waypoint before the first polygon overlap (ego_before_collision): it is a
+    // discrete proxy for "how far along the ego path ego may reach by t2 without encroaching".
+    //
+    // Required deceleration is the maximum of:
+    //   - d_vel:  enough deceleration that v(t2) <= v2 (obstacle speed projected along ego
+    //   heading).
+    //   - d_pos:  enough deceleration that s(t2) <= s_cap, using the quadratic bound while v(t2) >=
+    //   0,
+    //             otherwise the bound from stopping exactly in distance s_cap.
 
-    if (metrics_need_[Metric::obstacle_drac]) {
+    if (
+      metrics_need_[Metric::obstacle_drac] &&
+      first_ego_point.velocity_mps > parameters.stop_velocity_mps) {
       double obstacle_drac = 0.0;
       const double ego_start_vel = first_ego_point.velocity_mps;
 
       for (size_t i = 1; i < obstacle_trajectory_points_.size(); ++i) {
         const auto & obstacle_trajectory_point = obstacle_trajectory_points_[i];
-        const auto & ego_trajectory_point = ego_trajectory_points_[i];
         if (!obstacle_trajectory_point.is_collision_with_ego_trajectory) continue;
 
-        // calculate ego_end_vel at the collision point needed for deceleration:
-        //  - ego decelerate max to stop.
-        //  - consider two cases of forward and backward.
-        const double yaw_diff = tf2::getYaw(ego_trajectory_point.pose.orientation) -
+        const size_t ego_first_overlap_idx =
+          obstacle_trajectory_point.first_overlapping_ego_trajectory_index;
+
+        // Skip overlap at t = 0 (ego already at the conflicting pose).
+        if (ego_first_overlap_idx == 0) {
+          continue;
+        }
+        const auto & ego_before_collision = ego_trajectory_points_[ego_first_overlap_idx - 1];
+
+        // Target speed v2 at t2: obstacle speed projected onto ego heading at the last safe ego
+        // pose. Clamp by sign of v0 so forward and reverse driving stay consistent.
+        const double yaw_diff = tf2::getYaw(ego_before_collision.pose.orientation) -
                                 tf2::getYaw(obstacle_trajectory_point.pose.orientation);
         double ego_end_vel = obstacle_trajectory_point.velocity_mps * std::cos(yaw_diff);
         ego_end_vel =
           ego_start_vel >= 0.0 ? std::max(ego_end_vel, 0.0) : std::min(ego_end_vel, 0.0);
 
-        // calculate DRAC
-        const double distance_to_collision = ego_trajectory_point.distance_from_start_m;
-        const double point_drac =
-          std::pow(ego_end_vel - ego_start_vel, 2) / (2.0 * distance_to_collision + 1e-6);
-        obstacle_drac = std::max(obstacle_drac, std::abs(point_drac));
+        // If the projected obstacle speed exceeds |v0|, slowing ego is not required in this
+        // direction.
+        if (std::abs(ego_end_vel) > std::abs(ego_start_vel)) {
+          continue;
+        }
+
+        // Arc-length cap from the last non-overlapping ego waypoint; obstacle clock t2 is the
+        // evaluation instant for both velocity and position constraints (see block comment above).
+        const double s_cap = ego_before_collision.distance_from_start_m;
+        const double t2 = obstacle_trajectory_point.time_from_start_s;
+
+        const double v0 = ego_start_vel;
+        const double v2 = ego_end_vel;
+
+        // Velocity bound at t2: v0 - d*t2 <= v2  =>  d >= (v0 - v2) / t2
+        const double d_vel = (v0 - v2) / t2;
+
+        // Position bound at t2 while v(t2) >= 0: v0*t2 - 0.5*d*t2^2 <= s_cap
+        //   =>  d >= 2*(v0*t2 - s_cap) / t2^2
+        const double d_quad = 2.0 * (v0 * t2 - s_cap) / (t2 * t2);
+
+        // Largest d for which v(t2) = v0 - d*t2 is still non-negative: d <= v0 / t2
+        const double d_time_stop_bound = v0 / t2;
+
+        // If d_quad implies stopping before t2 under the same constant d, use stopping in s_cap:
+        // 0 = v0^2 - 2*d*s_cap  =>  d = v0^2 / (2*s_cap)
+        const double d_stop_in_distance = (v0 * v0) / (2.0 * s_cap);
+
+        const double d_pos = d_quad <= d_time_stop_bound ? d_quad : d_stop_in_distance;
+
+        // Smallest constant deceleration from t = 0 satisfying both bounds at obstacle time t2.
+        const double point_drac = std::max(0.0, std::max(d_vel, d_pos));
+
+        obstacle_drac = std::max(obstacle_drac, point_drac);
       }
 
       // Add to metric statistics if we found any valid DRAC value
