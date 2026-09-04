@@ -180,6 +180,8 @@ Two things to keep in mind when using this mode:
   up the ego vehicle and its sensors, and those ticks must not race the external owner.
 - **The cadence belongs to the tick owner**, so `max_real_delta_seconds` no longer paces the loop.
   Set `fixed_delta_seconds` to the step length that the owner uses.
+- **`/clock` starts at zero on the first frame that the bridge processes.** In this mode it stays a
+  constant offset behind the CARLA elapsed time: the idle time before the owner started.
 
 If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
 and reports how many it skipped through a throttled warning.
