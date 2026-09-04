@@ -66,6 +66,16 @@ def test_close_neighbor_sharing_groups_is_not_ambiguous():
     assert result.assignments["a"] == [1, 2]
 
 
+def test_overlapping_but_unequal_group_sets_are_ambiguous():
+    # Two heads at equal distance whose group sets overlap but are not equal:
+    # matching the wrong one would publish a different set ({500, 501} vs {501}),
+    # so the light must be dropped, not resolved by arbitrary ranking.
+    m = _map({"w1": ((0.0, 0.0), {500, 501}), "w2": ((0.5, 0.0), {501})})
+    result = match_traffic_lights([("a", None, (0.25, 0.0))], m)
+    assert "a" not in result.assignments
+    assert _status(result, "a") == MatchResult.AMBIGUOUS
+
+
 def test_clear_winner_over_nearby_disjoint_head_still_matches():
     # Light sits essentially on its own head (0.1 m); a different signal 1.5 m away
     # should not defeat the match thanks to the ratio-based ambiguity test.

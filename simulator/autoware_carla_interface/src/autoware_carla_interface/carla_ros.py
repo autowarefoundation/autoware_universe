@@ -1225,6 +1225,12 @@ class carla_ros2_interface(object):
         ``get_light_boxes()`` reports them in world coordinates) rather than the
         actor origin, which sits at the pole base and is offset from the heads the
         lanelet2 map records. Falls back to the actor location if no boxes exist.
+
+        The CARLA→map offset is read via :meth:`_current_map_origin` (not the raw
+        ``map_origin_x/y`` parameters) so georeferenced maps, whose origin is
+        derived from the OpenDRIVE geoReference in ``on_world_ready`` while the
+        parameters stay at their zero default, transform the heads into the same
+        frame as the lanelet2 ``local_x/local_y`` coordinates and localization.
         """
         try:
             boxes = actor.get_light_boxes()
@@ -1239,11 +1245,8 @@ class carla_ros2_interface(object):
             )
         else:
             carla_location = actor.get_location()
-        point = carla_location_to_ros_point(
-            carla_location,
-            origin_x=self.param_values["map_origin_x"],
-            origin_y=self.param_values["map_origin_y"],
-        )
+        origin_x, origin_y = self._current_map_origin()
+        point = carla_location_to_ros_point(carla_location, origin_x=origin_x, origin_y=origin_y)
         return (point.x, point.y)
 
     def _parse_traffic_light_id_override(self):

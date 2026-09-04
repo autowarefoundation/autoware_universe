@@ -193,17 +193,14 @@ def match_traffic_lights(
 
         nearest_dist, nearest_way = ranked[0]
         nearest_groups = map_lights.head_groups[nearest_way]
-        # Closest head that would resolve to a *different* set of group ids, i.e. a
-        # genuinely different signal (the light across the intersection), not just the
-        # neighbouring head of the same approach, which shares the same regulatory
-        # elements and would give the same answer. Only such a head makes a match
-        # ambiguous.
+        # Closest head that would resolve to a *different answer* than the winner.
+        # A head is a genuine alternative unless its group set is exactly equal to
+        # the winner's: only then does matching it publish the same group ids, so a
+        # neighbouring head of the same approach is ignored, while a head with an
+        # overlapping-but-unequal or disjoint set (e.g. {500, 501} vs {501}, or the
+        # light across the intersection) still makes the match ambiguous.
         second_dist = next(
-            (
-                d
-                for d, way_id in ranked[1:]
-                if map_lights.head_groups[way_id].isdisjoint(nearest_groups)
-            ),
+            (d for d, way_id in ranked[1:] if map_lights.head_groups[way_id] != nearest_groups),
             None,
         )
 
