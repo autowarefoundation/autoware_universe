@@ -367,6 +367,10 @@ class InitializeInterface(object):
         self.world.apply_settings(settings)
         CarlaDataProvider.set_world(self.world)
         CarlaDataProvider.set_client(client)
+        # Vehicle physics differ between CARLA 0.9.x and 0.10 (Chaos); let the
+        # interface derive its capability flags (e.g. whether the wheel steer
+        # angle is reported) from the server version.
+        self.interface.set_carla_version(client.get_server_version())
 
         spawn_point, randomize = self._parse_spawn_point()
         if not randomize:

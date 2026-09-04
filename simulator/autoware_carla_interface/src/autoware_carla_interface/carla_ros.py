@@ -357,6 +357,11 @@ class carla_ros2_interface(object):
         self.prev_steer_output = 0.0
         self.tau = 0.2
         self._max_steer_angle_rad = None
+        # CARLA server version and the capability flags derived from it. Set by
+        # set_carla_version() once the world is loaded; until then we assume the
+        # measured wheel angle is usable (0.9.x behavior).
+        self.carla_version = None
+        self._wheel_steer_angle_reliable = True
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -976,6 +981,34 @@ class carla_ros2_interface(object):
             self._max_steer_angle_rad = math.radians(max_deg)
         return self._max_steer_angle_rad
 
+    def set_carla_version(self, version_str):
+        """Record the CARLA server version and derive capability flags from it.
+
+        CARLA 0.10 (Chaos physics) always returns 0 from
+        get_wheel_steer_angle(), so on 0.10+ the steering report is synthesized
+        from the applied control while 0.9.x keeps using the measured wheel
+        angle. An unparsable version keeps the 0.9.x (measured) behavior.
+        https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_wheel_steer_angle
+        """
+        import re
+
+        self.carla_version = version_str
+        match = re.match(r"\s*(\d+)\.(\d+)", version_str or "")
+        if match is None:
+            self.logger.warning(
+                f"Could not parse CARLA version '{version_str}'; assuming "
+                "get_wheel_steer_angle() is reliable (CARLA 0.9.x behavior)."
+            )
+            self._wheel_steer_angle_reliable = True
+            return
+        major, minor = int(match.group(1)), int(match.group(2))
+        self._wheel_steer_angle_reliable = (major, minor) < (0, 10)
+        self.logger.info(
+            f"CARLA server version {version_str}: "
+            f"wheel steer angle "
+            f"{'reliable' if self._wheel_steer_angle_reliable else 'synthesized'}."
+        )
+
     def _steering_curve_factor(self, speed_mps):
         """Steering multiplier CARLA applies at ``speed_mps`` [m/s] forward speed.
 
@@ -1084,10 +1117,10 @@ class carla_ros2_interface(object):
         out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
 
         out_steering_state.stamp = out_vel_state.header.stamp
-        # CARLA 0.10 (Chaos) always reports 0 from get_wheel_steer_angle();
-        # synthesize the steering state from the applied control in that case
-        # so controllers keep receiving a consistent steering feedback.
-        if abs(steer_angle) > 1e-6:
+        # CARLA 0.10 (Chaos) always reports 0 from get_wheel_steer_angle(), so on
+        # 0.10+ (see set_carla_version) synthesize the steering state from the
+        # applied control; 0.9.x keeps using the measured wheel angle.
+        if self._wheel_steer_angle_reliable:
             out_steering_state.steering_tire_angle = -math.radians(steer_angle)
         elif self.physics_control is not None:
             # get_control().steer is the requested steer fraction BEFORE the
