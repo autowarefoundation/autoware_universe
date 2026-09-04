@@ -21,7 +21,6 @@
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
-  <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
