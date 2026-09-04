@@ -14,11 +14,21 @@
 
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
+#include "autoware/trajectory/interpolator/cubic_spline.hpp"
+#include "autoware/trajectory/pose.hpp"
+#include "autoware/trajectory/threshold.hpp"
+#include "autoware/trajectory/utils/closest.hpp"
+
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_math/normalization.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -125,75 +135,153 @@ geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const do
   return shifted_pose;
 }
 
-PolylineProjection project_pose_onto_polyline(
-  const double query_x, const double query_y, const std::vector<Eigen::Matrix4d> & polyline,
-  const int64_t max_search_segment_count)
+namespace
 {
-  if (polyline.size() < 2) {
-    throw std::runtime_error("project_pose_onto_polyline requires at least two poses");
-  }
-  if (max_search_segment_count < 1) {
-    throw std::runtime_error("project_pose_onto_polyline requires max_search_segment_count >= 1");
-  }
+geometry_msgs::msg::Pose matrix4d_to_pose(const Eigen::Matrix4d & matrix)
+{
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = matrix(0, 3);
+  pose.position.y = matrix(1, 3);
+  pose.position.z = matrix(2, 3);
+  const Eigen::Quaterniond q(matrix.block<3, 3>(0, 0));
+  pose.orientation.x = q.x();
+  pose.orientation.y = q.y();
+  pose.orientation.z = q.z();
+  pose.orientation.w = q.w();
+  return pose;
+}
 
-  const Eigen::Vector2d query(query_x, query_y);
-
-  double best_dist_sq = std::numeric_limits<double>::max();
-  Eigen::Vector2d best_foot = query;
-  Eigen::Quaterniond best_orientation = Eigen::Quaterniond::Identity();
-  // (closest segment index + intra-segment ratio); position of the foot along the polyline.
-  double best_interpolation_index = 0.0;
-
-  // Because the diffusion planner runs at 10Hz and the polyline vertices are spaced by one
-  // prediction step (0.1s), the foot always lands within the first few segments. Limiting the
-  // search keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being
-  // selected as the closest segment.
-  const size_t segment_count = static_cast<size_t>(max_search_segment_count);
-
-  for (size_t i = 0; i < segment_count && i + 1 < polyline.size(); ++i) {
-    // Endpoints of the i-th line segment in the xy-plane.
-    const Eigen::Vector2d segment_start(polyline[i](0, 3), polyline[i](1, 3));
-    const Eigen::Vector2d segment_end(polyline[i + 1](0, 3), polyline[i + 1](1, 3));
-
-    // Direction vector of the segment (start -> end) and the vector from the start to the query.
-    const Eigen::Vector2d segment_vector = segment_end - segment_start;
-    const Eigen::Vector2d start_to_query = query - segment_start;
-
-    // Squared length of the segment. Also used to guard against a degenerate (zero-length) segment.
-    const double segment_length_sq = segment_vector.squaredNorm();
-
-    // Projection ratio of the query point onto the infinite line through the segment:
-    //   raw_ratio = dot(start_to_query, segment_vector) / |segment_vector|^2
-    // raw_ratio == 0 -> foot at segment_start, raw_ratio == 1 -> foot at segment_end.
-    // Clamping to [0, 1] keeps the foot ON the segment: if the perpendicular foot would land beyond
-    // an endpoint (raw_ratio < 0 or > 1), it is pulled back to the nearest endpoint.
-    constexpr double EPS = 1e-9;
-    double ratio = 0.0;
-    if (segment_length_sq >= EPS) {
-      const double projection = start_to_query.dot(segment_vector);
-      const double raw_ratio = projection / segment_length_sq;
-      ratio = std::clamp(raw_ratio, 0.0, 1.0);
+// Leading vertices of the polyline up to (excluding) the first vertex that coincides with its
+// predecessor. Coincident vertices would give the spline (near) zero-length bases.
+std::vector<geometry_msgs::msg::Pose> leading_distinct_poses(
+  const std::vector<Eigen::Matrix4d> & polyline)
+{
+  std::vector<geometry_msgs::msg::Pose> poses;
+  poses.reserve(polyline.size());
+  for (const auto & matrix : polyline) {
+    const geometry_msgs::msg::Pose pose = matrix4d_to_pose(matrix);
+    if (
+      !poses.empty() &&
+      autoware::experimental::trajectory::is_almost_same(poses.back().position, pose.position)) {
+      break;
     }
+    poses.push_back(pose);
+  }
+  return poses;
+}
 
-    // Foot of the perpendicular (already clamped onto the segment) and its distance to the query.
-    const Eigen::Vector2d foot = segment_start + ratio * segment_vector;
-    const double dist_sq = (query - foot).squaredNorm();
+// (segment index + intra-segment ratio) of arc length s given the vertex arc lengths.
+double arc_length_to_interpolation_index(const std::vector<double> & bases, const double s)
+{
+  const auto upper = std::upper_bound(bases.begin(), bases.end(), s);
+  const int64_t segment = std::clamp<int64_t>(
+    static_cast<int64_t>(std::distance(bases.begin(), upper)) - 1, 0,
+    static_cast<int64_t>(bases.size()) - 2);
+  const double segment_length = bases[segment + 1] - bases[segment];
+  const double ratio = std::clamp((s - bases[segment]) / segment_length, 0.0, 1.0);
+  return static_cast<double>(segment) + ratio;
+}
 
-    if (dist_sq < best_dist_sq) {
-      best_dist_sq = dist_sq;
-      best_foot = foot;
-      const Eigen::Quaterniond start_orientation(polyline[i].block<3, 3>(0, 0));
-      const Eigen::Quaterniond end_orientation(polyline[i + 1].block<3, 3>(0, 0));
-      best_orientation = start_orientation.slerp(ratio, end_orientation);
-      best_interpolation_index = static_cast<double>(i) + ratio;
-    }
+std::optional<double> windowed_tangent_yaw(
+  const autoware::experimental::trajectory::Trajectory<geometry_msgs::msg::Pose> & trajectory,
+  const double s, const double half_window_m, const double min_length_m)
+{
+  // Symmetric window: shrink it when it would run past either end so the mean is not biased
+  // toward one side of the snapped point (the point sits close to the start of a prediction).
+  const double half = std::min({half_window_m, s, trajectory.length() - s});
+  const double lo = s - half;
+  const double hi = s + half;
+  if (hi - lo < min_length_m) {
+    return std::nullopt;
+  }
+  constexpr double SAMPLE_TICK_M = 0.05;
+  const std::vector<double> azimuths =
+    trajectory.azimuth(trajectory.base_arange({lo, hi}, SAMPLE_TICK_M));
+  double sum_cos = 0.0;
+  double sum_sin = 0.0;
+  for (const double yaw : azimuths) {
+    sum_cos += std::cos(yaw);
+    sum_sin += std::sin(yaw);
+  }
+  return std::atan2(sum_sin, sum_cos);
+}
+}  // namespace
+
+std::optional<TrajectorySnap> snap_point_to_trajectory(
+  const double query_x, const double query_y, const std::vector<Eigen::Matrix4d> & polyline,
+  const TrajectorySnapOptions & options)
+{
+  using autoware::experimental::trajectory::Trajectory;
+  using autoware::experimental::trajectory::interpolator::CubicSpline;
+
+  if (options.max_search_segment_count < 1) {
+    throw std::runtime_error("snap_point_to_trajectory requires max_search_segment_count >= 1");
+  }
+  if (options.prefix_count < 0) {
+    throw std::runtime_error("snap_point_to_trajectory requires prefix_count >= 0");
   }
 
-  Eigen::Matrix4d projected = Eigen::Matrix4d::Identity();
-  projected.block<3, 3>(0, 0) = best_orientation.normalized().toRotationMatrix();
-  projected(0, 3) = best_foot.x();
-  projected(1, 3) = best_foot.y();
-  return PolylineProjection{projected, best_interpolation_index};
+  const std::vector<geometry_msgs::msg::Pose> poses = leading_distinct_poses(polyline);
+  const size_t prefix = static_cast<size_t>(options.prefix_count);
+  if (poses.size() < prefix + 2) {
+    return std::nullopt;
+  }
+  const auto trajectory =
+    Trajectory<geometry_msgs::msg::Pose>::Builder{}.set_xy_interpolator<CubicSpline>().build(poses);
+  if (!trajectory) {
+    return std::nullopt;
+  }
+
+  // Bases of the trajectory proper: vertex `prefix` is the trajectory start (s_start).
+  const std::vector<double> all_bases = trajectory->get_underlying_bases();
+  const std::vector<double> bases(all_bases.begin() + prefix, all_bases.end());
+  const double search_start_s = bases.front();
+  const double search_end_s = bases[std::min<size_t>(
+    static_cast<size_t>(options.max_search_segment_count), bases.size() - 1)];
+  geometry_msgs::msg::Point query;
+  query.x = query_x;
+  query.y = query_y;
+  const std::optional<double> s = autoware::experimental::trajectory::closest_with_constraint(
+    *trajectory, query, [search_start_s, search_end_s](const double & s) {
+      return search_start_s <= s && s <= search_end_s;
+    });
+  if (!s) {
+    return std::nullopt;
+  }
+
+  const geometry_msgs::msg::Pose snapped = trajectory->compute(*s);
+  return TrajectorySnap{
+    Eigen::Vector2d(snapped.position.x, snapped.position.y),
+    arc_length_to_interpolation_index(bases, *s),
+    autoware_utils_geometry::get_rpy(snapped.orientation).z,
+    windowed_tangent_yaw(
+      *trajectory, *s, options.yaw_fit_half_window_m, options.yaw_fit_min_length_m)};
+  ;
+}
+
+BoundedPose bound_snapped_pose(
+  const Eigen::Vector2d & real_position, const double real_yaw,
+  const Eigen::Vector2d & snapped_position, const double snapped_yaw, const double snap_strength,
+  const double max_position_error_m, const double max_yaw_error_rad)
+{
+  if (snap_strength < 0.0 || snap_strength > 1.0) {
+    throw std::runtime_error("bound_snapped_pose requires snap_strength in [0, 1]");
+  }
+  if (max_position_error_m <= 0.0 || max_yaw_error_rad <= 0.0) {
+    throw std::runtime_error("bound_snapped_pose requires positive error limits");
+  }
+  Eigen::Vector2d residual = snap_strength * (real_position - snapped_position);
+  const double norm = residual.norm();
+  if (norm > max_position_error_m) {
+    residual *= max_position_error_m / norm;
+  }
+
+  const double yaw_residual = std::clamp(
+    snap_strength * autoware_utils_math::normalize_radian(real_yaw - snapped_yaw),
+    -max_yaw_error_rad, max_yaw_error_rad);
+
+  return BoundedPose{
+    real_position - residual, autoware_utils_math::normalize_radian(real_yaw - yaw_residual)};
 }
 
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)

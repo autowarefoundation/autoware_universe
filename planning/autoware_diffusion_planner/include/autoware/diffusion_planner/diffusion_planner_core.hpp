@@ -133,10 +133,45 @@ struct EgoSnapParams
   // Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose.
   double max_yaw_error_deg;
 
+  // What happens at the error limits:
+  //  - "reject": the snap is skipped for the frame and the raw pose is used (a step in the ego pose
+  //    and in the ego history whenever the limit is crossed).
+  //  - "bound": the snapped pose is pulled toward the raw pose so it never exceeds the limits
+  //    (utils::bound_snapped_pose); continuous, no step.
+  std::string limit_mode;
+
+  // How far from the raw pose toward the snapped pose the virtual pose is placed, in [0, 1].
+  // 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous
+  // plan; values in between sit on the segment between the two. Only used with limit_mode "bound".
+  double snap_strength;
+
   // Number of leading segments of the previous trajectory searched for the closest one. The
   // planning cycle only advances the ego by ~1 segment, so a small window is enough and it keeps
   // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
   int64_t max_search_segment_count;
+
+  // Ego speed [m/s] below which the snap is skipped. When (nearly) stopped the first segments of
+  // the previous trajectory are only centimetres long, so their direction is dominated by model
+  // noise and snapping onto them injects heading jitter instead of removing it.
+  double min_speed_mps;
+
+  // Where the heading of the snapped pose comes from:
+  //  - "predicted_heading": the vertex headings of the previous trajectory interpolated at the
+  //    snapped point (the model's own heading channel, which is not kinematically tied to its xy
+  //    output).
+  //  - "polyline_tangent": tangent of the spline through the previous trajectory's xy positions,
+  //    averaged over +-yaw_fit_half_window_m of arc length around the snapped point (see
+  //    utils::snap_point_to_trajectory). Falls back to the raw localization heading when the
+  //    window is shorter than yaw_fit_min_length_m.
+  std::string yaw_source;
+  double yaw_fit_half_window_m;
+  double yaw_fit_min_length_m;
+
+  // Number of earlier ego poses (from the ego history, i.e. the virtual poses of the previous
+  // frames) prepended to the previous trajectory before snapping. They extend the spline behind the
+  // snapped point so the tangent window stays symmetric and long even though the ego is always
+  // within the first metre of the previous trajectory.
+  int64_t history_prefix_count;
 };
 
 struct DiffusionPlannerParams
@@ -384,6 +419,15 @@ private:
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
   std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
+
+  /**
+   * @brief Snapped ego pose (map frame, model frame convention) and interpolation time [s] of the
+   *        snapped point along the previous planning trajectory, according to
+   *        params_.ego_snap_to_prev_trajectory. std::nullopt when the snap is disabled, not yet
+   *        possible (no previous trajectory), skipped (low speed) or rejected (error limits).
+   */
+  std::optional<std::pair<Eigen::Matrix4d, double>> snap_ego_to_previous_trajectory(
+    const nav_msgs::msg::Odometry & kinematic_state) const;
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;

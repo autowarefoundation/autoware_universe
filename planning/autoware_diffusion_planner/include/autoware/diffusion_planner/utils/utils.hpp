@@ -20,6 +20,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -71,43 +72,106 @@ std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotat
 geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const double shift_length);
 
 /**
- * @brief Result of projecting a query point onto a polyline.
+ * @brief Options for snap_point_to_trajectory.
  */
-struct PolylineProjection
+struct TrajectorySnapOptions
 {
-  //! Projected pose (foot of the perpendicular) as a 4x4 transformation matrix.
-  Eigen::Matrix4d pose;
-  //! Position of the foot along the polyline, expressed as (closest segment index +
-  //! intra-segment ratio in [0, 1]). Multiplying by the per-segment time step yields the
-  //! interpolation time of the foot along the polyline.
-  double interpolation_index;
+  //! Number of leading vertices of the polyline that precede the trajectory proper (e.g. the ego
+  //! poses of earlier frames). They extend the spline backwards so the tangent window can stay
+  //! symmetric and long close to the trajectory start, but are never selected as the closest point
+  //! and do not count in interpolation_index (vertex prefix_count is index 0).
+  int64_t prefix_count;
+  //! Number of leading segments of the trajectory (after the prefix) the closest point is searched
+  //! in. A planning cycle only advances the ego by about one segment, so a small window is enough
+  //! and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being
+  //! selected.
+  int64_t max_search_segment_count;
+  //! Arc length [m] on each side of the snapped point over which the spline tangent is averaged.
+  //! The window is kept symmetric around the snapped point (shrunk when it would run past either
+  //! end of the trajectory) so the averaged heading is not biased toward the future path.
+  double yaw_fit_half_window_m;
+  //! Minimum total arc length [m] of that window for the tangent to be considered reliable.
+  double yaw_fit_min_length_m;
 };
 
 /**
- * @brief Projects a 2D query point onto a polyline and returns the pose at the foot of the
- *        perpendicular to the closest line segment.
+ * @brief Result of snapping a query point onto a trajectory.
+ */
+struct TrajectorySnap
+{
+  //! Closest point on the spline through the trajectory vertices (xy, same frame as the input).
+  Eigen::Vector2d position;
+  //! Position of the snapped point along the trajectory, expressed as (segment index +
+  //! intra-segment ratio in [0, 1]). Multiplying by the per-segment time step yields the
+  //! interpolation time of the snapped point along the trajectory.
+  double interpolation_index;
+  //! Heading [rad] spherically interpolated from the vertex orientations at the snapped point.
+  double heading_yaw;
+  //! Heading [rad] from the geometry: circular mean of the spline tangent over
+  //! +-yaw_fit_half_window_m of arc length around the snapped point. std::nullopt when the
+  //! available window is shorter than yaw_fit_min_length_m (no reliable heading information).
+  std::optional<double> tangent_yaw;
+};
+
+/**
+ * @brief Snaps a 2D query point onto a trajectory given as a sequence of poses.
  *
- * The polyline is treated as (polyline.size() - 1) line segments in the xy-plane. For each
- * segment, the foot of the perpendicular from the query point (clamped to the segment endpoints)
- * is computed, and the segment with the smallest distance is selected. The returned pose has the
- * foot position as (x, y) and an orientation obtained by spherically interpolating (slerp) the two
- * endpoint orientations by the projection ratio. The z component is left at 0.
- *
- * @note Only the leading max_search_segment_count segments are searched; segments beyond that are
- *       never selected, which keeps a far-away part of the polyline (e.g. the return leg of a
- *       U-turn) from being picked as the closest segment.
+ * A cubic-spline trajectory (autoware::experimental::trajectory) is built through the leading
+ * vertices of the polyline, stopping at the first pair of (almost) coincident consecutive vertices
+ * so a stop at the end of a prediction does not degenerate the spline. The closest point on the
+ * spline within the first max_search_segment_count segments is returned, together with two
+ * headings: the interpolated vertex heading and the geometric tangent averaged over a window of
+ * arc length (robust to noise in the individual vertex headings and to jitter of the short leading
+ * segments of a predicted trajectory).
  *
  * @param query_x X coordinate of the query point.
  * @param query_y Y coordinate of the query point.
- * @param polyline Sequence of poses (must contain at least two elements) forming the polyline.
- * @param max_search_segment_count Number of leading segments to search (must be at least one).
- * @return The projected pose together with the interpolation index of the foot along the polyline.
- * @throw std::runtime_error if the polyline has fewer than two poses, or if
- *        max_search_segment_count is less than one.
+ * @param polyline Sequence of poses (4x4 transforms): options.prefix_count leading poses followed
+ *        by the trajectory.
+ * @param options See TrajectorySnapOptions.
+ * @return The snap result, or std::nullopt when fewer than two distinct vertices remain past the
+ *         prefix or the spline could not be built.
+ * @throw std::runtime_error if options.max_search_segment_count is less than one or
+ *        options.prefix_count is negative.
  */
-PolylineProjection project_pose_onto_polyline(
+std::optional<TrajectorySnap> snap_point_to_trajectory(
   double query_x, double query_y, const std::vector<Eigen::Matrix4d> & polyline,
-  int64_t max_search_segment_count);
+  const TrajectorySnapOptions & options);
+
+/**
+ * @brief Pose (xy + yaw) resulting from bounding a snapped pose to the real one.
+ */
+struct BoundedPose
+{
+  Eigen::Vector2d position;
+  double yaw;
+};
+
+/**
+ * @brief Bounds a snapped pose by the real pose so the two can never drift apart by more than the
+ *        given limits, without a discontinuity.
+ *
+ * The residual (real - snapped) is scaled by snap_strength: a strength of 0 returns the real pose
+ * and so disables the feature, a strength of 1 returns the snapped pose, and anything in between
+ * places the virtual pose on the segment between them. The scaled
+ * residual is then saturated at max_position_error_m and max_yaw_error_rad, so the returned pose
+ * is always within those limits of the real pose. Unlike rejecting the snap when a limit is
+ * exceeded, this is continuous in the inputs: the virtual pose tracks the plan while it is close
+ * to reality and slides along with reality when it is not, instead of jumping between the two.
+ *
+ * @param real_position Real (localized) xy position.
+ * @param real_yaw Real yaw [rad].
+ * @param snapped_position Snapped xy position.
+ * @param snapped_yaw Snapped yaw [rad].
+ * @param snap_strength How far from the real pose toward the snapped pose the virtual pose is
+ *        placed, in [0, 1]. 0 is the real pose (feature off), 1 is the snapped pose.
+ * @param max_position_error_m Saturation of the position residual [m] (> 0).
+ * @param max_yaw_error_rad Saturation of the yaw residual [rad] (> 0).
+ * @throw std::runtime_error on an out-of-range strength or a non-positive limit.
+ */
+BoundedPose bound_snapped_pose(
+  const Eigen::Vector2d & real_position, double real_yaw, const Eigen::Vector2d & snapped_position,
+  double snapped_yaw, double snap_strength, double max_position_error_m, double max_yaw_error_rad);
 
 /**
  * @brief Computes the inverse of a 4x4 transformation matrix.

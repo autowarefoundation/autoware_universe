@@ -26,6 +26,10 @@
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
+
 #ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 #include "autoware/diffusion_planner/inference/onnxruntime_inference.hpp"
 #endif
@@ -288,68 +292,23 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
       utils::shift_x(kinematic_state.pose.pose, vehicle_spec_.base_link_to_center);
   }
 
-  // Snap the ego pose onto the previous planning trajectory. The previous trajectory is the
-  // polyline formed by the previous planning start pose (last_ego_to_map_transform_) followed by
-  // the previous prediction (last_agent_poses_map_[0][0]), i.e. OUTPUT_T + 1 points forming
-  // OUTPUT_T segments. The foot of the perpendicular to the closest segment becomes the next ego
-  // pose. Note that kinematic_state here is already in the model frame (center frame when shift_x
-  // is enabled), which matches the frame the previous trajectory was generated in.
+  // Snap the ego pose onto the previous planning trajectory so consecutive frames plan from one
+  // consistent trajectory instead of a slightly drifted localization pose. Note that
+  // kinematic_state here is already in the model frame (center frame when shift_x is enabled),
+  // which matches the frame the previous trajectory was generated in.
   std::optional<Eigen::Matrix4d> snapped_pose_opt;
   std::optional<double> snapped_interpolation_time_s_opt;
-  if (
-    params_.ego_snap_to_prev_trajectory.enable && last_ego_to_map_transform_.has_value() &&
-    !last_agent_poses_map_.empty() && !last_agent_poses_map_[0].empty() &&
-    !last_agent_poses_map_[0][0].empty()) {
-    constexpr int64_t batch_idx = 0;
-    constexpr int64_t agent_idx = 0;
-    const auto & prev_poses = last_agent_poses_map_[batch_idx][agent_idx];
-
-    std::vector<Eigen::Matrix4d> prev_trajectory;
-    prev_trajectory.reserve(prev_poses.size() + 1);
-    prev_trajectory.push_back(last_ego_to_map_transform_.value());
-    prev_trajectory.insert(prev_trajectory.end(), prev_poses.begin(), prev_poses.end());
-
-    const utils::PolylineProjection projection = utils::project_pose_onto_polyline(
-      kinematic_state.pose.pose.position.x, kinematic_state.pose.pose.position.y, prev_trajectory,
-      params_.ego_snap_to_prev_trajectory.max_search_segment_count);
-    const Eigen::Matrix4d & snapped_pose = projection.pose;
-
-    // Reject the snap when the actual ego pose is too far (in position or heading) from the
-    // snapped pose. In that case the previous planning trajectory no longer reflects reality
-    // (e.g. large tracking error or a disturbance), so keeping the raw ego pose is safer than
-    // forcing it onto a stale trajectory.
-    const double position_error_m = std::hypot(
-      kinematic_state.pose.pose.position.x - snapped_pose(0, 3),
-      kinematic_state.pose.pose.position.y - snapped_pose(1, 3));
-    const Eigen::Quaterniond current_q(
-      kinematic_state.pose.pose.orientation.w, kinematic_state.pose.pose.orientation.x,
-      kinematic_state.pose.pose.orientation.y, kinematic_state.pose.pose.orientation.z);
-    const double current_yaw =
-      std::atan2(current_q.toRotationMatrix()(1, 0), current_q.toRotationMatrix()(0, 0));
-    const double snapped_yaw = std::atan2(snapped_pose(1, 0), snapped_pose(0, 0));
-    const double yaw_error_rad = std::abs(
-      std::atan2(std::sin(current_yaw - snapped_yaw), std::cos(current_yaw - snapped_yaw)));
-
-    const double yaw_error_deg = yaw_error_rad * 180.0 / M_PI;
-
-    if (
-      position_error_m <= params_.ego_snap_to_prev_trajectory.max_position_error_m &&
-      yaw_error_deg <= params_.ego_snap_to_prev_trajectory.max_yaw_error_deg) {
-      kinematic_state.pose.pose.position.x = snapped_pose(0, 3);
-      kinematic_state.pose.pose.position.y = snapped_pose(1, 3);
-      const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));
-      kinematic_state.pose.pose.orientation.x = q.x();
-      kinematic_state.pose.pose.orientation.y = q.y();
-      kinematic_state.pose.pose.orientation.z = q.z();
-      kinematic_state.pose.pose.orientation.w = q.w();
-
-      // The polyline's first vertex is the previous planning start (t = 0) and each subsequent
-      // vertex advances by one prediction time step, so the interpolation index (segment index +
-      // intra-segment ratio) maps to time via the per-step duration.
-      snapped_pose_opt = snapped_pose;
-      snapped_interpolation_time_s_opt =
-        projection.interpolation_index * constants::PREDICTION_TIME_STEP_S;
-    }
+  if (const auto snapped = snap_ego_to_previous_trajectory(kinematic_state)) {
+    const auto & [snapped_pose, interpolation_time_s] = *snapped;
+    kinematic_state.pose.pose.position.x = snapped_pose(0, 3);
+    kinematic_state.pose.pose.position.y = snapped_pose(1, 3);
+    const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));
+    kinematic_state.pose.pose.orientation.x = q.x();
+    kinematic_state.pose.pose.orientation.y = q.y();
+    kinematic_state.pose.pose.orientation.z = q.z();
+    kinematic_state.pose.pose.orientation.w = q.w();
+    snapped_pose_opt = snapped_pose;
+    snapped_interpolation_time_s_opt = interpolation_time_s;
   }
 
   // Get transforms
@@ -406,6 +365,106 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     snapped_interpolation_time_s_opt};
 
   return frame_context;
+}
+
+std::optional<std::pair<Eigen::Matrix4d, double>>
+DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic_state) const
+{
+  const auto & snap_params = params_.ego_snap_to_prev_trajectory;
+  const bool has_previous_trajectory =
+    last_ego_to_map_transform_.has_value() && !last_agent_poses_map_.empty() &&
+    !last_agent_poses_map_[0].empty() && !last_agent_poses_map_[0][0].empty();
+  // When (nearly) stopped the leading segments of the previous trajectory are only centimetres
+  // long, so their direction is dominated by model noise: snapping would inject heading jitter.
+  const double ego_speed_mps =
+    std::hypot(kinematic_state.twist.twist.linear.x, kinematic_state.twist.twist.linear.y);
+  if (
+    !snap_params.enable || !has_previous_trajectory || ego_speed_mps < snap_params.min_speed_mps) {
+    return std::nullopt;
+  }
+
+  // The previous trajectory is the polyline formed by the previous planning start pose followed
+  // by the previous ego prediction (batch 0, agent 0), i.e. OUTPUT_T + 1 vertices spaced by one
+  // prediction time step.
+  // It is preceded by up to history_prefix_count distinct earlier ego poses (newest of them is the
+  // previous planning start itself, so it is skipped) to extend the spline behind the ego.
+  const auto & prev_poses = last_agent_poses_map_[0][0];
+  std::vector<Eigen::Matrix4d> prefix;
+  for (auto it = ego_history_.rbegin(); it != ego_history_.rend(); ++it) {
+    if (static_cast<int64_t>(prefix.size()) >= snap_params.history_prefix_count) {
+      break;
+    }
+    const Eigen::Matrix4d pose = utils::pose_to_matrix4d(it->pose.pose);
+    const Eigen::Matrix4d & next =
+      prefix.empty() ? last_ego_to_map_transform_.value() : prefix.back();
+    constexpr double MIN_SPACING_M = 0.05;
+    if ((pose.block<2, 1>(0, 3) - next.block<2, 1>(0, 3)).norm() < MIN_SPACING_M) {
+      continue;
+    }
+    prefix.push_back(pose);
+  }
+  std::vector<Eigen::Matrix4d> prev_trajectory(prefix.rbegin(), prefix.rend());
+  prev_trajectory.reserve(prefix.size() + prev_poses.size() + 1);
+  prev_trajectory.push_back(last_ego_to_map_transform_.value());
+  prev_trajectory.insert(prev_trajectory.end(), prev_poses.begin(), prev_poses.end());
+
+  const auto & position = kinematic_state.pose.pose.position;
+  const std::optional<utils::TrajectorySnap> snap = utils::snap_point_to_trajectory(
+    position.x, position.y, prev_trajectory,
+    utils::TrajectorySnapOptions{
+      static_cast<int64_t>(prefix.size()), snap_params.max_search_segment_count,
+      snap_params.yaw_fit_half_window_m, snap_params.yaw_fit_min_length_m});
+  if (!snap) {
+    return std::nullopt;
+  }
+
+  // The model's heading channel is not tied to its xy output: at the first prediction steps it
+  // disagrees with the path by several degrees and, fed back as the next ego frame, that error
+  // propagates to the following frames. The geometric tangent does not have this problem. When the
+  // tangent is unreliable (too short a window) keep the localization heading.
+  const double current_yaw =
+    autoware_utils_geometry::get_rpy(kinematic_state.pose.pose.orientation).z;
+  const double snapped_yaw = snap_params.yaw_source == "polyline_tangent"
+                               ? snap->tangent_yaw.value_or(current_yaw)
+                               : snap->heading_yaw;
+
+  // The previous planning trajectory may no longer reflect reality (large tracking error, a
+  // disturbance): the snapped pose is kept within max_position_error_m / max_yaw_error_deg of the
+  // raw pose, either by skipping the snap ("reject") or by bounding it continuously ("bound").
+  const Eigen::Vector2d real_position(position.x, position.y);
+  const double max_yaw_error_rad = autoware_utils_math::deg2rad(snap_params.max_yaw_error_deg);
+  utils::BoundedPose virtual_pose{snap->position, snapped_yaw};
+  if (snap_params.limit_mode == "bound") {
+    virtual_pose = utils::bound_snapped_pose(
+      real_position, current_yaw, snap->position, snapped_yaw, snap_params.snap_strength,
+      snap_params.max_position_error_m, max_yaw_error_rad);
+  } else {
+    const double position_error_m = (real_position - snap->position).norm();
+    const double yaw_error_rad =
+      std::abs(autoware_utils_math::normalize_radian(current_yaw - snapped_yaw));
+    if (position_error_m > snap_params.max_position_error_m || yaw_error_rad > max_yaw_error_rad) {
+      return std::nullopt;
+    }
+  }
+
+  // Rotate the real orientation about the map z axis by the yaw change, rather than rebuilding the
+  // orientation from the yaw alone: the trajectory carries no roll or pitch, so building a yaw-only
+  // rotation would silently flatten the vehicle's real attitude (measured at ~1 deg of pitch on a
+  // sloped route) in the frame the model and every transformed input see.
+  const auto & real_orientation = kinematic_state.pose.pose.orientation;
+  const Eigen::Quaterniond real_q(
+    real_orientation.w, real_orientation.x, real_orientation.y, real_orientation.z);
+  const double yaw_change = autoware_utils_math::normalize_radian(virtual_pose.yaw - current_yaw);
+  const Eigen::Quaterniond virtual_q =
+    Eigen::Quaterniond(Eigen::AngleAxisd(yaw_change, Eigen::Vector3d::UnitZ())) * real_q;
+
+  Eigen::Matrix4d snapped_pose = Eigen::Matrix4d::Identity();
+  snapped_pose.block<3, 3>(0, 0) = virtual_q.normalized().toRotationMatrix();
+  snapped_pose(0, 3) = virtual_pose.position.x();
+  snapped_pose(1, 3) = virtual_pose.position.y();
+  snapped_pose(2, 3) = kinematic_state.pose.pose.position.z;
+  return std::make_pair(
+    snapped_pose, snap->interpolation_index * constants::PREDICTION_TIME_STEP_S);
 }
 
 InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_context)
@@ -662,18 +721,20 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
       output.turn_indicators_command = turn_indicators_command;
     }
 
-    autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
-    candidate_trajectory.header = trajectory.header;
-    candidate_trajectory.generator_id = generator_uuid;
-    candidate_trajectory.points = trajectory.points;
-    candidate_trajectory.turn_indicators_command = turn_indicators_command;
+    const auto candidate_trajectory = autoware_internal_planning_msgs::build<
+                                        autoware_internal_planning_msgs::msg::CandidateTrajectory>()
+                                        .header(trajectory.header)
+                                        .generator_id(generator_uuid)
+                                        .points(trajectory.points)
+                                        .turn_indicators_command(turn_indicators_command);
 
     std_msgs::msg::String generator_name_msg;
     generator_name_msg.data = std::string("DiffusionPlanner_batch_") + std::to_string(i);
 
-    autoware_internal_planning_msgs::msg::GeneratorInfo generator_info;
-    generator_info.generator_id = generator_uuid;
-    generator_info.generator_name = generator_name_msg;
+    const auto generator_info =
+      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
+        .generator_id(generator_uuid)
+        .generator_name(generator_name_msg);
 
     output.candidate_trajectories.candidate_trajectories.push_back(candidate_trajectory);
     output.candidate_trajectories.generator_info.push_back(generator_info);
