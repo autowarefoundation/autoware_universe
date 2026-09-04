@@ -1,4 +1,5 @@
 <launch>
+  <!-- Read `ld_preload_value` -->
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
 
   <arg name="input_operation_mode_availability" default="/system/operation_mode/availability"/>
