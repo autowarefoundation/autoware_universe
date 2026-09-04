@@ -24,11 +24,29 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
+
+template <typename PointCloudMsgT>
+const std::vector<std::string> & CloudConcatenator<PointCloudMsgT>::validate_input_topics(
+  const std::vector<std::string> & input_topics)
+{
+  std::unordered_set<std::string> seen;
+  seen.reserve(input_topics.size());
+  for (const auto & topic : input_topics) {
+    if (!seen.insert(topic).second) {
+      throw std::invalid_argument(
+        "duplicate input topic '" + topic +
+        "'; input_topics must be unique, otherwise a collector can never gather one cloud per "
+        "topic and every frame is emitted on timeout");
+    }
+  }
+  return input_topics;
+}
 
 template <typename PointCloudMsgT>
 std::unique_ptr<MatchingPolicy> CloudConcatenator<PointCloudMsgT>::make_matching_policy(
@@ -56,7 +74,7 @@ CloudConcatenator<PointCloudMsgT>::CloudConcatenator(
   const std::optional<std::vector<double>> & lidar_timestamp_offsets,
   const std::optional<std::vector<double>> & lidar_timestamp_noise_window,
   std::size_t max_open_collectors, LateCloudPolicy late_cloud_policy)
-: input_topics_(input_topics),
+: input_topics_(validate_input_topics(input_topics)),
   timeout_sec_(timeout_sec),
   matching_strategy_(matching_strategy),
   max_open_collectors_(max_open_collectors),

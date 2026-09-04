@@ -125,6 +125,22 @@ TEST(CloudConcatenatorConstruction, UnknownStrategyNameIsRejectedAtParse)
   EXPECT_THROW(static_cast<void>(parse_unknown_name()), std::invalid_argument);
 }
 
+TEST(CloudConcatenatorConstruction, DuplicateInputTopicIsRejected)
+{
+  // Arrange
+  // topic_to_cloud is keyed by topic name, so a duplicate would make the completion condition
+  // topic_to_cloud.size() == input_topics.size() unreachable and silently push every frame onto
+  // the timeout path. Reject it at construction instead.
+  const auto construct_with_duplicate_topic = [] {
+    return CloudConcatenator(
+      {"lidar_top", "lidar_left", "lidar_top"}, kOutputFrame, 0.2, false, false, false,
+      MatchingStrategyType::naive);
+  };
+
+  // Act & Assert
+  EXPECT_THROW(static_cast<void>(construct_with_duplicate_topic()), std::invalid_argument);
+}
+
 TEST(CloudConcatenatorConstruction, AdvancedRequiresOffsetsAndNoiseWindow)
 {
   // Arrange
