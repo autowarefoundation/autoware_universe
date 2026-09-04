@@ -536,10 +536,25 @@ class carla_ros2_interface(object):
         derived = getattr(self, "_derived_map_origin", None)
         if derived is not None:
             return derived
+        # The CARLA world/map may not be loaded yet (e.g. an initialpose arrives
+        # during startup). "Not ready" is transient, so fall back to (0, 0) for
+        # this call WITHOUT caching it, otherwise the poisoned cache would stop
+        # us ever deriving the real origin once the map does become available.
+        world = CarlaDataProvider.get_world()
+        if world is None:
+            return 0.0, 0.0
         try:
-            xodr_xml = CarlaDataProvider.get_world().get_map().to_opendrive()
+            xodr_xml = world.get_map().to_opendrive()
+        except RuntimeError as exc:
+            self.logger.warning(
+                f"CARLA map not ready for origin resolution ({exc}); using (0, 0) for now"
+            )
+            return 0.0, 0.0
+        try:
             lat_0, lon_0 = _parse_geo_reference(xodr_xml)
         except (RuntimeError, ValueError):
+            # No usable geoReference is a permanent property of the map (stock
+            # CARLA towns), so caching (0, 0) here is correct.
             self._derived_map_origin = (0.0, 0.0)
             return self._derived_map_origin
         if lat_0 == 0.0 and lon_0 == 0.0:
