@@ -33,6 +33,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::ptv3
@@ -99,6 +100,8 @@ protected:
 
   // The encoder is always present. The heads are loaded only when enabled.
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> encoder_trt_ptr_{nullptr};
+  /// IO tensor names of the loaded encoder engine, enumerated once in initEncoderTrt.
+  std::unordered_set<std::string> encoder_tensors_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> detection3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
