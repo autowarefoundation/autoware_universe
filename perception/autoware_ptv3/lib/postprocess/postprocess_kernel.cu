@@ -27,8 +27,9 @@ namespace autoware::ptv3
 using autoware::point_types::PointCloudClassification;
 
 __global__ void createVisualizationPointcloudKernel(
-  const float4 * input_features, const float * colors, const std::int64_t * labels,
-  float4 * output_points, std::size_t num_classes, std::size_t num_points)
+  const float * input_features, std::int64_t feature_stride, const float * colors,
+  const std::int64_t * labels, float4 * output_points, std::size_t num_classes,
+  std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -39,22 +40,23 @@ __global__ void createVisualizationPointcloudKernel(
   const auto color =
     label >= 0 && static_cast<std::size_t>(label) < num_classes ? colors[label] : 0.0f;
 
-  output_points[idx] =
-    make_float4(input_features[idx].x, input_features[idx].y, input_features[idx].z, color);
+  const float * input_point = &input_features[idx * feature_stride];
+  output_points[idx] = make_float4(input_point[0], input_point[1], input_point[2], color);
 }
 
 __global__ void createSegmentationPointcloudKernel(
-  const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
-  const std::uint8_t * class_id_to_classification, const std::uint32_t * filter_class_indices,
-  std::size_t num_filter_classes, std::uint32_t * output_num_points,
-  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
+  const float * input_features, std::int64_t feature_stride, const std::int64_t * labels,
+  const float * pred_probs, const std::uint8_t * class_id_to_classification,
+  const std::uint32_t * filter_class_indices, std::size_t num_filter_classes,
+  std::uint32_t * output_num_points, point_types::PointXYZCPE * output_points,
+  std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
 
-  const auto input_point = input_features[idx];
+  const float * input_point = &input_features[idx * feature_stride];
   const auto label = labels[idx];
   const bool has_valid_label = label >= 0 && static_cast<std::size_t>(label) < num_classes;
 
@@ -83,9 +85,9 @@ __global__ void createSegmentationPointcloudKernel(
   }
 
   const auto output_idx = atomicAdd(output_num_points, 1U);
-  output_points[output_idx].x = input_point.x;
-  output_points[output_idx].y = input_point.y;
-  output_points[output_idx].z = input_point.z;
+  output_points[output_idx].x = input_point[0];
+  output_points[output_idx].y = input_point[1];
+  output_points[output_idx].z = input_point[2];
   output_points[output_idx].class_id =
     has_valid_label ? class_id_to_classification[label]
                     : static_cast<std::uint8_t>(PointCloudClassification::INVALID);
@@ -315,21 +317,22 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
 }
 
 void PostprocessCuda::createVisualizationPointcloud(
-  const float * input_features, const std::int64_t * labels, float * output_points,
-  std::size_t num_classes, std::size_t num_points)
+  const float * input_features, const std::int64_t feature_stride, const std::int64_t * labels,
+  float * output_points, std::size_t num_classes, std::size_t num_points)
 {
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
   createVisualizationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<const float4 *>(input_features), color_map_d_.get(), labels,
+    input_features, feature_stride, color_map_d_.get(), labels,
     reinterpret_cast<float4 *>(output_points), num_classes, num_points);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
 std::size_t PostprocessCuda::createSegmentationPointcloud(
-  const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points)
+  const float * input_features, const std::int64_t feature_stride, const std::int64_t * pred_labels,
+  const float * pred_probs, point_types::PointXYZCPE * output_points, std::size_t num_classes,
+  std::size_t num_points)
 {
   cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
 
@@ -338,9 +341,9 @@ std::size_t PostprocessCuda::createSegmentationPointcloud(
     config_.filter_apply_to_segmentation_ ? config_.filter_class_indices_.size() : std::size_t{0};
 
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
-    class_id_to_classification_d_.get(), filter_class_indices_d_.get(), num_filter_classes,
-    filtered_mask_d_.get(), output_points, num_classes, num_points);
+    input_features, feature_stride, pred_labels, pred_probs, class_id_to_classification_d_.get(),
+    filter_class_indices_d_.get(), num_filter_classes, filtered_mask_d_.get(), output_points,
+    num_classes, num_points);
 
   std::uint32_t num_segmented_points = 0;
   cudaMemcpyAsync(

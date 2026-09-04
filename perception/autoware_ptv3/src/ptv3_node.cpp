@@ -28,7 +28,8 @@
 namespace autoware::ptv3
 {
 
-PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
+PTv3Node::PTv3Node(const rclcpp::NodeOptions & options)
+: Node("ptv3", options), tf_buffer_(this->get_clock())
 {
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
 
@@ -49,6 +50,14 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     this->declare_parameter<std::string>("trt_precision", descriptor);
   const auto cloud_capacity = this->declare_parameter<std::int64_t>("cloud_capacity", descriptor);
 
+  // Densification parameters
+  const std::string densification_world_frame_id =
+    this->declare_parameter<std::string>("densification_world_frame_id", descriptor);
+  const auto densification_num_past_frames =
+    this->declare_parameter<std::int64_t>("densification_num_past_frames", descriptor);
+  densification_world_frame_id_ = densification_world_frame_id;
+  densification_num_past_frames_ = densification_num_past_frames;
+
   // Encoder parameters
   const std::string encoder_onnx_path =
     this->declare_parameter<std::string>("encoder.onnx_path", descriptor);
@@ -61,6 +70,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     this->declare_parameter<std::vector<double>>("encoder.point_cloud_range", descriptor));
   const auto voxel_size =
     to_float_vector(this->declare_parameter<std::vector<double>>("encoder.voxel_size", descriptor));
+  const auto max_points_per_voxel =
+    this->declare_parameter<std::int64_t>("encoder.max_points_per_voxel", descriptor);
   const auto serialization_orders =
     this->declare_parameter<std::vector<std::string>>("encoder.serialization_orders", descriptor);
   const auto pooling_strides =
@@ -193,12 +204,13 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   }
 
   PTv3Config config(
-    use_seg3d_head, use_det3d_head, plugins_path, cloud_capacity, voxels_num, point_cloud_range,
-    voxel_size, segmentation_class_names, segmentation_class_mapping, serialization_orders,
-    pooling_strides, enc_channels, palette, filter_classes, filter_output_format,
-    filter_apply_to_segmentation, source_reconstruction, dec_depths, detection_class_names_,
-    bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
-    has_twist_, num_proposals, post_center_range);
+    use_seg3d_head, use_det3d_head, plugins_path, cloud_capacity, densification_world_frame_id,
+    densification_num_past_frames, voxels_num, point_cloud_range, voxel_size, max_points_per_voxel,
+    segmentation_class_names, segmentation_class_mapping, serialization_orders, pooling_strides,
+    enc_channels, palette, filter_classes, filter_output_format, filter_apply_to_segmentation,
+    source_reconstruction, dec_depths, detection_class_names_, bbox_voxel_size,
+    distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds, has_twist_,
+    num_proposals, post_center_range);
 
   const auto encoder_trt_config = tensorrt_common::TrtCommonConfig(
     encoder_onnx_path, trt_precision, encoder_engine_path, encoder_workspace_size);
@@ -278,6 +290,26 @@ void PTv3Node::publishFilteredPointcloud(
   }
 }
 
+std::optional<Eigen::Affine3f> PTv3Node::lookupWorldToLidar(
+  const std_msgs::msg::Header & header) const
+{
+  // Without past frames every cached sweep is the current frame itself and the pose cancels out.
+  if (densification_num_past_frames_ == 0) {
+    return Eigen::Affine3f::Identity();
+  }
+  try {
+    const auto transform = tf_buffer_.lookupTransform(
+      header.frame_id, densification_world_frame_id_, header.stamp,
+      rclcpp::Duration::from_seconds(0.5));
+    Eigen::Affine3f affine;
+    affine.matrix() = tf2::transformToEigen(transform.transform).matrix().cast<float>();
+    return affine;
+  } catch (const tf2::TransformException & exception) {
+    RCLCPP_WARN_STREAM(get_logger(), exception.what());
+    return std::nullopt;
+  }
+}
+
 void PTv3Node::cloudCallback(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr)
 {
@@ -309,9 +341,14 @@ void PTv3Node::cloudCallback(
 
   std::unordered_map<std::string, double> proc_timing;
   std::optional<std::vector<Box3D>> det_boxes3d;
+  const auto affine_world2current = lookupWorldToLidar(msg_ptr->header);
+  if (!affine_world2current) {
+    RCLCPP_WARN(get_logger(), "The world transform is unavailable. Skipping inference.");
+    return;
+  }
   bool is_success = model_ptr_->infer(
-    msg_ptr, segmented_sub_count, visualization_sub_count, filtered_sub_count,
-    objects_sub_count > 0u, det_boxes3d, proc_timing);
+    msg_ptr, *affine_world2current, segmented_sub_count, visualization_sub_count,
+    filtered_sub_count, objects_sub_count > 0u, det_boxes3d, proc_timing);
   if (!is_success) {
     return;
   }
