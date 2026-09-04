@@ -48,6 +48,8 @@
 #include "autoware/landmark_manager/landmark_manager.hpp"
 #include "autoware/localization_util/smart_pose_buffer.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
@@ -58,9 +60,6 @@
 #include <visualization_msgs/msg/marker.hpp>
 
 #include <aruco/aruco.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <deque>
 #include <map>
@@ -68,7 +67,7 @@
 #include <string>
 #include <vector>
 
-class ArTagBasedLocalizer : public rclcpp::Node
+class ArTagBasedLocalizer : public autoware::agnocast_wrapper::Node
 {
   using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using Image = sensor_msgs::msg::Image;
@@ -86,11 +85,11 @@ public:
   explicit ArTagBasedLocalizer(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
 private:
-  void map_bin_callback(const LaneletMapBin::ConstSharedPtr & msg);
-  void image_callback(const Image::ConstSharedPtr & msg);
-  void cam_info_callback(const CameraInfo::ConstSharedPtr & msg);
-  void ekf_pose_callback(const PoseWithCovarianceStamped::ConstSharedPtr & msg);
-  std::vector<Landmark> detect_landmarks(const Image::ConstSharedPtr & msg);
+  void map_bin_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg);
+  void image_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Image) & msg);
+  void cam_info_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CameraInfo) & msg);
+  void ekf_pose_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PoseWithCovarianceStamped) & msg);
+  std::vector<Landmark> detect_landmarks(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Image) & msg);
 
   // Parameters
   float marker_size_{};
@@ -102,21 +101,21 @@ private:
   double ekf_position_tolerance_{};
 
   // tf
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::unique_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_;
+  std::unique_ptr<autoware::agnocast_wrapper::TransformListener> tf_listener_;
 
   // Subscribers
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr map_bin_sub_;
-  rclcpp::Subscription<Image>::SharedPtr image_sub_;
-  rclcpp::Subscription<CameraInfo>::SharedPtr cam_info_sub_;
-  rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr ekf_pose_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) map_bin_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(Image) image_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(CameraInfo) cam_info_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(PoseWithCovarianceStamped) ekf_pose_sub_;
 
   // Publishers
-  rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pose_pub_;
-  rclcpp::Publisher<Image>::SharedPtr image_pub_;
-  rclcpp::Publisher<PoseArray>::SharedPtr detected_tag_pose_pub_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr mapped_tag_pose_pub_;
-  rclcpp::Publisher<DiagnosticArray>::SharedPtr diag_pub_;
+  AUTOWARE_PUBLISHER_PTR(PoseWithCovarianceStamped) pose_pub_;
+  AUTOWARE_PUBLISHER_PTR(Image) image_pub_;
+  AUTOWARE_PUBLISHER_PTR(PoseArray) detected_tag_pose_pub_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) mapped_tag_pose_pub_;
+  AUTOWARE_PUBLISHER_PTR(DiagnosticArray) diag_pub_;
 
   // Others
   aruco::MarkerDetector detector_;
