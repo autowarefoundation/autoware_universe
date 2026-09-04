@@ -49,6 +49,12 @@ IndiceConvPlugin::IndiceConvPlugin(const std::string & name, IndiceConvParameter
   tuner_fp16_ptr_ =
     std::make_unique<GemmTunerSimple>(GemmMain::get_all_algo_desp());  // cSpell:ignore desp
   tuner_fp32_ptr_ = std::make_unique<GemmTunerSimple>(GemmMain::get_all_algo_desp());
+
+  // Create the cuBLASLt-backed matmul helper here rather than in enqueue(); see the member
+  // declaration for why it must not be created while the stream is capturing.
+  matmul_allocator_ptr_ =
+    std::make_unique<StaticAllocator>(std::unordered_map<std::string, tv::Tensor>{});
+  matmul_ptr_ = std::make_unique<SimpleExternalSpconvMatmul>(*matmul_allocator_ptr_);
 }
 
 void IndiceConvPlugin::initFieldsToSerialize()
@@ -196,14 +202,16 @@ std::int32_t IndiceConvPlugin::getOutputShapes(
 }
 
 std::int32_t IndiceConvPlugin::enqueue(
-  PluginTensorDesc const * input_desc, [[maybe_unused]] PluginTensorDesc const * output_desc,
+  PluginTensorDesc const * input_desc, PluginTensorDesc const * output_desc,
   void const * const * inputs, void * const * outputs, [[maybe_unused]] void * workspace,
   cudaStream_t stream) noexcept
 {
-  using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
   using ConvGemmOps = spconvlib::spconv::csrc::sparse::convops::spops::ConvGemmOps;
-  using SimpleExternalSpconvMatmul =
-    spconvlib::spconv::csrc::sparse::convops::SimpleExternalSpconvMatmul;
+
+  if (isStreamCapturing(stream)) {
+    warnOnceStreamCaptureUnsupported(kINDICE_CONV_PLUGIN_NAME, stream_capture_warned_);
+    return zeroPluginOutputs(output_desc, getNbOutputs(), outputs, stream) == cudaSuccess ? 0 : -1;
+  }
 
   std::int64_t num_act_in = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[0];
   std::int64_t num_in_features = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[1];
@@ -250,9 +258,12 @@ std::int32_t IndiceConvPlugin::enqueue(
     {SPCONV_ALLOC_FEATURES, input_features},
     {SPCONV_ALLOC_FILTERS, weights},
     {SPCONV_ALLOC_OUT_FEATURES, out_features}};
-  StaticAllocator alloc2(tensor_dict);
 
-  SimpleExternalSpconvMatmul ext_mm(alloc2);
+  // Retarget the long-lived allocator at this call's bindings. matmul_ptr_ holds a reference to
+  // it, so the cuBLASLt handle created in the constructor is reused instead of rebuilt here.
+  auto & alloc2 = *matmul_allocator_ptr_;
+  alloc2.set_new_tensor_dict(tensor_dict);
+  auto & ext_mm = *matmul_ptr_;
 
   ConvGemmOps::indice_conv(
     alloc2, ext_mm, *tuner_ptr, true, false, input_features, weights, pairs, pairs_num, arch_,
