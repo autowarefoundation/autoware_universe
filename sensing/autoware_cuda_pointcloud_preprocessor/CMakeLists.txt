@@ -90,7 +90,9 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_outlier_filter/cuda_polar_voxel_noise_filter.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
+  src/cuda_downsample_filter/cuda_random_downsample_filter.cu
   src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter.cu
+  src/cuda_crop_box_filter/cuda_crop_box_filter.cu
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
@@ -131,6 +133,8 @@ ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
   src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter_node.cpp
   src/cuda_outlier_filter/cuda_polar_voxel_noise_filter_node.cpp
+  src/cuda_crop_box_filter/cuda_crop_box_filter_node.cpp
+  src/cuda_downsample_filter/cuda_random_downsample_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -168,6 +172,18 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
   EXECUTABLE cuda_polar_voxel_noise_filter_node
 )
 
+# ========== CropBox filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaCropBoxFilterNode"
+  EXECUTABLE cuda_crop_box_filter_node
+)
+
+# ========== Random downsample filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaRandomDownsampleFilterNode"
+  EXECUTABLE cuda_random_downsample_filter_node
+)
+
 ################################################################################
 # Install
 install(DIRECTORY launch config
@@ -178,6 +194,19 @@ install(
   TARGETS cuda_pointcloud_preprocessor_lib
   LIBRARY DESTINATION lib
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_cuda_pointcloud_preprocessor_filters
+    test/test_cuda_crop_box_filter.cpp
+    test/test_cuda_random_downsample_filter.cpp
+  )
+  target_link_libraries(test_cuda_pointcloud_preprocessor_filters
+    cuda_pointcloud_preprocessor_lib
+    ${CUDA_LIBRARIES}
+  )
+  target_include_directories(test_cuda_pointcloud_preprocessor_filters PRIVATE include)
+endif()
 
 ament_auto_package()
 
