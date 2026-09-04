@@ -36,6 +36,9 @@
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
+#include <regex>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -53,6 +56,28 @@ bool is_non_scsi_device(const std::string & device_name)
           boost::starts_with(device_name, "/dev/mmcblk"));  // SD card, eMMC
   // cspell:enable
   // clang-format on
+}
+
+std::string unescape_mount_field(const std::string & escaped)
+{
+  std::string unescaped;
+  unescaped.reserve(escaped.size());
+
+  for (size_t i = 0; i < escaped.size(); ++i) {
+    if (
+      escaped[i] == '\\' && i + 3 < escaped.size() && escaped[i + 1] >= '0' &&
+      escaped[i + 1] <= '7' && escaped[i + 2] >= '0' && escaped[i + 2] <= '7' &&
+      escaped[i + 3] >= '0' && escaped[i + 3] <= '7') {
+      const char ch = static_cast<char>(
+        (escaped[i + 1] - '0') * 64 + (escaped[i + 2] - '0') * 8 + (escaped[i + 3] - '0'));
+      unescaped.push_back(ch);
+      i += 3;
+      continue;
+    }
+    unescaped.push_back(escaped[i]);
+  }
+
+  return unescaped;
 }
 
 }  // namespace
@@ -600,42 +625,45 @@ void HddMonitor::getHddParams()
 
 std::string HddMonitor::getDeviceFromMountPoint(const std::string & mount_point)
 {
-  std::string ret;
+  const auto find_device_from_mounts = [&](const char * mounts_file_path) {
+    std::ifstream mounts_file(mounts_file_path);
+    if (!mounts_file.is_open()) {
+      return std::string{};
+    }
 
-  // boost::process create file descriptor without O_CLOEXEC required for multithreading.
-  // So create file descriptor with O_CLOEXEC and pass it to boost::process.
-  int out_fd[2];
-  if (pipe2(out_fd, O_CLOEXEC) != 0) {
-    RCLCPP_ERROR(get_logger(), "Failed to execute pipe2. %s", strerror(errno));
-    return "";
-  }
-  bp::pipe out_pipe{out_fd[0], out_fd[1]};
-  bp::ipstream is_out{std::move(out_pipe)};
+    std::string line;
+    while (std::getline(mounts_file, line)) {
+      std::istringstream iss(line);
+      std::string source;
+      std::string mounted_on;
+      if (!(iss >> source >> mounted_on)) {
+        continue;
+      }
 
-  int err_fd[2];
-  if (pipe2(err_fd, O_CLOEXEC) != 0) {
-    RCLCPP_ERROR(get_logger(), "Failed to execute pipe2. %s", strerror(errno));
-    return "";
-  }
-  bp::pipe err_pipe{err_fd[0], err_fd[1]};
-  bp::ipstream is_err{std::move(err_pipe)};
+      source = unescape_mount_field(source);
+      mounted_on = unescape_mount_field(mounted_on);
+      if (mounted_on != mount_point) {
+        continue;
+      }
 
-  bp::child c(
-    "/bin/sh", "-c", fmt::format("findmnt -n -o SOURCE {}", mount_point.c_str()),
-    bp::std_out > is_out, bp::std_err > is_err);
-  c.wait();
+      return source;
+    }
 
-  if (c.exit_code() != 0) {
-    RCLCPP_ERROR(get_logger(), "Failed to execute findmnt. %s", mount_point.c_str());
-    return "";
-  }
+    return std::string{};
+  };
 
-  if (!std::getline(is_out, ret)) {
-    RCLCPP_ERROR(get_logger(), "Failed to find device name. %s", mount_point.c_str());
-    return "";
+  auto device = find_device_from_mounts("/proc/self/mounts");
+  if (!device.empty()) {
+    return device;
   }
 
-  return ret;
+  device = find_device_from_mounts("/proc/mounts");
+  if (!device.empty()) {
+    return device;
+  }
+
+  RCLCPP_ERROR(get_logger(), "Failed to find device name. %s", mount_point.c_str());
+  return "";
 }
 
 void HddMonitor::onTimer()
@@ -865,7 +893,9 @@ void HddMonitor::updateHddConnections()
       if (std::filesystem::exists(hdd_param.second.part_device_, ec)) {
         hdd_connected_flags_[hdd_param.first] = true;
 
-        // Remove index number of partition for passing device name to hdd-reader
+        // Remove partition suffix when the mounted source is a direct partition device.
+        // For symlinked or mapper-backed device paths, hdd_reader resolves the final block device
+        // before SMART access, keeping this callback focused on connection checks.
         if (boost::starts_with(hdd_param.second.part_device_, "/dev/sd")) {
           const std::regex pattern("\\d+$");
           hdd_param.second.disk_device_ =
@@ -874,6 +904,8 @@ void HddMonitor::updateHddConnections()
           const std::regex pattern("p\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
+        } else {
+          hdd_param.second.disk_device_ = hdd_param.second.part_device_;
         }
 
         const std::regex raw_pattern(".*/");
