@@ -14,9 +14,12 @@
 
 #include "autoware/rtc_interface/rtc_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/qos_utils/qos_compatibility.hpp>
 
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace
@@ -112,11 +115,47 @@ Module getModuleType(const std::string & module_name)
   return module;
 }
 
+/// @brief Whether NodeT::create_service() takes its QoS as an rclcpp::QoS.
+///
+/// autoware::agnocast_wrapper::Node takes rclcpp::QoS on every distribution, while rclcpp::Node
+/// takes rmw_qos_profile_t on Humble and rclcpp::QoS from Jazzy on. There is no implicit conversion
+/// either way, and a callback group can only be passed positionally after the QoS.
+template <class NodeT, class ServiceT, class CallbackT, class = void>
+struct AcceptsRclcppQosService : std::false_type
+{
+};
+
+template <class NodeT, class ServiceT, class CallbackT>
+struct AcceptsRclcppQosService<
+  NodeT, ServiceT, CallbackT,
+  std::void_t<decltype(std::declval<NodeT *>()->template create_service<ServiceT>(
+    std::string{}, std::declval<CallbackT>(), rclcpp::ServicesQoS(),
+    rclcpp::CallbackGroup::SharedPtr{}))>> : std::true_type
+{
+};
+
+template <class ServiceT, class NodeT, class CallbackT>
+auto create_service_compat(
+  NodeT * node, const std::string & service_name, CallbackT && callback,
+  const rclcpp::CallbackGroup::SharedPtr & group)
+{
+  if constexpr (AcceptsRclcppQosService<NodeT, ServiceT, CallbackT>::value) {
+    return node->template create_service<ServiceT>(
+      service_name, std::forward<CallbackT>(callback), rclcpp::ServicesQoS(), group);
+  } else {
+    return node->template create_service<ServiceT>(
+      service_name, std::forward<CallbackT>(callback), AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(),
+      group);
+  }
+}
+
 }  // namespace
 
 namespace autoware::rtc_interface
 {
-RTCInterface::RTCInterface(rclcpp::Node * node, const std::string & name, const bool enable_rtc)
+template <class NodeT>
+BasicRTCInterface<NodeT>::BasicRTCInterface(
+  NodeT * node, const std::string & name, const bool enable_rtc)
 : clock_{node->get_clock()},
   logger_{node->get_logger().get_child("RTCInterface[" + name + "]")},
   is_auto_mode_enabled_{!enable_rtc},
@@ -127,39 +166,41 @@ RTCInterface::RTCInterface(rclcpp::Node * node, const std::string & name, const 
 
   constexpr double update_rate = 10.0;
   const auto period_ns = rclcpp::Rate(update_rate).period();
-  timer_ = rclcpp::create_timer(
-    node, node->get_clock(), period_ns, std::bind(&RTCInterface::onTimer, this));
+  // Unqualified on purpose: found by ADL as rclcpp::create_timer() for an rclcpp::Node and as
+  // autoware::agnocast_wrapper::create_timer() for an agnocast_wrapper::Node.
+  timer_ =
+    create_timer(node, node->get_clock(), period_ns, std::bind(&BasicRTCInterface::onTimer, this));
 
   // Publisher
-  pub_statuses_ =
-    node->create_publisher<CooperateStatusArray>(cooperate_status_namespace_ + "/" + name, 1);
+  pub_statuses_ = node->template create_publisher<CooperateStatusArray>(
+    cooperate_status_namespace_ + "/" + name, 1);
 
   pub_auto_mode_status_ =
-    node->create_publisher<AutoModeStatus>(auto_mode_status_namespace_ + "/" + name, 1);
+    node->template create_publisher<AutoModeStatus>(auto_mode_status_namespace_ + "/" + name, 1);
 
   // Service
   callback_group_ = node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  srv_commands_ = node->create_service<CooperateCommands>(
-    cooperate_commands_namespace_ + "/" + name,
-    std::bind(&RTCInterface::onCooperateCommandService, this, _1, _2),
-    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), callback_group_);
-  srv_auto_mode_ = node->create_service<AutoMode>(
-    enable_auto_mode_namespace_ + "/" + name,
-    std::bind(&RTCInterface::onAutoModeService, this, _1, _2),
-    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), callback_group_);
+  srv_commands_ = create_service_compat<CooperateCommands>(
+    node, cooperate_commands_namespace_ + "/" + name,
+    std::bind(&BasicRTCInterface::onCooperateCommandService, this, _1, _2), callback_group_);
+  srv_auto_mode_ = create_service_compat<AutoMode>(
+    node, enable_auto_mode_namespace_ + "/" + name,
+    std::bind(&BasicRTCInterface::onAutoModeService, this, _1, _2), callback_group_);
 
   // Module
   module_ = getModuleType(name);
 }
 
-void RTCInterface::publishCooperateStatus(const rclcpp::Time & stamp)
+template <class NodeT>
+void BasicRTCInterface<NodeT>::publishCooperateStatus(const rclcpp::Time & stamp)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   registered_status_.stamp = stamp;
   pub_statuses_->publish(registered_status_);
 }
 
-void RTCInterface::onCooperateCommandService(
+template <class NodeT>
+void BasicRTCInterface<NodeT>::onCooperateCommandService(
   const CooperateCommands::Request::SharedPtr request,
   const CooperateCommands::Response::SharedPtr responses)
 {
@@ -175,7 +216,8 @@ void RTCInterface::onCooperateCommandService(
   updateCooperateCommandStatus(request->commands);
 }
 
-std::vector<CooperateResponse> RTCInterface::validateCooperateCommands(
+template <class NodeT>
+std::vector<CooperateResponse> BasicRTCInterface<NodeT>::validateCooperateCommands(
   const std::vector<CooperateCommand> & commands)
 {
   std::vector<CooperateResponse> responses;
@@ -211,7 +253,9 @@ std::vector<CooperateResponse> RTCInterface::validateCooperateCommands(
   return responses;
 }
 
-void RTCInterface::updateCooperateCommandStatus(const std::vector<CooperateCommand> & commands)
+template <class NodeT>
+void BasicRTCInterface<NodeT>::updateCooperateCommandStatus(
+  const std::vector<CooperateCommand> & commands)
 {
   for (const auto & command : commands) {
     const auto itr = std::find_if(
@@ -228,7 +272,8 @@ void RTCInterface::updateCooperateCommandStatus(const std::vector<CooperateComma
   }
 }
 
-void RTCInterface::onAutoModeService(
+template <class NodeT>
+void BasicRTCInterface<NodeT>::onAutoModeService(
   const AutoMode::Request::SharedPtr request, const AutoMode::Response::SharedPtr response)
 {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -239,7 +284,8 @@ void RTCInterface::onAutoModeService(
   response->success = true;
 }
 
-void RTCInterface::onTimer()
+template <class NodeT>
+void BasicRTCInterface<NodeT>::onTimer()
 {
   AutoModeStatus auto_mode_status;
   auto_mode_status.module = module_;
@@ -248,7 +294,8 @@ void RTCInterface::onTimer()
   pub_auto_mode_status_->publish(auto_mode_status);
 }
 
-void RTCInterface::updateCooperateStatus(
+template <class NodeT>
+void BasicRTCInterface<NodeT>::updateCooperateStatus(
   const UUID & uuid, const bool safe, const uint8_t state, const double start_distance,
   const double finish_distance, const rclcpp::Time & stamp, const bool requested,
   const std::optional<bool> & override_rtc_auto_mode)
@@ -321,7 +368,8 @@ void RTCInterface::updateCooperateStatus(
                                                    << state_to_string(state) << std::endl);
 }
 
-void RTCInterface::removeCooperateStatus(const UUID & uuid)
+template <class NodeT>
+void BasicRTCInterface<NodeT>::removeCooperateStatus(const UUID & uuid)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   removeStoredCommand(uuid);
@@ -340,7 +388,8 @@ void RTCInterface::removeCooperateStatus(const UUID & uuid)
     "[removeCooperateStatus] uuid : " << uuid_to_string(uuid) << " is not found." << std::endl);
 }
 
-void RTCInterface::removeStoredCommand(const UUID & uuid)
+template <class NodeT>
+void BasicRTCInterface<NodeT>::removeStoredCommand(const UUID & uuid)
 {
   // Find stored command which has same uuid and erase it
   const auto itr = std::find_if(
@@ -353,7 +402,8 @@ void RTCInterface::removeStoredCommand(const UUID & uuid)
   }
 }
 
-void RTCInterface::removeExpiredCooperateStatus()
+template <class NodeT>
+void BasicRTCInterface<NodeT>::removeExpiredCooperateStatus()
 {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto itr = std::remove_if(
@@ -363,14 +413,16 @@ void RTCInterface::removeExpiredCooperateStatus()
   registered_status_.statuses.erase(itr, registered_status_.statuses.end());
 }
 
-void RTCInterface::clearCooperateStatus()
+template <class NodeT>
+void BasicRTCInterface<NodeT>::clearCooperateStatus()
 {
   std::lock_guard<std::mutex> lock(mutex_);
   registered_status_.statuses.clear();
   stored_commands_.clear();
 }
 
-bool RTCInterface::isActivated(const UUID & uuid) const
+template <class NodeT>
+bool BasicRTCInterface<NodeT>::isActivated(const UUID & uuid) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto itr = std::find_if(
@@ -392,7 +444,8 @@ bool RTCInterface::isActivated(const UUID & uuid) const
   return false;
 }
 
-bool RTCInterface::isForceActivated(const UUID & uuid) const
+template <class NodeT>
+bool BasicRTCInterface<NodeT>::isForceActivated(const UUID & uuid) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto itr = std::find_if(
@@ -413,7 +466,8 @@ bool RTCInterface::isForceActivated(const UUID & uuid) const
   return false;
 }
 
-bool RTCInterface::isForceDeactivated(const UUID & uuid) const
+template <class NodeT>
+bool BasicRTCInterface<NodeT>::isForceDeactivated(const UUID & uuid) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto itr = std::find_if(
@@ -433,7 +487,8 @@ bool RTCInterface::isForceDeactivated(const UUID & uuid) const
   return false;
 }
 
-bool RTCInterface::isRegistered(const UUID & uuid) const
+template <class NodeT>
+bool BasicRTCInterface<NodeT>::isRegistered(const UUID & uuid) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto itr = std::find_if(
@@ -442,7 +497,8 @@ bool RTCInterface::isRegistered(const UUID & uuid) const
   return itr != registered_status_.statuses.end();
 }
 
-bool RTCInterface::isRTCEnabled(const UUID & uuid) const
+template <class NodeT>
+bool BasicRTCInterface<NodeT>::isRTCEnabled(const UUID & uuid) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto itr = std::find_if(
@@ -458,7 +514,8 @@ bool RTCInterface::isRTCEnabled(const UUID & uuid) const
   return is_auto_mode_enabled_;
 }
 
-bool RTCInterface::isTerminated(const UUID & uuid) const
+template <class NodeT>
+bool BasicRTCInterface<NodeT>::isTerminated(const UUID & uuid) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto itr = std::find_if(
@@ -474,28 +531,33 @@ bool RTCInterface::isTerminated(const UUID & uuid) const
   return is_auto_mode_enabled_;
 }
 
-void RTCInterface::lockCommandUpdate()
+template <class NodeT>
+void BasicRTCInterface<NodeT>::lockCommandUpdate()
 {
   is_locked_ = true;
 }
 
-void RTCInterface::unlockCommandUpdate()
+template <class NodeT>
+void BasicRTCInterface<NodeT>::unlockCommandUpdate()
 {
   is_locked_ = false;
   updateCooperateCommandStatus(stored_commands_);
 }
 
-rclcpp::Logger RTCInterface::getLogger() const
+template <class NodeT>
+rclcpp::Logger BasicRTCInterface<NodeT>::getLogger() const
 {
   return logger_;
 }
 
-bool RTCInterface::isLocked() const
+template <class NodeT>
+bool BasicRTCInterface<NodeT>::isLocked() const
 {
   return is_locked_;
 }
 
-void RTCInterface::print() const
+template <class NodeT>
+void BasicRTCInterface<NodeT>::print() const
 {
   RCLCPP_INFO_STREAM(getLogger(), "---print rtc cooperate statuses---" << std::endl);
   for (const auto status : registered_status_.statuses) {
@@ -506,5 +568,11 @@ void RTCInterface::print() const
                            << " state:" << state_to_string(status.state.type) << std::endl);
   }
 }
+
+// Only these instantiations can be linked against. No #ifdef is needed: even in a build without
+// Agnocast, autoware::agnocast_wrapper::Node is a class of its own rather than an alias of
+// rclcpp::Node, so the two instantiations are always distinct types.
+template class BasicRTCInterface<rclcpp::Node>;
+template class BasicRTCInterface<autoware::agnocast_wrapper::Node>;
 
 }  // namespace autoware::rtc_interface
