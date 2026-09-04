@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+# Entry point script for the autoware_bridge node
+import sys
+
+from autoware_carla_interface.autoware_bridge.node import main
+
+if __name__ == "__main__":
+    sys.exit(main())
