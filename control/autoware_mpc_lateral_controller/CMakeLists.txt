@@ -25,12 +25,19 @@ ament_auto_add_library(${MPC_LAT_CON_LIB} SHARED
 if(BUILD_TESTING)
   set(TEST_LAT_SOURCES
     test/test_mpc.cpp
+    test/test_mpc_lateral_controller.cpp
     test/test_mpc_utils.cpp
     test/test_lowpass_filter.cpp
   )
   set(TEST_LATERAL_CONTROLLER_EXE test_lateral_controller)
-  ament_add_ros_isolated_gtest(${TEST_LATERAL_CONTROLLER_EXE} ${TEST_LAT_SOURCES})
+  # Each test in test_mpc_lateral_controller.cpp builds a node and declares the parameters
+  # of the controller on it, which a coverage build makes about ten times slower. The whole
+  # executable then runs for around ninety seconds and passes the sixty second default.
+  # Extracting the logic out of the node removes the node from these tests and with it the
+  # reason for this timeout.
+  ament_add_ros_isolated_gtest(${TEST_LATERAL_CONTROLLER_EXE} ${TEST_LAT_SOURCES} TIMEOUT 300)
   target_link_libraries(${TEST_LATERAL_CONTROLLER_EXE} ${MPC_LAT_CON_LIB})
+  ament_target_dependencies(${TEST_LATERAL_CONTROLLER_EXE} ament_index_cpp)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
