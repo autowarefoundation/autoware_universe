@@ -39,6 +39,7 @@ endif()
 if(BUILD_TESTING)
     list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
     find_package(ament_lint_auto REQUIRED)
+    find_package(ament_cmake_gtest REQUIRED)
     ament_lint_auto_find_test_dependencies()
 endif()
 
@@ -95,6 +96,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
   ${autoware_pointcloud_preprocessor_TARGETS}
+  ${cuda_blackboard_LIBRARIES}
 )
 
 target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
@@ -173,6 +175,22 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  ament_add_gtest(test_cuda_pointcloud_preprocessor
+    test/test_cuda_pointcloud_preprocessor.cpp
+  )
+  target_link_libraries(test_cuda_pointcloud_preprocessor
+    cuda_pointcloud_preprocessor_lib
+    ${CUDA_LIBRARIES}
+  )
+  target_include_directories(test_cuda_pointcloud_preprocessor SYSTEM PRIVATE
+    ${autoware_cuda_utils_INCLUDE_DIRS}
+    ${autoware_pointcloud_preprocessor_INCLUDE_DIRS}
+    ${autoware_point_types_INCLUDE_DIRS}
+    ${cuda_blackboard_INCLUDE_DIRS}
+  )
+endif()
 
 install(
   TARGETS cuda_pointcloud_preprocessor_lib
