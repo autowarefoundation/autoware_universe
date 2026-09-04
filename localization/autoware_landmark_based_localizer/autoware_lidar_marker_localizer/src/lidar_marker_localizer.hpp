@@ -18,6 +18,8 @@
 #include "autoware/localization_util/smart_pose_buffer.hpp"
 #include "autoware/qos_utils/qos_compatibility.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/landmark_manager/landmark_manager.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -34,8 +36,6 @@
 #include <pcl/common/transforms.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <deque>
 #include <memory>
@@ -46,7 +46,7 @@
 namespace autoware::lidar_marker_localizer
 {
 
-class LidarMarkerLocalizer : public rclcpp::Node
+class LidarMarkerLocalizer : public autoware::agnocast_wrapper::Node
 {
   using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using MarkerArray = visualization_msgs::msg::MarkerArray;
@@ -103,11 +103,12 @@ public:
   explicit LidarMarkerLocalizer(const rclcpp::NodeOptions & node_options);
 
 private:
-  void self_pose_callback(const PoseWithCovarianceStamped::ConstSharedPtr & self_pose_msg_ptr);
-  void points_callback(const PointCloud2::ConstSharedPtr & points_msg_ptr);
-  void map_bin_callback(const HADMapBin::ConstSharedPtr & map_bin_msg_ptr);
+  void self_pose_callback(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PoseWithCovarianceStamped) & self_pose_msg_ptr);
+  void points_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) & points_msg_ptr);
+  void map_bin_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(HADMapBin) & map_bin_msg_ptr);
   void service_trigger_node(
-    const SetBool::Request::SharedPtr req, SetBool::Response::SharedPtr res);
+    AUTOWARE_SERVICE_REQUEST_PTR(SetBool) req, AUTOWARE_SERVICE_RESPONSE_PTR(SetBool) res);
 
   void initialize_diagnostics();
   void main_process(const PointCloud2::ConstSharedPtr & points_msg_ptr);
@@ -131,28 +132,29 @@ private:
     const sensor_msgs::msg::PointCloud2::SharedPtr & sensor_points_input_ptr,
     sensor_msgs::msg::PointCloud2::SharedPtr & sensor_points_output_ptr);
 
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<autoware::agnocast_wrapper::TransformListener> tf_listener_;
+  std::shared_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_;
 
-  rclcpp::Subscription<PointCloud2>::SharedPtr sub_points_;
-  rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr sub_self_pose_;
-  rclcpp::Subscription<HADMapBin>::SharedPtr sub_map_bin_;
+  AUTOWARE_SUBSCRIPTION_PTR(PointCloud2) sub_points_;
+  AUTOWARE_SUBSCRIPTION_PTR(PoseWithCovarianceStamped) sub_self_pose_;
+  AUTOWARE_SUBSCRIPTION_PTR(HADMapBin) sub_map_bin_;
 
-  rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr
-    pub_base_link_pose_with_covariance_on_map_;
-  rclcpp::Service<SetBool>::SharedPtr service_trigger_node_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr pub_marker_mapped_;
-  rclcpp::Publisher<PoseArray>::SharedPtr pub_marker_detected_;
-  rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_debug_pose_with_covariance_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_marker_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(PoseWithCovarianceStamped)
+  pub_base_link_pose_with_covariance_on_map_;
+  AUTOWARE_SERVICE_PTR(SetBool) service_trigger_node_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) pub_marker_mapped_;
+  AUTOWARE_PUBLISHER_PTR(PoseArray) pub_marker_detected_;
+  AUTOWARE_PUBLISHER_PTR(PoseWithCovarianceStamped) pub_debug_pose_with_covariance_;
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_marker_pointcloud_;
 
-  std::shared_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
+  std::shared_ptr<autoware_utils::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
+    diagnostics_interface_;
 
-  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_center_intensity_grid;
-  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_positive_grid;
-  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_negative_grid;
-  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_matched_grid;
-  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_vote_grid;
+  AUTOWARE_PUBLISHER_PTR(nav_msgs::msg::OccupancyGrid) pub_center_intensity_grid;
+  AUTOWARE_PUBLISHER_PTR(nav_msgs::msg::OccupancyGrid) pub_positive_grid;
+  AUTOWARE_PUBLISHER_PTR(nav_msgs::msg::OccupancyGrid) pub_negative_grid;
+  AUTOWARE_PUBLISHER_PTR(nav_msgs::msg::OccupancyGrid) pub_matched_grid;
+  AUTOWARE_PUBLISHER_PTR(nav_msgs::msg::OccupancyGrid) pub_vote_grid;
 
   Param param_;
   bool is_activated_;
