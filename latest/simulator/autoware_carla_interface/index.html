@@ -23102,6 +23102,12 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td>"$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml"</td>
 <td>Control mapping file to be used in <code>autoware_raw_vehicle_cmd_converter</code>. Current control are calibrated based on <code>vehicle.toyota.prius</code> Blueprints ID in CARLA. Changing the vehicle type may need a recalibration.</td>
 </tr>
+<tr>
+<td><code>wake_sleeping_physics</code></td>
+<td>bool</td>
+<td>False</td>
+<td>Nudge the ego physics body awake with a small <code>set_target_velocity</code> when launching from standstill. Only needed on CARLA 0.10 (UE5/Chaos), where a stationary body is put to sleep and <code>VehicleControl</code> throttle does not wake it. Leave <code>false</code> on the supported 0.9.15 environment, whose bodies never sleep, to keep unmodified launch dynamics.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="sensor-configuration">Sensor Configuration<a class="headerlink" href="#sensor-configuration" title="Permanent link">#</a></h3>
