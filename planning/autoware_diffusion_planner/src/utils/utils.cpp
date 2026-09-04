@@ -261,25 +261,24 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
 
 BoundedPose bound_snapped_pose(
   const Eigen::Vector2d & real_position, const double real_yaw,
-  const Eigen::Vector2d & snapped_position, const double snapped_yaw, const double correction_gain,
+  const Eigen::Vector2d & snapped_position, const double snapped_yaw, const double snap_strength,
   const double max_position_error_m, const double max_yaw_error_rad)
 {
-  if (correction_gain < 0.0 || correction_gain > 1.0) {
-    throw std::runtime_error("bound_snapped_pose requires correction_gain in [0, 1]");
+  if (snap_strength < 0.0 || snap_strength > 1.0) {
+    throw std::runtime_error("bound_snapped_pose requires snap_strength in [0, 1]");
   }
   if (max_position_error_m <= 0.0 || max_yaw_error_rad <= 0.0) {
     throw std::runtime_error("bound_snapped_pose requires positive error limits");
   }
-  const double keep = 1.0 - correction_gain;
-
-  Eigen::Vector2d residual = keep * (real_position - snapped_position);
+  Eigen::Vector2d residual = snap_strength * (real_position - snapped_position);
   const double norm = residual.norm();
   if (norm > max_position_error_m) {
     residual *= max_position_error_m / norm;
   }
 
   const double yaw_residual = std::clamp(
-    keep * autoware_utils_math::normalize_radian(real_yaw - snapped_yaw), -max_yaw_error_rad,
+    snap_strength * autoware_utils_math::normalize_radian(real_yaw - snapped_yaw),
+    -max_yaw_error_rad,
     max_yaw_error_rad);
 
   return BoundedPose{

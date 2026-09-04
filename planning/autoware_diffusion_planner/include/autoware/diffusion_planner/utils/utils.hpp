@@ -151,9 +151,9 @@ struct BoundedPose
  * @brief Bounds a snapped pose by the real pose so the two can never drift apart by more than the
  *        given limits, without a discontinuity.
  *
- * The residual (real - snapped) is first shrunk by (1 - correction_gain): a gain of 0 keeps the
- * snapped pose, a gain of 1 returns the real pose, anything in between leaks the residual back
- * into the virtual pose over successive frames (time constant ~ 1 / gain frames). The shrunk
+ * The residual (real - snapped) is scaled by snap_strength: a strength of 0 returns the real pose
+ * and so disables the feature, a strength of 1 returns the snapped pose, and anything in between
+ * places the virtual pose on the segment between them. The scaled
  * residual is then saturated at max_position_error_m and max_yaw_error_rad, so the returned pose
  * is always within those limits of the real pose. Unlike rejecting the snap when a limit is
  * exceeded, this is continuous in the inputs: the virtual pose tracks the plan while it is close
@@ -163,14 +163,15 @@ struct BoundedPose
  * @param real_yaw Real yaw [rad].
  * @param snapped_position Snapped xy position.
  * @param snapped_yaw Snapped yaw [rad].
- * @param correction_gain Fraction of the residual re-injected per call, in [0, 1].
+ * @param snap_strength How far from the real pose toward the snapped pose the virtual pose is
+ *        placed, in [0, 1]. 0 is the real pose (feature off), 1 is the snapped pose.
  * @param max_position_error_m Saturation of the position residual [m] (> 0).
  * @param max_yaw_error_rad Saturation of the yaw residual [rad] (> 0).
- * @throw std::runtime_error on an out-of-range gain or a non-positive limit.
+ * @throw std::runtime_error on an out-of-range strength or a non-positive limit.
  */
 BoundedPose bound_snapped_pose(
   const Eigen::Vector2d & real_position, double real_yaw, const Eigen::Vector2d & snapped_position,
-  double snapped_yaw, double correction_gain, double max_position_error_m,
+  double snapped_yaw, double snap_strength, double max_position_error_m,
   double max_yaw_error_rad);
 
 /**

@@ -237,12 +237,12 @@
               "enum": ["bound", "reject"],
               "description": "Behaviour at the error limits. 'bound': the snapped pose is pulled toward the raw pose so it never differs by more than max_position_error_m / max_yaw_error_deg (continuous, no step). 'reject': the snap is skipped for the frame and the raw pose is used."
             },
-            "correction_gain": {
+            "snap_strength": {
               "type": "number",
-              "default": 0.1,
+              "default": 0.9,
               "minimum": 0,
               "maximum": 1,
-              "description": "Bound mode only. Fraction of the (raw - snapped) residual re-injected into the snapped pose every frame. 0 keeps the pose exactly on the previous plan; 0.1 lets the virtual pose follow reality with a time constant of about 10 frames."
+              "description": "Bound mode only. How far from the raw pose toward the snapped pose the virtual pose is placed. 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous plan."
             },
             "yaw_source": {
               "type": "string",
@@ -276,7 +276,7 @@
             "max_search_segment_count",
             "min_speed_mps",
             "limit_mode",
-            "correction_gain",
+            "snap_strength",
             "yaw_source",
             "yaw_fit_half_window_m",
             "yaw_fit_min_length_m",

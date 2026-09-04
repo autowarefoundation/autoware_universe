@@ -391,20 +391,20 @@ TEST_F(UtilsTest, SnapPointToTrajectoryPrefixExtendsWindowBackwards)
   EXPECT_NEAR(*snap->tangent_yaw, 0.0, 0.02);
 }
 
-TEST_F(UtilsTest, BoundSnappedPoseKeepsSnappedPoseWhenGainIsZero)
+TEST_F(UtilsTest, BoundSnappedPoseKeepsSnappedPoseWhenStrengthIsOne)
 {
   const auto b = utils::bound_snapped_pose(
-    Eigen::Vector2d(0.1, 0.2), 0.05, Eigen::Vector2d(0.0, 0.0), 0.0, 0.0, 0.3, 0.1);
+    Eigen::Vector2d(0.1, 0.2), 0.05, Eigen::Vector2d(0.0, 0.0), 0.0, 1.0, 0.3, 0.1);
   EXPECT_NEAR(b.position.x(), 0.0, 1e-9);
   EXPECT_NEAR(b.position.y(), 0.0, 1e-9);
   EXPECT_NEAR(b.yaw, 0.0, 1e-9);
 }
 
-TEST_F(UtilsTest, BoundSnappedPoseLeaksResidualByGain)
+TEST_F(UtilsTest, BoundSnappedPoseBlendsByStrength)
 {
   const auto b = utils::bound_snapped_pose(
-    Eigen::Vector2d(0.2, 0.0), 0.04, Eigen::Vector2d(0.0, 0.0), 0.0, 0.25, 0.3, 0.1);
-  // virtual = snapped + gain * (real - snapped)
+    Eigen::Vector2d(0.2, 0.0), 0.04, Eigen::Vector2d(0.0, 0.0), 0.0, 0.75, 0.3, 0.1);
+  // virtual = real - strength * (real - snapped)
   EXPECT_NEAR(b.position.x(), 0.05, 1e-9);
   EXPECT_NEAR(b.yaw, 0.01, 1e-9);
 }
@@ -414,7 +414,7 @@ TEST_F(UtilsTest, BoundSnappedPoseLeaksResidualByGain)
 TEST_F(UtilsTest, BoundSnappedPoseSaturatesAtLimits)
 {
   const auto b = utils::bound_snapped_pose(
-    Eigen::Vector2d(0.0, 1.0), 0.5, Eigen::Vector2d(0.0, 0.0), 0.0, 0.0, 0.3, 0.1);
+    Eigen::Vector2d(0.0, 1.0), 0.5, Eigen::Vector2d(0.0, 0.0), 0.0, 1.0, 0.3, 0.1);
   EXPECT_NEAR(b.position.x(), 0.0, 1e-9);
   EXPECT_NEAR(b.position.y(), 0.7, 1e-9);  // 0.3 m from the real pose toward the snapped one
   EXPECT_NEAR(b.yaw, 0.4, 1e-9);           // 0.1 rad from the real yaw toward the snapped one
@@ -423,7 +423,7 @@ TEST_F(UtilsTest, BoundSnappedPoseSaturatesAtLimits)
 TEST_F(UtilsTest, BoundSnappedPoseWrapsYaw)
 {
   const auto b = utils::bound_snapped_pose(
-    Eigen::Vector2d::Zero(), M_PI - 0.01, Eigen::Vector2d::Zero(), -M_PI + 0.01, 0.0, 0.3, 0.1);
+    Eigen::Vector2d::Zero(), M_PI - 0.01, Eigen::Vector2d::Zero(), -M_PI + 0.01, 1.0, 0.3, 0.1);
   // The residual across the +-pi seam is 0.02 rad, not 2 pi - 0.02.
   EXPECT_NEAR(std::abs(b.yaw), M_PI - 0.01, 1e-9);
 }

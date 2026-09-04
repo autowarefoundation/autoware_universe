@@ -46,7 +46,7 @@
       max_search_segment_count: 5     # number of leading segments of the previous trajectory searched for the closest one
       min_speed_mps: 0.0              # [m/s] skip the snap below this speed; measured worse than no gate, so disabled by default
       limit_mode: "bound"             # "bound": keep the snapped pose within the error limits of the raw pose (continuous); "reject": skip the snap when a limit is exceeded
-      correction_gain: 0.1            # fraction of the raw-vs-snapped residual re-injected per frame (bound mode); 0 = stay exactly on the previous plan
+      snap_strength: 0.9              # how far from the raw pose toward the snapped pose (bound mode); 0 = feature off, 1 = stay exactly on the previous plan
       yaw_source: "polyline_tangent"  # "polyline_tangent" (spline tangent of the previous trajectory, averaged over the fit window) or "predicted_heading" (model heading channel)
       yaw_fit_half_window_m: 1.0      # [m] arc length on each side of the foot point used to fit the tangent
       yaw_fit_min_length_m: 0.2       # [m] fall back to the localization heading when the fit window is shorter than this

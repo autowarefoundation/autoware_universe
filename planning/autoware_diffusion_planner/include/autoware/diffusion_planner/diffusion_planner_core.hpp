@@ -140,11 +140,10 @@ struct EgoSnapParams
   //    (utils::bound_snapped_pose); continuous, no step.
   std::string limit_mode;
 
-  // Fraction of the (raw - snapped) residual re-injected into the snapped pose every frame, in
-  // [0, 1]. 0 keeps the pose exactly on the previous plan; small values let the virtual pose follow
-  // reality with a time constant of about 1 / gain frames instead of accumulating tracking error
-  // until the limit is hit. Only used with limit_mode "bound".
-  double correction_gain;
+  // How far from the raw pose toward the snapped pose the virtual pose is placed, in [0, 1].
+  // 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous
+  // plan; values in between sit on the segment between the two. Only used with limit_mode "bound".
+  double snap_strength;
 
   // Number of leading segments of the previous trajectory searched for the closest one. The
   // planning cycle only advances the ego by ~1 segment, so a small window is enough and it keeps

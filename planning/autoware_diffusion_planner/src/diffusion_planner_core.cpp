@@ -436,7 +436,7 @@ DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic
   utils::BoundedPose virtual_pose{snap->position, snapped_yaw};
   if (snap_params.limit_mode == "bound") {
     virtual_pose = utils::bound_snapped_pose(
-      real_position, current_yaw, snap->position, snapped_yaw, snap_params.correction_gain,
+      real_position, current_yaw, snap->position, snapped_yaw, snap_params.snap_strength,
       snap_params.max_position_error_m, max_yaw_error_rad);
   } else {
     const double position_error_m = (real_position - snap->position).norm();
