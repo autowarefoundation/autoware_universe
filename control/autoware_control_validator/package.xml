@@ -22,6 +22,7 @@
 
   <depend>angles</depend>
   <depend>autoware_adapi_specs</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_control_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
