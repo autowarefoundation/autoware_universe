@@ -328,23 +328,14 @@ class InitializeInterface(object):
         for vehicle in vehicles:
             vehicle.set_autopilot(True)
 
-    def load_world(self):
+    def _connect_client(self):
+        """Open a CARLA client on the configured host/port with the configured timeout."""
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
-        map_verified = self._load_carla_world(client)
-        if not map_verified:
-            # After a failed OpenDRIVE parse, libcarla keeps serving the previous
-            # episode's cached map through this client, so world.get_map() would
-            # return a stale (wrong) map instead of raising. Reconnect with a fresh
-            # client so the mapless world reports honestly downstream
-            # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
-            self.logger.warning(
-                "Reconnecting the CARLA client to discard the stale map cache "
-                "of the previous episode."
-            )
-            client = carla.Client(self.local_host, self.port)
-            client.set_timeout(self.timeout)
+        return client
 
+    def _wait_for_world(self, client):
+        """Fetch the world once it is loaded and confirm it can be ticked."""
         # Wait for the world to be fully loaded
         # This is critical for non-default maps that need time to load
         time.sleep(2.0)
@@ -360,11 +351,48 @@ class InitializeInterface(object):
             # In this case, just wait a bit more
             time.sleep(1.0)
 
+    def _apply_world_settings(self):
+        """Push the configured simulation settings onto the loaded world."""
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = self.fixed_delta_seconds
         settings.synchronous_mode = self.sync_mode
         settings.no_rendering_mode = self.no_rendering_mode
         self.world.apply_settings(settings)
+
+    def _spawn_ego_actor(self):
+        """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
+        spawn_point, randomize = self._parse_spawn_point()
+        if not randomize:
+            spawn_point = self._snap_spawn_point_to_ground(spawn_point)
+        ego_actor = CarlaDataProvider.request_new_actor(
+            self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
+        )
+        if ego_actor is None:
+            raise RuntimeError(
+                f"Failed to spawn ego vehicle '{self.vehicle_type}' at "
+                f"({spawn_point.location.x:.1f}, {spawn_point.location.y:.1f}, "
+                f"{spawn_point.location.z:.1f}); the spawn point may be occupied "
+                "or invalid for this map"
+            )
+        return ego_actor
+
+    def load_world(self):
+        client = self._connect_client()
+        map_verified = self._load_carla_world(client)
+        if not map_verified:
+            # After a failed OpenDRIVE parse, libcarla keeps serving the previous
+            # episode's cached map through this client, so world.get_map() would
+            # return a stale (wrong) map instead of raising. Reconnect with a fresh
+            # client so the mapless world reports honestly downstream
+            # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
+            self.logger.warning(
+                "Reconnecting the CARLA client to discard the stale map cache "
+                "of the previous episode."
+            )
+            client = self._connect_client()
+
+        self._wait_for_world(client)
+        self._apply_world_settings()
         CarlaDataProvider.set_world(self.world)
         CarlaDataProvider.set_client(client)
         # Vehicle physics differ between CARLA 0.9.x and 0.10 (Chaos); let the
@@ -372,19 +400,7 @@ class InitializeInterface(object):
         # angle is reported) from the server version.
         self.interface.set_carla_version(client.get_server_version())
 
-        spawn_point, randomize = self._parse_spawn_point()
-        if not randomize:
-            spawn_point = self._snap_spawn_point_to_ground(spawn_point)
-        self.ego_actor = CarlaDataProvider.request_new_actor(
-            self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
-        )
-        if self.ego_actor is None:
-            raise RuntimeError(
-                f"Failed to spawn ego vehicle '{self.vehicle_type}' at "
-                f"({spawn_point.location.x:.1f}, {spawn_point.location.y:.1f}, "
-                f"{spawn_point.location.z:.1f}); the spawn point may be occupied "
-                "or invalid for this map"
-            )
+        self.ego_actor = self._spawn_ego_actor()
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
         if self.interface.param_values.get("flatten_steering_curve", False):
