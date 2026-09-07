@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<osm version="0.6" upload="false" generator="lanelet2">
+  <node id="1000" visible="true" version="1" lat="34.99998621134" lon="138.99998390104">
+    <tag k="local_x" v="-1.5" />
+    <tag k="local_y" v="-1.5" />
+  </node>
+  <node id="1001" visible="true" version="1" lat="34.99999036278" lon="139.00023579724">
+    <tag k="local_x" v="21.5" />
+    <tag k="local_y" v="-1.5" />
+  </node>
+  <node id="1002" visible="true" version="1" lat="35.00019763724" lon="139.00023075237">
+    <tag k="local_x" v="21.5" />
+    <tag k="local_y" v="21.5" />
+  </node>
+  <node id="1003" visible="true" version="1" lat="35.00019348577" lon="138.99997885554">
+    <tag k="local_x" v="-1.5" />
+    <tag k="local_y" v="21.5" />
+  </node>
+  <node id="1004" visible="true" version="1" lat="35.00001378866" lon="139.00001609897">
+    <tag k="local_x" v="1.5" />
+    <tag k="local_y" v="1.5" />
+  </node>
+  <node id="1005" visible="true" version="1" lat="35.00001685711" lon="139.00020228317">
+    <tag k="local_x" v="18.5" />
+    <tag k="local_y" v="1.5" />
+  </node>
+  <node id="1006" visible="true" version="1" lat="35.00017005997" lon="139.0001985543">
+    <tag k="local_x" v="18.5" />
+    <tag k="local_y" v="18.5" />
+  </node>
+  <node id="1007" visible="true" version="1" lat="35.0001669915" lon="139.00001236975">
+    <tag k="local_x" v="1.5" />
+    <tag k="local_y" v="18.5" />
+  </node>
+  <way id="1008" visible="true" version="1">
+    <nd ref="1004" />
+    <nd ref="1005" />
+  </way>
+  <way id="1009" visible="true" version="1">
+    <nd ref="1000" />
+    <nd ref="1001" />
+  </way>
+  <way id="1011" visible="true" version="1">
+    <nd ref="1005" />
+    <nd ref="1006" />
+  </way>
+  <way id="1012" visible="true" version="1">
+    <nd ref="1001" />
+    <nd ref="1002" />
+  </way>
+  <way id="1014" visible="true" version="1">
+    <nd ref="1006" />
+    <nd ref="1007" />
+  </way>
+  <way id="1015" visible="true" version="1">
+    <nd ref="1002" />
+    <nd ref="1003" />
+  </way>
+  <way id="1017" visible="true" version="1">
+    <nd ref="1007" />
+    <nd ref="1004" />
+  </way>
+  <way id="1018" visible="true" version="1">
+    <nd ref="1003" />
+    <nd ref="1000" />
+  </way>
+  <relation id="1010" visible="true" version="1">
+    <member type="way" ref="1008" role="left" />
+    <member type="way" ref="1009" role="right" />
+    <tag k="location" v="urban" />
+    <tag k="one_way" v="yes" />
+    <tag k="speed_limit" v="30" />
+    <tag k="subtype" v="road" />
+    <tag k="type" v="lanelet" />
+  </relation>
+  <relation id="1013" visible="true" version="1">
+    <member type="way" ref="1011" role="left" />
+    <member type="way" ref="1012" role="right" />
+    <tag k="location" v="urban" />
+    <tag k="one_way" v="yes" />
+    <tag k="speed_limit" v="30" />
+    <tag k="subtype" v="road" />
+    <tag k="type" v="lanelet" />
+  </relation>
+  <relation id="1016" visible="true" version="1">
+    <member type="way" ref="1014" role="left" />
+    <member type="way" ref="1015" role="right" />
+    <tag k="location" v="urban" />
+    <tag k="one_way" v="yes" />
+    <tag k="speed_limit" v="30" />
+    <tag k="subtype" v="road" />
+    <tag k="type" v="lanelet" />
+  </relation>
+  <relation id="1019" visible="true" version="1">
+    <member type="way" ref="1017" role="left" />
+    <member type="way" ref="1018" role="right" />
+    <tag k="location" v="urban" />
+    <tag k="one_way" v="yes" />
+    <tag k="speed_limit" v="30" />
+    <tag k="subtype" v="road" />
+    <tag k="type" v="lanelet" />
+  </relation>
+</osm>
