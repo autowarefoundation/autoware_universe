@@ -69,6 +69,9 @@ TrajectoryValidatorReport TrajectoryValidator::process(
           evaluation.reason = "Found failed metrics";
         }
         combined_metrics.insert(combined_metrics.end(), val.metrics.begin(), val.metrics.end());
+        report.planning_factors.factors.insert(
+          report.planning_factors.factors.end(), val.planning_factors.factors.begin(),
+          val.planning_factors.factors.end());
       }
 
       report.processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);

@@ -21,6 +21,7 @@
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report_array.hpp>
@@ -111,6 +112,13 @@ private:
     const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories);
 
   /**
+   * @brief Publishes the planning factors collected from all plugins this cycle.
+   * @param planning_factors Planning factors aggregated by the validator.
+   */
+  void publish_planning_factors(
+    const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors);
+
+  /**
    * @brief Publishes the validation report array.
    * @param reports Per-trajectory validation reports to publish.
    */
@@ -167,6 +175,9 @@ private:
   // Publishers
   std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
     pub_debug_;
+  std::unique_ptr<
+    autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>>
+    planning_factor_interface_;
 
   // Internal state
   std::unique_ptr<
