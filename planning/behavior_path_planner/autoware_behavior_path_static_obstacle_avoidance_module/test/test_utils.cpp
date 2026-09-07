@@ -20,10 +20,11 @@
 #include "autoware_test_utils/autoware_test_utils.hpp"
 #include "autoware_utils/math/unit_conversion.hpp"
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
+
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -1604,10 +1605,9 @@ TEST(TestUtils, getExtendLanesTerminatesOnLoopingMap)
     rclcpp::init(0, nullptr);
   }
 
-  const auto map_path =
-    ament_index_cpp::get_package_share_directory(
-      "autoware_behavior_path_static_obstacle_avoidance_module") +
-    "/test_data/loop_map.osm";
+  const auto map_path = ament_index_cpp::get_package_share_directory(
+                          "autoware_behavior_path_static_obstacle_avoidance_module") +
+                        "/test_data/loop_map.osm";
   const auto map_bin = autoware::test_utils::make_map_bin_msg(map_path);
 
   auto planner_data = std::make_shared<PlannerData>();
