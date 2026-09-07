@@ -1365,9 +1365,9 @@ class carla_ros2_interface(object):
         """Map a carla.TrafficLightState to a TrafficLightElement (color, status).
 
         A lit lamp reports its color as SOLID_ON. CARLA's ``Off`` is a *known* state --
-        the signal is dark (unsignalized / disabled intersection) -- so it is reported
-        as SOLID_OFF rather than as a lit lamp of unknown color, and only a state this
-        bridge cannot interpret stays UNKNOWN/UNKNOWN.
+        the signal is dark, e.g. at an intersection whose lights are disabled -- so it
+        is reported as SOLID_OFF rather than as a lit lamp of unknown color, and only a
+        state this bridge cannot interpret stays UNKNOWN/UNKNOWN.
         """
         if state == carla.TrafficLightState.Red:
             return TrafficLightElement.RED, TrafficLightElement.SOLID_ON
