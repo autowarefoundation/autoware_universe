@@ -17,6 +17,7 @@
 
 #include <redundancy_switcher_interface/ir/input_events.hpp>
 
+#include <memory>
 #include <stdexcept>
 #include <string>
 

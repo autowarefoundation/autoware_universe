@@ -1,6 +1,8 @@
 <launch>
   <arg name="base_config" default="$(find-pkg-share autoware_redundancy_switcher_interface)/config/default.param.yaml"/>
-  <arg name="plugin_config" default="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/default.param.yaml"/>
+  <!-- Plugin-specific parameters. Defaults to the base config, which already selects a plugin;
+       pass the config file of the plugin package you want to use to override it. -->
+  <arg name="plugin_config" default="$(var base_config)"/>
 
   <!-- Input common topics -->
   <arg name="input_velocity" default="/vehicle/status/velocity_status"/>

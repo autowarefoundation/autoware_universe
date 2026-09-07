@@ -3,6 +3,10 @@
 # Plugin-specific parameters (switcher_plugin, UDS paths, etc.) are in the plugin package config.
 /**:
   ros__parameters:
+    # Class name of the IAdapterPlugin to load. Resolved by pluginlib at runtime, so the
+    # implementation may live in any package. Override via the plugin config file.
+    switcher_plugin: "autoware::redundancy_switcher::SimpleSwitcherAdapter"
+
     # true: receive DrivingMode commands; false: receive CommandMode commands.
     use_driving_mode: false
 

@@ -31,6 +31,7 @@
 #include <chrono>
 #include <memory>
 #include <optional>
+#include <vector>
 
 namespace autoware::redundancy_switcher
 {

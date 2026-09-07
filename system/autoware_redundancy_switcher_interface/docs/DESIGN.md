@@ -19,7 +19,7 @@ pluginlib plugin; the framework has no knowledge of which plugin is used or its 
 
 ### autoware_redundancy_switcher_interface
 
-```
+```text
 include/redundancy_switcher_interface/
   core_logic/
     i_processor.hpp        — IProcessor interface (pure virtual)
@@ -47,7 +47,7 @@ docs/
 
 ### autoware_redundancy_switcher_interface_plugins
 
-```
+```text
 src/
   switcher_adapter.hpp / .cpp      — SimpleSwitcherAdapter plugin
   simple_switcher_node.hpp / .cpp  — Companion stateful switcher node
@@ -324,7 +324,7 @@ is submitted once at startup, making the Processor behave as permanently stable.
 
 ## 11. Thread Safety
 
-```
+```text
 EventGateway.mutex_
   Serializes: Processor::handle()
   Outside lock: CommandBus::dispatch() → adapter::execute()

@@ -17,6 +17,7 @@
 #include <pluginlib/class_list_macros.hpp>
 #include <redundancy_switcher_interface/detail/overloaded.hpp>
 
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <variant>

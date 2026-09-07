@@ -22,6 +22,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
+#include <utility>
 
 namespace autoware::redundancy_switcher
 {
@@ -411,20 +413,33 @@ void RedundancySwitcherAdapter::check_switcher_connection()
     if (jf && !src_f && !dst_f && !af) link_faults.insert(key);
   };
 
-  // clang-format off
-  mark_link(judge.main_ecu_to_sub_ecu_connected,  s.main_ecu_to_sub_ecu_connected,  mef, sef, "main_ecu_to_sub_ecu_link");
-  mark_link(judge.sub_ecu_to_main_ecu_connected,  s.sub_ecu_to_main_ecu_connected,  sef, mef, "main_ecu_to_sub_ecu_link");
-  mark_link(judge.main_ecu_to_main_vcu_connected, s.main_ecu_to_main_vcu_connected, mef, mvf, "main_ecu_to_main_vcu_link");
-  mark_link(judge.main_vcu_to_main_ecu_connected, s.main_vcu_to_main_ecu_connected, mvf, mef, "main_ecu_to_main_vcu_link");
-  mark_link(judge.main_ecu_to_sub_vcu_connected,  s.main_ecu_to_sub_vcu_connected,  mef, svf, "main_ecu_to_sub_vcu_link");
-  mark_link(judge.sub_vcu_to_main_ecu_connected,  s.sub_vcu_to_main_ecu_connected,  svf, mef, "main_ecu_to_sub_vcu_link");
-  mark_link(judge.sub_ecu_to_main_vcu_connected,  s.sub_ecu_to_main_vcu_connected,  sef, mvf, "sub_ecu_to_main_vcu_link");
-  mark_link(judge.main_vcu_to_sub_ecu_connected,  s.main_vcu_to_sub_ecu_connected,  mvf, sef, "sub_ecu_to_main_vcu_link");
-  mark_link(judge.sub_ecu_to_sub_vcu_connected,   s.sub_ecu_to_sub_vcu_connected,   sef, svf, "sub_ecu_to_sub_vcu_link");
-  mark_link(judge.sub_vcu_to_sub_ecu_connected,   s.sub_vcu_to_sub_ecu_connected,   svf, sef, "sub_ecu_to_sub_vcu_link");
-  mark_link(judge.main_vcu_to_sub_vcu_connected,  s.main_vcu_to_sub_vcu_connected,  mvf, svf, "main_vcu_to_sub_vcu_link");
-  mark_link(judge.sub_vcu_to_main_vcu_connected,  s.sub_vcu_to_main_vcu_connected,  svf, mvf, "main_vcu_to_sub_vcu_link");
-  // clang-format on
+  // Every link is judged in both directions. Each direction reads the same flag from the
+  // judged status (`judge`) and the reported one (`s`), so one pointer-to-member picks both.
+  struct LinkCheck
+  {
+    bool ElectionStatus::* connected;
+    bool src_fault;
+    bool dst_fault;
+    const char * key;
+  };
+  const LinkCheck link_checks[] = {
+    {&ElectionStatus::main_ecu_to_sub_ecu_connected, mef, sef, "main_ecu_to_sub_ecu_link"},
+    {&ElectionStatus::sub_ecu_to_main_ecu_connected, sef, mef, "main_ecu_to_sub_ecu_link"},
+    {&ElectionStatus::main_ecu_to_main_vcu_connected, mef, mvf, "main_ecu_to_main_vcu_link"},
+    {&ElectionStatus::main_vcu_to_main_ecu_connected, mvf, mef, "main_ecu_to_main_vcu_link"},
+    {&ElectionStatus::main_ecu_to_sub_vcu_connected, mef, svf, "main_ecu_to_sub_vcu_link"},
+    {&ElectionStatus::sub_vcu_to_main_ecu_connected, svf, mef, "main_ecu_to_sub_vcu_link"},
+    {&ElectionStatus::sub_ecu_to_main_vcu_connected, sef, mvf, "sub_ecu_to_main_vcu_link"},
+    {&ElectionStatus::main_vcu_to_sub_ecu_connected, mvf, sef, "sub_ecu_to_main_vcu_link"},
+    {&ElectionStatus::sub_ecu_to_sub_vcu_connected, sef, svf, "sub_ecu_to_sub_vcu_link"},
+    {&ElectionStatus::sub_vcu_to_sub_ecu_connected, svf, sef, "sub_ecu_to_sub_vcu_link"},
+    {&ElectionStatus::main_vcu_to_sub_vcu_connected, mvf, svf, "main_vcu_to_sub_vcu_link"},
+    {&ElectionStatus::sub_vcu_to_main_vcu_connected, svf, mvf, "main_vcu_to_sub_vcu_link"},
+  };
+  for (const auto & check : link_checks) {
+    mark_link(
+      judge.*check.connected, s.*check.connected, check.src_fault, check.dst_fault, check.key);
+  }
 
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
