@@ -13,7 +13,7 @@ It is intended for redundant ECU configurations where two independent ECUs each 
 When both inputs have published their struct, the node concatenates them into one struct.
 Node indices from the second input are shifted by the size of the first graph so that every index in the merged struct remains unique.
 
-```
+```text
 merged.nodes = struct1.nodes + struct2.nodes
 merged.diags = struct1.diags + shift(struct2.diags, offset)
 merged.links = struct1.links + shift(struct2.links, offset)
