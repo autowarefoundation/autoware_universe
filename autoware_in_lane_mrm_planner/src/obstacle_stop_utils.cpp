@@ -210,8 +210,9 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 
   PointCloud::Ptr pointcloud_in_polygon(new PointCloud);
   for (const auto & point : *pointcloud) {
-    if (boost::geometry::within(
-          autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
+    if (
+      boost::geometry::within(
+        autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
       pointcloud_in_polygon->push_back(point);
     }
   }
@@ -500,9 +501,10 @@ void ObstacleTracker::update_objects(
       if (distance < min_distance) {
         min_distance = distance;
         closest_uuid = uuid;
-        yaw_diff = std::abs(autoware_utils_geometry::calc_yaw_deviation(
-          object.kinematics.initial_pose_with_covariance.pose,
-          existing_object.object.kinematics.initial_pose_with_covariance.pose));
+        yaw_diff = std::abs(
+          autoware_utils_geometry::calc_yaw_deviation(
+            object.kinematics.initial_pose_with_covariance.pose,
+            existing_object.object.kinematics.initial_pose_with_covariance.pose));
       }
     }
     if (closest_uuid && (min_distance > object_distance_th_ || yaw_diff > object_yaw_th_)) {
