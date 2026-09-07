@@ -39,9 +39,9 @@ head positions in the same map frame (see ``carla_location_to_ros_point``) befor
 ``match``; the matcher itself is coordinate-frame agnostic and only compares 2-D points.
 """
 
+from collections import namedtuple
 import math
 import xml.etree.ElementTree as ET
-from collections import namedtuple
 
 # Immutable per-run matching context, so the per-head classifier takes one context
 # argument instead of a long parameter list. ``head_items`` is the map heads
