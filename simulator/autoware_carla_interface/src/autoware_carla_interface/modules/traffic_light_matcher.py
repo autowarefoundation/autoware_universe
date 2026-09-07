@@ -147,6 +147,26 @@ def load_map_traffic_lights(osm_path):
     return result
 
 
+def _parse_id(text, what):
+    """Parse one integer id, raising ``ValueError`` naming ``what`` was expected."""
+    try:
+        return int(text.strip())
+    except ValueError:
+        raise ValueError(f"'{text.strip()}' is not an integer {what}")
+
+
+def _parse_id_map_groups(groups_str):
+    """Parse the ``group_id[|group_id...]`` half of an id-map entry into a set."""
+    groups = {
+        _parse_id(token, "traffic-light group id")
+        for token in groups_str.split("|")
+        if token.strip()
+    }
+    if not groups:
+        raise ValueError("no group id after ':'")
+    return groups
+
+
 def _parse_id_map_entry(item):
     """Parse one ``opendrive_id:group_id[|group_id...]`` entry.
 
@@ -156,22 +176,7 @@ def _parse_id_map_entry(item):
     opendrive_str, separator, groups_str = item.partition(":")
     if not separator:
         raise ValueError("missing ':', expected 'opendrive_id:group_id[|group_id...]'")
-    try:
-        opendrive_id = int(opendrive_str.strip())
-    except ValueError:
-        raise ValueError(f"'{opendrive_str.strip()}' is not an integer OpenDRIVE signal id")
-    groups = set()
-    for token in groups_str.split("|"):
-        token = token.strip()
-        if not token:
-            continue
-        try:
-            groups.add(int(token))
-        except ValueError:
-            raise ValueError(f"'{token}' is not an integer traffic-light group id")
-    if not groups:
-        raise ValueError("no group id after ':'")
-    return opendrive_id, groups
+    return _parse_id(opendrive_str, "OpenDRIVE signal id"), _parse_id_map_groups(groups_str)
 
 
 def parse_id_map_override(raw, on_invalid=None):
@@ -232,6 +237,22 @@ def _distance(a, b):
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
+def _is_ambiguous(nearest_dist, second_dist, ambiguity_ratio):
+    """Whether the runner-up head is close enough that the winner cannot be trusted.
+
+    ``second_dist`` is the distance to the closest head resolving to a different answer,
+    or None when there is none. A tie has no winner -- which head ranks first would come
+    down to the order the ways appear in the .osm -- so equal distances are ambiguous
+    whatever the ratio, including two heads sitting on the same point where the ratio
+    test degenerates to ``0 > 0``.
+    """
+    if second_dist is None:
+        return False
+    if nearest_dist >= second_dist:
+        return True
+    return nearest_dist > ambiguity_ratio * second_dist
+
+
 def _classify_head(head, ctx):
     """Decide how one CARLA head resolves, returning (entry, group_ids or None).
 
@@ -269,12 +290,7 @@ def _classify_head(head, ctx):
         None,
     )
     entry["second"] = second_dist
-    # A tie (including two heads sitting on the same point, where the ratio test
-    # degenerates to 0 > 0) has no winner: which head ranks first would then come
-    # down to the order the ways appear in the .osm, so report it instead.
-    if second_dist is not None and (
-        nearest_dist >= second_dist or nearest_dist > ctx.ambiguity_ratio * second_dist
-    ):
+    if _is_ambiguous(nearest_dist, second_dist, ctx.ambiguity_ratio):
         entry["status"] = MatchResult.AMBIGUOUS
         return entry, None
 
