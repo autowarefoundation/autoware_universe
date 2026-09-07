@@ -31,7 +31,7 @@ In the MRM decision flow:
 - **MRM State Machine**: Tracks MRM operation state (UNKNOWN → NORMAL/OPERATING → SUCCEEDED)
 - **Vehicle Stop Detection**: Polls kinematic state to detect when the vehicle has come to a complete stop
 - **Driving Mode Active Flags**: Per-mode publication of `DrivingModeActive` flags for external monitoring
-- **Configurable Launch Parameters**: All topic and service endpoints are remappable via launch arguments
+- **Configurable Launch Parameters**: All topic and service endpoints can be remapped via launch arguments
 
 ## Architecture
 
