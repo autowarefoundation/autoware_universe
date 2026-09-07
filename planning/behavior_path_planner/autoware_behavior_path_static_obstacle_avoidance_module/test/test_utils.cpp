@@ -1602,11 +1602,18 @@ TEST(TestUtils, getExtendLanesTerminatesOnLoopingMap)
   // getExtendLanes() spins in a while (rclcpp::ok()) loop, so the context must
   // be up for the walk to run. Shut it back down at the end if we brought it up,
   // otherwise the node tests that run afterwards throw "context is already
-  // initialized" when they call rclcpp::init() themselves.
+  // initialized" when they call rclcpp::init() themselves. The scope guard makes
+  // the shutdown failure-safe: it runs even if an assertion or exception unwinds
+  // the test early.
   const bool initialized_context = !rclcpp::ok();
   if (initialized_context) {
     rclcpp::init(0, nullptr);
   }
+  const auto context_guard = std::shared_ptr<void>(nullptr, [initialized_context](void *) {
+    if (initialized_context) {
+      rclcpp::shutdown();
+    }
+  });
 
   const auto map_path = ament_index_cpp::get_package_share_directory(
                           "autoware_behavior_path_static_obstacle_avoidance_module") +
@@ -1641,9 +1648,5 @@ TEST(TestUtils, getExtendLanesTerminatesOnLoopingMap)
   // ... and cannot return more lanelets than the single loop contains.
   EXPECT_FALSE(extend_lanelets.empty());
   EXPECT_LE(extend_lanelets.size(), 4U);
-
-  if (initialized_context) {
-    rclcpp::shutdown();
-  }
 }
 }  // namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance
