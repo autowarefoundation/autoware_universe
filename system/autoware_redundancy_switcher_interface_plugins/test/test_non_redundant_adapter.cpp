@@ -126,13 +126,6 @@ TEST_F(NonRedundantAdapterTest, Execute_UpdateAutowareReadyCommand_DoesNothing)
   EXPECT_EQ(processor_->received.size(), before);
 }
 
-TEST_F(NonRedundantAdapterTest, Execute_UpdateAnotherEcuAvailabilityTimeoutCommand_DoesNothing)
-{
-  const std::size_t before = processor_->received.size();
-  adapter_->execute(OutputCommand{UpdateAnotherEcuAvailabilityTimeoutCommand{true}});
-  EXPECT_EQ(processor_->received.size(), before);
-}
-
 }  // namespace autoware::redundancy_switcher
 
 int main(int argc, char ** argv)

@@ -48,13 +48,6 @@ struct SetControlModeEvent
   Annotated<ControlMode> value;
 };
 
-/// Timeout notification fired when CommandModeAvailability from the peer ECU
-/// has not arrived within the configured interval.
-struct SetAnotherEcuAvailabilityTimeoutEvent
-{
-  Annotated<bool> timed_out;
-};
-
 /// Fired when the switching state has been updated by the SwitcherAdapter.
 /// Timeouts and disconnections are represented as SwitcherSignals with is_faulted=true.
 struct SetSwitcherSignalsEvent
@@ -73,8 +66,7 @@ struct SetPriorityEvent
 
 using InputEvent = std::variant<
   SelfInterruptionEvent, ResetEvent, SetAutowareReadyEvent, SetVelocityStatusEvent,
-  SetControlModeEvent, SetSwitcherSignalsEvent, SetActiveControlUnitEvent,
-  SetAnotherEcuAvailabilityTimeoutEvent, SetPriorityEvent>;
+  SetControlModeEvent, SetSwitcherSignalsEvent, SetActiveControlUnitEvent, SetPriorityEvent>;
 
 }  // namespace autoware::redundancy_switcher
 #endif  // REDUNDANCY_SWITCHER_INTERFACE__IR__INPUT_EVENTS_HPP_

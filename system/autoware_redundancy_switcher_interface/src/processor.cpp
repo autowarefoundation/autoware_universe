@@ -35,9 +35,6 @@ std::vector<OutputCommand> Processor::handle(const InputEvent & event)
       [this](const SetControlModeEvent & e) { return set_control_mode(e); },
       [this](const SetSwitcherSignalsEvent & e) { return set_switcher_signals(e); },
       [this](const SetActiveControlUnitEvent & e) { return set_active_control_unit(e); },
-      [this](const SetAnotherEcuAvailabilityTimeoutEvent & e) {
-        return set_another_ecu_availability_timeout(e);
-      },
       [this](const SetPriorityEvent & e) { return set_priority(e); }},
     event);
 }
@@ -207,18 +204,6 @@ std::vector<OutputCommand> Processor::set_active_control_unit(const SetActiveCon
     return {UpdateActiveControlUnitCommand{ActiveControlUnit{}}};
   }
   return {UpdateActiveControlUnitCommand{e.value.value}};
-}
-
-std::vector<OutputCommand> Processor::set_another_ecu_availability_timeout(
-  const SetAnotherEcuAvailabilityTimeoutEvent & e)
-{
-  state_.another_ecu_availability_timeout = e.timed_out.value;
-  const std::string msg =
-    std::string("Another ECU availability timeout: ") + (e.timed_out.value ? "true" : "false") +
-    (e.timed_out.annotation.empty() ? "" : " (" + e.timed_out.annotation + ")");
-  return {
-    UpdateAnotherEcuAvailabilityTimeoutCommand{e.timed_out.value},
-    LogCommand{e.timed_out.value ? LogLevel::Warn : LogLevel::Info, msg}};
 }
 
 std::vector<OutputCommand> Processor::set_priority(const SetPriorityEvent & e)

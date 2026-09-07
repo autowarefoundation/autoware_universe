@@ -13,7 +13,6 @@
 // limitations under the License.
 #include "redundancy_switcher_interface.hpp"
 
-#include "command_mode_subsystem_adapter.hpp"
 #include "driving_mode_subsystem_adapter.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
@@ -41,12 +40,7 @@ RedundancySwitcherInterface::RedundancySwitcherInterface(const rclcpp::NodeOptio
   command_bus_->add_handler(diag_adapter_);
   diag_adapter_->initialize(this, gateway_);
 
-  const bool use_driving_mode = this->declare_parameter<bool>("use_driving_mode", false);
-  if (use_driving_mode) {
-    subsystem_adapter_ = std::make_shared<DrivingModeSubSystemAdapter>();
-  } else {
-    subsystem_adapter_ = std::make_shared<CommandModeSubSystemAdapter>();
-  }
+  subsystem_adapter_ = std::make_shared<DrivingModeSubSystemAdapter>();
   command_bus_->add_handler(subsystem_adapter_);
   subsystem_adapter_->initialize(this, gateway_);
 

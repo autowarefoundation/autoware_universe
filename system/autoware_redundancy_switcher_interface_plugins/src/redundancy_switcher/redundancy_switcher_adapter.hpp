@@ -34,10 +34,9 @@
 namespace autoware::redundancy_switcher
 {
 
-// Variant of RedundancySwitcherAdapter for the driving_mode architecture.
-// Differences from the command_mode variant:
-//   - Does not handle UpdateAnotherEcuAvailabilityTimeoutCommand (no availability topic).
-//   - Sub-ECU main_ecu_fault detection does not require another_ecu_availability_timeout.
+// Connects the framework to the redundancy_switcher process over UDS, translating between the
+// ElectionRequest / ElectionStatus protocol and the SwitcherSignals / ActiveControlUnit
+// abstraction used by the framework.
 class RedundancySwitcherAdapter : public IAdapterPlugin
 {
 public:

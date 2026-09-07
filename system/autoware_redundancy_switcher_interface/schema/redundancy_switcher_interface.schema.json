@@ -19,21 +19,11 @@
     "base_params": {
       "type": "object",
       "properties": {
-        "use_driving_mode": {
-          "type": "boolean",
-          "description": "Set to true to receive DrivingMode commands from the subsystem; false to receive CommandMode commands.",
-          "default": false
-        },
-        "availability_timeout_milli": {
-          "type": "number",
-          "description": "Elapsed time [ms] without CommandModeAvailability from the peer ECU before the peer is considered unavailable. Only used when use_driving_mode=false.",
-          "exclusiveMinimum": 0
-        },
         "diag": {
           "$ref": "#/definitions/diag"
         }
       },
-      "required": ["use_driving_mode", "diag"],
+      "required": ["diag"],
       "additionalProperties": true
     }
   },

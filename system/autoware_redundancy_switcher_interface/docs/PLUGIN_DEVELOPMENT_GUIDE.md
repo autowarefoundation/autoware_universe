@@ -30,12 +30,11 @@ specific protocol (UDS, shared memory, ROS topics, etc.) and the
 
 ### Recommended
 
-| Responsibility                                     | When                                                                     |
-| -------------------------------------------------- | ------------------------------------------------------------------------ |
-| Submit `SetActiveControlUnitEvent`                 | When the active control unit changes                                     |
-| Cache `UpdateAutowareReadyCommand`                 | If the plugin needs to gate Switcher communication on Autoware readiness |
-| Cache `UpdateAnotherEcuAvailabilityTimeoutCommand` | If the plugin uses peer ECU availability in its own logic                |
-| Publish hardware-specific diagnostics              | If the Switcher reports node/link health information                     |
+| Responsibility                        | When                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------ |
+| Submit `SetActiveControlUnitEvent`    | When the active control unit changes                                     |
+| Cache `UpdateAutowareReadyCommand`    | If the plugin needs to gate Switcher communication on Autoware readiness |
+| Publish hardware-specific diagnostics | If the Switcher reports node/link health information                     |
 
 ### The most important responsibility: SwitcherSignals contract
 
@@ -222,19 +221,6 @@ If your Switcher needs to know whether Autoware is ready before accepting comman
 
 Use the cached value when deciding whether to send certain requests to the Switcher.
 
-### Caching UpdateAnotherEcuAvailabilityTimeoutCommand (optional)
-
-If your Switcher needs to react when the peer ECU's availability times out:
-
-```cpp
-[this](const UpdateAnotherEcuAvailabilityTimeoutCommand & cmd) {
-  std::lock_guard<std::mutex> lock(policy_mutex_);
-  another_ecu_availability_timeout_ = cmd.timed_out;
-},
-```
-
----
-
 ## 5. CommandBus — Which Commands Reach Your Plugin
 
 All `OutputCommand` types are broadcast to every registered adapter.
@@ -248,8 +234,7 @@ void execute(const OutputCommand & command) override
       [this](const ResetCommand &)            { /* handle */ },
       [this](const SelfInterruptionCommand &) { /* handle */ },
       // Cache if needed:
-      [this](const UpdateAutowareReadyCommand & cmd)               { /* optional */ },
-      [this](const UpdateAnotherEcuAvailabilityTimeoutCommand & cmd) { /* optional */ },
+      [this](const UpdateAutowareReadyCommand & cmd) { /* optional */ },
       // All others: ignore
       [](const auto &) {}},
     command);
@@ -258,12 +243,11 @@ void execute(const OutputCommand & command) override
 
 **Commands you typically care about:**
 
-| Command                                      | Action                                                                   |
-| -------------------------------------------- | ------------------------------------------------------------------------ |
-| `ResetCommand`                               | Send reset to the Switcher                                               |
-| `SelfInterruptionCommand`                    | Send self-interruption to the Switcher (use `is_main_ecu` to select ECU) |
-| `UpdateAutowareReadyCommand`                 | Cache if needed for Switcher-side gating                                 |
-| `UpdateAnotherEcuAvailabilityTimeoutCommand` | Cache if needed                                                          |
+| Command                      | Action                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| `ResetCommand`               | Send reset to the Switcher                                               |
+| `SelfInterruptionCommand`    | Send self-interruption to the Switcher (use `is_main_ecu` to select ECU) |
+| `UpdateAutowareReadyCommand` | Cache if needed for Switcher-side gating                                 |
 
 **Commands you should ignore** (handled by other adapters):
 
@@ -360,16 +344,15 @@ ament_auto_add_library(my_switcher_package SHARED
 The table below contrasts the desktop mock with a production-grade hardware plugin to show
 which features are optional vs necessary for real deployment.
 
-| Aspect                                              | SimpleSwitcherAdapter (mock)       | Production hardware plugin                                          |
-| --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------- |
-| Transport                                           | ROS topics                         | Hardware-specific (e.g. UDS, shared memory)                         |
-| Switcher state source                               | Encoded topic message              | Hardware protocol message                                           |
-| Timeout detection                                   | Not needed (mock doesn't time out) | Required — timer polls last receive timestamp                       |
-| Caches `UpdateAutowareReadyCommand`                 | No                                 | Recommended if plugin gates Switcher behavior on Autoware readiness |
-| Caches `UpdateAnotherEcuAvailabilityTimeoutCommand` | No                                 | Recommended if plugin reacts to peer ECU availability               |
-| Hardware-specific diagnostics                       | No                                 | Recommended — publish node/link health from hardware                |
-| Dedicated receive thread                            | No (ROS executor)                  | Typically yes for blocking transports                               |
-| Mutex count                                         | 1 (annotation cache)               | 3 (status / policy / diagnostics)                                   |
+| Aspect                              | SimpleSwitcherAdapter (mock)       | Production hardware plugin                                          |
+| ----------------------------------- | ---------------------------------- | ------------------------------------------------------------------- |
+| Transport                           | ROS topics                         | Hardware-specific (e.g. UDS, shared memory)                         |
+| Switcher state source               | Encoded topic message              | Hardware protocol message                                           |
+| Timeout detection                   | Not needed (mock doesn't time out) | Required — timer polls last receive timestamp                       |
+| Caches `UpdateAutowareReadyCommand` | No                                 | Recommended if plugin gates Switcher behavior on Autoware readiness |
+| Hardware-specific diagnostics       | No                                 | Recommended — publish node/link health from hardware                |
+| Dedicated receive thread            | No (ROS executor)                  | Typically yes for blocking transports                               |
+| Mutex count                         | 1 (annotation cache)               | 3 (status / policy / diagnostics)                                   |
 
 ---
 

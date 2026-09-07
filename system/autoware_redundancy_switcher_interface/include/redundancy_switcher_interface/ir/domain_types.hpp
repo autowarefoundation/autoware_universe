@@ -62,8 +62,6 @@ struct DomainSnapshot
   std::optional<Annotated<VelocityStatus>> velocity_status;
   std::optional<Annotated<ControlMode>> control_mode;
   std::optional<Annotated<SwitcherSignals>> switcher;
-  // nullopt = not yet evaluated (immediately after startup)
-  std::optional<bool> another_ecu_availability_timeout;
   std::optional<uint16_t> priority;
 };
 

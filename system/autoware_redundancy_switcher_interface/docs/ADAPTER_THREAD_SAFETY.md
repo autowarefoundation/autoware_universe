@@ -40,6 +40,6 @@ Adapter implementations must be data-race free under concurrent execution.
     occurs, so this nesting is deadlock-free. Do not introduce a path that takes
     `transition_mutex_` first and then `updater_mutex_`.
 - `SubSystemAdapter`:
-  - `state_mutex_`: callback-owned state (`last_command_mode_request_`, availability timeout state).
+  - `state_mutex_`: callback-owned state (`last_active_control_unit_ids_`).
 
 These patterns should be reused by plugin adapter authors.

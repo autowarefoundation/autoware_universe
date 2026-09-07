@@ -9,7 +9,7 @@ This package provides:
 - A pure C++ `Processor` that evaluates switching conditions and produces effects
 - An `EventGateway` for thread-safe event submission
 - A `CommandBus` for broadcasting effects to all registered adapters
-- Three built-in adapters: `LogAdapter`, `DiagAdapter`, and one of `CommandModeSubSystemAdapter` / `DrivingModeSubSystemAdapter` (selected at launch via `use_driving_mode`)
+- Three built-in adapters: `LogAdapter`, `DiagAdapter` and `DrivingModeSubSystemAdapter`
 - An `IAdapterPlugin` interface for Switcher-side plugins loaded via pluginlib
 
 The Switcher-side adapter (hardware-specific UDS or topic-based) is loaded at runtime as a pluginlib plugin. See sibling packages:
@@ -57,11 +57,10 @@ Launch (non-redundant / single-ECU mode):
 The base configuration (`config/default.param.yaml`) covers the built-in adapters.
 Plugin-specific parameters are provided by the plugin package config.
 
-| Parameter                         | Type   | Default | Description                                                                                                                                    |
-| --------------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `use_driving_mode`                | bool   | `false` | `true`: use `DrivingModeSubSystemAdapter` (receives DrivingMode msgs). `false`: use `CommandModeSubSystemAdapter` (receives CommandMode msgs). |
-| `availability_timeout_milli`      | double | —       | Elapsed time [ms] without `CommandModeAvailability` before peer ECU is considered unavailable. Used only when `use_driving_mode=false`.        |
-| `diag.transitional_timeout_milli` | double | —       | A transitional switcher state persisting longer than this [ms] is reported as `DiagStatus::ERROR`.                                             |
+| Parameter                         | Type   | Default                                                | Description                                                                                        |
+| --------------------------------- | ------ | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `switcher_plugin`                 | string | `autoware::redundancy_switcher::SimpleSwitcherAdapter` | Class name of the `IAdapterPlugin` to load. Override via the plugin config file.                   |
+| `diag.transitional_timeout_milli` | double | —                                                      | A transitional switcher state persisting longer than this [ms] is reported as `DiagStatus::ERROR`. |
 
 ## Key Concepts
 

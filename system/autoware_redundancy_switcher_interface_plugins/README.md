@@ -11,7 +11,7 @@ This package provides three adapters that can be loaded at runtime via pluginlib
 | `NonRedundantSwitcherAdapter` | Single-ECU systems with no hardware switcher                                                        |
 
 The plugin to use is selected by `switcher_plugin` in the plugin config file.
-Base parameters (`use_driving_mode`, `availability_timeout_milli`, `diag.*`) are provided
+Base parameters (`switcher_plugin`, `diag.*`) are provided
 by the interface package config (`autoware_redundancy_switcher_interface/config/default.param.yaml`).
 
 ---

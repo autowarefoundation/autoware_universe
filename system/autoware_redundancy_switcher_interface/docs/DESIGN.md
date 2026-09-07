@@ -37,7 +37,7 @@ src/
   redundancy_switcher_interface.hpp / .cpp  — ROS node, wiring
   diag_adapter.hpp / .cpp  — Built-in: publishes aggregated diagnostics (see Section 12)
   log_adapter.hpp / .cpp   — Built-in: logs all OutputCommands
-  subsystem_adapter.hpp / .cpp  — Built-in: ROS I/O with Autoware stack
+  driving_mode_subsystem_adapter.hpp / .cpp  — Built-in: ROS I/O with Autoware stack
 docs/
   REQUIREMENTS.md          — Functional requirements
   DESIGN.md                — This document
@@ -81,8 +81,7 @@ graph TB
   subgraph Autoware
     VEL["velocity topic"]
     CTL["control_mode topic"]
-    CMA["command_mode_availability topic"]
-    CMR["command_mode_request topic"]
+    DMR["driving_mode_request topic"]
     SVC_INIT["set_initializing service"]
     SVC_RST["reset service"]
   end
@@ -103,8 +102,7 @@ graph TB
 
   VEL --> SUB
   CTL --> SUB
-  CMA --> SUB
-  CMR --> SUB
+  DMR --> SUB
   SVC_INIT --> SUB
   SVC_RST --> SUB
 
@@ -126,7 +124,7 @@ sequenceDiagram
   participant LA as LogAdapter
   participant SP as SwitcherAdapter
 
-  A->>SA: velocity / control_mode / availability
+  A->>SA: velocity / control_mode / driving_mode_request
   SA->>GW: submit(SetVelocityStatusEvent)
   GW->>P: handle(event)
   P-->>GW: [UpdateStatusDiagCommand, LogCommand]
@@ -224,16 +222,15 @@ flowchart TD
 
 ## 7. InputEvent List
 
-| Event                                   | Submitted by           | Payload                      | Processor action                                                                                 |
-| --------------------------------------- | ---------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------ |
-| `SelfInterruptionEvent`                 | SubSystemAdapter       | —                            | Evaluate conditions; emit SelfInterruptionCommand if accepted                                    |
-| `ResetEvent`                            | SubSystemAdapter       | —                            | Evaluate conditions; emit ResetCommand + ResetResultCommand                                      |
-| `SetAutowareReadyEvent`                 | SubSystemAdapter       | `AutowareReady` (False/True) | Update `autoware_ready`; emit UpdateAutowareReadyCommand + diag + log                            |
-| `SetVelocityStatusEvent`                | SubSystemAdapter       | `VelocityStatus`             | Update `velocity_status`; emit diag + log if changed                                             |
-| `SetControlModeEvent`                   | SubSystemAdapter       | `ControlMode`                | Update `control_mode`; emit diag + log if changed                                                |
-| `SetSwitcherSignalsEvent`               | SwitcherAdapter plugin | `SwitcherSignals`            | Update `switcher`; force active_unit empty if interrupted/faulted; emit diag + log if changed    |
-| `SetActiveControlUnitEvent`             | SwitcherAdapter plugin | `ActiveControlUnit`          | If not interrupted/faulted: emit UpdateActiveControlUnitCommand                                  |
-| `SetAnotherEcuAvailabilityTimeoutEvent` | SubSystemAdapter       | `bool timed_out`             | Update `another_ecu_availability_timeout`; emit UpdateAnotherEcuAvailabilityTimeoutCommand + log |
+| Event                       | Submitted by           | Payload                      | Processor action                                                                              |
+| --------------------------- | ---------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `SelfInterruptionEvent`     | SubSystemAdapter       | —                            | Evaluate conditions; emit SelfInterruptionCommand if accepted                                 |
+| `ResetEvent`                | SubSystemAdapter       | —                            | Evaluate conditions; emit ResetCommand + ResetResultCommand                                   |
+| `SetAutowareReadyEvent`     | SubSystemAdapter       | `AutowareReady` (False/True) | Update `autoware_ready`; emit UpdateAutowareReadyCommand + diag + log                         |
+| `SetVelocityStatusEvent`    | SubSystemAdapter       | `VelocityStatus`             | Update `velocity_status`; emit diag + log if changed                                          |
+| `SetControlModeEvent`       | SubSystemAdapter       | `ControlMode`                | Update `control_mode`; emit diag + log if changed                                             |
+| `SetSwitcherSignalsEvent`   | SwitcherAdapter plugin | `SwitcherSignals`            | Update `switcher`; force active_unit empty if interrupted/faulted; emit diag + log if changed |
+| `SetActiveControlUnitEvent` | SwitcherAdapter plugin | `ActiveControlUnit`          | If not interrupted/faulted: emit UpdateActiveControlUnitCommand                               |
 
 Each event carries an `Annotated<T>` value: the payload `T` plus a human-readable annotation string.
 The annotation content is defined by the submitting adapter; the Processor only stores it.
@@ -242,16 +239,15 @@ The annotation content is defined by the submitting adapter; the Processor only 
 
 ## 8. OutputCommand List
 
-| Command                                      | Handled by             | Meaning                                                                 |
-| -------------------------------------------- | ---------------------- | ----------------------------------------------------------------------- |
-| `LogCommand`                                 | LogAdapter             | Emit a log message at the specified level (Debug/Info/Warn/Error/Fatal) |
-| `ResetCommand`                               | SwitcherAdapter plugin | Send a reset request to the Switcher                                    |
-| `SelfInterruptionCommand`                    | SwitcherAdapter plugin | Send a self-interruption request to the Switcher                        |
-| `UpdateStatusDiagCommand`                    | DiagAdapter            | Trigger a diagnostic update (DiagAdapter reads snapshot via gateway)    |
-| `UpdateActiveControlUnitCommand`             | SubSystemAdapter       | Publish the active control unit message                                 |
-| `UpdateAutowareReadyCommand`                 | SwitcherAdapter plugin | Update the plugin's local `autoware_ready` cache                        |
-| `ResetResultCommand`                         | SubSystemAdapter       | Return accept/reject result of a reset request to the service caller    |
-| `UpdateAnotherEcuAvailabilityTimeoutCommand` | SwitcherAdapter plugin | Update the plugin's local peer-ECU timeout state cache                  |
+| Command                          | Handled by             | Meaning                                                                 |
+| -------------------------------- | ---------------------- | ----------------------------------------------------------------------- |
+| `LogCommand`                     | LogAdapter             | Emit a log message at the specified level (Debug/Info/Warn/Error/Fatal) |
+| `ResetCommand`                   | SwitcherAdapter plugin | Send a reset request to the Switcher                                    |
+| `SelfInterruptionCommand`        | SwitcherAdapter plugin | Send a self-interruption request to the Switcher                        |
+| `UpdateStatusDiagCommand`        | DiagAdapter            | Trigger a diagnostic update (DiagAdapter reads snapshot via gateway)    |
+| `UpdateActiveControlUnitCommand` | SubSystemAdapter       | Publish the active control unit message                                 |
+| `UpdateAutowareReadyCommand`     | SwitcherAdapter plugin | Update the plugin's local `autoware_ready` cache                        |
+| `ResetResultCommand`             | SubSystemAdapter       | Return accept/reject result of a reset request to the service caller    |
 
 ---
 
@@ -259,15 +255,14 @@ The annotation content is defined by the submitting adapter; the Processor only 
 
 ### 9.1 ROS Topics / Services (SubSystemAdapter)
 
-| Direction | Name                                | Type                      | Description                                    |
-| --------- | ----------------------------------- | ------------------------- | ---------------------------------------------- |
-| Subscribe | `~/input/velocity`                  | `VelocityReport`          | Vehicle velocity                               |
-| Subscribe | `~/input/control_mode`              | `ControlModeReport`       | Autoware control mode                          |
-| Subscribe | `~/input/command_mode_request`      | `CommandModeRequest`      | Command mode request (main ECU only)           |
-| Subscribe | `~/input/command_mode_availability` | `CommandModeAvailability` | Availability from peer ECU                     |
-| Publish   | `~/output/active_control_unit`      | `ActiveControlUnit`       | Currently active ECU/VCU                       |
-| Service   | `~/set_initializing`                | `std_srvs/SetBool`        | Set Autoware readiness (data=true → not ready) |
-| Service   | `~/service/reset`                   | `ResetRedundancySwitcher` | Reset self-interruption state                  |
+| Direction | Name                           | Type                      | Description                                    |
+| --------- | ------------------------------ | ------------------------- | ---------------------------------------------- |
+| Subscribe | `~/input/velocity`             | `VelocityReport`          | Vehicle velocity                               |
+| Subscribe | `~/input/control_mode`         | `ControlModeReport`       | Autoware control mode                          |
+| Subscribe | `~/input/driving_mode_request` | `DrivingModeRequest`      | Driving mode request                           |
+| Publish   | `~/output/active_control_unit` | `ActiveControlUnit`       | Currently active ECU/VCU                       |
+| Service   | `~/set_initializing`           | `std_srvs/SetBool`        | Set Autoware readiness (data=true → not ready) |
+| Service   | `~/service/reset`              | `ResetRedundancySwitcher` | Reset self-interruption state                  |
 
 ### 9.2 ROS Topics / Services (SimpleSwitcherAdapter + SimpleSwitcherNode)
 
@@ -330,7 +325,7 @@ EventGateway.mutex_
   Outside lock: CommandBus::dispatch() → adapter::execute()
 
 SubSystemAdapter.state_mutex_
-  Protects: last_command_mode_request_, availability timeout state
+  Protects: last_active_control_unit_ids_
 
 DiagAdapter.updater_mutex_
   Protects: diagnostic_updater::force_update()

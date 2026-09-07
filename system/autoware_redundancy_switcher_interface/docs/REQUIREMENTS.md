@@ -12,12 +12,11 @@ This package provides the framework for managing redundancy switching in an Auto
 
 The system shall continuously receive and maintain the following state from the Autoware stack:
 
-| Input                 | Source                          | Values                |
-| --------------------- | ------------------------------- | --------------------- |
-| Autoware readiness    | `/set_initializing` service     | `False` / `True`      |
-| Vehicle velocity      | velocity topic                  | `Stopped` / `Moving`  |
-| Vehicle control mode  | control mode topic              | `Manual` / `Auto`     |
-| Peer ECU availability | command mode availability topic | available / timed-out |
+| Input                | Source                      | Values               |
+| -------------------- | --------------------------- | -------------------- |
+| Autoware readiness   | `/set_initializing` service | `False` / `True`     |
+| Vehicle velocity     | velocity topic              | `Stopped` / `Moving` |
+| Vehicle control mode | control mode topic          | `Manual` / `Auto`    |
 
 Each state field shall be `nullopt` until the first message is received (startup not yet complete).
 
@@ -90,16 +89,7 @@ The result is returned synchronously to the caller (SubSystemAdapter) via `Reset
 
 ---
 
-### FR-06: Peer ECU availability monitoring
-
-The system shall detect when `CommandModeAvailability` messages from the peer ECU have not arrived within a configurable timeout interval.
-
-- Rising edge (false→true): Submit `SetAnotherEcuAvailabilityTimeoutEvent{timed_out=true}`
-- Falling edge (true→false): Submit `SetAnotherEcuAvailabilityTimeoutEvent{timed_out=false}`
-
----
-
-### FR-07: Diagnostics
+### FR-06: Diagnostics
 
 The system shall publish a `diagnostic_updater` item named `redundancy_switcher_interface_status`
 with hardware ID `{main,sub}_ecu_redundancy_switcher_interface`, reflecting the aggregated
@@ -121,7 +111,7 @@ See [DESIGN.md Section 12](DESIGN.md#12-diagadapter--diagnostic-output) for the 
 
 ---
 
-### FR-08: Logging
+### FR-07: Logging
 
 All state changes and decision outcomes shall be emitted as `LogCommand` with appropriate log levels:
 
@@ -132,7 +122,7 @@ All state changes and decision outcomes shall be emitted as `LogCommand` with ap
 
 ---
 
-### FR-09: Plugin extensibility for Switcher
+### FR-08: Plugin extensibility for Switcher
 
 The Switcher-side adapter shall be loaded as a `pluginlib` plugin at runtime. This decouples the core logic from hardware-specific UDS/topic-based switching protocols.
 
@@ -140,7 +130,7 @@ When `is_redundant = false`, no plugin is loaded and a permanently stable signal
 
 ---
 
-### FR-10: Non-redundant mode
+### FR-09: Non-redundant mode
 
 When `is_redundant = false` (single-ECU system), the switcher plugin shall not be loaded. The system shall behave as if the switcher is permanently stable:
 
@@ -149,7 +139,7 @@ When `is_redundant = false` (single-ECU system), the switcher plugin shall not b
 
 ---
 
-### FR-11: Thread safety
+### FR-10: Thread safety
 
 All concurrent access from multiple adapter threads shall be safe. The EventGateway shall serialize Processor state transitions using a mutex. CommandBus dispatch shall run outside the lock to prevent blocking during I/O operations in adapters.
 
@@ -162,7 +152,6 @@ All concurrent access from multiple adapter threads shall be safe. The EventGate
 | `is_redundant`                    | interface          | `true`                  | Enable redundant mode                   |
 | `is_main_ecu`                     | interface / plugin | required                | ECU role (main/sub)                     |
 | `diag.transitional_timeout_milli` | interface          | 2000.0                  | Transitional state ERROR threshold (ms) |
-| `availability_timeout_milli`      | interface          | 200.0                   | Peer ECU availability timeout (ms)      |
 | `switcher_plugin`                 | interface          | (required if redundant) | pluginlib class name                    |
 
 ---
