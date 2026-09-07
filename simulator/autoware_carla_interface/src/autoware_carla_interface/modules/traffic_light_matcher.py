@@ -41,6 +41,14 @@ head positions in the same map frame (see ``carla_location_to_ros_point``) befor
 
 import math
 import xml.etree.ElementTree as ET
+from collections import namedtuple
+
+# Immutable per-run matching context, so the per-head classifier takes one context
+# argument instead of a long parameter list. ``head_items`` is the map heads
+# pre-materialised as [(way_id, (x, y)), ...] so it is built once, not per head.
+_MatchContext = namedtuple(
+    "_MatchContext", ["map_lights", "head_items", "distance_threshold", "ambiguity_ratio"]
+)
 
 
 class MapTrafficLights:
@@ -108,6 +116,17 @@ def _way_centroid(way_id, ways, nodes):
     return (sum(p[0] for p in points) / len(points), sum(p[1] for p in points) / len(points))
 
 
+def _add_relation_heads(relation, ways, nodes, result):
+    """Record every ``refers`` head of one traffic-light relation into ``result``."""
+    group_id = int(relation.get("id"))
+    for way_id in _refers_way_ids(relation):
+        centroid = _way_centroid(way_id, ways, nodes)
+        if centroid is None:
+            continue
+        result.head_positions.setdefault(way_id, centroid)
+        result.head_groups.setdefault(way_id, set()).add(group_id)
+
+
 def load_map_traffic_lights(osm_path):
     """Parse a lanelet2 map and return its traffic-light heads.
 
@@ -122,15 +141,8 @@ def load_map_traffic_lights(osm_path):
 
     result = MapTrafficLights()
     for relation in root.findall("relation"):
-        if not _is_traffic_light_relation(relation):
-            continue
-        group_id = int(relation.get("id"))
-        for way_id in _refers_way_ids(relation):
-            centroid = _way_centroid(way_id, ways, nodes)
-            if centroid is None:
-                continue
-            result.head_positions.setdefault(way_id, centroid)
-            result.head_groups.setdefault(way_id, set()).add(group_id)
+        if _is_traffic_light_relation(relation):
+            _add_relation_heads(relation, ways, nodes, result)
 
     return result
 
@@ -182,16 +194,19 @@ def _distance(a, b):
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
-def _classify_head(actor_id, opendrive_id, point, head_items, map_lights, threshold, ratio):
+def _classify_head(head, ctx):
     """Decide how one CARLA head resolves, returning (entry, group_ids or None).
 
-    See :func:`match_traffic_lights` for the threshold / ratio semantics. Kept as a
-    small helper so the matching loop stays flat and each outcome is one branch.
+    ``head`` is an ``(actor_id, opendrive_id, (x, y))`` tuple and ``ctx`` is a
+    :data:`_MatchContext`. See :func:`match_traffic_lights` for the threshold / ratio
+    semantics. Kept as a small helper so the matching loop stays flat and each outcome
+    is a single branch.
     """
+    actor_id, opendrive_id, point = head
     entry = {"status": None, "actor_id": actor_id, "opendrive_id": opendrive_id}
 
     ranked = sorted(
-        ((_distance(point, pos), way_id) for way_id, pos in head_items),
+        ((_distance(point, pos), way_id) for way_id, pos in ctx.head_items),
         key=lambda item: item[0],
     )
     if not ranked:
@@ -200,11 +215,11 @@ def _classify_head(actor_id, opendrive_id, point, head_items, map_lights, thresh
 
     nearest_dist, nearest_way = ranked[0]
     entry["nearest"] = nearest_dist
-    if nearest_dist > threshold:
+    if nearest_dist > ctx.distance_threshold:
         entry["status"] = MatchResult.TOO_FAR
         return entry, None
 
-    nearest_groups = map_lights.head_groups[nearest_way]
+    nearest_groups = ctx.map_lights.head_groups[nearest_way]
     # Closest head that would resolve to a *different answer* than the winner. A head
     # is a genuine alternative unless its group set is exactly equal to the winner's:
     # only then does matching it publish the same group ids, so a neighbouring head of
@@ -212,11 +227,11 @@ def _classify_head(actor_id, opendrive_id, point, head_items, map_lights, thresh
     # (e.g. {500, 501} vs {501}, or the light across the intersection) still makes the
     # match ambiguous.
     second_dist = next(
-        (d for d, way_id in ranked[1:] if map_lights.head_groups[way_id] != nearest_groups),
+        (d for d, way_id in ranked[1:] if ctx.map_lights.head_groups[way_id] != nearest_groups),
         None,
     )
     entry["second"] = second_dist
-    if second_dist is not None and nearest_dist > ratio * second_dist:
+    if second_dist is not None and nearest_dist > ctx.ambiguity_ratio * second_dist:
         entry["status"] = MatchResult.AMBIGUOUS
         return entry, None
 
@@ -256,21 +271,17 @@ def match_traffic_lights(
     -------
     MatchResult
     """
+    ctx = _MatchContext(
+        map_lights=map_lights,
+        head_items=list(map_lights.head_positions.items()),  # [(way_id, (x, y)), ...]
+        distance_threshold=distance_threshold,
+        ambiguity_ratio=ambiguity_ratio,
+    )
     result = MatchResult()
-    head_items = list(map_lights.head_positions.items())  # [(way_id, (x, y)), ...]
-
-    for actor_id, opendrive_id, point in carla_heads:
-        entry, group_ids = _classify_head(
-            actor_id,
-            opendrive_id,
-            point,
-            head_items,
-            map_lights,
-            distance_threshold,
-            ambiguity_ratio,
-        )
+    for head in carla_heads:
+        entry, group_ids = _classify_head(head, ctx)
         result.entries.append(entry)
         if group_ids is not None:
-            result.assignments[actor_id] = group_ids
+            result.assignments[head[0]] = group_ids
 
     return result
