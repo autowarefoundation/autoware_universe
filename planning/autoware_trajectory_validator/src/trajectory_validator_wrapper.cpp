@@ -133,7 +133,7 @@ void TrajectoryValidatorWrapper::publishers()
       node_ptr_, "~/debug");
 }
 
-CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
+TrajectoryValidatorReport TrajectoryValidatorWrapper::validate_trajectories(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
   const ValidatorContext & context)
 {
@@ -165,7 +165,7 @@ CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
   // Wire up the debug publishers using the opaque report data
   publish_debug(report.evaluation_tables, report.processing_time_ms, context.odometry->pose.pose);
 
-  return report.valid_trajectories;
+  return report;
 }
 
 void TrajectoryValidatorWrapper::update_diagnostic(

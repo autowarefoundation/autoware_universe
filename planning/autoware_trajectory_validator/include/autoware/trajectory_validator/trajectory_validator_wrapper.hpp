@@ -80,11 +80,12 @@ public:
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
 
   /**
-   * @brief Runs all plugins against the input trajectories and returns the feasible subset.
+   * @brief Runs all plugins against the input trajectories.
    * @param input_trajectories Candidate trajectories to validate.
    * @param context Current world state snapshot.
+   * @return Report holding the feasible subset and the per-trajectory validation reports.
    */
-  CandidateTrajectories validate_trajectories(
+  TrajectoryValidatorReport validate_trajectories(
     const CandidateTrajectories & input_trajectories, const ValidatorContext & context);
 
 private:
