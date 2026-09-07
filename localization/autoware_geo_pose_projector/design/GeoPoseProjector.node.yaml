@@ -11,7 +11,7 @@ launch:
 subscribers:
   - name: map_projector_info
     message_type: autoware_map_msgs/msg/MapProjectorInfo
-    global: /map/map_projector_info
+    remap_target: /map/map_projector_info
   - name: geo_pose
     message_type: geographic_msgs/msg/GeoPoseWithCovarianceStamped
     remap_target: input_geo_pose
