@@ -85,6 +85,12 @@ def _parse_geo_reference(xodr_xml: str):
     return float(lat_match.group(1)), float(lon_match.group(1))
 
 
+# Speed-unit conversions for the vehicle steering_curve lookup. The curve's speed
+# axis follows the UE vehicle plugin behind the CARLA version: Chaos (CARLA 0.10+,
+# UE5) samples it in mph, PhysX (CARLA 0.9.x, UE4) in km/h.
+MPS_TO_MPH = 2.2369362920544
+MPS_TO_KMH = 3.6
+
 # One consistent snapshot of the ego actor, read under a single lock so that the
 # published status reports all describe the same simulation step.
 EgoState = namedtuple(
@@ -371,6 +377,8 @@ class carla_ros2_interface(object):
         # measured wheel angle is usable (0.9.x behavior).
         self.carla_version = None
         self._wheel_steer_angle_reliable = True
+        # Speed unit the server samples steering_curve in (see set_carla_version).
+        self._steering_curve_speed_scale = MPS_TO_KMH
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -1012,6 +1020,12 @@ class carla_ros2_interface(object):
             return
         major, minor = int(match.group(1)), int(match.group(2))
         self._wheel_steer_angle_reliable = (major, minor) < (0, 10)
+        # steering_curve is sampled against the forward speed in the unit the
+        # underlying UE vehicle plugin uses: mph for Chaos (CARLA 0.10+ / UE5),
+        # km/h for PhysX (CARLA 0.9.x / UE4).
+        self._steering_curve_speed_scale = (
+            MPS_TO_KMH if self._wheel_steer_angle_reliable else MPS_TO_MPH
+        )
         self.logger.info(
             f"CARLA server version {version_str}: "
             f"wheel steer angle "
@@ -1027,6 +1041,14 @@ class carla_ros2_interface(object):
         factor to match the angle the simulator actually produced. Returns 1.0
         when no curve is available or when the curve has been flattened to the
         identity curve via flatten_steering_curve.
+
+        The curve's speed axis is NOT in m/s: the UE vehicle plugin evaluates it
+        against the forward speed in mph on Chaos (CARLA 0.10+, the versions this
+        synthesized report runs on) and in km/h on PhysX (CARLA 0.9.x), so the
+        speed is converted with the scale set by set_carla_version() before
+        interpolating. Sampling the curve with a raw m/s value would read it at
+        roughly 1/2 (mph) or 1/4 (km/h) of the real speed and overstate the
+        factor wherever the curve attenuates steering.
         https://carla.readthedocs.io/en/latest/python_api/#carlavehiclephysicscontrol
         """
         curve = getattr(self.physics_control, "steering_curve", None)
@@ -1038,7 +1060,8 @@ class carla_ros2_interface(object):
         points = sorted(((p.x, p.y) for p in curve), key=lambda point: point[0])
         speeds = [point[0] for point in points]
         factors = [point[1] for point in points]
-        return float(numpy.interp(abs(speed_mps), speeds, factors))
+        curve_speed = abs(speed_mps) * self._steering_curve_speed_scale
+        return float(numpy.interp(curve_speed, speeds, factors))
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""

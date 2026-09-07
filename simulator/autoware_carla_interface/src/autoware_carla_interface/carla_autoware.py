@@ -153,10 +153,11 @@ class InitializeInterface(object):
         """Replace the vehicle's speed-based steering curve with an identity curve.
 
         CARLA 0.10 ships corrupt steering-curve data (duplicated, unsorted
-        points such as (10 m/s, 0.5)) which the simulator applies internally,
-        attenuating the achievable steering angle at driving speeds. Writing a
-        flat curve back removes the server-side attenuation so the commanded
-        steer fraction maps directly to the wheel angle.
+        points such as (10, 0.5); the curve's speed axis is mph on Chaos) which
+        the simulator applies internally, attenuating the achievable steering
+        angle at driving speeds. Writing a flat curve back removes the
+        server-side attenuation so the commanded steer fraction maps directly to
+        the wheel angle.
         """
         try:
             physics = self.ego_actor.get_physics_control()
