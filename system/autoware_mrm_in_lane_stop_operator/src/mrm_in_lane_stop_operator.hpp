@@ -26,6 +26,7 @@
 #include <tier4_system_msgs/msg/driving_mode_request.hpp>
 #include <tier4_system_msgs/srv/change_topic_relay_control.hpp>
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -78,8 +79,18 @@ private:
   void on_info(DrivingModeInfo::ConstSharedPtr msg);
   void on_timer();
 
-  bool execute(ModeConfig & mode);
-  void cancel(ModeConfig & mode);
+  // Returns the configured mode whose resolved mode ID is `id`, or nullptr if this node does not
+  // manage that mode.
+  const ModeConfig * find_mode_by_id(uint32_t id) const;
+  // Cancels the currently active mode, if any. `active_mode_id_` is left untouched; the caller
+  // decides what the new state is.
+  void cancel_active_mode();
+  // Starts `mode`. On relay failure the active mode is left unchanged, so that the node never
+  // reports a mode it could not actually enable.
+  void activate_mode(const ModeConfig & mode, uint32_t mode_id);
+
+  bool execute(const ModeConfig & mode);
+  void cancel(const ModeConfig & mode);
   void publish_trigger(bool turn_on, double target_acceleration, double target_jerk);
   bool call_relay(bool relay_on);
   void publish_driving_mode_active() const;

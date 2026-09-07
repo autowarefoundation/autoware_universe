@@ -16,8 +16,12 @@
 
 #include <autoware/qos_utils/qos_compatibility.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace autoware::mrm_in_lane_stop_operator
 {
@@ -80,51 +84,60 @@ void MrmInLaneStopOperator::on_info(DrivingModeInfo::ConstSharedPtr msg)
   }
 }
 
-void MrmInLaneStopOperator::on_request(DrivingModeRequest::ConstSharedPtr msg)
+const ModeConfig * MrmInLaneStopOperator::find_mode_by_id(const uint32_t id) const
 {
-  const auto find_mode_by_id = [this](const uint32_t id) -> ModeConfig * {
-    for (auto & mode : modes_) {
-      if (mode.mode_id == id) return &mode;
-    }
-    return nullptr;
-  };
-
-  const auto requested_id = msg->mode;
-  auto * requested = find_mode_by_id(requested_id);
-
-  if (requested) {
-    // Request is for one of our configured modes.
-    if (active_mode_id_ == requested_id) {
-      return;  // Already running this exact mode; do nothing.
-    }
-    if (active_mode_id_.has_value()) {
-      // A different one of our modes is running; cancel it first.
-      auto * current = find_mode_by_id(active_mode_id_.value());
-      if (!skip_relay_call_ && current) cancel(*current);
-    }
-    if (skip_relay_call_ || execute(*requested)) {
-      active_mode_id_ = requested_id;
-      // For real-time safety, we should only publish the active flag
-      // After switching the active_mode_id_ to the new mode, so that the published flag is
-      // consistent with the internal state.
-      publish_driving_mode_active();
-    } else {
-      RCLCPP_WARN(
-        get_logger(),
-        "Failed to enable one or more relay services for mode=%u. Keep active_mode_id_ unchanged.",
-        requested_id);
-    }
-  } else {
-    // Request is not for any of our modes; cancel if we are active.
-    if (active_mode_id_.has_value()) {
-      auto * current = find_mode_by_id(active_mode_id_.value());
-      if (!skip_relay_call_ && current) cancel(*current);
-      active_mode_id_ = std::nullopt;
-    }
-  }
+  const auto it = std::find_if(
+    modes_.begin(), modes_.end(), [id](const ModeConfig & mode) { return mode.mode_id == id; });
+  return it == modes_.end() ? nullptr : &*it;
 }
 
-bool MrmInLaneStopOperator::execute(ModeConfig & mode)
+void MrmInLaneStopOperator::cancel_active_mode()
+{
+  if (!active_mode_id_.has_value()) return;
+  if (skip_relay_call_) return;
+
+  const auto * current = find_mode_by_id(active_mode_id_.value());
+  if (current) cancel(*current);
+}
+
+void MrmInLaneStopOperator::activate_mode(const ModeConfig & mode, const uint32_t mode_id)
+{
+  if (!skip_relay_call_ && !execute(mode)) {
+    RCLCPP_WARN(
+      get_logger(),
+      "Failed to enable one or more relay services for mode=%u. Keep active_mode_id_ unchanged.",
+      mode_id);
+    return;
+  }
+
+  active_mode_id_ = mode_id;
+  // For real-time safety, we should only publish the active flag
+  // After switching the active_mode_id_ to the new mode, so that the published flag is
+  // consistent with the internal state.
+  publish_driving_mode_active();
+}
+
+void MrmInLaneStopOperator::on_request(DrivingModeRequest::ConstSharedPtr msg)
+{
+  const auto requested_id = msg->mode;
+  const auto * requested = find_mode_by_id(requested_id);
+
+  if (!requested) {
+    // Request is not for any of our modes; cancel if we are active.
+    cancel_active_mode();
+    active_mode_id_ = std::nullopt;
+    return;
+  }
+  if (active_mode_id_ == requested_id) {
+    return;  // Already running this exact mode; do nothing.
+  }
+
+  // A different one of our modes is running; cancel it first.
+  cancel_active_mode();
+  activate_mode(*requested, requested_id);
+}
+
+bool MrmInLaneStopOperator::execute(const ModeConfig & mode)
 {
   publish_trigger(true, mode.target_acceleration, mode.target_jerk);
   const bool relay_success = call_relay(false);
@@ -138,7 +151,7 @@ bool MrmInLaneStopOperator::execute(ModeConfig & mode)
   return relay_success;
 }
 
-void MrmInLaneStopOperator::cancel(ModeConfig & mode)
+void MrmInLaneStopOperator::cancel(const ModeConfig & mode)
 {
   publish_trigger(false, mode.target_acceleration, mode.target_jerk);
   call_relay(true);
