@@ -58,7 +58,7 @@ shared request topics.
 
 ## 3. File Structure
 
-```
+```text
 src/
   switcher_adapter.hpp / .cpp              — SimpleSwitcherAdapter (this document)
   simple_switcher_node.hpp / .cpp          — Mock switcher node (ROS component)

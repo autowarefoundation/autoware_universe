@@ -18,6 +18,8 @@
 #include <redundancy_switcher_interface/detail/overloaded.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 
+#include <algorithm>
+#include <memory>
 #include <stdexcept>
 #include <string>
 

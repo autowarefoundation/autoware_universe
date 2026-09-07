@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <memory>
 #include <utility>
 
 namespace autoware::redundancy_switcher
