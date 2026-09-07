@@ -14,6 +14,8 @@
 
 #include "mrm_in_lane_stop_operator.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <chrono>
 #include <cmath>
 
@@ -42,7 +44,7 @@ MrmInLaneStopOperator::MrmInLaneStopOperator(const rclcpp::NodeOptions & node_op
   relay_service_name_ = "~/input/relay_service";
   relay_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   relay_client_ = create_client<ChangeTopicRelayControl>(
-    relay_service_name_, rmw_qos_profile_services_default, relay_group_);
+    relay_service_name_, AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), relay_group_);
 
   // publisher
   pub_trigger_ = create_publisher<ConstantJerkDecelerationTrigger>(
@@ -105,7 +107,7 @@ void MrmInLaneStopOperator::on_request(DrivingModeRequest::ConstSharedPtr msg)
       // For real-time safety, we should only publish the active flag
       // After switching the active_mode_id_ to the new mode, so that the published flag is
       // consistent with the internal state.
-      publishDrivingModeActive();
+      publish_driving_mode_active();
     } else {
       RCLCPP_WARN(
         get_logger(),
@@ -185,7 +187,7 @@ bool MrmInLaneStopOperator::call_relay(bool relay_on)
   return true;
 }
 
-void MrmInLaneStopOperator::publishDrivingModeActive() const
+void MrmInLaneStopOperator::publish_driving_mode_active() const
 {
   DrivingModeFlag msg;
   msg.stamp = now();
@@ -242,7 +244,7 @@ bool MrmInLaneStopOperator::is_vehicle_stopped() const
 void MrmInLaneStopOperator::on_timer()
 {
   publish_mrm_state();
-  publishDrivingModeActive();
+  publish_driving_mode_active();
 }
 
 }  // namespace autoware::mrm_in_lane_stop_operator

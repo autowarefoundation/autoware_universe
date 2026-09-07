@@ -33,13 +33,6 @@ In the MRM decision flow:
 - **Driving Mode Active Flags**: Per-mode publication of `DrivingModeActive` flags for external monitoring
 - **Configurable Launch Parameters**: All topic and service endpoints are remappable via launch arguments
 
-- **Flexible Driving Mode Management**: Support for multiple configurable driving modes with per-mode deceleration parameters
-- **Relay Service Control**: Seamlessly switches between normal operation and MRM mode via topic relay control
-- **MRM State Machine**: Tracks MRM operation state (UNKNOWN → NORMAL/OPERATING → SUCCEEDED)
-- **Vehicle Stop Detection**: Polls kinematic state to detect when the vehicle has come to a complete stop
-- **Driving Mode Active Flags**: Per-mode publication of `DrivingModeActive` flags for external monitoring
-- **Configurable Launch Parameters**: All topic and service endpoints are remappable via launch arguments
-
 ## Architecture
 
 ### Input/Output
@@ -64,12 +57,13 @@ In the MRM decision flow:
 
 #### Service Clients
 
-- Relay control service (default: `/system/topic_relay_controller_trajectory/operate`)
-  - Used to enable/disable the constant jerk deceleration trigger
+- `~/input/relay_service` (tier4_system_msgs/ChangeTopicRelayControl)
+  - Relay control of the topic that the MRM trajectory takes over
+    (default: `/system/topic_relay_controller_pose_with_covariance/operate`)
 
 ### MRM State Machine
 
-```
+```text
 ┌─────────┐
 │ UNKNOWN │  (initial state)
 └────┬────┘
@@ -92,29 +86,43 @@ In the MRM decision flow:
 
 ### Relay Service Integration
 
-The node communicates with a relay controller service to enable/disable the constant jerk deceleration topic routing. On mode activation:
+The node communicates with a relay controller service so that the MRM trajectory can take over the
+relayed topic. On mode activation:
 
-1. Calls the relay service with `enable=true`
-2. Only updates internal `active_mode_id_` if the relay service call succeeds
-3. On mode deactivation, calls relay with `enable=false`
+1. Publishes the deceleration trigger, then calls the relay service with `relay_on=false` to stop
+   the normal relay
+2. Only updates the internal `active_mode_id_` if the relay service call succeeds
+3. On mode deactivation, calls the relay service with `relay_on=true` to restore the normal relay
 
 This ensures that if the relay service is unavailable, the node does not incorrectly track mode state.
+
+`skip_relay_call` bypasses every relay service call, for bring-up and simulation where the relay
+controller is not running. In that case `active_mode_id_` is updated without calling the service.
 
 ## Configuration
 
 ### Launch Arguments
 
-| Argument                          | Type   | Default                                             | Description                         |
-| --------------------------------- | ------ | --------------------------------------------------- | ----------------------------------- |
-| `jerk_deceleration_trigger_topic` | string | `/control/constant_jerk_deceleration_trigger`       | Topic for jerk deceleration trigger |
-| `relay_service_name`              | string | `/system/topic_relay_controller_trajectory/operate` | Service name for relay control      |
+| Argument                          | Type   | Default                                                       | Description                             |
+| --------------------------------- | ------ | ------------------------------------------------------------- | --------------------------------------- |
+| `config`                          | string | `config/mrm_in_lane_stop_operator.param.yaml`                 | Parameter file                          |
+| `skip_relay_call`                 | bool   | `false`                                                       | Skip all relay service calls            |
+| `driving_mode_request_topic`      | string | `/system/driving_mode/request`                                | Topic for driving mode requests         |
+| `driving_mode_info_topic`         | string | `/system/driving_mode/info`                                   | Topic for the driving mode name/ID list |
+| `mrm_state_topic`                 | string | `/system/driving_mode/mrm_state`                              | Topic for the MRM state                 |
+| `driving_mode_active_topic`       | string | `/system/driving_mode/active`                                 | Topic for the active flags              |
+| `jerk_deceleration_trigger_topic` | string | `/control/constant_jerk_deceleration_trigger`                 | Topic for jerk deceleration trigger     |
+| `relay_service_name`              | string | `/system/topic_relay_controller_pose_with_covariance/operate` | Service name for relay control          |
 
 ### Parameters (YAML)
 
 **Global Parameters:**
 
-- `mode_names` (list of strings): Names of driving modes to manage
+- `mode_names` (list of strings): Names of driving modes to manage.
+  Each name must match the mode name registered in `driving_mode_manager`.
 - `service_timeout_ms` (int): Timeout for relay service calls [ms]
+- `skip_relay_call` (bool): Skip all relay service calls. Set via the launch argument of the same
+  name (default `false`).
 
 **Per-Mode Parameters:**
 Each mode in `mode_names` has a configuration block:
@@ -123,6 +131,7 @@ Each mode in `mode_names` has a configuration block:
 <mode_name>:
   target_acceleration: <double> # Target acceleration [m/s²]
   target_jerk: <double> # Target jerk [m/s³]
+  send_active_flag: <bool> # Include this mode in ~/output/driving_mode_active (default: true)
 ```
 
 **Example:**
@@ -134,6 +143,7 @@ Each mode in `mode_names` has a configuration block:
       - in_lane_moderate_stop
     service_timeout_ms: 100
     in_lane_moderate_stop:
+      send_active_flag: true
       target_acceleration: -2.5
       target_jerk: -1.5
 ```

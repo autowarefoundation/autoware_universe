@@ -82,7 +82,7 @@ private:
   void cancel(ModeConfig & mode);
   void publish_trigger(bool turn_on, double target_acceleration, double target_jerk);
   bool call_relay(bool relay_on);
-  void publishDrivingModeActive() const;
+  void publish_driving_mode_active() const;
   void publish_mrm_state() const;
   bool is_vehicle_stopped() const;
 };
