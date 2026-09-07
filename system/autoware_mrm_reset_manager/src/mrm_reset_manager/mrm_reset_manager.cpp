@@ -14,6 +14,8 @@
 
 #include "mrm_reset_manager.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <autoware_common_msgs/msg/response_status.hpp>
 #include <tier4_external_api_msgs/msg/response_status.hpp>
 
@@ -131,7 +133,7 @@ MrmResetManager::MrmResetManager(const rclcpp::NodeOptions & options)
 
   srv_reset_mrm_ = create_service<ResetMrm>(
     "~/input/reset_mrm", std::bind(&MrmResetManager::on_reset_mrm, this, _1, _2),
-    rmw_qos_profile_services_default, service_callback_group_);
+    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), service_callback_group_);
 
   const auto qos = rclcpp::QoS(1).transient_local();
   sub_localization_initialization_state_ = create_subscription<LocalizationState>(
@@ -155,16 +157,17 @@ MrmResetManager::MrmResetManager(const rclcpp::NodeOptions & options)
     });
 
   cli_set_aggregator_initializing_ = create_client<SetBool>(
-    "~/output/set_aggregator_initializing", rmw_qos_profile_services_default,
+    "~/output/set_aggregator_initializing", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(),
     cli_set_aggregator_initializing_callback_group_);
   cli_set_redundancy_switcher_interface_initializing_ = create_client<SetBool>(
-    "~/output/set_redundancy_switcher_interface_initializing", rmw_qos_profile_services_default,
+    "~/output/set_redundancy_switcher_interface_initializing",
+    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(),
     cli_set_redundancy_switcher_interface_initializing_callback_group_);
   cli_reset_redundancy_switcher_ = create_client<ResetRedundancySwitcher>(
-    "~/output/reset_redundancy_switcher", rmw_qos_profile_services_default,
+    "~/output/reset_redundancy_switcher", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(),
     cli_reset_redundancy_switcher_callback_group_);
   cli_reset_diag_graph_ = create_client<ResetDiagGraph>(
-    "~/output/reset_diag_graph", rmw_qos_profile_services_default,
+    "~/output/reset_diag_graph", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(),
     cli_reset_diag_graph_callback_group_);
 
   init_timer_ = rclcpp::create_timer(

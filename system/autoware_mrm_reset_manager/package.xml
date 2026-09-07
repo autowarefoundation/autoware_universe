@@ -14,6 +14,7 @@
 
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_common_msgs</depend>
+  <depend>autoware_qos_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_srvs</depend>
