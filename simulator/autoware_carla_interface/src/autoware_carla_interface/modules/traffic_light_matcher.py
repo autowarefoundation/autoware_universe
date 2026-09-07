@@ -67,17 +67,8 @@ class MapTrafficLights:
         return len({gid for gids in self.head_groups.values() for gid in gids})
 
 
-def load_map_traffic_lights(osm_path):
-    """Parse a lanelet2 map and return its traffic-light heads.
-
-    The map is read as raw OSM XML rather than through the lanelet2 library on purpose:
-    it avoids pulling in the C++ regulatory-element registration (which is easy to get
-    out of sync across ROS/Python versions) and reads ``local_x``/``local_y`` directly,
-    sidestepping any projector mismatch between this process and the map loader.
-    """
-    root = ET.parse(osm_path).getroot()
-
-    # node id -> (local_x, local_y)
+def _parse_local_nodes(root):
+    """node id -> (local_x, local_y) for nodes that carry both tags."""
     nodes = {}
     for node in root.findall("node"):
         local_x = local_y = None
@@ -89,33 +80,78 @@ def load_map_traffic_lights(osm_path):
                 local_y = float(tag.get("v"))
         if local_x is not None and local_y is not None:
             nodes[node.get("id")] = (local_x, local_y)
+    return nodes
 
-    # way id -> list of node ids
-    ways = {
+
+def _parse_ways(root):
+    """way id -> list of node ids."""
+    return {
         way.get("id"): [nd.get("ref") for nd in way.findall("nd")] for way in root.findall("way")
     }
 
+
+def _is_traffic_light_relation(relation):
+    tags = {tag.get("k"): tag.get("v") for tag in relation.findall("tag")}
+    return tags.get("type") == "regulatory_element" and tags.get("subtype") == "traffic_light"
+
+
+def _refers_way_ids(relation):
+    """way ids referenced with role ``refers`` (the physical light heads)."""
+    return [m.get("ref") for m in relation.findall("member") if m.get("role") == "refers"]
+
+
+def _way_centroid(way_id, ways, nodes):
+    """Mean (x, y) of a way's known nodes, or None if it has none."""
+    points = [nodes[ref] for ref in ways.get(way_id, []) if ref in nodes]
+    if not points:
+        return None
+    return (sum(p[0] for p in points) / len(points), sum(p[1] for p in points) / len(points))
+
+
+def load_map_traffic_lights(osm_path):
+    """Parse a lanelet2 map and return its traffic-light heads.
+
+    The map is read as raw OSM XML rather than through the lanelet2 library on purpose:
+    it avoids pulling in the C++ regulatory-element registration (which is easy to get
+    out of sync across ROS/Python versions) and reads ``local_x``/``local_y`` directly,
+    sidestepping any projector mismatch between this process and the map loader.
+    """
+    root = ET.parse(osm_path).getroot()
+    nodes = _parse_local_nodes(root)
+    ways = _parse_ways(root)
+
     result = MapTrafficLights()
     for relation in root.findall("relation"):
-        tags = {tag.get("k"): tag.get("v") for tag in relation.findall("tag")}
-        if tags.get("type") != "regulatory_element" or tags.get("subtype") != "traffic_light":
+        if not _is_traffic_light_relation(relation):
             continue
         group_id = int(relation.get("id"))
-        for member in relation.findall("member"):
-            if member.get("role") != "refers":
+        for way_id in _refers_way_ids(relation):
+            centroid = _way_centroid(way_id, ways, nodes)
+            if centroid is None:
                 continue
-            way_id = member.get("ref")
-            points = [nodes[ref] for ref in ways.get(way_id, []) if ref in nodes]
-            if not points:
-                continue
-            if way_id not in result.head_positions:
-                cx = sum(p[0] for p in points) / len(points)
-                cy = sum(p[1] for p in points) / len(points)
-                result.head_positions[way_id] = (cx, cy)
-                result.head_groups[way_id] = set()
-            result.head_groups[way_id].add(group_id)
+            result.head_positions.setdefault(way_id, centroid)
+            result.head_groups.setdefault(way_id, set()).add(group_id)
 
     return result
+
+
+def parse_id_map_override(raw):
+    """Parse a ``traffic_light.id_map`` string into ``{opendrive_id: [group_id, ...]}``.
+
+    Format is ``opendrive_id:group_id[|group_id...],...``. A single OpenDRIVE signal id
+    may list several group ids (separated by ``|``) so a physical light shared by
+    multiple regulatory elements can be pinned to all of them, matching the position
+    matcher's shared-head behaviour. Repeated keys are merged.
+    """
+    override = {}
+    for item in str(raw or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        opendrive_str, groups_str = item.split(":")
+        groups = {int(g) for g in groups_str.split("|") if g.strip()}
+        override.setdefault(int(opendrive_str), set()).update(groups)
+    return {opendrive_id: sorted(groups) for opendrive_id, groups in override.items()}
 
 
 class MatchResult:
@@ -144,6 +180,50 @@ class MatchResult:
 
 def _distance(a, b):
     return math.hypot(a[0] - b[0], a[1] - b[1])
+
+
+def _classify_head(actor_id, opendrive_id, point, head_items, map_lights, threshold, ratio):
+    """Decide how one CARLA head resolves, returning (entry, group_ids or None).
+
+    See :func:`match_traffic_lights` for the threshold / ratio semantics. Kept as a
+    small helper so the matching loop stays flat and each outcome is one branch.
+    """
+    entry = {"status": None, "actor_id": actor_id, "opendrive_id": opendrive_id}
+
+    ranked = sorted(
+        ((_distance(point, pos), way_id) for way_id, pos in head_items),
+        key=lambda item: item[0],
+    )
+    if not ranked:
+        entry["status"] = MatchResult.NO_HEAD
+        return entry, None
+
+    nearest_dist, nearest_way = ranked[0]
+    entry["nearest"] = nearest_dist
+    if nearest_dist > threshold:
+        entry["status"] = MatchResult.TOO_FAR
+        return entry, None
+
+    nearest_groups = map_lights.head_groups[nearest_way]
+    # Closest head that would resolve to a *different answer* than the winner. A head
+    # is a genuine alternative unless its group set is exactly equal to the winner's:
+    # only then does matching it publish the same group ids, so a neighbouring head of
+    # the same approach is ignored, while an overlapping-but-unequal or disjoint set
+    # (e.g. {500, 501} vs {501}, or the light across the intersection) still makes the
+    # match ambiguous.
+    second_dist = next(
+        (d for d, way_id in ranked[1:] if map_lights.head_groups[way_id] != nearest_groups),
+        None,
+    )
+    entry["second"] = second_dist
+    if second_dist is not None and nearest_dist > ratio * second_dist:
+        entry["status"] = MatchResult.AMBIGUOUS
+        return entry, None
+
+    group_ids = sorted(nearest_groups)
+    entry["status"] = MatchResult.MATCHED
+    entry["group_ids"] = group_ids
+    return entry, group_ids
 
 
 def match_traffic_lights(
@@ -180,64 +260,17 @@ def match_traffic_lights(
     head_items = list(map_lights.head_positions.items())  # [(way_id, (x, y)), ...]
 
     for actor_id, opendrive_id, point in carla_heads:
-        # Rank every map head by distance to this CARLA head.
-        ranked = sorted(
-            ((_distance(point, pos), way_id) for way_id, pos in head_items),
-            key=lambda item: item[0],
+        entry, group_ids = _classify_head(
+            actor_id,
+            opendrive_id,
+            point,
+            head_items,
+            map_lights,
+            distance_threshold,
+            ambiguity_ratio,
         )
-        if not ranked:
-            result.entries.append(
-                {"status": MatchResult.NO_HEAD, "actor_id": actor_id, "opendrive_id": opendrive_id}
-            )
-            continue
-
-        nearest_dist, nearest_way = ranked[0]
-        nearest_groups = map_lights.head_groups[nearest_way]
-        # Closest head that would resolve to a *different answer* than the winner.
-        # A head is a genuine alternative unless its group set is exactly equal to
-        # the winner's: only then does matching it publish the same group ids, so a
-        # neighbouring head of the same approach is ignored, while a head with an
-        # overlapping-but-unequal or disjoint set (e.g. {500, 501} vs {501}, or the
-        # light across the intersection) still makes the match ambiguous.
-        second_dist = next(
-            (d for d, way_id in ranked[1:] if map_lights.head_groups[way_id] != nearest_groups),
-            None,
-        )
-
-        if nearest_dist > distance_threshold:
-            result.entries.append(
-                {
-                    "status": MatchResult.TOO_FAR,
-                    "actor_id": actor_id,
-                    "opendrive_id": opendrive_id,
-                    "nearest": nearest_dist,
-                }
-            )
-            continue
-
-        if second_dist is not None and nearest_dist > ambiguity_ratio * second_dist:
-            result.entries.append(
-                {
-                    "status": MatchResult.AMBIGUOUS,
-                    "actor_id": actor_id,
-                    "opendrive_id": opendrive_id,
-                    "nearest": nearest_dist,
-                    "second": second_dist,
-                }
-            )
-            continue
-
-        group_ids = sorted(map_lights.head_groups[nearest_way])
-        result.assignments[actor_id] = group_ids
-        result.entries.append(
-            {
-                "status": MatchResult.MATCHED,
-                "actor_id": actor_id,
-                "opendrive_id": opendrive_id,
-                "group_ids": group_ids,
-                "nearest": nearest_dist,
-                "second": second_dist,
-            }
-        )
+        result.entries.append(entry)
+        if group_ids is not None:
+            result.assignments[actor_id] = group_ids
 
     return result

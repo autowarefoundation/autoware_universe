@@ -174,7 +174,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `traffic_light.map_path`          | string | ""                                                                                | Path to the lanelet2 map (`.osm`). When set, CARLA traffic lights are matched to the map's traffic-light heads **by position** and published under the matched regulatory-element ids. Empty falls back to using the CARLA OpenDRIVE signal id directly as the group id.                                                                            |
 | `traffic_light.match_distance`    | double | 5.0                                                                               | Maximum head-to-head distance (m) accepted when matching a CARLA traffic light to a lanelet2 head.                                                                                                                                                                                                                                                  |
 | `traffic_light.match_ratio`       | double | 0.6                                                                               | Ambiguity threshold: a match is rejected when the nearest head that resolves to a _different_ signal is nearly as close as the winner (`nearest > ratio * second`). Lower is stricter.                                                                                                                                                              |
-| `traffic_light.id_map`            | string | ""                                                                                | Optional override, formatted `opendrive_id:group_id,...`, that pins a CARLA signal id to an Autoware group id and takes precedence over position matching. Use it to recover the few lights the matcher reports as ambiguous or unmatched.                                                                                                          |
+| `traffic_light.id_map`            | string | ""                                                                                | Optional override, formatted `opendrive_id:group_id[|group_id...],...`, that pins a CARLA signal id to one or more Autoware group ids and takes precedence over position matching. A `|`-separated list maps a shared head to all its regulatory elements; use it to recover the few lights the matcher reports as ambiguous or unmatched.          |
 | `wake_sleeping_physics`           | bool   | False                                                                             | Nudge the ego physics body awake with a small `set_target_velocity` when launching from standstill. Only needed on CARLA 0.10 (UE5/Chaos), where a stationary body is put to sleep and `VehicleControl` throttle does not wake it. Leave `false` on the supported 0.9.15 environment, whose bodies never sleep, to keep unmodified launch dynamics. |
 
 > These `traffic_light.*` launch arguments are the node parameters of the same name, kept grouped together under the `traffic_light.` namespace in `ros2 param list`.
@@ -400,7 +400,9 @@ regulatory element in the lanelet2 map. The bridge resolves which group(s) each 
 belongs to as follows, in order of precedence:
 
 1. **`traffic_light.id_map` override.** If the light's OpenDRIVE signal id appears in the
-   `opendrive_id:group_id,...` map, that group id is used directly.
+   `opendrive_id:group_id[|group_id...],...` map, those group ids are used directly. One entry
+   may pin several group ids (`|`-separated), so a shared physical head can be mapped to every
+   regulatory element that governs it.
 2. **Position matching (`traffic_light.map_path`).** When a lanelet2 map is given, each CARLA
    light head is matched to the nearest map traffic-light head, and its state is published under
    **every** regulatory element that references that head (one physical light is commonly shared

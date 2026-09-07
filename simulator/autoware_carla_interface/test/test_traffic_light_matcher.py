@@ -20,6 +20,7 @@ from autoware_carla_interface.modules.traffic_light_matcher import MapTrafficLig
 from autoware_carla_interface.modules.traffic_light_matcher import MatchResult
 from autoware_carla_interface.modules.traffic_light_matcher import load_map_traffic_lights
 from autoware_carla_interface.modules.traffic_light_matcher import match_traffic_lights
+from autoware_carla_interface.modules.traffic_light_matcher import parse_id_map_override
 
 
 def _map(heads):
@@ -139,6 +140,15 @@ def test_load_map_parses_heads_and_shared_groups(tmp_path):
     # Centroid is the mean of the way's node local coordinates.
     assert m.head_positions["100"] == (1.0, 0.0)
     assert m.group_count == 2
+
+
+def test_parse_id_map_override_single_and_multi_group():
+    # A single OpenDRIVE id can pin several group ids (| separated), and repeated
+    # keys merge, so a shared physical head can be recovered to all its groups.
+    assert parse_id_map_override("") == {}
+    assert parse_id_map_override("12:100") == {12: [100]}
+    assert parse_id_map_override(" 12 : 100 | 101 , 13:102 ") == {12: [100, 101], 13: [102]}
+    assert parse_id_map_override("12:100,12:101") == {12: [100, 101]}
 
 
 def test_id_map_override_semantics_via_matcher(tmp_path):

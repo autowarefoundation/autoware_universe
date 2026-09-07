@@ -281,13 +281,16 @@ class InitializeInterface(object):
     def _force_green_traffic_lights(self):
         """Set every CARLA traffic light to green and freeze it there.
 
-        Camera-less closed-loop runs have no traffic-light recognition, so the
-        planner would otherwise hold indefinitely at every signalized stop line.
-        Freezing all lights green lets the ego proceed while still exercising the
-        rest of the stack. When traffic_light.publish is also enabled, carla_ros
-        publishes these frozen green states on
-        /perception/traffic_light_recognition/traffic_signals.
+        No-op unless ``traffic_light.force_green`` is enabled (the check lives here so
+        the caller stays a single unconditional call). Camera-less closed-loop runs
+        have no traffic-light recognition, so the planner would otherwise hold
+        indefinitely at every signalized stop line. Freezing all lights green lets the
+        ego proceed while still exercising the rest of the stack. When
+        traffic_light.publish is also enabled, carla_ros publishes these frozen green
+        states on /perception/traffic_light_recognition/traffic_signals.
         """
+        if not self.interface.param_values.get("traffic_light.force_green", False):
+            return
         traffic_lights = self.world.get_actors().filter("*traffic_light*")
         count = 0
         for traffic_light in traffic_lights:
@@ -412,8 +415,8 @@ class InitializeInterface(object):
         # (and was buffered) during startup.
         self.interface.on_world_ready()
 
-        if self.interface.param_values.get("traffic_light.force_green", False):
-            self._force_green_traffic_lights()
+        # No-op unless traffic_light.force_green is enabled.
+        self._force_green_traffic_lights()
 
         if self.use_traffic_manager:
             self._setup_traffic_manager(client)

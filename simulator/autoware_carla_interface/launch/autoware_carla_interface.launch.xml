@@ -73,7 +73,7 @@
     <arg
       name="traffic_light.id_map"
       default=""
-      description="Optional override 'opendrive_id:group_id,...' that pins a CARLA signal id to an Autoware group id, taking precedence over position matching"
+      description="Optional override 'opendrive_id:group_id[|group_id...],...' that pins a CARLA signal id to one or more Autoware group ids, taking precedence over position matching"
     />
 
     <!-- CARLA Interface -->

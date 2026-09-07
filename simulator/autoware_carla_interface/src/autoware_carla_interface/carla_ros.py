@@ -61,6 +61,7 @@ from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
 from .modules.traffic_light_matcher import load_map_traffic_lights
 from .modules.traffic_light_matcher import match_traffic_lights
+from .modules.traffic_light_matcher import parse_id_map_override
 
 
 def _parse_geo_reference(xodr_xml: str):
@@ -164,10 +165,11 @@ class carla_ros2_interface(object):
             # that resolves to a different regulatory element is nearly as close
             # as the winner (nearest > ratio * second). Lower is stricter.
             "traffic_light.match_ratio": (rclpy.Parameter.Type.DOUBLE, 0.6),
-            # Optional override, formatted "opendrive_id:group_id,...". Pins a
-            # CARLA OpenDRIVE signal id to an Autoware group id, taking
-            # precedence over position matching (use it to recover the few
-            # lights the matcher reports as ambiguous or unmatched).
+            # Optional override, formatted "opendrive_id:group_id[|group_id...],...".
+            # Pins a CARLA OpenDRIVE signal id to one or more Autoware group ids,
+            # taking precedence over position matching (use it to recover the few
+            # lights the matcher reports as ambiguous or unmatched; the |-separated
+            # list lets a shared head map to all of its regulatory elements).
             "traffic_light.id_map": (rclpy.Parameter.Type.STRING, ""),
         }
 
@@ -1249,23 +1251,55 @@ class carla_ros2_interface(object):
         point = carla_location_to_ros_point(carla_location, origin_x=origin_x, origin_y=origin_y)
         return (point.x, point.y)
 
-    def _parse_traffic_light_id_override(self):
-        """Parse the "opendrive_id:group_id,..." override into {opendrive_id: group_id}."""
-        raw = str(self.param_values.get("traffic_light.id_map", "") or "").strip()
-        override = {}
-        for item in raw.split(","):
-            item = item.strip()
-            if not item:
-                continue
-            opendrive_str, group_str = item.split(":")
-            override[int(opendrive_str)] = int(group_str)
-        return override
-
     def _actor_opendrive_id(self, actor):
         try:
             return int(actor.get_opendrive_id())
         except (ValueError, RuntimeError):
             return None
+
+    def _apply_id_map_override(self, override):
+        """Assign the lights whose OpenDRIVE id is pinned in the override.
+
+        Returns ``(assignments, overridden_actor_ids)``; overridden lights bypass
+        position matching entirely.
+        """
+        assignments = {}
+        overridden = set()
+        for actor in self._traffic_light_actors:
+            opendrive_id = self._actor_opendrive_id(actor)
+            if opendrive_id is not None and opendrive_id in override:
+                assignments[actor.id] = list(override[opendrive_id])
+                overridden.add(actor.id)
+        return assignments, overridden
+
+    def _match_actors_to_map(self, actors, map_path, override_count):
+        """Position-match ``actors`` against the lanelet2 map; returns assignments."""
+        map_lights = load_map_traffic_lights(map_path)
+        carla_heads = [
+            (actor.id, self._actor_opendrive_id(actor), self._carla_light_map_point(actor))
+            for actor in actors
+        ]
+        result = match_traffic_lights(
+            carla_heads,
+            map_lights,
+            distance_threshold=self.param_values["traffic_light.match_distance"],
+            ambiguity_ratio=self.param_values["traffic_light.match_ratio"],
+        )
+        self._log_traffic_light_match(map_lights, result, override_count=override_count)
+        return result.assignments
+
+    def _fallback_opendrive_groups(self, actors):
+        """Use the OpenDRIVE signal id directly as the group id (no map path)."""
+        assignments = {}
+        for actor in actors:
+            opendrive_id = self._actor_opendrive_id(actor)
+            if opendrive_id is not None:
+                assignments[actor.id] = [opendrive_id]
+        self.logger.info(
+            f"Publishing {len(assignments)} CARLA traffic lights using the OpenDRIVE "
+            f"signal id as the group id (no traffic_light.map_path set)"
+        )
+        return assignments
 
     def _resolve_traffic_light_groups(self):
         """Resolve each CARLA traffic light to its Autoware group id(s), once.
@@ -1274,7 +1308,8 @@ class carla_ros2_interface(object):
         built on the first publishing tick and reused afterwards. Resolution order
         per light:
 
-        1. ``traffic_light.id_map`` override (keyed by OpenDRIVE signal id) wins.
+        1. ``traffic_light.id_map`` override (keyed by OpenDRIVE signal id) wins; one
+           entry may pin several group ids.
         2. Otherwise, if a lanelet2 map is provided, the light is matched to the
            nearest map head by position; ambiguous / too-far lights are dropped and
            reported so they can be pinned via the override instead of mis-assigned.
@@ -1285,44 +1320,16 @@ class carla_ros2_interface(object):
         if world is None:
             return
         self._traffic_light_actors = list(world.get_actors().filter("*traffic_light*"))
-        override = self._parse_traffic_light_id_override()
 
-        assignments = {}
-        # Apply the manual override first; these lights bypass matching entirely.
-        overridden = set()
-        for actor in self._traffic_light_actors:
-            opendrive_id = self._actor_opendrive_id(actor)
-            if opendrive_id is not None and opendrive_id in override:
-                assignments[actor.id] = [override[opendrive_id]]
-                overridden.add(actor.id)
-
-        map_path = str(self.param_values.get("traffic_light.map_path", "") or "").strip()
+        override = parse_id_map_override(self.param_values.get("traffic_light.id_map", ""))
+        assignments, overridden = self._apply_id_map_override(override)
         to_resolve = [a for a in self._traffic_light_actors if a.id not in overridden]
 
+        map_path = str(self.param_values.get("traffic_light.map_path", "") or "").strip()
         if map_path:
-            map_lights = load_map_traffic_lights(map_path)
-            carla_heads = [
-                (actor.id, self._actor_opendrive_id(actor), self._carla_light_map_point(actor))
-                for actor in to_resolve
-            ]
-            result = match_traffic_lights(
-                carla_heads,
-                map_lights,
-                distance_threshold=self.param_values["traffic_light.match_distance"],
-                ambiguity_ratio=self.param_values["traffic_light.match_ratio"],
-            )
-            assignments.update(result.assignments)
-            self._log_traffic_light_match(map_lights, result, override_count=len(overridden))
+            assignments.update(self._match_actors_to_map(to_resolve, map_path, len(overridden)))
         else:
-            # No map: fall back to OpenDRIVE signal id as the group id.
-            for actor in to_resolve:
-                opendrive_id = self._actor_opendrive_id(actor)
-                if opendrive_id is not None:
-                    assignments[actor.id] = [opendrive_id]
-            self.logger.info(
-                f"Publishing {len(assignments)} CARLA traffic lights using the OpenDRIVE "
-                f"signal id as the group id (no traffic_light.map_path set)"
-            )
+            assignments.update(self._fallback_opendrive_groups(to_resolve))
 
         self._traffic_light_actor_groups = assignments
 
