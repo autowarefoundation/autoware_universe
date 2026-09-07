@@ -1321,7 +1321,10 @@ class carla_ros2_interface(object):
             return
         self._traffic_light_actors = list(world.get_actors().filter("*traffic_light*"))
 
-        override = parse_id_map_override(self.param_values.get("traffic_light.id_map", ""))
+        override = parse_id_map_override(
+            self.param_values.get("traffic_light.id_map", ""),
+            on_invalid=lambda message: self.logger.warning(f"traffic_light.id_map: {message}"),
+        )
         assignments, overridden = self._apply_id_map_override(override)
         to_resolve = [a for a in self._traffic_light_actors if a.id not in overridden]
 
@@ -1358,24 +1361,33 @@ class carla_ros2_interface(object):
             )
 
     @staticmethod
-    def _carla_state_to_autoware_color(state):
-        """Map a carla.TrafficLightState to a TrafficLightElement color."""
+    def _carla_state_to_autoware_element(state):
+        """Map a carla.TrafficLightState to a TrafficLightElement (color, status).
+
+        A lit lamp reports its color as SOLID_ON. CARLA's ``Off`` is a *known* state --
+        the signal is dark (unsignalized / disabled intersection) -- so it is reported
+        as SOLID_OFF rather than as a lit lamp of unknown color, and only a state this
+        bridge cannot interpret stays UNKNOWN/UNKNOWN.
+        """
         if state == carla.TrafficLightState.Red:
-            return TrafficLightElement.RED
+            return TrafficLightElement.RED, TrafficLightElement.SOLID_ON
         if state == carla.TrafficLightState.Yellow:
-            return TrafficLightElement.AMBER
+            return TrafficLightElement.AMBER, TrafficLightElement.SOLID_ON
         if state == carla.TrafficLightState.Green:
-            return TrafficLightElement.GREEN
-        return TrafficLightElement.UNKNOWN
+            return TrafficLightElement.GREEN, TrafficLightElement.SOLID_ON
+        if state == carla.TrafficLightState.Off:
+            return TrafficLightElement.UNKNOWN, TrafficLightElement.SOLID_OFF
+        return TrafficLightElement.UNKNOWN, TrafficLightElement.UNKNOWN
 
     def _publish_traffic_lights(self):
         """Publish CARLA traffic-light states as a TrafficLightGroupArray.
 
         No-op unless traffic_light.publish is enabled (the publisher only exists
-        then). Each CARLA light is reported as a solid circular signal whose color
-        reflects the current CARLA state, published under every regulatory-element
-        (group) id it resolved to. When traffic_light.force_green is set the lights
-        are frozen green in CARLA, so this naturally publishes green for all of them.
+        then). Each CARLA light is reported as a circular signal whose color and
+        status reflect the current CARLA state, published under every
+        regulatory-element (group) id it resolved to. When traffic_light.force_green
+        is set the lights are frozen green in CARLA, so this naturally publishes
+        green for all of them.
         """
         if self.pub_traffic_signals is None:
             return
@@ -1387,24 +1399,24 @@ class carla_ros2_interface(object):
         # Aggregate by group id: several physical heads (actors) can belong to the
         # same regulatory element, and they show the same aspect, so one element per
         # group is emitted.
-        group_colors = {}
+        group_elements = {}
         for actor in self._traffic_light_actors:
             group_ids = self._traffic_light_actor_groups.get(actor.id)
             if not group_ids:
                 continue
-            color = self._carla_state_to_autoware_color(actor.get_state())
+            color, status = self._carla_state_to_autoware_element(actor.get_state())
             for group_id in group_ids:
-                group_colors[group_id] = color
+                group_elements[group_id] = (color, status)
 
         msg = TrafficLightGroupArray()
         msg.stamp = self.get_msg_header(frame_id="map").stamp
-        for group_id, color in group_colors.items():
+        for group_id, (color, status) in group_elements.items():
             group = TrafficLightGroup()
             group.traffic_light_group_id = group_id
             element = TrafficLightElement()
             element.color = color
             element.shape = TrafficLightElement.CIRCLE
-            element.status = TrafficLightElement.SOLID_ON
+            element.status = status
             element.confidence = 1.0
             group.elements.append(element)
             msg.traffic_light_groups.append(group)

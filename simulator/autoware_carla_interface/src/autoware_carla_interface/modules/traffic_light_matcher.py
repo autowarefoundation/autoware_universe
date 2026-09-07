@@ -147,22 +147,60 @@ def load_map_traffic_lights(osm_path):
     return result
 
 
-def parse_id_map_override(raw):
+def _parse_id_map_entry(item):
+    """Parse one ``opendrive_id:group_id[|group_id...]`` entry.
+
+    Returns ``(opendrive_id, {group_id, ...})``, or raises ``ValueError`` describing
+    what is wrong with the entry so the caller can report it and skip it.
+    """
+    opendrive_str, separator, groups_str = item.partition(":")
+    if not separator:
+        raise ValueError("missing ':', expected 'opendrive_id:group_id[|group_id...]'")
+    try:
+        opendrive_id = int(opendrive_str.strip())
+    except ValueError:
+        raise ValueError(f"'{opendrive_str.strip()}' is not an integer OpenDRIVE signal id")
+    groups = set()
+    for token in groups_str.split("|"):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            groups.add(int(token))
+        except ValueError:
+            raise ValueError(f"'{token}' is not an integer traffic-light group id")
+    if not groups:
+        raise ValueError("no group id after ':'")
+    return opendrive_id, groups
+
+
+def parse_id_map_override(raw, on_invalid=None):
     """Parse a ``traffic_light.id_map`` string into ``{opendrive_id: [group_id, ...]}``.
 
     Format is ``opendrive_id:group_id[|group_id...],...``. A single OpenDRIVE signal id
     may list several group ids (separated by ``|``) so a physical light shared by
     multiple regulatory elements can be pinned to all of them, matching the position
     matcher's shared-head behaviour. Repeated keys are merged.
+
+    A malformed entry is skipped rather than raising: a typo in this parameter must not
+    take the bridge down on the first simulation tick, and an entry such as ``12:`` must
+    not silently override a light with an empty group list. Every rejected entry is
+    reported through the optional ``on_invalid`` callback (e.g. a logger's ``warning``),
+    which receives one human-readable message per bad entry. Entries that parse fine are
+    kept, so one typo does not discard the rest of the table.
     """
     override = {}
     for item in str(raw or "").split(","):
         item = item.strip()
         if not item:
             continue
-        opendrive_str, groups_str = item.split(":")
-        groups = {int(g) for g in groups_str.split("|") if g.strip()}
-        override.setdefault(int(opendrive_str), set()).update(groups)
+        try:
+            opendrive_id, groups = _parse_id_map_entry(item)
+        except ValueError as error:
+            if on_invalid is not None:
+                on_invalid(f"ignoring malformed id_map entry '{item}': {error}")
+            continue
+        override.setdefault(opendrive_id, set()).update(groups)
     return {opendrive_id: sorted(groups) for opendrive_id, groups in override.items()}
 
 
@@ -231,7 +269,12 @@ def _classify_head(head, ctx):
         None,
     )
     entry["second"] = second_dist
-    if second_dist is not None and nearest_dist > ctx.ambiguity_ratio * second_dist:
+    # A tie (including two heads sitting on the same point, where the ratio test
+    # degenerates to 0 > 0) has no winner: which head ranks first would then come
+    # down to the order the ways appear in the .osm, so report it instead.
+    if second_dist is not None and (
+        nearest_dist >= second_dist or nearest_dist > ctx.ambiguity_ratio * second_dist
+    ):
         entry["status"] = MatchResult.AMBIGUOUS
         return entry, None
 
@@ -261,7 +304,8 @@ def match_traffic_lights(
     ambiguity_ratio : float
         A match is ambiguous when the closest head that resolves to a *different set of
         regulatory elements* is nearly as close as the winner, i.e. when
-        ``nearest_dist > ambiguity_ratio * second_dist``. Using a ratio rather than an
+        ``nearest_dist > ambiguity_ratio * second_dist`` (an exact tie is always
+        ambiguous, whatever the ratio). Using a ratio rather than an
         absolute margin keeps confident matches (a CARLA light sitting essentially on
         its own head, so ``nearest_dist`` is tiny) even when another signal is only a
         metre or two away, while still rejecting a light that falls roughly midway

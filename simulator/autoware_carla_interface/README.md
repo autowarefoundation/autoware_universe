@@ -392,8 +392,9 @@ Instead of running camera-based recognition, the bridge can publish the CARLA se
 traffic-light states directly. Setting `traffic_light.publish:=true` publishes an
 `autoware_perception_msgs/TrafficLightGroupArray` on
 `/perception/traffic_light_recognition/traffic_signals` every tick. Each CARLA light is
-reported as a solid circular signal whose color follows the CARLA state (`Red`/`Yellow`/`Green`
-map to `RED`/`AMBER`/`GREEN`; anything else is `UNKNOWN`).
+reported as a circular signal whose color and status follow the CARLA state: `Red`/`Yellow`/`Green`
+map to `RED`/`AMBER`/`GREEN` with status `SOLID_ON`, the known-dark `Off` state maps to status
+`SOLID_OFF`, and only a state the bridge cannot interpret is published as `UNKNOWN`/`UNKNOWN`.
 
 Autoware keys traffic signals by `traffic_light_group_id`, the id of a `traffic_light`
 regulatory element in the lanelet2 map. The bridge resolves which group(s) each CARLA light
@@ -402,7 +403,10 @@ belongs to as follows, in order of precedence:
 1. **`traffic_light.id_map` override.** If the light's OpenDRIVE signal id appears in the
    `opendrive_id:group_id[|group_id...],...` map, those group ids are used directly. One entry
    may pin several group ids (`|`-separated), so a shared physical head can be mapped to every
-   regulatory element that governs it.
+   regulatory element that governs it. A malformed entry (no `:`, a non-integer id, or no group
+   id after the `:`) is skipped with a warning naming the offending entry, so a typo neither
+   stops the bridge nor silently overrides a light with an empty group list; the remaining
+   entries still apply.
 2. **Position matching (`traffic_light.map_path`).** When a lanelet2 map is given, each CARLA
    light head is matched to the nearest map traffic-light head, and its state is published under
    **every** regulatory element that references that head (one physical light is commonly shared
@@ -414,11 +418,12 @@ belongs to as follows, in order of precedence:
    the OpenDRIVE signal ids).
 
 Position matching is deliberately conservative: it binds a CARLA light only when a single map head
-is clearly closest. If a head belonging to a _different_ signal is nearly as close — the classic
-"light across the intersection" case, controlled by `traffic_light.match_ratio` — or nothing is
-within `traffic_light.match_distance`, the light is left unpublished and logged as ambiguous /
-unmatched rather than guessed. Watch the node's startup log for the match report (`N matched,
-M ambiguous, K too far`) and pin any reported light through `traffic_light.id_map` if you need it.
+is clearly closest. If a head belonging to a _different_ signal is nearly as close (the classic
+"light across the intersection" case, controlled by `traffic_light.match_ratio`), is exactly as
+close (a tie has no winner, so the .osm order must not decide it), or nothing is within
+`traffic_light.match_distance`, the light is left unpublished and logged as ambiguous / unmatched
+rather than guessed. Watch the node's startup log for the match report (`N matched, M ambiguous,
+K too far`) and pin any reported light through `traffic_light.id_map` if you need it.
 
 > Position matching reads the lanelet2 node `local_x`/`local_y` tags, i.e. the Autoware map frame,
 > and expresses each CARLA head in that frame via `map_origin_x`/`map_origin_y` (the same offsets

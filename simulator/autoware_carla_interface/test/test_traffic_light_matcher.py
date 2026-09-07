@@ -77,6 +77,16 @@ def test_overlapping_but_unequal_group_sets_are_ambiguous():
     assert _status(result, "a") == MatchResult.AMBIGUOUS
 
 
+def test_coincident_heads_with_different_groups_are_ambiguous():
+    # Two heads of different signals at the same point: both distances are 0, so the
+    # ratio test alone (0 > ratio * 0) would accept whichever way the .osm happens to
+    # list first. An exact tie has no winner and must be reported instead.
+    m = _map({"w1": ((0.0, 0.0), {1}), "w2": ((0.0, 0.0), {2})})
+    result = match_traffic_lights([("a", None, (0.0, 0.0))], m)
+    assert "a" not in result.assignments
+    assert _status(result, "a") == MatchResult.AMBIGUOUS
+
+
 def test_clear_winner_over_nearby_disjoint_head_still_matches():
     # Light sits essentially on its own head (0.1 m); a different signal 1.5 m away
     # should not defeat the match thanks to the ratio-based ambiguity test.
@@ -149,6 +159,27 @@ def test_parse_id_map_override_single_and_multi_group():
     assert parse_id_map_override("12:100") == {12: [100]}
     assert parse_id_map_override(" 12 : 100 | 101 , 13:102 ") == {12: [100, 101], 13: [102]}
     assert parse_id_map_override("12:100,12:101") == {12: [100, 101]}
+
+
+def test_parse_id_map_override_skips_malformed_entries():
+    # A typo must not take the bridge down on the first tick, and must not silently
+    # override a light with an empty group list; the valid entries still parse and
+    # every rejected entry is reported.
+    reported = []
+
+    parsed = parse_id_map_override("12,13:,14:abc,x:15,16:200", on_invalid=reported.append)
+
+    assert parsed == {16: [200]}
+    assert len(reported) == 4
+    assert "'12'" in reported[0] and "missing ':'" in reported[0]
+    assert "'13:'" in reported[1] and "no group id" in reported[1]
+    assert "'abc'" in reported[2]
+    assert "'x'" in reported[3]
+
+
+def test_parse_id_map_override_without_callback_is_silent():
+    # on_invalid is optional: bad entries are dropped rather than raising.
+    assert parse_id_map_override("12,13:200") == {13: [200]}
 
 
 def test_id_map_override_semantics_via_matcher(tmp_path):
