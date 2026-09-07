@@ -36,6 +36,7 @@
   <depend>lanelet2_core</depend>
   <depend>magic_enum</depend>
   <depend>nav_msgs</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

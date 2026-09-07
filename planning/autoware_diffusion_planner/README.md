@@ -41,6 +41,30 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
   planning_setting:=diffusion_planner
 ```
 
+### Fixed-weight CAMP candidate selection
+
+The planner can run the bundled K=8 fixed-weight CAMP selector directly after
+Diffusion Planner inference. CAMP constructs 16 safety, rule, progress,
+comfort, and previous-plan atoms from the unchanged batch output and current
+map context, then publishes the lowest-cost original candidate. The actor
+predictions published on `~/output/predicted_objects` remain aligned with that
+selected candidate.
+
+Use the supplied CAMP parameter file:
+
+```bash
+ros2 launch autoware_diffusion_planner diffusion_planner.launch.xml \
+  data_path:=/path/to/autoware_data/ml_models \
+  diffusion_planner_param_path:=$(ros2 pkg prefix autoware_diffusion_planner)/share/autoware_diffusion_planner/config/diffusion_planner_camp.param.yaml
+```
+
+The CAMP configuration uses candidate 0 with zero sampling temperature and
+seven sampled candidates with temperature 1.0, matching the trained ordered
+pool. At decision time Autoware supplies only the current traffic-light state,
+not an authoritative 8-second phase sequence; red-light atoms therefore use
+the model's `typed_missing` status when the selected route contains a signal,
+and `not_applicable` when it does not.
+
 ## Features
 
 - **Diffusion-based trajectory generation** for flexible and robust planning

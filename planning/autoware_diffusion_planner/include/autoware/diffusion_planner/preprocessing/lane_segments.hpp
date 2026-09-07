@@ -135,6 +135,8 @@ public:
     return lanelet_id_to_array_index_;
   }
 
+  const autoware::diffusion_planner::LaneletMap & get_lanelet_map() const { return lanelet_map_; }
+
   // Create polygon and linestring tensor data
   std::vector<float> create_polygon_tensor(
     const Eigen::Matrix4d & transform_matrix, const double center_x, const double center_y) const
