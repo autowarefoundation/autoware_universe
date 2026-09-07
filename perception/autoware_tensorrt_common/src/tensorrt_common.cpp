@@ -28,6 +28,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -39,6 +40,98 @@ namespace autoware
 {
 namespace tensorrt_common
 {
+namespace
+{
+std::string joinNames(const std::set<std::string> & names)
+{
+  std::string joined;
+  for (const auto & name : names) {
+    joined += joined.empty() ? name : ", " + name;
+  }
+  return joined;
+}
+
+/// Erase every entry naming one of `names`.
+template <typename IOEntries>
+void eraseNamedIO(IOEntries & entries, const std::set<std::string> & names)
+{
+  const auto named = [&names](const auto & entry) { return names.count(entry.tensor_name) > 0; };
+  entries.erase(std::remove_if(entries.begin(), entries.end(), named), entries.end());
+}
+
+/// The names a caller offered, classified by what the model declares. Nothing is acted on yet: an
+/// offer carrying anything `missing` is refused before a single `skippable` entry is dropped.
+struct OfferedIO
+{
+  std::set<std::string> names;      //!< Every distinct name the offer mentions.
+  std::set<std::string> skippable;  //!< Undeclared, and offered as optional: safe to drop.
+  std::set<std::string> missing;    //!< Undeclared, and not offered as optional: fatal.
+};
+
+/// Add one list of offered entries to `offer`, which accumulates over however many lists there are.
+template <typename IOEntries>
+void collectOffer(
+  const IOEntries & entries, const std::unordered_set<std::string> & declared, OfferedIO & offer)
+{
+  for (const auto & entry : entries) {
+    offer.names.emplace(entry.tensor_name);
+    if (declared.count(entry.tensor_name) > 0) {
+      continue;
+    }
+    auto & undeclared = entry.optional ? offer.skippable : offer.missing;
+    undeclared.emplace(entry.tensor_name);
+  }
+}
+
+/// Collect both offered lists, either of which may be absent, into one account of the offer.
+OfferedIO collectOfferedIO(
+  const std::vector<NetworkIO> * network_io, const std::vector<ProfileDims> * profile_dims,
+  const std::unordered_set<std::string> & declared)
+{
+  OfferedIO offer;
+  if (network_io) {
+    collectOffer(*network_io, declared, offer);
+  }
+  if (profile_dims) {
+    collectOffer(*profile_dims, declared, offer);
+  }
+  return offer;
+}
+
+/// Whether `network_io` names every tensor the model declares, logging any it does not.
+bool offersEveryDeclaredTensor(
+  const std::vector<NetworkIO> & network_io, const std::unordered_set<std::string> & declared,
+  Logger & logger)
+{
+  std::set<std::string> unoffered(declared.begin(), declared.end());
+  for (const auto & io : network_io) {
+    unoffered.erase(io.tensor_name);
+  }
+  if (unoffered.empty()) {
+    return true;
+  }
+  logger.log(
+    nvinfer1::ILogger::Severity::kERROR, "Model declares IO tensor(s) that were not offered: [%s]",
+    joinNames(unoffered).c_str());
+  return false;
+}
+
+/// Log how much of the offered IO the model declares.
+void logReconciledIO(
+  const std::size_t offered, const std::set<std::string> & skipped, Logger & logger)
+{
+  if (skipped.empty()) {
+    logger.log(
+      nvinfer1::ILogger::Severity::kINFO, "Model declares all %zu offered IO tensors", offered);
+    return;
+  }
+  logger.log(
+    nvinfer1::ILogger::Severity::kINFO,
+    "Model declares %zu of %zu offered IO tensors; skipping the optional tensors it does not "
+    "declare: [%s]",
+    offered - skipped.size(), offered, joinNames(skipped).c_str());
+}
+}  // namespace
 
 TrtCommon::TrtCommon(
   const TrtCommonConfig & trt_config, const std::shared_ptr<Profiler> & profiler,
@@ -86,18 +179,94 @@ TrtCommon::TrtCommon(
 
 TrtCommon::~TrtCommon() = default;
 
-bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
+template <typename IOEntries>
+void TrtCommon::resolveTensorNamesOrThrow(IOEntries & entries) const
 {
+  for (auto & entry : entries) {
+    if (!entry.tensor_name.empty()) {
+      continue;
+    }
+    const auto * name = getIOTensorName(entry.tensor_index);
+    if (name == nullptr) {
+      throw std::invalid_argument(
+        "No IO tensor at index " + std::to_string(entry.tensor_index) + "; the model declares " +
+        std::to_string(getNbIOTensors()) + " IO tensors.");
+    }
+    entry.tensor_name = name;
+  }
+}
+
+void TrtCommon::dropSkippedIO(const std::set<std::string> & skipped)
+{
+  if (network_io_) {
+    eraseNamedIO(*network_io_, skipped);
+  }
+  if (profile_dims_) {
+    eraseNamedIO(*profile_dims_, skipped);
+  }
+  // Remembered so the by-name setters no-op for a tensor the caller may still bind
+  // unconditionally.
+  skipped_io_.insert(skipped.begin(), skipped.end());
+}
+
+bool TrtCommon::reconcileOfferedIO()
+{
+  const auto declared = getIOTensorNames();
+
+  // Whether the caller offered a complete account of the model's IO, judged on the offer as it
+  // arrived: dropping every entry of an all-optional offer below would otherwise read as a caller
+  // that never made the promise.
+  const auto accounts_for_all_io = network_io_ && !network_io_->empty();
+
+  const auto offer = collectOfferedIO(network_io_.get(), profile_dims_.get(), declared);
+  if (offer.names.empty()) {
+    return true;
+  }
+
+  // A required tensor the model does not declare is a mismatch between the model and the caller
+  // that no engine build can resolve, so refuse it before building one.
+  if (!offer.missing.empty()) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kERROR, "Model does not declare the required IO tensor(s): [%s]",
+      joinNames(offer.missing).c_str());
+    return false;
+  }
+
+  dropSkippedIO(offer.skippable);
+
+  if (accounts_for_all_io && !offersEveryDeclaredTensor(*network_io_, declared, *logger_)) {
+    return false;
+  }
+
+  logReconciledIO(offer.names.size(), offer.skippable, *logger_);
+  return true;
+}
+
+bool TrtCommon::acceptOfferedIO(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
+{
+  if (profile_dims) {
+    resolveTensorNamesOrThrow(*profile_dims);
+  }
+  if (network_io) {
+    resolveTensorNamesOrThrow(*network_io);
+  }
+
   profile_dims_ = std::move(profile_dims);
   network_io_ = std::move(network_io);
+
+  return reconcileOfferedIO();
+}
+
+bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
+{
+  if (!acceptOfferedIO(std::move(profile_dims), std::move(network_io))) {
+    return false;
+  }
 
   // Set input profile
   if (profile_dims_ && !profile_dims_->empty()) {
     auto profile = builder_->createOptimizationProfile();
     for (auto & profile_dim : *profile_dims_) {
-      if (profile_dim.tensor_name.empty()) {
-        profile_dim.tensor_name = getIOTensorName(profile_dim.tensor_index);
-      }
       logger_->log(
         nvinfer1::ILogger::Severity::kINFO, "Setting optimization profile for tensor: %s",
         profile_dim.toString().c_str());
@@ -335,6 +504,9 @@ bool TrtCommon::setTensorAddress(const char * tensor_name, void * data)
     logger_->log(nvinfer1::ILogger::Severity::kERROR, "Context is not initialized");
     return false;
   }
+  if (skipped_io_.count(tensor_name) > 0) {
+    return true;
+  }
   auto success = context_->setTensorAddress(tensor_name, data);
   if (!success) {
     logger_->log(
@@ -374,6 +546,9 @@ bool TrtCommon::setInputShape(const char * tensor_name, const nvinfer1::Dims & d
   if (!context_) {
     logger_->log(nvinfer1::ILogger::Severity::kERROR, "Context is not initialized");
     return false;
+  }
+  if (skipped_io_.count(tensor_name) > 0) {
+    return true;
   }
   auto success = context_->setInputShape(tensor_name, dimensions);
   if (!success) {
