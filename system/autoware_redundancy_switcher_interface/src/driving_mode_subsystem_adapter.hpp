@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef DRIVING_MODE_SUBSYSTEM__DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_
-#define DRIVING_MODE_SUBSYSTEM__DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_
+#ifndef DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_
+#define DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
@@ -80,4 +80,4 @@ private:
 };
 
 }  // namespace autoware::redundancy_switcher
-#endif  // DRIVING_MODE_SUBSYSTEM__DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_
+#endif  // DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_

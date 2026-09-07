@@ -20,8 +20,8 @@
 
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <std_msgs/msg/u_int8.hpp>
 #include <std_msgs/msg/u_int16.hpp>
+#include <std_msgs/msg/u_int8.hpp>
 #include <tier4_system_msgs/msg/active_control_unit.hpp>
 
 #include <memory>
@@ -51,7 +51,6 @@ public:
   static SwitcherSignals decode_signals(uint8_t encoded);
 
 private:
-
   void on_active_control_unit(const ActiveControlUnitMsg & msg);
   void on_switcher_signals(const UInt8Msg & msg);
   void on_switcher_annotation(const StringMsg & msg);

@@ -45,7 +45,8 @@ private:
   std::shared_ptr<LogAdapter> log_adapter_;
   std::shared_ptr<DiagAdapter> diag_adapter_;
 
-  // Subsystem adapter: CommandModeSubSystemAdapter or DrivingModeSubSystemAdapter, selected by use_driving_mode.
+  // Subsystem adapter: CommandModeSubSystemAdapter or DrivingModeSubSystemAdapter, selected by
+  // use_driving_mode.
   std::shared_ptr<IAdapterPlugin> subsystem_adapter_;
 
   pluginlib::ClassLoader<IAdapterPlugin> plugin_loader_;

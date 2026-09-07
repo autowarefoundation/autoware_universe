@@ -98,8 +98,8 @@ protected:
       "/system/simple_switcher/request/self_interruption/main_ecu", qos);
     pub_self_sub_ = helper_->create_publisher<std_msgs::msg::Empty>(
       "/system/simple_switcher/request/self_interruption/sub_ecu", qos);
-    pub_reset_ = helper_->create_publisher<std_msgs::msg::Empty>(
-      "/system/simple_switcher/request/reset", qos);
+    pub_reset_ =
+      helper_->create_publisher<std_msgs::msg::Empty>("/system/simple_switcher/request/reset", qos);
     pub_priority_main_ = helper_->create_publisher<std_msgs::msg::UInt16>(
       "/system/simple_switcher/request/priority/main_ecu", qos);
     pub_priority_sub_ = helper_->create_publisher<std_msgs::msg::UInt16>(

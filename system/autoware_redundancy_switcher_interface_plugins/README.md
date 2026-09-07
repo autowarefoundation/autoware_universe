@@ -49,11 +49,11 @@ set to true, enabling full fault detection and redundancy management.
 
 ### Parameters
 
-| Parameter                               | Type   | Description                                                   |
-| --------------------------------------- | ------ | ------------------------------------------------------------- |
-| `uds.switcher_command_path`             | string | Unix domain socket path for sending `ElectionRequest`         |
-| `uds.switcher_status_path`              | string | Unix domain socket path for receiving `ElectionStatus`        |
-| `uds.election_status_timeout_milli`     | double | Timeout [ms] for reading `ElectionStatus` from the socket     |
+| Parameter                                  | Type   | Description                                                |
+| ------------------------------------------ | ------ | ---------------------------------------------------------- |
+| `uds.switcher_command_path`                | string | Unix domain socket path for sending `ElectionRequest`      |
+| `uds.switcher_status_path`                 | string | Unix domain socket path for receiving `ElectionStatus`     |
+| `uds.election_status_timeout_milli`        | double | Timeout [ms] for reading `ElectionStatus` from the socket  |
 | `uds.election_request_send_interval_milli` | double | Interval [ms] for the periodic `ElectionRequest` heartbeat |
 
 **Note on `autoware_ready`:** The `autoware_ready` flag is sent in every `ElectionRequest` heartbeat.

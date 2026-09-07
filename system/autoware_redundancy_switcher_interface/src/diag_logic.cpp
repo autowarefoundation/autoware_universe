@@ -42,8 +42,7 @@ SwitcherLevelResult compute_switcher_level(
   // Transitional state (startup or state change in progress)
   if (autoware_ready.has_value() && autoware_ready->value == AutowareReady::False) {
     return {
-      DiagLevel::Ok,
-      "Switcher transitional state timeout skipped: Autoware is not ready (OK)",
+      DiagLevel::Ok, "Switcher transitional state timeout skipped: Autoware is not ready (OK)",
       std::nullopt};
   }
 

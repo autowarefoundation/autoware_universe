@@ -49,18 +49,15 @@ void CommandModeSubSystemAdapter::initialize(
 
   sub_velocity_report_ = node_->create_subscription<VelocityReport>(
     "~/input/velocity", qos,
-    std::bind(
-      &CommandModeSubSystemAdapter::on_velocity_report, this, std::placeholders::_1));
+    std::bind(&CommandModeSubSystemAdapter::on_velocity_report, this, std::placeholders::_1));
 
   sub_control_mode_ = node_->create_subscription<ControlModeReport>(
     "~/input/control_mode", qos,
-    std::bind(
-      &CommandModeSubSystemAdapter::on_control_mode_report, this, std::placeholders::_1));
+    std::bind(&CommandModeSubSystemAdapter::on_control_mode_report, this, std::placeholders::_1));
 
   sub_command_mode_request_ = node_->create_subscription<CommandModeRequest>(
     "~/input/command_mode_request", qos,
-    std::bind(
-      &CommandModeSubSystemAdapter::on_command_mode_request, this, std::placeholders::_1));
+    std::bind(&CommandModeSubSystemAdapter::on_command_mode_request, this, std::placeholders::_1));
 
   sub_command_mode_availability_ = node_->create_subscription<CommandModeAvailability>(
     "~/input/command_mode_availability", qos,
@@ -68,16 +65,14 @@ void CommandModeSubSystemAdapter::initialize(
       &CommandModeSubSystemAdapter::on_command_mode_availability, this, std::placeholders::_1));
 
   srv_set_initializing_ = node_->create_service<SetBool>(
-    "~/set_initializing",
-    std::bind(
-      &CommandModeSubSystemAdapter::on_set_initializing, this, std::placeholders::_1,
-      std::placeholders::_2));
+    "~/set_initializing", std::bind(
+                            &CommandModeSubSystemAdapter::on_set_initializing, this,
+                            std::placeholders::_1, std::placeholders::_2));
 
   srv_reset_ = node_->create_service<ResetRedundancySwitcher>(
-    "~/service/reset",
-    std::bind(
-      &CommandModeSubSystemAdapter::on_reset_request, this, std::placeholders::_1,
-      std::placeholders::_2));
+    "~/service/reset", std::bind(
+                         &CommandModeSubSystemAdapter::on_reset_request, this,
+                         std::placeholders::_1, std::placeholders::_2));
 
   // Publishers
   pub_active_control_unit_ = node_->create_publisher<ActiveControlUnitMsg>(
