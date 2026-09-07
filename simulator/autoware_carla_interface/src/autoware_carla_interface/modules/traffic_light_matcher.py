@@ -76,7 +76,7 @@ class MapTrafficLights:
 
 
 def _parse_local_nodes(root):
-    """node id -> (local_x, local_y) for nodes that carry both tags."""
+    """Node id -> (local_x, local_y) for nodes that carry both tags."""
     nodes = {}
     for node in root.findall("node"):
         local_x = local_y = None
@@ -92,7 +92,7 @@ def _parse_local_nodes(root):
 
 
 def _parse_ways(root):
-    """way id -> list of node ids."""
+    """Way id -> list of node ids."""
     return {
         way.get("id"): [nd.get("ref") for nd in way.findall("nd")] for way in root.findall("way")
     }
@@ -104,7 +104,7 @@ def _is_traffic_light_relation(relation):
 
 
 def _refers_way_ids(relation):
-    """way ids referenced with role ``refers`` (the physical light heads)."""
+    """Way ids referenced with role ``refers`` (the physical light heads)."""
     return [m.get("ref") for m in relation.findall("member") if m.get("role") == "refers"]
 
 
