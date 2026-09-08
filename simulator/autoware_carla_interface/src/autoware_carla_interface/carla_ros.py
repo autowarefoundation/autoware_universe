@@ -109,11 +109,12 @@ EgoState = namedtuple(
     ["transform", "velocity", "angular_velocity", "steer_angle", "control", "light_state"],
 )
 
-# CARLA blueprint base_type -> Autoware label (anything unlisted falls back to CAR)
+# CARLA blueprint base_type, lower-cased -> Autoware label (anything unlisted falls back to CAR)
 BASE_TYPE_TO_LABEL = {
     "car": ObjectClassification.CAR,
     "truck": ObjectClassification.TRUCK,
     "van": ObjectClassification.TRUCK,
+    "bus": ObjectClassification.BUS,
     "motorcycle": ObjectClassification.MOTORCYCLE,
     "bicycle": ObjectClassification.BICYCLE,
 }
@@ -1670,12 +1671,20 @@ class carla_ros2_interface(object):
             if not actor.type_id.startswith("vehicle."):
                 self.ground_truth_static[actor.id] = None
                 continue
-            extent = actor.bounding_box.extent
+            bounding_box = actor.bounding_box
+            extent = bounding_box.extent
+            # CARLA spells "Bus" with a capital letter; every other base_type is lower case
             label = BASE_TYPE_TO_LABEL.get(
-                actor.attributes.get("base_type"), ObjectClassification.CAR
+                (actor.attributes.get("base_type") or "").lower(), ObjectClassification.CAR
             )
             dimensions = (float(extent.x * 2.0), float(extent.y * 2.0), float(extent.z * 2.0))
-            self.ground_truth_static[actor.id] = (label, dimensions)
+            # The box center sits at an offset from the actor origin, in the actor frame
+            center_offset = (
+                float(bounding_box.location.x),
+                float(bounding_box.location.y),
+                float(bounding_box.location.z),
+            )
+            self.ground_truth_static[actor.id] = (label, dimensions, center_offset)
         for actor_id in actor_ids:
             self.ground_truth_static.setdefault(actor_id, None)
 
@@ -1688,8 +1697,8 @@ class carla_ros2_interface(object):
         for actor_id in set(self.ground_truth_static).difference(present):
             del self.ground_truth_static[actor_id]
 
-    def ground_truth_detection(self, transform, label, dimensions):
-        """Build one detection from pose, label and dimensions; velocity is left to the tracker."""
+    def ground_truth_detection(self, transform, label, dimensions, center_offset):
+        """Build one detection from pose, label and box; velocity is left to the tracker."""
         obj = DetectedObject()
         obj.existence_probability = 1.0
 
@@ -1698,8 +1707,11 @@ class carla_ros2_interface(object):
         classification.probability = 1.0
         obj.classification.append(classification)
 
+        # Autoware puts the box around the pose, so publish the box center, not the actor origin
+        center = carla.Location(*center_offset)
+        transform.transform(center)
         obj.kinematics.pose_with_covariance.pose.position = carla_location_to_ros_point(
-            transform.location,
+            center,
             origin_x=self.param_values["map_origin_x"],
             origin_y=self.param_values["map_origin_y"],
         )
@@ -1739,9 +1751,11 @@ class carla_ros2_interface(object):
             static = self.ground_truth_static.get(actor_snapshot.id)
             if static is None or actor_snapshot.id == ego_id:
                 continue
-            label, dimensions = static
+            label, dimensions, center_offset = static
             msg.objects.append(
-                self.ground_truth_detection(actor_snapshot.get_transform(), label, dimensions)
+                self.ground_truth_detection(
+                    actor_snapshot.get_transform(), label, dimensions, center_offset
+                )
             )
         self.pub_ground_truth_objects.publish(msg)
 
