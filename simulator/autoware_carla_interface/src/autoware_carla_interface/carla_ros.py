@@ -95,11 +95,11 @@ def _extract_proj_string(xodr_xml: str) -> str:
     import xml.etree.ElementTree as ET
 
     match = re.search(
-        r"<geoReference>\s*<!\[CDATA\[(.*?)\]\]>\s*</geoReference>",
+        r"<geoReference>\s*(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?\s*</geoReference>",
         xodr_xml,
         re.DOTALL,
     )
-    if match:
+    if match and match.group(1).strip():
         return match.group(1).strip()
 
     geo_ref = ET.fromstring(xodr_xml).find(".//geoReference")
@@ -122,7 +122,7 @@ def _parse_geo_reference(xodr_xml: str):
     lat_match = re.search(r"\+lat_0=([0-9eE.+-]+)", proj_string)
     lon_match = re.search(r"\+lon_0=([0-9eE.+-]+)", proj_string)
     if lat_match is None or lon_match is None:
-        raise ValueError(f"Cannot extract +lat_0/+lon_0 from GeoReference: {proj_string}")
+        raise ValueError(f"Cannot extract +lat_0/+lon_0 from geoReference: {proj_string}")
     return float(lat_match.group(1)), float(lon_match.group(1))
 
 
@@ -179,10 +179,22 @@ class carla_ros2_interface(object):
             "splatsim_device": (rclpy.Parameter.Type.STRING, "cuda:0"),
             "splatsim_restart_container": (rclpy.Parameter.Type.BOOL, False),
             "splatsim_compress_format": (rclpy.Parameter.Type.STRING, "jpeg"),
+            # Override the wheel max steer angle [deg] used to convert between
+            # tire angles and the normalized VehicleControl.steer. 0 uses the
+            # value reported by the vehicle physics. CARLA 0.10 (Chaos) reports
+            # 70 deg but only achieves roughly a third of it, so calibrating
+            # this to the measured full-steer angle restores a unity gain.
+            "max_wheel_steer_angle_deg": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Replace the ego vehicle's speed-based steering curve with an
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
             "flatten_steering_curve": (rclpy.Parameter.Type.BOOL, False),
+            # Nudge the ego physics body awake when launching from a standstill.
+            # Only needed on CARLA 0.10 (UE5/Chaos), where a stationary body is
+            # put to sleep and VehicleControl throttle does not wake it. Off by
+            # default so the supported 0.9.15 environment, where bodies never
+            # sleep, keeps its unmodified launch dynamics.
+            "wake_sleeping_physics": (rclpy.Parameter.Type.BOOL, False),
         }
 
         self.param_values = {}
@@ -447,9 +459,15 @@ class carla_ros2_interface(object):
         self.prev_steer_output = 0.0
         self.tau = 0.2
         self._max_steer_angle_rad = None
+        self._physics_max_steer_angle_rad = None
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
+        # Map origin (CARLA->map offset) is resolved once the world/map is
+        # loaded (on_world_ready); None until then. An initialpose that arrives
+        # before that is buffered here and applied on_world_ready.
+        self._map_origin = None
+        self._pending_initialpose = None
         self.current_control = carla.VehicleControl()
         self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
         self.current_hazard_lights = HazardLightsCommand.DISABLE
@@ -635,13 +653,95 @@ class carla_ros2_interface(object):
             carla_pose_transform.location.y,
         )
 
+    def _current_map_origin(self):
+        """Return the resolved CARLA→map offset, or (0, 0) if not yet resolved."""
+        return self._map_origin if self._map_origin is not None else (0.0, 0.0)
+
+    def _derive_map_origin(self):
+        """Compute the CARLA→map-frame origin offset from the loaded map.
+
+        Must only be called once the CARLA world/map is fully loaded (see
+        :meth:`on_world_ready`); it reads ``get_map()`` directly with no
+        readiness guards, since resolving against a not-yet-loaded (e.g. default)
+        map would silently latch the wrong origin.
+
+        An explicit non-zero ``map_origin_x/y`` parameter always wins.  When the
+        parameters are left at 0/0 and the CARLA map carries a georeferenced
+        OpenDRIVE ``<geoReference>`` (+lat_0/+lon_0 other than 0/0, e.g. maps
+        converted from lanelet2), derive the offset as the origin's in-cell MGRS
+        coordinates.  Hand-maintained constants for such maps can silently
+        disagree with the geoReference by sub-metre amounts, shifting the GNSS
+        pose and RViz initialpose against everything else that derives its
+        offset from the map itself.  Stock CARLA towns (no usable geoReference)
+        keep the plain 0/0 behavior.
+        """
+        px = float(self.param_values["map_origin_x"])
+        py = float(self.param_values["map_origin_y"])
+        if px != 0.0 or py != 0.0:
+            return px, py
+        try:
+            xodr_xml = CarlaDataProvider.get_world().get_map().to_opendrive()
+            lat_0, lon_0 = _parse_geo_reference(xodr_xml)
+        except (RuntimeError, ValueError):
+            return 0.0, 0.0
+        if lat_0 == 0.0 and lon_0 == 0.0:
+            return 0.0, 0.0
+        from autoware_lanelet2_extension_python.projection import MGRSProjector
+        import lanelet2.core
+        import lanelet2.io
+
+        projector = MGRSProjector(lanelet2.io.Origin(lat_0, lon_0))
+        local = projector.forward(lanelet2.core.GPSPoint(lat_0, lon_0, 0.0))
+        self.logger.info(
+            f"map origin derived from OpenDRIVE geoReference: "
+            f"lat_0={lat_0:.8f}, lon_0={lon_0:.8f} -> "
+            f"offset=({local.x:.3f}, {local.y:.3f})"
+        )
+        return float(local.x), float(local.y)
+
+    def on_world_ready(self):
+        """Resolve the map origin once and flush any buffered initial pose.
+
+        Called by the orchestrator after the CARLA world/map is fully loaded and
+        the ego has been spawned.  Resolving here rather than lazily in the
+        callbacks means the origin always derives from the final map, and an
+        initialpose that arrived during startup is applied now instead of being
+        transformed with a not-yet-known origin.
+        """
+        origin = self._derive_map_origin()  # reads CARLA; do it outside the lock
+        with self._state_lock:
+            self._map_origin = origin
+            pending = self._pending_initialpose
+            self._pending_initialpose = None
+        self.logger.info(f"map origin resolved: ({origin[0]:.3f}, {origin[1]:.3f})")
+        if pending is not None:
+            self.logger.info("Applying the initial pose buffered during startup")
+            self._apply_initialpose(pending)
+
     def initialpose_callback(self, data):
-        """Transform RVIZ initial pose to CARLA (thread-safe)."""
+        """Buffer or apply an RViz initial pose (thread-safe).
+
+        A map-frame pose can only be converted to CARLA once the map origin is
+        known.  If it is not resolved yet (on_world_ready has not run), buffer
+        the latest pose and apply it then; otherwise apply immediately.
+        """
+        with self._state_lock:
+            ready = self._map_origin is not None
+            if not ready:
+                self._pending_initialpose = data
+        if not ready:
+            self.logger.info("Buffered initial pose until the CARLA world/map is ready")
+            return
+        self._apply_initialpose(data)
+
+    def _apply_initialpose(self, data):
+        """Convert a map-frame initial pose to CARLA and teleport the ego."""
         pose = data.pose.pose
+        origin_x, origin_y = self._current_map_origin()
         carla_pose_transform = ros_pose_to_carla_transform(
             pose,
-            origin_x=self.param_values["map_origin_x"],
-            origin_y=self.param_values["map_origin_y"],
+            origin_x=origin_x,
+            origin_y=origin_y,
         )
 
         # RViz's 2D Pose Estimate only carries x/y/yaw (z is always 0), so the
@@ -696,10 +796,11 @@ class carla_ros2_interface(object):
                 return
             ego_transform = self.ego_actor.get_transform()
 
+        origin_x, origin_y = self._current_map_origin()
         pose_carla.position = carla_location_to_ros_point(
             ego_transform.location,
-            origin_x=self.param_values["map_origin_x"],
-            origin_y=self.param_values["map_origin_y"],
+            origin_x=origin_x,
+            origin_y=origin_y,
         )
         pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
@@ -927,6 +1028,32 @@ class carla_ros2_interface(object):
             return
         out_cmd.throttle = max(out_cmd.throttle, min_positive_throttle)
 
+    def _wake_sleeping_physics(self, out_cmd, in_cmd):
+        """Wake the ego physics body when pulling away from a standstill.
+
+        CARLA 0.10 (UE5/Chaos) puts a stationary vehicle's physics body to
+        sleep, and VehicleControl throttle does NOT wake it, so a vehicle that
+        has been stopped for a while can never launch again (observed: throttle
+        applied, brake 0, first gear — velocity stays exactly 0 until an
+        external set_target_velocity kick wakes the body). Nudge the body awake
+        whenever the stack is trying to pull away from a standstill; once
+        rolling (speed > 0.05 m/s) this no-ops. Needs ``_state_lock`` held.
+
+        Gated behind ``wake_sleeping_physics`` (off by default): the kick
+        overrides launch dynamics at every standstill start, so it must not run
+        on the supported CARLA 0.9.15 environment, whose bodies never sleep.
+        """
+        if not self.param_values.get("wake_sleeping_physics", False):
+            return
+        if out_cmd.throttle <= 0.0 or in_cmd.actuation.brake_cmd > 0.0:
+            return
+        if self._ego_speed_mps() >= 0.05:
+            return
+        wake_yaw = math.radians(self.ego_actor.get_transform().rotation.yaw)
+        self.ego_actor.set_target_velocity(
+            carla.Vector3D(0.3 * math.cos(wake_yaw), 0.3 * math.sin(wake_yaw), 0.0)
+        )
+
     def control_callback(self, in_cmd):
         """
         Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
@@ -947,6 +1074,7 @@ class carla_ros2_interface(object):
                 return  # Skip if vehicle not initialized yet
 
             self._apply_min_positive_throttle(out_cmd, in_cmd)
+            self._wake_sleeping_physics(out_cmd, in_cmd)
 
             # steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter
             # passes control_cmd.steering_tire_angle through), while
@@ -962,17 +1090,48 @@ class carla_ros2_interface(object):
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
 
-    def _max_wheel_steer_angle_rad(self):
-        """Max steerable wheel angle [rad], cached from the vehicle physics.
+    def _physics_max_wheel_steer_angle_rad(self):
+        """Max steerable wheel angle [rad] reported by the vehicle physics.
 
-        Must be called with ``physics_control`` already available.
+        This is CARLA's own full-steer angle: normalized VehicleControl.steer
+        in [-1, 1] maps to +/- this angle, and ``get_wheel_steer_angle()``
+        returns a value on the same scale. Must be called with
+        ``physics_control`` already available.
         """
-        if self._max_steer_angle_rad is None:
+        if self._physics_max_steer_angle_rad is None:
             max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
             if max_deg <= 0.0:
                 max_deg = 70.0  # CARLA's usual front-wheel default
-            self._max_steer_angle_rad = math.radians(max_deg)
+            self._physics_max_steer_angle_rad = math.radians(max_deg)
+        return self._physics_max_steer_angle_rad
+
+    def _max_wheel_steer_angle_rad(self):
+        """Calibrated full-steer wheel angle [rad] used for steer conversion.
+
+        Uses ``max_wheel_steer_angle_deg`` when set (> 0), otherwise the
+        physics value. Must be called with ``physics_control`` available.
+        """
+        if self._max_steer_angle_rad is None:
+            max_deg = float(self.param_values.get("max_wheel_steer_angle_deg", 0.0))
+            if max_deg <= 0.0:
+                self._max_steer_angle_rad = self._physics_max_wheel_steer_angle_rad()
+            else:
+                self._max_steer_angle_rad = math.radians(max_deg)
         return self._max_steer_angle_rad
+
+    def _steer_report_scale(self):
+        """Factor mapping CARLA's reported wheel angle to the calibrated angle.
+
+        ``get_wheel_steer_angle()`` returns an angle on the physics full-steer
+        scale, but the command path normalizes by the (possibly overridden)
+        calibrated angle. Scaling the report by calibrated / physics keeps the
+        steering feedback consistent with the command, so the ~3x report
+        mismatch the override removes on the command side is removed here too.
+        """
+        physics_rad = self._physics_max_wheel_steer_angle_rad()
+        if physics_rad <= 0.0:
+            return 1.0
+        return self._max_wheel_steer_angle_rad() / physics_rad
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
@@ -1060,7 +1219,13 @@ class carla_ros2_interface(object):
         out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
 
         out_steering_state.stamp = out_vel_state.header.stamp
-        out_steering_state.steering_tire_angle = -math.radians(steer_angle)
+        # Scale CARLA's reported wheel angle onto the calibrated full-steer
+        # range so the feedback matches the command normalization (identity
+        # when max_wheel_steer_angle_deg is unset). The sign flips because
+        # Autoware is CCW-positive and CARLA CW-positive.
+        out_steering_state.steering_tire_angle = (
+            -math.radians(steer_angle) * self._steer_report_scale()
+        )
 
         out_gear_state.stamp = out_vel_state.header.stamp
         out_gear_state.report = GearReport.DRIVE

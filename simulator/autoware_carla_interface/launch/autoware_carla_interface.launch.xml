@@ -23,8 +23,16 @@
     <arg name="min_positive_throttle" default="0.0" description="Minimum throttle applied while accelerating from (near) standstill; heavy CARLA vehicles never start on small actuation-map throttle"/>
     <arg name="min_positive_throttle_speed_threshold" default="0.8" description="Apply min_positive_throttle only below this speed [m/s]; negative = always"/>
     <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
-    <arg name="map_origin_x" default="0.0" description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
-    <arg name="map_origin_y" default="0.0" description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 for stock CARLA towns)"/>
+    <arg
+      name="map_origin_x"
+      default="0.0"
+      description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 = auto-derive from the OpenDRIVE geoReference for georeferenced maps; stays 0.0 for stock CARLA towns)"
+    />
+    <arg
+      name="map_origin_y"
+      default="0.0"
+      description="Y offset from the CARLA world origin to the Autoware map frame origin (0.0 = auto-derive from the OpenDRIVE geoReference for georeferenced maps; stays 0.0 for stock CARLA towns)"
+    />
 
     <arg
       name="carla_map"
@@ -77,7 +85,9 @@
     <!-- Per-sensor SplatSim rendering settings (camera near/far/frame_rate, LiDAR
          sensor_type/fps/rows/ranges/thresholds) come from the sensor mapping's
          per-sensor `parameters:` block, not from launch args. -->
+    <arg name="max_wheel_steer_angle_deg" default="0.0" description="Override the wheel max steer angle [deg] used for steer normalization; 0 uses the physics value"/>
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
+    <arg name="wake_sleeping_physics" default="false" description="Nudge the ego physics body awake when launching from standstill (CARLA 0.10 sleeping-body workaround; not needed on 0.9.15)"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -116,7 +126,9 @@
       <param name="splatsim_render_lidar" value="$(var splatsim_render_lidar)"/>
       <param name="splatsim_lidar_grpc_port" value="$(var splatsim_lidar_grpc_port)"/>
       <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>
+      <param name="max_wheel_steer_angle_deg" value="$(var max_wheel_steer_angle_deg)"/>
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
+      <param name="wake_sleeping_physics" value="$(var wake_sleeping_physics)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>
