@@ -23083,80 +23083,24 @@
 <td>≥0.0<br>≤10.0</td>
 </tr>
 <tr>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>target_<wbr>types</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Pointcloud types to consider for obstacle stop</td>
+<td>["structure", "vegetation"]</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>height_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
-<td>Height buffer [m]</td>
+<td>Height buffer to add above ego height [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>min_<wbr>height</wbr></wbr></wbr></wbr></td>
 <td>float</td>
-<td>Min height [m]</td>
+<td>Minimum height of pointcloud [m]</td>
 <td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>detection_<wbr>range</wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Detection range [m]</td>
-<td>100.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>x</wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>X [m]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>y</wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Y [m]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>z</wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Z [m]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Min size</td>
-<td>3</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>tolerance</wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Tolerance [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Min height [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Min size</td>
-<td>10</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>max_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Max size</td>
-<td>10000</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23276,6 +23220,13 @@
 <td>array</td>
 <td>Types of polygon shaped objects to consider for surround obstacle stop</td>
 <td>["car", "truck", "bus", "trailer", "pedestrian", "hazard", "animal", "unknown"]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>target_<wbr>objects.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Pointcloud types to consider for surround obstacle stop</td>
+<td>["structure", "vegetation"]</td>
 <td>N/A</td>
 </tr>
 <tr>
