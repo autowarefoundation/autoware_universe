@@ -37,16 +37,21 @@ struct ConcatenationDiagnosticsOptions
   bool drop_previous_but_late{false};
 };
 
+struct ReferenceWindow
+{
+  double time{0.0};
+  double noise_window{0.0};
+};
+
 // Values from the concatenated frame that the diagnostics are built from.
 struct ConcatenationDiagnosticsSummary
 {
   double concatenated_cloud_timestamp_sec{0.0};
   bool is_concatenated_cloud_empty{false};
-  // true: advanced strategy (reference window), false: naive (first arrival), nullopt: none.
-  std::optional<bool> is_advanced{};
-  double reference_time{0.0};
-  double noise_window{0.0};
-  double first_arrival_time{0.0};
+  // Set by the naive strategy.
+  std::optional<double> first_arrival_time{};
+  // Set by the advanced strategy.
+  std::optional<ReferenceWindow> reference_window{};
   std::unordered_map<std::string, double> topic_to_original_stamp{};
 };
 

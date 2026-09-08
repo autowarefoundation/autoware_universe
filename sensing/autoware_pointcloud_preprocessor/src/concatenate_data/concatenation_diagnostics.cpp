@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
@@ -29,12 +30,7 @@ namespace autoware::pointcloud_preprocessor
 namespace
 {
 
-// Same formatting as DiagnosticsInterface: doubles with 6 decimals, bools as "True"/"False".
-std::string format_double(double value)
-{
-  return std::to_string(value);
-}
-
+// Same bool formatting as DiagnosticsInterface.
 std::string format_bool(bool value)
 {
   return value ? "True" : "False";
@@ -58,21 +54,15 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
     "Concatenated pointcloud timestamp",
     format_timestamp(summary.concatenated_cloud_timestamp_sec));
 
-  if (summary.is_advanced.has_value()) {
-    if (*summary.is_advanced) {
-      add(
-        "Minimum reference timestamp",
-        format_timestamp(summary.reference_time - summary.noise_window));
-      add(
-        "Maximum reference timestamp",
-        format_timestamp(summary.reference_time + summary.noise_window));
-    } else {
-      add("First pointcloud arrival timestamp", format_timestamp(summary.first_arrival_time));
-    }
+  if (const auto & window = summary.reference_window) {
+    add("Minimum reference timestamp", format_timestamp(window->time - window->noise_window));
+    add("Maximum reference timestamp", format_timestamp(window->time + window->noise_window));
+  } else if (summary.first_arrival_time) {
+    add("First pointcloud arrival timestamp", format_timestamp(*summary.first_arrival_time));
   }
 
   if (options.processing_time_ms.has_value()) {
-    add("Processing time (ms)", format_double(*options.processing_time_ms));
+    add("Processing time (ms)", std::to_string(*options.processing_time_ms));
   }
 
   std::unordered_map<std::string, double> topic_to_latency;
@@ -83,7 +73,7 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
       topic_to_latency[topic] = latency_ms;
       max_latency = std::max(max_latency, latency_ms);
     }
-    add("Pipeline latency (ms)", format_double(max_latency));
+    add("Pipeline latency (ms)", std::to_string(max_latency));
   }
 
   bool topic_miss = false;
@@ -98,23 +88,22 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
     }
     const auto latency_it = topic_to_latency.find(topic);
     if (latency_it != topic_to_latency.end()) {
-      add("Latency (ms): " + topic, format_double(latency_it->second));
+      add("Latency (ms): " + topic, std::to_string(latency_it->second));
     }
   }
 
   const bool concatenation_success = !topic_miss;
   add("Pointcloud concatenation succeeded", format_bool(concatenation_success));
 
-  const bool is_concatenated_cloud_empty = summary.is_concatenated_cloud_empty;
   int8_t level = diagnostic_msgs::msg::DiagnosticStatus::OK;
   std::string message = "Concatenated pointcloud is published and includes all topics";
   if (options.drop_previous_but_late) {
     level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    message = topic_miss ? "Concatenated pointcloud was dropped due to missing topics and its "
-                           "timestamp is earlier than the latest published one"
-                         : "Concatenated pointcloud was dropped due to its timestamp is earlier "
+    message = topic_miss ? "Concatenated pointcloud was dropped due to missing topics and because "
+                           "its timestamp is earlier than the latest published one"
+                         : "Concatenated pointcloud was dropped because its timestamp is earlier "
                            "than the latest published one";
-  } else if (is_concatenated_cloud_empty) {
+  } else if (summary.is_concatenated_cloud_empty) {
     level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     message = "Concatenated pointcloud is empty";
   } else if (topic_miss) {
@@ -128,9 +117,8 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
                   ? options.node_name
                   : options.node_name + ": " + options.diagnostic_name;
   status.hardware_id = options.node_name;
-  // DiagnosticsInterface publishes "OK" as the message when the level is OK.
-  status.message = level == diagnostic_msgs::msg::DiagnosticStatus::OK ? "OK" : message;
-  status.values = values;
+  status.message = message;
+  status.values = std::move(values);
   return status;
 }
 

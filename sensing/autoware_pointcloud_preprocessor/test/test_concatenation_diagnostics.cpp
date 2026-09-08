@@ -31,10 +31,12 @@ namespace
 using autoware::pointcloud_preprocessor::build_diagnostic_status;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsSummary;
+using autoware::pointcloud_preprocessor::ReferenceWindow;
 
 const std::vector<std::string> kInputTopics = {"lidar_top", "lidar_left", "lidar_right"};
 
-std::map<std::string, std::string> values_of(const diagnostic_msgs::msg::DiagnosticStatus & status)
+std::map<std::string, std::string> key_values_of(
+  const diagnostic_msgs::msg::DiagnosticStatus & status)
 {
   std::map<std::string, std::string> values;
   for (const auto & kv : status.values) {
@@ -59,7 +61,6 @@ ConcatenationDiagnosticsSummary complete_naive_summary()
   ConcatenationDiagnosticsSummary summary;
   summary.concatenated_cloud_timestamp_sec = 10.0;
   summary.is_concatenated_cloud_empty = false;
-  summary.is_advanced = false;
   summary.first_arrival_time = 100.0;
   for (const auto & topic : kInputTopics) {
     summary.topic_to_original_stamp[topic] = 10.0;
@@ -71,10 +72,10 @@ ConcatenationDiagnosticsSummary complete_naive_summary()
 TEST(ConcatenationDiagnostics, CompleteNaiveIsOk)
 {
   const auto status = build_diagnostic_status(complete_naive_summary(), kInputTopics);
-  const auto values = values_of(status);
+  const auto values = key_values_of(status);
 
   EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::OK);
-  EXPECT_EQ(status.message, "OK");
+  EXPECT_EQ(status.message, "Concatenated pointcloud is published and includes all topics");
   EXPECT_EQ(values.at("Concatenated pointcloud timestamp"), "10.000000000");
   EXPECT_EQ(values.at("First pointcloud arrival timestamp"), "100.000000000");
   EXPECT_EQ(values.at("Pointcloud concatenation succeeded"), "True");
@@ -114,7 +115,7 @@ TEST(ConcatenationDiagnostics, MissingTopicIsError)
   summary.topic_to_original_stamp.erase("lidar_left");
 
   const auto status = build_diagnostic_status(summary, kInputTopics);
-  const auto values = values_of(status);
+  const auto values = key_values_of(status);
 
   EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::ERROR);
   EXPECT_EQ(status.message, "Concatenated pointcloud is published but misses some topics");
@@ -124,7 +125,7 @@ TEST(ConcatenationDiagnostics, MissingTopicIsError)
   EXPECT_EQ(values.count("Timestamp: lidar_left"), 0u);
 }
 
-TEST(ConcatenationDiagnostics, EmptyCloudIsError)
+TEST(ConcatenationDiagnostics, EmptyConcatenatedCloudIsError)
 {
   auto summary = complete_naive_summary();
   summary.is_concatenated_cloud_empty = true;
@@ -134,7 +135,7 @@ TEST(ConcatenationDiagnostics, EmptyCloudIsError)
   EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::ERROR);
   EXPECT_EQ(status.message, "Concatenated pointcloud is empty");
   // All topics contributed, so concatenation itself succeeded.
-  EXPECT_EQ(values_of(status).at("Pointcloud concatenation succeeded"), "True");
+  EXPECT_EQ(key_values_of(status).at("Pointcloud concatenation succeeded"), "True");
 }
 
 TEST(ConcatenationDiagnostics, LateDropIsErrorAndOutranksTheOtherCauses)
@@ -145,8 +146,8 @@ TEST(ConcatenationDiagnostics, LateDropIsErrorAndOutranksTheOtherCauses)
   auto summary = complete_naive_summary();
   EXPECT_EQ(
     build_diagnostic_status(summary, kInputTopics, options).message,
-    "Concatenated pointcloud was dropped due to its timestamp is earlier than the latest published "
-    "one");
+    "Concatenated pointcloud was dropped because its timestamp is earlier than the latest "
+    "published one");
 
   // Missing topic changes the message; empty cloud does not override the late drop.
   summary.topic_to_original_stamp.erase("lidar_left");
@@ -155,18 +156,17 @@ TEST(ConcatenationDiagnostics, LateDropIsErrorAndOutranksTheOtherCauses)
   EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::ERROR);
   EXPECT_EQ(
     status.message,
-    "Concatenated pointcloud was dropped due to missing topics and its timestamp is earlier than "
-    "the latest published one");
+    "Concatenated pointcloud was dropped due to missing topics and because its timestamp is "
+    "earlier than the latest published one");
 }
 
 TEST(ConcatenationDiagnostics, AdvancedReportsTheReferenceWindow)
 {
   auto summary = complete_naive_summary();
-  summary.is_advanced = true;
-  summary.reference_time = 10.0;
-  summary.noise_window = 0.01;
+  summary.first_arrival_time.reset();
+  summary.reference_window = ReferenceWindow{10.0, 0.01};
 
-  const auto values = values_of(build_diagnostic_status(summary, kInputTopics));
+  const auto values = key_values_of(build_diagnostic_status(summary, kInputTopics));
 
   EXPECT_EQ(values.at("Minimum reference timestamp"), "9.990000000");
   EXPECT_EQ(values.at("Maximum reference timestamp"), "10.010000000");
@@ -176,9 +176,9 @@ TEST(ConcatenationDiagnostics, AdvancedReportsTheReferenceWindow)
 TEST(ConcatenationDiagnostics, NoMatchingContextOmitsBothEntries)
 {
   auto summary = complete_naive_summary();
-  summary.is_advanced = std::nullopt;
+  summary.first_arrival_time.reset();
 
-  const auto values = values_of(build_diagnostic_status(summary, kInputTopics));
+  const auto values = key_values_of(build_diagnostic_status(summary, kInputTopics));
 
   EXPECT_EQ(values.count("First pointcloud arrival timestamp"), 0u);
   EXPECT_EQ(values.count("Minimum reference timestamp"), 0u);
@@ -191,7 +191,7 @@ TEST(ConcatenationDiagnostics, OptionalLatencyAndProcessingTime)
   options.now_sec = 10.1;  // 100 ms after the stamps
 
   const auto values =
-    values_of(build_diagnostic_status(complete_naive_summary(), kInputTopics, options));
+    key_values_of(build_diagnostic_status(complete_naive_summary(), kInputTopics, options));
 
   EXPECT_EQ(values.at("Processing time (ms)"), "2.500000");
   EXPECT_EQ(values.at("Pipeline latency (ms)"), "100.000000");

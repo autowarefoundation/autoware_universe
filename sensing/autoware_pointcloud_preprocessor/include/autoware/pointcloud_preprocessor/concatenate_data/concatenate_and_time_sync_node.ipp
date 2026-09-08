@@ -481,21 +481,18 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::check_c
     return;
   }
 
-  // Collect inputs, build the status with the shared builder, and publish it.
   ConcatenationDiagnosticsSummary summary;
   summary.concatenated_cloud_timestamp_sec = current_concatenate_cloud_timestamp_;
   summary.is_concatenated_cloud_empty = diagnostic_info.is_concatenated_cloud_empty;
   if (
     const auto naive_info =
       std::dynamic_pointer_cast<NaiveCollectorInfo>(diagnostic_info.collector_info)) {
-    summary.is_advanced = false;
     summary.first_arrival_time = naive_info->timestamp;
   } else if (
     const auto advanced_info =
       std::dynamic_pointer_cast<AdvancedCollectorInfo>(diagnostic_info.collector_info)) {
-    summary.is_advanced = true;
-    summary.reference_time = advanced_info->timestamp;
-    summary.noise_window = advanced_info->noise_window;
+    summary.reference_window =
+      ReferenceWindow{advanced_info->timestamp, advanced_info->noise_window};
   }
   summary.topic_to_original_stamp = diagnostic_info.topic_to_original_stamp_map;
 
@@ -506,7 +503,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::check_c
 
   const auto status = build_diagnostic_status(summary, params_.input_topics, options);
   for (const auto & key_value : status.values) {
-    diagnostics_interface_->add_key_value(key_value.key, key_value.value);
+    diagnostics_interface_->add_key_value(key_value);
   }
   diagnostics_interface_->update_level_and_message(status.level, status.message);
   diagnostics_interface_->publish(this->get_clock()->now());

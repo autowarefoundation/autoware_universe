@@ -307,8 +307,6 @@ install(
 
 ament_export_targets(export_${PROJECT_NAME})
 
-find_package(autoware_utils_math REQUIRED)
-
 # ROS-runtime-free core (no rclcpp/tf/pcl_ros). Links message targets directly to keep it that way.
 add_library(concatenate_core SHARED
   src/concatenate_data/combine_cloud_handler.cpp
@@ -380,7 +378,6 @@ if(BUILD_TESTING)
   ament_add_gtest(test_concatenation_diagnostics
     test/test_concatenation_diagnostics.cpp
   )
-  target_include_directories(test_matching_policy PRIVATE include)
 
   ament_add_gtest(test_polar_voxel_outlier_filter_node
     test/test_polar_voxel_outlier_filter_node.cpp
