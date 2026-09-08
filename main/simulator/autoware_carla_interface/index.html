@@ -22794,6 +22794,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Traffic Light Recognition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#publishing-carla-traffic-light-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publishing CARLA Traffic-Light States
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -23151,6 +23168,42 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td>Control mapping file to be used in <code>autoware_raw_vehicle_cmd_converter</code>. Current control are calibrated based on <code>vehicle.toyota.prius</code> Blueprints ID in CARLA. Changing the vehicle type may need a recalibration.</td>
 </tr>
 <tr>
+<td><code>traffic_light.publish</code></td>
+<td>bool</td>
+<td>False</td>
+<td>Publish CARLA traffic-light states on <code>/perception/traffic_light_recognition/traffic_signals</code> as an <code>autoware_perception_msgs/TrafficLightGroupArray</code>. See <a href="#publishing-carla-traffic-light-states">Publishing CARLA Traffic-Light States</a>.</td>
+</tr>
+<tr>
+<td><code>traffic_light.force_green</code></td>
+<td>bool</td>
+<td>False</td>
+<td>Set every CARLA traffic light to green and freeze it there at startup. Useful for camera-less closed-loop runs that have no traffic-light recognition and would otherwise hold at every signalized stop line.</td>
+</tr>
+<tr>
+<td><code>traffic_light.map_path</code></td>
+<td>string</td>
+<td>""</td>
+<td>Path to the lanelet2 map (<code>.osm</code>). When set, CARLA traffic lights are matched to the map's traffic-light heads <strong>by position</strong> and published under the matched regulatory-element ids. Empty falls back to using the CARLA OpenDRIVE signal id directly as the group id.</td>
+</tr>
+<tr>
+<td><code>traffic_light.match_distance</code></td>
+<td>double</td>
+<td>5.0</td>
+<td>Maximum head-to-head distance (m) accepted when matching a CARLA traffic light to a lanelet2 head.</td>
+</tr>
+<tr>
+<td><code>traffic_light.match_ratio</code></td>
+<td>double</td>
+<td>0.6</td>
+<td>Ambiguity threshold: a match is rejected when the nearest head that resolves to a <em>different</em> signal is nearly as close as the winner (<code>nearest &gt; ratio * second</code>). Lower is stricter.</td>
+</tr>
+<tr>
+<td><code>traffic_light.id_map</code></td>
+<td>string</td>
+<td>""</td>
+<td>Optional override, formatted <code>opendrive_id:group_id,...</code>, that pins a CARLA signal id to one or more Autoware group ids and takes precedence over position matching. A single entry can list several group ids (separated with a vertical bar) to map a shared head to all its regulatory elements; use it to recover the few lights the matcher reports as ambiguous or unmatched.</td>
+</tr>
+<tr>
 <td><code>wake_sleeping_physics</code></td>
 <td>bool</td>
 <td>False</td>
@@ -23158,6 +23211,9 @@ This ros package enables communication between Autoware and CARLA for autonomous
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p>These <code>traffic_light.*</code> launch arguments are the node parameters of the same name, kept grouped together under the <code>traffic_light.</code> namespace in <code>ros2 param list</code>.</p>
+</blockquote>
 <h4 id="ground-snapping">Ground snapping<a class="headerlink" href="#ground-snapping" title="Permanent link">#</a></h4>
 <p>When <code>spawn_point_ground_snap</code> is enabled, the ego spawn point and the RViz "2D
 Pose Estimate" initial pose are snapped onto the CARLA map geometry instead of
@@ -23334,6 +23390,51 @@ and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,l
 <li>When using the TIER IV Vector Map Builder, you must convert the PCD format from <code>binary_compressed</code> to <code>ascii</code>. You can use <code>pcl_tools</code> for this conversion.</li>
 <li>For reference, an example of Town01 with added traffic lights at one intersection can be downloaded <a href="https://drive.google.com/drive/folders/1QFU0p3C8NW71sT5wwdnCKXoZFQJzXfTG?usp=sharing">here</a>.</li>
 </ul>
+<h3 id="publishing-carla-traffic-light-states">Publishing CARLA Traffic-Light States<a class="headerlink" href="#publishing-carla-traffic-light-states" title="Permanent link">#</a></h3>
+<p>Instead of running camera-based recognition, the bridge can publish the CARLA server's
+traffic-light states directly. Setting <code>traffic_light.publish:=true</code> publishes an
+<code>autoware_perception_msgs/TrafficLightGroupArray</code> on
+<code>/perception/traffic_light_recognition/traffic_signals</code> every tick. Each CARLA light is
+reported as a circular signal whose color and status follow the CARLA state: <code>Red</code>/<code>Yellow</code>/<code>Green</code>
+map to <code>RED</code>/<code>AMBER</code>/<code>GREEN</code> with status <code>SOLID_ON</code>, the known-dark <code>Off</code> state maps to status
+<code>SOLID_OFF</code>, and only a state the bridge cannot interpret is published as <code>UNKNOWN</code>/<code>UNKNOWN</code>.</p>
+<p>Autoware keys traffic signals by <code>traffic_light_group_id</code>, the id of a <code>traffic_light</code>
+regulatory element in the lanelet2 map. The bridge resolves which group(s) each CARLA light
+belongs to as follows, in order of precedence:</p>
+<ol>
+<li><strong><code>traffic_light.id_map</code> override.</strong> If the light's OpenDRIVE signal id appears in the
+   <code>opendrive_id:group_id[|group_id...],...</code> map, those group ids are used directly. One entry
+   may pin several group ids (<code>|</code>-separated), so a shared physical head can be mapped to every
+   regulatory element that governs it. A malformed entry (no <code>:</code>, a non-integer id, or no group
+   id after the <code>:</code>) is skipped with a warning naming the offending entry, so a typo neither
+   stops the bridge nor silently overrides a light with an empty group list; the remaining
+   entries still apply.</li>
+<li><strong>Position matching (<code>traffic_light.map_path</code>).</strong> When a lanelet2 map is given, each CARLA
+   light head is matched to the nearest map traffic-light head, and its state is published under
+   <strong>every</strong> regulatory element that references that head (one physical light is commonly shared
+   by several regulatory elements, one per approaching lane). This needs no id convention between
+   CARLA and the map — it works for hand-authored / Vector Map Builder maps whose regulatory-element
+   ids do not correspond to the OpenDRIVE signal ids.</li>
+<li><strong>OpenDRIVE-id fallback.</strong> With no map path and no override, the OpenDRIVE signal id is used
+   directly as the group id (correct only for maps generated so regulatory-element ids preserve
+   the OpenDRIVE signal ids).</li>
+</ol>
+<p>Position matching is deliberately conservative: it binds a CARLA light only when a single map head
+is clearly closest. If a head belonging to a <em>different</em> signal is nearly as close (the classic
+"light across the intersection" case, controlled by <code>traffic_light.match_ratio</code>), is exactly as
+close (a tie has no winner, so the .osm order must not decide it), or nothing is within
+<code>traffic_light.match_distance</code>, the light is left unpublished and logged as ambiguous / unmatched
+rather than guessed. Watch the node's startup log for the match report (<code>N matched, M ambiguous,
+K too far</code>) and pin any reported light through <code>traffic_light.id_map</code> if you need it.</p>
+<blockquote>
+<p>Position matching reads the lanelet2 node <code>local_x</code>/<code>local_y</code> tags, i.e. the Autoware map frame,
+and expresses each CARLA head in that frame via <code>map_origin_x</code>/<code>map_origin_y</code> (the same offsets
+used for localization). If localization is aligned, matching is too.</p>
+</blockquote>
+<p>To let the ego proceed through all intersections without any recognition setup — for example in
+camera-less closed-loop runs — set <code>traffic_light.force_green:=true</code>. At startup this sets every
+CARLA traffic light to green and freezes it; combined with <code>traffic_light.publish:=true</code> the
+frozen green states are also published on the topic above.</p>
 <h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">#</a></h2>
 <ul>
 <li>Misalignment might occurs during initialization, pressing <code>init by gnss</code> button should fix it.</li>
@@ -23342,7 +23443,7 @@ and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,l
 <h2 id="known-issues-and-future-works">Known Issues and Future Works<a class="headerlink" href="#known-issues-and-future-works" title="Permanent link">#</a></h2>
 <ul>
 <li><strong>Testing on procedural maps (Adv Digital Twin)</strong>: Currently unable to test due to failures in creating the Adv Digital Twin map.</li>
-<li><strong>Traffic light recognition</strong>: The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds.</li>
+<li><strong>Traffic light recognition</strong>: The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds, or bypass camera recognition entirely with <code>traffic_light.publish</code> (see "Publishing CARLA Traffic-Light States").</li>
 </ul></div>
 
 
