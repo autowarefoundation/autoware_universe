@@ -25,7 +25,7 @@
     
     
       
-        <title>autoware_trajectory_ranker - Autoware Universe Documentation</title>
+        <title>Trajectory Ranker - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#autoware_trajectory_ranker" class="md-skip">
+        <a href="#trajectory-ranker" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              autoware_trajectory_ranker
+              Trajectory Ranker
             
           </span>
         </div>
@@ -22631,10 +22631,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purpose" class="md-nav__link">
+  <a href="#purposerole" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose
+        Purpose/Role
       
     </span>
   </a>
@@ -22642,10 +22642,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        Architecture
       
     </span>
   </a>
@@ -22665,10 +22665,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#trajectory-resampling" class="md-nav__link">
+  <a href="#trajectory-sources" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trajectory Resampling
+        Trajectory sources
       
     </span>
   </a>
@@ -22676,21 +22676,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#metric-evaluation" class="md-nav__link">
+  <a href="#default-penalties-from-configtrajectory_rankerparamyaml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Metric Evaluation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#score-aggregation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Score Aggregation
+        Default penalties (from config/trajectory_ranker.param.yaml)
       
     </span>
   </a>
@@ -22703,50 +22692,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-metrics" class="md-nav__link">
+  <a href="#quality-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Metrics
+        Quality Metrics
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Available Metrics">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interface">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#metric-types" class="md-nav__link">
+  <a href="#selector-side-topics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Metric Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#input-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Input / Output
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Input / Output">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#input-topics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Input Topics
+        Selector-side topics
       
     </span>
   </a>
@@ -22754,149 +22726,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#output-topics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Output Topics
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
         Parameters
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Parameters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#core-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parameter-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameter Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#simple-trajectory-ranker" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simple Trajectory Ranker
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Simple Trajectory Ranker">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#logic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Logic
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scoring" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scoring
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#input-output_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Input / Output
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parameters_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-launch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Launch
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#launch-with-custom-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Launch with Custom Parameters
       
     </span>
   </a>
@@ -22928,243 +22761,489 @@
   
 
 
-<div><h1 id="autoware_trajectory_ranker">autoware_trajectory_ranker<a class="headerlink" href="#autoware_trajectory_ranker" title="Permanent link">#</a></h1>
-<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>The <code>autoware_trajectory_ranker</code> package provides a flexible and extensible framework for evaluating and ranking multiple trajectory candidates in autonomous driving scenarios. It transforms a set of viable candidate paths into an ordered list by attaching a scalar score to every trajectory based on safety, comfort, and efficiency criteria.</p>
-<p>This decoupling of upstream path-generation logic from downstream motion-control logic enables:</p>
-<ul>
-<li>Diverse trajectory generators (rule-based, ML-based, optimization-based) to coexist</li>
-<li>Controllers to simply follow the highest-ranked path</li>
-<li>Improved overall driving performance through multi-criteria optimization</li>
-<li>Architectural flexibility through a plugin-based metric system</li>
-</ul>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
-<ul>
-<li><strong>Plugin-based Architecture</strong>: Dynamically load and configure evaluation metrics via pluginlib</li>
-<li><strong>Multi-criteria Evaluation</strong>: Score trajectories based on multiple metrics simultaneously</li>
-<li><strong>Time-based Weighting</strong>: Apply temporal decay to metrics for better near-term decision making</li>
-<li><strong>Extensible Framework</strong>: Easy to add new metrics through the plugin system</li>
-<li><strong>Real-time Processing</strong>: Efficient evaluation of multiple trajectories per planning cycle</li>
-</ul>
+<div><h1 id="trajectory-ranker">Trajectory Ranker<a class="headerlink" href="#trajectory-ranker" title="Permanent link">#</a></h1>
+<h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
+<p>This package provides a C++ library that scores candidate trajectories and selects the best one. Ranking combines three independently configurable terms:</p>
+<ol>
+<li><strong>Safety</strong> — penalty from the validator risk level (<code>RiskLevel</code>)</li>
+<li><strong>Source</strong> — penalty from the trajectory generator (diffusion vs backup planners)</li>
+<li><strong>Quality</strong> — optional metric-plugin evaluation (comfort / progress / consistency)</li>
+</ol>
+<p>The library can be embedded into a calling ros node (such as <code>autoware_trajectory_selector</code>) via <code>TrajectoryRankerWrapper</code>.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TrajectoryRankerWrapper</code></td>
+<td>Owns parameters, metric <code>Evaluator</code>, and <code>TrajectoryRanker</code>; entry point used by the selector</td>
+</tr>
+<tr>
+<td><code>TrajectoryRanker</code></td>
+<td>Applies safety / source / quality penalties and computes the final scalar score</td>
+</tr>
+<tr>
+<td><code>Evaluator</code></td>
+<td>Loads and runs quality metric plugins (only when <code>evaluation.enable</code> is true)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
-<p>At every planning period the node latches the most recent odometry and perception context, then processes trajectories through five distinct stages:</p>
+<p>For each call to <code>TrajectoryRanker::process()</code>:</p>
 <ol>
-<li><strong>Ingestion</strong>: Receives candidate trajectories from upstream generators</li>
-<li><strong>Resampling</strong>: Converts each path into a common frame and resamples to fixed resolution</li>
-<li><strong>Evaluation</strong>: Applies configured metric plugins to compute cost vectors</li>
-<li><strong>Aggregation</strong>: Combines metrics using weights and temporal decay</li>
-<li><strong>Publication</strong>: Outputs scored trajectories and debug information</li>
-</ol>
-<h3 id="trajectory-resampling">Trajectory Resampling<a class="headerlink" href="#trajectory-resampling" title="Permanent link">#</a></h3>
-<p>Every incoming trajectory is re-interpolated relative to the ego pose so that:</p>
-<ul>
-<li>First point aligns with current vehicle position</li>
-<li>Path comprises exactly <code>sample_num</code> points</li>
-<li>Points are spaced at fixed temporal intervals</li>
-<li>All metrics operate on consistent trajectory representations</li>
+<li><strong>Safety evaluation</strong> (<code>safety.enable</code>): map each trajectory's <code>RiskLevel</code> to a penalty via <code>safety.levels</code> / <code>safety.penalty</code>.</li>
+<li><strong>Source evaluation</strong> (<code>source.enable</code>): map each trajectory's <code>TrajectorySource</code> to a penalty via <code>source.levels</code> / <code>source.penalty</code>.</li>
+<li><strong>Quality evaluation</strong> (<code>evaluation.enable</code>, default off): resample each trajectory relative to ego odometry, run the configured metric plugins, and set <code>quality_penalty = 1 - quality_score</code>. Skipped if route handler or odometry is unavailable.</li>
+<li><strong>Score aggregation</strong>:
+   [
+   \mathrm{score} = 1 - \frac{
+   s<em _mathrm_safety="\mathrm{safety">{\mathrm{safety}}\,p</em>}<ul>
+<li>s<em _mathrm_source="\mathrm{source">{\mathrm{source}}\,p</em>}</li>
+<li>s<em _mathrm_quality="\mathrm{quality">{\mathrm{eval}}\,p</em>}
+   }{
+   s<em _mathrm_source="\mathrm{source">{\mathrm{safety}} + s</em>} + s*{\mathrm{eval}}
+   }
+   ]
+   where <span class="arithmatex">\(s*\_\)</span> are the configured scales and <span class="arithmatex">\(p\_\_\)</span> are the per-trajectory penalties (zero when that term is disabled).</li>
 </ul>
-<p>This ensures that metric plugins can assume identical temporal spacing even when generators produce paths of different lengths or densities.</p>
-<h3 id="metric-evaluation">Metric Evaluation<a class="headerlink" href="#metric-evaluation" title="Permanent link">#</a></h3>
-<p>For each resampled path, the evaluator executes a plugin chain specified in the configuration. Each metric plugin:</p>
-<ul>
-<li>Computes a vector of values (one per trajectory point)</li>
-<li>Returns costs reflecting safety, comfort, or efficiency considerations</li>
-<li>Can be classified as either maximization or deviation metrics</li>
-</ul>
-<h3 id="score-aggregation">Score Aggregation<a class="headerlink" href="#score-aggregation" title="Permanent link">#</a></h3>
-<p>The aggregation stage:</p>
-<ol>
-<li>Applies per-metric weights from configuration</li>
-<li>Multiplies by temporal decay weights (exponential decay for near-term bias)</li>
-<li>Normalizes across trajectory candidates</li>
-<li>Sums to produce a single scalar score per trajectory</li>
+</li>
+<li><strong>Best selection</strong>: the trajectory with the highest score is retained as <code>best_trajectory_info</code> and used to update trajectory history / previous points for subsequent quality metrics.</li>
 </ol>
-<h2 id="available-metrics">Available Metrics<a class="headerlink" href="#available-metrics" title="Permanent link">#</a></h2>
-<p>The package includes the following built-in metric plugins:</p>
+<h3 id="trajectory-sources">Trajectory sources<a class="headerlink" href="#trajectory-sources" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th><code>TrajectorySource</code></th>
+<th>Typical generator name prefix</th>
+<th>Default source level string</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DIFFUSION_PLANNER</code></td>
+<td><code>DiffusionPlanner_</code></td>
+<td><code>diffusion_planner</code></td>
+</tr>
+<tr>
+<td><code>BACKUP_PLANNER_GO</code></td>
+<td><code>MinimumRuleBasedPlanner_Go</code></td>
+<td><code>backup_planner_go</code></td>
+</tr>
+<tr>
+<td><code>BACKUP_PLANNER_STOP</code></td>
+<td><code>MinimumRuleBasedPlanner_Stop</code></td>
+<td><code>backup_planner_stop</code></td>
+</tr>
+</tbody>
+</table>
+<p>Source mapping from generator names is performed in the calling node (e.g <code>trajectory_selector_node</code>) before calling the ranker.</p>
+<h3 id="default-penalties-from-configtrajectory_rankerparamyaml">Default penalties (from <code>config/trajectory_ranker.param.yaml</code>)<a class="headerlink" href="#default-penalties-from-configtrajectory_rankerparamyaml" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Levels / order</th>
+<th>Penalties</th>
+<th>Scale</th>
+<th>Enabled by default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Safety</td>
+<td><code>safe</code>, <code>low_caution</code>, <code>high_caution</code>, <code>danger</code>, <code>fatal</code></td>
+<td><code>0.0</code>, <code>0.1</code>, <code>0.4</code>, <code>1.0</code>, <code>1.0</code></td>
+<td><code>20.0</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Source</td>
+<td><code>diffusion_planner</code>, <code>backup_planner_go</code>, <code>backup_planner_stop</code></td>
+<td><code>0.0</code>, <code>0.45</code>, <code>0.5</code></td>
+<td><code>5.0</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Quality</td>
+<td>metric plugins under <code>evaluation.plugin_names</code></td>
+<td>derived from metric score</td>
+<td><code>1.0</code></td>
+<td><strong>no</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="quality-metrics">Quality Metrics<a class="headerlink" href="#quality-metrics" title="Permanent link">#</a></h2>
+<p>Used only when <code>evaluation.enable</code> is true. Plugins are loaded by <code>Evaluator</code> from <code>evaluation.plugin_names</code>.</p>
 <table>
 <thead>
 <tr>
 <th>Metric</th>
 <th>Type</th>
 <th>Description</th>
-<th>Class Name</th>
+<th>Class name</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>TravelDistance</strong></td>
 <td>Maximization</td>
-<td>Measures progress along trajectory</td>
+<td>Progress along the trajectory</td>
 <td><code>autoware::trajectory_ranker::metrics::TravelDistance</code></td>
 </tr>
 <tr>
 <td><strong>LateralAcceleration</strong></td>
 <td>Deviation</td>
-<td>Evaluates lateral acceleration for comfort</td>
+<td>Lateral acceleration comfort</td>
 <td><code>autoware::trajectory_ranker::metrics::LateralAcceleration</code></td>
 </tr>
 <tr>
 <td><strong>LongitudinalJerk</strong></td>
 <td>Deviation</td>
-<td>Measures longitudinal jerk for smoothness</td>
+<td>Longitudinal jerk smoothness</td>
 <td><code>autoware::trajectory_ranker::metrics::LongitudinalJerk</code></td>
-</tr>
-<tr>
-<td><strong>TimeToCollision</strong></td>
-<td>Maximization</td>
-<td>Calculates time to collision with objects</td>
-<td><code>autoware::trajectory_ranker::metrics::TimeToCollision</code></td>
 </tr>
 <tr>
 <td><strong>LateralDeviation</strong></td>
 <td>Deviation</td>
-<td>Measures deviation from preferred lanes</td>
+<td>Deviation from preferred lane centerline</td>
 <td><code>autoware::trajectory_ranker::metrics::LateralDeviation</code></td>
 </tr>
 <tr>
 <td><strong>SteeringConsistency</strong></td>
 <td>Deviation</td>
-<td>Evaluates steering command consistency</td>
+<td>Consistency vs previous steering command</td>
 <td><code>autoware::trajectory_ranker::metrics::SteeringConsistency</code></td>
 </tr>
+<tr>
+<td><strong>TrajectoryConsistency</strong></td>
+<td>Deviation</td>
+<td>Consistency vs recent best trajectories</td>
+<td><code>autoware::trajectory_ranker::metrics::TrajectoryConsistency</code></td>
+</tr>
 </tbody>
 </table>
-<h3 id="metric-types">Metric Types<a class="headerlink" href="#metric-types" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Maximization</strong>: Higher values are better (e.g., distance traveled, time to collision)</li>
-<li><strong>Deviation</strong>: Lower values are better (e.g., lateral acceleration, jerk)</li>
+<li><strong>Maximization</strong>: higher raw values are better</li>
+<li><strong>Deviation</strong>: lower raw values are better</li>
 </ul>
-<h2 id="input-output">Input / Output<a class="headerlink" href="#input-output" title="Permanent link">#</a></h2>
-<h3 id="input-topics">Input Topics<a class="headerlink" href="#input-topics" title="Permanent link">#</a></h3>
+<p>When quality evaluation is enabled, trajectories are resampled to <code>evaluation.sampling_number</code> points at <code>evaluation.sampling_resolution</code> seconds relative to the current ego pose.</p>
+<h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
+<p>This package is primarily a C++ library consumed by <code>trajectory_selector_node</code>. The selector owns the ROS I/O and passes:</p>
+<ul>
+<li><code>RankerInputTrajectories</code> — each entry has a <code>CandidateTrajectory</code>, validator <code>risk_level</code>, and <code>TrajectorySource</code></li>
+<li><code>RankerContext</code> — odometry, route handler, and generator info (needed for quality metrics and output generator metadata)</li>
+</ul>
+<h3 id="selector-side-topics">Selector-side topics<a class="headerlink" href="#selector-side-topics" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
-<th>Topic</th>
-<th>Type</th>
+<th>Direction</th>
+<th>Topic name</th>
+<th>Message Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>~/input/trajectories</code></td>
-<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Candidate trajectories to evaluate</td>
-</tr>
-<tr>
-<td><code>~/input/objects</code></td>
-<td><code>autoware_perception_msgs/msg/PredictedObjects</code></td>
-<td>Predicted objects for collision checking</td>
-</tr>
-<tr>
-<td><code>~/input/odometry</code></td>
-<td><code>nav_msgs/msg/Odometry</code></td>
-<td>Current vehicle state</td>
-</tr>
-<tr>
-<td><code>~/input/map</code></td>
-<td><code>autoware_map_msgs/msg/LaneletMapBin</code></td>
-<td>Lanelet2 HD map</td>
-</tr>
-<tr>
-<td><code>~/input/route</code></td>
-<td><code>autoware_planning_msgs/msg/LaneletRoute</code></td>
-<td>Current route</td>
-</tr>
-</tbody>
-</table>
-<h3 id="output-topics">Output Topics<a class="headerlink" href="#output-topics" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Topic</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/output/trajectories</code></td>
-<td><code>autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories</code></td>
-<td>Scored candidate trajectories</td>
-</tr>
-<tr>
-<td><code>~/debug/processing_time_detail</code></td>
-<td><code>autoware_utils_debug/msg/ProcessingTimeDetail</code></td>
-<td>Processing time statistics</td>
-</tr>
-</tbody>
-</table>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<h3 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">#</a></h3>
-<p>The package uses the Generate Parameter Library for configuration. Parameters are defined in <code>param/trajectory_ranker_parameters.yaml</code>:</p>
-<h3 id="parameter-structure">Parameter Structure<a class="headerlink" href="#parameter-structure" title="Permanent link">#</a></h3>
-<ul>
-<li><strong>evaluation.sample_num</strong>: Number of points in resampled trajectories (default: 16)</li>
-<li><strong>evaluation.resolution</strong>: Time interval between trajectory points in seconds (default: 0.5)</li>
-<li><strong>evaluation.metrics.name</strong>: Array of metric plugin class names (fully qualified)</li>
-<li><strong>evaluation.metrics.maximum</strong>: Maximum expected values for each metric (used for normalization)</li>
-<li><strong>evaluation.score_weight</strong>: Weight for each metric in final score calculation</li>
-<li><strong>evaluation.time_decay_weight.s0-s5</strong>: Temporal weights for metrics (s0=first metric, s1=second, etc.)</li>
-</ul>
-<h2 id="simple-trajectory-ranker">Simple Trajectory Ranker<a class="headerlink" href="#simple-trajectory-ranker" title="Permanent link">#</a></h2>
-<p>The <code>SimpleTrajectoryRanker</code> is a lightweight alternative to the main trajectory ranker. It ranks trajectory candidates based on a prioritized list of generator name prefixes rather than complex geometric or physical metrics.</p>
-<h3 id="logic">Logic<a class="headerlink" href="#logic" title="Permanent link">#</a></h3>
-<p>The node matches the generator name of each candidate trajectory (retrieved from <code>generator_info</code> using the <code>generator_id</code>) against a user-defined list of prefixes in <code>ranked_generator_name_prefixes</code>.</p>
-<h3 id="scoring">Scoring<a class="headerlink" href="#scoring" title="Permanent link">#</a></h3>
-<p>Scores are assigned based on the inverse of the rank of the matching prefix:</p>
-<ul>
-<li>If there are <span class="arithmatex">\(N\)</span> ranked prefixes, a trajectory matching the first prefix gets a score of <span class="arithmatex">\(N\)</span>.</li>
-<li>A trajectory matching the second prefix gets a score of <span class="arithmatex">\(N-1\)</span>, and so on.</li>
-<li>Trajectories that do not match any prefix, or whose generator info is missing, are assigned a score of <code>0.0</code>.</li>
-</ul>
-<p>The output list is ordered by these scores (highest score first), followed by unranked trajectories which maintain their original relative order.</p>
-<h3 id="input-output_1">Input / Output<a class="headerlink" href="#input-output_1" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Topic</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/input/candidate_trajectories</code></td>
-<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Candidate trajectories</td>
-</tr>
-<tr>
+<td>Publisher</td>
 <td><code>~/output/scored_trajectories</code></td>
 <td><code>autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories</code></td>
-<td>Scored candidate trajectories</td>
+<td>Scored candidates from the integrated ranker</td>
 </tr>
 </tbody>
 </table>
-<h3 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">#</a></h3>
+<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
-<th>Parameter</th>
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
+<th>Default</th>
+<th>Range</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ranked_generator_name_prefixes</code></td>
-<td><code>std::vector&lt;std::string&gt;</code></td>
-<td>Ordered list of generator name prefixes for prioritizing</td>
+<td>safety.<wbr>enable</wbr></td>
+<td>boolean</td>
+<td>Enable safety evaluation</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>safety.<wbr>levels</wbr></td>
+<td>array</td>
+<td>List of safety levels</td>
+<td>["safe", "low_<wbr>caution", "high_<wbr>caution", "danger", "fatal"]</wbr></wbr></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>safety.<wbr>penalty</wbr></td>
+<td>array</td>
+<td>List of safety penalties</td>
+<td>[0.0, 0.1, 0.4, 1.0, 1.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>safety.<wbr>scale</wbr></td>
+<td>float</td>
+<td>Safety scale</td>
+<td>20.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>source.<wbr>enable</wbr></td>
+<td>boolean</td>
+<td>Enable source evaluation</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>source.<wbr>levels</wbr></td>
+<td>array</td>
+<td>List of source levels</td>
+<td>["diffusion_<wbr>planner", "backup_<wbr>planner_<wbr>go", "backup_<wbr>planner_<wbr>stop"]</wbr></wbr></wbr></wbr></wbr></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>source.<wbr>penalty</wbr></td>
+<td>array</td>
+<td>List of source penalties</td>
+<td>[0.0, 0.45, 0.5]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>source.<wbr>scale</wbr></td>
+<td>float</td>
+<td>Source scale</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>enable</wbr></td>
+<td>boolean</td>
+<td>Enable evaluation by metrics</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>plugin_<wbr>names</wbr></wbr></td>
+<td>array</td>
+<td>List of evaluation plugin names</td>
+<td>["autoware::trajectory_<wbr>ranker::metrics::LateralAcceleration", "autoware::trajectory_<wbr>ranker::metrics::LongitudinalJerk", "autoware::trajectory_<wbr>ranker::metrics::TravelDistance", "autoware::trajectory_<wbr>ranker::metrics::LateralDeviation", "autoware::trajectory_<wbr>ranker::metrics::SteeringConsistency", "autoware::trajectory_<wbr>ranker::metrics::TrajectoryConsistency"]</wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>scale</wbr></td>
+<td>float</td>
+<td>Evaluation scale</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>sampling_<wbr>number</wbr></wbr></td>
+<td>integer</td>
+<td>Sampling number</td>
+<td>16</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>sampling_<wbr>resolution</wbr></wbr></td>
+<td>float</td>
+<td>Sampling resolution</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>trajectory_<wbr>history_<wbr>size</wbr></wbr></wbr></td>
+<td>integer</td>
+<td>Trajectory history size</td>
+<td>10</td>
+<td>≥1<br>≤100</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>acceleration.<wbr>enable</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Enable lateral acceleration</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>acceleration.<wbr>weight</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Lateral acceleration weight</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>acceleration.<wbr>maximum</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Lateral acceleration maximum</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>acceleration.<wbr>decay_<wbr>weight</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Temporal decay weights applied per resampled trajectory point</td>
+<td>[1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.1, 0.08, 0.067, 0.053, 0.043, 0.034]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>longitudinal_<wbr>jerk.<wbr>enable</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Enable longitudinal jerk</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>longitudinal_<wbr>jerk.<wbr>weight</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Longitudinal jerk weight</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>longitudinal_<wbr>jerk.<wbr>maximum</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Longitudinal jerk maximum</td>
+<td>10.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>longitudinal_<wbr>jerk.<wbr>decay_<wbr>weight</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Temporal decay weights applied per resampled trajectory point</td>
+<td>[1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.1, 0.08, 0.067, 0.053, 0.043, 0.034]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>travel_<wbr>distance.<wbr>enable</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Enable travel distance</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>travel_<wbr>distance.<wbr>weight</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Travel distance weight</td>
+<td>0.3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>travel_<wbr>distance.<wbr>maximum</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Travel distance maximum</td>
+<td>500.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>travel_<wbr>distance.<wbr>decay_<wbr>weight</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Temporal decay weights applied per resampled trajectory point</td>
+<td>[1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.1, 0.08, 0.067, 0.053, 0.043, 0.034]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>deviation.<wbr>enable</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Enable lateral deviation</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>deviation.<wbr>weight</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Lateral deviation weight</td>
+<td>0.3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>deviation.<wbr>maximum</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Lateral deviation maximum</td>
+<td>10.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>lateral_<wbr>deviation.<wbr>decay_<wbr>weight</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Temporal decay weights applied per resampled trajectory point</td>
+<td>[1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.1, 0.08, 0.067, 0.053, 0.043, 0.034]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>steering_<wbr>consistency.<wbr>enable</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Enable steering consistency</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>steering_<wbr>consistency.<wbr>weight</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Steering consistency weight</td>
+<td>0.3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>steering_<wbr>consistency.<wbr>maximum</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Steering consistency maximum</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>steering_<wbr>consistency.<wbr>decay_<wbr>weight</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Temporal decay weights applied per resampled trajectory point</td>
+<td>[1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.1, 0.08, 0.067, 0.053, 0.043, 0.034]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>trajectory_<wbr>consistency.<wbr>enable</wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Enable trajectory consistency</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>trajectory_<wbr>consistency.<wbr>weight</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Trajectory consistency weight</td>
+<td>0.2</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>trajectory_<wbr>consistency.<wbr>time_<wbr>horizon</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Trajectory consistency time horizon</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>trajectory_<wbr>consistency.<wbr>maximum</wbr></wbr></wbr></td>
+<td>float</td>
+<td>Trajectory consistency maximum</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>evaluation.<wbr>trajectory_<wbr>consistency.<wbr>decay_<wbr>weight</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Temporal decay weights applied per resampled trajectory point</td>
+<td>[1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.1, 0.08, 0.067, 0.053, 0.043, 0.034]</td>
+<td>N/A</td>
 </tr>
 </tbody>
-</table>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
-<h3 id="basic-launch">Basic Launch<a class="headerlink" href="#basic-launch" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_trajectory_ranker<span class="w"> </span>trajectory_ranker.launch.xml
-</code></pre></div>
-<h3 id="launch-with-custom-parameters">Launch with Custom Parameters<a class="headerlink" href="#launch-with-custom-parameters" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_trajectory_ranker<span class="w"> </span>trajectory_ranker.launch.xml<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>trajectory_ranker_param_file:<span class="o">=</span>/path/to/your/config.yaml
-</code></pre></div></div>
+</table></div>
 
 
 

@@ -23202,6 +23202,13 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>≥0</td>
 </tr>
 <tr>
+<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>target_<wbr>types</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Pointcloud types to consider for obstacle stop</td>
+<td>["hazard", "structure", "vegetation"]</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>height_<wbr>buffer</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Height buffer to add above ego height [m]</td>
@@ -23213,62 +23220,6 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>float</td>
 <td>Minimum height of pointcloud [m]</td>
 <td>0.2</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>x</wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>X dimension of voxel grid filter [m]</td>
-<td>0.2</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>y</wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Y dimension of voxel grid filter [m]</td>
-<td>0.2</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>z</wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Z dimension of voxel grid filter [m]</td>
-<td>0.2</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>voxel_<wbr>grid_<wbr>filter.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Minimum size of voxel grid filter [m]</td>
-<td>3</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>tolerance</wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Tolerance for clustering [m]</td>
-<td>0.5</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>height</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Minimum height for clustering [m]</td>
-<td>0.5</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>min_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Minimum size for clustering [m]</td>
-<td>10</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>obstacle_<wbr>stop.<wbr>pointcloud.<wbr>clustering.<wbr>max_<wbr>size</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Maximum size for clustering [m]</td>
-<td>10000</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -23388,6 +23339,13 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>array</td>
 <td>Types of polygon shaped objects to consider for surround obstacle stop</td>
 <td>["car", "truck", "bus", "trailer", "pedestrian", "hazard", "animal", "unknown"]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>surround_<wbr>obstacle_<wbr>stop.<wbr>target_<wbr>objects.<wbr>pointcloud</wbr></wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Pointcloud types to consider for surround obstacle stop</td>
+<td>["hazard", "structure", "vegetation"]</td>
 <td>N/A</td>
 </tr>
 <tr>
