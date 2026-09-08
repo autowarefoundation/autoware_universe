@@ -24,7 +24,7 @@ namespace autoware::trajectory_ranker
 {
 
 TrajectoryRankerWrapper::TrajectoryRankerWrapper(
-  rclcpp::Node & node,
+  autoware::agnocast_wrapper::Node & node,
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
   VehicleInfo vehicle_info, std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
 : node_ptr_(&node),
@@ -40,8 +40,8 @@ TrajectoryRankerWrapper::TrajectoryRankerWrapper(
 
   params_ = param_listener_->get_params();
 
-  evaluator_ =
-    std::make_shared<Evaluator>(vehicle_info_, node.get_logger(), params_.evaluation, node_ptr_);
+  evaluator_ = std::make_shared<Evaluator>(
+    vehicle_info_, node_ptr_->get_logger(), params_.evaluation, node_ptr_);
 
   ranker_ptr_ = std::make_unique<TrajectoryRanker>(evaluator_, params_);
 }

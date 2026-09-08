@@ -19,6 +19,7 @@
 #include "autoware/trajectory_ranker/interface/data_interface.hpp"
 #include "autoware/trajectory_ranker/interface/metrics_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <pluginlib/class_loader.hpp>
@@ -43,7 +44,8 @@ class Evaluator
 public:
   explicit Evaluator(
     const std::shared_ptr<VehicleInfo> & vehicle_info, const rclcpp::Logger & logger,
-    const trajectory_ranker_params::Params::Evaluation & params, rclcpp::Node * node = nullptr)
+    const trajectory_ranker_params::Params::Evaluation & params,
+    autoware::agnocast_wrapper::Node * node = nullptr)
   : plugin_loader_(
       "autoware_trajectory_ranker", "autoware::trajectory_ranker::metrics::MetricInterface"),
     vehicle_info_{vehicle_info},
@@ -156,7 +158,7 @@ private:
 
   rclcpp::Logger logger_;
 
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
 
   EvaluatorParameters params_;
 };

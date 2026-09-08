@@ -17,6 +17,7 @@
 
 #include "autoware/trajectory_ranker/trajectory_ranker.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_trajectory_ranker/autoware_trajectory_ranker_param.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
@@ -43,7 +44,7 @@ class TrajectoryRankerWrapper
 {
 public:
   explicit TrajectoryRankerWrapper(
-    rclcpp::Node & node,
+    autoware::agnocast_wrapper::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
     vehicle_info_utils::VehicleInfo vehicle_info,
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
@@ -55,7 +56,7 @@ private:
   void update_parameters();
   void update_last_best_trajectory_info(const ScoredTrajectory & best_trajectory_info);
 
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
   std::string interface_name_{"trajectory_ranker"};
   rclcpp::Logger logger_;
   std::shared_ptr<vehicle_info_utils::VehicleInfo> vehicle_info_;

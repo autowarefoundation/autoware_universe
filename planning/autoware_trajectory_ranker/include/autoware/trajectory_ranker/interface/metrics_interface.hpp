@@ -17,6 +17,7 @@
 
 #include "autoware/trajectory_ranker/interface/data_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_trajectory_ranker/autoware_trajectory_ranker_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -69,7 +70,8 @@ public:
    */
   void init(
     const std::shared_ptr<VehicleInfo> & vehicle_info,
-    const trajectory_ranker_params::Params::Evaluation & params, rclcpp::Node * node = nullptr)
+    const trajectory_ranker_params::Params::Evaluation & params,
+    autoware::agnocast_wrapper::Node * node = nullptr)
   {
     vehicle_info_ = vehicle_info;
     node_ptr_ = node;
@@ -124,7 +126,7 @@ protected:
    * @brief Gets node pointer (for parameter access)
    * @return Node pointer
    */
-  rclcpp::Node * node() const { return node_ptr_; }
+  autoware::agnocast_wrapper::Node * node() const { return node_ptr_; }
 
 private:
   std::shared_ptr<VehicleInfo> vehicle_info_;
@@ -135,7 +137,7 @@ private:
 
   float resolution_;
 
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
 };
 
 }  // namespace autoware::trajectory_ranker::metrics
