@@ -1,0 +1,13 @@
+dla_core_id: -1 # If positive ID value is specified, the node assign inference task to the DLA core.
+gpu_id: 0 # GPU ID to select CUDA Device
+calibration_image_list_path: "" # Path to a file which contains path to images. Those images will be used for int8 quantization.
+
+# refine segmentation mask by overlay roi class
+# disable when sematic segmentation accuracy is good enough
+is_roi_overlap_segmentation: true
+
+# minimum existence_probability of detected roi considered to replace segmentation
+overlap_roi_score_threshold: 0.3
+
+# publish color mask for result visualization
+is_publish_color_mask: false
