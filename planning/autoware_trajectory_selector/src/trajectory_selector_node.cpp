@@ -45,6 +45,10 @@ void TrajectorySelectorNode::subscribers()
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectorySelectorNode::map_callback, this, std::placeholders::_1));
 
+  sub_route_ = create_subscription<LaneletRoute>(
+    "~/input/route", rclcpp::QoS{1}.transient_local(),
+    std::bind(&TrajectorySelectorNode::route_callback, this, std::placeholders::_1));
+
   sub_trajectories_generative_ = create_subscription<CandidateTrajectories>(
     "~/input/trajectories_generative", 1,
     std::bind(&TrajectorySelectorNode::on_anchor_trajectories, this, std::placeholders::_1));
@@ -70,6 +74,12 @@ void TrajectorySelectorNode::map_callback(
 
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+}
+
+void TrajectorySelectorNode::route_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) & msg)
+{
+  route_ptr_ = std::make_shared<const LaneletRoute>(*msg);
 }
 
 void TrajectorySelectorNode::on_anchor_trajectories(
@@ -106,6 +116,13 @@ TrajectorySelectorNode::take_validator_data()
   }
 
   context.traffic_light_signals = sub_traffic_lights_->take_data();
+  if (!context.traffic_light_signals) {
+    // No traffic light input means no known signals, not an unavailable input.
+    context.traffic_light_signals =
+      std::make_shared<autoware_perception_msgs::msg::TrafficLightGroupArray>();
+  }
+
+  context.route = route_ptr_;
 
   context.lanelet_map = lanelet_map_ptr_;
   if (!context.lanelet_map) {
@@ -137,10 +154,10 @@ void TrajectorySelectorNode::concatenate_and_validate()
     return;
   }
 
-  auto validated_trajectories =
+  const auto validator_report =
     validator_ptr_->validate_trajectories(concatenated_trajectories, context_opt.value());
 
-  pub_trajectories_->publish(validated_trajectories);
+  pub_trajectories_->publish(validator_report.valid_trajectories);
 }
 
 void TrajectorySelectorNode::update_parameters()

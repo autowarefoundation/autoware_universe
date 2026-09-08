@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
 import math
 import threading
 
@@ -90,6 +91,20 @@ def _parse_geo_reference(xodr_xml: str):
     return float(lat_match.group(1)), float(lon_match.group(1))
 
 
+# Speed-unit conversions for the vehicle steering_curve lookup. The curve's speed
+# axis follows the UE vehicle plugin behind the CARLA version: Chaos (CARLA 0.10+,
+# UE5) samples it in mph, PhysX (CARLA 0.9.x, UE4) in km/h.
+MPS_TO_MPH = 2.2369362920544
+MPS_TO_KMH = 3.6
+
+# One consistent snapshot of the ego actor, read under a single lock so that the
+# published status reports all describe the same simulation step.
+EgoState = namedtuple(
+    "EgoState",
+    ["transform", "velocity", "angular_velocity", "steer_angle", "control", "light_state"],
+)
+
+
 class carla_ros2_interface(object):
 
     def _initialize_parameters(self):
@@ -129,6 +144,12 @@ class carla_ros2_interface(object):
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
+            # Override the wheel max steer angle [deg] used to convert between
+            # tire angles and the normalized VehicleControl.steer. 0 uses the
+            # value reported by the vehicle physics. CARLA 0.10 (Chaos) reports
+            # 70 deg but only achieves roughly a third of it, so calibrating
+            # this to the measured full-steer angle restores a unity gain.
+            "max_wheel_steer_angle_deg": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Replace the ego vehicle's speed-based steering curve with an
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
@@ -409,6 +430,14 @@ class carla_ros2_interface(object):
         self.prev_steer_output = 0.0
         self.tau = 0.2
         self._max_steer_angle_rad = None
+        self._physics_max_steer_angle_rad = None
+        # CARLA server version and the capability flags derived from it. Set by
+        # set_carla_version() once the world is loaded; until then we assume the
+        # measured wheel angle is usable (0.9.x behavior).
+        self.carla_version = None
+        self._wheel_steer_angle_reliable = True
+        # Speed unit the server samples steering_curve in (see set_carla_version).
+        self._steering_curve_speed_scale = MPS_TO_KMH
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -1016,17 +1045,113 @@ class carla_ros2_interface(object):
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
 
-    def _max_wheel_steer_angle_rad(self):
-        """Max steerable wheel angle [rad], cached from the vehicle physics.
+    def _physics_max_wheel_steer_angle_rad(self):
+        """Max steerable wheel angle [rad] reported by the vehicle physics.
 
-        Must be called with ``physics_control`` already available.
+        This is CARLA's own full-steer angle: normalized VehicleControl.steer
+        in [-1, 1] maps to +/- this angle, and ``get_wheel_steer_angle()``
+        returns a value on the same scale. Must be called with
+        ``physics_control`` already available.
         """
-        if self._max_steer_angle_rad is None:
+        if self._physics_max_steer_angle_rad is None:
             max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
             if max_deg <= 0.0:
                 max_deg = 70.0  # CARLA's usual front-wheel default
-            self._max_steer_angle_rad = math.radians(max_deg)
+            self._physics_max_steer_angle_rad = math.radians(max_deg)
+        return self._physics_max_steer_angle_rad
+
+    def _max_wheel_steer_angle_rad(self):
+        """Calibrated full-steer wheel angle [rad] used for steer conversion.
+
+        Uses ``max_wheel_steer_angle_deg`` when set (> 0), otherwise the
+        physics value. Must be called with ``physics_control`` available.
+        """
+        if self._max_steer_angle_rad is None:
+            max_deg = float(self.param_values.get("max_wheel_steer_angle_deg", 0.0))
+            if max_deg <= 0.0:
+                self._max_steer_angle_rad = self._physics_max_wheel_steer_angle_rad()
+            else:
+                self._max_steer_angle_rad = math.radians(max_deg)
         return self._max_steer_angle_rad
+
+    def _steer_report_scale(self):
+        """Factor mapping CARLA's reported wheel angle to the calibrated angle.
+
+        ``get_wheel_steer_angle()`` returns an angle on the physics full-steer
+        scale, but the command path normalizes by the (possibly overridden)
+        calibrated angle. Scaling the report by calibrated / physics keeps the
+        steering feedback consistent with the command, so the ~3x report
+        mismatch the override removes on the command side is removed here too.
+        """
+        physics_rad = self._physics_max_wheel_steer_angle_rad()
+        if physics_rad <= 0.0:
+            return 1.0
+        return self._max_wheel_steer_angle_rad() / physics_rad
+
+    def set_carla_version(self, version_str):
+        """Record the CARLA server version and derive capability flags from it.
+
+        CARLA 0.10 (Chaos physics) always returns 0 from
+        get_wheel_steer_angle(), so on 0.10+ the steering report is synthesized
+        from the applied control while 0.9.x keeps using the measured wheel
+        angle. An unparsable version keeps the 0.9.x (measured) behavior.
+        https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_wheel_steer_angle
+        """
+        import re
+
+        self.carla_version = version_str
+        match = re.match(r"\s*(\d+)\.(\d+)", version_str or "")
+        if match is None:
+            self.logger.warning(
+                f"Could not parse CARLA version '{version_str}'; assuming "
+                "get_wheel_steer_angle() is reliable (CARLA 0.9.x behavior)."
+            )
+            self._wheel_steer_angle_reliable = True
+            return
+        major, minor = int(match.group(1)), int(match.group(2))
+        self._wheel_steer_angle_reliable = (major, minor) < (0, 10)
+        # steering_curve is sampled against the forward speed in the unit the
+        # underlying UE vehicle plugin uses: mph for Chaos (CARLA 0.10+ / UE5),
+        # km/h for PhysX (CARLA 0.9.x / UE4).
+        self._steering_curve_speed_scale = (
+            MPS_TO_KMH if self._wheel_steer_angle_reliable else MPS_TO_MPH
+        )
+        self.logger.info(
+            f"CARLA server version {version_str}: "
+            f"wheel steer angle "
+            f"{'reliable' if self._wheel_steer_angle_reliable else 'synthesized'}."
+        )
+
+    def _steering_curve_factor(self, speed_mps):
+        """Steering multiplier CARLA applies at ``speed_mps`` [m/s] forward speed.
+
+        CARLA scales the achievable wheel angle by the vehicle's
+        ``steering_curve`` (a forward-speed -> [0, 1] factor lookup) before
+        turning the wheels, so the synthesized steering report folds in the same
+        factor to match the angle the simulator actually produced. Returns 1.0
+        when no curve is available or when the curve has been flattened to the
+        identity curve via flatten_steering_curve.
+
+        The curve's speed axis is NOT in m/s: the UE vehicle plugin evaluates it
+        against the forward speed in mph on Chaos (CARLA 0.10+, the versions this
+        synthesized report runs on) and in km/h on PhysX (CARLA 0.9.x), so the
+        speed is converted with the scale set by set_carla_version() before
+        interpolating. Sampling the curve with a raw m/s value would read it at
+        roughly 1/2 (mph) or 1/4 (km/h) of the real speed and overstate the
+        factor wherever the curve attenuates steering.
+        https://carla.readthedocs.io/en/latest/python_api/#carlavehiclephysicscontrol
+        """
+        curve = getattr(self.physics_control, "steering_curve", None)
+        if not curve:
+            return 1.0
+        # CARLA 0.10 ships corrupt curves (duplicated, unsorted points); sort by
+        # speed so numpy.interp stays monotonic. numpy.interp clamps to the end
+        # point factors outside the sampled speed range.
+        points = sorted(((p.x, p.y) for p in curve), key=lambda point: point[0])
+        speeds = [point[0] for point in points]
+        factors = [point[1] for point in points]
+        curve_speed = abs(speed_mps) * self._steering_curve_speed_scale
+        return float(numpy.interp(curve_speed, speeds, factors))
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
@@ -1067,6 +1192,83 @@ class carla_ros2_interface(object):
 
             self.ego_actor.set_light_state(carla.VehicleLightState(new_state))
 
+    def _read_ego_state(self):
+        """Read one consistent ego snapshot under the state lock, or None if no ego actor."""
+        with self._state_lock:
+            if not self.ego_actor:
+                return None
+            return EgoState(
+                transform=self.ego_actor.get_transform(),
+                velocity=self.ego_actor.get_velocity(),
+                angular_velocity=self.ego_actor.get_angular_velocity(),
+                steer_angle=self.ego_actor.get_wheel_steer_angle(
+                    carla.VehicleWheelLocation.FL_Wheel
+                ),
+                control=self.ego_actor.get_control(),
+                light_state=int(self.ego_actor.get_light_state()),
+            )
+
+    @staticmethod
+    def _velocity_in_ego_frame(ego_transform, ego_velocity_carla):
+        """Rotate the CARLA world-frame velocity into the ego (base_link) frame."""
+        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
+        inv_rot_mat = trans_mat[0:3, 0:3].T
+        vel_vec = numpy.array(
+            [ego_velocity_carla.x, ego_velocity_carla.y, ego_velocity_carla.z]
+        ).reshape(3, 1)
+        return (inv_rot_mat @ vel_vec).T[0]
+
+    def _steering_tire_angle(self, ego, speed_mps):
+        """Return the steering tire angle [rad] to report for this simulation step.
+
+        CARLA 0.10 (Chaos) always reports 0 from get_wheel_steer_angle(), so on
+        0.10+ (see set_carla_version) the angle is synthesized from the applied
+        control; 0.9.x keeps using the measured wheel angle.
+        """
+        if self._wheel_steer_angle_reliable:
+            # Scale CARLA's reported wheel angle onto the calibrated full-steer
+            # range so the feedback matches the command normalization (identity
+            # when max_wheel_steer_angle_deg is unset). The sign flips because
+            # Autoware is CCW-positive and CARLA CW-positive.
+            return -math.radians(ego.steer_angle) * self._steer_report_scale()
+        if self.physics_control is None:
+            return 0.0
+        # get_control().steer is the requested steer fraction BEFORE the server
+        # applies the vehicle's speed-based steering_curve, so the bare fraction
+        # * max angle overstates the wheel angle whenever the curve attenuates
+        # steering at speed. Fold the same curve back in so the report matches
+        # the angle CARLA actually produced. control_callback intentionally
+        # leaves the curve to the server, and flatten_steering_curve makes this
+        # factor ~1.0 (identity curve), leaving the report unchanged.
+        curve_factor = self._steering_curve_factor(speed_mps)
+        return -ego.control.steer * self._max_wheel_steer_angle_rad() * curve_factor
+
+    @staticmethod
+    def _blinker_reports(light_state, stamp):
+        """Decode CARLA blinker bits into Autoware turn-indicator / hazard reports."""
+        left_on = bool(light_state & int(carla.VehicleLightState.LeftBlinker))
+        right_on = bool(light_state & int(carla.VehicleLightState.RightBlinker))
+        # Both blinkers on => hazard mode; the turn indicator then reports DISABLE.
+        hazard_on = left_on and right_on
+
+        out_turn_indicators_state = TurnIndicatorsReport()
+        out_turn_indicators_state.stamp = stamp
+        if hazard_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
+        elif left_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_LEFT
+        elif right_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_RIGHT
+        else:
+            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
+
+        out_hazard_lights_state = HazardLightsReport()
+        out_hazard_lights_state.stamp = stamp
+        out_hazard_lights_state.report = (
+            HazardLightsReport.ENABLE if hazard_on else HazardLightsReport.DISABLE
+        )
+        return out_turn_indicators_state, out_hazard_lights_state
+
     def ego_status(self):
         """
         Publish ego vehicle status.
@@ -1077,33 +1279,13 @@ class carla_ros2_interface(object):
         if self.checkFrequency("status"):
             return
 
-        # Thread-safe access to ego_actor - get all needed data in one lock section
-        with self._state_lock:
-            if not self.ego_actor:
-                return
+        ego = self._read_ego_state()
+        if ego is None:
+            return
 
-            ego_transform = self.ego_actor.get_transform()
-            ego_velocity_carla = self.ego_actor.get_velocity()
-            ego_angular_velocity = self.ego_actor.get_angular_velocity()
-            steer_angle = self.ego_actor.get_wheel_steer_angle(carla.VehicleWheelLocation.FL_Wheel)
-            control = self.ego_actor.get_control()
-            light_state = int(self.ego_actor.get_light_state())
-
-        # convert velocity from cartesian to ego frame
-        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
-        rot_mat = trans_mat[0:3, 0:3]
-        inv_rot_mat = rot_mat.T
-        vel_vec = numpy.array(
-            [ego_velocity_carla.x, ego_velocity_carla.y, ego_velocity_carla.z]
-        ).reshape(3, 1)
-        ego_velocity = (inv_rot_mat @ vel_vec).T[0]
+        ego_velocity = self._velocity_in_ego_frame(ego.transform, ego.velocity)
 
         out_vel_state = VelocityReport()
-        out_steering_state = SteeringReport()
-        out_ctrl_mode = ControlModeReport()
-        out_gear_state = GearReport()
-        out_actuation_status = ActuationStatusStamped()
-
         out_vel_state.header = self.get_msg_header(frame_id="base_link")
         out_vel_state.longitudinal_velocity = ego_velocity[0]
         out_vel_state.lateral_velocity = ego_velocity[1]
@@ -1111,44 +1293,30 @@ class carla_ros2_interface(object):
         # (CW-positive) frame, while ROS expects rad/s CCW-positive (REP-103):
         # https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
         # https://www.ros.org/reps/rep-0103.html
-        out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
+        out_vel_state.heading_rate = -math.radians(ego.angular_velocity.z)
+        stamp = out_vel_state.header.stamp
 
-        out_steering_state.stamp = out_vel_state.header.stamp
-        out_steering_state.steering_tire_angle = -math.radians(steer_angle)
+        out_steering_state = SteeringReport()
+        out_steering_state.stamp = stamp
+        out_steering_state.steering_tire_angle = self._steering_tire_angle(ego, ego_velocity[0])
 
-        out_gear_state.stamp = out_vel_state.header.stamp
+        out_gear_state = GearReport()
+        out_gear_state.stamp = stamp
         out_gear_state.report = GearReport.DRIVE
 
-        out_ctrl_mode.stamp = out_vel_state.header.stamp
+        out_ctrl_mode = ControlModeReport()
+        out_ctrl_mode.stamp = stamp
         out_ctrl_mode.mode = ControlModeReport.AUTONOMOUS
 
+        out_actuation_status = ActuationStatusStamped()
         out_actuation_status.header = self.get_msg_header(frame_id="base_link")
-        out_actuation_status.status.accel_status = control.throttle
-        out_actuation_status.status.brake_status = control.brake
-        out_actuation_status.status.steer_status = -control.steer
+        out_actuation_status.status.accel_status = ego.control.throttle
+        out_actuation_status.status.brake_status = ego.control.brake
+        out_actuation_status.status.steer_status = -ego.control.steer
 
-        # Decode CARLA blinker bits into Autoware turn-indicator / hazard reports.
-        left_on = bool(light_state & int(carla.VehicleLightState.LeftBlinker))
-        right_on = bool(light_state & int(carla.VehicleLightState.RightBlinker))
-
-        out_turn_indicators_state = TurnIndicatorsReport()
-        out_turn_indicators_state.stamp = out_vel_state.header.stamp
-        if left_on and right_on:
-            # Both blinkers on => hazard mode; turn indicator reports DISABLE.
-            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
-        elif left_on:
-            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_LEFT
-        elif right_on:
-            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_RIGHT
-        else:
-            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
-
-        out_hazard_lights_state = HazardLightsReport()
-        out_hazard_lights_state.stamp = out_vel_state.header.stamp
-        if left_on and right_on:
-            out_hazard_lights_state.report = HazardLightsReport.ENABLE
-        else:
-            out_hazard_lights_state.report = HazardLightsReport.DISABLE
+        out_turn_indicators_state, out_hazard_lights_state = self._blinker_reports(
+            ego.light_state, stamp
+        )
 
         self.pub_actuation_status.publish(out_actuation_status)
         self.pub_vel_state.publish(out_vel_state)

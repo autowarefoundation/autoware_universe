@@ -118,6 +118,18 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
   const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
 {
+  // The kernels stride the buffer by sizeof(PointTypeStruct), so a prefix-compatible but wider
+  // layout would be misread.
+  if (
+    !autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzirc(
+      msg->fields) ||
+    msg->point_step != sizeof(PointTypeStruct)) {
+    RCLCPP_ERROR_ONCE(
+      get_logger(), "Expected PointXYZIRC (point_step %zu), got %u. Skipping.",
+      sizeof(PointTypeStruct), msg->point_step);
+    return;
+  }
+
   // start time measurement
   if (stop_watch_ptr_) {
     stop_watch_ptr_->tic("processing_time");
