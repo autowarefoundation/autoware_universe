@@ -41,6 +41,16 @@ std::string format_bool(bool value)
 
 }  // namespace
 
+std::unordered_map<std::string, double> pipeline_latencies_ms(
+  const std::unordered_map<std::string, double> & topic_to_original_stamp, double now_sec)
+{
+  std::unordered_map<std::string, double> latencies;
+  for (const auto & [topic, stamp] : topic_to_original_stamp) {
+    latencies[topic] = (now_sec - stamp) * 1000.0;
+  }
+  return latencies;
+}
+
 diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
   const ConcatenationDiagnosticsSummary & summary, const std::vector<std::string> & input_topics,
   const ConcatenationDiagnosticsOptions & options)
@@ -70,10 +80,9 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
 
   std::unordered_map<std::string, double> topic_to_latency;
   if (options.now_sec.has_value()) {
+    topic_to_latency = pipeline_latencies_ms(summary.topic_to_original_stamp, *options.now_sec);
     double max_latency = 0.0;
-    for (const auto & [topic, stamp] : summary.topic_to_original_stamp) {
-      const double latency_ms = (*options.now_sec - stamp) * 1000.0;
-      topic_to_latency[topic] = latency_ms;
+    for (const auto & [topic, latency_ms] : topic_to_latency) {
       max_latency = std::max(max_latency, latency_ms);
     }
     add("Pipeline latency (ms)", std::to_string(max_latency));
