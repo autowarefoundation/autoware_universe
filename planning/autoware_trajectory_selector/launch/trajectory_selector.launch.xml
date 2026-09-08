@@ -9,6 +9,7 @@
   <arg name="input_objects" default="~/input/objects"/>
   <arg name="input_acceleration" default="~/input/acceleration"/>
   <arg name="input_traffic_signals" default="~/input/traffic_signals"/>
+  <arg name="input_route" default="~/input/route"/>
 
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
 
@@ -23,5 +24,6 @@
     <remap from="~/input/objects" to="$(var input_objects)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
     <remap from="~/input/traffic_signals" to="$(var input_traffic_signals)"/>
+    <remap from="~/input/route" to="$(var input_route)"/>
   </node>
 </launch>

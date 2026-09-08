@@ -25,6 +25,9 @@
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
+#include <autoware_internal_planning_msgs/msg/control_point.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
+
 #include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 
@@ -241,9 +244,10 @@ CrosswalkFilter::result_t CrosswalkFilter::is_feasible(
   update_target_objects(context, target_crosswalks);
 
   std::unordered_set<lanelet::Id> obstructing_crosswalk_ids;
+  SafetyFactorArray safety_factors;
   const bool feasible =
     std::none_of(target_crosswalks.begin(), target_crosswalks.end(), [&](const auto & cw) {
-      if (!is_obstructing_crosswalk(candidate_trajectory.points, cw)) return false;
+      if (!is_obstructing_crosswalk(candidate_trajectory.points, cw, safety_factors)) return false;
       obstructing_crosswalk_ids.insert(cw.crosswalk_info.crosswalk->id());
       return true;
     });
@@ -262,7 +266,25 @@ CrosswalkFilter::result_t CrosswalkFilter::is_feasible(
       .metric_value(0.0)
       .risk(risk_level));
 
-  return ValidationResult{feasible, std::move(metrics)};
+  PlanningFactorArray planning_factors;
+  if (!feasible) {
+    const auto control_point =
+      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::ControlPoint>()
+        .pose(context.odometry->pose.pose)
+        .velocity(0.0)
+        .shift_length(0.0)
+        .distance(0.0);
+    planning_factors.factors.push_back(
+      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::PlanningFactor>()
+        .module(get_name())
+        .is_driving_forward(true)
+        .control_points({control_point})
+        .behavior(autoware_internal_planning_msgs::msg::PlanningFactor::STOP)
+        .detail("crosswalk_obstruction")
+        .safety_factors(safety_factors));
+  }
+
+  return ValidationResult{feasible, std::move(metrics), std::move(planning_factors)};
 }
 
 std::vector<TargetCrosswalk> CrosswalkFilter::get_target_crosswalks(
@@ -434,7 +456,8 @@ void CrosswalkFilter::update_target_objects(
 }
 
 bool CrosswalkFilter::is_obstructing_crosswalk(
-  const TrajectoryPoints & traj_points, const TargetCrosswalk & target_crosswalk) const
+  const TrajectoryPoints & traj_points, const TargetCrosswalk & target_crosswalk,
+  SafetyFactorArray & safety_factors) const
 {
   if (!target_crosswalk.is_crossing) return false;
 
@@ -467,6 +490,14 @@ bool CrosswalkFilter::is_obstructing_crosswalk(
   }();
 
   if (required_waiting_time < 1e-3) return false;
+
+  SafetyFactor safety_factor;
+  safety_factor.type = SafetyFactor::OBJECT;
+  safety_factor.object_id = min_duration_obj.object.object_id;
+  safety_factor.points.push_back(
+    min_duration_obj.object.kinematics.initial_pose_with_covariance.pose.position);
+  safety_factor.is_safe = false;
+  safety_factors.factors.push_back(safety_factor);
 
   if (!params_.use_trajectory_time) return true;
 

@@ -138,6 +138,12 @@ class carla_ros2_interface(object):
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
+            # Override the wheel max steer angle [deg] used to convert between
+            # tire angles and the normalized VehicleControl.steer. 0 uses the
+            # value reported by the vehicle physics. CARLA 0.10 (Chaos) reports
+            # 70 deg but only achieves roughly a third of it, so calibrating
+            # this to the measured full-steer angle restores a unity gain.
+            "max_wheel_steer_angle_deg": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Replace the ego vehicle's speed-based steering curve with an
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
@@ -372,6 +378,7 @@ class carla_ros2_interface(object):
         self.prev_steer_output = 0.0
         self.tau = 0.2
         self._max_steer_angle_rad = None
+        self._physics_max_steer_angle_rad = None
         # CARLA server version and the capability flags derived from it. Set by
         # set_carla_version() once the world is loaded; until then we assume the
         # measured wheel angle is usable (0.9.x behavior).
@@ -986,17 +993,48 @@ class carla_ros2_interface(object):
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
 
-    def _max_wheel_steer_angle_rad(self):
-        """Max steerable wheel angle [rad], cached from the vehicle physics.
+    def _physics_max_wheel_steer_angle_rad(self):
+        """Max steerable wheel angle [rad] reported by the vehicle physics.
 
-        Must be called with ``physics_control`` already available.
+        This is CARLA's own full-steer angle: normalized VehicleControl.steer
+        in [-1, 1] maps to +/- this angle, and ``get_wheel_steer_angle()``
+        returns a value on the same scale. Must be called with
+        ``physics_control`` already available.
         """
-        if self._max_steer_angle_rad is None:
+        if self._physics_max_steer_angle_rad is None:
             max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
             if max_deg <= 0.0:
                 max_deg = 70.0  # CARLA's usual front-wheel default
-            self._max_steer_angle_rad = math.radians(max_deg)
+            self._physics_max_steer_angle_rad = math.radians(max_deg)
+        return self._physics_max_steer_angle_rad
+
+    def _max_wheel_steer_angle_rad(self):
+        """Calibrated full-steer wheel angle [rad] used for steer conversion.
+
+        Uses ``max_wheel_steer_angle_deg`` when set (> 0), otherwise the
+        physics value. Must be called with ``physics_control`` available.
+        """
+        if self._max_steer_angle_rad is None:
+            max_deg = float(self.param_values.get("max_wheel_steer_angle_deg", 0.0))
+            if max_deg <= 0.0:
+                self._max_steer_angle_rad = self._physics_max_wheel_steer_angle_rad()
+            else:
+                self._max_steer_angle_rad = math.radians(max_deg)
         return self._max_steer_angle_rad
+
+    def _steer_report_scale(self):
+        """Factor mapping CARLA's reported wheel angle to the calibrated angle.
+
+        ``get_wheel_steer_angle()`` returns an angle on the physics full-steer
+        scale, but the command path normalizes by the (possibly overridden)
+        calibrated angle. Scaling the report by calibrated / physics keeps the
+        steering feedback consistent with the command, so the ~3x report
+        mismatch the override removes on the command side is removed here too.
+        """
+        physics_rad = self._physics_max_wheel_steer_angle_rad()
+        if physics_rad <= 0.0:
+            return 1.0
+        return self._max_wheel_steer_angle_rad() / physics_rad
 
     def set_carla_version(self, version_str):
         """Record the CARLA server version and derive capability flags from it.
@@ -1136,7 +1174,11 @@ class carla_ros2_interface(object):
         control; 0.9.x keeps using the measured wheel angle.
         """
         if self._wheel_steer_angle_reliable:
-            return -math.radians(ego.steer_angle)
+            # Scale CARLA's reported wheel angle onto the calibrated full-steer
+            # range so the feedback matches the command normalization (identity
+            # when max_wheel_steer_angle_deg is unset). The sign flips because
+            # Autoware is CCW-positive and CARLA CW-positive.
+            return -math.radians(ego.steer_angle) * self._steer_report_scale()
         if self.physics_control is None:
             return 0.0
         # get_control().steer is the requested steer fraction BEFORE the server

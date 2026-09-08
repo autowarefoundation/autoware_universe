@@ -30,6 +30,7 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -42,6 +43,7 @@ using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_planning_msgs::msg::LaneletRoute;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
@@ -70,6 +72,12 @@ private:
    * @param msg Binary lanelet map message.
    */
   void map_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg);
+
+  /**
+   * @brief Stores the received route for the validator context.
+   * @param msg Lanelet route message.
+   */
+  void route_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) & msg);
 
   /**
    * @brief Forwards incoming candidate trajectories to the concatenator and trigger the
@@ -104,6 +112,7 @@ private:
   std::unique_ptr<trajectory_validator::TrajectoryValidatorWrapper> validator_ptr_;
   AUTOWARE_TIMER_PTR timer_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
+  LaneletRoute::ConstSharedPtr route_ptr_;
 
   // Polling Subscribers
   autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_odometry_ =
@@ -123,6 +132,7 @@ private:
 
   // Normal Subscribers
   AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;
+  AUTOWARE_SUBSCRIPTION_PTR(LaneletRoute) sub_route_;
   AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) sub_trajectories_generative_;
   AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) sub_trajectories_backup_;
 
