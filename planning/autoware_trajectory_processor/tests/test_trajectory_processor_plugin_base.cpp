@@ -50,7 +50,7 @@ public:
     enabled_ = params.use_stop_point_fixer;
   }
 
-  [[nodiscard]] rclcpp::Node * node() const { return get_node_ptr(); }
+  [[nodiscard]] std::string logger_name() const { return get_logger().get_name(); }
   [[nodiscard]] bool initialized() const { return initialized_; }
 
 protected:
@@ -99,7 +99,7 @@ TEST_F(TrajectoryProcessorPluginBaseTest, InitializesCommonState)
     node_.get(), time_keeper_, nullptr, params);
 
   EXPECT_TRUE(plugin.initialized());
-  EXPECT_EQ(plugin.node(), node_.get());
+  EXPECT_EQ(plugin.logger_name(), std::string(node_->get_logger().get_name()));
   EXPECT_EQ(plugin.get_name(), "processor_0");
   EXPECT_EQ(plugin.get_short_name(), "TestTrajectoryProcessorPlugin");
   EXPECT_TRUE(plugin.get_planning_factors().empty());

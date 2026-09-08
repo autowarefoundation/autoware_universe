@@ -155,6 +155,12 @@
               "default": 6,
               "minimum": 0
             },
+            "minimum_stop_margin": {
+              "type": "number",
+              "description": "Minimum distance to maintain from an obstacle when stopped [m]",
+              "default": 3.0,
+              "minimum": 0.0
+            },
             "lateral_margin": {
               "type": "number",
               "description": "Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]",
@@ -213,28 +219,46 @@
             "objects": {
               "type": "object",
               "properties": {
-                "object_types": {
-                  "type": "array",
-                  "description": "Object types to consider for obstacle stop",
-                  "default": [
-                    "car",
-                    "truck",
-                    "bus",
-                    "trailer",
-                    "motorcycle",
-                    "bicycle",
-                    "pedestrian",
-                    "hazard"
-                  ],
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "max_velocity_th": {
-                  "type": "number",
-                  "description": "Maximum velocity threshold for target object [m/s]",
-                  "default": 5,
-                  "minimum": 0
+                "target_objects": {
+                  "type": "object",
+                  "properties": {
+                    "bbox": {
+                      "type": "array",
+                      "description": "Types of bounding box shaped objects to consider for obstacle stop",
+                      "default": [
+                        "car",
+                        "truck",
+                        "bus",
+                        "trailer",
+                        "motorcycle",
+                        "bicycle",
+                        "pedestrian",
+                        "hazard",
+                        "unknown"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "polygon": {
+                      "type": "array",
+                      "description": "Types of polygon shaped objects to consider for obstacle stop",
+                      "default": [
+                        "car",
+                        "truck",
+                        "bus",
+                        "trailer",
+                        "pedestrian",
+                        "hazard",
+                        "unknown"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
                 },
                 "stopped_velocity_th": {
                   "type": "number",
@@ -261,6 +285,14 @@
             "pointcloud": {
               "type": "object",
               "properties": {
+                "target_types": {
+                  "type": "array",
+                  "description": "Pointcloud types to consider for obstacle stop",
+                  "default": ["hazard", "structure", "vegetation"],
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "height_buffer": {
                   "type": "number",
                   "description": "Height buffer to add above ego height [m]",
@@ -272,68 +304,6 @@
                   "description": "Minimum height of pointcloud [m]",
                   "default": 0.2,
                   "minimum": 0
-                },
-                "voxel_grid_filter": {
-                  "type": "object",
-                  "properties": {
-                    "x": {
-                      "type": "number",
-                      "description": "X dimension of voxel grid filter [m]",
-                      "default": 0.2,
-                      "minimum": 0
-                    },
-                    "y": {
-                      "type": "number",
-                      "description": "Y dimension of voxel grid filter [m]",
-                      "default": 0.2,
-                      "minimum": 0
-                    },
-                    "z": {
-                      "type": "number",
-                      "description": "Z dimension of voxel grid filter [m]",
-                      "default": 0.2,
-                      "minimum": 0
-                    },
-                    "min_size": {
-                      "type": "number",
-                      "description": "Minimum size of voxel grid filter [m]",
-                      "default": 3,
-                      "minimum": 0
-                    }
-                  },
-                  "required": [],
-                  "additionalProperties": false
-                },
-                "clustering": {
-                  "type": "object",
-                  "properties": {
-                    "tolerance": {
-                      "type": "number",
-                      "description": "Tolerance for clustering [m]",
-                      "default": 0.5,
-                      "minimum": 0
-                    },
-                    "min_height": {
-                      "type": "number",
-                      "description": "Minimum height for clustering [m]",
-                      "default": 0.5,
-                      "minimum": 0
-                    },
-                    "min_size": {
-                      "type": "number",
-                      "description": "Minimum size for clustering [m]",
-                      "default": 10,
-                      "minimum": 0
-                    },
-                    "max_size": {
-                      "type": "number",
-                      "description": "Maximum size for clustering [m]",
-                      "default": 10000,
-                      "minimum": 0
-                    }
-                  },
-                  "required": [],
-                  "additionalProperties": false
                 }
               },
               "required": [],
@@ -447,13 +417,56 @@
               "description": "Enable the use of pointcloud for surround obstacle stop",
               "default": true
             },
-            "object_types": {
-              "type": "array",
-              "description": "Types of objects to consider for surround obstacle stop",
-              "default": ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"],
-              "items": {
-                "type": "string"
-              }
+            "target_objects": {
+              "type": "object",
+              "properties": {
+                "bbox": {
+                  "type": "array",
+                  "description": "Types of bounding box shaped objects to consider for surround obstacle stop",
+                  "default": [
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "motorcycle",
+                    "bicycle",
+                    "pedestrian",
+                    "hazard",
+                    "animal",
+                    "unknown"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "polygon": {
+                  "type": "array",
+                  "description": "Types of polygon shaped objects to consider for surround obstacle stop",
+                  "default": [
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "pedestrian",
+                    "hazard",
+                    "animal",
+                    "unknown"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "pointcloud": {
+                  "type": "array",
+                  "description": "Pointcloud types to consider for surround obstacle stop",
+                  "default": ["hazard", "structure", "vegetation"],
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
             },
             "front_distance_th": {
               "type": "object",

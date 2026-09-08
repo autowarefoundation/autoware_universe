@@ -48,6 +48,14 @@ a throttled warning.
 9. Estimate a shape and pose for each cluster with `ShapeEstimator`.
 10. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
 
+### Filtering Clusters
+
+Clusters can optionally be filtered by their physical size after label-based clustering.
+The size is the diameter of an XY bounding circle around the cluster, which is independent of object heading.
+`min_cluster_size_m: 0.0` disables the global filter.
+A value under `label_cluster_params.<label>.min_cluster_size_m` overrides it for that label; setting the override to `0.0` disables filtering for that label.
+This allows large-object labels such as `truck` to reject implausibly small false positives while leaving small `hazard` objects unfiltered.
+
 ## Shape Estimation Behavior
 
 After clustering, the node converts each cluster into a `DetectedObject`.
@@ -87,6 +95,7 @@ hazards need a tighter tolerance and finer voxels than cars or trucks.
 - Each override block accepts the same keys as the global clustering parameters.
 - Any key omitted inside an override block falls back to the corresponding global value, so a block
   only needs to list the parameters that differ.
+- `min_cluster_size_m` is also accepted in an override block and is evaluated after clustering.
 - A label with no override block (or an empty one) keeps using the global default cluster.
 - When a label-specific cluster is created, the node logs `Using custom cluster params for label '<label>'` at startup.
 

@@ -315,9 +315,10 @@ void CrosswalkTrafficLightEstimator::update_crosswalk_overrides_from_map(
   }
 }
 
-TrafficSignalArray CrosswalkTrafficLightEstimator::estimate(
-  const TrafficSignalArray & msg, const rclcpp::Time & current_time)
+TrafficSignalArray CrosswalkTrafficLightEstimator::estimate(const TrafficSignalArray & msg)
 {
+  const rclcpp::Time current_time(msg.stamp);
+
   TrafficSignalArray output = msg;
 
   TrafficLightIdMap traffic_light_id_map;

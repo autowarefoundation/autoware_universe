@@ -30,8 +30,6 @@ namespace autoware::trajectory_processor::plugin
 
 void TrajectoryVelocityOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
-
   enabled_ = params.use_velocity_optimizer;
   velocity_params_.nearest_dist_threshold_m =
     params.trajectory_velocity_optimizer.nearest_dist_threshold_m;
@@ -67,17 +65,16 @@ void TrajectoryVelocityOptimizer::on_initialize(const TrajectoryProcessorParams 
   cjs.min_jerk = params.limit.min_jerk;
 
   sub_planning_velocity_ =
-    std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
-      node_ptr, "~/input/external_velocity_limit_mps", rclcpp::QoS{1});
+    make_polling_subscriber<VelocityLimit>("~/input/external_velocity_limit_mps", rclcpp::QoS{1});
 
-  pub_velocity_limit_ = node_ptr->create_publisher<VelocityLimit>(
+  pub_velocity_limit_ = make_publisher<VelocityLimit>(
     "~/output/current_velocity_limit_mps", rclcpp::QoS{1}.transient_local());
 
   // publish default max velocity
   VelocityLimit max_vel_msg{};
-  max_vel_msg.stamp = node_ptr->now();
+  max_vel_msg.stamp = now();
   max_vel_msg.max_velocity = static_cast<float>(velocity_params_.default_max_velocity_mps);
-  pub_velocity_limit_->publish(max_vel_msg);
+  pub_velocity_limit_(max_vel_msg);
 }
 
 ProcessingResult TrajectoryVelocityOptimizer::process(
@@ -108,18 +105,6 @@ ProcessingResult TrajectoryVelocityOptimizer::process(
       velocity_params_.min_limited_speed_mps, current_odometry, max_speed_update_in_place);
   }
 
-  auto initial_motion_speed =
-    (current_speed > target_pull_out_speed_mps) ? current_speed : target_pull_out_speed_mps;
-  auto initial_motion_acc = (current_speed > target_pull_out_speed_mps)
-                              ? current_linear_acceleration
-                              : target_pull_out_acc_mps2;
-
-  if (velocity_params_.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
-    trajectory_velocity_optimizer_utils::clamp_velocities(
-      traj_points, static_cast<float>(initial_motion_speed),
-      static_cast<float>(initial_motion_acc));
-  }
-
   // Apply global speed limit to trajectory and max velocity array
   if (velocity_params_.limit_speed) {
     const auto external_velocity_limit = sub_planning_velocity_->take_data();
@@ -136,7 +121,7 @@ ProcessingResult TrajectoryVelocityOptimizer::process(
       }
     }
     if (external_velocity_limit) {
-      pub_velocity_limit_->publish(*external_velocity_limit);
+      pub_velocity_limit_(*external_velocity_limit);
     }
   }
 
@@ -150,6 +135,19 @@ ProcessingResult TrajectoryVelocityOptimizer::process(
       traj_points, velocity_params_.nearest_dist_threshold_m,
       autoware_utils_math::deg2rad(velocity_params_.nearest_yaw_threshold_deg),
       continuous_jerk_smoother_, current_odometry, max_velocity_per_point);
+  }
+
+  // Apply after smoothing so the smoother cannot overwrite pull-out constraints
+  auto initial_motion_speed =
+    (current_speed > target_pull_out_speed_mps) ? current_speed : target_pull_out_speed_mps;
+  auto initial_motion_acc = (current_speed > target_pull_out_speed_mps)
+                              ? current_linear_acceleration
+                              : target_pull_out_acc_mps2;
+
+  if (velocity_params_.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
+    trajectory_velocity_optimizer_utils::clamp_velocities(
+      traj_points, static_cast<float>(initial_motion_speed),
+      static_cast<float>(initial_motion_acc));
   }
   return ProcessingResult::Modified;
 }

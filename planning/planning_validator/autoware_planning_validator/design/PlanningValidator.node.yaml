@@ -41,13 +41,13 @@ param_files:
   - name: planning_validator_param
     default: config/planning_validator.param.yaml
   - name: latency_checker_param
-    default: config/planning_validator_latency_checker.param.yaml
+    default: $(find-pkg-share autoware_planning_validator_latency_checker)/config/latency_checker.param.yaml
   - name: trajectory_checker_param
-    default: config/planning_validator_trajectory_checker.param.yaml
+    default: $(find-pkg-share autoware_planning_validator_trajectory_checker)/config/trajectory_checker.param.yaml
   - name: intersection_collision_checker_param
-    default: config/planning_validator_intersection_collision_checker.param.yaml
+    default: $(find-pkg-share autoware_planning_validator_intersection_collision_checker)/config/intersection_collision_checker.param.yaml
   - name: rear_collision_checker_param
-    default: config/planning_validator_rear_collision_checker.param.yaml
+    default: $(find-pkg-share autoware_planning_validator_rear_collision_checker)/config/rear_collision_checker.param.yaml
 
 param_values:
   - name: launch_modules

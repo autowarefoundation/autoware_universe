@@ -42,7 +42,7 @@ class SensorConfig:
     frequency_hz: float = 20.0
     qos_profile: str = "reliable"
     # What a camera's pixels are published as. A consumer that only wants
-    # luminance otherwise pays four times the bytes through serialisation and
+    # luminance otherwise pays four times the bytes through serialization and
     # the transport for three channels it discards on arrival.
     image_encoding: str = "bgra8"
     parameters: Dict[str, Any] = field(default_factory=dict)

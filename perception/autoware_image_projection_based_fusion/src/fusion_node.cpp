@@ -30,12 +30,14 @@
 
 #include <boost/optional.hpp>
 
+#include <atomic>
 #include <cmath>
 #include <limits>
 #include <list>
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -273,24 +275,30 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
   // This assume the camera info does not change while the node is running
   auto & det2d_status = det2d_status_list_.at(rois_id);
   if (det2d_status.camera_projector_ptr == nullptr && check_camera_info(*input_camera_info_msg)) {
-    std::atomic<bool> initializing{true};
-    std::thread([this, &initializing, rois_id]() {
+    // The flag is shared with the logging thread so that it outlives this scope even if the
+    // thread is still running, and the thread is joined below to guarantee that `this` stays
+    // valid for the whole lifetime of the thread.
+    auto initializing = std::make_shared<std::atomic<bool>>(true);
+    std::thread logging_thread([this, initializing, rois_id]() {
       rclcpp::Rate rate(1.0);  // 1 Hz
-      while (rclcpp::ok() && initializing.load()) {
+      while (rclcpp::ok() && initializing->load()) {
         RCLCPP_WARN(
           this->get_logger(), "Still initializing camera projector for ROI %zu... please wait...",
           rois_id);
         rate.sleep();
       }
-    }).detach();
+    });
 
     det2d_status.camera_projector_ptr = std::make_unique<CameraProjection>(
       *input_camera_info_msg, approx_grid_cell_w_size_, approx_grid_cell_h_size_,
       det2d_status.project_to_unrectified_image, det2d_status.approximate_camera_projection);
     det2d_status.camera_projector_ptr->initialize();
 
-    // Mark as finished
-    initializing = false;
+    // Mark as finished and wait for the logging thread to exit, so that no stray warning is
+    // printed after the message below and no thread outlives this node.
+    initializing->store(false);
+    logging_thread.join();
+
     RCLCPP_INFO(
       this->get_logger(), "Camera projector initialization for ROI %zu finished.", rois_id);
 
