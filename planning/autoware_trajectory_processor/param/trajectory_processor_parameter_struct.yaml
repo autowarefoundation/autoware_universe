@@ -106,6 +106,13 @@ trajectory_processor_params:
       read_only: false
       validation:
         bounds<>: [0.0, 10.0]
+    delay_response_time:
+      type: double
+      default_value: 0.5
+      description: Delay response time used to estimate the minimum ego stopping distance [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
     arrived_distance_threshold:
       type: double
       default_value: 0.5
@@ -503,13 +510,6 @@ trajectory_processor_params:
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
-    crossing_time_limit:
-      type: double
-      default_value: 2.75
-      description: Crossing time limit [s]
-      validation:
-        bounds<>: [0.0, 10.0]
-      read_only: false
     amber_rejection:
       th_hysteresis:
         type: double
@@ -523,7 +523,27 @@ trajectory_processor_params:
         default_value: true
         description: Reject if we detect a previous stop attempt from input trajectory
         read_only: false
-
+      can_stop_decel:
+        type: double
+        default_value: 2.8
+        description: Deceleration threshold for ego vehicle to stop [m/s^2]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      can_stop_jerk:
+        type: double
+        default_value: 5.0
+        description: Jerk threshold for ego vehicle to stop [m/s^3]
+        validation:
+          bounds<>: [0.0, 100.0]
+        read_only: false
+      crossing_time_limit:
+        type: double
+        default_value: 2.75
+        description: Crossing time limit [s]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
   use_akima_spline_interpolation:
     type: bool
     default_value: false

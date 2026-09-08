@@ -250,7 +250,7 @@ protected:
     tl.th_stable_duration_unknown = 0.0;
     tl.amber_rejection.th_hysteresis = 0.0;
     tl.amber_rejection.reject_if_stop_detected = false;
-    tl.crossing_time_limit = 2.75;
+    tl.amber_rejection.crossing_time_limit = 2.75;
   }
 
   void create_and_set_map(lanelet::Id light_id, double stop_line_x)
@@ -508,7 +508,7 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithAmberLightWhenPrev
   params_.traffic_light_stop.amber_rejection.th_hysteresis = 5.0;
   params_.traffic_light_stop.overshoot_tolerance = 0.5;
   params_.traffic_light_stop.allow_if_cannot_stop_distance = 0.0;
-  params_.traffic_light_stop.crossing_time_limit = 100.0;
+  params_.traffic_light_stop.amber_rejection.crossing_time_limit = 100.0;
   plugin_->update_params(params_);
 
   const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
@@ -536,7 +536,7 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryNotModifiedWhenRejectIfStopDet
   params_.traffic_light_stop.amber_rejection.th_hysteresis = 5.0;
   params_.traffic_light_stop.overshoot_tolerance = 0.5;
   params_.traffic_light_stop.allow_if_cannot_stop_distance = 0.0;
-  params_.traffic_light_stop.crossing_time_limit = 100.0;
+  params_.traffic_light_stop.amber_rejection.crossing_time_limit = 100.0;
   plugin_->update_params(params_);
 
   const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;

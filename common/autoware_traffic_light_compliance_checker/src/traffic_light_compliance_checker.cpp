@@ -198,10 +198,12 @@ Violations TrafficLightComplianceChecker::get_red_light_violations(
       }
       distance_to_stop_line += static_cast<double>(boost::geometry::length(segment));
     }
+    const auto ego_front_to_stop_line =
+      distance_to_stop_line - vehicle_info_.max_longitudinal_offset_m;
     if (
       intersection_points.empty() ||
       is_stop_point_within_margin_from_stop_line(stop_point, red_stop_line.line) ||
-      is_allow_if_cannot_stop(distance_to_stop_line))
+      is_allow_if_cannot_stop(ego_front_to_stop_line))
       continue;
 
     violations.emplace_back(
@@ -224,6 +226,7 @@ Violations TrafficLightComplianceChecker::get_amber_light_violations(
     auto distance_to_stop_line = 0.0;
     std::optional<double> amber_stop_line_crossing_time;
     lanelet::BasicPoint2d intersection_point;
+    auto crossing_speed = 0.0;
     for (size_t i = 0; i + 1 < trajectory.size(); ++i) {
       lanelet::BasicPoints2d intersection_points;
       const lanelet::BasicLineString2d segment{trajectory_ls[i], trajectory_ls[i + 1]};
@@ -240,6 +243,7 @@ Violations TrafficLightComplianceChecker::get_amber_light_violations(
       amber_stop_line_crossing_time = autoware::interpolation::lerp(
         rclcpp::Duration(trajectory[i].time_from_start).seconds(),
         rclcpp::Duration(trajectory[i + 1].time_from_start).seconds(), ratio);
+      crossing_speed = trajectory[i].longitudinal_velocity_mps;
       intersection_point = intersection_points.front();
       break;
     }
@@ -252,7 +256,13 @@ Violations TrafficLightComplianceChecker::get_amber_light_violations(
       continue;
     }
 
-    if (is_allow_if_cannot_stop(distance_to_stop_line)) {
+    const auto ego_front_to_stop_line =
+      distance_to_stop_line - vehicle_info_.max_longitudinal_offset_m;
+    const auto ego_front_crossing_time = std::max(
+      0.0, *amber_stop_line_crossing_time -
+             (vehicle_info_.max_longitudinal_offset_m / std::max(crossing_speed, 1e-3)));
+
+    if (is_allow_if_cannot_stop(ego_front_to_stop_line)) {
       continue;
     }
 
@@ -264,8 +274,8 @@ Violations TrafficLightComplianceChecker::get_amber_light_violations(
                              amber_stop_line.traffic_light_id) != force_reject_amber_ids.end();
 
     bool can_pass = can_pass_amber_light(
-      amber_stop_line.traffic_light_id, distance_to_stop_line, current_velocity,
-      current_acceleration, *amber_stop_line_crossing_time);
+      amber_stop_line.traffic_light_id, ego_front_to_stop_line, current_velocity,
+      current_acceleration, ego_front_crossing_time);
 
     if (!is_force_reject && can_pass) continue;
 
@@ -430,8 +440,9 @@ bool TrafficLightComplianceChecker::is_stop_point_within_margin_from_stop_line(
 }
 
 bool TrafficLightComplianceChecker::can_pass_amber_light(
-  const int64_t traffic_light_id, const double distance_to_stop_line, const double current_velocity,
-  const double current_acceleration, const double time_to_cross_stop_line) const
+  const int64_t traffic_light_id, const double distance_from_ego_front,
+  const double current_velocity, const double current_acceleration,
+  const double time_to_cross_stop_line) const
 {
   const double decel_limit = params_.deceleration_limit;
   const double jerk_limit = params_.jerk_limit;
@@ -443,19 +454,17 @@ bool TrafficLightComplianceChecker::can_pass_amber_light(
     std::max(0.0, params_.crossing_time_limit - status_tracker_->get_duration(traffic_light_id));
 
   const bool can_stop =
-    distance_for_ego_to_stop.has_value() && *distance_for_ego_to_stop <= distance_to_stop_line;
+    distance_for_ego_to_stop.has_value() && *distance_for_ego_to_stop <= distance_from_ego_front;
   const bool can_pass_in_time = time_to_cross_stop_line <= crossing_time_limit;
   const bool can_pass = !can_stop && can_pass_in_time;
   return can_pass;
 }
 
 bool TrafficLightComplianceChecker::is_allow_if_cannot_stop(
-  const double distance_to_cross_point) const
+  const double distance_from_ego_front) const
 {
   if (!ego_stopping_distance_.has_value() || params_.allow_if_cannot_stop_distance < 1e-3)
     return false;
-  const auto distance_from_ego_front =
-    distance_to_cross_point - vehicle_info_.max_longitudinal_offset_m;
   return distance_from_ego_front < params_.allow_if_cannot_stop_distance &&
          distance_from_ego_front < *ego_stopping_distance_ - params_.stop_overshoot_margin;
 }
