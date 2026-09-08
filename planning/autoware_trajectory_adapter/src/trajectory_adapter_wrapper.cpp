@@ -20,7 +20,8 @@ namespace autoware::trajectory_adapter
 {
 
 TrajectoryAdapterWrapper::TrajectoryAdapterWrapper(
-  autoware::agnocast_wrapper::Node & node, std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
+  autoware::agnocast_wrapper::Node & node,
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
 : node_ptr_(&node),
   logger_(node_ptr_->get_logger().get_child(interface_name_)),
   adapter_ptr_(std::make_unique<TrajectoryAdapter>()),
@@ -30,8 +31,8 @@ TrajectoryAdapterWrapper::TrajectoryAdapterWrapper(
     throw std::runtime_error("TimeKeeper is required for TrajectoryAdapterWrapper");
   }
 
-  debug_latency_pub_ = node_ptr_->create_publisher<Float64Stamped>(
-      "~/debug/planning_component_latency_s", 1);
+  debug_latency_pub_ =
+    node_ptr_->create_publisher<Float64Stamped>("~/debug/planning_component_latency_s", 1);
 }
 
 std::optional<TrajectoryAdapterResult> TrajectoryAdapterWrapper::get_trajectory(

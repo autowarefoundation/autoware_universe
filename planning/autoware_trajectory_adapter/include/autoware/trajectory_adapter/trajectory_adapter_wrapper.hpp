@@ -47,7 +47,8 @@ public:
    * @param time_keeper Shared time keeper for processing time tracking.
    */
   TrajectoryAdapterWrapper(
-    autoware::agnocast_wrapper::Node & node, std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
+    autoware::agnocast_wrapper::Node & node,
+    std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
 
   /**
    * @brief Selects the best trajectory from ranked candidates.
@@ -64,7 +65,7 @@ private:
   std::unique_ptr<TrajectoryAdapter> adapter_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
-  AUTOWARE_PUBLISHER_PTR(Float64Stamped)debug_latency_pub_;
+  AUTOWARE_PUBLISHER_PTR(Float64Stamped) debug_latency_pub_;
 };
 
 }  // namespace autoware::trajectory_adapter
