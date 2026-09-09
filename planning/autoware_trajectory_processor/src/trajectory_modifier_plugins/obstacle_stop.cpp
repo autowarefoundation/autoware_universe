@@ -179,7 +179,7 @@ bool ObstacleStop::is_trajectory_modification_required(
       traj_points, input.current_odometry->pose.pose, context_->vehicle_info,
       input.current_odometry->twist.twist.linear.x,
       input.current_acceleration->accel.accel.linear.x, stopping_params_.nominal_deceleration,
-      stopping_params_.jerk_limit, params_.stop_margin);
+      stopping_params_.jerk_limit, params_.stop_margin, stopping_params_.delay_response_time);
   }
 
   check_obstacles(traj_points, input);
@@ -229,7 +229,7 @@ bool ObstacleStop::set_stop_point(
     nearest_collision_point_->arc_length - target_stop_margin,
     debug_data_.trajectory_shape.trajectory_length, input.current_odometry->twist.twist.linear.x,
     input.current_acceleration->accel.accel.linear.x, stopping_params_.maximum_deceleration,
-    stopping_params_.jerk_limit);
+    stopping_params_.jerk_limit, stopping_params_.delay_response_time);
 
   // actual stop margin from ego front to collision point
   const auto actual_stop_margin =
@@ -339,7 +339,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 
   auto collision_point = get_nearest_object_collision(
     debug_data_.target_objects, traj_points, context_->vehicle_info, object_decel_map_,
-    params_.rss_params.ego_decel, params_.rss_params.reaction_time,
+    params_.rss_params.ego_decel, stopping_params_.delay_response_time, params_.stop_margin,
     params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
     params_.rss_params.lookahead_horizon, params_.rss_params.enable);
 
@@ -440,7 +440,7 @@ void ObstacleStop::publish_debug_string(bool is_safe) const
      << "SAFE: " << is_safe << "\n";
   ss << "\t\t"
      << "OBJECTS: " << debug_data_.filtered_objects.objects.size() << " --> "
-     << debug_data_.target_polygons.size() << "\n";
+     << debug_data_.target_objects.size() << "\n";
   ss << "\t\t" << "POINTCLOUD: " << filtered_pcd_size << " --> "
      << debug_data_.target_pcd_points.size() << "\n";
   if (nearest_collision_point_) {
@@ -554,8 +554,7 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
   }
 
   for (const auto & obj : debug_data_.target_objects) {
-    const auto & target_polygon = obj.polygon;
-    add_polygon_marker(target_polygon, ns + "/target_objects", id, magenta);
+    add_polygon_marker(obj.polygon, ns + "/target_objects", id, magenta);
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2);
     ss << "safe: " << (obj.is_safe ? "true" : "false") << "\n";
@@ -564,6 +563,8 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
     add_text_marker(
       ss.str(), obj.object.kinematics.initial_pose_with_covariance.pose,
       ns + "/target_objects_text", id, white);
+    if (!obj.is_safe)
+      add_polygon_marker(obj.ego_footprint, ns + "/overlapping_ego_footprint", id, magenta);
     id++;
   }
 

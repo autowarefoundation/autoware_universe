@@ -141,6 +141,10 @@ minimum_rule_based_planner:
       type: double
       default_value: 3.0
       description: stopping jerk [m/s^3]
+    delay_response_time:
+      type: double
+      default_value: 0.5
+      description: delay response time used to estimate the minimum ego stopping distance [s]
     on_time_buffer:
       type: double
       default_value: 0.5
@@ -333,15 +337,9 @@ minimum_rule_based_planner:
         description: deceleration for ego vehicle used in RSS calculation [m/s^2]
         validation:
           bounds<>: [0.0, 10.0]
-      reaction_time:
-        type: double
-        default_value: 0.4
-        description: reaction time used in RSS calculation [s]
-        validation:
-          bounds<>: [0.0, 10.0]
       safety_margin:
         type: double
-        default_value: 3.0
+        default_value: 1.5
         description: safety margin used in RSS calculation [m]
         validation:
           bounds<>: [0.0, 10.0]

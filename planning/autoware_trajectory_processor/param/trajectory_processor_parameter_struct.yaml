@@ -403,16 +403,9 @@ trajectory_processor_params:
         validation:
           bounds<>: [0.0, 10.0]
         read_only: false
-      reaction_time:
-        type: double
-        default_value: 0.2
-        description: Reaction time to consider for RSS calculation [s]
-        validation:
-          bounds<>: [0.0, 10.0]
-        read_only: false
       safety_margin:
         type: double
-        default_value: 2.0
+        default_value: 1.5
         description: Safety margin to consider for RSS calculation [m]
         validation:
           bounds<>: [0.0, 10.0]

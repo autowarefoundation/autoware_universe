@@ -213,6 +213,12 @@
               "default": 3.0,
               "minimum": 0.0
             },
+            "delay_response_time": {
+              "type": "number",
+              "description": "Delay response time [s]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
             "on_time_buffer": {
               "type": "number",
               "description": "On time buffer [s]",
@@ -456,16 +462,10 @@
                   "default": 4.0,
                   "minimum": 0.0
                 },
-                "reaction_time": {
-                  "type": "number",
-                  "description": "Reaction time used in RSS calculation [s]",
-                  "default": 0.2,
-                  "minimum": 0.0
-                },
                 "safety_margin": {
                   "type": "number",
                   "description": "Safety margin used in RSS calculation [m]",
-                  "default": 2.0,
+                  "default": 1.5,
                   "minimum": 0.0
                 },
                 "lookahead_horizon": {

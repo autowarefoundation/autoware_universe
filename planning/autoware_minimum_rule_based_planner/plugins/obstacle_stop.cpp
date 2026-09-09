@@ -93,7 +93,8 @@ bool ObstacleStop::is_obstacle_detected(
   debug_data_.trajectory_shape = build_trajectory_footprint_index(
     traj_points, data.odometry_ptr->pose.pose, context_->vehicle_info,
     data.odometry_ptr->twist.twist.linear.x, data.acceleration_ptr->accel.accel.linear.x,
-    params_.nominal_stopping_decel, params_.stopping_jerk, params_.stop_margin);
+    params_.nominal_stopping_decel, params_.stopping_jerk, params_.stop_margin,
+    params_.delay_response_time);
   const auto collision_point_pcd = check_pointcloud(traj_points, data);
   update_collision_points_buffer(collision_points_buffer_.pcd, traj_points, collision_point_pcd);
   const auto collision_point_objects = check_predicted_objects(traj_points, data);
@@ -161,7 +162,7 @@ void ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const Modifier
     nearest_collision_point_->arc_length - stop_margin,
     debug_data_.trajectory_shape.trajectory_length, data.odometry_ptr->twist.twist.linear.x,
     data.acceleration_ptr->accel.accel.linear.x, params_.maximum_stopping_decel,
-    params_.stopping_jerk);
+    params_.stopping_jerk, params_.delay_response_time);
 
   if (
     target_stop_point_arc_length < params_.arrived_distance_threshold ||
@@ -203,7 +204,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 
   auto collision_point = get_nearest_object_collision(
     debug_data_.target_objects, traj_points, context_->vehicle_info, object_decel_map_,
-    params_.rss_params.ego_decel, params_.rss_params.reaction_time,
+    params_.rss_params.ego_decel, params_.delay_response_time, params_.stop_margin,
     params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
     params_.rss_params.lookahead_horizon, params_.rss_params.enable);
 
@@ -480,6 +481,8 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
     add_text_marker(
       ss.str(), obj.object.kinematics.initial_pose_with_covariance.pose,
       ns + "/target_objects_text", id, white);
+    if (!obj.is_safe)
+      add_polygon_marker(obj.ego_footprint, ns + "/overlapping_ego_footprint", id, magenta);
     id++;
   }
 
