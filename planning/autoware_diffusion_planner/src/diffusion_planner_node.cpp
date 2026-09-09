@@ -233,6 +233,16 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<std::string>("ego_snap_to_prev_trajectory.limit_mode", "bound");
   params_.ego_snap_to_prev_trajectory.snap_strength =
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.snap_strength", 0.9);
+  if (params_.ego_snap_to_prev_trajectory.snap_strength > kMaxSnapStrength) {
+    RCLCPP_WARN(
+      get_logger(),
+      "ego_snap_to_prev_trajectory.snap_strength=%.3f exceeds %.2f; clipping to %.2f. Above this the "
+      "virtual pose carries none of the localized pose and the gap to the trajectory is not closed.",
+      params_.ego_snap_to_prev_trajectory.snap_strength, kMaxSnapStrength, kMaxSnapStrength);
+    params_.ego_snap_to_prev_trajectory.snap_strength = kMaxSnapStrength;
+    this->set_parameter(
+      rclcpp::Parameter("ego_snap_to_prev_trajectory.snap_strength", kMaxSnapStrength));
+  }
   // `correction_gain` was this parameter under an inverted meaning: gain 1 was the raw pose and
   // gain 0 the strongest snap, which reads backwards and was misconfigured in practice. Fail
   // loudly on the old name rather than silently running at a different strength.
@@ -391,6 +401,15 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "ego_snap_to_prev_trajectory.snap_strength",
       temp_params.ego_snap_to_prev_trajectory.snap_strength);
+    if (
+      temp_params.ego_snap_to_prev_trajectory.snap_strength > kMaxSnapStrength &&
+      temp_params.ego_snap_to_prev_trajectory.snap_strength <= 1.0) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "ego_snap_to_prev_trajectory.snap_strength=%.3f exceeds %.2f; running at %.2f.",
+        temp_params.ego_snap_to_prev_trajectory.snap_strength, kMaxSnapStrength, kMaxSnapStrength);
+      temp_params.ego_snap_to_prev_trajectory.snap_strength = kMaxSnapStrength;
+    }
     update_param<int64_t>(
       parameters, "ego_snap_to_prev_trajectory.history_prefix_count",
       temp_params.ego_snap_to_prev_trajectory.history_prefix_count);
@@ -427,7 +446,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
       } else if (snap.limit_mode != "reject" && snap.limit_mode != "bound") {
         reason = "ego_snap_to_prev_trajectory.limit_mode must be 'reject' or 'bound'";
       } else if (snap.snap_strength < 0.0 || snap.snap_strength > 1.0) {
-        reason = "ego_snap_to_prev_trajectory.snap_strength must be in [0, 1]";
+        reason = "ego_snap_to_prev_trajectory.snap_strength must be in [0, 1] (values above 0.95 "
+                 "are clipped to 0.95)";
       } else if (snap.history_prefix_count < 0) {
         reason = "ego_snap_to_prev_trajectory.history_prefix_count must be >= 0";
       }

@@ -242,7 +242,7 @@
               "default": 0.9,
               "minimum": 0,
               "maximum": 1,
-              "description": "Bound mode only. How far from the raw pose toward the snapped pose the virtual pose is placed. 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous plan."
+              "description": "Bound mode only. How far from the raw pose toward the snapped pose the virtual pose is placed. 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous plan. Values above 0.95 are clipped to 0.95 with a warning, so at least 5% of the localized pose always enters the blend."
             },
             "yaw_source": {
               "type": "string",

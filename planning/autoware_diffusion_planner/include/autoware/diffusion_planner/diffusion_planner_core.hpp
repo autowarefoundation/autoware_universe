@@ -122,6 +122,14 @@ struct FrameContext
  * consistent trajectory instead of re-planning from a slightly drifted localization pose. The
  * error limits reject the snap when the previous trajectory no longer reflects reality.
  */
+// Upper limit applied to snap_strength. At exactly 1 no part of the localized pose enters the
+// virtual pose, so once the vehicle sits against the position clamp the reference is regenerated
+// at the clamp distance every cycle and nothing pulls it back onto the vehicle; the gap to the
+// trajectory then depends entirely on the controller removing a standing lateral offset, which the
+// stock MPC weights do only slowly. Keeping at least 5% of the localized pose in the blend closes
+// that gap by itself with a time constant of about 20 planning cycles.
+inline constexpr double kMaxSnapStrength = 0.95;
+
 struct EgoSnapParams
 {
   // When false, the raw ego pose is used as-is.
@@ -143,6 +151,7 @@ struct EgoSnapParams
   // How far from the raw pose toward the snapped pose the virtual pose is placed, in [0, 1].
   // 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous
   // plan; values in between sit on the segment between the two. Only used with limit_mode "bound".
+  // Values above kMaxSnapStrength are clipped to it (see the constant).
   double snap_strength;
 
   // Number of leading segments of the previous trajectory searched for the closest one. The
