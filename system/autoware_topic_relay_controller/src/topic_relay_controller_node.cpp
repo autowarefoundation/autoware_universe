@@ -77,7 +77,8 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
     pub_transform_ = this->create_publisher<tf2_msgs::msg::TFMessage>(node_param_.remap_topic, qos);
 
     sub_transform_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-      node_param_.topic, qos, [this](tf2_msgs::msg::TFMessage::SharedPtr msg) {
+      node_param_.topic, qos,
+      [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(tf2_msgs::msg::TFMessage) & msg) {
         for (const auto & transform : msg->transforms) {
           if (
             transform.header.frame_id != node_param_.frame_id ||
@@ -112,7 +113,7 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
   // Timer
   if (node_param_.enable_keep_publishing) {
     const auto update_period_ns = rclcpp::Rate(node_param_.update_rate).period();
-    timer_ = rclcpp::create_timer(this, get_clock(), update_period_ns, [this]() {
+    timer_ = autoware::agnocast_wrapper::create_timer(this, get_clock(), update_period_ns, [this]() {
       if (!is_relaying_) return;
 
       if (node_param_.is_transform) {
