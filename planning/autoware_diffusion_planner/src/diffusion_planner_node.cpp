@@ -236,8 +236,10 @@ void DiffusionPlanner::set_up_params()
   if (params_.ego_snap_to_prev_trajectory.snap_strength > kMaxSnapStrength) {
     RCLCPP_WARN(
       get_logger(),
-      "ego_snap_to_prev_trajectory.snap_strength=%.3f exceeds %.2f; clipping to %.2f. Above this the "
-      "virtual pose carries none of the localized pose and the gap to the trajectory is not closed.",
+      "ego_snap_to_prev_trajectory.snap_strength=%.3f exceeds %.2f; clipping to %.2f. Above this "
+      "the "
+      "virtual pose carries none of the localized pose and the gap to the trajectory is not "
+      "closed.",
       params_.ego_snap_to_prev_trajectory.snap_strength, kMaxSnapStrength, kMaxSnapStrength);
     params_.ego_snap_to_prev_trajectory.snap_strength = kMaxSnapStrength;
     this->set_parameter(
@@ -446,8 +448,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
       } else if (snap.limit_mode != "reject" && snap.limit_mode != "bound") {
         reason = "ego_snap_to_prev_trajectory.limit_mode must be 'reject' or 'bound'";
       } else if (snap.snap_strength < 0.0 || snap.snap_strength > 1.0) {
-        reason = "ego_snap_to_prev_trajectory.snap_strength must be in [0, 1] (values above 0.95 "
-                 "are clipped to 0.95)";
+        reason =
+          "ego_snap_to_prev_trajectory.snap_strength must be in [0, 1] (values above 0.95 "
+          "are clipped to 0.95)";
       } else if (snap.history_prefix_count < 0) {
         reason = "ego_snap_to_prev_trajectory.history_prefix_count must be >= 0";
       }
