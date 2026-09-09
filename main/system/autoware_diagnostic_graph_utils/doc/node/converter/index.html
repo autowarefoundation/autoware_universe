@@ -22794,14 +22794,15 @@
 <div><h1 id="converter-tool">Converter tool<a class="headerlink" href="#converter-tool" title="Permanent link">#</a></h1>
 <p>This tool converts <code>/diagnostics_graph</code> to <code>/diagnostics_array</code> so it can be read by tools such as <code>rqt_runtime_monitor</code>.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>converter_node
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>converter.launch.xml
 </code></pre></div>
+<p>Use the launch file rather than <code>ros2 run</code>: it preloads the Agnocast heaphook, which the node needs to publish when built with <code>ENABLE_AGNOCAST=1</code>.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h2>
 <p>Terminal 1:</p>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>diagnostic_graph_aggregator<span class="w"> </span>example-main.launch.xml
 </code></pre></div>
 <p>Terminal 2:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>converter_node
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>converter.launch.xml
 </code></pre></div>
 <p>Terminal 3:</p>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>rqt_runtime_monitor<span class="w"> </span>rqt_runtime_monitor<span class="w"> </span>--ros-args<span class="w"> </span>-r<span class="w"> </span>diagnostics:<span class="o">=</span>diagnostics_array
