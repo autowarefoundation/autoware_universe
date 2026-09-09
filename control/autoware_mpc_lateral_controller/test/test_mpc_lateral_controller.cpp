@@ -60,12 +60,11 @@ TrajectoryPoint make_point(const double x, const double y, const double yaw)
   return point;
 }
 
-Trajectory make_trajectory(
-  const TrajectoryPoint & first, const TrajectoryPoint & second, const TrajectoryPoint & third)
+Trajectory make_trajectory(std::vector<TrajectoryPoint> points)
 {
   Trajectory trajectory;
   trajectory.header.frame_id = "map";
-  trajectory.points = {first, second, third};
+  trajectory.points = std::move(points);
   return trajectory;
 }
 
@@ -80,19 +79,19 @@ Trajectory make_trajectory(
 Trajectory straight_path()
 {
   return make_trajectory(
-    make_point(0.0, 0.0, 0.0), make_point(10.0, 0.0, 0.0), make_point(20.0, 0.0, 0.0));
+    {make_point(0.0, 0.0, 0.0), make_point(10.0, 0.0, 0.0), make_point(20.0, 0.0, 0.0)});
 }
 
 Trajectory left_curve_path()
 {
   return make_trajectory(
-    make_point(0.0, 0.0, 0.0), make_point(9.9, 1.0, 0.2), make_point(19.4, 4.0, 0.4));
+    {make_point(0.0, 0.0, 0.0), make_point(9.9, 1.0, 0.2), make_point(19.4, 4.0, 0.4)});
 }
 
 Trajectory right_curve_path()
 {
   return make_trajectory(
-    make_point(0.0, 0.0, 0.0), make_point(9.9, -1.0, -0.2), make_point(19.4, -4.0, -0.4));
+    {make_point(0.0, 0.0, 0.0), make_point(9.9, -1.0, -0.2), make_point(19.4, -4.0, -0.4)});
 }
 
 /// Extend a straight path by moving its far end further along, leaving the near end and
@@ -102,7 +101,7 @@ Trajectory right_curve_path()
 Trajectory straight_path_extended_by(const double distance)
 {
   return make_trajectory(
-    make_point(0.0, 0.0, 0.0), make_point(10.0, 0.0, 0.0), make_point(20.0 + distance, 0.0, 0.0));
+    {make_point(0.0, 0.0, 0.0), make_point(10.0, 0.0, 0.0), make_point(20.0 + distance, 0.0, 0.0)});
 }
 
 /// A path whose points carry a time_from_start. The temporal reference mode requires those
@@ -202,16 +201,13 @@ struct ControllerOptions
   /// or dynamics.
   std::string vehicle_model_type = "kinematics";
 
-  /// Takes the angle the optimisation starts from out of an estimate built from the
-  /// commands already issued, instead of out of the measurement.
+  /// Derives the angle the optimisation starts from an estimate of the commands already
+  /// issued, instead of from the measurement.
   bool use_steer_prediction = false;
 
   /// Keeps the controller steering while stopped until it accepts that the vehicle has
   /// reached the angle it was asked for.
   bool keep_steer_control_until_converged = true;
-
-  /// Lets the test drive the clock the controller reads, instead of the machine clock.
-  bool use_simulated_time = false;
 
   /// Selects how the reference path is followed: spatial by distance along the path, or
   /// temporal by the time stamped on each point.
@@ -278,8 +274,7 @@ protected:
   void SetUp() override { rclcpp::init(0, nullptr); }
   void TearDown() override { rclcpp::shutdown(); }
 
-  /// Move the clock the node reads. Works only when the controller was built with
-  /// simulated time, which is what lets a test set the time instead of the machine.
+  /// Move the clock the node reads forward.
   void advance_clock(const double seconds)
   {
     clock_time_ns_ += static_cast<int64_t>(seconds * 1e9);
@@ -333,9 +328,9 @@ protected:
     options.append_parameter_override("vehicle.cf", 155494.663);
     options.append_parameter_override("vehicle.cr", 155494.663);
 
-    if (controller_options.use_simulated_time) {
-      options.append_parameter_override("use_sim_time", true);
-    }
+    // Every controller reads a simulated clock, so a test sets the time itself and no
+    // result depends on how fast the machine runs.
+    options.append_parameter_override("use_sim_time", true);
 
     return options;
   }
@@ -398,12 +393,14 @@ protected:
   }
 
   /// Drive a curve at speed until the command stops moving, and report the command reached.
-  /// Five cycles are enough for the low pass filters inside the controller to settle.
-  static float settle_on_curve(LateralControllerBase & controller)
+  /// Five cycles are enough for the low pass filters inside the controller to settle. The
+  /// clock moves on with each cycle, as it does when the vehicle drives.
+  float settle_on_curve(LateralControllerBase & controller)
   {
     const InputData driving = Input().following(left_curve_path()).planned_at(3.0).driving_at(3.0);
     float command = 0.0f;
     for (int cycle = 0; cycle < 5; ++cycle) {
+      advance_clock(ctrl_period);
       command = controller.run(driving).control_cmd.steering_tire_angle;
     }
     return command;
@@ -412,9 +409,9 @@ protected:
   std::vector<std::shared_ptr<rclcpp::Node>> nodes_;
   std::shared_ptr<rclcpp::Node> node_;
 
-  /// Starts away from zero so that the durations the controller takes over its own history
-  /// never reach back before the start of the clock.
-  int64_t clock_time_ns_ = 1000000000;
+  /// Time the controller reads. Every controller is built with a simulated clock, so a test
+  /// sets this time itself.
+  int64_t clock_time_ns_ = 0;
 
   /// Time written to each path, advanced together with the clock.
   double stamp_seconds_ = 0.0;
@@ -447,9 +444,8 @@ TEST_F(MpcLateralControllerTest, IsNotReadyWithoutTrajectory)
 TEST_F(MpcLateralControllerTest, IsNotReadyWithTwoPointTrajectory)
 {
   auto controller = make_controller();
-  auto trajectory = straight_path();
-  trajectory.points.pop_back();
-  const auto input = Input().following(trajectory).planned_at(1.0).driving_at(1.0);
+  const auto two_points = make_trajectory({make_point(0.0, 0.0, 0.0), make_point(10.0, 0.0, 0.0)});
+  const auto input = Input().following(two_points).planned_at(1.0).driving_at(1.0);
 
   const auto ready = controller->isReady(input);
 
@@ -505,11 +501,10 @@ TEST_P(MpcLateralControllerModelTest, RightCurveCommandsNegativeSteering)
   EXPECT_LT(output.control_cmd.steering_tire_angle, 0.0f);
 }
 
-/// use_steer_prediction picks whether the initial angle of the optimisation comes from the
-/// measurement or from an estimate built out of the commands already issued. The measured
-/// angle here is deliberately away from zero, where the commands issued along a straight
-/// path leave the estimate, so that the two sources disagree and the choice between them
-/// shows in the command.
+/// use_steer_prediction selects where the optimisation gets its initial angle. One source
+/// is the measurement. The other is an estimate derived from the commands already issued.
+/// The measured angle here is away from zero, and the commands issued along a straight path
+/// leave the estimate at zero, so the two sources disagree.
 TEST_F(MpcLateralControllerTest, SteerPredictionTakesTheInitialAngleFromTheCommandHistory)
 {
   ControllerOptions options;
@@ -620,9 +615,7 @@ TEST_F(MpcLateralControllerTest, SteeringOffsetIsDroppedWhileAutomaticRemovalIsO
 /// changes.
 TEST_F(MpcLateralControllerTest, SteeringIsNotConvergedBeforeTheHistoryWindowIsFilled)
 {
-  ControllerOptions options;
-  options.use_simulated_time = true;
-  auto controller = make_controller(options);
+  auto controller = make_controller();
   const auto input = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
 
   const auto output = run_cycles(*controller, input, cycles_spanning(convergence_history_sec) - 1);
@@ -632,9 +625,7 @@ TEST_F(MpcLateralControllerTest, SteeringIsNotConvergedBeforeTheHistoryWindowIsF
 
 TEST_F(MpcLateralControllerTest, SteeringIsConvergedOnceTheHistoryWindowIsFilled)
 {
-  ControllerOptions options;
-  options.use_simulated_time = true;
-  auto controller = make_controller(options);
+  auto controller = make_controller();
   const auto input = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
 
   const auto output = run_cycles(*controller, input, cycles_spanning(convergence_history_sec));
@@ -647,9 +638,7 @@ TEST_F(MpcLateralControllerTest, SteeringIsConvergedOnceTheHistoryWindowIsFilled
 /// new_traj_end_dist. A new shape withdraws the convergence report until the path settles.
 TEST_F(MpcLateralControllerTest, PathEndExtendedWithinTheThresholdKeepsTheConvergenceReport)
 {
-  ControllerOptions options;
-  options.use_simulated_time = true;
-  auto controller = make_controller(options);
+  auto controller = make_controller();
   const auto original = straight_path_extended_by(0.0);
   const auto barely_extended = straight_path_extended_by(0.9 * new_traj_end_dist);
   follow_path_for_cycles(*controller, original, cycles_spanning(convergence_history_sec));
@@ -661,9 +650,7 @@ TEST_F(MpcLateralControllerTest, PathEndExtendedWithinTheThresholdKeepsTheConver
 
 TEST_F(MpcLateralControllerTest, PathEndExtendedBeyondTheThresholdWithdrawsTheConvergenceReport)
 {
-  ControllerOptions options;
-  options.use_simulated_time = true;
-  auto controller = make_controller(options);
+  auto controller = make_controller();
   const auto original = straight_path_extended_by(0.0);
   const auto extended = straight_path_extended_by(1.1 * new_traj_end_dist);
   follow_path_for_cycles(*controller, original, cycles_spanning(convergence_history_sec));
@@ -678,9 +665,7 @@ TEST_F(MpcLateralControllerTest, PathEndExtendedBeyondTheThresholdWithdrawsTheCo
 /// tests use a duration shorter and longer than that point.
 TEST_F(MpcLateralControllerTest, PathShapeChangeIsStillRememberedBeforeTheRetentionTime)
 {
-  ControllerOptions options;
-  options.use_simulated_time = true;
-  auto controller = make_controller(options);
+  auto controller = make_controller();
   const auto original = straight_path_extended_by(0.0);
   const auto extended = straight_path_extended_by(1.1 * new_traj_end_dist);
   follow_path_for_cycles(*controller, original, cycles_spanning(convergence_history_sec));
@@ -694,9 +679,7 @@ TEST_F(MpcLateralControllerTest, PathShapeChangeIsStillRememberedBeforeTheRetent
 
 TEST_F(MpcLateralControllerTest, PathShapeChangeIsForgottenAfterTheRetentionTime)
 {
-  ControllerOptions options;
-  options.use_simulated_time = true;
-  auto controller = make_controller(options);
+  auto controller = make_controller();
   const auto original = straight_path_extended_by(0.0);
   const auto extended = straight_path_extended_by(1.1 * new_traj_end_dist);
   follow_path_for_cycles(*controller, original, cycles_spanning(convergence_history_sec));
