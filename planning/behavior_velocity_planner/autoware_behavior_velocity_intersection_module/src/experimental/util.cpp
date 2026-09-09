@@ -213,7 +213,7 @@ std::optional<autoware::experimental::trajectory::Interval> findLaneIdsInterval(
         return ids.find(lane_id) != ids.end();
       });
     },
-    1);
+    2);
 
   if (!intervals.has_value()) {
     return std::nullopt;
@@ -318,7 +318,7 @@ std::optional<double> getFirstIndexInsidePolygonByFootprint(
     [&](const PathPointWithLaneId & p) {
       return isPointInsidePolygonByFootprint(p, lanelet::utils::to2D(polygon), footprint);
     },
-    1);
+    2);
 
   if (!first_index.has_value()) {
     return std::nullopt;
