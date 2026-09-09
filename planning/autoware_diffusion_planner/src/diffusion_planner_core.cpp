@@ -402,14 +402,21 @@ std::string validate_ego_snap_params(const EgoSnapParams & p)
   const auto finite_non_negative = [&](const double v, const char * name) -> std::string {
     return std::isfinite(v) && v >= 0.0 ? "" : prefix + name + " must be a finite number >= 0";
   };
-  if (auto r = finite_positive(p.max_position_error_m, "max_position_error_m"); !r.empty())
+  if (auto r = finite_positive(p.max_position_error_m, "max_position_error_m"); !r.empty()) {
     return r;
-  if (auto r = finite_positive(p.max_yaw_error_deg, "max_yaw_error_deg"); !r.empty()) return r;
-  if (auto r = finite_non_negative(p.min_speed_mps, "min_speed_mps"); !r.empty()) return r;
-  if (auto r = finite_non_negative(p.yaw_fit_half_window_m, "yaw_fit_half_window_m"); !r.empty())
+  }
+  if (auto r = finite_positive(p.max_yaw_error_deg, "max_yaw_error_deg"); !r.empty()) {
     return r;
-  if (auto r = finite_non_negative(p.yaw_fit_min_length_m, "yaw_fit_min_length_m"); !r.empty())
+  }
+  if (auto r = finite_non_negative(p.min_speed_mps, "min_speed_mps"); !r.empty()) {
     return r;
+  }
+  if (auto r = finite_non_negative(p.yaw_fit_half_window_m, "yaw_fit_half_window_m"); !r.empty()) {
+    return r;
+  }
+  if (auto r = finite_non_negative(p.yaw_fit_min_length_m, "yaw_fit_min_length_m"); !r.empty()) {
+    return r;
+  }
   if (!std::isfinite(p.snap_strength) || p.snap_strength < 0.0 || p.snap_strength > 1.0) {
     return prefix + "snap_strength must be in [0, 1] (values above 0.95 are clipped to 0.95)";
   }

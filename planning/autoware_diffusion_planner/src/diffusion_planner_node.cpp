@@ -233,6 +233,15 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<std::string>("ego_snap_to_prev_trajectory.limit_mode", "bound");
   params_.ego_snap_to_prev_trajectory.snap_strength =
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.snap_strength", 0.9);
+  // Reject an out-of-range or non-finite value before the cap can turn it into something valid.
+  {
+    const double raw = params_.ego_snap_to_prev_trajectory.snap_strength;
+    if (!std::isfinite(raw) || raw < 0.0 || raw > 1.0) {
+      throw std::runtime_error(
+        "ego_snap_to_prev_trajectory.snap_strength must be in [0, 1] (values above 0.95 are "
+        "clipped to 0.95)");
+    }
+  }
   if (params_.ego_snap_to_prev_trajectory.snap_strength > kMaxSnapStrength) {
     RCLCPP_WARN(
       get_logger(),
@@ -265,9 +274,8 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.yaw_fit_min_length_m", 0.2);
   // The parameter callback is registered after this function returns, so startup values would
   // otherwise bypass the checks it applies to runtime updates.
-  if (
-    const std::string reason = validate_ego_snap_params(params_.ego_snap_to_prev_trajectory);
-    !reason.empty()) {
+  if (const std::string reason = validate_ego_snap_params(params_.ego_snap_to_prev_trajectory);
+      !reason.empty()) {
     throw std::runtime_error(reason);
   }
   params_.start_guidance_reference_distance_m =
@@ -445,9 +453,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "guidance.centerline_guidance.start_time_s",
       temp_params.centerline_guidance_start_time_s);
-    if (
-      const std::string reason = validate_ego_snap_params(temp_params.ego_snap_to_prev_trajectory);
-      !reason.empty()) {
+    if (const std::string reason =
+          validate_ego_snap_params(temp_params.ego_snap_to_prev_trajectory);
+        !reason.empty()) {
       SetParametersResult result;
       result.successful = false;
       result.reason = reason;
