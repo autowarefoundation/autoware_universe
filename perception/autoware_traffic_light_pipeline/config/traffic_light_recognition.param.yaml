@@ -1,0 +1,32 @@
+/**:
+  ros__parameters:
+    build_only: false
+
+    # Directory holding the ML artifacts named below. Supplied by the launch file (or `-p`), so
+    # this file names no user-specific path and therefore needs no launch substitution.
+    ml_model_path: ""
+
+    whole_image_detector:
+      # model / label files, relative to ml_model_path
+      model_path: tensorrt_yolox/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx
+      label_path: tensorrt_yolox/car_ped_tl_detector_labels.txt
+      score_threshold: 0.35
+      nms_threshold: 0.7
+
+    map_based_detector:
+      min_timestamp_offset: -0.04
+      max_timestamp_offset: 0.0
+
+    car_classifier:
+      # model / label files, relative to ml_model_path
+      model_path: traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx
+      label_path: traffic_light_classifier/lamp_labels.txt
+
+    pedestrian_classifier:
+      # model / label files, relative to ml_model_path
+      model_path: traffic_light_classifier/ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+      label_path: traffic_light_classifier/lamp_labels_ped.txt
+
+    classifier:
+      over_exposure_threshold: 0.85
+      under_exposure_threshold: -0.83

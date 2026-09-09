@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_traffic_light_pipeline</name>
+  <version>0.52.0</version>
+  <description>Single-node traffic light recognition pipeline composed of the extracted core logics</description>
+  <maintainer email="takahisa.ishikawa@tier4.jp">Takahisa Ishikawa</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <build_depend>autoware_cmake</build_depend>
+
+  <!-- Composed core logics, plus the ROS interfaces this Node speaks -->
+  <depend>autoware_map_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_tensorrt_yolox</depend>
+  <depend>autoware_traffic_light_category_merger</depend>
+  <depend>autoware_traffic_light_classifier</depend>
+  <depend>autoware_traffic_light_map_based_detector</depend>
+  <depend>autoware_traffic_light_selector</depend>
+  <depend>message_filters</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tier4_perception_msgs</depend>
+  <depend>tl_expected</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_cuda_utils</test_depend>
+  <test_depend>autoware_lanelet2_utils</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+  <test_depend>geometry_msgs</test_depend>
+  <test_depend>lanelet2_core</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
