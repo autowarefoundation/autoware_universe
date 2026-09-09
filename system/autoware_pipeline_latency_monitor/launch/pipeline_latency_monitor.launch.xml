@@ -3,8 +3,11 @@
   <!-- Parameters -->
   <arg name="config_file" default="$(find-pkg-share autoware_pipeline_latency_monitor)/config/pipeline_latency_monitor.param.yaml"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_pipeline_latency_monitor" exec="autoware_pipeline_latency_monitor_node" name="pipeline_latency_monitor" output="screen">
     <!-- Parameters -->
     <param from="$(var config_file)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>
