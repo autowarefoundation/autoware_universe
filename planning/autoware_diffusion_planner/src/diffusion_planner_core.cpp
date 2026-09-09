@@ -299,7 +299,8 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   std::optional<Eigen::Matrix4d> snapped_pose_opt;
   std::optional<double> snapped_interpolation_time_s_opt;
   if (const auto snapped = snap_ego_to_previous_trajectory(kinematic_state)) {
-    const auto & [snapped_pose, interpolation_time_s] = *snapped;
+    const Eigen::Matrix4d & snapped_pose = snapped->pose;
+    const double interpolation_time_s = snapped->interpolation_time_s;
     kinematic_state.pose.pose.position.x = snapped_pose(0, 3);
     kinematic_state.pose.pose.position.y = snapped_pose(1, 3);
     const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));
@@ -367,8 +368,88 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   return frame_context;
 }
 
-std::optional<std::pair<Eigen::Matrix4d, double>>
-DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic_state) const
+namespace
+{
+// Applies the error limits to the snapped pose. "bound" blends toward the real pose and clamps the
+// result, so it always returns a pose. "reject" returns nullopt when either limit is exceeded, and
+// the caller keeps the raw pose for this frame.
+std::optional<utils::BoundedPose> limit_snapped_pose(
+  const EgoSnapParams & params, const Eigen::Vector2d & real_position, const double real_yaw,
+  const Eigen::Vector2d & snapped_position, const double snapped_yaw)
+{
+  const double max_yaw_error_rad = autoware_utils_math::deg2rad(params.max_yaw_error_deg);
+  if (params.limit_mode == "bound") {
+    return utils::bound_snapped_pose(
+      real_position, real_yaw, snapped_position, snapped_yaw, params.snap_strength,
+      params.max_position_error_m, max_yaw_error_rad);
+  }
+  const double position_error_m = (real_position - snapped_position).norm();
+  const double yaw_error_rad =
+    std::abs(autoware_utils_math::normalize_radian(real_yaw - snapped_yaw));
+  if (position_error_m > params.max_position_error_m || yaw_error_rad > max_yaw_error_rad) {
+    return std::nullopt;
+  }
+  return utils::BoundedPose{snapped_position, snapped_yaw};
+}
+}  // namespace
+
+std::string validate_ego_snap_params(const EgoSnapParams & p)
+{
+  const std::string prefix = "ego_snap_to_prev_trajectory.";
+  const auto finite_positive = [&](const double v, const char * name) -> std::string {
+    return std::isfinite(v) && v > 0.0 ? "" : prefix + name + " must be a finite number > 0";
+  };
+  const auto finite_non_negative = [&](const double v, const char * name) -> std::string {
+    return std::isfinite(v) && v >= 0.0 ? "" : prefix + name + " must be a finite number >= 0";
+  };
+  if (auto r = finite_positive(p.max_position_error_m, "max_position_error_m"); !r.empty())
+    return r;
+  if (auto r = finite_positive(p.max_yaw_error_deg, "max_yaw_error_deg"); !r.empty()) return r;
+  if (auto r = finite_non_negative(p.min_speed_mps, "min_speed_mps"); !r.empty()) return r;
+  if (auto r = finite_non_negative(p.yaw_fit_half_window_m, "yaw_fit_half_window_m"); !r.empty())
+    return r;
+  if (auto r = finite_non_negative(p.yaw_fit_min_length_m, "yaw_fit_min_length_m"); !r.empty())
+    return r;
+  if (!std::isfinite(p.snap_strength) || p.snap_strength < 0.0 || p.snap_strength > 1.0) {
+    return prefix + "snap_strength must be in [0, 1] (values above 0.95 are clipped to 0.95)";
+  }
+  if (p.max_search_segment_count < 1) {
+    return prefix + "max_search_segment_count must be >= 1";
+  }
+  if (p.history_prefix_count < 0) {
+    return prefix + "history_prefix_count must be >= 0";
+  }
+  if (p.limit_mode != "reject" && p.limit_mode != "bound") {
+    return prefix + "limit_mode must be 'reject' or 'bound'";
+  }
+  if (p.yaw_source != "predicted_heading" && p.yaw_source != "polyline_tangent") {
+    return prefix + "yaw_source must be 'predicted_heading' or 'polyline_tangent'";
+  }
+  return "";
+}
+
+std::vector<Eigen::Matrix4d> DiffusionPlannerCore::ego_history_prefix_for_snap(
+  const int64_t max_count) const
+{
+  constexpr double MIN_SPACING_M = 0.05;
+  std::vector<Eigen::Matrix4d> newest_first;
+  for (auto it = ego_history_.rbegin(); it != ego_history_.rend(); ++it) {
+    if (static_cast<int64_t>(newest_first.size()) >= max_count) {
+      break;
+    }
+    const Eigen::Matrix4d pose = utils::pose_to_matrix4d(it->pose.pose);
+    const Eigen::Matrix4d & successor =
+      newest_first.empty() ? last_ego_to_map_transform_.value() : newest_first.back();
+    if ((pose.block<2, 1>(0, 3) - successor.block<2, 1>(0, 3)).norm() < MIN_SPACING_M) {
+      continue;
+    }
+    newest_first.push_back(pose);
+  }
+  return {newest_first.rbegin(), newest_first.rend()};
+}
+
+std::optional<SnappedEgo> DiffusionPlannerCore::snap_ego_to_previous_trajectory(
+  const Odometry & kinematic_state) const
 {
   const auto & snap_params = params_.ego_snap_to_prev_trajectory;
   const bool has_previous_trajectory =
@@ -383,28 +464,14 @@ DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic
     return std::nullopt;
   }
 
-  // The previous trajectory is the polyline formed by the previous planning start pose followed
-  // by the previous ego prediction (batch 0, agent 0), i.e. OUTPUT_T + 1 vertices spaced by one
-  // prediction time step.
-  // It is preceded by up to history_prefix_count distinct earlier ego poses (newest of them is the
-  // previous planning start itself, so it is skipped) to extend the spline behind the ego.
+  // The previous trajectory is the previous planning start pose followed by the previous ego
+  // prediction (batch 0, agent 0): OUTPUT_T + 1 vertices spaced by one prediction time step,
+  // preceded by recent ego poses so the spline extends behind the vehicle.
+  std::vector<Eigen::Matrix4d> prev_trajectory =
+    ego_history_prefix_for_snap(snap_params.history_prefix_count);
+  const size_t prefix_count = prev_trajectory.size();
   const auto & prev_poses = last_agent_poses_map_[0][0];
-  std::vector<Eigen::Matrix4d> prefix;
-  for (auto it = ego_history_.rbegin(); it != ego_history_.rend(); ++it) {
-    if (static_cast<int64_t>(prefix.size()) >= snap_params.history_prefix_count) {
-      break;
-    }
-    const Eigen::Matrix4d pose = utils::pose_to_matrix4d(it->pose.pose);
-    const Eigen::Matrix4d & next =
-      prefix.empty() ? last_ego_to_map_transform_.value() : prefix.back();
-    constexpr double MIN_SPACING_M = 0.05;
-    if ((pose.block<2, 1>(0, 3) - next.block<2, 1>(0, 3)).norm() < MIN_SPACING_M) {
-      continue;
-    }
-    prefix.push_back(pose);
-  }
-  std::vector<Eigen::Matrix4d> prev_trajectory(prefix.rbegin(), prefix.rend());
-  prev_trajectory.reserve(prefix.size() + prev_poses.size() + 1);
+  prev_trajectory.reserve(prefix_count + prev_poses.size() + 1);
   prev_trajectory.push_back(last_ego_to_map_transform_.value());
   prev_trajectory.insert(prev_trajectory.end(), prev_poses.begin(), prev_poses.end());
 
@@ -412,7 +479,7 @@ DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic
   const std::optional<utils::TrajectorySnap> snap = utils::snap_point_to_trajectory(
     position.x, position.y, prev_trajectory,
     utils::TrajectorySnapOptions{
-      static_cast<int64_t>(prefix.size()), snap_params.max_search_segment_count,
+      static_cast<int64_t>(prefix_count), snap_params.max_search_segment_count,
       snap_params.yaw_fit_half_window_m, snap_params.yaw_fit_min_length_m});
   if (!snap) {
     return std::nullopt;
@@ -428,43 +495,30 @@ DiffusionPlannerCore::snap_ego_to_previous_trajectory(const Odometry & kinematic
                                ? snap->tangent_yaw.value_or(current_yaw)
                                : snap->heading_yaw;
 
-  // The previous planning trajectory may no longer reflect reality (large tracking error, a
-  // disturbance): the snapped pose is kept within max_position_error_m / max_yaw_error_deg of the
-  // raw pose, either by skipping the snap ("reject") or by bounding it continuously ("bound").
   const Eigen::Vector2d real_position(position.x, position.y);
-  const double max_yaw_error_rad = autoware_utils_math::deg2rad(snap_params.max_yaw_error_deg);
-  utils::BoundedPose virtual_pose{snap->position, snapped_yaw};
-  if (snap_params.limit_mode == "bound") {
-    virtual_pose = utils::bound_snapped_pose(
-      real_position, current_yaw, snap->position, snapped_yaw, snap_params.snap_strength,
-      snap_params.max_position_error_m, max_yaw_error_rad);
-  } else {
-    const double position_error_m = (real_position - snap->position).norm();
-    const double yaw_error_rad =
-      std::abs(autoware_utils_math::normalize_radian(current_yaw - snapped_yaw));
-    if (position_error_m > snap_params.max_position_error_m || yaw_error_rad > max_yaw_error_rad) {
-      return std::nullopt;
-    }
+  const std::optional<utils::BoundedPose> virtual_pose =
+    limit_snapped_pose(snap_params, real_position, current_yaw, snap->position, snapped_yaw);
+  if (!virtual_pose) {
+    return std::nullopt;
   }
 
   // Rotate the real orientation about the map z axis by the yaw change, rather than rebuilding the
   // orientation from the yaw alone: the trajectory carries no roll or pitch, so building a yaw-only
   // rotation would silently flatten the vehicle's real attitude (measured at ~1 deg of pitch on a
-  // sloped route) in the frame the model and every transformed input see.
+  // sloped route) in the frame the model and every transformed input see. Height is the real one.
   const auto & real_orientation = kinematic_state.pose.pose.orientation;
   const Eigen::Quaterniond real_q(
     real_orientation.w, real_orientation.x, real_orientation.y, real_orientation.z);
-  const double yaw_change = autoware_utils_math::normalize_radian(virtual_pose.yaw - current_yaw);
+  const double yaw_change = autoware_utils_math::normalize_radian(virtual_pose->yaw - current_yaw);
   const Eigen::Quaterniond virtual_q =
     Eigen::Quaterniond(Eigen::AngleAxisd(yaw_change, Eigen::Vector3d::UnitZ())) * real_q;
 
   Eigen::Matrix4d snapped_pose = Eigen::Matrix4d::Identity();
   snapped_pose.block<3, 3>(0, 0) = virtual_q.normalized().toRotationMatrix();
-  snapped_pose(0, 3) = virtual_pose.position.x();
-  snapped_pose(1, 3) = virtual_pose.position.y();
-  snapped_pose(2, 3) = kinematic_state.pose.pose.position.z;
-  return std::make_pair(
-    snapped_pose, snap->interpolation_index * constants::PREDICTION_TIME_STEP_S);
+  snapped_pose(0, 3) = virtual_pose->position.x();
+  snapped_pose(1, 3) = virtual_pose->position.y();
+  snapped_pose(2, 3) = position.z;
+  return SnappedEgo{snapped_pose, snap->interpolation_index * constants::PREDICTION_TIME_STEP_S};
 }
 
 InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_context)

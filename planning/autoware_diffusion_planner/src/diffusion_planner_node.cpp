@@ -263,6 +263,12 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.yaw_fit_half_window_m", 1.0);
   params_.ego_snap_to_prev_trajectory.yaw_fit_min_length_m =
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.yaw_fit_min_length_m", 0.2);
+  // The parameter callback is registered after this function returns, so startup values would
+  // otherwise bypass the checks it applies to runtime updates.
+  if (const std::string reason = validate_ego_snap_params(params_.ego_snap_to_prev_trajectory);
+      !reason.empty()) {
+    throw std::runtime_error(reason);
+  }
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
@@ -438,28 +444,13 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "guidance.centerline_guidance.start_time_s",
       temp_params.centerline_guidance_start_time_s);
-    {
-      const auto & snap = temp_params.ego_snap_to_prev_trajectory;
-      std::string reason;
-      if (snap.yaw_source != "predicted_heading" && snap.yaw_source != "polyline_tangent") {
-        reason =
-          "ego_snap_to_prev_trajectory.yaw_source must be 'predicted_heading' or "
-          "'polyline_tangent'";
-      } else if (snap.limit_mode != "reject" && snap.limit_mode != "bound") {
-        reason = "ego_snap_to_prev_trajectory.limit_mode must be 'reject' or 'bound'";
-      } else if (snap.snap_strength < 0.0 || snap.snap_strength > 1.0) {
-        reason =
-          "ego_snap_to_prev_trajectory.snap_strength must be in [0, 1] (values above 0.95 "
-          "are clipped to 0.95)";
-      } else if (snap.history_prefix_count < 0) {
-        reason = "ego_snap_to_prev_trajectory.history_prefix_count must be >= 0";
-      }
-      if (!reason.empty()) {
-        SetParametersResult result;
-        result.successful = false;
-        result.reason = reason;
-        return result;
-      }
+    if (const std::string reason =
+          validate_ego_snap_params(temp_params.ego_snap_to_prev_trajectory);
+        !reason.empty()) {
+      SetParametersResult result;
+      result.successful = false;
+      result.reason = reason;
+      return result;
     }
     if (temp_params.trt_precision != "fp32" && temp_params.trt_precision != "fp16") {
       SetParametersResult result;

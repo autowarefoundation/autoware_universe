@@ -229,6 +229,24 @@ TEST_F(UtilsTest, SnapPointToTrajectoryLateralOffset)
   EXPECT_NEAR(snap->interpolation_index, 2.5, 1e-6);
 }
 
+// The snap is an xy operation. A trajectory at 100 m elevation and climbing must snap exactly as
+// the same trajectory on the ground plane; measuring the 3D distance from a z = 0 query would
+// otherwise pick the vertex with the lowest z instead of the laterally closest point.
+TEST_F(UtilsTest, SnapPointToTrajectoryIgnoresElevation)
+{
+  auto polyline = straight_polyline(10, 1.0);
+  for (size_t i = 0; i < polyline.size(); ++i) {
+    polyline[i](2, 3) = 100.0 + 0.5 * static_cast<double>(i);
+  }
+
+  const auto snap = utils::snap_point_to_trajectory(2.5, 0.3, polyline, default_options);
+
+  ASSERT_TRUE(snap.has_value());
+  EXPECT_NEAR(snap->position.x(), 2.5, 1e-6);
+  EXPECT_NEAR(snap->position.y(), 0.0, 1e-6);
+  EXPECT_NEAR(snap->interpolation_index, 2.5, 1e-6);
+}
+
 // The closest point is only searched within the leading max_search_segment_count segments.
 TEST_F(UtilsTest, SnapPointToTrajectoryRespectsSearchWindow)
 {

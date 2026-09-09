@@ -221,7 +221,14 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
     throw std::runtime_error("snap_point_to_trajectory requires prefix_count >= 0");
   }
 
-  const std::vector<geometry_msgs::msg::Pose> poses = leading_distinct_poses(polyline);
+  std::vector<geometry_msgs::msg::Pose> poses = leading_distinct_poses(polyline);
+  // This is an xy operation, but closest_with_constraint measures 3D distance and the spline's arc
+  // length includes z. A trajectory at elevation, or one climbing a slope, would otherwise be
+  // compared against a query at z = 0 and the closest point would be wrong. Flatten the geometry;
+  // the caller keeps the vehicle's real height.
+  for (auto & pose : poses) {
+    pose.position.z = 0.0;
+  }
   const size_t prefix = static_cast<size_t>(options.prefix_count);
   if (poses.size() < prefix + 2) {
     return std::nullopt;

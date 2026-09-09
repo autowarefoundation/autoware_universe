@@ -134,6 +134,8 @@ struct TrajectorySnap
  * @throw std::runtime_error if options.max_search_segment_count is less than one or
  *        options.prefix_count is negative.
  */
+// Planar: vertex z is ignored (the geometry is flattened before the spline is built), so the
+// result is the same for a trajectory on a slope or at elevation as for one on the ground plane.
 std::optional<TrajectorySnap> snap_point_to_trajectory(
   double query_x, double query_y, const std::vector<Eigen::Matrix4d> & polyline,
   const TrajectorySnapOptions & options);
