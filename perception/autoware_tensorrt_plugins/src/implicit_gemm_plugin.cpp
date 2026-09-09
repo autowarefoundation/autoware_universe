@@ -380,13 +380,16 @@ std::int32_t ImplicitGemmPlugin::enqueue(
   using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
   using ConvGemmOps = spconvlib::spconv::csrc::sparse::convops::spops::ConvGemmOps;
 
+  // Dispatch before the FP input-count check: the INT8 node carries seven inputs, so
+  // asserting the FP counts first aborts every INT8 engine on its first inference.
+  if (is_int8()) {
+    PLUGIN_ASSERT(num_plugin_inputs_ == NUM_INPUTS_INT8);
+    return enqueueInt8(input_desc, inputs, outputs, workspace, stream);
+  }
+
   PLUGIN_ASSERT(
     num_plugin_inputs_ == NUM_PLUGIN_INPUTS_NO_BIAS ||
     num_plugin_inputs_ == NUM_PLUGIN_INPUTS_BIAS);
-
-  if (is_int8()) {
-    return enqueueInt8(input_desc, inputs, outputs, workspace, stream);
-  }
 
   std::int64_t num_act_in = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[0];
   std::int64_t num_in_features = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[1];
