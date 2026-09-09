@@ -2,7 +2,10 @@
   <arg name="node_name_suffix" default="default" description="node name suffix"/>
   <arg name="config_file" default="$(find-pkg-share autoware_topic_relay_controller)/config/topic_relay_controller.param.yaml" description="config file path"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_topic_relay_controller" exec="autoware_topic_relay_controller_node" name="topic_relay_controller_$(var node_name_suffix)" output="screen">
     <param from="$(var config_file)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>
