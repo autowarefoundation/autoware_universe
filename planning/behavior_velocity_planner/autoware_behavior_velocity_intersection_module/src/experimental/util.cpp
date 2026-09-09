@@ -206,18 +206,20 @@ std::vector<lanelet::ConstLanelet> getLaneletsOnPathFromCurrent(
 std::optional<autoware::experimental::trajectory::Interval> findLaneIdsInterval(
   const Trajectory & path, const std::set<lanelet::Id> & ids)
 {
-  const auto intervals =
-    autoware::experimental::trajectory::find_intervals(path, [&](const PathPointWithLaneId & p) {
+  const auto intervals = autoware::experimental::trajectory::find_first_interval(
+    path,
+    [&](const PathPointWithLaneId & p) {
       return std::any_of(p.lane_ids.begin(), p.lane_ids.end(), [&](const lanelet::Id lane_id) {
         return ids.find(lane_id) != ids.end();
       });
-    });
+    },
+    1);
 
-  if (intervals.empty()) {
+  if (!intervals.has_value()) {
     return std::nullopt;
   }
 
-  const auto & [start_s, end_s] = intervals.front();
+  const auto & [start_s, end_s] = intervals.value();
   // has some more interval offset
   const autoware::experimental::trajectory::Interval & lane_id_interval{
     std::max(start_s - 0.1, 0.0), std::min(end_s + 0.1, path.length())};
@@ -312,9 +314,11 @@ std::optional<double> getFirstIndexInsidePolygonByFootprint(
   const auto cropped_path = autoware::experimental::trajectory::crop(path, start_s, interval.end);
 
   const auto first_index = autoware::experimental::trajectory::find_first_index_if(
-    cropped_path, [&](const PathPointWithLaneId & p) {
+    cropped_path,
+    [&](const PathPointWithLaneId & p) {
       return isPointInsidePolygonByFootprint(p, lanelet::utils::to2D(polygon), footprint);
-    });
+    },
+    1);
 
   if (!first_index.has_value()) {
     return std::nullopt;
