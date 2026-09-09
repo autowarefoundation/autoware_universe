@@ -35,6 +35,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
@@ -70,7 +71,8 @@ std::string compute_file_hash_hex(const std::string & path)
 }  // namespace
 
 DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
-: Node("diffusion_planner", options), generator_uuid_(autoware_utils_uuid::generate_uuid())
+: autoware::agnocast_wrapper::Node("diffusion_planner", options),
+  generator_uuid_(autoware_utils_uuid::generate_uuid())
 {
   // Initialize the node
   pub_trajectory_ = this->create_publisher<Trajectory>("~/output/trajectory", 1);
@@ -132,8 +134,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
       std::placeholders::_2));
 
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      this, "diffusion_planner");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(this, "diffusion_planner");
 
   diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
   try {
@@ -152,7 +154,7 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     }
   }
 
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), rclcpp::Rate(params_.planning_frequency_hz).period(),
     std::bind(&DiffusionPlanner::on_timer, this));
 
@@ -448,7 +450,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
 }
 
 void DiffusionPlanner::on_set_start_guidance_enabled(
-  const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response)
+  const AUTOWARE_SERVER_REQUEST_PTR(SetBool) & request,
+  const AUTOWARE_SERVER_RESPONSE_PTR(SetBool) & response)
 {
   core_->set_start_guidance_enabled(request->data);
 
@@ -457,7 +460,8 @@ void DiffusionPlanner::on_set_start_guidance_enabled(
 }
 
 void DiffusionPlanner::on_set_stop_guidance_enabled(
-  const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response)
+  const AUTOWARE_SERVER_REQUEST_PTR(SetBool) & request,
+  const AUTOWARE_SERVER_RESPONSE_PTR(SetBool) & response)
 {
   core_->set_stop_guidance_enabled(request->data);
 
@@ -466,7 +470,8 @@ void DiffusionPlanner::on_set_stop_guidance_enabled(
 }
 
 void DiffusionPlanner::on_set_centerline_guidance_enabled(
-  const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response)
+  const AUTOWARE_SERVER_REQUEST_PTR(SetBool) & request,
+  const AUTOWARE_SERVER_RESPONSE_PTR(SetBool) & response)
 {
   core_->set_centerline_guidance_enabled(request->data);
 
@@ -490,23 +495,23 @@ void DiffusionPlanner::publish_snapped_pose(
   }
 
   const Eigen::Matrix4d & snapped_pose = frame_context.snapped_pose.value();
-  geometry_msgs::msg::PoseStamped pose_msg;
-  pose_msg.header.stamp = timestamp;
-  pose_msg.header.frame_id = "map";
-  pose_msg.pose.position.x = snapped_pose(0, 3);
-  pose_msg.pose.position.y = snapped_pose(1, 3);
-  pose_msg.pose.position.z = snapped_pose(2, 3);
+  auto pose_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_snapped_pose_);
+  pose_msg->header.stamp = timestamp;
+  pose_msg->header.frame_id = "map";
+  pose_msg->pose.position.x = snapped_pose(0, 3);
+  pose_msg->pose.position.y = snapped_pose(1, 3);
+  pose_msg->pose.position.z = snapped_pose(2, 3);
   const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));
-  pose_msg.pose.orientation.x = q.x();
-  pose_msg.pose.orientation.y = q.y();
-  pose_msg.pose.orientation.z = q.z();
-  pose_msg.pose.orientation.w = q.w();
-  pub_snapped_pose_->publish(pose_msg);
+  pose_msg->pose.orientation.x = q.x();
+  pose_msg->pose.orientation.y = q.y();
+  pose_msg->pose.orientation.z = q.z();
+  pose_msg->pose.orientation.w = q.w();
+  pub_snapped_pose_->publish(std::move(pose_msg));
 
-  autoware_internal_debug_msgs::msg::Float64Stamped interpolation_time_msg;
-  interpolation_time_msg.stamp = timestamp;
-  interpolation_time_msg.data = frame_context.snapped_interpolation_time_s.value();
-  pub_snap_interpolation_time_->publish(interpolation_time_msg);
+  auto interpolation_time_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_snap_interpolation_time_);
+  interpolation_time_msg->stamp = timestamp;
+  interpolation_time_msg->data = frame_context.snapped_interpolation_time_s.value();
+  pub_snap_interpolation_time_->publish(std::move(interpolation_time_msg));
 }
 
 void DiffusionPlanner::publish_debug_markers(
@@ -570,12 +575,16 @@ void DiffusionPlanner::on_timer()
   }
 
   // Take data from subscribers
-  auto objects = sub_tracked_objects_.take_data();
-  auto ego_kinematic_state = sub_current_odometry_.take_data();
-  auto ego_acceleration = sub_current_acceleration_.take_data();
-  auto traffic_signals = sub_traffic_signals_.take_data();
-  auto temp_route_ptr = route_subscriber_.take_data();
-  auto turn_indicators_ptr = sub_turn_indicators_.take_data();
+  auto objects = sub_tracked_objects_->take_data();
+  auto ego_kinematic_state = sub_current_odometry_->take_data();
+  auto ego_acceleration = sub_current_acceleration_->take_data();
+  auto temp_route_ptr = route_subscriber_->take_data();
+  auto turn_indicators_ptr = sub_turn_indicators_->take_data();
+  std::vector<std::shared_ptr<const autoware_perception_msgs::msg::TrafficLightGroupArray>>
+    traffic_signals;
+  if (auto traffic_signals_msg = sub_traffic_signals_->take_data()) {
+    traffic_signals.push_back(std::move(traffic_signals_msg));
+  }
 
   // Prepare frame context using core
   const std::optional<FrameContext> frame_context = core_->create_frame_context(
@@ -650,9 +659,9 @@ void DiffusionPlanner::on_timer()
     return;
   }
 
-  std_msgs::msg::Float64 inference_time_msg;
-  inference_time_msg.data = inference_result->inference_time_ms;
-  pub_inference_time_->publish(inference_time_msg);
+  auto inference_time_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_inference_time_);
+  inference_time_msg->data = inference_result->inference_time_ms;
+  pub_inference_time_->publish(std::move(inference_time_msg));
 
   PlannerOutput planner_output;
   try {
@@ -680,10 +689,10 @@ void DiffusionPlanner::on_timer()
 
   // Publish diagnostics
   diagnostics_inference_->publish(frame_time);
-  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
-  processing_time_msg.stamp = get_clock()->now();
-  processing_time_msg.data = stop_watch_ptr_->toc("processing_time", true);
-  debug_processing_time_pub_->publish(processing_time_msg);
+  auto processing_time_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(debug_processing_time_pub_);
+  processing_time_msg->stamp = get_clock()->now();
+  processing_time_msg->data = stop_watch_ptr_->toc("processing_time", true);
+  debug_processing_time_pub_->publish(std::move(processing_time_msg));
 }
 
 void DiffusionPlanner::publish_guidance_status(
@@ -693,9 +702,6 @@ void DiffusionPlanner::publish_guidance_status(
   if (guidance_triggered.empty()) {
     return;
   }
-
-  autoware_internal_debug_msgs::msg::StringStamped msg;
-  msg.stamp = timestamp;
 
   std::vector<std::string> batch_entries;
   size_t batch_size = 0;
@@ -721,9 +727,10 @@ void DiffusionPlanner::publish_guidance_status(
     }
     result += batch_entries[i];
   }
-  msg.data = result;
-
-  pub_guidance_status_->publish(msg);
+  auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_guidance_status_);
+  msg->stamp = timestamp;
+  msg->data = result;
+  pub_guidance_status_->publish(std::move(msg));
 }
 
 void DiffusionPlanner::publish_planning_factor(const Trajectory & trajectory)
@@ -750,7 +757,7 @@ void DiffusionPlanner::publish_planning_factor(const Trajectory & trajectory)
   planning_factor_interface_->publish();
 }
 
-void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
+void DiffusionPlanner::on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(HADMapBin) & map_msg)
 {
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg);
   core_->set_map(lanelet_map_ptr_);
