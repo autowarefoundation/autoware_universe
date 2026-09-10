@@ -154,6 +154,9 @@ class carla_ros2_interface(object):
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
             "flatten_steering_curve": (rclpy.Parameter.Type.BOOL, False),
+            # Path to the YAML holding the physics to write onto the ego vehicle
+            # (see config/vehicle_physics.yaml); empty leaves CARLA's own values.
+            "vehicle_physics_config": (rclpy.Parameter.Type.STRING, ""),
             # Nudge the ego physics body awake when launching from a standstill.
             # Only needed on CARLA 0.10 (UE5/Chaos), where a stationary body is
             # put to sleep and VehicleControl throttle does not wake it. Off by

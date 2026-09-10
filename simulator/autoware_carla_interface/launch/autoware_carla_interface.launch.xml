@@ -60,6 +60,11 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
     <arg name="max_wheel_steer_angle_deg" default="0.0" description="Override the wheel max steer angle [deg] used for steer normalization; 0 uses the physics value"/>
+    <arg
+      name="vehicle_physics_config"
+      default="$(find-pkg-share autoware_carla_interface)/config/vehicle_physics.yaml"
+      description="YAML with the physics written onto the ego after it spawns (mass, steering curve, per-axle wheel settings). CARLA 0.10 gives every car the same placeholder physics, which does not match the vehicle Autoware plans for. Empty keeps CARLA's own values"
+    />
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
     <arg name="wake_sleeping_physics" default="false" description="Nudge the ego physics body awake when launching from standstill (CARLA 0.10 sleeping-body workaround; not needed on 0.9.15)"/>
     <arg name="traffic_light.publish" default="false" description="Publish CARLA traffic-light states on /perception/traffic_light_recognition/traffic_signals"/>
@@ -135,6 +140,7 @@
       <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>
       <param name="max_wheel_steer_angle_deg" value="$(var max_wheel_steer_angle_deg)"/>
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
+      <param name="vehicle_physics_config" value="$(var vehicle_physics_config)"/>
       <param name="wake_sleeping_physics" value="$(var wake_sleeping_physics)"/>
       <param name="traffic_light.publish" value="$(var traffic_light.publish)"/>
       <param name="traffic_light.force_green" value="$(var traffic_light.force_green)"/>
