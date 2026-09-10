@@ -99,7 +99,7 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
 
     sub_topic_ = this->create_generic_subscription(
       node_param_.topic, node_param_.topic_type, qos,
-      [this]([[maybe_unused]] std::shared_ptr<rclcpp::SerializedMessage> msg) {
+      [this]([[maybe_unused]] std::shared_ptr<const rclcpp::SerializedMessage> msg) {
         if (!is_relaying_) return;
 
         if (node_param_.enable_keep_publishing) {

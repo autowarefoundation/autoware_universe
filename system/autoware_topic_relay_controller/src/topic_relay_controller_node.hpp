@@ -70,7 +70,7 @@ private:
   // State
   bool is_relaying_;
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(tf2_msgs::msg::TFMessage) last_tf_topic_;
-  std::shared_ptr<rclcpp::SerializedMessage> last_topic_;
+  std::shared_ptr<const rclcpp::SerializedMessage> last_topic_;
 };
 }  // namespace autoware::topic_relay_controller
 
