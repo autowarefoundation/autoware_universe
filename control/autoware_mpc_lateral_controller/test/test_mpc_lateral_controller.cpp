@@ -104,6 +104,23 @@ Trajectory straight_path_extended_by(const double distance)
     {make_point(0.0, 0.0, 0.0), make_point(10.0, 0.0, 0.0), make_point(20.0 + distance, 0.0, 0.0)});
 }
 
+/// A path that follows a circle of the given radius, curving to the left. The ego pose is
+/// fixed at the map origin facing along the x axis, and this path starts there with that
+/// heading, so the ego begins on the path with no lateral and no heading error.
+///
+/// The points are spaced half a metre apart, close enough that the circle survives the
+/// resampling the controller applies. The path reaches three metres behind the ego, so
+/// that the search for the nearest point has a segment on either side of the ego.
+Trajectory arc_path(const double radius)
+{
+  std::vector<TrajectoryPoint> points;
+  for (double distance = -3.0; distance <= 40.0; distance += 0.5) {
+    const double angle = distance / radius;
+    points.push_back(make_point(radius * std::sin(angle), radius * (1.0 - std::cos(angle)), angle));
+  }
+  return make_trajectory(std::move(points));
+}
+
 /// A path whose points carry a time_from_start. The temporal reference mode requires those
 /// times to increase along the path and rejects the path when they do not.
 Trajectory straight_path_with_time_from_start(const bool increasing)
@@ -256,6 +273,29 @@ protected:
   /// A speed step small enough to land on the other side of either stop threshold.
   static constexpr double speed_step = 0.0001;
 
+  /// Radius of the circle the steady state steering tests follow [m]. The controller
+  /// replaces a feed-forward angle below mpc_zero_ff_steer_deg (0.5 deg) with zero, which
+  /// this wheelbase reaches at a radius of about 314 m, so the radius stays well below
+  /// that.
+  static constexpr double arc_radius = 30.0;
+
+  /// Speed those tests drive the circle at [m/s]. The weight on the heading error grows
+  /// with the square of the speed, so at a high speed the optimisation arrives near the
+  /// same angle even without the feed-forward that decides it. A low speed keeps the two
+  /// apart.
+  static constexpr double arc_speed = 1.0;
+
+  /// Cycles those tests run. The command reaches the settled angle in about twenty cycles.
+  /// The limit on how far the command may move during one cycle sets that number, not the
+  /// optimisation.
+  static constexpr int arc_settling_cycles = 60;
+
+  /// How far the settled command may differ from the angle the geometry gives. A
+  /// controller that approximates tan(angle) by the angle itself commands L / R instead of
+  /// atan(L / R). The two differ by 0.3 per cent at the radius above, so this margin
+  /// accepts such a controller as well.
+  static constexpr double arc_relative_tolerance = 0.01;
+
   /// Cycles needed for the command record to cover the given duration. The record gains
   /// one entry per cycle, so n cycles cover (n - 1) control periods.
   static int cycles_spanning(const double seconds)
@@ -406,6 +446,26 @@ protected:
     return command;
   }
 
+  /// Drive a circle until the command settles, and report the command reached.
+  ///
+  /// The ego pose stays on the circle, so the lateral and the heading error stay at zero
+  /// and the command is the angle the controller holds that state with. The command of one
+  /// cycle is returned as the measured angle of the next, which is the relation that holds
+  /// once the steering of a vehicle has reached the commanded angle. Nothing else about a
+  /// vehicle is modelled, so the result does not depend on how quickly one responds.
+  float settle_on_arc(LateralControllerBase & controller)
+  {
+    const Trajectory path = arc_path(arc_radius);
+    float command = 0.0f;
+    for (int cycle = 0; cycle < arc_settling_cycles; ++cycle) {
+      advance_clock(ctrl_period);
+      const InputData driving =
+        Input().following(path).planned_at(arc_speed).driving_at(arc_speed).steering_at(command);
+      command = controller.run(driving).control_cmd.steering_tire_angle;
+    }
+    return command;
+  }
+
   std::vector<std::shared_ptr<rclcpp::Node>> nodes_;
   std::shared_ptr<rclcpp::Node> node_;
 
@@ -499,6 +559,39 @@ TEST_P(MpcLateralControllerModelTest, RightCurveCommandsNegativeSteering)
   const auto output = controller->run(input);
 
   EXPECT_LT(output.control_cmd.steering_tire_angle, 0.0f);
+}
+
+/// A vehicle of wheelbase L held at a steering angle drives a circle, and the radius of
+/// that circle is L / tan(angle). A vehicle already on a circle of radius R therefore
+/// stays on it at one angle only, atan(L / R); every other angle takes it off the circle.
+/// That angle is what the controller has to command once the vehicle sits on the circle
+/// and its steering has reached the commanded angle. The two tests below check it for the
+/// two vehicle models that describe the vehicle by its geometry alone.
+///
+/// The dynamics model is intentionally excluded: its calculation nature requires a simulated
+/// vehicle and thus it's out of scope of unit test.
+TEST_F(MpcLateralControllerTest, KinematicsModelSteersAnArcAtTheAngleTheRadiusRequires)
+{
+  ControllerOptions options;
+  options.vehicle_model_type = "kinematics";
+  auto controller = make_controller(options);
+
+  const auto command = settle_on_arc(*controller);
+
+  const double angle_holding_the_circle = std::atan(wheel_base / arc_radius);
+  EXPECT_NEAR(command, angle_holding_the_circle, arc_relative_tolerance * angle_holding_the_circle);
+}
+
+TEST_F(MpcLateralControllerTest, KinematicsNoDelayModelSteersAnArcAtTheAngleTheRadiusRequires)
+{
+  ControllerOptions options;
+  options.vehicle_model_type = "kinematics_no_delay";
+  auto controller = make_controller(options);
+
+  const auto command = settle_on_arc(*controller);
+
+  const double angle_holding_the_circle = std::atan(wheel_base / arc_radius);
+  EXPECT_NEAR(command, angle_holding_the_circle, arc_relative_tolerance * angle_holding_the_circle);
 }
 
 /// use_steer_prediction selects where the optimisation gets its initial angle. One source
