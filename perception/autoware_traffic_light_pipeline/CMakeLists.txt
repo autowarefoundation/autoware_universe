@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.14)
 project(autoware_traffic_light_pipeline)
 
+# The composed cores are only built when CUDA / TensorRT are available: autoware_tensorrt_yolox
+# returns early (installing no headers) when autoware_tensorrt_common is missing, so this package
+# cannot be compiled at all on such an environment. Skip it the same way instead of failing.
+find_package(autoware_tensorrt_yolox)
+if(NOT autoware_tensorrt_yolox_FOUND)
+  message(WARNING "The autoware_tensorrt_yolox package is not found. Please check its dependencies.")
+  return()
+endif()
+
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
