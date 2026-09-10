@@ -90,6 +90,11 @@
     />
     <arg name="scenario_python" default="python3.10" description="Interpreter used to build the scenario runner's virtualenv (must be CPython 3.10 for the CARLA 0.10 wheel)"/>
     <arg name="scenario_pip_args" default="" description="Extra 'pip install' args for the scenario runner venv, e.g. '--find-links /path/to/carla_wheels' for the vendored CARLA wheel"/>
+    <arg
+      name="scenario_overrides"
+      default=""
+      description="Extra Hydra overrides for the scenario runner, e.g. 'map=town10hd_opt'. A scenario authored for a map other than the runner's default needs its map named here, since Hydra resolves the map group after the scenario one"
+    />
     <arg name="bridge_address" default="localhost:50052" description="host:port of the scenario-runner AutowareBridge gRPC server to dial"/>
     <arg name="auto_engage" default="true" description="Auto change_to_autonomous once localization is initialized, the route is set, and autonomous mode is available (scenario/sim only)"/>
     <arg
@@ -143,8 +148,12 @@
          virtualenv and exec its gRPC server. Launch owns this process's lifecycle
          (start/stop); the scenario_bridge node below only dials it. Only run when
          with_scenario is non-empty. -->
+    <!-- The command's arguments carry no quotes on purpose: the XML frontend splits
+         cmd into tokens before substituting, so a quoted substitution breaks the
+         parse outright, while an option written as 'opt=$(var x)' stays one token
+         even when x is empty or holds spaces. -->
     <executable
-      cmd="ros2 run autoware_carla_interface scenario_runner &quot;$(var with_scenario)&quot; --python &quot;$(var scenario_python)&quot; --pip-args &quot;$(var scenario_pip_args)&quot;"
+      cmd="ros2 run autoware_carla_interface scenario_runner $(var with_scenario) --python=$(var scenario_python) --pip-args=$(var scenario_pip_args) --overrides=$(var scenario_overrides)"
       output="screen"
       if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)"
     />

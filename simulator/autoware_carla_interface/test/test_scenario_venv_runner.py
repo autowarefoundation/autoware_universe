@@ -34,7 +34,9 @@ import pytest
 
 
 def _args(**kw) -> argparse.Namespace:
-    return argparse.Namespace(**{"python": "python3.10", "pip_args": "", **kw})
+    return argparse.Namespace(
+        **{"python": "python3.10", "pip_args": "", "overrides": "", **kw}
+    )
 
 
 def _wheelhouse(tmp_path) -> "tuple":
@@ -99,6 +101,18 @@ def test_launch_cmd_appends_scenario_name(tmp_path):
     assert runner._launch_cmd() == [
         str(tmp_path / "venv" / "bin" / "scenario"),
         "scenario=town10_x",
+    ]
+
+
+def test_launch_cmd_appends_overrides_after_the_scenario(tmp_path):
+    # A scenario authored for another map needs 'map=' too: Hydra resolves the map
+    # group after the scenario one, so the group default would otherwise win.
+    runner = ScenarioVenvRunner(["pkg"], "town10_x", overrides=["map=town10hd_opt"])
+    runner._venv_dir = tmp_path
+    assert runner._launch_cmd() == [
+        str(tmp_path / "bin" / "scenario"),
+        "scenario=town10_x",
+        "map=town10hd_opt",
     ]
 
 
@@ -182,3 +196,10 @@ def test_make_runner_wheelhouse_dir_installs_offline(tmp_path):
 def test_make_runner_pip_source_keeps_source_and_pip_args(tmp_path):
     runner = _make_runner("some-pip-pkg", "s", _args(pip_args="--find-links /w"))
     assert runner._install_args == ["--find-links", "/w", "some-pip-pkg"]
+
+
+def test_make_runner_shlex_splits_overrides(tmp_path):
+    runner = _make_runner(
+        "some-pip-pkg", "s", _args(overrides="map=town10hd_opt server.port=2010")
+    )
+    assert runner._overrides == ["map=town10hd_opt", "server.port=2010"]

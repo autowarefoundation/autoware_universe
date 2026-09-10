@@ -152,6 +152,12 @@ class ScenarioVenvRunner:
             ``--no-index --no-deps <wheels...>`` or ``[*pip_args, <source>]``.
         scenario_name: Scenario passed to the ``scenario`` entrypoint's Hydra CLI
             as ``scenario=<name>`` (empty -> the entrypoint's default).
+        overrides: Further Hydra overrides appended after it, e.g.
+            ``["map=town10hd_opt"]``.  A scenario that is authored for a map other
+            than the entrypoint's default needs its map named here: Hydra resolves
+            the ``map`` group after the ``scenario`` one, so the group's default
+            wins over what the scenario config sets unless the map is overridden
+            too.
         python: Interpreter used to build the venv.  Must be CPython 3.10 -- the
             runner's CARLA 0.10.0 wheel is cp310-only -- independent of whatever
             Python the ROS 2 node itself runs.
@@ -166,10 +172,12 @@ class ScenarioVenvRunner:
         install_args: Sequence[str],
         scenario_name: str,
         *,
+        overrides: Sequence[str] = (),
         python: str = "python3.10",
     ) -> None:
         self._install_args = list(install_args)
         self._scenario_name = scenario_name
+        self._overrides = list(overrides)
         self._python = python
         self._venv_dir = _cache_root() / "venvs" / _digest(python, *self._install_args)
 
@@ -185,12 +193,13 @@ class ScenarioVenvRunner:
         return [str(self._bin("python")), "-m", "pip", "install", *self._install_args]
 
     def _launch_cmd(self) -> list[str]:
-        # The scenario name is passed as a list argument (never a shell string, so
-        # it needs no escaping). The exact serve-mode overrides are coordinated
-        # with the framework side (issue #10); extend this if it needs more.
+        # The scenario name and the overrides are passed as list arguments (never a
+        # shell string, so they need no escaping). The exact serve-mode overrides
+        # are coordinated with the framework side (issue #10).
         command = [str(self._bin(_ENTRYPOINT))]
         if self._scenario_name:
             command.append(f"scenario={self._scenario_name}")
+        command.extend(self._overrides)
         return command
 
     # -- lifecycle -------------------------------------------------------------
@@ -229,7 +238,12 @@ def _make_runner(source: str, scenario_name: str, args: argparse.Namespace) -> S
         install_args = _wheelhouse_install_args(source)
     else:
         install_args = [*shlex.split(args.pip_args), source]
-    return ScenarioVenvRunner(install_args, scenario_name, python=args.python)
+    return ScenarioVenvRunner(
+        install_args,
+        scenario_name,
+        overrides=shlex.split(args.overrides),
+        python=args.python,
+    )
 
 
 def main(argv: Optional[Sequence[str]] = None) -> NoReturn:
@@ -246,6 +260,12 @@ def main(argv: Optional[Sequence[str]] = None) -> NoReturn:
     )
     parser.add_argument(
         "--pip-args", default="", help="Extra 'pip install' args (shlex-split) for a pip source"
+    )
+    parser.add_argument(
+        "--overrides",
+        default="",
+        help="Extra Hydra overrides (shlex-split) for the scenario entrypoint, "
+        "e.g. 'map=town10hd_opt'",
     )
     args = parser.parse_args(argv)
 
