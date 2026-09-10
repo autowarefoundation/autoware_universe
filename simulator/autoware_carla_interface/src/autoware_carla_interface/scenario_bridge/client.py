@@ -27,13 +27,13 @@ from dataclasses import dataclass
 import logging
 from typing import Optional
 
-from autoware_carla_interface.autoware_bridge.proto import autoware_bridge_pb2 as pb2
-from autoware_carla_interface.autoware_bridge.proto import autoware_bridge_pb2_grpc as pb2_grpc
+from autoware_carla_interface.scenario_bridge.proto import autoware_bridge_pb2 as pb2
+from autoware_carla_interface.scenario_bridge.proto import autoware_bridge_pb2_grpc as pb2_grpc
 import grpc
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["AutowareBridgeClient", "Mission"]
+__all__ = ["ScenarioBridgeClient", "Mission"]
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ class Mission:
     goal: pb2.Pose
 
 
-class AutowareBridgeClient:
+class ScenarioBridgeClient:
     """Talks to the scenario library's ``AutowareBridge`` server.
 
     Args:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Round-trip tests for AutowareBridgeClient against an in-process server.
+"""Round-trip tests for ScenarioBridgeClient against an in-process server.
 
 ROS 2-free: a stub server plays the scenario-library role on a real loopback
 port, so these exercise the generated stubs and the client end to end without a
@@ -21,9 +21,9 @@ running Autoware stack.
 
 from concurrent import futures
 
-from autoware_carla_interface.autoware_bridge.client import AutowareBridgeClient
-from autoware_carla_interface.autoware_bridge.proto import autoware_bridge_pb2 as pb2
-from autoware_carla_interface.autoware_bridge.proto import autoware_bridge_pb2_grpc as pb2_grpc
+from autoware_carla_interface.scenario_bridge.client import ScenarioBridgeClient
+from autoware_carla_interface.scenario_bridge.proto import autoware_bridge_pb2 as pb2
+from autoware_carla_interface.scenario_bridge.proto import autoware_bridge_pb2_grpc as pb2_grpc
 import grpc
 import pytest
 
@@ -61,7 +61,7 @@ def server():
 
 def _client(server):
     channel = grpc.insecure_channel(f"localhost:{server.port}")
-    return AutowareBridgeClient(channel=channel)
+    return ScenarioBridgeClient(channel=channel)
 
 
 def _pose(x, y, z):

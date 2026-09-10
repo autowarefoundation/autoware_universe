@@ -15,7 +15,7 @@
 """Docker launch for the scenario-library gRPC server.
 
 The interface node launches the scenario-library container (which hosts the
-``AutowareBridge`` server) and then dials it with :class:`AutowareBridgeClient`.
+``AutowareBridge`` server) and then dials it with :class:`ScenarioBridgeClient`.
 ``--network=host`` keeps the gRPC endpoint on ``localhost`` and lets the container
 share the CARLA world / DDS with the host.
 

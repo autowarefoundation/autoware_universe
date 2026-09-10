@@ -14,10 +14,10 @@
 
 """Unit tests for the ROS-free readiness aggregation logic."""
 
-from autoware_carla_interface.autoware_bridge.ad_api import LOCALIZATION_STATE_INITIALIZED
-from autoware_carla_interface.autoware_bridge.ad_api import OPERATION_MODE_AUTONOMOUS
-from autoware_carla_interface.autoware_bridge.ad_api import ROUTE_STATE_SET
-from autoware_carla_interface.autoware_bridge.ad_api import ReadinessAggregator
+from autoware_carla_interface.scenario_bridge.ad_api import LOCALIZATION_STATE_INITIALIZED
+from autoware_carla_interface.scenario_bridge.ad_api import OPERATION_MODE_AUTONOMOUS
+from autoware_carla_interface.scenario_bridge.ad_api import ROUTE_STATE_SET
+from autoware_carla_interface.scenario_bridge.ad_api import ReadinessAggregator
 
 
 def _initialized_and_routed() -> ReadinessAggregator:
