@@ -580,11 +580,7 @@ void DiffusionPlanner::on_timer()
   auto ego_acceleration = sub_current_acceleration_->take_data();
   auto temp_route_ptr = route_subscriber_->take_data();
   auto turn_indicators_ptr = sub_turn_indicators_->take_data();
-  std::vector<std::shared_ptr<const autoware_perception_msgs::msg::TrafficLightGroupArray>>
-    traffic_signals;
-  if (auto traffic_signals_msg = sub_traffic_signals_->take_data()) {
-    traffic_signals.push_back(std::move(traffic_signals_msg));
-  }
+  auto traffic_signals = sub_traffic_signals_->take_data();
 
   // Prepare frame context using core
   const std::optional<FrameContext> frame_context = core_->create_frame_context(

@@ -262,14 +262,13 @@ private:
     sub_tracked_objects_ =
       autoware::agnocast_wrapper::polling::create_polling_subscriber<TrackedObjects>(
         this, "~/input/tracked_objects");
-  // The newest message is enough: each TrafficLightGroupArray is a full snapshot of the arbitrated
-  // signals, and the traffic light map keeps the newest stamp per group.
   autoware::agnocast_wrapper::polling::PollingSubscriber<
     autoware_perception_msgs::msg::TrafficLightGroupArray,
-    autoware::agnocast_wrapper::polling::polling_policy::Newest>::SharedPtr sub_traffic_signals_ =
+    autoware::agnocast_wrapper::polling::polling_policy::All>::SharedPtr sub_traffic_signals_ =
     autoware::agnocast_wrapper::polling::create_polling_subscriber<
       autoware_perception_msgs::msg::TrafficLightGroupArray,
-      autoware::agnocast_wrapper::polling::polling_policy::Newest>(this, "~/input/traffic_signals");
+      autoware::agnocast_wrapper::polling::polling_policy::All>(
+      this, "~/input/traffic_signals", rclcpp::QoS{10});
   autoware::agnocast_wrapper::polling::PollingSubscriber<TurnIndicatorsReport>::SharedPtr
     sub_turn_indicators_ =
       autoware::agnocast_wrapper::polling::create_polling_subscriber<TurnIndicatorsReport>(
