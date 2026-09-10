@@ -20,28 +20,39 @@ live run, not here).
 """
 
 import argparse
+from pathlib import Path
 import zipfile
 
 from autoware_carla_interface.scenario_bridge.venv_manager import ScenarioVenvRunner
-from autoware_carla_interface.scenario_bridge.venv_manager import ScenarioZipRunner
-from autoware_carla_interface.scenario_bridge.venv_manager import _extract_scenario_zip
-from autoware_carla_interface.scenario_bridge.venv_manager import _find_project_dir
+from autoware_carla_interface.scenario_bridge.venv_manager import _extract_zip
+from autoware_carla_interface.scenario_bridge.venv_manager import _find_wheels
+from autoware_carla_interface.scenario_bridge.venv_manager import _is_wheelhouse
 from autoware_carla_interface.scenario_bridge.venv_manager import _make_runner
+from autoware_carla_interface.scenario_bridge.venv_manager import _wheelhouse_install_args
 from autoware_carla_interface.scenario_bridge.venv_manager import parse_spec
+import pytest
 
-_SOURCE = "git+https://example.invalid/repo#subdirectory=pkg"
+
+def _args(**kw) -> argparse.Namespace:
+    return argparse.Namespace(**{"python": "python3.10", "pip_args": "", **kw})
 
 
-def _runner(tmp_path, **kwargs) -> ScenarioVenvRunner:
-    # Pin the venv dir (production derives it under the user cache) so the command
-    # builders can be asserted without touching the real cache.
-    runner = ScenarioVenvRunner(_SOURCE, "town10_straight", **kwargs)
-    runner._venv_dir = tmp_path / "venv"
-    return runner
+def _wheelhouse(tmp_path) -> "tuple":
+    """Create a wheelhouse dir with two wheels; return (dir, sorted wheel paths)."""
+    wh = tmp_path / "wheelhouse"
+    (wh / "sub").mkdir(parents=True)
+    a = wh / "scenario-0.1.0-py3-none-any.whl"
+    b = wh / "sub" / "carla-0.10.0-cp310-cp310-linux_x86_64.whl"
+    a.write_bytes(b"")
+    b.write_bytes(b"")
+    return wh, sorted([a, b])
+
+
+# -- spec parsing --------------------------------------------------------------
 
 
 def test_parse_spec_splits_on_first_hash():
-    assert parse_spec("pkg#town10") == ("pkg", "town10")
+    assert parse_spec("wh.zip#town10") == ("wh.zip", "town10")
     assert parse_spec("git+https://x/r@v#a#b") == ("git+https://x/r@v", "a#b")
 
 
@@ -53,93 +64,121 @@ def test_parse_spec_empty():
     assert parse_spec("   ") == ("", "")
 
 
+# -- venv command construction -------------------------------------------------
+
+
+def _runner(tmp_path, install_args) -> ScenarioVenvRunner:
+    # Pin the venv dir (production derives it under the user cache) so the command
+    # builders can be asserted without touching the real cache.
+    runner = ScenarioVenvRunner(install_args, "town10_x")
+    runner._venv_dir = tmp_path / "venv"
+    return runner
+
+
 def test_venv_cmd_uses_configured_python(tmp_path):
-    runner = _runner(tmp_path, python="python3.10")
+    runner = ScenarioVenvRunner(["pkg"], "s", python="python3.10")
+    runner._venv_dir = tmp_path / "venv"
     assert runner._venv_cmd() == ["python3.10", "-m", "venv", str(tmp_path / "venv")]
 
 
-def test_pip_cmd_includes_extra_args_and_source(tmp_path):
-    runner = _runner(tmp_path, pip_args=["--find-links", "/wheels"])
-    cmd = runner._pip_cmd()
-    assert cmd[:4] == [str(tmp_path / "venv" / "bin" / "python"), "-m", "pip", "install"]
-    assert "--find-links" in cmd and "/wheels" in cmd
-    assert cmd[-1] == _SOURCE
+def test_pip_cmd_passes_install_args(tmp_path):
+    runner = _runner(tmp_path, ["--no-index", "--no-deps", "/wh/a.whl"])
+    assert runner._pip_cmd() == [
+        str(tmp_path / "venv" / "bin" / "python"),
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/wh/a.whl",
+    ]
 
 
 def test_launch_cmd_appends_scenario_name(tmp_path):
-    runner = _runner(tmp_path)
+    runner = _runner(tmp_path, ["pkg"])
     assert runner._launch_cmd() == [
         str(tmp_path / "venv" / "bin" / "scenario"),
-        "scenario=town10_straight",
+        "scenario=town10_x",
     ]
 
 
 def test_launch_cmd_omits_empty_scenario(tmp_path):
-    runner = ScenarioVenvRunner("pkg", "")
+    runner = ScenarioVenvRunner(["pkg"], "")
     runner._venv_dir = tmp_path
     assert runner._launch_cmd() == [str(tmp_path / "bin" / "scenario")]
 
 
 def test_default_venv_dir_is_content_addressed():
-    # No venv_dir -> a cache path keyed on (python, source, pip_args); the scenario
-    # name is not part of the key, so it does not change the venv.
-    same_a = ScenarioVenvRunner("pkg-a", "scenario-1")
-    same_b = ScenarioVenvRunner("pkg-a", "scenario-2")
-    other = ScenarioVenvRunner("pkg-b", "scenario-1")
+    # No pinned dir -> a cache path keyed on (python, *install_args); the scenario
+    # name is not part of the key.
+    same_a = ScenarioVenvRunner(["pkg-a"], "scenario-1")
+    same_b = ScenarioVenvRunner(["pkg-a"], "scenario-2")
+    other = ScenarioVenvRunner(["pkg-b"], "scenario-1")
     assert same_a._venv_dir == same_b._venv_dir
     assert same_a._venv_dir != other._venv_dir
-    # pip_args participate in the key.
-    with_wheels = ScenarioVenvRunner("pkg-a", "scenario-1", pip_args=["--find-links", "/wheels"])
-    assert with_wheels._venv_dir != same_a._venv_dir
 
 
-# -- local .zip scenario package (uv) -----------------------------------------
+# -- wheelhouse ----------------------------------------------------------------
 
 
-def _args(**kw) -> argparse.Namespace:
-    return argparse.Namespace(python="python3.10", pip_args="", uv="uv", **kw)
+def test_is_wheelhouse(tmp_path):
+    (tmp_path / "wh").mkdir()
+    assert _is_wheelhouse(str(tmp_path / "x.zip")) is True
+    assert _is_wheelhouse(str(tmp_path / "X.ZIP")) is True
+    assert _is_wheelhouse(str(tmp_path / "wh")) is True  # existing directory
+    assert _is_wheelhouse("some-pip-pkg") is False
 
 
-def test_make_runner_selects_zip_vs_pip(tmp_path):
-    zip_src = str(tmp_path / "scn.zip")
-    assert isinstance(_make_runner(zip_src, "s", _args()), ScenarioZipRunner)
-    assert isinstance(_make_runner("some-pip-pkg", "s", _args()), ScenarioVenvRunner)
-    # case-insensitive on the extension
-    assert isinstance(_make_runner(str(tmp_path / "SCN.ZIP"), "s", _args()), ScenarioZipRunner)
+def test_find_wheels_is_recursive_and_sorted(tmp_path):
+    wh, wheels = _wheelhouse(tmp_path)
+    assert _find_wheels(wh) == wheels
 
 
-def test_zip_runner_sync_and_launch_cmd(tmp_path):
-    runner = ScenarioZipRunner("scn.zip", "town10_x", uv="uv")
-    runner._project_dir = tmp_path / "proj"
-    assert runner._sync_cmd() == ["uv", "sync", "--locked", "--project", str(tmp_path / "proj")]
-    assert runner._launch_cmd() == [
-        str(tmp_path / "proj" / ".venv" / "bin" / "scenario"),
-        "scenario=town10_x",
+def test_wheelhouse_install_args_from_dir(tmp_path):
+    wh, wheels = _wheelhouse(tmp_path)
+    assert _wheelhouse_install_args(str(wh)) == ["--no-index", "--no-deps", *map(str, wheels)]
+
+
+def test_wheelhouse_install_args_from_zip(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    archive = tmp_path / "wh.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("scenario-0.1.0-py3-none-any.whl", b"")
+        zf.writestr("deps/carla-0.10.0-cp310-cp310-linux_x86_64.whl", b"")
+    args = _wheelhouse_install_args(str(archive))
+    assert args[:2] == ["--no-index", "--no-deps"]
+    names = sorted(Path(p).name for p in args[2:])
+    assert names == [
+        "carla-0.10.0-cp310-cp310-linux_x86_64.whl",
+        "scenario-0.1.0-py3-none-any.whl",
     ]
 
 
-def test_find_project_dir_at_root_and_one_level_down(tmp_path):
-    (tmp_path / "pyproject.toml").write_text("[project]\n")
-    assert _find_project_dir(tmp_path) == tmp_path
-
-    nested = tmp_path / "b"
-    pkg = nested / "the_scenario"
-    pkg.mkdir(parents=True)
-    (pkg / "pyproject.toml").write_text("[project]\n")
-    assert _find_project_dir(nested) == pkg
+def test_wheelhouse_install_args_empty_raises(tmp_path):
+    (tmp_path / "empty").mkdir()
+    with pytest.raises(FileNotFoundError):
+        _wheelhouse_install_args(str(tmp_path / "empty"))
 
 
-def test_extract_scenario_zip_finds_project_root(tmp_path, monkeypatch):
-    # Point the cache at a temp dir so extraction doesn't touch the user cache.
+def test_extract_zip_is_reused(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
-    archive = tmp_path / "town10.zip"
+    archive = tmp_path / "wh.zip"
     with zipfile.ZipFile(archive, "w") as zf:
-        zf.writestr("town10_scenario/pyproject.toml", "[project]\n")
-        zf.writestr("town10_scenario/conf/scenario/town10.yaml", "scenario: {}\n")
+        zf.writestr("a.whl", b"")
+    first = _extract_zip(archive)
+    assert (first / "a.whl").is_file()
+    assert _extract_zip(archive) == first  # content-addressed reuse
 
-    project = _extract_scenario_zip(str(archive))
-    assert project.name == "town10_scenario"
-    assert (project / "pyproject.toml").is_file()
 
-    # Re-extraction reuses the same content-addressed directory.
-    assert _extract_scenario_zip(str(archive)) == project
+# -- runner selection ----------------------------------------------------------
+
+
+def test_make_runner_wheelhouse_dir_installs_offline(tmp_path):
+    wh, wheels = _wheelhouse(tmp_path)
+    runner = _make_runner(str(wh), "s", _args())
+    assert runner._install_args == ["--no-index", "--no-deps", *map(str, wheels)]
+
+
+def test_make_runner_pip_source_keeps_source_and_pip_args(tmp_path):
+    runner = _make_runner("some-pip-pkg", "s", _args(pip_args="--find-links /w"))
+    assert runner._install_args == ["--find-links", "/w", "some-pip-pkg"]
