@@ -42,6 +42,7 @@ private:
   using DiagnosticArray = diagnostic_msgs::msg::DiagnosticArray;
   void on_timer();
   InputData take_data();
+  bool has_all_data() const;
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<ModeChangeAvailable>::SharedPtr pub_transition_available_;
@@ -55,6 +56,16 @@ private:
   PollingSubscriber<Control> sub_control_cmd_{this, "control_cmd"};
   PollingSubscriber<Control> sub_trajectory_follower_control_cmd_{
     this, "trajectory_follower_control_cmd"};
+
+  // The timer runs at frequency_hz, which can outpace the inputs (a simulator that
+  // ticks the world at a few Hz publishes odometry and trajectories slower than
+  // that). Holding the last message keeps a tick without new data from evaluating
+  // the transition checks against default-constructed input.
+  InputData input_data_;
+  bool has_kinematics_{false};
+  bool has_trajectory_{false};
+  bool has_control_cmd_{false};
+  bool has_trajectory_follower_control_cmd_{false};
 
   std::unique_ptr<ModeChangeBase> autonomous_mode_;
 
