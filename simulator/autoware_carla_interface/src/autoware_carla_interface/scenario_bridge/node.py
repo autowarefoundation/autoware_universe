@@ -48,7 +48,6 @@ bridge; it stays on ROS 2 topics and direct CARLA control in the interface node.
 from __future__ import annotations
 
 from functools import partial
-import shlex
 import threading
 from typing import Optional
 
@@ -100,20 +99,6 @@ def _to_ros_pose(pose: pb2.Pose) -> Pose:
     ros.orientation.y = pose.rotation.y
     ros.orientation.z = pose.rotation.z
     return ros
-
-
-def _parse_scenario(spec: str) -> tuple[str, str]:
-    """Split a ``with_scenario`` spec into ``(install_source, scenario_name)``.
-
-    The spec is ``<install-source>#<scenario-name>``; ``#`` separates the two
-    because pip install sources already use ``:`` / ``@`` / ``/`` (VCS URLs,
-    paths).  It splits on the first ``#`` only, so the scenario name may itself
-    contain ``#``.  A spec with no ``#`` is taken as the source alone (empty
-    scenario name -> entrypoint default).  An empty/whitespace spec yields
-    ``("", "")``.
-    """
-    source, _, scenario = spec.strip().partition("#")
-    return source.strip(), scenario.strip()
 
 
 def _response_ok(future) -> tuple[bool, str]:
@@ -188,24 +173,8 @@ class ScenarioBridgeNode(Node):
         self._mission_poll_timeout_s = (
             self.declare_parameter("mission_poll_timeout_s", 1.0).get_parameter_value().double_value
         )
-        scenario_spec = self.declare_parameter("scenario", "").get_parameter_value().string_value
-        scenario_python = (
-            self.declare_parameter("scenario_python", "python3.10")
-            .get_parameter_value()
-            .string_value
-        )
-        scenario_pip_args = (
-            self.declare_parameter("scenario_pip_args", "").get_parameter_value().string_value
-        )
-
         self._client = ScenarioBridgeClient(self._bridge_address)
         self._aggregator = ReadinessAggregator(require_localization=require_localization)
-
-        # Optionally provision + launch the scenario runner (which hosts the gRPC
-        # server) in a virtualenv before dialling it.
-        self._runner = self._start_scenario_runner(
-            scenario_spec, scenario_python, scenario_pip_args
-        )
 
         # Startup state, guarded by ``_lock`` (the tick timer and the three AD API
         # state callbacks all advance concurrently under a MultiThreadedExecutor).
@@ -269,40 +238,6 @@ class ScenarioBridgeNode(Node):
             f"scenario_bridge dialling scenario server at {self._bridge_address} "
             f"(auto_engage={self._auto_engage})"
         )
-
-    # ------------------------------------------------------------------
-    # Scenario runner
-    # ------------------------------------------------------------------
-
-    def _start_scenario_runner(self, scenario_spec, python, pip_args):
-        """Provision + launch the scenario runner from *scenario_spec*, or ``None``.
-
-        *scenario_spec* is the ``with_scenario`` value
-        (``<install-source>#<scenario>``).  Empty -> nothing launched: the node
-        just dials an already-running server at ``bridge_address``.  The runner is
-        installed into a virtualenv (built with *python*, CPython 3.10) whose
-        ``scenario`` entrypoint hosts the gRPC server.  Launching is best-effort,
-        so a failure is logged and the node falls back to polling GetMission
-        against ``bridge_address``.
-        """
-        source, scenario_name = _parse_scenario(scenario_spec)
-        if not source:
-            return None
-
-        from autoware_carla_interface.scenario_bridge.venv_manager import ScenarioVenvRunner
-
-        runner = ScenarioVenvRunner(
-            source, scenario_name, python=python, pip_args=shlex.split(pip_args)
-        )
-        try:
-            runner.start()
-        except Exception as error:  # noqa: BLE001 - runner launch is best-effort
-            self.get_logger().error(f"Failed to launch scenario runner {source!r}: {error}")
-            return None
-        if not self._client.wait_for_ready(self._rpc_timeout_s):
-            self.get_logger().warning("Scenario server not ready yet; will keep polling GetMission")
-        self.get_logger().info(f"Launched scenario runner {source!r} (scenario={scenario_name!r})")
-        return runner
 
     # ------------------------------------------------------------------
     # Reconciliation loop
@@ -513,10 +448,8 @@ class ScenarioBridgeNode(Node):
         self._advance()
 
     def destroy_node(self) -> bool:
-        """Close the gRPC channel and stop the scenario runner on shutdown."""
+        """Close the gRPC channel on shutdown."""
         self._client.close()
-        if self._runner is not None:
-            self._runner.stop()
         return super().destroy_node()
 
 

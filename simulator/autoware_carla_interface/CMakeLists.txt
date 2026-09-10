@@ -54,6 +54,7 @@ install(PROGRAMS
   scripts/multi_camera_combiner
   scripts/spectator_follow
   scripts/scenario_bridge
+  scripts/scenario_runner
   DESTINATION lib/${PROJECT_NAME}
 )
 

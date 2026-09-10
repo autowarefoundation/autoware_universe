@@ -19,6 +19,7 @@ setup(
             "autoware_carla_interface = autoware_carla_interface.carla_autoware:main",
             "multi_camera_combiner = autoware_carla_interface.multi_camera_combiner_node:main",
             "scenario_bridge = autoware_carla_interface.scenario_bridge.node:main",
+            "scenario_runner = autoware_carla_interface.scenario_bridge.venv_manager:main",
         ],
     },
     package_dir={"": "src"},

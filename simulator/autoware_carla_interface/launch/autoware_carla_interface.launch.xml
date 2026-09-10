@@ -138,14 +138,20 @@
       <param name="traffic_light.id_map" value="$(var traffic_light.id_map)"/>
     </node>
 
-    <!-- Scenario bridge: install + launch the scenario runner (named by
-         with_scenario) in a virtualenv, which hosts the gRPC server, then pull the
-         mission and drive Autoware's localization init / routing / engage and
-         report readiness. Only launched when with_scenario is non-empty. -->
+    <!-- Scenario runner: install the runner (named by with_scenario) into a
+         virtualenv and exec its gRPC server. Launch owns this process's lifecycle
+         (start/stop); the scenario_bridge node below only dials it. Only run when
+         with_scenario is non-empty. -->
+    <executable
+      cmd="ros2 run autoware_carla_interface scenario_runner &quot;$(var with_scenario)&quot; --python &quot;$(var scenario_python)&quot; --pip-args &quot;$(var scenario_pip_args)&quot;"
+      output="screen"
+      if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)"
+    />
+
+    <!-- Scenario bridge: dial the runner's gRPC server, pull the mission, and
+         drive Autoware's localization init / routing / engage and report
+         readiness. Only launched when with_scenario is non-empty. -->
     <node pkg="autoware_carla_interface" exec="scenario_bridge" name="scenario_bridge" output="screen" if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)">
-      <param name="scenario" value="$(var with_scenario)"/>
-      <param name="scenario_python" value="$(var scenario_python)"/>
-      <param name="scenario_pip_args" value="$(var scenario_pip_args)"/>
       <param name="bridge_address" value="$(var bridge_address)"/>
       <param name="auto_engage" value="$(var auto_engage)"/>
       <param name="initialize_localization" value="$(var initialize_localization)"/>

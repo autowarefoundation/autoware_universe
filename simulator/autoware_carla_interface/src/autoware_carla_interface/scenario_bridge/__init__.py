@@ -14,10 +14,13 @@
 
 """Autoware side of the CARLA scenario ``AutowareBridge``.
 
-Topology: the scenario runner hosts the ``AutowareBridge`` gRPC server and this
-package is the client that launches (in a virtualenv) and dials it.  The client
-pulls the scenario's mission (initial pose + goal) via ``GetMission`` and pushes
-a single readiness flag via ``ReportReadiness``.
+Topology: the scenario runner hosts the ``AutowareBridge`` gRPC server and the
+``scenario_bridge`` node (see :mod:`.node`) is the client that dials it.  The
+runner process itself is launched separately -- ROS 2 launch runs the
+``scenario_runner`` executable (see :mod:`.venv_manager`), which provisions a
+virtualenv and execs the server.  The client pulls the scenario's mission (initial
+pose + goal) via ``GetMission`` and pushes a single readiness flag via
+``ReportReadiness``.
 
 The heavy lifting -- localization init, routing, engage, and readiness
 aggregation -- lives here on the Autoware side (see :mod:`.node`), driven through

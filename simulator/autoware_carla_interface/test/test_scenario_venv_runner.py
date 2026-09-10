@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""ROS-free tests for the scenario runner's venv command construction.
+"""ROS-free tests for the scenario runner's spec parsing and command construction.
 
-These exercise the pure command builders and the content-addressed cache path
-without creating a real venv or installing anything.
+These exercise the pure helpers without creating a real venv or installing
+anything (``provision`` / ``exec_runner`` touch the system and are covered by a
+live run, not here).
 """
 
 from autoware_carla_interface.scenario_bridge.venv_manager import ScenarioVenvRunner
+from autoware_carla_interface.scenario_bridge.venv_manager import parse_spec
 
 _SOURCE = "git+https://example.invalid/repo#subdirectory=pkg"
 
@@ -30,6 +32,19 @@ def _runner(tmp_path, **kwargs) -> ScenarioVenvRunner:
         venv_dir=str(tmp_path / "venv"),
         **kwargs,
     )
+
+
+def test_parse_spec_splits_on_first_hash():
+    assert parse_spec("pkg#town10") == ("pkg", "town10")
+    assert parse_spec("git+https://x/r@v#a#b") == ("git+https://x/r@v", "a#b")
+
+
+def test_parse_spec_without_hash_is_source_only():
+    assert parse_spec("pkg") == ("pkg", "")
+
+
+def test_parse_spec_empty():
+    assert parse_spec("   ") == ("", "")
 
 
 def test_venv_cmd_uses_configured_python(tmp_path):
@@ -69,7 +84,3 @@ def test_default_venv_dir_is_content_addressed():
     # pip_args participate in the key.
     with_wheels = ScenarioVenvRunner("pkg-a", "scenario-1", pip_args=["--find-links", "/wheels"])
     assert with_wheels._venv_dir != same_a._venv_dir
-
-
-def test_stop_before_start_is_noop(tmp_path):
-    _runner(tmp_path).stop()  # must not raise
