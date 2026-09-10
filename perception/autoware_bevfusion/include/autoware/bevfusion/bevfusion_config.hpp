@@ -247,6 +247,21 @@ public:
 
   ///// RUNTIME DIMENSIONS /////
   std::array<std::int64_t, 3> voxels_num_{};
+
+  ///// SPARSE trainStation/DDS REMOVAL /////
+  // When true, the sparse engine was exported with the 4 down-sample GetIndicePairsImplicitGemm
+  // nodes removed (their rulebooks exposed as graph inputs). The runtime then precomputes those
+  // rulebooks from the voxel coordinates and binds them before inference. Plain member (set by the
+  // node from a ROS param) to avoid extending the large positional constructor.
+  // See BEVFusion_spconv_DDS_optimization.md (Slice 2b).
+  bool sparse_remove_trainstation_{false};
+  // Upper bound on active out-voxels per down-sample stage; must match the plugin's
+  // out_indices_num_limit_ and the TensorRT profile max for the rulebook inputs.
+  std::int64_t sparse_out_indices_num_limit_{256000};
+  // Fallback for sparse engines exported before the ONNX carried "rulebook_coors_permutation":
+  // true if `coors` is [z,y,x] and those exports were built on [x,y,z] (the AWML contract).
+  // Ignored when the ONNX records its column order.
+  bool sparse_coors_is_zyx_{true};
 };
 
 }  // namespace autoware::bevfusion
