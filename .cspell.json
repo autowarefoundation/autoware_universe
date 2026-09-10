@@ -1,5 +1,6 @@
 {
   "ignorePaths": [
+    "simulator/autoware_carla_interface/src/autoware_carla_interface/scenario_bridge/proto/*_pb2*.py",
     "perception/autoware_bytetrack/lib/**",
     "perception/autoware_shape_estimation/resource/**",
     "planning/autoware_path_optimizer/scripts/**",

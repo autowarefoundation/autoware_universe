@@ -1,3 +1,4 @@
+# cspell:ignore execv virtualenv
 # Copyright 2024 Tier IV, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,7 +177,7 @@ class ScenarioVenvRunner:
         os.execv(command[0], command)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Optional[Sequence[str]] = None) -> NoReturn:
     """``scenario_runner`` entrypoint: provision the venv, then exec the runner."""
     logging.basicConfig(level=logging.INFO, format="[scenario_runner] %(message)s")
     parser = argparse.ArgumentParser(description="Provision + exec the CARLA scenario runner.")
@@ -198,4 +199,3 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     runner.provision()
     runner.exec_runner()  # never returns
-    return 0  # pragma: no cover - unreachable after execv

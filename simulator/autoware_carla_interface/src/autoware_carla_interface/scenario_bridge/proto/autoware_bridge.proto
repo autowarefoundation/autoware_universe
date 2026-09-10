@@ -1,3 +1,4 @@
+// cspell:ignore alpasim egodriver wxyz
 // gRPC wire contract between the scenario framework and
 // autoware_carla_interface. The contract is intentionally tiny: the scenario
 // framework hands Autoware the mission (initial pose + goal), and the Autoware

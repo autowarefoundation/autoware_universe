@@ -77,6 +77,7 @@
       description="Optional override 'opendrive_id:group_id[|group_id...],...' that pins a CARLA signal id to one or more Autoware group ids, taking precedence over position matching"
     />
 
+    <!-- cspell:ignore virtualenv -->
     <!-- Scenario bridge (closed-loop with the CARLA scenario runner).
          Set with_scenario:=<install-source>#<scenario-name> to run a scenario
          closed loop; empty (the default) leaves the bridge off, i.e. the current
