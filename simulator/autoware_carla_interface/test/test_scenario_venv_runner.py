@@ -19,7 +19,14 @@ anything (``provision`` / ``exec_runner`` touch the system and are covered by a
 live run, not here).
 """
 
+import argparse
+import zipfile
+
 from autoware_carla_interface.scenario_bridge.venv_manager import ScenarioVenvRunner
+from autoware_carla_interface.scenario_bridge.venv_manager import ScenarioZipRunner
+from autoware_carla_interface.scenario_bridge.venv_manager import _extract_scenario_zip
+from autoware_carla_interface.scenario_bridge.venv_manager import _find_project_dir
+from autoware_carla_interface.scenario_bridge.venv_manager import _make_runner
 from autoware_carla_interface.scenario_bridge.venv_manager import parse_spec
 
 _SOURCE = "git+https://example.invalid/repo#subdirectory=pkg"
@@ -84,3 +91,55 @@ def test_default_venv_dir_is_content_addressed():
     # pip_args participate in the key.
     with_wheels = ScenarioVenvRunner("pkg-a", "scenario-1", pip_args=["--find-links", "/wheels"])
     assert with_wheels._venv_dir != same_a._venv_dir
+
+
+# -- local .zip scenario package (uv) -----------------------------------------
+
+
+def _args(**kw) -> argparse.Namespace:
+    return argparse.Namespace(python="python3.10", pip_args="", uv="uv", **kw)
+
+
+def test_make_runner_selects_zip_vs_pip(tmp_path):
+    zip_src = str(tmp_path / "scn.zip")
+    assert isinstance(_make_runner(zip_src, "s", _args()), ScenarioZipRunner)
+    assert isinstance(_make_runner("some-pip-pkg", "s", _args()), ScenarioVenvRunner)
+    # case-insensitive on the extension
+    assert isinstance(_make_runner(str(tmp_path / "SCN.ZIP"), "s", _args()), ScenarioZipRunner)
+
+
+def test_zip_runner_sync_and_launch_cmd(tmp_path):
+    runner = ScenarioZipRunner("scn.zip", "town10_x", uv="uv")
+    runner._project_dir = tmp_path / "proj"
+    assert runner._sync_cmd() == ["uv", "sync", "--locked", "--project", str(tmp_path / "proj")]
+    assert runner._launch_cmd() == [
+        str(tmp_path / "proj" / ".venv" / "bin" / "scenario"),
+        "scenario=town10_x",
+    ]
+
+
+def test_find_project_dir_at_root_and_one_level_down(tmp_path):
+    (tmp_path / "pyproject.toml").write_text("[project]\n")
+    assert _find_project_dir(tmp_path) == tmp_path
+
+    nested = tmp_path / "b"
+    pkg = nested / "the_scenario"
+    pkg.mkdir(parents=True)
+    (pkg / "pyproject.toml").write_text("[project]\n")
+    assert _find_project_dir(nested) == pkg
+
+
+def test_extract_scenario_zip_finds_project_root(tmp_path, monkeypatch):
+    # Point the cache at a temp dir so extraction doesn't touch the user cache.
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    archive = tmp_path / "town10.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("town10_scenario/pyproject.toml", "[project]\n")
+        zf.writestr("town10_scenario/conf/scenario/town10.yaml", "scenario: {}\n")
+
+    project = _extract_scenario_zip(str(archive))
+    assert project.name == "town10_scenario"
+    assert (project / "pyproject.toml").is_file()
+
+    # Re-extraction reuses the same content-addressed directory.
+    assert _extract_scenario_zip(str(archive)) == project

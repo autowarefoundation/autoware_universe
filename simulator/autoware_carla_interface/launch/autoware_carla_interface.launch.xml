@@ -86,7 +86,7 @@
     <arg
       name="with_scenario"
       default=""
-      description="Run a CARLA scenario closed loop, as '&lt;install-source&gt;#&lt;scenario-name&gt;' (the '#' separates the pip install source from the scenario, since sources use ':' '@' '/'); the source half alone runs the entrypoint default. The runner is installed into a virtualenv and its 'scenario' entrypoint hosts the gRPC server. Empty (default) disables the scenario_bridge node (current behavior)."
+      description="Run a CARLA scenario closed loop, as '&lt;source&gt;#&lt;scenario-name&gt;' (the '#' separates source from scenario, since sources use ':' '@' '/'). &lt;source&gt; is a local scenario .zip (extracted and 'uv sync'-ed; needs uv) or a pip install source (installed into a venv); its 'scenario' entrypoint hosts the gRPC server. Empty (default) disables the scenario_bridge node (current behavior)."
     />
     <arg name="scenario_python" default="python3.10" description="Interpreter used to build the scenario runner's virtualenv (must be CPython 3.10 for the CARLA 0.10 wheel)"/>
     <arg name="scenario_pip_args" default="" description="Extra 'pip install' args for the scenario runner venv, e.g. '--find-links /path/to/carla_wheels' for the vendored CARLA wheel"/>
