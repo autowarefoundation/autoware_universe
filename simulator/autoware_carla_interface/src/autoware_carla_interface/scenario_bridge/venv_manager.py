@@ -98,9 +98,10 @@ class ScenarioVenvRunner:
             Python the ROS 2 node itself runs.
         pip_args: Extra ``pip install`` arguments (e.g. ``--find-links`` for the
             vendored CARLA wheel, or ``-e``).
-        venv_dir: Explicit venv location; ``None`` (the default) derives a stable
-            per-source path under the user cache and reuses it across launches (the
-            install is skipped when its entrypoint already exists).
+
+    The venv lives at a stable per-source path under the user cache (see
+    :func:`_cache_venv_dir`) and is reused across launches -- the install is
+    skipped when its entrypoint already exists.
     """
 
     def __init__(
@@ -110,15 +111,12 @@ class ScenarioVenvRunner:
         *,
         python: str = "python3.10",
         pip_args: Sequence[str] = (),
-        venv_dir: str | None = None,
     ) -> None:
         self._install_source = install_source
         self._scenario_name = scenario_name
         self._python = python
         self._pip_args = list(pip_args)
-        self._venv_dir = (
-            Path(venv_dir) if venv_dir else _cache_venv_dir(install_source, self._pip_args, python)
-        )
+        self._venv_dir = _cache_venv_dir(install_source, self._pip_args, python)
 
     # -- command construction (pure; unit-tested without touching the system) --
 

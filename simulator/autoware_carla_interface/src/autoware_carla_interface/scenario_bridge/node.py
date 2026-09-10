@@ -138,44 +138,10 @@ class ScenarioBridgeNode(Node):
     def __init__(self) -> None:
         super().__init__("scenario_bridge")
 
-        self._bridge_address = (
-            self.declare_parameter("bridge_address", "localhost:50052")
-            .get_parameter_value()
-            .string_value
-        )
-        self._auto_engage = (
-            self.declare_parameter("auto_engage", True).get_parameter_value().bool_value
-        )
-        # Localization is a configurable step so the node fits both the mainline
-        # AD API flow and stacks that localize outside it (CARLA ground-truth /
-        # E2E, localization:=false).  Defaults match the mainline; set both False
-        # to skip the /api/localization/initialize call and drop the localization
-        # requirement from readiness.
-        self._init_localization = (
-            self.declare_parameter("initialize_localization", True).get_parameter_value().bool_value
-        )
-        require_localization = (
-            self.declare_parameter("require_localization_initialized", True)
-            .get_parameter_value()
-            .bool_value
-        )
-        self._map_frame = (
-            self.declare_parameter("map_frame", "map").get_parameter_value().string_value
-        )
-        self._rpc_timeout_s = (
-            self.declare_parameter("rpc_timeout_s", 5.0).get_parameter_value().double_value
-        )
-        tick_period_s = (
-            self.declare_parameter("tick_period_s", 0.5).get_parameter_value().double_value
-        )
-        # GetMission is polled from the tick with its own short timeout so an
-        # unreachable scenario server can't pin a worker thread for the full
-        # rpc_timeout_s each poll; the retry just comes on the next tick.
-        self._mission_poll_timeout_s = (
-            self.declare_parameter("mission_poll_timeout_s", 1.0).get_parameter_value().double_value
-        )
+        tick_period_s = self._declare_parameters()
+
         self._client = ScenarioBridgeClient(self._bridge_address)
-        self._aggregator = ReadinessAggregator(require_localization=require_localization)
+        self._aggregator = ReadinessAggregator(require_localization=self._require_localization)
 
         # Startup state, guarded by ``_lock`` (the tick timer and the three AD API
         # state callbacks all advance concurrently under a MultiThreadedExecutor).
@@ -191,43 +157,8 @@ class ScenarioBridgeNode(Node):
         self._readiness_reported = False
 
         group = ReentrantCallbackGroup()
-
-        self._init_cli = self.create_client(
-            InitializeLocalization,
-            LOCALIZATION_INITIALIZE_SERVICE,
-            callback_group=group,
-        )
-        self._route_cli = self.create_client(
-            SetRoutePoints, ROUTING_SET_ROUTE_POINTS_SERVICE, callback_group=group
-        )
-        self._engage_cli = self.create_client(
-            ChangeOperationMode,
-            OPERATION_MODE_CHANGE_TO_AUTONOMOUS_SERVICE,
-            callback_group=group,
-        )
-
-        qos = _latched_state_qos()
-        self.create_subscription(
-            LocalizationInitializationState,
-            LOCALIZATION_INITIALIZATION_STATE_TOPIC,
-            self._on_localization_state,
-            qos,
-            callback_group=group,
-        )
-        self.create_subscription(
-            RouteState,
-            ROUTING_STATE_TOPIC,
-            self._on_route_state,
-            qos,
-            callback_group=group,
-        )
-        self.create_subscription(
-            OperationModeState,
-            OPERATION_MODE_STATE_TOPIC,
-            self._on_operation_mode_state,
-            qos,
-            callback_group=group,
-        )
+        self._create_ad_api_clients(group)
+        self._subscribe_ad_api_states(group)
 
         # Reconciliation tick: polls GetMission until one arrives, then re-drives
         # the outstanding startup step on every pass.  It keeps ticking (rather
@@ -238,6 +169,78 @@ class ScenarioBridgeNode(Node):
         self.get_logger().info(
             f"scenario_bridge dialling scenario server at {self._bridge_address} "
             f"(auto_engage={self._auto_engage})"
+        )
+
+    def _declare_parameters(self) -> float:
+        """Declare and read the node's ROS parameters; return the tick period.
+
+        Localization is configurable so the node fits both the mainline AD API flow
+        and stacks that localize outside it (CARLA ground-truth / E2E,
+        ``localization:=false``): set ``initialize_localization`` /
+        ``require_localization_initialized`` False to skip the
+        ``/api/localization/initialize`` call and drop localization from readiness.
+        """
+        self._bridge_address = (
+            self.declare_parameter("bridge_address", "localhost:50052")
+            .get_parameter_value()
+            .string_value
+        )
+        self._auto_engage = (
+            self.declare_parameter("auto_engage", True).get_parameter_value().bool_value
+        )
+        self._init_localization = (
+            self.declare_parameter("initialize_localization", True).get_parameter_value().bool_value
+        )
+        self._require_localization = (
+            self.declare_parameter("require_localization_initialized", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self._map_frame = (
+            self.declare_parameter("map_frame", "map").get_parameter_value().string_value
+        )
+        self._rpc_timeout_s = (
+            self.declare_parameter("rpc_timeout_s", 5.0).get_parameter_value().double_value
+        )
+        # GetMission is polled from the tick with its own short timeout so an
+        # unreachable scenario server can't pin a worker thread for the full
+        # rpc_timeout_s each poll; the retry just comes on the next tick.
+        self._mission_poll_timeout_s = (
+            self.declare_parameter("mission_poll_timeout_s", 1.0).get_parameter_value().double_value
+        )
+        return self.declare_parameter("tick_period_s", 0.5).get_parameter_value().double_value
+
+    def _create_ad_api_clients(self, group: ReentrantCallbackGroup) -> None:
+        """Create the AD API service clients used to drive Autoware's startup."""
+        self._init_cli = self.create_client(
+            InitializeLocalization, LOCALIZATION_INITIALIZE_SERVICE, callback_group=group
+        )
+        self._route_cli = self.create_client(
+            SetRoutePoints, ROUTING_SET_ROUTE_POINTS_SERVICE, callback_group=group
+        )
+        self._engage_cli = self.create_client(
+            ChangeOperationMode, OPERATION_MODE_CHANGE_TO_AUTONOMOUS_SERVICE, callback_group=group
+        )
+
+    def _subscribe_ad_api_states(self, group: ReentrantCallbackGroup) -> None:
+        """Subscribe to the latched AD API state topics that feed the aggregator."""
+        qos = _latched_state_qos()
+        self.create_subscription(
+            LocalizationInitializationState,
+            LOCALIZATION_INITIALIZATION_STATE_TOPIC,
+            self._on_localization_state,
+            qos,
+            callback_group=group,
+        )
+        self.create_subscription(
+            RouteState, ROUTING_STATE_TOPIC, self._on_route_state, qos, callback_group=group
+        )
+        self.create_subscription(
+            OperationModeState,
+            OPERATION_MODE_STATE_TOPIC,
+            self._on_operation_mode_state,
+            qos,
+            callback_group=group,
         )
 
     # ------------------------------------------------------------------
@@ -406,18 +409,30 @@ class ScenarioBridgeNode(Node):
             "change_to_autonomous",
         )
 
+    def _claim_readiness_report(self) -> bool:
+        """Latch and claim the readiness report for this caller (else return False).
+
+        The ``_readiness_inflight`` latch (set under the lock) stops two overlapping
+        ticks from both firing the RPC; already-reported or not-yet-ready both mean
+        "don't send".
+        """
+        with self._lock:
+            if self._readiness_reported or self._readiness_inflight:
+                return False
+            if not self._aggregator.ready:
+                return False
+            self._readiness_inflight = True
+            return True
+
     def _maybe_report_ready(self) -> None:
         """Push ``ReportReadiness(True)`` once Autoware is ready, retrying on failure.
 
-        Called only from the tick; the ``_readiness_inflight`` latch (set under the
-        lock before the blocking call) stops two overlapping ticks from both firing
-        the RPC.  The tick retries after a transient failure independently of AD API
-        state changes, which go quiescent once Autoware is ready.
+        Called only from the tick; the tick retries after a transient failure
+        independently of AD API state changes, which go quiescent once Autoware is
+        ready.
         """
-        with self._lock:
-            if self._readiness_reported or self._readiness_inflight or not self._aggregator.ready:
-                return
-            self._readiness_inflight = True
+        if not self._claim_readiness_report():
+            return
         try:
             self._client.report_readiness(True, timeout=self._rpc_timeout_s)
         except grpc.RpcError as error:

@@ -26,12 +26,11 @@ _SOURCE = "git+https://example.invalid/repo#subdirectory=pkg"
 
 
 def _runner(tmp_path, **kwargs) -> ScenarioVenvRunner:
-    return ScenarioVenvRunner(
-        _SOURCE,
-        "town10_straight",
-        venv_dir=str(tmp_path / "venv"),
-        **kwargs,
-    )
+    # Pin the venv dir (production derives it under the user cache) so the command
+    # builders can be asserted without touching the real cache.
+    runner = ScenarioVenvRunner(_SOURCE, "town10_straight", **kwargs)
+    runner._venv_dir = tmp_path / "venv"
+    return runner
 
 
 def test_parse_spec_splits_on_first_hash():
@@ -69,7 +68,8 @@ def test_launch_cmd_appends_scenario_name(tmp_path):
 
 
 def test_launch_cmd_omits_empty_scenario(tmp_path):
-    runner = ScenarioVenvRunner("pkg", "", venv_dir=str(tmp_path))
+    runner = ScenarioVenvRunner("pkg", "")
+    runner._venv_dir = tmp_path
     assert runner._launch_cmd() == [str(tmp_path / "bin" / "scenario")]
 
 
