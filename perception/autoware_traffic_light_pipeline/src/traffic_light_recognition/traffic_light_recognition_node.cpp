@@ -14,8 +14,8 @@
 
 #include "traffic_light_recognition_node.hpp"
 
+#include <exception>
 #include <memory>
-#include <stdexcept>
 #include <string>
 
 namespace autoware::traffic_light

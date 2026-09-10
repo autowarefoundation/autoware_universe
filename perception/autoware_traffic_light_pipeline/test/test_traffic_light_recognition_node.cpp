@@ -21,8 +21,8 @@
 // no traffic lights.
 //
 // The node's constructor builds three TensorRT engines, so this suite needs a GPU + TensorRT + the
-// ONNX models under autoware_data. It is gated in CMakeLists.txt behind TRT_AVAIL AND CUDA_AVAIL
-// and self-skips (GTEST_SKIP) when no usable GPU is found at runtime.
+// ONNX models under autoware_data, and self-skips (GTEST_SKIP) when no usable GPU is found at
+// runtime.
 //
 
 #include "traffic_light_recognition/traffic_light_recognition_node.hpp"
@@ -45,7 +45,6 @@
 #include <memory>
 #include <string>
 #include <thread>
-#include <vector>
 
 namespace
 {
