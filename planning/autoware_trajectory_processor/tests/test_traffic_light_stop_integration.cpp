@@ -518,7 +518,7 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithAmberLightWhenPrev
     "Input trajectory should not be modified when it already contains a valid stop point");
 
   auto crossing_trajectory = create_straight_trajectory(0.0, 10.0, 10.0);
-  const bool modified = plugin_->modify_trajectory(crossing_trajectory, make_default_input(10.0));
+  const bool modified = process_plugin(*plugin_, crossing_trajectory, make_default_input(10.0));
   EXPECT_TRUE(modified) << "Should modify trajectory when a prior stop attempt is detected and "
                            "reject_if_stop_detected is true";
   EXPECT_FLOAT_EQ(crossing_trajectory.back().longitudinal_velocity_mps, 0.0F);

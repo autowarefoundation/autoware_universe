@@ -120,7 +120,7 @@ bool TrafficLightStop::check_traffic_lights(
     checker_->check(inputs, params_.stop_for_red_light, params_.stop_for_amber_light);
   if (!result) {
     RCLCPP_ERROR(
-      get_node_ptr()->get_logger(), "Failed to check traffic lights: %s", result.error().c_str());
+      get_logger(), "Failed to check traffic lights: %s", result.error().c_str());
     return false;
   }
 
