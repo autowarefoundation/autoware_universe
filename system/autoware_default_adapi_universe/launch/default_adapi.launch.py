@@ -27,14 +27,18 @@ from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
 
+CORE = "autoware_default_adapi"
 UNIVERSE = "autoware_default_adapi_universe"
 
-# Nodes derived from autoware::agnocast_wrapper::Node, as (node name, class name, executable).
-# Composed like any other node under ENABLE_AGNOCAST=0, where that base is backed by rclcpp;
-# run as their own process under =1, where they need an AgnocastOnly executor that a shared
+# Nodes derived from autoware::agnocast_wrapper::Node, as (package, node name, class name,
+# executable). Composed like any other node under ENABLE_AGNOCAST=0, where that base is backed by
+# rclcpp; run as their own process under =1, where they need an AgnocastOnly executor that a shared
 # component container cannot provide.
 AGNOCAST_WRAPPER_NODES = [
-    ("diagnostics", "DiagnosticsNode", "diagnostics_node"),
+    (CORE, "interface", "InterfaceNode", "interface_node"),
+    (CORE, "localization", "LocalizationNode", "localization_node"),
+    (CORE, "routing", "RoutingNode", "routing_node"),
+    (UNIVERSE, "diagnostics", "DiagnosticsNode", "diagnostics_node"),
 ]
 
 
@@ -91,9 +95,6 @@ def launch_setup(context, *args, **kwargs):
     use_agnocast = context.perform_substitution(LaunchConfiguration("use_agnocast")) == "1"
 
     components = [
-        create_api_node("autoware_default_adapi", "interface", "InterfaceNode"),
-        create_api_node("autoware_default_adapi", "localization", "LocalizationNode"),
-        create_api_node("autoware_default_adapi", "routing", "RoutingNode"),
         create_api_node("autoware_default_adapi_universe", "autoware_state", "AutowareStateNode"),
         create_api_node("autoware_default_adapi_universe", "fail_safe", "FailSafeNode"),
         create_api_node("autoware_default_adapi_universe", "heartbeat", "HeartbeatNode"),
@@ -111,11 +112,11 @@ def launch_setup(context, *args, **kwargs):
         create_api_node("autoware_default_adapi_universe", "vehicle_door", "VehicleDoorNode"),
     ]
     nodes = []
-    for node_name, class_name, executable in AGNOCAST_WRAPPER_NODES:
+    for package_name, node_name, class_name, executable in AGNOCAST_WRAPPER_NODES:
         if use_agnocast:
-            nodes.append(create_standalone_api_node(UNIVERSE, node_name, executable))
+            nodes.append(create_standalone_api_node(package_name, node_name, executable))
         else:
-            components.append(create_api_node(UNIVERSE, node_name, class_name))
+            components.append(create_api_node(package_name, node_name, class_name))
 
     container = ComposableNodeContainer(
         namespace="adapi",
