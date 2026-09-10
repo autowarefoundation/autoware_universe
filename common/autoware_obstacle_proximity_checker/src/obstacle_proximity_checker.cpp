@@ -187,6 +187,21 @@ std::optional<ProximityObstacle> ProximityChecker::getNearestObstacleByDynamicOb
     return std::nullopt;
   }
 
+  auto is_enabled = [&](const auto & object, const std::string & label) {
+    const auto enable_check_iter = parameters_.object_type_enable_check.find(label);
+    if (
+      enable_check_iter == parameters_.object_type_enable_check.end() ||
+      !enable_check_iter->second) {
+      return false;
+    }
+    const auto & object_param = parameters_.obstacle_types_map.at(label);
+    if (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX)
+      return object_param.enable_bbox_check;
+    if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON)
+      return object_param.enable_polygon_check;
+    return false;
+  };
+
   autoware_perception_msgs::msg::PredictedObject nearest_object;
   double minimum_distance = std::numeric_limits<double>::max();
   bool was_minimum_distance_updated = false;
@@ -199,12 +214,7 @@ std::optional<ProximityObstacle> ProximityChecker::getNearestObstacleByDynamicOb
     }
 
     const auto & str_label = label_iter->second;
-    const auto enable_check_iter = parameters_.object_type_enable_check.find(str_label);
-    if (
-      enable_check_iter == parameters_.object_type_enable_check.end() ||
-      !enable_check_iter->second) {
-      continue;
-    }
+    if (!is_enabled(object, str_label)) continue;
 
     const auto & object_param = parameters_.obstacle_types_map.at(str_label);
     const double front_margin = object_param.surround_check_front_distance;

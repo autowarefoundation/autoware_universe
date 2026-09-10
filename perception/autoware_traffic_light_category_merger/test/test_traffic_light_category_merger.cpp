@@ -22,7 +22,7 @@
 // by test_traffic_light_category_merger_integration.
 //
 
-#include "../src/traffic_light_category_merger.hpp"
+#include "autoware/traffic_light_category_merger/traffic_light_category_merger.hpp"
 
 #include <std_msgs/msg/header.hpp>
 #include <tier4_perception_msgs/msg/traffic_light.hpp>

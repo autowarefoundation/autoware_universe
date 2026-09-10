@@ -73,7 +73,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
 
   if (wheelbase < 1e-3 || max_steer_rad < 1e-3 || max_yaw_rate < 1e-3) {
     RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+      get_logger(), *get_clock(), 5000,
       "Kinematic Feasibility Enforcer: Invalid vehicle parameters (wheelbase=%.2f, "
       "max_steer_angle=%.3f rad, max_yaw_rate=%.3f rad/s), skipping enforcement",
       wheelbase, max_steer_rad, max_yaw_rate);
@@ -174,17 +174,17 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
 
 void TrajectoryKinematicFeasibilityEnforcer::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
-
   // Get vehicle info
-  vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
+  vehicle_info_ = with_node([](auto * node) {
+    return autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo();
+  });
 
   enabled_ = params.use_kinematic_feasibility_enforcer;
   feasibility_params_ = params.trajectory_kinematic_feasibility;
 
   // Log configuration
   RCLCPP_INFO(
-    node_ptr->get_logger(),
+    get_logger(),
     "Kinematic Feasibility Enforcer initialized: max_yaw_rate=%.3f rad/s (%.1f deg/s), "
     "wheelbase=%.2f m, max_steer_angle=%.3f rad (%.1f deg)",
     feasibility_params_.max_yaw_rate_rad_s, feasibility_params_.max_yaw_rate_rad_s * 180.0 / M_PI,

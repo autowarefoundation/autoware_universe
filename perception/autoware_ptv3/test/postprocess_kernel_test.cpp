@@ -40,6 +40,8 @@ PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
   params.point_cloud_range = {-10.0F, -10.0F, -3.0F, 10.0F, 10.0F, 3.0F};
   params.voxel_size = {0.2F, 0.2F, 0.2F};
   params.segmentation_class_names = {"car", "truck", "drivable_flat"};
+  params.segmentation_class_mapping = {
+    {"car", "CAR"}, {"truck", "TRUCK"}, {"drivable_flat", "FLAT_SURFACE"}};
   params.palette = {
     255, 0,
     0,  // car
@@ -67,6 +69,8 @@ protected:
   {
     PTv3ConfigParams params;
     params.segmentation_class_names = {"car", "truck", "drivable_flat"};
+    params.segmentation_class_mapping = {
+      {"car", "CAR"}, {"truck", "TRUCK"}, {"drivable_flat", "FLAT_SURFACE"}};
     params.palette = {
       255, 0,
       0,  // car

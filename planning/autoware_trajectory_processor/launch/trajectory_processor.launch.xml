@@ -25,7 +25,10 @@
   <arg name="output_trajectories" default="/planning/generator/candidate_trajectories"/>
   <arg name="output_current_velocity_limit_mps" default="/planning/scenario_planning/current_max_velocity"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_trajectory_processor" exec="autoware_trajectory_processor_node" name="trajectory_processor" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var trajectory_processor_param_path)" allow_substs="true"/>
     <param from="$(var common_param_path)"/>
     <param from="$(var elastic_band_param_path)" allow_substs="true"/>

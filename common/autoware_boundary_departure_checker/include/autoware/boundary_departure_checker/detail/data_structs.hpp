@@ -44,9 +44,9 @@ namespace autoware::boundary_departure_checker
  * @brief Type of boundary departure.
  */
 enum class DepartureType {
-  NONE = 0,     ///< no departure
-  APPROACHING,  ///< approaching the boundary
-  CRITICAL,     ///< critical departure from the boundary
+  NONE = 0,       ///< no departure
+  NEAR_BOUNDARY,  ///< footprint is within the near boundary lateral threshold
+  CRITICAL,       ///< critical departure from the boundary
 };
 
 /**
@@ -75,10 +75,13 @@ struct ProjectionToBound
   [[nodiscard]] bool is_none_departure() const { return departure_type == DepartureType::NONE; }
 
   /**
-   * @brief Check if the departure type is APPROACHING.
-   * @return true if APPROACHING
+   * @brief Check if the departure type is NEAR_BOUNDARY.
+   * @return true if NEAR_BOUNDARY
    */
-  [[nodiscard]] bool is_approaching() const { return departure_type == DepartureType::APPROACHING; }
+  [[nodiscard]] bool is_near_boundary() const
+  {
+    return departure_type == DepartureType::NEAR_BOUNDARY;
+  }
 
   /**
    * @brief Check if the departure type is CRITICAL.
@@ -101,9 +104,9 @@ struct ProjectionToBound
 using ProjectionsToBound = std::vector<ProjectionToBound>;
 
 /**
- * @brief A pair of critical points: physical departure point and safety buffer start.
+ * @brief A pair of departure points: physical departure point and safety buffer start.
  */
-struct CriticalPointPair
+struct DeparturePointPair
 {
   ProjectionToBound physical_departure_point;  ///< physical departure point
   ProjectionToBound safety_buffer_start;       ///< point where safety buffer starts
@@ -182,7 +185,10 @@ using FootprintSideSegmentsArray = std::vector<FootprintSideSegments>;
  */
 struct DepartureResult
 {
-  DepartureType status{DepartureType::NONE};           ///< current departure status
+  DepartureType status{DepartureType::NONE};  ///< current departure status
+  double lat_dist_to_uncrossable_bound{
+    std::numeric_limits<double>::infinity()};  ///< smallest lateral distance to a boundary [m],
+                                               ///< infinity when no boundary was evaluated
   visualization_msgs::msg::MarkerArray debug_markers;  ///< debug markers for visualization
 };
 
@@ -205,6 +211,7 @@ struct DepartureCheckThresholds
   double min_braking_distance{0.0};  ///< minimum braking distance [m]
   double cutoff_time{0.0};           ///< time cutoff for departure check [s]
   double th_lat_critical{0.0};       ///< lateral distance threshold for critical departure [m]
+  double th_near_boundary{0.0};      ///< lateral distance threshold for near boundary [m]
 };
 
 /**

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/image_transport_decompressor/image_transport_decompressor_node.hpp"
+#include "image_transport_decompressor_node.hpp"
 
-#include "image_transport_decompressor.hpp"
+#include "autoware/image_transport_decompressor/image_transport_decompressor.hpp"
 
 #include <exception>
 #include <memory>

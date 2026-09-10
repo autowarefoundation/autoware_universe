@@ -49,6 +49,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   ROS2_EXECUTOR MultiThreadedExecutor
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
+
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::default_adapi::ManualControlNode"
   EXECUTABLE manual_control_node

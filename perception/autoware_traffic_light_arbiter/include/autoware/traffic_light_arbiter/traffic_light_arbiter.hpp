@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -40,8 +41,10 @@ public:
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
 
+  // source_priority is "confidence", "external", or "perception"; any other value is treated as
+  // "confidence"
   TrafficLightArbiter(
-    SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
+    std::string source_priority, bool enable_signal_matching, double external_delay_tolerance,
     double external_time_tolerance, double perception_time_tolerance);
 
   // Extracts and stores the regulatory-element IDs the Core needs from the map

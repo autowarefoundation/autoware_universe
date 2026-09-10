@@ -194,7 +194,7 @@ MeasurementProcessingResult process_measurement(
   state.processor->updateEgoPose(ego_pose);
 
   const auto association_result = state.processor->associate(*objects);
-  state.input_manager->push(channel_index, *objects, association_result);
+  state.input_manager->push(channel_index, *objects, association_result, current_time);
 
   result.has_objects = true;
   result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());

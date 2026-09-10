@@ -13,10 +13,17 @@ include_directories()
 ament_auto_add_library(autoware_crosswalk_traffic_light_estimator SHARED
   src/crosswalk_traffic_light_estimator.cpp
   src/flashing_detection.cpp
+)
+
+ament_auto_add_library(autoware_crosswalk_traffic_light_estimator_node SHARED
   src/node.cpp
 )
 
-autoware_agnocast_wrapper_register_node(autoware_crosswalk_traffic_light_estimator
+target_link_libraries(autoware_crosswalk_traffic_light_estimator_node
+  autoware_crosswalk_traffic_light_estimator
+)
+
+autoware_agnocast_wrapper_register_node(autoware_crosswalk_traffic_light_estimator_node
   PLUGIN "autoware::crosswalk_traffic_light_estimator::CrosswalkTrafficLightEstimatorNode"
   EXECUTABLE crosswalk_traffic_light_estimator_node
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
@@ -33,7 +40,7 @@ if(BUILD_TESTING)
       test/test_crosswalk_traffic_light_estimator_node.cpp
     )
     target_link_libraries(test_crosswalk_traffic_light_estimator_node
-      autoware_crosswalk_traffic_light_estimator
+      autoware_crosswalk_traffic_light_estimator_node
     )
   endif()
 

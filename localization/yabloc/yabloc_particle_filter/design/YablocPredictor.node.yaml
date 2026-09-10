@@ -13,6 +13,7 @@ subscribers:
     message_type: geometry_msgs/msg/PoseWithCovarianceStamped
   - name: weighted_particles
     message_type: yabloc_particle_filter/msg/ParticleArray
+    global: /localization/pose_estimator/yabloc/pf/weighted_particles
   - name: height
     message_type: std_msgs/msg/Float32
   - name: twist_with_covariance
@@ -38,7 +39,7 @@ publishers:
 servers:
   - name: yabloc_trigger_srv
     message_type: std_srvs/srv/SetBool
-    remap_target: ~/service/yabloc_trigger_srv
+    remap_target: ~/yabloc_trigger_srv
 # parameters
 param_files:
   - name: predictor_param

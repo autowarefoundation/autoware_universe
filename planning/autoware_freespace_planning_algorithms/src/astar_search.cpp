@@ -245,7 +245,7 @@ void AstarSearch::setCollisionFreeDistanceMap()
         if (getObstacleEDT(n_index).distance < 0.5 * collision_vehicle_shape_.width) continue;
         const int n_id = indexToId(n_index);
         const double dist = current.second + (sqrt(offset) * costmap_.info.resolution);
-        if (closed[n_id] || col_free_distance_map_[n_id] < dist) continue;
+        if (closed[n_id] || col_free_distance_map_[n_id] <= dist) continue;
         col_free_distance_map_[n_id] = dist;
         heap.push({n_index, dist});
       }

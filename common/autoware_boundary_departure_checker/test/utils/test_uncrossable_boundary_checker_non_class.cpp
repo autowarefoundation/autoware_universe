@@ -19,6 +19,7 @@
 #include "autoware/boundary_departure_checker/detail/uncrossable_boundaries_rtree.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <gtest/gtest.h>
 
@@ -312,7 +313,7 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityBackwardBuffer
   // Arrange:
   Side<ProjectionsToBound> input;
   UncrossableBoundaryDepartureParam param;
-  param.lateral_margin_m = 0.5;
+  param.critical_departure_lateral_th_m = 0.5;
   param.time_to_departure_cutoff_s = 2.0;
   param.longitudinal_margin_m = 1.0;
   double min_braking_dist = 10.0;
@@ -344,6 +345,64 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityBackwardBuffer
   ASSERT_TRUE(result.left.has_value());
   EXPECT_DOUBLE_EQ(result.left->physical_departure_point.dist_along_trajectory_m, 15.0);
   EXPECT_DOUBLE_EQ(result.left->safety_buffer_start.dist_along_trajectory_m, 14.0);
+
+  // Without a critical projection there is no departure pair to buffer backwards from.
+  EXPECT_FALSE(severity_evaluator::apply_backward_buffer_and_filter({}, param).has_value());
+}
+
+TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityNearBoundary)
+{
+  // Verifies that a footprint that stays outside the critical margin is reported as
+  // NEAR_BOUNDARY at its closest projection.
+
+  // Arrange:
+  const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
+    0.383, 0.235, 2.79, 1.64, 1.0, 1.1, 2.5, 0.128, 0.128, 0.70);
+
+  UncrossableBoundaryDepartureParam param;
+  param.critical_departure_lateral_th_m = 0.01;
+  param.near_boundary_lateral_th_m = 0.5;
+  param.time_to_departure_cutoff_s = 2.0;
+  param.longitudinal_margin_m = 1.0;
+
+  EgoDynamicState ego_state;
+  ego_state.velocity = 0.0;
+  ego_state.acceleration = 0.0;
+
+  const auto create_pt = [](size_t idx, double lat_dist) {
+    ProjectionToBound pt(idx);
+    pt.lat_dist = lat_dist;
+    pt.dist_along_trajectory_m = 10.0 + static_cast<double>(idx);
+    pt.ego_front_to_proj_offset_m = 0.0;
+    pt.time_from_start = 3.0 + static_cast<double>(idx);
+    pt.pt_on_ego = {pt.dist_along_trajectory_m, lat_dist};
+    pt.pt_on_bound = {pt.dist_along_trajectory_m, 0.0};
+    return pt;
+  };
+
+  Side<ProjectionsToBound> input;
+  input.left.push_back(create_pt(0, 0.9));
+  input.left.push_back(create_pt(1, 0.4));
+  input.left.push_back(create_pt(2, 0.2));
+  input.left.push_back(create_pt(3, 0.6));
+
+  input.right.push_back(create_pt(0, 3.0));
+
+  // Act:
+  const auto result =
+    severity_evaluator::evaluate_projections_severity(input, param, ego_state, vehicle_info);
+
+  // Assert:
+  ASSERT_TRUE(result.left.has_value());
+  EXPECT_EQ(result.left->physical_departure_point.departure_type, DepartureType::NEAR_BOUNDARY);
+  EXPECT_DOUBLE_EQ(result.left->physical_departure_point.lat_dist, 0.2);
+
+  ASSERT_TRUE(result.right.has_value());
+  EXPECT_EQ(result.right->physical_departure_point.departure_type, DepartureType::NONE);
+
+  EXPECT_TRUE(severity_evaluator::is_near_boundary(result));
+  EXPECT_FALSE(severity_evaluator::is_critical(result));
+  EXPECT_DOUBLE_EQ(severity_evaluator::get_min_lateral_distance_to_bound(result), 0.2);
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestBuildUncrossableBoundariesRTree)
