@@ -34,9 +34,7 @@ import pytest
 
 
 def _args(**kw) -> argparse.Namespace:
-    return argparse.Namespace(
-        **{"python": "python3.10", "pip_args": "", "overrides": "", **kw}
-    )
+    return argparse.Namespace(**{"python": "python3.10", "pip_args": "", "overrides": "", **kw})
 
 
 def _wheelhouse(tmp_path) -> "tuple":
@@ -199,7 +197,5 @@ def test_make_runner_pip_source_keeps_source_and_pip_args(tmp_path):
 
 
 def test_make_runner_shlex_splits_overrides(tmp_path):
-    runner = _make_runner(
-        "some-pip-pkg", "s", _args(overrides="map=town10hd_opt server.port=2010")
-    )
+    runner = _make_runner("some-pip-pkg", "s", _args(overrides="map=town10hd_opt server.port=2010"))
     assert runner._overrides == ["map=town10hd_opt", "server.port=2010"]
