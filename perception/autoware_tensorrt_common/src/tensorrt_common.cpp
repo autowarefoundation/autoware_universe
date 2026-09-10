@@ -28,8 +28,10 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -233,6 +235,23 @@ int32_t TrtCommon::getNbIOTensors() const
     return engine_->getNbIOTensors();
   }
   return network_->getNbInputs() + network_->getNbOutputs();
+}
+
+std::unordered_set<std::string> TrtCommon::getIOTensorNames() const
+{
+  const auto num_tensors = getNbIOTensors();
+  std::unordered_set<std::string> names;
+  names.reserve(static_cast<std::size_t>(num_tensors));
+  for (int32_t index = 0; index < num_tensors; ++index) {
+    const auto * name = getIOTensorName(index);
+    if (name == nullptr) {
+      throw std::runtime_error(
+        "TensorRT reports " + std::to_string(num_tensors) + " IO tensors but cannot name index " +
+        std::to_string(index) + ".");
+    }
+    names.emplace(name);
+  }
+  return names;
 }
 
 nvinfer1::Dims TrtCommon::getTensorShape(const int32_t index) const

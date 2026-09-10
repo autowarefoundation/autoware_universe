@@ -181,6 +181,11 @@ validator:
       default_value: 0.01
       description: lateral margin [m]
       read_only: false
+    near_boundary_lateral_th_m:
+      type: double
+      default_value: 0.2
+      description: lateral distance below which the trajectory is flagged as near an uncrossable boundary [m]
+      read_only: false
     longitudinal_margin_m:
       type: double
       default_value: 1.0

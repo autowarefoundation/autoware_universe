@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/multi_camera_fusion.hpp"
+#include "autoware/traffic_light_multi_camera_fusion/traffic_light_multi_camera_fusion.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <rclcpp/time.hpp>

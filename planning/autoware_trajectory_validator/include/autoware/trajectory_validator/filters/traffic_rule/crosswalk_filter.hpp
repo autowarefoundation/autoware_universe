@@ -22,6 +22,7 @@
 #include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
+#include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
 #include <unordered_map>
@@ -30,6 +31,8 @@
 
 namespace autoware::trajectory_validator::plugin::traffic_rule
 {
+using autoware_internal_planning_msgs::msg::SafetyFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -146,7 +149,8 @@ private:
     const FilterContext & context, const TargetCrosswalks & target_crosswalks);
 
   bool is_obstructing_crosswalk(
-    const TrajectoryPoints & traj_points, const TargetCrosswalk & target_crosswalk) const;
+    const TrajectoryPoints & traj_points, const TargetCrosswalk & target_crosswalk,
+    SafetyFactorArray & safety_factors) const;
 
   void update_debug_data(
     const TrajectoryPoints & traj_points, const TargetCrosswalks & target_crosswalks,

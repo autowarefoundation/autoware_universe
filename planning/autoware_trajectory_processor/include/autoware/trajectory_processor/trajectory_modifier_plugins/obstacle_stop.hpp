@@ -91,7 +91,6 @@ private:
   MarkerArray marker_array_;
   PublisherHandle<visualization_msgs::msg::MarkerArray> debug_viz_pub_;
   PublisherHandle<PointCloud2> pub_filtered_pointcloud_;
-  PublisherHandle<PointCloud2> pub_clustered_pointcloud_;
   PublisherHandle<StringStamped> pub_debug_text_;
 
   void check_obstacles(const TrajectoryPoints & traj_points, const TrajectoryProcessorData & input);

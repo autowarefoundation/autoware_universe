@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
 import math
 import threading
 
+from autoware_perception_msgs.msg import TrafficLightElement
+from autoware_perception_msgs.msg import TrafficLightGroup
+from autoware_perception_msgs.msg import TrafficLightGroupArray
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
 from autoware_vehicle_msgs.msg import HazardLightsCommand
@@ -56,6 +60,9 @@ from .modules.carla_utils import create_cloud
 from .modules.carla_utils import project_point_to_ground
 from .modules.carla_utils import ros_pose_to_carla_transform
 from .modules.carla_wrapper import SensorInterface
+from .modules.traffic_light_matcher import load_map_traffic_lights
+from .modules.traffic_light_matcher import match_traffic_lights
+from .modules.traffic_light_matcher import parse_id_map_override
 
 
 def _parse_geo_reference(xodr_xml: str):
@@ -82,6 +89,20 @@ def _parse_geo_reference(xodr_xml: str):
     if lat_match is None or lon_match is None:
         raise ValueError(f"Cannot extract +lat_0/+lon_0 from geoReference: {proj_string}")
     return float(lat_match.group(1)), float(lon_match.group(1))
+
+
+# Speed-unit conversions for the vehicle steering_curve lookup. The curve's speed
+# axis follows the UE vehicle plugin behind the CARLA version: Chaos (CARLA 0.10+,
+# UE5) samples it in mph, PhysX (CARLA 0.9.x, UE4) in km/h.
+MPS_TO_MPH = 2.2369362920544
+MPS_TO_KMH = 3.6
+
+# One consistent snapshot of the ego actor, read under a single lock so that the
+# published status reports all describe the same simulation step.
+EgoState = namedtuple(
+    "EgoState",
+    ["transform", "velocity", "angular_velocity", "steer_angle", "control", "light_state"],
+)
 
 
 class carla_ros2_interface(object):
@@ -123,6 +144,12 @@ class carla_ros2_interface(object):
             # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
+            # Override the wheel max steer angle [deg] used to convert between
+            # tire angles and the normalized VehicleControl.steer. 0 uses the
+            # value reported by the vehicle physics. CARLA 0.10 (Chaos) reports
+            # 70 deg but only achieves roughly a third of it, so calibrating
+            # this to the measured full-steer angle restores a unity gain.
+            "max_wheel_steer_angle_deg": (rclpy.Parameter.Type.DOUBLE, 0.0),
             # Replace the ego vehicle's speed-based steering curve with an
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
@@ -133,6 +160,38 @@ class carla_ros2_interface(object):
             # default so the supported 0.9.15 environment, where bodies never
             # sleep, keeps its unmodified launch dynamics.
             "wake_sleeping_physics": (rclpy.Parameter.Type.BOOL, False),
+            # Traffic-light bridging parameters, grouped under the
+            # "traffic_light." namespace so they stay together in `ros2 param list`.
+            #
+            # Publish the CARLA server's traffic-light states as an Autoware
+            # TrafficLightGroupArray on
+            # /perception/traffic_light_recognition/traffic_signals, bypassing
+            # camera-based recognition.
+            "traffic_light.publish": (rclpy.Parameter.Type.BOOL, False),
+            # Set every CARLA traffic light to green and freeze it there at
+            # startup (handled in carla_autoware). Useful for camera-less
+            # closed-loop runs that have no traffic-light recognition and would
+            # otherwise hold at every signalized stop line.
+            "traffic_light.force_green": (rclpy.Parameter.Type.BOOL, False),
+            # Path to the lanelet2 map (.osm). When set, each CARLA traffic
+            # light is matched by position to the map's traffic-light heads and
+            # its state is published under the matched regulatory-element
+            # (traffic_light_group) ids. Empty falls back to using the CARLA
+            # OpenDRIVE signal id directly as the group id.
+            "traffic_light.map_path": (rclpy.Parameter.Type.STRING, ""),
+            # Maximum head-to-head distance (m) accepted when matching a CARLA
+            # traffic light to a lanelet2 traffic-light head.
+            "traffic_light.match_distance": (rclpy.Parameter.Type.DOUBLE, 5.0),
+            # A position match is rejected as ambiguous when the closest head
+            # that resolves to a different regulatory element is nearly as close
+            # as the winner (nearest > ratio * second). Lower is stricter.
+            "traffic_light.match_ratio": (rclpy.Parameter.Type.DOUBLE, 0.6),
+            # Optional override, formatted "opendrive_id:group_id[|group_id...],...".
+            # Pins a CARLA OpenDRIVE signal id to one or more Autoware group ids,
+            # taking precedence over position matching (use it to recover the few
+            # lights the matcher reports as ambiguous or unmatched; the |-separated
+            # list lets a shared head map to all of its regulatory elements).
+            "traffic_light.id_map": (rclpy.Parameter.Type.STRING, ""),
         }
 
         self.param_values = {}
@@ -189,6 +248,12 @@ class carla_ros2_interface(object):
         self.pub_hazard_lights_state = self.ros2_node.create_publisher(
             HazardLightsReport, "/vehicle/status/hazard_lights_status", 1
         )
+        if self.param_values.get("traffic_light.publish", False):
+            self.pub_traffic_signals = self.ros2_node.create_publisher(
+                TrafficLightGroupArray,
+                "/perception/traffic_light_recognition/traffic_signals",
+                1,
+            )
 
     def _initialize_subscriptions(self):
         """Initialize all ROS 2 subscriptions."""
@@ -350,13 +415,29 @@ class carla_ros2_interface(object):
         self.pub_camera_info = {}
         self.pub_lidar = {}
         self.pub_imu = None
+        self.pub_traffic_signals = None
         self.camera_info_cache = {}
+
+        # Traffic-light publishing state, resolved lazily on the first tick that
+        # publishes (the CARLA world is not populated at construction time).
+        self._traffic_light_actors = None
+        # actor id -> [Autoware traffic_light_group_id, ...] resolved by the
+        # position matcher (or the OpenDRIVE-id fallback).
+        self._traffic_light_actor_groups = None
 
         # Vehicle and control state
         self.prev_timestamp = None
         self.prev_steer_output = 0.0
         self.tau = 0.2
         self._max_steer_angle_rad = None
+        self._physics_max_steer_angle_rad = None
+        # CARLA server version and the capability flags derived from it. Set by
+        # set_carla_version() once the world is loaded; until then we assume the
+        # measured wheel angle is usable (0.9.x behavior).
+        self.carla_version = None
+        self._wheel_steer_angle_reliable = True
+        # Speed unit the server samples steering_curve in (see set_carla_version).
+        self._steering_curve_speed_scale = MPS_TO_KMH
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -964,17 +1045,113 @@ class carla_ros2_interface(object):
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
 
-    def _max_wheel_steer_angle_rad(self):
-        """Max steerable wheel angle [rad], cached from the vehicle physics.
+    def _physics_max_wheel_steer_angle_rad(self):
+        """Max steerable wheel angle [rad] reported by the vehicle physics.
 
-        Must be called with ``physics_control`` already available.
+        This is CARLA's own full-steer angle: normalized VehicleControl.steer
+        in [-1, 1] maps to +/- this angle, and ``get_wheel_steer_angle()``
+        returns a value on the same scale. Must be called with
+        ``physics_control`` already available.
         """
-        if self._max_steer_angle_rad is None:
+        if self._physics_max_steer_angle_rad is None:
             max_deg = max((w.max_steer_angle for w in self.physics_control.wheels), default=0.0)
             if max_deg <= 0.0:
                 max_deg = 70.0  # CARLA's usual front-wheel default
-            self._max_steer_angle_rad = math.radians(max_deg)
+            self._physics_max_steer_angle_rad = math.radians(max_deg)
+        return self._physics_max_steer_angle_rad
+
+    def _max_wheel_steer_angle_rad(self):
+        """Calibrated full-steer wheel angle [rad] used for steer conversion.
+
+        Uses ``max_wheel_steer_angle_deg`` when set (> 0), otherwise the
+        physics value. Must be called with ``physics_control`` available.
+        """
+        if self._max_steer_angle_rad is None:
+            max_deg = float(self.param_values.get("max_wheel_steer_angle_deg", 0.0))
+            if max_deg <= 0.0:
+                self._max_steer_angle_rad = self._physics_max_wheel_steer_angle_rad()
+            else:
+                self._max_steer_angle_rad = math.radians(max_deg)
         return self._max_steer_angle_rad
+
+    def _steer_report_scale(self):
+        """Factor mapping CARLA's reported wheel angle to the calibrated angle.
+
+        ``get_wheel_steer_angle()`` returns an angle on the physics full-steer
+        scale, but the command path normalizes by the (possibly overridden)
+        calibrated angle. Scaling the report by calibrated / physics keeps the
+        steering feedback consistent with the command, so the ~3x report
+        mismatch the override removes on the command side is removed here too.
+        """
+        physics_rad = self._physics_max_wheel_steer_angle_rad()
+        if physics_rad <= 0.0:
+            return 1.0
+        return self._max_wheel_steer_angle_rad() / physics_rad
+
+    def set_carla_version(self, version_str):
+        """Record the CARLA server version and derive capability flags from it.
+
+        CARLA 0.10 (Chaos physics) always returns 0 from
+        get_wheel_steer_angle(), so on 0.10+ the steering report is synthesized
+        from the applied control while 0.9.x keeps using the measured wheel
+        angle. An unparsable version keeps the 0.9.x (measured) behavior.
+        https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_wheel_steer_angle
+        """
+        import re
+
+        self.carla_version = version_str
+        match = re.match(r"\s*(\d+)\.(\d+)", version_str or "")
+        if match is None:
+            self.logger.warning(
+                f"Could not parse CARLA version '{version_str}'; assuming "
+                "get_wheel_steer_angle() is reliable (CARLA 0.9.x behavior)."
+            )
+            self._wheel_steer_angle_reliable = True
+            return
+        major, minor = int(match.group(1)), int(match.group(2))
+        self._wheel_steer_angle_reliable = (major, minor) < (0, 10)
+        # steering_curve is sampled against the forward speed in the unit the
+        # underlying UE vehicle plugin uses: mph for Chaos (CARLA 0.10+ / UE5),
+        # km/h for PhysX (CARLA 0.9.x / UE4).
+        self._steering_curve_speed_scale = (
+            MPS_TO_KMH if self._wheel_steer_angle_reliable else MPS_TO_MPH
+        )
+        self.logger.info(
+            f"CARLA server version {version_str}: "
+            f"wheel steer angle "
+            f"{'reliable' if self._wheel_steer_angle_reliable else 'synthesized'}."
+        )
+
+    def _steering_curve_factor(self, speed_mps):
+        """Steering multiplier CARLA applies at ``speed_mps`` [m/s] forward speed.
+
+        CARLA scales the achievable wheel angle by the vehicle's
+        ``steering_curve`` (a forward-speed -> [0, 1] factor lookup) before
+        turning the wheels, so the synthesized steering report folds in the same
+        factor to match the angle the simulator actually produced. Returns 1.0
+        when no curve is available or when the curve has been flattened to the
+        identity curve via flatten_steering_curve.
+
+        The curve's speed axis is NOT in m/s: the UE vehicle plugin evaluates it
+        against the forward speed in mph on Chaos (CARLA 0.10+, the versions this
+        synthesized report runs on) and in km/h on PhysX (CARLA 0.9.x), so the
+        speed is converted with the scale set by set_carla_version() before
+        interpolating. Sampling the curve with a raw m/s value would read it at
+        roughly 1/2 (mph) or 1/4 (km/h) of the real speed and overstate the
+        factor wherever the curve attenuates steering.
+        https://carla.readthedocs.io/en/latest/python_api/#carlavehiclephysicscontrol
+        """
+        curve = getattr(self.physics_control, "steering_curve", None)
+        if not curve:
+            return 1.0
+        # CARLA 0.10 ships corrupt curves (duplicated, unsorted points); sort by
+        # speed so numpy.interp stays monotonic. numpy.interp clamps to the end
+        # point factors outside the sampled speed range.
+        points = sorted(((p.x, p.y) for p in curve), key=lambda point: point[0])
+        speeds = [point[0] for point in points]
+        factors = [point[1] for point in points]
+        curve_speed = abs(speed_mps) * self._steering_curve_speed_scale
+        return float(numpy.interp(curve_speed, speeds, factors))
 
     def turn_indicators_callback(self, in_cmd):
         """Store turn indicator command (thread-safe)."""
@@ -1015,6 +1192,83 @@ class carla_ros2_interface(object):
 
             self.ego_actor.set_light_state(carla.VehicleLightState(new_state))
 
+    def _read_ego_state(self):
+        """Read one consistent ego snapshot under the state lock, or None if no ego actor."""
+        with self._state_lock:
+            if not self.ego_actor:
+                return None
+            return EgoState(
+                transform=self.ego_actor.get_transform(),
+                velocity=self.ego_actor.get_velocity(),
+                angular_velocity=self.ego_actor.get_angular_velocity(),
+                steer_angle=self.ego_actor.get_wheel_steer_angle(
+                    carla.VehicleWheelLocation.FL_Wheel
+                ),
+                control=self.ego_actor.get_control(),
+                light_state=int(self.ego_actor.get_light_state()),
+            )
+
+    @staticmethod
+    def _velocity_in_ego_frame(ego_transform, ego_velocity_carla):
+        """Rotate the CARLA world-frame velocity into the ego (base_link) frame."""
+        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
+        inv_rot_mat = trans_mat[0:3, 0:3].T
+        vel_vec = numpy.array(
+            [ego_velocity_carla.x, ego_velocity_carla.y, ego_velocity_carla.z]
+        ).reshape(3, 1)
+        return (inv_rot_mat @ vel_vec).T[0]
+
+    def _steering_tire_angle(self, ego, speed_mps):
+        """Return the steering tire angle [rad] to report for this simulation step.
+
+        CARLA 0.10 (Chaos) always reports 0 from get_wheel_steer_angle(), so on
+        0.10+ (see set_carla_version) the angle is synthesized from the applied
+        control; 0.9.x keeps using the measured wheel angle.
+        """
+        if self._wheel_steer_angle_reliable:
+            # Scale CARLA's reported wheel angle onto the calibrated full-steer
+            # range so the feedback matches the command normalization (identity
+            # when max_wheel_steer_angle_deg is unset). The sign flips because
+            # Autoware is CCW-positive and CARLA CW-positive.
+            return -math.radians(ego.steer_angle) * self._steer_report_scale()
+        if self.physics_control is None:
+            return 0.0
+        # get_control().steer is the requested steer fraction BEFORE the server
+        # applies the vehicle's speed-based steering_curve, so the bare fraction
+        # * max angle overstates the wheel angle whenever the curve attenuates
+        # steering at speed. Fold the same curve back in so the report matches
+        # the angle CARLA actually produced. control_callback intentionally
+        # leaves the curve to the server, and flatten_steering_curve makes this
+        # factor ~1.0 (identity curve), leaving the report unchanged.
+        curve_factor = self._steering_curve_factor(speed_mps)
+        return -ego.control.steer * self._max_wheel_steer_angle_rad() * curve_factor
+
+    @staticmethod
+    def _blinker_reports(light_state, stamp):
+        """Decode CARLA blinker bits into Autoware turn-indicator / hazard reports."""
+        left_on = bool(light_state & int(carla.VehicleLightState.LeftBlinker))
+        right_on = bool(light_state & int(carla.VehicleLightState.RightBlinker))
+        # Both blinkers on => hazard mode; the turn indicator then reports DISABLE.
+        hazard_on = left_on and right_on
+
+        out_turn_indicators_state = TurnIndicatorsReport()
+        out_turn_indicators_state.stamp = stamp
+        if hazard_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
+        elif left_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_LEFT
+        elif right_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_RIGHT
+        else:
+            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
+
+        out_hazard_lights_state = HazardLightsReport()
+        out_hazard_lights_state.stamp = stamp
+        out_hazard_lights_state.report = (
+            HazardLightsReport.ENABLE if hazard_on else HazardLightsReport.DISABLE
+        )
+        return out_turn_indicators_state, out_hazard_lights_state
+
     def ego_status(self):
         """
         Publish ego vehicle status.
@@ -1025,33 +1279,13 @@ class carla_ros2_interface(object):
         if self.checkFrequency("status"):
             return
 
-        # Thread-safe access to ego_actor - get all needed data in one lock section
-        with self._state_lock:
-            if not self.ego_actor:
-                return
+        ego = self._read_ego_state()
+        if ego is None:
+            return
 
-            ego_transform = self.ego_actor.get_transform()
-            ego_velocity_carla = self.ego_actor.get_velocity()
-            ego_angular_velocity = self.ego_actor.get_angular_velocity()
-            steer_angle = self.ego_actor.get_wheel_steer_angle(carla.VehicleWheelLocation.FL_Wheel)
-            control = self.ego_actor.get_control()
-            light_state = int(self.ego_actor.get_light_state())
-
-        # convert velocity from cartesian to ego frame
-        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
-        rot_mat = trans_mat[0:3, 0:3]
-        inv_rot_mat = rot_mat.T
-        vel_vec = numpy.array(
-            [ego_velocity_carla.x, ego_velocity_carla.y, ego_velocity_carla.z]
-        ).reshape(3, 1)
-        ego_velocity = (inv_rot_mat @ vel_vec).T[0]
+        ego_velocity = self._velocity_in_ego_frame(ego.transform, ego.velocity)
 
         out_vel_state = VelocityReport()
-        out_steering_state = SteeringReport()
-        out_ctrl_mode = ControlModeReport()
-        out_gear_state = GearReport()
-        out_actuation_status = ActuationStatusStamped()
-
         out_vel_state.header = self.get_msg_header(frame_id="base_link")
         out_vel_state.longitudinal_velocity = ego_velocity[0]
         out_vel_state.lateral_velocity = ego_velocity[1]
@@ -1059,44 +1293,30 @@ class carla_ros2_interface(object):
         # (CW-positive) frame, while ROS expects rad/s CCW-positive (REP-103):
         # https://carla.readthedocs.io/en/latest/python_api/#carla.Actor.get_angular_velocity
         # https://www.ros.org/reps/rep-0103.html
-        out_vel_state.heading_rate = -math.radians(ego_angular_velocity.z)
+        out_vel_state.heading_rate = -math.radians(ego.angular_velocity.z)
+        stamp = out_vel_state.header.stamp
 
-        out_steering_state.stamp = out_vel_state.header.stamp
-        out_steering_state.steering_tire_angle = -math.radians(steer_angle)
+        out_steering_state = SteeringReport()
+        out_steering_state.stamp = stamp
+        out_steering_state.steering_tire_angle = self._steering_tire_angle(ego, ego_velocity[0])
 
-        out_gear_state.stamp = out_vel_state.header.stamp
+        out_gear_state = GearReport()
+        out_gear_state.stamp = stamp
         out_gear_state.report = GearReport.DRIVE
 
-        out_ctrl_mode.stamp = out_vel_state.header.stamp
+        out_ctrl_mode = ControlModeReport()
+        out_ctrl_mode.stamp = stamp
         out_ctrl_mode.mode = ControlModeReport.AUTONOMOUS
 
+        out_actuation_status = ActuationStatusStamped()
         out_actuation_status.header = self.get_msg_header(frame_id="base_link")
-        out_actuation_status.status.accel_status = control.throttle
-        out_actuation_status.status.brake_status = control.brake
-        out_actuation_status.status.steer_status = -control.steer
+        out_actuation_status.status.accel_status = ego.control.throttle
+        out_actuation_status.status.brake_status = ego.control.brake
+        out_actuation_status.status.steer_status = -ego.control.steer
 
-        # Decode CARLA blinker bits into Autoware turn-indicator / hazard reports.
-        left_on = bool(light_state & int(carla.VehicleLightState.LeftBlinker))
-        right_on = bool(light_state & int(carla.VehicleLightState.RightBlinker))
-
-        out_turn_indicators_state = TurnIndicatorsReport()
-        out_turn_indicators_state.stamp = out_vel_state.header.stamp
-        if left_on and right_on:
-            # Both blinkers on => hazard mode; turn indicator reports DISABLE.
-            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
-        elif left_on:
-            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_LEFT
-        elif right_on:
-            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_RIGHT
-        else:
-            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
-
-        out_hazard_lights_state = HazardLightsReport()
-        out_hazard_lights_state.stamp = out_vel_state.header.stamp
-        if left_on and right_on:
-            out_hazard_lights_state.report = HazardLightsReport.ENABLE
-        else:
-            out_hazard_lights_state.report = HazardLightsReport.DISABLE
+        out_turn_indicators_state, out_hazard_lights_state = self._blinker_reports(
+            ego.light_state, stamp
+        )
 
         self.pub_actuation_status.publish(out_actuation_status)
         self.pub_vel_state.publish(out_vel_state)
@@ -1167,6 +1387,208 @@ class carla_ros2_interface(object):
         odom.twist.twist.angular.y = -math.radians(float(body_ang_vel[1]))
         odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
         self.pub_gt_odom.publish(odom)
+
+    def _carla_light_map_point(self, actor):
+        """Return a CARLA traffic light's head position in the Autoware map frame.
+
+        Uses the mean of the actor's light-box centres (the physical light heads,
+        ``get_light_boxes()`` reports them in world coordinates) rather than the
+        actor origin, which sits at the pole base and is offset from the heads the
+        lanelet2 map records. Falls back to the actor location if no boxes exist.
+
+        The CARLA→map offset is read via :meth:`_current_map_origin` (not the raw
+        ``map_origin_x/y`` parameters) so georeferenced maps, whose origin is
+        derived from the OpenDRIVE geoReference in ``on_world_ready`` while the
+        parameters stay at their zero default, transform the heads into the same
+        frame as the lanelet2 ``local_x/local_y`` coordinates and localization.
+        """
+        try:
+            boxes = actor.get_light_boxes()
+        except RuntimeError:
+            boxes = None
+        if boxes:
+            locations = [box.location for box in boxes]
+            carla_location = carla.Location(
+                x=sum(loc.x for loc in locations) / len(locations),
+                y=sum(loc.y for loc in locations) / len(locations),
+                z=sum(loc.z for loc in locations) / len(locations),
+            )
+        else:
+            carla_location = actor.get_location()
+        origin_x, origin_y = self._current_map_origin()
+        point = carla_location_to_ros_point(carla_location, origin_x=origin_x, origin_y=origin_y)
+        return (point.x, point.y)
+
+    def _actor_opendrive_id(self, actor):
+        try:
+            return int(actor.get_opendrive_id())
+        except (ValueError, RuntimeError):
+            return None
+
+    def _apply_id_map_override(self, override):
+        """Assign the lights whose OpenDRIVE id is pinned in the override.
+
+        Returns ``(assignments, overridden_actor_ids)``; overridden lights bypass
+        position matching entirely.
+        """
+        assignments = {}
+        overridden = set()
+        for actor in self._traffic_light_actors:
+            opendrive_id = self._actor_opendrive_id(actor)
+            if opendrive_id is not None and opendrive_id in override:
+                assignments[actor.id] = list(override[opendrive_id])
+                overridden.add(actor.id)
+        return assignments, overridden
+
+    def _match_actors_to_map(self, actors, map_path, override_count):
+        """Position-match ``actors`` against the lanelet2 map; returns assignments."""
+        map_lights = load_map_traffic_lights(map_path)
+        carla_heads = [
+            (actor.id, self._actor_opendrive_id(actor), self._carla_light_map_point(actor))
+            for actor in actors
+        ]
+        result = match_traffic_lights(
+            carla_heads,
+            map_lights,
+            distance_threshold=self.param_values["traffic_light.match_distance"],
+            ambiguity_ratio=self.param_values["traffic_light.match_ratio"],
+        )
+        self._log_traffic_light_match(map_lights, result, override_count=override_count)
+        return result.assignments
+
+    def _fallback_opendrive_groups(self, actors):
+        """Use the OpenDRIVE signal id directly as the group id (no map path)."""
+        assignments = {}
+        for actor in actors:
+            opendrive_id = self._actor_opendrive_id(actor)
+            if opendrive_id is not None:
+                assignments[actor.id] = [opendrive_id]
+        self.logger.info(
+            f"Publishing {len(assignments)} CARLA traffic lights using the OpenDRIVE "
+            f"signal id as the group id (no traffic_light.map_path set)"
+        )
+        return assignments
+
+    def _resolve_traffic_light_groups(self):
+        """Resolve each CARLA traffic light to its Autoware group id(s), once.
+
+        Traffic lights are static actors, so the world is queried and the mapping
+        built on the first publishing tick and reused afterwards. Resolution order
+        per light:
+
+        1. ``traffic_light.id_map`` override (keyed by OpenDRIVE signal id) wins; one
+           entry may pin several group ids.
+        2. Otherwise, if a lanelet2 map is provided, the light is matched to the
+           nearest map head by position; ambiguous / too-far lights are dropped and
+           reported so they can be pinned via the override instead of mis-assigned.
+        3. Otherwise (no map), the OpenDRIVE signal id is used directly as the group
+           id, matching lanelet2 maps whose regulatory-element ids preserve it.
+        """
+        world = CarlaDataProvider.get_world()
+        if world is None:
+            return
+        self._traffic_light_actors = list(world.get_actors().filter("*traffic_light*"))
+
+        override = parse_id_map_override(
+            self.param_values.get("traffic_light.id_map", ""),
+            on_invalid=lambda message: self.logger.warning(f"traffic_light.id_map: {message}"),
+        )
+        assignments, overridden = self._apply_id_map_override(override)
+        to_resolve = [a for a in self._traffic_light_actors if a.id not in overridden]
+
+        map_path = str(self.param_values.get("traffic_light.map_path", "") or "").strip()
+        if map_path:
+            assignments.update(self._match_actors_to_map(to_resolve, map_path, len(overridden)))
+        else:
+            assignments.update(self._fallback_opendrive_groups(to_resolve))
+
+        self._traffic_light_actor_groups = assignments
+
+    def _log_traffic_light_match(self, map_lights, result, override_count):
+        """Log a per-light match report so a human can verify or override it."""
+        from .modules.traffic_light_matcher import MatchResult
+
+        ambiguous = [e for e in result.entries if e["status"] == MatchResult.AMBIGUOUS]
+        too_far = [e for e in result.entries if e["status"] == MatchResult.TOO_FAR]
+        self.logger.info(
+            f"Traffic-light matching: {result.matched_actor_count} matched, "
+            f"{len(ambiguous)} ambiguous, {len(too_far)} too far, "
+            f"{override_count} overridden "
+            f"(map has {len(map_lights)} heads / {map_lights.group_count} groups)"
+        )
+        for entry in ambiguous:
+            self.logger.warning(
+                f"  ambiguous CARLA light (opendrive_id={entry['opendrive_id']}): nearest "
+                f"{entry['nearest']:.2f} m vs {entry['second']:.2f} m to a different signal; "
+                f"not published (pin it via traffic_light.id_map if needed)"
+            )
+        for entry in too_far:
+            self.logger.warning(
+                f"  unmatched CARLA light (opendrive_id={entry['opendrive_id']}): nearest map "
+                f"head {entry['nearest']:.2f} m away exceeds the match distance; not published"
+            )
+
+    @staticmethod
+    def _carla_state_to_autoware_element(state):
+        """Map a carla.TrafficLightState to a TrafficLightElement (color, status).
+
+        A lit lamp reports its color as SOLID_ON. CARLA's ``Off`` is a *known* state --
+        the signal is dark, e.g. at an intersection whose lights are disabled -- so it
+        is reported as SOLID_OFF rather than as a lit lamp of unknown color, and only a
+        state this bridge cannot interpret stays UNKNOWN/UNKNOWN.
+        """
+        if state == carla.TrafficLightState.Red:
+            return TrafficLightElement.RED, TrafficLightElement.SOLID_ON
+        if state == carla.TrafficLightState.Yellow:
+            return TrafficLightElement.AMBER, TrafficLightElement.SOLID_ON
+        if state == carla.TrafficLightState.Green:
+            return TrafficLightElement.GREEN, TrafficLightElement.SOLID_ON
+        if state == carla.TrafficLightState.Off:
+            return TrafficLightElement.UNKNOWN, TrafficLightElement.SOLID_OFF
+        return TrafficLightElement.UNKNOWN, TrafficLightElement.UNKNOWN
+
+    def _publish_traffic_lights(self):
+        """Publish CARLA traffic-light states as a TrafficLightGroupArray.
+
+        No-op unless traffic_light.publish is enabled (the publisher only exists
+        then). Each CARLA light is reported as a circular signal whose color and
+        status reflect the current CARLA state, published under every
+        regulatory-element (group) id it resolved to. When traffic_light.force_green
+        is set the lights are frozen green in CARLA, so this naturally publishes
+        green for all of them.
+        """
+        if self.pub_traffic_signals is None:
+            return
+        if self._traffic_light_actor_groups is None:
+            self._resolve_traffic_light_groups()
+        if not self._traffic_light_actor_groups:
+            return
+
+        # Aggregate by group id: several physical heads (actors) can belong to the
+        # same regulatory element, and they show the same aspect, so one element per
+        # group is emitted.
+        group_elements = {}
+        for actor in self._traffic_light_actors:
+            group_ids = self._traffic_light_actor_groups.get(actor.id)
+            if not group_ids:
+                continue
+            color, status = self._carla_state_to_autoware_element(actor.get_state())
+            for group_id in group_ids:
+                group_elements[group_id] = (color, status)
+
+        msg = TrafficLightGroupArray()
+        msg.stamp = self.get_msg_header(frame_id="map").stamp
+        for group_id, (color, status) in group_elements.items():
+            group = TrafficLightGroup()
+            group.traffic_light_group_id = group_id
+            element = TrafficLightElement()
+            element.color = color
+            element.shape = TrafficLightElement.CIRCLE
+            element.status = status
+            element.confidence = 1.0
+            group.elements.append(element)
+            msg.traffic_light_groups.append(group)
+        self.pub_traffic_signals.publish(msg)
 
     def _publish_sensor_data(self, key, data):
         """Publish one sensor's data, dispatching on its sensor type.
@@ -1243,6 +1665,9 @@ class carla_ros2_interface(object):
 
         # Publish ego vehicle status
         self.ego_status()
+
+        # Publish CARLA traffic-light states (no-op unless enabled)
+        self._publish_traffic_lights()
 
         # Thread-safe read of current control command
         with self._state_lock:

@@ -117,7 +117,7 @@ void calculate_overlapping_collision(
 /// @param[in] params The parameters for collision calculation.
 /// @return A vector of collisions.
 std::vector<Collision> calculate_interval_collisions(
-  std::vector<TimeOverlapIntervalPair> intervals, const Parameters & params);
+  const std::vector<TimeOverlapIntervalPair> & intervals, const Parameters & params);
 
 /// @brief Calculates collisions between the ego vehicle's trajectory footprint and a predicted
 /// object's footprint.

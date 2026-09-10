@@ -17,6 +17,7 @@
 
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -39,7 +40,7 @@ using autoware_planning_validator::msg::PlanningValidatorStatus;
 class PlanningValidatorDebugMarkerPublisher
 {
 public:
-  explicit PlanningValidatorDebugMarkerPublisher(rclcpp::Node * node);
+  explicit PlanningValidatorDebugMarkerPublisher(autoware::agnocast_wrapper::Node * node);
 
   void pushPoseMarker(
     const autoware_planning_msgs::msg::TrajectoryPoint & p, const std::string & ns, int id = 0);
@@ -96,11 +97,11 @@ public:
   void clearMarkers();
 
 private:
-  rclcpp::Node * node_;
+  autoware::agnocast_wrapper::Node * node_;
   visualization_msgs::msg::MarkerArray marker_array_;
   visualization_msgs::msg::MarkerArray marker_array_virtual_wall_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr virtual_wall_pub_;
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) debug_viz_pub_;
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) virtual_wall_pub_;
   std::map<std::string, int> marker_id_;
 
   int getMarkerId(const std::string & ns)
