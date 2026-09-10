@@ -1,6 +1,18 @@
 selector:
+  generator_name_prefixes:
+    type: string_array
+    default_value: [DiffusionPlanner_, MinimumRuleBasedPlanner_Go, MinimumRuleBasedPlanner_Stop]
+    description: List of generator name prefixes
+    read_only: false
+
   fallback_period_ms:
     type: int
     default_value: 150
     description: fallback timer period in milliseconds.
+    read_only: false
+
+  enable_ranker:
+    type: bool
+    default_value: false
+    description: enable trajectory ranker
     read_only: false

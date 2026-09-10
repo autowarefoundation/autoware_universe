@@ -19,4 +19,11 @@
       Rejects trajectories that would pass through red or amber traffic lights.
     </description>
   </class>
+  <class type="traffic_rule::CrosswalkFilter"
+         base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
+    <description>
+      Filter for checking crosswalk violations.
+      Rejects trajectories that would violate crosswalk traffic rules.
+    </description>
+  </class>
 </library>

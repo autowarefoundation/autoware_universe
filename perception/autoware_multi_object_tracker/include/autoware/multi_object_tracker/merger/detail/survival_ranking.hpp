@@ -26,6 +26,9 @@ namespace autoware::multi_object_tracker::detail
 // Lazily evaluate and cache the tracker's confidence for this cycle.
 bool ensureConfident(TrackerSnapshot & snap, const DecisionContext & ctx);
 
+// Lazily evaluate and cache the tracker's confidence at the publish horizon (state + 200 ms).
+bool ensurePublishConfident(TrackerSnapshot & snap, const DecisionContext & ctx);
+
 // Lazily export and cache the tracker's full object; nullptr if it cannot be exported.
 const types::DynamicObject * ensureObject(TrackerSnapshot & snap, const rclcpp::Time & time);
 

@@ -22,8 +22,8 @@
 #include <fstream>
 #include <vector>
 
-using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
-using autoware::trajectory_optimizer::plugin::ContinuousJerkSmootherParams;
+using autoware::trajectory_processor::plugin::ContinuousJerkSmoother;
+using autoware::trajectory_processor::plugin::ContinuousJerkSmootherParams;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using trajectory_optimizer_test_utils::create_point;
 

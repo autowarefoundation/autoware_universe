@@ -875,8 +875,9 @@ SetParametersResult BehaviorPathPlannerNode::onSetParam(
       parameters, DrivableAreaExpansionParameters::AVOID_DYN_OBJECTS_PARAM,
       planner_data_->drivable_area_expansion_parameters.object_exclusion.exclude_dynamic);
     std::vector<std::string> strings;
-    if (update_param(
-          parameters, DrivableAreaExpansionParameters::AVOID_LINESTRING_TYPES_PARAM, strings)) {
+    if (
+      update_param(
+        parameters, DrivableAreaExpansionParameters::AVOID_LINESTRING_TYPES_PARAM, strings)) {
       planner_data_->drivable_area_expansion_parameters.avoid_linestring_types.clear();
       for (const auto & s : strings) {
         planner_data_->drivable_area_expansion_parameters.avoid_linestring_types.emplace_back(s);

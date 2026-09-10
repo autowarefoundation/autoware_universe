@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: AutowareEngage.node
+package:
+  name: autoware_evaluation_adapter
+  provider: autoware
+launch:
+  plugin: autoware::evaluation_adapter::AutowareEngage
+  executable: autoware_evaluation_adapter_node
+  node_output: screen
+# interfaces
+subscribers:
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    global: /api/operation_mode/state
+publishers: []
+servers:
+  - name: set_engage
+    message_type: tier4_external_api_msgs/srv/Engage
+    global: /api/external/set/engage
+clients:
+  - name: change_to_stop
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    global: /api/operation_mode/change_to_stop
+  - name: change_to_autonomous
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    global: /api/operation_mode/change_to_autonomous
+# parameters
+param_files: []
+param_values: []
+# processes
+processes:
+  - name: relay_engage
+    trigger_conditions:
+      - on_input: operation_mode_state
+    outcomes:
+      - terminal: null

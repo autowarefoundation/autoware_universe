@@ -36,11 +36,11 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 
 // Helper function that builds an rclcpp::Time from a plain seconds value (e.g. 1.03), so call
 // sites read as a point in time rather than an opaque (seconds, nanoseconds) pair.
-rclcpp::Time make_time(const double seconds, const rcl_clock_type_t clock_type = RCL_SYSTEM_TIME)
+rclcpp::Time make_time(const double seconds)
 {
   const auto whole_seconds = static_cast<int32_t>(std::floor(seconds));
   const auto nanoseconds = static_cast<uint32_t>(std::llround((seconds - whole_seconds) * 1e9));
-  return rclcpp::Time(whole_seconds, nanoseconds, clock_type);
+  return rclcpp::Time(whole_seconds, nanoseconds);
 }
 
 // Helper function that builds a fully-populated, valid config equivalent to the shipped
@@ -375,11 +375,11 @@ TEST(PidLongitudinalController, PredictsStateFromCommandHistoryWhenAutonomous)
   auto config = make_default_config();
   PidLongitudinalController controller(config);
   const auto trajectory = make_straight_trajectory(30, 5.0);
-  controller.run(make_input_data(trajectory, 3.0, 0.0, true), make_time(0.0, RCL_ROS_TIME), true);
+  controller.run(make_input_data(trajectory, 3.0, 0.0, true), make_time(0.0), true);
 
   // Act
   const auto result =
-    controller.run(make_input_data(trajectory, 3.0, 1.0, true), make_time(0.1, RCL_ROS_TIME), true);
+    controller.run(make_input_data(trajectory, 3.0, 1.0, true), make_time(0.1), true);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::DRIVE);
@@ -479,11 +479,11 @@ TEST(PidLongitudinalController, KeepStoppedShowsVirtualWallUnderAutonomousContro
   config.enable_keep_stopped_until_steer_convergence = true;
   PidLongitudinalController controller(config);
   const auto trajectory = make_straight_trajectory(20, 5.0);
-  controller.run(make_input_data(trajectory, 0.0, 0.0, true), make_time(0.0, RCL_ROS_TIME), false);
+  controller.run(make_input_data(trajectory, 0.0, 0.0, true), make_time(0.0), false);
 
   // Act
-  const auto result = controller.run(
-    make_input_data(trajectory, 0.0, 0.0, true), make_time(1.0, RCL_ROS_TIME), false);
+  const auto result =
+    controller.run(make_input_data(trajectory, 0.0, 0.0, true), make_time(1.0), false);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::STOPPED);
@@ -579,16 +579,13 @@ TEST(PidLongitudinalController, StaysInEmergencyWhileOvershootPersistsUnderContr
   auto config = make_default_config();
   PidLongitudinalController controller(config);
   controller.run(
-    make_input_data(make_straight_trajectory(20, 5.0), 0.0, 0.0, true),
-    make_time(0.0, RCL_ROS_TIME), true);
+    make_input_data(make_straight_trajectory(20, 5.0), 0.0, 0.0, true), make_time(0.0), true);
   controller.run(
-    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0, true),
-    make_time(0.03, RCL_ROS_TIME), true);
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0, true), make_time(0.03), true);
 
   // Act
   const auto result = controller.run(
-    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0, true),
-    make_time(0.06, RCL_ROS_TIME), true);
+    make_input_data(make_straight_trajectory(20, 0.0), 0.0, 10.0, true), make_time(0.06), true);
 
   // Assert
   EXPECT_EQ(result.control_state, ControlState::EMERGENCY);
@@ -610,7 +607,7 @@ TEST(PidLongitudinalController, TemporalTrajectoryProducesValidCommand)
 
   // Act
   const auto result =
-    controller.run(make_input_data(temporal_trajectory, 3.0), make_time(0.5, RCL_ROS_TIME), true);
+    controller.run(make_input_data(temporal_trajectory, 3.0), make_time(0.5), true);
 
   // Assert
   EXPECT_FALSE(result.received_invalid_trajectory);

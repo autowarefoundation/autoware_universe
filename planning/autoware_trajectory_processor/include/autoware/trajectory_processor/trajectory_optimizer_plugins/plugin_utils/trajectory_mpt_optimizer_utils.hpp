@@ -24,7 +24,7 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -128,7 +128,7 @@ BoundsPair generate_bounds(
   const bool enable_adaptive_width, const double curvature_width_factor,
   const double velocity_width_factor, const double min_clearance_m, const double vehicle_width_m);
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_mpt_optimizer_utils
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_MPT_OPTIMIZER_UTILS_HPP_

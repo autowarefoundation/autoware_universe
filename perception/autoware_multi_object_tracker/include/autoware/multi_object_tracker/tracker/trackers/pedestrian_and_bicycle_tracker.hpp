@@ -29,6 +29,9 @@ private:
   PedestrianTracker pedestrian_tracker_;
   VehicleTracker bicycle_tracker_;
 
+  // Heading-sign consensus across the layers; the bicycle layer's sign belief is authoritative.
+  void alignOrientationSigns();
+
 public:
   PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 

@@ -142,8 +142,8 @@ std::vector<SegmentWithIdx> find_closest_boundary_segments(
 
     auto boundary_segment = utils::to_segment_2d(boundary_segment_3d);
 
-    if (is_closest_to_boundary_segment(
-          boundary_segment, ego_ref_segment, ego_opposite_ref_segment)) {
+    if (
+      is_closest_to_boundary_segment(boundary_segment, ego_ref_segment, ego_opposite_ref_segment)) {
       new_segments.emplace_back(boundary_segment, id);
     }
   }

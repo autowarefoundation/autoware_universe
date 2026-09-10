@@ -15,31 +15,23 @@
 #ifndef AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
 #define AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_HPP_
 
-#include <rclcpp/rclcpp.hpp>
-
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
-#include <memory>
 #include <string>
-#include <utility>
 
-namespace autoware::image_preprocessor
+namespace autoware::image_preprocessor::image_transport_decompressor
 {
-class ImageTransportDecompressor : public rclcpp::Node
-{
-public:
-  explicit ImageTransportDecompressor(const rclcpp::NodeOptions & node_options);
 
-private:
-  void onCompressedImage(
-    const sensor_msgs::msg::CompressedImage::ConstSharedPtr input_compressed_image_msg);
+/// @brief Decompress @p compressed_image, copying its header into the returned image. "rgb8" and
+/// "bgr8" force that encoding, any other requested one keeps the encoding the format field names.
+/// @throws std::runtime_error when the payload cannot be decoded. A sensor sits at the far end of a
+/// physical link, so that is an expected event rather than a defect of this function, and the
+/// caller owns the policy for it.
+sensor_msgs::msg::Image decompress(
+  const sensor_msgs::msg::CompressedImage & compressed_image,
+  const std::string & requested_encoding);
 
-  rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr compressed_image_sub_;
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr raw_image_pub_;
-  std::string encoding_;
-};
-
-}  // namespace autoware::image_preprocessor
+}  // namespace autoware::image_preprocessor::image_transport_decompressor
 
 #endif  // AUTOWARE__IMAGE_TRANSPORT_DECOMPRESSOR__IMAGE_TRANSPORT_DECOMPRESSOR_HPP_

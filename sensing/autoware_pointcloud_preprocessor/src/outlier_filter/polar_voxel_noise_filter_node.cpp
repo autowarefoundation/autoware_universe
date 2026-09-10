@@ -529,8 +529,9 @@ PolarVoxelNoiseFilterComponent::determine_valid_voxels_with_return_types(
   const VoxelStatsMap & voxel_stats_map) const
 {
   return determine_valid_voxels_generic(voxel_stats_map, [this](const VoxelStats & stats) {
-    if (stats.meets_noise_condition(
-          voxel_points_threshold_, avg_intensity_threshold_, secondary_noise_threshold_)) {
+    if (
+      stats.meets_noise_condition(
+        voxel_points_threshold_, avg_intensity_threshold_, secondary_noise_threshold_)) {
       return false;
     } else {
       return true;

@@ -100,11 +100,12 @@ protected:
          "/config/test_vehicle_info.param.yaml"});
 
     node_ = std::make_shared<ControlValidator>(options);
-    trajectory_validator_ = std::make_shared<TrajectoryValidator>(*node_);
+    ::control_validator::ParamListener param_listener(node_->get_node_parameters_interface());
+    trajectory_validator_ = std::make_shared<TrajectoryValidator>(param_listener.get_params());
   }
   void TearDown() override { rclcpp::shutdown(); }
 
-  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<ControlValidator> node_;
   std::shared_ptr<TrajectoryValidator> trajectory_validator_;
 };
 
@@ -203,11 +204,12 @@ protected:
          "/config/test_vehicle_info.param.yaml"});
 
     node_ = std::make_shared<ControlValidator>(options);
-    acceleration_validator_ = std::make_shared<AccelerationValidator>(*node_);
+    ::control_validator::ParamListener param_listener(node_->get_node_parameters_interface());
+    acceleration_validator_ = std::make_shared<AccelerationValidator>(param_listener.get_params());
   }
   void TearDown() override { rclcpp::shutdown(); }
 
-  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<ControlValidator> node_;
   std::shared_ptr<AccelerationValidator> acceleration_validator_;
 };
 

@@ -210,6 +210,12 @@ private:
     double vel{0.0};
     double acc{0.0};
   };
+  // entry of the sent-acceleration-command history buffer used for delay compensation
+  struct TimestampedAcceleration
+  {
+    rclcpp::Time stamp;
+    double acceleration{0.0};
+  };
   struct StateAfterDelay
   {
     StateAfterDelay(const double velocity, const double acceleration, const double distance)
@@ -252,8 +258,6 @@ private:
   // control state
   ControlState m_control_state{ControlState::STOPPED};
 
-  std::optional<double> m_prev_nearest_time{std::nullopt};
-
   // drive
   PIDController m_pid_vel;
   std::shared_ptr<LowpassFilter1d> m_lpf_vel_error{nullptr};
@@ -268,7 +272,7 @@ private:
   std::optional<double> m_previous_slope_angle{std::nullopt};
 
   // buffer of send command
-  std::vector<autoware_control_msgs::msg::Longitudinal> m_ctrl_cmd_vec;
+  std::vector<TimestampedAcceleration> m_ctrl_cmd_vec;
 
   // for calculating dt
   std::shared_ptr<rclcpp::Time> m_prev_control_time{nullptr};
@@ -288,15 +292,6 @@ private:
   std::shared_ptr<rclcpp::Time> m_last_running_time{nullptr};
 
   std::optional<MarkerArray> m_virtual_wall_marker{std::nullopt};
-
-  // time captured once per control cycle in run(), and whether the lateral controller has
-  // converged its steering for this cycle
-  rclcpp::Time m_current_time{};
-  bool m_is_steer_converged{false};
-
-  // error causes raised during this run(), to be logged by the caller
-  bool m_received_invalid_trajectory{false};
-  std::optional<std::string> m_emergency_stop_reason{std::nullopt};
 
   struct ResultWithReason
   {
@@ -323,28 +318,25 @@ private:
    * @brief change control state
    * @param [in] new state
    * @param [in] reason to change control state
+   * @return reason for entering the emergency state, if the new state is EMERGENCY
    */
-  void changeControlState(const ControlState & control_state, const std::string & reason = "");
+  std::optional<std::string> changeControlState(
+    const ControlState & control_state, const std::string & reason = "");
 
   /**
    * @brief update control state according to the current situation
    * @param [in] control_data control data
+   * @param [in] is_steer_converged whether the lateral controller has converged its steering
+   * @return reason for entering the emergency state, if it was entered during this call
    */
-  void updateControlState(const ControlData & control_data);
+  std::optional<std::string> updateControlState(
+    const ControlData & control_data, const bool is_steer_converged);
 
   /**
    * @brief calculate control command based on the current control state
    * @param [in] control_data control data
    */
   Motion calcCtrlCmd(const ControlData & control_data);
-
-  /**
-   * @brief create the control command message
-   * @param [in] ctrl_cmd calculated control command to control velocity
-   * @param [in] current_time time captured once per control cycle in run()
-   */
-  autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(
-    const Motion & ctrl_cmd, const rclcpp::Time & current_time);
 
   /**
    * @brief update debug values
@@ -360,23 +352,10 @@ private:
   double getDt(const rclcpp::Time & current_time);
 
   /**
-   * @brief calculate current velocity and acceleration
-   */
-  Motion getCurrentMotion() const;
-
-  /**
    * @brief calculate direction (forward or backward) that vehicle moves
    * @param [in] control_data data for control calculation
    */
   enum Shift getCurrentShift(const ControlData & control_data) const;
-
-  /**
-   * @brief filter acceleration command with limitation of acceleration and jerk, and slope
-   * compensation
-   * @param [in] raw_acc acceleration before filtered
-   * @param [in] control_data data for control calculation
-   */
-  double calcFilteredAcc(const double raw_acc, const ControlData & control_data);
 
   /**
    * @brief store acceleration command before slope compensation
@@ -448,7 +427,7 @@ private:
    * @brief calculate elapsed time since the vehicle entered autoware control
    * @param [in] current_time time captured once per control cycle in run()
    */
-  double getTimeUnderControl(const rclcpp::Time & current_time);
+  double getTimeUnderControl(const rclcpp::Time & current_time) const;
 };
 }  // namespace autoware::motion::control::pid_longitudinal_controller
 

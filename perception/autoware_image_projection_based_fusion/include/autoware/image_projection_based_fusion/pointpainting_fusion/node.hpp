@@ -17,14 +17,14 @@
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 #include "autoware/image_projection_based_fusion/pointpainting_fusion/pointpainting_trt.hpp"
-#include "autoware/lidar_centerpoint/postprocess/non_maximum_suppression.hpp"
 
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 #include <autoware/lidar_centerpoint/centerpoint_trt.hpp>
 #include <autoware/lidar_centerpoint/detection_class_remapper.hpp>
-#include <autoware_utils/ros/diagnostics_interface.hpp>
-#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
+#include <perception_utils/iou_bev_nms.hpp>
 
 #include <map>
 #include <memory>
@@ -60,8 +60,10 @@ private:
 
   void diagnosePointPaintingProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  rclcpp::Publisher<PointCloudMsgType>::SharedPtr painted_point_pub_ptr_;
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  AUTOWARE_PUBLISHER_PTR(PointCloudMsgType) painted_point_pub_ptr_;
+  std::unique_ptr<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
+    diagnostics_interface_ptr_;
 
   int omp_num_threads_{1};
   std::vector<std::string> class_names_;
@@ -71,7 +73,7 @@ private:
   bool has_variance_{false};
   bool has_twist_{false};
 
-  autoware::lidar_centerpoint::NonMaximumSuppression iou_bev_nms_;
+  perception_utils::IouBevNms iou_bev_nms_;
   autoware::lidar_centerpoint::DetectionClassRemapper detection_class_remapper_;
 
   std::unique_ptr<image_projection_based_fusion::PointPaintingTRT> detector_ptr_{nullptr};
@@ -82,7 +84,7 @@ private:
   // set as optional to avoid sending error diagnostics before the node starts processing
   std::optional<double> last_processing_time_ms_;
   std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
-  diagnostic_updater::Updater diagnostic_processing_time_updater_{this};
+  autoware::agnocast_wrapper::diagnostic_updater::Updater diagnostic_processing_time_updater_{this};
 };
 }  // namespace autoware::image_projection_based_fusion
 #endif  // AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__POINTPAINTING_FUSION__NODE_HPP_

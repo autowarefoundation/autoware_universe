@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_temporal_mpt_optimizer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_temporal_mpt_optimizer_utils
 {
 
 size_t find_closest_trajectory_index(const TrajectoryPoints & traj_points, double x, double y)
@@ -85,4 +85,4 @@ TemporalMPTReferences build_temporal_mpt_references(
   return refs;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_temporal_mpt_optimizer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_temporal_mpt_optimizer_utils

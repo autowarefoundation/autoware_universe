@@ -1,0 +1,50 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: TrafficLightRoiVisualizer.node
+
+package:
+  name: autoware_traffic_light_visualization
+  provider: autoware
+
+launch:
+  plugin: autoware::traffic_light::TrafficLightRoiVisualizerNode
+  executable: traffic_light_visualization_node
+  node_output: screen
+
+# interfaces
+# image + rois + rough_rois + traffic_signals are message_filters-synced.
+# image I/O uses image_transport.
+subscribers:
+  - name: image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/image
+  - name: rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: ~/input/rois
+  - name: rough_rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: ~/input/rough/rois
+  - name: traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+    remap_target: ~/input/traffic_signals
+
+publishers:
+  - name: image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/output/image
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/traffic_light_roi_visualizer.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: visualize
+    trigger_conditions:
+      - on_input: image
+    outcomes:
+      - to_output: image

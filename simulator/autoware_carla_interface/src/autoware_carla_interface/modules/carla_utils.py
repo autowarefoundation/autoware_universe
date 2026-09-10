@@ -88,11 +88,19 @@ def create_cloud(header, fields, points):
     )
 
 
-def carla_location_to_ros_point(carla_location):
-    """Convert a carla location to a ROS point."""
+def carla_location_to_ros_point(carla_location, origin_x=0.0, origin_y=0.0):
+    """
+    Convert a carla location to a ROS point.
+
+    origin_x/origin_y translate from CARLA's local world origin to the
+    Autoware map frame origin. They are needed whenever the CARLA level was
+    authored with its own local origin instead of matching the lanelet2/PCD
+    map frame directly (e.g. a real-world-georeferenced custom map), and are
+    zero for stock CARLA towns whose maps are natively aligned with the map frame.
+    """
     ros_point = Point()
-    ros_point.x = carla_location.x
-    ros_point.y = -carla_location.y
+    ros_point.x = carla_location.x + origin_x
+    ros_point.y = -carla_location.y + origin_y
     ros_point.z = carla_location.z
 
     return ros_point
@@ -120,9 +128,81 @@ def ros_quaternion_to_carla_rotation(ros_quaternion):
     )
 
 
-def ros_pose_to_carla_transform(ros_pose):
-    """Convert ROS pose to carla transform."""
+def ros_pose_to_carla_transform(ros_pose, origin_x=0.0, origin_y=0.0):
+    """Convert ROS pose to carla transform (inverse of carla_location_to_ros_point)."""
     return carla.Transform(
-        carla.Location(ros_pose.position.x, -ros_pose.position.y, ros_pose.position.z),
+        carla.Location(
+            ros_pose.position.x - origin_x,
+            origin_y - ros_pose.position.y,
+            ros_pose.position.z,
+        ),
         ros_quaternion_to_carla_rotation(ros_pose.orientation),
     )
+
+
+# Cross-shaped neighborhood (dx, dy in meters) sampled when snapping to ground.
+GROUND_PROBE_OFFSETS = (
+    (0.0, 0.0),
+    (0.75, 0.0),
+    (-0.75, 0.0),
+    (0.0, 0.75),
+    (0.0, -0.75),
+    (1.5, 0.0),
+    (-1.5, 0.0),
+    (0.0, 1.5),
+    (0.0, -1.5),
+)
+
+# Semantic labels accepted as drivable/ground surfaces when snapping to
+# ground. Hits on anything else (vehicles, pedestrians, building roofs, ...)
+# are discarded so a nearby actor is never mistaken for the road. ``NONE``
+# and ``Other`` are kept because custom map meshes imported without semantic
+# tags fall into these categories. Labels are resolved by name because the
+# available enum members differ between CARLA versions.
+_GROUND_LABEL_NAMES = (
+    "Roads",
+    "RoadLines",
+    "Sidewalks",
+    "Ground",
+    "Terrain",
+    "Bridge",
+    "RailTrack",
+    "NONE",
+    "Other",
+)
+GROUND_LABELS = frozenset(
+    label
+    for label in (getattr(carla.CityObjectLabel, name, None) for name in _GROUND_LABEL_NAMES)
+    if label is not None
+)
+
+
+def project_point_to_ground(world, x, y):
+    """Return the highest CARLA ground height near (x, y), or None.
+
+    Samples the ``GROUND_PROBE_OFFSETS`` cross-shaped neighborhood with
+    ``world.ground_projection`` and returns the maximum ground z. Sampling
+    several points and taking the highest hit keeps the result on the road
+    surface instead of dropping into a mesh gap or gutter seam. Hits whose
+    semantic label is not in ``GROUND_LABELS`` (e.g. a vehicle parked next to
+    the probe point) are ignored. Returns None when the world lacks
+    ``ground_projection`` (older CARLA APIs) or no ground point is found, so
+    callers can fall back to a fixed z-offset.
+    """
+    if world is None or not hasattr(world, "ground_projection"):
+        return None
+
+    projected_heights = []
+    for offset_x, offset_y in GROUND_PROBE_OFFSETS:
+        search_origin = carla.Location(x=x + offset_x, y=y + offset_y, z=1000.0)
+        try:
+            labeled_point = world.ground_projection(search_origin, 10000.0)
+        except RuntimeError:
+            # A single probe may fail; keep the hits from the other samples.
+            continue
+        if labeled_point is not None and labeled_point.label in GROUND_LABELS:
+            projected_heights.append(labeled_point.location.z)
+
+    if not projected_heights:
+        return None
+    return max(projected_heights)

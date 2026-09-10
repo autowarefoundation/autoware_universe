@@ -43,6 +43,36 @@ bool is_valid_trajectory(
 
   return true;
 }
+
+autoware_internal_debug_msgs::msg::Float32MultiArrayStamped createDebugMessage(
+  const rclcpp::Time & current_time, const DebugValues & debug_values)
+{
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_message{};
+  debug_message.stamp = current_time;
+  for (const auto & v : debug_values.getValues()) {
+    debug_message.data.push_back(static_cast<decltype(debug_message.data)::value_type>(v));
+  }
+  return debug_message;
+}
+
+autoware_internal_debug_msgs::msg::Float32MultiArrayStamped createSlopeMessage(
+  const rclcpp::Time & current_time, const double slope_angle)
+{
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped slope_message{};
+  slope_message.stamp = current_time;
+  slope_message.data.push_back(static_cast<decltype(slope_message.data)::value_type>(slope_angle));
+  return slope_message;
+}
+
+autoware_control_msgs::msg::Longitudinal createCtrlCmdMsg(
+  const rclcpp::Time & current_time, const double velocity, const double acceleration)
+{
+  autoware_control_msgs::msg::Longitudinal cmd{};
+  cmd.stamp = current_time;
+  cmd.velocity = static_cast<decltype(cmd.velocity)>(velocity);
+  cmd.acceleration = static_cast<decltype(cmd.acceleration)>(acceleration);
+  return cmd;
+}
 }  // namespace
 
 PidLongitudinalController::PidLongitudinalController(const PidLongitudinalControllerConfig & cfg)
@@ -79,28 +109,17 @@ PidLongitudinalControllerResult PidLongitudinalController::run(
   const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time,
   const bool is_steer_converged)
 {
-  // capture the time and lateral convergence state once for this control cycle
-  m_current_time = current_time;
-  m_is_steer_converged = is_steer_converged;
-  m_received_invalid_trajectory = false;
-  m_emergency_stop_reason = std::nullopt;
-
-  // check input data
-  if (!is_valid_trajectory(input_data.current_trajectory, config.use_temporal_trajectory)) {
-    m_received_invalid_trajectory = true;
-  }
-
   // calculate control data
   const auto control_data = getControlData(input_data, current_time);
 
   // update control state
-  updateControlState(control_data);
+  const auto emergency_stop_reason = updateControlState(control_data, is_steer_converged);
 
   // calculate control command
   const Motion ctrl_cmd = calcCtrlCmd(control_data);
 
   // create control command
-  const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, current_time);
+  const auto cmd_msg = createCtrlCmdMsg(current_time, ctrl_cmd.vel, ctrl_cmd.acc);
   trajectory_follower::LongitudinalOutput output;
   output.control_cmd = cmd_msg;
 
@@ -115,22 +134,16 @@ PidLongitudinalControllerResult PidLongitudinalController::run(
   result.output = output;
   result.control_state = m_control_state;
 
-  result.debug_message.stamp = current_time;
-  for (const auto & v : m_debug_values.getValues()) {
-    result.debug_message.data.push_back(
-      static_cast<decltype(result.debug_message.data)::value_type>(v));
-  }
-
-  result.slope_message.stamp = current_time;
-  result.slope_message.data.push_back(
-    static_cast<decltype(result.slope_message.data)::value_type>(control_data.slope_angle));
+  result.debug_message = createDebugMessage(current_time, m_debug_values);
+  result.slope_message = createSlopeMessage(current_time, control_data.slope_angle);
 
   if (m_virtual_wall_marker) {
     result.virtual_wall_marker = m_virtual_wall_marker;
     m_virtual_wall_marker.reset();
   }
-  result.received_invalid_trajectory = m_received_invalid_trajectory;
-  result.emergency_stop_reason = m_emergency_stop_reason;
+  result.received_invalid_trajectory =
+    !is_valid_trajectory(input_data.current_trajectory, config.use_temporal_trajectory);
+  result.emergency_stop_reason = emergency_stop_reason;
 
   return result;
 }
@@ -169,12 +182,12 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   autoware_planning_msgs::msg::TrajectoryPoint target_point;
 
   if (config.use_temporal_trajectory) {
-    const rclcpp::Time traj_stamp(m_last_valid_trajectory.header.stamp);
+    const rclcpp::Time traj_stamp(
+      m_last_valid_trajectory.header.stamp, current_time.get_clock_type());
     const double elapsed_time = (current_time - traj_stamp).seconds();
     const double nearest_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
     control_data.temporal_predicted_time = nearest_time;
     control_data.temporal_fused_time = nearest_time;
-    m_prev_nearest_time = nearest_time;
 
     const auto nearest_interpolated_point = longitudinal_utils::lerpTrajectoryPointByTime(
       control_data.interpolated_traj.points, nearest_time);
@@ -240,7 +253,6 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   // ==========================================================================================
   // Spatial-only de-duplication and index re-acquisition after inserting interpolated points.
   if (!config.use_temporal_trajectory) {
-    m_prev_nearest_time.reset();
     control_data.interpolated_traj.points =
       autoware::motion_utils::removeOverlapPoints(control_data.interpolated_traj.points);
     control_data.nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
@@ -341,18 +353,21 @@ PidLongitudinalController::Motion PidLongitudinalController::calcEmergencyCtrlCm
   return raw_ctrl_cmd;
 }
 
-void PidLongitudinalController::changeControlState(
+std::optional<std::string> PidLongitudinalController::changeControlState(
   const ControlState & control_state, const std::string & reason)
 {
+  std::optional<std::string> emergency_stop_reason{std::nullopt};
   if (control_state != m_control_state) {
     if (control_state == ControlState::EMERGENCY) {
-      m_emergency_stop_reason = reason;
+      emergency_stop_reason = reason;
     }
   }
   m_control_state = control_state;
+  return emergency_stop_reason;
 }
 
-void PidLongitudinalController::updateControlState(const ControlData & control_data)
+std::optional<std::string> PidLongitudinalController::updateControlState(
+  const ControlData & control_data, const bool is_steer_converged)
 {
   const double current_vel = control_data.current_motion.vel;
   const double stop_dist = control_data.stop_dist;
@@ -446,7 +461,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
         return changeControlState(ControlState::STOPPED);
       }
     }
-    return;
+    return std::nullopt;
   }
 
   // in STOPPING state
@@ -465,20 +480,20 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
       m_prev_raw_ctrl_cmd.acc = std::max(0.0, m_prev_raw_ctrl_cmd.acc);
       return changeControlState(ControlState::DRIVE);
     }
-    return;
+    return std::nullopt;
   }
 
   // in STOPPED state
   if (m_control_state == ControlState::STOPPED) {
     // keep STOPPED if is_under_control is false
-    if (!is_under_control && stopped_condition) return;
+    if (!is_under_control && stopped_condition) return std::nullopt;
 
     if (departure_condition_from_stopped) {
       // Let vehicle start after the steering is converged for dry steering
       const bool current_keep_stopped_condition =
-        std::fabs(current_vel) < vel_epsilon && !m_is_steer_converged;
+        std::fabs(current_vel) < vel_epsilon && !is_steer_converged;
       // NOTE: Dry steering is considered unnecessary when the steering is converged twice in a
-      //       row. This is because m_is_steer_converged is not the current but
+      //       row. This is because is_steer_converged is not the current but
       //       the previous value due to the order controllers' run and sync functions.
       const bool keep_stopped_condition =
         !m_prev_keep_stopped_condition ||
@@ -493,7 +508,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
         }
 
         // keep STOPPED
-        return;
+        return std::nullopt;
       }
 
       m_pid_vel.reset();
@@ -502,7 +517,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
       return changeControlState(ControlState::DRIVE);
     }
 
-    return;
+    return std::nullopt;
   }
 
   // in EMERGENCY state
@@ -517,11 +532,12 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
         return changeControlState(ControlState::DRIVE);
       }
     }
-    return;
+    return std::nullopt;
   }
 
   // NOTE: unreachable. ControlState has only DRIVE, STOPPING, STOPPED, and EMERGENCY, and every
   // branch above returns.
+  return std::nullopt;
 }
 
 PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
@@ -614,21 +630,9 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
   // update debug visualization
   updateDebugVelAcc(control_data);
 
+  m_prev_ctrl_cmd = ctrl_cmd_as_pedal_pos;
+
   return ctrl_cmd_as_pedal_pos;
-}
-
-// Do not use nearest_idx here
-autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCmdMsg(
-  const Motion & ctrl_cmd, const rclcpp::Time & current_time)
-{
-  autoware_control_msgs::msg::Longitudinal cmd{};
-  cmd.stamp = current_time;
-  cmd.velocity = static_cast<decltype(cmd.velocity)>(ctrl_cmd.vel);
-  cmd.acceleration = static_cast<decltype(cmd.acceleration)>(ctrl_cmd.acc);
-
-  m_prev_ctrl_cmd = ctrl_cmd;
-
-  return cmd;
 }
 
 void PidLongitudinalController::setDebugValues(
@@ -689,13 +693,7 @@ enum PidLongitudinalController::Shift PidLongitudinalController::getCurrentShift
 void PidLongitudinalController::storeAccelCmd(const double accel, const rclcpp::Time & current_time)
 {
   if (m_control_state == ControlState::DRIVE) {
-    // convert format
-    autoware_control_msgs::msg::Longitudinal cmd;
-    cmd.stamp = current_time;
-    cmd.acceleration = static_cast<decltype(cmd.acceleration)>(accel);
-
-    // store published ctrl cmd
-    m_ctrl_cmd_vec.emplace_back(cmd);
+    m_ctrl_cmd_vec.push_back(TimestampedAcceleration{current_time, accel});
   } else {
     // reset command
     m_ctrl_cmd_vec.clear();
@@ -808,9 +806,7 @@ PidLongitudinalController::StateAfterDelay PidLongitudinalController::predictedS
               (control_data.current_time - m_ctrl_cmd_vec.back().stamp).seconds(),
               delay_compensation_time)
           : std::min(
-              (rclcpp::Time(m_ctrl_cmd_vec.at(i + 1).stamp) -
-               rclcpp::Time(m_ctrl_cmd_vec.at(i).stamp))
-                .seconds(),
+              (m_ctrl_cmd_vec.at(i + 1).stamp - m_ctrl_cmd_vec.at(i).stamp).seconds(),
               delay_compensation_time);
       const double acc = m_ctrl_cmd_vec.at(i).acceleration;
       // because acc_cmd is positive when vehicle is running backward
@@ -918,7 +914,7 @@ void PidLongitudinalController::updateDebugVelAcc(const ControlData & control_da
       control_data.current_motion.vel);
 }
 
-double PidLongitudinalController::getTimeUnderControl(const rclcpp::Time & current_time)
+double PidLongitudinalController::getTimeUnderControl(const rclcpp::Time & current_time) const
 {
   if (!m_under_control_starting_time) return 0.0;
   return (current_time - *m_under_control_starting_time).seconds();

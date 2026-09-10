@@ -169,4 +169,3 @@ get_bidirectional_lanelets_where_ego_is(
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__BIDIRECTIONAL_LANELETS_HPP_  // NOLINT
-// clang-format on

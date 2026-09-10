@@ -12,7 +12,9 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>ament_index_cpp</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
+  <depend>rcl_interfaces</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2_msgs</depend>

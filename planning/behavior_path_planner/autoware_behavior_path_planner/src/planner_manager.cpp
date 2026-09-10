@@ -276,8 +276,9 @@ void PlannerManager::updateCurrentRouteLanelet(
       return;
     }
     lanelet::ConstLanelet constrained{};
-    if (route_handler->getClosestLaneletWithConstrainsWithinRoute(
-          pose, &constrained, p.ego_nearest_dist_threshold, p.ego_nearest_yaw_threshold)) {
+    if (
+      route_handler->getClosestLaneletWithConstrainsWithinRoute(
+        pose, &constrained, p.ego_nearest_dist_threshold, p.ego_nearest_yaw_threshold)) {
       *current_route_lanelet_ = constrained;
       return;
     }
@@ -292,9 +293,10 @@ void PlannerManager::updateCurrentRouteLanelet(
 
   lanelet::ConstLanelet closest_lane{};
 
-  if (route_handler->getClosestRouteLaneletFromLanelet(
-        pose, current_route_lanelet_->value(), &closest_lane, p.ego_nearest_dist_threshold,
-        p.ego_nearest_yaw_threshold)) {
+  if (
+    route_handler->getClosestRouteLaneletFromLanelet(
+      pose, current_route_lanelet_->value(), &closest_lane, p.ego_nearest_dist_threshold,
+      p.ego_nearest_yaw_threshold)) {
     *current_route_lanelet_ = closest_lane;
     snap_to_global_route_if_ego_out();
     return;
@@ -309,9 +311,10 @@ void PlannerManager::updateCurrentRouteLanelet(
     closest_lane = *opt;
     *current_route_lanelet_ = closest_lane;
     snap_to_global_route_if_ego_out();
-  } else if (const auto opt_constraint =
-               experimental::lanelet2_utils::get_closest_lanelet(lanelet_sequence, pose);
-             opt_constraint) {
+  } else if (
+    const auto opt_constraint =
+      experimental::lanelet2_utils::get_closest_lanelet(lanelet_sequence, pose);
+    opt_constraint) {
     *current_route_lanelet_ = opt_constraint.value();
     snap_to_global_route_if_ego_out();
   } else if (!is_any_approved_module_running) {
@@ -500,10 +503,11 @@ std::vector<SceneModulePtr> SubPlannerManager::getRequestModules(
     }
     BOOST_SCOPE_EXIT_END;
 
-    if (const auto deleted_it = std::find_if(
-          deleted_modules.begin(), deleted_modules.end(),
-          [&](const auto & m) { return m->name() == manager_ptr->name(); });
-        deleted_it != deleted_modules.end()) {
+    if (
+      const auto deleted_it = std::find_if(
+        deleted_modules.begin(), deleted_modules.end(),
+        [&](const auto & m) { return m->name() == manager_ptr->name(); });
+      deleted_it != deleted_modules.end()) {
       continue;
     }
 

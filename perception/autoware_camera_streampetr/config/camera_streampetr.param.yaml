@@ -6,7 +6,16 @@
     anchor_camera_id: 0 # Camera id of the anchor topic. The forward pass begins once every anchor camera topic reaches.
     is_compressed_image: false # Whether the input images are compressed
     is_distorted_image: false # Whether the input images are distorted
-    ego_mask.fill_value_bgr: [0.0, 0.0, 0.0]
+    ego_mask.fill_value_rgb: [0.0, 0.0, 0.0] # RGB order, matching the model input and the rgb8 camera encoding
+    diagnostics:
+      max_allowed_processing_time_ms: 200.0 # A cycle slower than this raises a WARN.
+      # If the processing time stays above max_allowed_processing_time_ms for longer than
+      # max_acceptable_consecutive_delay_ms, the WARN escalates to an ERROR.
+      max_acceptable_consecutive_delay_ms: 1000.0
+      # A camera whose newest frame is older than this raises an ERROR (mid-run stall). Cameras
+      # that have not delivered a first frame yet only raise a WARN (normal during start-up).
+      max_image_age_ms: 300.0
+      validation_callback_interval_ms: 100.0 # Interval of both diagnostic callbacks.
     camera_mask.camera_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     camera_0_mask:
       enable: false

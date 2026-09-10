@@ -13,11 +13,12 @@
 // limitations under the License.
 
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/traffic_light_stop.hpp"
+#include "trajectory_processor_test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
-#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
@@ -39,10 +40,12 @@
 
 namespace
 {
-using autoware::trajectory_modifier::TrajectoryModifierContext;
-using autoware::trajectory_modifier::plugin::InputData;
-using autoware::trajectory_modifier::plugin::TrafficLightStop;
-using autoware::trajectory_modifier::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::TrajectoryProcessorContext;
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::TrafficLightStop;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::test::process_plugin;
 using autoware_perception_msgs::msg::TrafficLightElement;
 using autoware_perception_msgs::msg::TrafficLightGroup;
 using autoware_perception_msgs::msg::TrafficLightGroupArray;
@@ -161,14 +164,14 @@ LaneletRoute::ConstSharedPtr create_route(lanelet::Id lanelet_id)
   return route;
 }
 
-InputData create_input_data(
+TrajectoryProcessorData create_input_data(
   Odometry::ConstSharedPtr current_odometry,
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration,
   std::shared_ptr<lanelet::LaneletMap> lanelet_map = nullptr,
   LaneletRoute::ConstSharedPtr route = nullptr,
   TrafficLightGroupArray::ConstSharedPtr traffic_light_signals = nullptr)
 {
-  InputData input;
+  TrajectoryProcessorData input;
   input.current_odometry = std::move(current_odometry);
   input.current_acceleration = std::move(current_acceleration);
   input.lanelet_map = std::move(lanelet_map);
@@ -197,9 +200,11 @@ protected:
 
     set_up_default_params();
 
-    context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
+    context_ = std::make_shared<TrajectoryProcessorContext>(node_.get());
     plugin_ = std::make_unique<TrafficLightStop>();
-    plugin_->initialize("test_traffic_light_stop", node_.get(), time_keeper_, context_, params_);
+    plugin_->initialize(
+      "test_traffic_light_stop", node_.get(), time_keeper_, context_,
+      TrajectoryProcessorParams{params_});
     odometry_stamp_ = node_->now();
   }
 
@@ -246,7 +251,7 @@ protected:
     traffic_light_signals_ = make_traffic_light_signal(id, color);
   }
 
-  InputData make_default_input(double velocity = 5.0)
+  TrajectoryProcessorData make_default_input(double velocity = 5.0)
   {
     return create_input_data(
       make_odometry(0.0, 0.0, velocity, odometry_stamp_), make_acceleration(0.0), lanelet_map_,
@@ -254,16 +259,18 @@ protected:
   }
 
   void expect_not_modified(
-    TrajectoryPoints & trajectory, const InputData & input, const std::string & message = "")
+    TrajectoryPoints & trajectory, const TrajectoryProcessorData & input,
+    const std::string & message = "")
   {
-    const bool modified = plugin_->modify_trajectory(trajectory, input);
+    const bool modified = process_plugin(*plugin_, trajectory, input);
     EXPECT_FALSE(modified) << message;
   }
 
   void expect_modified_with_stop_before_stop_line(
-    TrajectoryPoints & trajectory, const InputData & input, const std::string & message = "")
+    TrajectoryPoints & trajectory, const TrajectoryProcessorData & input,
+    const std::string & message = "")
   {
-    const bool modified = plugin_->modify_trajectory(trajectory, input);
+    const bool modified = process_plugin(*plugin_, trajectory, input);
     ASSERT_TRUE(modified) << message;
     EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
     EXPECT_LT(trajectory.back().pose.position.x, stop_line_x_);
@@ -277,8 +284,8 @@ protected:
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<TrafficLightStop> plugin_;
-  trajectory_modifier_params::Params params_;
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  trajectory_processor_params::Params params_;
+  std::shared_ptr<TrajectoryProcessorContext> context_;
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_;
   LaneletRoute::ConstSharedPtr route_;
@@ -290,10 +297,11 @@ protected:
 TEST_F(TrafficLightStopIntegrationTest, TrajectoryNotModifiedWhenDisabled)
 {
   params_.use_traffic_light_stop = false;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto trajectory = create_straight_trajectory(0.0, 10.0, 5.0);
-  expect_not_modified(trajectory, InputData{}, "Plugin disabled should not modify trajectory");
+  expect_not_modified(
+    trajectory, TrajectoryProcessorData{}, "Plugin disabled should not modify trajectory");
 }
 
 TEST_F(TrafficLightStopIntegrationTest, TrajectoryNotModifiedForEmptyTrajectory)
@@ -436,10 +444,10 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithAmberLightAsRedLig
   set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
 
   params_.traffic_light_stop.treat_amber_light_as_red = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto trajectory = create_straight_trajectory(0.0, 16.0, 10.0);
-  const bool modified = plugin_->modify_trajectory(trajectory, make_default_input(10.0));
+  const bool modified = process_plugin(*plugin_, trajectory, make_default_input(10.0));
   EXPECT_TRUE(modified) << "Amber treated as red should insert stop point even when not stoppable";
 }
 
@@ -466,10 +474,10 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithUnknownLightAsRedL
   set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
 
   params_.traffic_light_stop.treat_unknown_light_as_red = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto trajectory = create_straight_trajectory(0.0, 16.0, 10.0);
-  const bool modified = plugin_->modify_trajectory(trajectory, make_default_input(10.0));
+  const bool modified = process_plugin(*plugin_, trajectory, make_default_input(10.0));
   EXPECT_TRUE(modified)
     << "Unknown treated as red should insert stop point even when not stoppable";
 }

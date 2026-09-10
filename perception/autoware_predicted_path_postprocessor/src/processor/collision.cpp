@@ -99,8 +99,9 @@ std::optional<CollisionHit> find_collision(
 
     for (const auto & obstacle : obstacles) {
       // if the obstacle has a high speed or is the same as the path, skip it
-      if (auto speed = std::abs(obstacle.kinematics.initial_twist_with_covariance.twist.linear.x);
-          speed > speed_threshold || obstacle.object_id == target.object_id) {
+      if (
+        auto speed = std::abs(obstacle.kinematics.initial_twist_with_covariance.twist.linear.x);
+        speed > speed_threshold || obstacle.object_id == target.object_id) {
         continue;
       }
 

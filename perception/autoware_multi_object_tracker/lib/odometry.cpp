@@ -319,8 +319,9 @@ std::optional<geometry_msgs::msg::Transform> Odometry::getTransform(
       }
       try {
         std::string errstr;
-        if (tf_buffer_->canTransform(
-              ego_frame_id_, source_frame_id, tf2::TimePointZero, tf2::Duration::zero(), &errstr)) {
+        if (
+          tf_buffer_->canTransform(
+            ego_frame_id_, source_frame_id, tf2::TimePointZero, tf2::Duration::zero(), &errstr)) {
           const auto ego_to_source =
             tf_buffer_->lookupTransform(ego_frame_id_, source_frame_id, tf2::TimePointZero);
           tf2::Transform tf_world_to_ego;

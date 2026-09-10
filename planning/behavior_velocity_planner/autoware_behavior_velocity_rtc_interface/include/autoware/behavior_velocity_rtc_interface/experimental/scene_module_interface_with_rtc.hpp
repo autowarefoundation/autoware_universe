@@ -145,4 +145,3 @@ extern template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::r
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__EXPERIMENTAL__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_  // NOLINT
-// clang-format on

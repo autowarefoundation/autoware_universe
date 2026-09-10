@@ -16,11 +16,13 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_
 
 #include <autoware/object_recognition_utils/object_classification.hpp>
+#include <autoware/point_types/types.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -29,16 +31,8 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_hash.hpp>
 
-#include <pcl/filters/crop_box.h>
-#include <pcl/filters/crop_hull.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/registration/gicp.h>
-#include <pcl/segmentation/extract_clusters.h>
-#include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <memory>
@@ -48,13 +42,16 @@
 #include <unordered_set>
 #include <vector>
 
-namespace autoware::trajectory_modifier::utils::obstacle_stop
+namespace autoware::trajectory_processor::utils::obstacle_stop
 {
+using autoware::point_types::PointCloudClassification;
+using autoware::point_types::PointXYZCPE;
 using sensor_msgs::msg::PointCloud2;
-using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+using PointCloud = pcl::PointCloud<PointXYZCPE>;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware_utils_geometry::MultiPolygon2d;
@@ -69,15 +66,28 @@ enum class ObjectType : uint8_t {
   BICYCLE,
   PEDESTRIAN,
   ANIMAL,
-  HAZARD
+  HAZARD,
+  FLAT_SURFACE,
+  STRUCTURE,
+  VEGETATION,
+  NOISE,
 };
 
 inline static const std::unordered_map<std::string, ObjectType> string_to_object_type = {
-  {"unknown", ObjectType::UNKNOWN}, {"car", ObjectType::CAR},
-  {"truck", ObjectType::TRUCK},     {"bus", ObjectType::BUS},
-  {"trailer", ObjectType::TRAILER}, {"motorcycle", ObjectType::MOTORCYCLE},
-  {"bicycle", ObjectType::BICYCLE}, {"pedestrian", ObjectType::PEDESTRIAN},
-  {"animal", ObjectType::ANIMAL},   {"hazard", ObjectType::HAZARD}};
+  {"unknown", ObjectType::UNKNOWN},
+  {"car", ObjectType::CAR},
+  {"truck", ObjectType::TRUCK},
+  {"bus", ObjectType::BUS},
+  {"trailer", ObjectType::TRAILER},
+  {"motorcycle", ObjectType::MOTORCYCLE},
+  {"bicycle", ObjectType::BICYCLE},
+  {"pedestrian", ObjectType::PEDESTRIAN},
+  {"animal", ObjectType::ANIMAL},
+  {"hazard", ObjectType::HAZARD},
+  {"flat_surface", ObjectType::FLAT_SURFACE},
+  {"structure", ObjectType::STRUCTURE},
+  {"vegetation", ObjectType::VEGETATION},
+  {"noise", ObjectType::NOISE}};
 
 inline static const std::unordered_map<uint8_t, ObjectType> classification_to_object_type = {
   {ObjectClassification::UNKNOWN, ObjectType::UNKNOWN},
@@ -90,6 +100,22 @@ inline static const std::unordered_map<uint8_t, ObjectType> classification_to_ob
   {ObjectClassification::PEDESTRIAN, ObjectType::PEDESTRIAN},
   {ObjectClassification::ANIMAL, ObjectType::ANIMAL},
   {ObjectClassification::HAZARD, ObjectType::HAZARD}};
+
+inline static const std::unordered_map<PointCloudClassification, ObjectType>
+  pcd_class_to_object_type = {
+    {PointCloudClassification::CAR, ObjectType::CAR},
+    {PointCloudClassification::TRUCK, ObjectType::TRUCK},
+    {PointCloudClassification::BUS, ObjectType::BUS},
+    {PointCloudClassification::MOTORCYCLE, ObjectType::MOTORCYCLE},
+    {PointCloudClassification::BICYCLE, ObjectType::BICYCLE},
+    {PointCloudClassification::PEDESTRIAN, ObjectType::PEDESTRIAN},
+    {PointCloudClassification::ANIMAL, ObjectType::ANIMAL},
+    {PointCloudClassification::HAZARD, ObjectType::HAZARD},
+    {PointCloudClassification::FLAT_SURFACE, ObjectType::FLAT_SURFACE},
+    {PointCloudClassification::STRUCTURE, ObjectType::STRUCTURE},
+    {PointCloudClassification::VEGETATION, ObjectType::VEGETATION},
+    {PointCloudClassification::NOISE, ObjectType::NOISE},
+    {PointCloudClassification::INVALID, ObjectType::UNKNOWN}};
 
 struct CollisionPoint
 {
@@ -141,11 +167,12 @@ struct TrajectoryShape
   autoware_utils_geometry::Box2d bounding_box;
   double trajectory_length;
   double forward_traj_length;
+
+  [[nodiscard]] double ego_arc_length() const { return trajectory_length - forward_traj_length; }
 };
 
 struct DebugData
 {
-  PointCloud2::SharedPtr cluster_points;
   PointCloud2::SharedPtr filtered_points;
   PredictedObjects filtered_objects;
   MultiPolygon2d target_polygons;
@@ -203,20 +230,6 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
   const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points);
 
-/**
- * @brief Find the nearest obstacle along the path using each object's footprint polygon at the
- * current time.
- * @details For every target object, polygon vertices are projected onto arc length along the
- * trajectory; the minimum over all vertices and objects defines the collision point.
- * @param trajectory_points Reference path.
- * @param target_objects Predicted objects to test (typically already filtered).
- * @param[out] colliding_object Object that yielded the minimum arc-length collision.
- * @return Collision point and arc length, or nullopt if inputs are invalid or no objects.
- */
-std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points, const PredictedObjects & target_objects,
-  PredictedObject & colliding_object);
-
 using ObjectDecelMap = std::unordered_map<ObjectType, double>;
 
 /**
@@ -249,7 +262,8 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const PredictedObjects & target_objects, const ObjectDecelMap & object_decel_map,
   const double ego_decel, const double reaction_time, const double safety_margin,
-  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object);
+  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object,
+  const bool use_rss_check = true);
 
 /// Filters predicted objects by semantic type, speed, and spatial relationship to the trajectory.
 struct ObjectFilter
@@ -257,23 +271,25 @@ struct ObjectFilter
   /**
    * @brief Construct a filter from allowed type names and speed thresholds.
    * @param object_type_strings Allowed object classes (see string_to_object_type).
-   * @param max_velocity_th Remove objects with longitudinal twist.x above this [m/s].
    * @param stopped_velocity_th Used when filtering by target area for "moving" vs stopped.
    * @param max_lateral_velocity_th Lateral speed threshold for the exiting-object heuristic [m/s].
    * @param safety_buffer Safety buffer to expand object shape [m].
    */
   ObjectFilter(
-    const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th,
-    const double safety_buffer)
-  : max_velocity_th_(max_velocity_th),
-    stopped_velocity_th_(stopped_velocity_th),
+    const std::vector<std::string> & bbox_object_type_strings,
+    const std::vector<std::string> & polygon_object_type_strings, const double stopped_velocity_th,
+    const double max_lateral_velocity_th, const double safety_buffer)
+  : stopped_velocity_th_(stopped_velocity_th),
     max_lateral_velocity_th_(max_lateral_velocity_th),
     safety_buffer_(safety_buffer)
   {
-    for (const auto & object_type_string : object_type_strings) {
+    for (const auto & object_type_string : bbox_object_type_strings) {
       if (string_to_object_type.count(object_type_string) == 0) continue;
-      object_types_.emplace(string_to_object_type.at(object_type_string));
+      bbox_object_types_.emplace(string_to_object_type.at(object_type_string));
+    }
+    for (const auto & object_type_string : polygon_object_type_strings) {
+      if (string_to_object_type.count(object_type_string) == 0) continue;
+      polygon_object_types_.emplace(string_to_object_type.at(object_type_string));
     }
   }
 
@@ -287,14 +303,16 @@ struct ObjectFilter
       std::remove_if(
         objects.objects.begin(), objects.objects.end(),
         [&](const auto & object) {
-          if (object.kinematics.initial_twist_with_covariance.twist.linear.x > max_velocity_th_)
-            return true;
           const auto label =
             object.classification.empty()
               ? ObjectClassification::UNKNOWN
               : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
           if (classification_to_object_type.count(label) == 0) return true;
-          return object_types_.count(classification_to_object_type.at(label)) == 0;
+          if (object.shape.type == Shape::BOUNDING_BOX)
+            return bbox_object_types_.count(classification_to_object_type.at(label)) == 0;
+          if (object.shape.type == Shape::POLYGON)
+            return polygon_object_types_.count(classification_to_object_type.at(label)) == 0;
+          return true;
         }),
       objects.objects.end());
   }
@@ -318,78 +336,68 @@ struct ObjectFilter
    * @brief Update allow-listed types and velocity thresholds without reconstructing the filter.
    */
   void set_params(
-    const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th,
-    const double safety_buffer)
+    const std::vector<std::string> & bbox_object_type_strings,
+    const std::vector<std::string> & polygon_object_type_strings, const double stopped_velocity_th,
+    const double max_lateral_velocity_th, const double safety_buffer)
   {
-    object_types_.clear();
-    for (const auto & object_type_string : object_type_strings) {
+    bbox_object_types_.clear();
+    polygon_object_types_.clear();
+    for (const auto & object_type_string : bbox_object_type_strings) {
       if (string_to_object_type.count(object_type_string) == 0) continue;
-      object_types_.emplace(string_to_object_type.at(object_type_string));
+      bbox_object_types_.emplace(string_to_object_type.at(object_type_string));
     }
-    max_velocity_th_ = max_velocity_th;
+    for (const auto & object_type_string : polygon_object_type_strings) {
+      if (string_to_object_type.count(object_type_string) == 0) continue;
+      polygon_object_types_.emplace(string_to_object_type.at(object_type_string));
+    }
     stopped_velocity_th_ = stopped_velocity_th;
     max_lateral_velocity_th_ = max_lateral_velocity_th;
     safety_buffer_ = safety_buffer;
   }
 
 private:
-  std::unordered_set<ObjectType> object_types_;
-  double max_velocity_th_;
+  std::unordered_set<ObjectType> bbox_object_types_;
+  std::unordered_set<ObjectType> polygon_object_types_;
   double stopped_velocity_th_;
   double max_lateral_velocity_th_;
   double safety_buffer_;
 };
 
-/// PCL-based downsampling, cropping, clustering, and object masking for obstacle point clouds.
+/// Range and semantic-label filtering plus object masking for obstacle point clouds.
 struct PointCloudFilter
 {
   /**
-   * @brief Configure voxel grid and euclidean clustering parameters used by subsequent filters.
+   * @brief Configure the set of point-cloud class labels kept by subsequent filters.
    */
-  PointCloudFilter(
-    double voxel_size_x, double voxel_size_y, double voxel_size_z, int voxel_min_size,
-    double cluster_tolerance, int cluster_min_size, int cluster_max_size)
+  explicit PointCloudFilter(const std::vector<std::string> & target_types)
   {
-    tree_ = std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>();
-    ec_.setClusterTolerance(cluster_tolerance);
-    ec_.setMinClusterSize(cluster_min_size);
-    ec_.setMaxClusterSize(cluster_max_size);
-    voxel_grid_.setLeafSize(voxel_size_x, voxel_size_y, voxel_size_z);
-    voxel_grid_.setMinimumPointsNumberPerVoxel(voxel_min_size);
-    convex_hull_.setDimension(2);
+    for (const auto & target_type : target_types) {
+      if (string_to_object_type.count(target_type) == 0) continue;
+      pcd_types_.emplace(string_to_object_type.at(target_type));
+    }
   };
 
   /**
-   * @brief Update voxel and clustering parameters at runtime.
+   * @brief Update the kept point-cloud class labels at runtime.
    */
-  void set_params(
-    double voxel_size_x, double voxel_size_y, double voxel_size_z, int voxel_min_size,
-    double cluster_tolerance, int cluster_min_size, int cluster_max_size)
+  void set_params(const std::vector<std::string> & target_types)
   {
-    voxel_grid_.setLeafSize(voxel_size_x, voxel_size_y, voxel_size_z);
-    voxel_grid_.setMinimumPointsNumberPerVoxel(voxel_min_size);
-    ec_.setClusterTolerance(cluster_tolerance);
-    ec_.setMinClusterSize(cluster_min_size);
-    ec_.setMaxClusterSize(cluster_max_size);
+    pcd_types_.clear();
+    for (const auto & target_type : target_types) {
+      if (string_to_object_type.count(target_type) == 0) continue;
+      pcd_types_.emplace(string_to_object_type.at(target_type));
+    }
   }
 
   /**
-   * @brief Crop the cloud to an axis-aligned box, then apply voxel grid downsampling.
+   * @brief Crop the cloud to an axis-aligned box, then keep only configured class types.
    * @param[in,out] pointcloud Cloud updated in place; empty if nothing remains.
    * @param min_x,max_x,min_y,max_y,min_z,max_z Crop box bounds in the cloud frame.
    */
   void filter_pointcloud(
     PointCloud::Ptr & pointcloud, const double min_x, const double max_x, const double min_y,
     const double max_y, const double min_z, const double max_z);
-  /**
-   * @brief Cluster the cloud and output 2D convex hull vertices of clusters above a height cutoff.
-   * @param input Downsampled or cropped cloud.
-   * @param[out] output Hull vertices of qualifying clusters (typically for footprint tests).
-   * @param min_height A cluster is kept only if at least one point has z >= this value [m].
-   */
-  void cluster_pointcloud(
-    const PointCloud::Ptr & input, PointCloud::Ptr & output, const double min_height);
+
   /**
    * @brief Remove points that lie inside predicted object footprints (expanded by a small margin).
    * @param[in,out] pointcloud Cloud to strip in place.
@@ -398,11 +406,7 @@ struct PointCloudFilter
   void filter_pointcloud_by_object(PointCloud::Ptr & pointcloud, const PredictedObjects & objects);
 
 private:
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree_;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec_;
-  pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
-  pcl::CropBox<pcl::PointXYZ> crop_box_;
-  pcl::ConvexHull<pcl::PointXYZ> convex_hull_;
+  std::unordered_set<ObjectType> pcd_types_;
 };
 
 /// Temporal association of obstacle detections (objects and points) with hysteresis.
@@ -501,9 +505,9 @@ private:
 
   struct PersistentPoint : public PersistentObstacle
   {
-    geometry_msgs::msg::Point position;
-    explicit PersistentPoint(const geometry_msgs::msg::Point & position, const rclcpp::Time & now)
-    : PersistentObstacle(now), position(position)
+    PointXYZCPE point;
+    explicit PersistentPoint(const PointXYZCPE & point, const rclcpp::Time & now)
+    : PersistentObstacle(now), point(point)
     {
     }
   };
@@ -513,6 +517,6 @@ private:
   boost::uuids::random_generator id_generator_;
 };
 
-}  // namespace autoware::trajectory_modifier::utils::obstacle_stop
+}  // namespace autoware::trajectory_processor::utils::obstacle_stop
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_

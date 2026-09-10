@@ -67,6 +67,10 @@ public:
   [[nodiscard]] std::optional<lanelet::Id> getSignalId(
     const lanelet::ConstLanelet & way_lanelet) const;
 
+  /// True when @p way_lanelet has an associated traffic signal that is currently red.
+  /// Returns false when the lanelet has no signal or the signal is not red.
+  [[nodiscard]] bool isRedSignal(const lanelet::ConstLanelet & way_lanelet) const;
+
   bool calcIntentionToCross(
     const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
     const lanelet::Id & signal_id);

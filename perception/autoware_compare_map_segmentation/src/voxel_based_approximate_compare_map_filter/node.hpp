@@ -80,4 +80,3 @@ public:
 
 // clang-format off
 #endif  // VOXEL_BASED_APPROXIMATE_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
-// clang-format on

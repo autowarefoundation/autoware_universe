@@ -103,4 +103,3 @@ private:
 }  // namespace autoware::motion::control::mpc_lateral_controller
 // clang-format off
 #endif  // AUTOWARE__MPC_LATERAL_CONTROLLER__VEHICLE_MODEL__VEHICLE_MODEL_BICYCLE_KINEMATICS_NO_DELAY_HPP_  // NOLINT
-// clang-format on

@@ -1,0 +1,46 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RadarTracksMsgsConverter.node
+
+package:
+  name: autoware_radar_tracks_msgs_converter
+  provider: autoware
+
+launch:
+  plugin: autoware::radar_tracks_msgs_converter::RadarTracksMsgsConverterNode
+  executable: radar_tracks_msgs_converter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: radar_objects
+    message_type: radar_msgs/msg/RadarTracks
+    remap_target: ~/input/radar_objects
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: ~/input/odometry
+
+publishers:
+  - name: radar_tracked_objects
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    remap_target: ~/output/radar_tracked_objects
+  - name: radar_detected_objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/radar_detected_objects
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/radar_tracks_msgs_converter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - on_input: radar_objects
+    outcomes:
+      - to_output: radar_tracked_objects
+      - to_output: radar_detected_objects

@@ -98,10 +98,11 @@ public:
   std::vector<DiagnosticArray::ConstSharedPtr> received_diags_;
 };
 
-void spinSome(rclcpp::Node::SharedPtr node_ptr)
+template <class NodeT>
+void spinSome(std::shared_ptr<NodeT> node_ptr)
 {
   for (int i = 0; i < 20; ++i) {
-    rclcpp::spin_some(node_ptr);
+    rclcpp::spin_some(node_ptr->get_node_base_interface());
     rclcpp::WallRate(100).sleep();
   }
 }

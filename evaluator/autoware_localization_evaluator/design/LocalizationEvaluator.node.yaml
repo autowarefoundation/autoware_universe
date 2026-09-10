@@ -1,0 +1,39 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: LocalizationEvaluator.node
+package:
+  name: autoware_localization_evaluator
+  provider: autoware
+launch:
+  plugin: autoware::localization_diagnostics::LocalizationEvaluatorNode
+  executable: autoware_localization_evaluator_node
+  node_output: screen
+# interfaces
+subscribers:
+  - name: localization
+    message_type: nav_msgs/msg/Odometry
+  - name: ref
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: ~/input/localization/ref
+publishers:
+  - name: metrics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+# parameters
+param_files:
+  - name: localization_evaluator_param
+    default: $(find-pkg-share autoware_localization_evaluator)/config/localization_evaluator.param.yaml
+param_values:
+  - name: output_file
+    type: string
+    default: loc_metrics.results
+  - name: selected_metrics
+    type: string_array
+    default: [lateral_error, absolute_error]
+# processes
+processes:
+  - name: evaluate_localization
+    trigger_conditions:
+      - on_input: localization
+      - on_input: ref
+    outcomes:
+      - to_output: metrics

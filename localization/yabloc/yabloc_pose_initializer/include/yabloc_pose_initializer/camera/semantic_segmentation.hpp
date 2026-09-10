@@ -33,7 +33,11 @@ public:
 private:
   static cv::Mat make_blob(const cv::Mat & image);
 
+  static cv::Mat make_nhwc_blob(const cv::Mat & image);
+
   static cv::Mat convert_blob_to_image(const cv::Mat & blob);
+
+  static cv::Mat convert_nhwc_blob_to_image(const cv::Mat & blob);
 
   static cv::Mat normalize(const cv::Mat & mask, double score_threshold = 0.5);
 
