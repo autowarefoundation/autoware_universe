@@ -227,8 +227,6 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.max_yaw_error_deg", 5.0);
   params_.ego_snap_to_prev_trajectory.max_search_segment_count =
     this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.max_search_segment_count", 5);
-  params_.ego_snap_to_prev_trajectory.min_speed_mps =
-    this->declare_parameter<double>("ego_snap_to_prev_trajectory.min_speed_mps", 0.0);
   params_.ego_snap_to_prev_trajectory.limit_mode =
     this->declare_parameter<std::string>("ego_snap_to_prev_trajectory.limit_mode", "bound");
   params_.ego_snap_to_prev_trajectory.snap_strength =
@@ -274,9 +272,8 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.yaw_fit_min_length_m", 0.2);
   // The parameter callback is registered after this function returns, so startup values would
   // otherwise bypass the checks it applies to runtime updates.
-  if (
-    const std::string reason = validate_ego_snap_params(params_.ego_snap_to_prev_trajectory);
-    !reason.empty()) {
+  if (const std::string reason = validate_ego_snap_params(params_.ego_snap_to_prev_trajectory);
+      !reason.empty()) {
     throw std::runtime_error(reason);
   }
   params_.start_guidance_reference_distance_m =
@@ -410,9 +407,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(
       parameters, "ego_snap_to_prev_trajectory.max_search_segment_count",
       temp_params.ego_snap_to_prev_trajectory.max_search_segment_count);
-    update_param<double>(
-      parameters, "ego_snap_to_prev_trajectory.min_speed_mps",
-      temp_params.ego_snap_to_prev_trajectory.min_speed_mps);
     update_param<std::string>(
       parameters, "ego_snap_to_prev_trajectory.limit_mode",
       temp_params.ego_snap_to_prev_trajectory.limit_mode);
@@ -454,9 +448,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "guidance.centerline_guidance.start_time_s",
       temp_params.centerline_guidance_start_time_s);
-    if (
-      const std::string reason = validate_ego_snap_params(temp_params.ego_snap_to_prev_trajectory);
-      !reason.empty()) {
+    if (const std::string reason =
+          validate_ego_snap_params(temp_params.ego_snap_to_prev_trajectory);
+        !reason.empty()) {
       SetParametersResult result;
       result.successful = false;
       result.reason = reason;

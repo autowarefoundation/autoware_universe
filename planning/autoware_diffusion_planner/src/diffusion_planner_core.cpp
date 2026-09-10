@@ -408,9 +408,6 @@ std::string validate_ego_snap_params(const EgoSnapParams & p)
   if (auto r = finite_positive(p.max_yaw_error_deg, "max_yaw_error_deg"); !r.empty()) {
     return r;
   }
-  if (auto r = finite_non_negative(p.min_speed_mps, "min_speed_mps"); !r.empty()) {
-    return r;
-  }
   if (auto r = finite_non_negative(p.yaw_fit_half_window_m, "yaw_fit_half_window_m"); !r.empty()) {
     return r;
   }
@@ -462,12 +459,7 @@ std::optional<SnappedEgo> DiffusionPlannerCore::snap_ego_to_previous_trajectory(
   const bool has_previous_trajectory =
     last_ego_to_map_transform_.has_value() && !last_agent_poses_map_.empty() &&
     !last_agent_poses_map_[0].empty() && !last_agent_poses_map_[0][0].empty();
-  // When (nearly) stopped the leading segments of the previous trajectory are only centimetres
-  // long, so their direction is dominated by model noise: snapping would inject heading jitter.
-  const double ego_speed_mps =
-    std::hypot(kinematic_state.twist.twist.linear.x, kinematic_state.twist.twist.linear.y);
-  if (
-    !snap_params.enable || !has_previous_trajectory || ego_speed_mps < snap_params.min_speed_mps) {
+  if (!snap_params.enable || !has_previous_trajectory) {
     return std::nullopt;
   }
 

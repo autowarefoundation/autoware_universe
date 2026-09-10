@@ -225,12 +225,6 @@
               "minimum": 1,
               "description": "Number of leading segments of the previous trajectory the closest point is searched in. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected."
             },
-            "min_speed_mps": {
-              "type": "number",
-              "default": 0.0,
-              "minimum": 0,
-              "description": "Ego speed [m/s] below which the snap is skipped and the raw ego pose is kept. Defaults to 0 (no gate): each entry into and exit from the gate is a step in the pose fed to the model, which measured worse in closed loop than leaving the gate off. The tangent-heading fallback already covers the stopped case."
-            },
             "limit_mode": {
               "type": "string",
               "default": "bound",
@@ -274,7 +268,6 @@
             "max_position_error_m",
             "max_yaw_error_deg",
             "max_search_segment_count",
-            "min_speed_mps",
             "limit_mode",
             "snap_strength",
             "yaw_source",

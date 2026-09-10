@@ -166,7 +166,6 @@ struct EgoSnapParams
   // Ego speed [m/s] below which the snap is skipped. When (nearly) stopped the first segments of
   // the previous trajectory are only centimetres long, so their direction is dominated by model
   // noise and snapping onto them injects heading jitter instead of removing it.
-  double min_speed_mps;
 
   // Where the heading of the snapped pose comes from:
   //  - "predicted_heading": the vertex headings of the previous trajectory interpolated at the
