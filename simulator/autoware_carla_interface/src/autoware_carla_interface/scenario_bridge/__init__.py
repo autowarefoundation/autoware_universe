@@ -14,10 +14,10 @@
 
 """Autoware side of the CARLA scenario ``AutowareBridge``.
 
-Topology: the scenario library hosts the ``AutowareBridge`` gRPC server and this
-package is the client that launches (in Docker) and dials it.  The client pulls
-the scenario's mission (initial pose + goal) via ``GetMission`` and pushes a
-single readiness flag via ``ReportReadiness``.
+Topology: the scenario runner hosts the ``AutowareBridge`` gRPC server and this
+package is the client that launches (in a virtualenv) and dials it.  The client
+pulls the scenario's mission (initial pose + goal) via ``GetMission`` and pushes
+a single readiness flag via ``ReportReadiness``.
 
 The heavy lifting -- localization init, routing, engage, and readiness
 aggregation -- lives here on the Autoware side (see :mod:`.node`), driven through
