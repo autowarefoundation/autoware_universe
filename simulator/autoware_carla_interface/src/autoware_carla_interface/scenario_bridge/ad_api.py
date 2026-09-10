@@ -16,13 +16,18 @@
 
 The topic/service names are the stable AD API contract (``autoware_adapi_specs``).
 :class:`ReadinessAggregator` is kept ``rclpy``-free -- it operates on the plain
-enum values from the AD API messages -- so the readiness/engage logic can be unit
-tested without a running Autoware stack.
+enum values (read straight from the ``autoware_adapi_v1_msgs`` message classes so
+they can't drift from the definitions) -- so the readiness/engage logic can be
+unit tested without a running Autoware stack.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from autoware_adapi_v1_msgs.msg import LocalizationInitializationState
+from autoware_adapi_v1_msgs.msg import OperationModeState
+from autoware_adapi_v1_msgs.msg import RouteState
 
 # -- AD API interface names (see autoware_adapi_specs) -----------------------
 
@@ -39,14 +44,14 @@ OPERATION_MODE_STATE_TOPIC = "/api/operation_mode/state"
 #: Service: change the operation mode to autonomous.
 OPERATION_MODE_CHANGE_TO_AUTONOMOUS_SERVICE = "/api/operation_mode/change_to_autonomous"
 
-# -- Enum values (mirror the autoware_adapi_v1_msgs message constants) --------
+# -- Enum values (read from the autoware_adapi_v1_msgs message constants) -----
 
 #: LocalizationInitializationState.INITIALIZED.
-LOCALIZATION_STATE_INITIALIZED = 3
+LOCALIZATION_STATE_INITIALIZED = LocalizationInitializationState.INITIALIZED
 #: RouteState.SET.
-ROUTE_STATE_SET = 2
+ROUTE_STATE_SET = RouteState.SET
 #: OperationModeState.AUTONOMOUS.
-OPERATION_MODE_AUTONOMOUS = 2
+OPERATION_MODE_AUTONOMOUS = OperationModeState.AUTONOMOUS
 
 
 @dataclass
