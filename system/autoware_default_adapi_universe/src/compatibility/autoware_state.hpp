@@ -18,6 +18,8 @@
 #include <autoware/adapi_specs/localization.hpp>
 #include <autoware/adapi_specs/operation_mode.hpp>
 #include <autoware/adapi_specs/routing.hpp>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 
 #include <autoware_system_msgs/msg/autoware_state.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -31,18 +33,18 @@
 namespace autoware::default_adapi
 {
 
-class AutowareStateNode : public rclcpp::Node
+class AutowareStateNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit AutowareStateNode(const rclcpp::NodeOptions & options);
 
 private:
   using ModeChangeAvailable = tier4_system_msgs::msg::ModeChangeAvailable;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
   // emergency
-  Sub<autoware::adapi_specs::localization::InitializationState> sub_localization_;
-  Sub<autoware::adapi_specs::routing::RouteState> sub_routing_;
-  Sub<autoware::adapi_specs::operation_mode::OperationModeState> sub_operation_mode_;
+  Sub<autoware::adapi_specs::localization::InitializationState, NodeT> sub_localization_;
+  Sub<autoware::adapi_specs::routing::RouteState, NodeT> sub_routing_;
+  Sub<autoware::adapi_specs::operation_mode::OperationModeState, NodeT> sub_operation_mode_;
 
   using AutowareState = autoware_system_msgs::msg::AutowareState;
   using LocalizationState = autoware::adapi_specs::localization::InitializationState::Message;
@@ -50,9 +52,9 @@ private:
   using OperationModeState = autoware::adapi_specs::operation_mode::OperationModeState::Message;
   using Trigger = std_srvs::srv::Trigger;
   std::vector<bool> component_states_;
-  std::vector<rclcpp::Subscription<ModeChangeAvailable>::SharedPtr> sub_component_states_;
-  rclcpp::Publisher<AutowareState>::SharedPtr pub_autoware_state_;
-  rclcpp::Service<Trigger>::SharedPtr srv_autoware_shutdown_;
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(ModeChangeAvailable)> sub_component_states_;
+  AUTOWARE_PUBLISHER_PTR(AutowareState) pub_autoware_state_;
+  AUTOWARE_SERVICE_PTR(Trigger) srv_autoware_shutdown_;
 
   enum class LaunchState { Initializing, Running, Finalizing };
   LaunchState launch_state_;
