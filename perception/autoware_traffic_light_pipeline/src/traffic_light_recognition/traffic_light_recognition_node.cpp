@@ -14,6 +14,7 @@
 
 #include "traffic_light_recognition_node.hpp"
 
+#include <algorithm>
 #include <exception>
 #include <memory>
 #include <string>
@@ -146,6 +147,20 @@ void TrafficLightRecognitionNode::sync_callback(
   if (!recognition_) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "vector map not received yet: dropping frame");
+    return;
+  }
+
+  // Wait for the transform at the exact moment to become available.
+  const rclcpp::Time latest_required_stamp =
+    rclcpp::Time(camera_info_msg->header.stamp) +
+    rclcpp::Duration::from_seconds(std::max(0.0, config_.max_timestamp_offset));
+  std::string tf_error_msg;
+  if (!tf_buffer_.canTransform(
+        "map", camera_info_msg->header.frame_id, latest_required_stamp,
+        rclcpp::Duration::from_seconds(0.2), &tf_error_msg)) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "failed to get transform from map frame to camera frame: %s", tf_error_msg.c_str());
     return;
   }
 
