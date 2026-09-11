@@ -18,7 +18,7 @@
 #   yaw rate at full steer). Getting this wrong is understeer -- the ego runs wide
 #   through curves by metres.
 # * every other key is written onto carla.VehiclePhysicsControl, `wheels` onto
-#   carla.WheelPhysicsControl (front/rear select the steered and unsteered axles),
+#   carla.WheelPhysicsControl (front/rear select the steered and the fixed axles),
 #   and steering_curve takes [speed, factor] pairs.
 #
 # Only the keys present here are written; everything else the server reports is

@@ -34,7 +34,6 @@ class CarlaWorldLoadError(RuntimeError):
 
 
 class SensorLoop(object):
-
     def __init__(self):
         self.start_game_time = None
         self.start_system_time = None
@@ -62,7 +61,6 @@ class SensorLoop(object):
 
 
 class InitializeInterface(object):
-
     def __init__(self):
         self.interface = carla_ros2_interface()
         self.param_ = self.interface.get_param()
@@ -224,6 +222,39 @@ class InitializeInterface(object):
                 setattr(wheel, key, float(value))
         return wheels
 
+    def _apply_steer_normalization(self, settings, path):
+        """Take `steer_normalization_deg` out of *settings* and give it to the interface.
+
+        It is the one key read rather than written: CARLA 0.10 reports 70 deg of
+        steer for every car and ignores writes to a wheel's max_steer_angle, so the
+        angle a commanded tire angle is normalized by has to be configured. An
+        explicit ``max_wheel_steer_angle_deg`` wins over the file.
+        """
+        steer_deg = settings.pop("steer_normalization_deg", None)
+        if steer_deg is None:
+            return
+        if float(self.interface.param_values.get("max_wheel_steer_angle_deg", 0.0)) > 0.0:
+            return
+        self.interface.param_values["max_wheel_steer_angle_deg"] = float(steer_deg)
+        print(f"INFO: Steer normalization set to {float(steer_deg):.1f} deg from {path}.")
+
+    @staticmethod
+    def _write_physics_settings(physics, settings):
+        """Write *settings* onto *physics*; return the keys that were written."""
+        applied = []
+        for key, value in settings.items():
+            if key == "wheels":
+                physics.wheels = InitializeInterface._apply_wheel_settings(physics, value)
+            elif key == "steering_curve":
+                physics.steering_curve = [carla.Vector2D(float(x), float(y)) for x, y in value]
+            elif hasattr(physics, key):
+                setattr(physics, key, float(value))
+            else:
+                print(f"WARNING: Unknown vehicle physics key '{key}'; skipped.")
+                continue
+            applied.append(key)
+        return applied
+
     def _apply_vehicle_physics(self):
         """Apply the configured physics to the ego, so it moves like the modelled car.
 
@@ -241,30 +272,10 @@ class InitializeInterface(object):
             print(f"INFO: No vehicle physics for {self.ego_actor.type_id} in {path}.")
             return
 
-        # Read by the interface rather than written to the server: CARLA 0.10
-        # reports 70 deg of steer for every car and ignores writes to it, so the
-        # angle a commanded tire angle is normalized by has to be configured.
-        steer_deg = settings.pop("steer_normalization_deg", None)
-        if steer_deg is not None and float(
-            self.interface.param_values.get("max_wheel_steer_angle_deg", 0.0)
-        ) <= 0.0:
-            self.interface.param_values["max_wheel_steer_angle_deg"] = float(steer_deg)
-            print(f"INFO: Steer normalization set to {float(steer_deg):.1f} deg from {path}.")
-
+        self._apply_steer_normalization(settings, path)
         try:
             physics = self.ego_actor.get_physics_control()
-            applied = []
-            for key, value in settings.items():
-                if key == "wheels":
-                    physics.wheels = self._apply_wheel_settings(physics, value)
-                elif key == "steering_curve":
-                    physics.steering_curve = [carla.Vector2D(float(x), float(y)) for x, y in value]
-                elif hasattr(physics, key):
-                    setattr(physics, key, float(value))
-                else:
-                    print(f"WARNING: Unknown vehicle physics key '{key}'; skipped.")
-                    continue
-                applied.append(key)
+            applied = self._write_physics_settings(physics, settings)
             self.ego_actor.apply_physics_control(physics)
             self.interface.physics_control = self.ego_actor.get_physics_control()
             print(
