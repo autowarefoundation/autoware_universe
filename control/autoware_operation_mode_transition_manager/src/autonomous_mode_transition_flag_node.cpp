@@ -54,8 +54,10 @@ void AutonomousModeTransitionFlagNode::on_timer()
   };
 
   const auto input = take_data();
-  const bool is_available = autonomous_mode_->isModeChangeAvailable(input);
-  const bool is_completed = autonomous_mode_->isModeChangeCompleted(input);
+  // Before every input has been seen once there is nothing to judge on, and the
+  // answer to "can autonomous run" is no.
+  const bool is_available = has_all_data() && autonomous_mode_->isModeChangeAvailable(input);
+  const bool is_completed = has_all_data() && autonomous_mode_->isModeChangeCompleted(input);
 
   const auto stamp = get_clock()->now();
   publish(pub_transition_available_, stamp, is_available);
@@ -70,29 +72,41 @@ void AutonomousModeTransitionFlagNode::on_timer()
 
 InputData AutonomousModeTransitionFlagNode::take_data()
 {
-  InputData data;
-
+  // Each input keeps its last value: the polling subscribers return nothing on a
+  // tick that saw no new message, and the checks read every field, so dropping
+  // back to a default-constructed InputData would report a zero pose, an empty
+  // trajectory and a zero command -- "not available" -- on every such tick.
   const auto kinematics = sub_kinematics_.take_data();
   if (kinematics) {
-    data.kinematics = *kinematics;
+    input_data_.kinematics = *kinematics;
+    has_kinematics_ = true;
   }
 
   const auto trajectory = sub_trajectory_.take_data();
   if (trajectory) {
-    data.trajectory = *trajectory;
+    input_data_.trajectory = *trajectory;
+    has_trajectory_ = true;
   }
 
   const auto control_cmd = sub_control_cmd_.take_data();
   if (control_cmd) {
-    data.control_cmd = *control_cmd;
+    input_data_.control_cmd = *control_cmd;
+    has_control_cmd_ = true;
   }
 
   const auto trajectory_follower_control_cmd = sub_trajectory_follower_control_cmd_.take_data();
   if (trajectory_follower_control_cmd) {
-    data.trajectory_follower_control_cmd = *trajectory_follower_control_cmd;
+    input_data_.trajectory_follower_control_cmd = *trajectory_follower_control_cmd;
+    has_trajectory_follower_control_cmd_ = true;
   }
 
-  return data;
+  return input_data_;
+}
+
+bool AutonomousModeTransitionFlagNode::has_all_data() const
+{
+  return has_kinematics_ && has_trajectory_ && has_control_cmd_ &&
+         has_trajectory_follower_control_cmd_;
 }
 
 void AutonomousModeTransitionFlagNode::on_driving_mode_info(const DrivingModeInfo & msg)
