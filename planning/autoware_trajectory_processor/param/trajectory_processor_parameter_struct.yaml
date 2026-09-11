@@ -106,6 +106,13 @@ trajectory_processor_params:
       read_only: false
       validation:
         bounds<>: [0.0, 10.0]
+    delay_response_time:
+      type: double
+      default_value: 0.5
+      description: Delay response time used to estimate the minimum ego stopping distance [s]
+      read_only: false
+      validation:
+        bounds<>: [0.0, 10.0]
     arrived_distance_threshold:
       type: double
       default_value: 0.5
