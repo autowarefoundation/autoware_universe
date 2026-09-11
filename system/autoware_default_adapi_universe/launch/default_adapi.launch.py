@@ -44,10 +44,13 @@ AGNOCAST_WRAPPER_NODES = [
     (UNIVERSE, "heartbeat", "HeartbeatNode", "heartbeat_node"),
     (UNIVERSE, "manual/local", "ManualControlNode", "manual_control_node"),
     (UNIVERSE, "manual/remote", "ManualControlNode", "manual_control_node"),
+    (UNIVERSE, "motion", "MotionNode", "motion_node"),
+    (UNIVERSE, "mrm_request", "MrmRequestNode", "mrm_request_node"),
     (UNIVERSE, "operation_mode", "OperationModeNode", "operation_mode_node"),
     (UNIVERSE, "perception", "PerceptionNode", "perception_node"),
     (UNIVERSE, "planning", "PlanningNode", "planning_node"),
     (UNIVERSE, "vehicle_command", "VehicleCommandNode", "vehicle_command_node"),
+    (UNIVERSE, "vehicle_door", "VehicleDoorNode", "vehicle_door_node"),
     (UNIVERSE, "vehicle_info", "VehicleInfoNode", "vehicle_info_node"),
     (UNIVERSE, "vehicle_metrics", "VehicleMetricsNode", "vehicle_metrics_node"),
     (UNIVERSE, "vehicle_status", "VehicleStatusNode", "vehicle_status_node"),
@@ -106,18 +109,16 @@ def get_default_config():
 def launch_setup(context, *args, **kwargs):
     use_agnocast = context.perform_substitution(LaunchConfiguration("use_agnocast")) == "1"
 
-    components = [
-        create_api_node("autoware_default_adapi_universe", "motion", "MotionNode"),
-        create_api_node("autoware_default_adapi_universe", "mrm_request", "MrmRequestNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_door", "VehicleDoorNode"),
-    ]
-    nodes = []
-    for package_name, node_name, class_name, executable in AGNOCAST_WRAPPER_NODES:
-        if use_agnocast:
-            nodes.append(create_standalone_api_node(package_name, node_name, executable))
-        else:
-            components.append(create_api_node(package_name, node_name, class_name))
+    if use_agnocast:
+        return [
+            create_standalone_api_node(package_name, node_name, executable)
+            for package_name, node_name, _, executable in AGNOCAST_WRAPPER_NODES
+        ]
 
+    components = [
+        create_api_node(package_name, node_name, class_name)
+        for package_name, node_name, class_name, _ in AGNOCAST_WRAPPER_NODES
+    ]
     container = ComposableNodeContainer(
         namespace="adapi",
         name="container",
@@ -126,7 +127,7 @@ def launch_setup(context, *args, **kwargs):
         ros_arguments=["--log-level", "adapi.container:=WARN"],
         composable_node_descriptions=components,
     )
-    return [container, *nodes]
+    return [container]
 
 
 def generate_launch_description():

@@ -23,13 +23,13 @@ namespace autoware::default_adapi
 
 using NodeT = autoware::agnocast_wrapper::Node;
 
-template <class T, class N = rclcpp::Node>
+template <class T, class N>
 using Pub = typename autoware::component_interface_utils::Publisher<T, N>::SharedPtr;
-template <class T, class N = rclcpp::Node>
+template <class T, class N>
 using Sub = typename autoware::component_interface_utils::Subscription<T, N>::SharedPtr;
-template <class T, class N = rclcpp::Node>
+template <class T, class N>
 using Cli = typename autoware::component_interface_utils::Client<T, N>::SharedPtr;
-template <class T, class N = rclcpp::Node>
+template <class T, class N>
 using Srv = typename autoware::component_interface_utils::Service<T, N>::SharedPtr;
 
 }  // namespace autoware::default_adapi

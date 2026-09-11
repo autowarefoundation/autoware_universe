@@ -20,23 +20,29 @@
 namespace autoware::default_adapi
 {
 
+// The buffer VehicleStopChecker keeps, reproduced here because its base takes it as an argument.
+constexpr double velocity_buffer_time_sec = 10.0;
+
 MotionNode::MotionNode(const rclcpp::NodeOptions & options)
-: Node("motion", options), vehicle_stop_checker_(this)
+: autoware::agnocast_wrapper::Node("motion", options),
+  vehicle_stop_checker_(this, velocity_buffer_time_sec)
 {
   stop_check_duration_ = declare_parameter<double>("stop_check_duration");
   require_accept_start_ = declare_parameter<bool>("require_accept_start");
   is_calling_set_pause_ = false;
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_srv(srv_accept_, this, &MotionNode::on_accept);
   adaptor.init_pub(pub_state_);
   adaptor.init_cli(cli_set_pause_, group_cli_);
   adaptor.init_sub(sub_is_paused_, this, &MotionNode::on_is_paused);
   adaptor.init_sub(sub_is_start_requested_, this, &MotionNode::on_is_start_requested);
+  adaptor.init_sub(sub_kinematic_state_, this, &MotionNode::on_kinematic_state);
 
   rclcpp::Rate rate(10);
-  timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), rate.period(), [this]() { on_timer(); });
   state_ = State::Unknown;
 }
 
@@ -148,6 +154,16 @@ void MotionNode::on_is_start_requested(
 {
   is_start_requested_ = msg->data;
   update_state();
+}
+
+void MotionNode::on_kinematic_state(
+  const autoware::component_interface_specs_universe::localization::KinematicState::Message::
+    ConstSharedPtr msg)
+{
+  geometry_msgs::msg::TwistStamped twist;
+  twist.header = msg->header;
+  twist.twist = msg->twist.twist;
+  vehicle_stop_checker_.addTwist(twist);
 }
 
 void MotionNode::on_accept(
