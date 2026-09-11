@@ -14,7 +14,7 @@
       nms_threshold: 0.7
 
     map_based_detector:
-      min_timestamp_offset: -0.04
+      min_timestamp_offset: -0.3
       max_timestamp_offset: 0.0
 
     car_classifier:
