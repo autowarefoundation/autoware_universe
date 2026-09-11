@@ -225,6 +225,7 @@ protected:
     params_.stopping_constraints.nominal_deceleration = 1.0;
     params_.stopping_constraints.maximum_deceleration = 4.0;
     params_.stopping_constraints.jerk_limit = 3.0;
+    params_.stopping_constraints.delay_response_time = 0.0;
     params_.stopping_constraints.arrived_distance_threshold = 0.5;
 
     auto & p = params_.obstacle_stop;
