@@ -22955,20 +22955,6 @@
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>crosswalk.<wbr>nominal_<wbr>deceleration</wbr></wbr></td>
-<td>float</td>
-<td>Nominal deceleration to calculate the stop distance used as trajectory length limit [m/s²].</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>crosswalk.<wbr>nominal_<wbr>jerk</wbr></wbr></td>
-<td>float</td>
-<td>Nominal jerk to calculate the stop distance used as trajectory length limit [m/s³].</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
 <td>crosswalk.<wbr>stop_<wbr>duration</wbr></wbr></td>
 <td>float</td>
 <td>Minimum duration of the stop to consider the trajectory feasible [s].</td>
@@ -22988,6 +22974,41 @@
 <td>Whether to use the embedded trajectory time to evaluate the stop duration.</td>
 <td>false</td>
 <td>N/A</td>
+</tr>
+<tr>
+<td>crosswalk.<wbr>stopping_<wbr>params.<wbr>nominal_<wbr>decel</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Nominal deceleration to calculate the stop distance used as trajectory length limit [m/s²].</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>crosswalk.<wbr>stopping_<wbr>params.<wbr>nominal_<wbr>jerk</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Nominal jerk to calculate the stop distance used as trajectory length limit [m/s³].</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>crosswalk.<wbr>stopping_<wbr>params.<wbr>decel_<wbr>limit</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Deceleration limit to calculate the stop distance used as trajectory length limit [m/s²].</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>crosswalk.<wbr>stopping_<wbr>params.<wbr>jerk_<wbr>limit</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Jerk limit to calculate the stop distance used as trajectory length limit [m/s³].</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>crosswalk.<wbr>stopping_<wbr>params.<wbr>delay_<wbr>response_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Delay response time used to estimate the minimum ego stopping distance [s].</td>
+<td>0.5</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light.<wbr>deceleration_<wbr>limit</wbr></wbr></wbr></td>
@@ -23032,6 +23053,13 @@
 <td>N/A</td>
 </tr>
 <tr>
+<td>traffic_<wbr>light.<wbr>enable_<wbr>arrow_<wbr>aware_<wbr>amber_<wbr>passing</wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow (protected turn phase).</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>traffic_<wbr>light.<wbr>stop_<wbr>overshoot_<wbr>margin</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].</td>
@@ -23043,6 +23071,13 @@
 <td>float</td>
 <td>allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m].</td>
 <td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_<wbr>light.<wbr>min_<wbr>lookahead_<wbr>distance</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Minimum forward trajectory length to scan for traffic light stop lines even at low ego speed [m].</td>
+<td>20.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23063,13 +23098,6 @@
 <td>traffic_<wbr>light.<wbr>stable_<wbr>duration_<wbr>threshold_<wbr>unknown</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving) [s].</td>
-<td>0.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>traffic_<wbr>light.<wbr>amber_<wbr>rejection_<wbr>hysteresis_<wbr>duration</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Duration to persist an AMBER rejection state to prevent flipping [s].</td>
 <td>0.0</td>
 <td>≥0.0</td>
 </tr>
@@ -23095,11 +23123,32 @@
 <td>N/A</td>
 </tr>
 <tr>
+<td>traffic_<wbr>light.<wbr>amber_<wbr>rejection.<wbr>hysteresis_<wbr>duration</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Hysteresis duration to persist an AMBER rejection [s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_<wbr>light.<wbr>amber_<wbr>rejection.<wbr>reject_<wbr>if_<wbr>stop_<wbr>detected</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Reject if we detect a previous stop attempt from input trajectory.</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>boundary_<wbr>departure.<wbr>lateral_<wbr>margin_<wbr>m</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Lateral clearance margin from an uncrossable boundary [m]. Trajectories whose footprint comes within this margin are rejected.</td>
 <td>0.01</td>
 <td>N/A</td>
+</tr>
+<tr>
+<td>boundary_<wbr>departure.<wbr>near_<wbr>boundary_<wbr>lateral_<wbr>th_<wbr>m</wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Lateral distance below which the trajectory is reported as near an uncrossable boundary [m]. Reported as a low caution risk level; it does not reject the trajectory.</td>
+<td>0.2</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>boundary_<wbr>departure.<wbr>longitudinal_<wbr>margin_<wbr>m</wbr></wbr></wbr></wbr></td>

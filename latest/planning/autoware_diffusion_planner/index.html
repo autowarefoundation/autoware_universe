@@ -22986,6 +22986,13 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>N/A</td>
 </tr>
 <tr>
+<td>remap_<wbr>unsupported_<wbr>objects_<wbr>to_<wbr>pedestrian</wbr></wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Treat UNKNOWN and HAZARD tracked objects as PEDESTRIAN, the most conservative supported class, so the planner reacts to them instead of dropping them. Non-BOX shapes are replaced with a 0.5 m bounding box. ANIMAL, OVER_DRIVABLE and UNDER_DRIVABLE remain ignored.</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>traffic_<wbr>light_<wbr>group_<wbr>msg_<wbr>timeout_<wbr>seconds</wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Timeout for traffic light group messages (seconds)</td>
