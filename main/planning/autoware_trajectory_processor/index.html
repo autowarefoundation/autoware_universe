@@ -23062,6 +23062,13 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>≥0</td>
 </tr>
 <tr>
+<td>stopping_<wbr>constraints.<wbr>delay_<wbr>response_<wbr>time</wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Delay response time used to estimate the minimum ego stopping distance [s]</td>
+<td>0.5</td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>stopping_<wbr>constraints.<wbr>arrived_<wbr>distance_<wbr>threshold</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold to check if the ego vehicle has arrived at the stop point [m]</td>
@@ -23632,70 +23639,91 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>traffic_<wbr>light_<wbr>stop.<wbr>treat_<wbr>unknown_<wbr>light_<wbr>as_<wbr>red</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
 <td>Treat unknown light as red light</td>
-<td>false</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>enable_<wbr>arrow_<wbr>aware_<wbr>amber_<wbr>passing</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow (protected turn phase)</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>overshoot_<wbr>tolerance</wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Overshoot tolerance [m]</td>
-<td>0</td>
-<td>≥0</td>
+<td>0.5</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>allow_<wbr>if_<wbr>cannot_<wbr>stop_<wbr>distance</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m]</td>
-<td>0</td>
-<td>≥0</td>
+<td>1.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>min_<wbr>lookahead_<wbr>distance</wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Minimum forward trajectory length to scan for traffic light stop lines even at low ego speed [m]</td>
+<td>20.0</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>stable_<wbr>duration_<wbr>red</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for stable duration of red light [s]</td>
 <td>0.2</td>
-<td>≥0</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>stable_<wbr>duration_<wbr>amber</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for stable duration of amber light [s]</td>
 <td>0.2</td>
-<td>≥0</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>stable_<wbr>duration_<wbr>unknown</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for stable duration of unknown light [s]</td>
-<td>0</td>
-<td>≥0</td>
+<td>0.5</td>
+<td>≥0.0</td>
 </tr>
 <tr>
-<td>traffic_<wbr>light_<wbr>stop.<wbr>th_<wbr>amber_<wbr>rejection_<wbr>hysteresis</wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>amber_<wbr>rejection.<wbr>th_<wbr>hysteresis</wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Threshold for amber rejection hysteresis [s]</td>
 <td>0.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>traffic_<wbr>light_<wbr>stop.<wbr>crossing_<wbr>time_<wbr>limit</wbr></wbr></wbr></wbr></wbr></td>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>amber_<wbr>rejection.<wbr>reject_<wbr>if_<wbr>stop_<wbr>detected</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>boolean</td>
+<td>Reject if we detect a previous stop attempt from input trajectory</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>amber_<wbr>rejection.<wbr>can_<wbr>stop_<wbr>decel</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Deceleration threshold for ego vehicle to stop [m/s^2]</td>
+<td>2.8</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>amber_<wbr>rejection.<wbr>can_<wbr>stop_<wbr>jerk</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>float</td>
+<td>Jerk threshold for ego vehicle to stop [m/s^3]</td>
+<td>5.0</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>traffic_<wbr>light_<wbr>stop.<wbr>amber_<wbr>rejection.<wbr>crossing_<wbr>time_<wbr>limit</wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>float</td>
 <td>Crossing time limit [s]</td>
 <td>2.75</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>traffic_<wbr>light_<wbr>stop.<wbr>delay_<wbr>response_<wbr>time</wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Delay response time used to estimate the minimum ego stopping distance [s]</td>
-<td>0.5</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>traffic_<wbr>light_<wbr>stop.<wbr>ego_<wbr>stopped_<wbr>vel_<wbr>th</wbr></wbr></wbr></wbr></wbr></wbr></td>
-<td>float</td>
-<td>Velocity below which ego is considered stopped when checking traffic lights [m/s]</td>
-<td>0.01</td>
 <td>≥0</td>
 </tr>
 <tr>
