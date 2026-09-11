@@ -61,6 +61,11 @@
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
     <arg name="max_wheel_steer_angle_deg" default="0.0" description="Override the wheel max steer angle [deg] used for steer normalization; 0 uses the physics value"/>
     <arg
+      name="steering_lag_time_constant"
+      default="0.05"
+      description="Time constant [s] of the first-order lag on the steer command, standing in for the steering actuator. CARLA 0.10's own steering settles in ~0.1 s, so a larger value only adds delay the controller cannot see"
+    />
+    <arg
       name="vehicle_physics_config"
       default="$(find-pkg-share autoware_carla_interface)/config/vehicle_physics.yaml"
       description="YAML with the physics written onto the ego after it spawns (mass, steering curve, per-axle wheel settings). CARLA 0.10 gives every car the same placeholder physics, which does not match the vehicle Autoware plans for. Empty keeps CARLA's own values"
@@ -141,6 +146,7 @@
       <param name="max_wheel_steer_angle_deg" value="$(var max_wheel_steer_angle_deg)"/>
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
       <param name="vehicle_physics_config" value="$(var vehicle_physics_config)"/>
+      <param name="steering_lag_time_constant" value="$(var steering_lag_time_constant)"/>
       <param name="wake_sleeping_physics" value="$(var wake_sleeping_physics)"/>
       <param name="traffic_light.publish" value="$(var traffic_light.publish)"/>
       <param name="traffic_light.force_green" value="$(var traffic_light.force_green)"/>
