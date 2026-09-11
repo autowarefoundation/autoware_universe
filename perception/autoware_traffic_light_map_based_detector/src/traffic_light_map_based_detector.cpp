@@ -89,6 +89,10 @@ TrafficLightMapBasedDetector::TrafficLightMapBasedDetector(
   if (config_.max_detection_range <= 0) {
     throw std::invalid_argument("max_detection_range must be positive");
   }
+  if (config_.max_timestamp_offset < config_.min_timestamp_offset) {
+    throw std::invalid_argument(
+      "max_timestamp_offset must be greater than or equal to min_timestamp_offset");
+  }
   set_map(map_msg);
 }
 

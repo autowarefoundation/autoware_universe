@@ -237,6 +237,18 @@ TEST(TrafficLightMapBasedDetectorTest, ConstructorThrowsWhenMaxDetectionRangeIsN
   EXPECT_THROW(TrafficLightMapBasedDetector(config, map), std::invalid_argument);
 }
 
+TEST(TrafficLightMapBasedDetectorTest, ConstructorThrowsWhenTimestampOffsetRangeIsInverted)
+{
+  // Arrange
+  auto config = make_default_config();
+  config.min_timestamp_offset = 0.1;
+  config.max_timestamp_offset = -0.1;
+  const auto map = make_test_map();
+
+  // Act & Assert
+  EXPECT_THROW(TrafficLightMapBasedDetector(config, map), std::invalid_argument);
+}
+
 TEST(TrafficLightMapBasedDetectorTest, DetectWithoutSetRouteUsesAllMapTrafficLights)
 {
   // Arrange
