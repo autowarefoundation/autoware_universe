@@ -121,7 +121,7 @@ bool AutonomousModeTransitionFlagNode::inputs_are_fresh(const rclcpp::Time & now
   const auto timed_out = [&](const char * name, const auto & stamp) {
     const bool stale = input_timeout_ < (now - rclcpp::Time(stamp)).seconds();
     if (stale) {
-      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "Retained %s is timed out.", name);
+      RCLCPP_WARN_THROTTLE(get_logger(), *clock_, 3000, "Retained %s is timed out.", name);
     }
     return stale;
   };

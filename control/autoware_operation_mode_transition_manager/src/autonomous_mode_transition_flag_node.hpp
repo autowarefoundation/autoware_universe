@@ -68,6 +68,10 @@ private:
   // the transition checks against default-constructed input.
   InputData input_data_;
   double input_timeout_;  // [s] retained inputs older than this are treated as missing
+  // Cached so the throttled staleness warning can fire from the const inputs_are_fresh:
+  // on Humble Node::get_clock() const returns a ConstSharedPtr, but dereferencing this
+  // (non-const) shared_ptr still yields the mutable Clock& that RCLCPP_*_THROTTLE needs.
+  rclcpp::Clock::SharedPtr clock_{get_clock()};
   bool has_kinematics_{false};
   bool has_trajectory_{false};
   bool has_control_cmd_{false};
