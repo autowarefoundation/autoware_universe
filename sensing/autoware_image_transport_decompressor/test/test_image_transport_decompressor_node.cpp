@@ -16,7 +16,7 @@
 // This file only checks that the node subscribes, forwards the "encoding" parameter, publishes
 // decompress()'s image when there is one, and stays silent otherwise.
 
-#include "autoware/image_transport_decompressor/image_transport_decompressor_node.hpp"
+#include "../src/image_transport_decompressor_node.hpp"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>

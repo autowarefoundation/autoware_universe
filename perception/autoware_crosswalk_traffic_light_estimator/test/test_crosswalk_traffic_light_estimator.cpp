@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/crosswalk_traffic_light_estimator.hpp"
+#include "autoware/crosswalk_traffic_light_estimator/crosswalk_traffic_light_estimator.hpp"
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>

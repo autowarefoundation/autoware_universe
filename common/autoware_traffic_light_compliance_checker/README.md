@@ -22,7 +22,7 @@ The `traffic_light_compliance_checker` package provides a deterministic validati
 The execution flow follows a sequential logical from signal processing & filtering down to stop line interaction evaluations:
 
 1. **Filter signals and update status tracker:** Feeds raw perception data into the status tracker to clean up transient noise and tracking dropouts.
-2. **Generate Geometric Trajectory Linestring:** Removes path points situated behind the ego vehicle, clamps the forward path length at the maximum required stop distance, and extends trajectory end to account for ego front offset.
+2. **Generate Geometric Trajectory Linestring:** Removes path points situated behind the ego vehicle, clamps the forward path length at `max(min_lookahead_distance, comfortable_stop_distance + stop_overshoot_margin)` (or until the first planned stop), and extends trajectory end to account for ego front offset.
 3. **Extract and group map stop lines:** Sorts overlapping intersection lines into separate evaluation queues for red and amber constraints.
 4. **Evaluate Stop Line Violations:** Checks the trajectory linestring against active stop lines, records detected violations and generate compliance result.
 
@@ -34,7 +34,7 @@ skinparam backgroundColor #WHITE
 start
 
 :Filter signals and update status tracker;<<#LightBlue>>
-:Generate Trajectory Linestring\n(Cull backward points & clamp at max stop distance);<<#LightBlue>>
+:Generate Trajectory Linestring\n(Cull backward points & clamp at max(min lookahead, stop distance));<<#LightBlue>>
 :Extend trajectory linestring\n(Add physical front bumper footprint offset);<<#LightBlue>>
 :Extract and group map stop lines\n(Categorize into RED vs. AMBER targets);<<#LightBlue>>
 
@@ -87,6 +87,13 @@ To prevent sudden, harsh emergency braking maneuvers caused by raw perception no
 - **Segment-by-Segment Geometric Scan:** The checker evaluates trajectory segments sequentially against mapped stop lines using a localized `boost::geometry::intersection` check. The loop breaks immediately upon finding the first chronological intersection point, calculating the dynamic distance-to-stop-line and interpolating the exact crossing timestamp (for amber light) using `autoware::interpolation::lerp`.
 - **Red Light Evaluation:** Generates a violation if an intersection occurs, unless the trajectory makes the ego come to a complete stop within the specified `stop_overshoot_margin`.
 - **Amber Light Evaluation:** Computes the dynamic stopping distance based on current velocity, acceleration, applied deceleration, and system response latency. If the vehicle can stop safely before the line, or if it cannot clear the intersection within the `crossing_time_limit`, an amber violation is recorded to enforce a stop.
+- **Arrow-aware amber passing:** On protected turn lanes with a separate direction-arrow bulb in the map, the circle signal often goes `GREEN → AMBER → RED` before `GREEN *_ARROW` appears. While the circle is amber after a green circle, requiring a stop would be overly strict. When `enable_arrow_aware_amber_passing` is true, the checker skips stop-line collection (no amber/red violation) if all of the following hold:
+  - ego route lane is a left or right turn lane (`turn_direction`)
+  - the traffic light has a static arrow in the map (`subtype` containing `arrow`, or light-bulb `arrow` attribute)
+  - the amber phase was reached from a green circle (`AmberState::kFromGreen`)
+  - the current signal still reports an amber circle
+
+  Transitions from red (or unknown) to amber still require a stop. A brief red circle before the green arrow is reported is also still treated as a stop (same scope as the behavior velocity traffic light module).
 
 ## Structs and Interface Definitions
 
@@ -124,6 +131,7 @@ The interfaces pass inputs and output results through the following standard dat
 | `crossing_time_limit`                          | `double` | Maximum duration allowed for the vehicle to clear an amber light intersection (seconds).                   |
 | `stop_overshoot_margin`                        | `double` | Allowed physical distance buffer beyond a stop line for a stopped vehicle (meters).                        |
 | `allow_if_cannot_stop_distance`                | `double` | Distance within which a crossing trajectory is allowed when ego cannot stop before the stop line (meters). |
+| `min_lookahead_distance`                       | `double` | Minimum forward trajectory length to scan for stop lines, even at low ego speed (meters).                  |
 | `stable_duration_threshold_red`                | `double` | Required continuous duration for a `RED` state to be confirmed as valid (seconds).                         |
 | `stable_duration_threshold_amber`              | `double` | Required continuous duration for an `AMBER` state to be confirmed as valid (seconds).                      |
 | `stable_duration_threshold_unknown`            | `double` | Required continuous duration for an `UNKNOWN` state to be confirmed as valid (seconds).                    |
@@ -131,5 +139,6 @@ The interfaces pass inputs and output results through the following standard dat
 | `ego_stopped_velocity_threshold`               | `double` | Velocity threshold beneath which the ego vehicle is considered completely stopped ($m/s$).                 |
 | `treat_amber_light_as_red_light`               | `bool`   | If true, disables amber passing logic and treats all amber states as strict red signals.                   |
 | `treat_unknown_light_as_red_light`             | `bool`   | If true, evaluates unclassified or blank signal states as strict red signals.                              |
+| `enable_arrow_aware_amber_passing`             | `bool`   | If true, allow Green Circle → Amber pass on turn lanes with a mapped static arrow.                         |
 | `checked_trajectory_length.deceleration_limit` | `double` | Comfortable stop deceleration limit ($m/s^2$) for computing trajectory checking length.                    |
 | `checked_trajectory_length.jerk_limit`         | `double` | Comfortable stop jerk limit ($m/s^3$) for computing trajectory checking length.                            |

@@ -22,8 +22,11 @@
 
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <algorithm>
+#include <cstdint>
 #include <iomanip>
 #include <memory>
 #include <sstream>
@@ -122,6 +125,10 @@ void SurroundObstacleStop::on_initialize(const TrajectoryProcessorParams & param
   params_ = params.surround_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
 
+  pointcloud_filter_ =
+    std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
+      params_.target_objects.pointcloud);
+
   proximity_checker_ = std::make_unique<obstacle_proximity_checker::ProximityChecker>(
     to_proximity_checker_parameters(params_), context_->vehicle_info);
 }
@@ -132,6 +139,7 @@ void SurroundObstacleStop::update_params(const TrajectoryProcessorParams & param
   params_ = params.surround_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
   proximity_checker_->update_parameters(to_proximity_checker_parameters(params_));
+  pointcloud_filter_->set_params(params_.target_objects.pointcloud);
 }
 
 bool SurroundObstacleStop::check_inputs(const TrajectoryProcessorData & input) const
@@ -167,11 +175,34 @@ obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_in
 
   Eigen::Affine3f isometry =
     tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
-  pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
-  pcl::fromROSMsg(*input.obstacle_pointcloud, transformed_pointcloud);
-  autoware_utils::transform_pointcloud(transformed_pointcloud, transformed_pointcloud, isometry);
+  PointCloud::Ptr transformed_pointcloud(new PointCloud);
+  pcl::fromROSMsg(*input.obstacle_pointcloud, *transformed_pointcloud);
+  for (auto & p : transformed_pointcloud->points) {
+    const Eigen::Vector3f q = isometry * Eigen::Vector3f(p.x, p.y, p.z);
+    p.x = q.x();
+    p.y = q.y();
+    p.z = q.z();
+  }
 
-  checker_inputs.pointcloud_in_base_link = transformed_pointcloud.makeShared();
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  const auto ego_rear_offset = context_->vehicle_info.rear_overhang_m;
+  const auto ego_side_offset = context_->vehicle_info.vehicle_width_m / 2.0;
+  const auto front_offset =
+    ego_front_offset + params_.front_distance_th.pointcloud + params_.hysteresis_distance;
+  const auto rear_offset =
+    ego_rear_offset + params_.back_distance_th.pointcloud + params_.hysteresis_distance;
+  const auto side_offset =
+    ego_side_offset + params_.side_distance_th.pointcloud + params_.hysteresis_distance;
+  const auto [min_x, max_x] = std::pair(-rear_offset, front_offset);
+  const auto [min_y, max_y] = std::pair(-side_offset, side_offset);
+  pointcloud_filter_->filter_pointcloud(
+    transformed_pointcloud, min_x, max_x, min_y, max_y, -10.0, 10.0);
+
+  // ProximityChecker expects PointXYZ; drop CPE fields after label/range filtering.
+  pcl::PointCloud<pcl::PointXYZ>::Ptr xyz_pointcloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::copyPointCloud(*transformed_pointcloud, *xyz_pointcloud);
+
+  checker_inputs.pointcloud_in_base_link = xyz_pointcloud;
 
   return checker_inputs;
 }

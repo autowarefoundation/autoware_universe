@@ -153,10 +153,11 @@ class InitializeInterface(object):
         """Replace the vehicle's speed-based steering curve with an identity curve.
 
         CARLA 0.10 ships corrupt steering-curve data (duplicated, unsorted
-        points such as (10 m/s, 0.5)) which the simulator applies internally,
-        attenuating the achievable steering angle at driving speeds. Writing a
-        flat curve back removes the server-side attenuation so the commanded
-        steer fraction maps directly to the wheel angle.
+        points such as (10, 0.5); the curve's speed axis is mph on Chaos) which
+        the simulator applies internally, attenuating the achievable steering
+        angle at driving speeds. Writing a flat curve back removes the
+        server-side attenuation so the commanded steer fraction maps directly to
+        the wheel angle.
         """
         try:
             physics = self.ego_actor.get_physics_control()
@@ -278,6 +279,27 @@ class InitializeInterface(object):
 
         return self._verify_world_loaded(client, load_error)
 
+    def _force_green_traffic_lights(self):
+        """Set every CARLA traffic light to green and freeze it there.
+
+        No-op unless ``traffic_light.force_green`` is enabled (the check lives here so
+        the caller stays a single unconditional call). Camera-less closed-loop runs
+        have no traffic-light recognition, so the planner would otherwise hold
+        indefinitely at every signalized stop line. Freezing all lights green lets the
+        ego proceed while still exercising the rest of the stack. When
+        traffic_light.publish is also enabled, carla_ros publishes these frozen green
+        states on /perception/traffic_light_recognition/traffic_signals.
+        """
+        if not self.interface.param_values.get("traffic_light.force_green", False):
+            return
+        traffic_lights = self.world.get_actors().filter("*traffic_light*")
+        count = 0
+        for traffic_light in traffic_lights:
+            traffic_light.set_state(carla.TrafficLightState.Green)
+            traffic_light.freeze(True)
+            count += 1
+        print(f"INFO: Forced {count} traffic lights to green and froze them.", flush=True)
+
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
         spawn_points_tm = self._get_map_spawn_points()
@@ -328,23 +350,14 @@ class InitializeInterface(object):
         for vehicle in vehicles:
             vehicle.set_autopilot(True)
 
-    def load_world(self):
+    def _connect_client(self):
+        """Open a CARLA client on the configured host/port with the configured timeout."""
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
-        map_verified = self._load_carla_world(client)
-        if not map_verified:
-            # After a failed OpenDRIVE parse, libcarla keeps serving the previous
-            # episode's cached map through this client, so world.get_map() would
-            # return a stale (wrong) map instead of raising. Reconnect with a fresh
-            # client so the mapless world reports honestly downstream
-            # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
-            self.logger.warning(
-                "Reconnecting the CARLA client to discard the stale map cache "
-                "of the previous episode."
-            )
-            client = carla.Client(self.local_host, self.port)
-            client.set_timeout(self.timeout)
+        return client
 
+    def _wait_for_world(self, client):
+        """Fetch the world once it is loaded and confirm it can be ticked."""
         # Wait for the world to be fully loaded
         # This is critical for non-default maps that need time to load
         time.sleep(2.0)
@@ -360,27 +373,56 @@ class InitializeInterface(object):
             # In this case, just wait a bit more
             time.sleep(1.0)
 
+    def _apply_world_settings(self):
+        """Push the configured simulation settings onto the loaded world."""
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = self.fixed_delta_seconds
         settings.synchronous_mode = self.sync_mode
         settings.no_rendering_mode = self.no_rendering_mode
         self.world.apply_settings(settings)
-        CarlaDataProvider.set_world(self.world)
-        CarlaDataProvider.set_client(client)
 
+    def _spawn_ego_actor(self):
+        """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
         spawn_point, randomize = self._parse_spawn_point()
         if not randomize:
             spawn_point = self._snap_spawn_point_to_ground(spawn_point)
-        self.ego_actor = CarlaDataProvider.request_new_actor(
+        ego_actor = CarlaDataProvider.request_new_actor(
             self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
         )
-        if self.ego_actor is None:
+        if ego_actor is None:
             raise RuntimeError(
                 f"Failed to spawn ego vehicle '{self.vehicle_type}' at "
                 f"({spawn_point.location.x:.1f}, {spawn_point.location.y:.1f}, "
                 f"{spawn_point.location.z:.1f}); the spawn point may be occupied "
                 "or invalid for this map"
             )
+        return ego_actor
+
+    def load_world(self):
+        client = self._connect_client()
+        map_verified = self._load_carla_world(client)
+        if not map_verified:
+            # After a failed OpenDRIVE parse, libcarla keeps serving the previous
+            # episode's cached map through this client, so world.get_map() would
+            # return a stale (wrong) map instead of raising. Reconnect with a fresh
+            # client so the mapless world reports honestly downstream
+            # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
+            self.logger.warning(
+                "Reconnecting the CARLA client to discard the stale map cache "
+                "of the previous episode."
+            )
+            client = self._connect_client()
+
+        self._wait_for_world(client)
+        self._apply_world_settings()
+        CarlaDataProvider.set_world(self.world)
+        CarlaDataProvider.set_client(client)
+        # Vehicle physics differ between CARLA 0.9.x and 0.10 (Chaos); let the
+        # interface derive its capability flags (e.g. whether the wheel steer
+        # angle is reported) from the server version.
+        self.interface.set_carla_version(client.get_server_version())
+
+        self.ego_actor = self._spawn_ego_actor()
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
         if self.interface.param_values.get("flatten_steering_curve", False):
@@ -393,6 +435,9 @@ class InitializeInterface(object):
         # origin from the final map and apply any initial pose that arrived
         # (and was buffered) during startup.
         self.interface.on_world_ready()
+
+        # No-op unless traffic_light.force_green is enabled.
+        self._force_green_traffic_lights()
 
         if self.use_traffic_manager:
             self._setup_traffic_manager(client)

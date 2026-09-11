@@ -470,8 +470,14 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
 bool BEVFusionTRT::validatePointCloud(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr)
 {
-  if (!autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg_ptr->fields)) {
-    RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Invalid point type. Skipping detection.");
+  // The voxel generator strides the buffer by sizeof(InputPointType), so a prefix-compatible but
+  // wider layout would be misread.
+  if (
+    !autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg_ptr->fields) ||
+    pc_msg_ptr->point_step != sizeof(InputPointType)) {
+    RCLCPP_ERROR_ONCE(
+      rclcpp::get_logger("bevfusion"), "Expected PointXYZIRC (point_step %zu), got %u. Skipping.",
+      sizeof(InputPointType), pc_msg_ptr->point_step);
     return false;
   }
 

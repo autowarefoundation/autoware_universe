@@ -26,6 +26,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -67,6 +68,8 @@ public:
    * parameter.
    * @param[in] profiler Per-layer profiler.
    * @param[in] plugin_paths Paths for TensorRT plugins.
+   * @throw std::runtime_error If TensorRT cannot be initialized, which includes failing to parse
+   * the ONNX model at `trt_config.onnx_path`.
    */
   TrtCommon(
     const TrtCommonConfig & trt_config,
@@ -114,6 +117,18 @@ public:
    * @return Number of IO tensors.
    */
   [[nodiscard]] int32_t getNbIOTensors() const;
+
+  /**
+   * @brief Get the names of all IO tensors from TensorRT engine with fallback from TensorRT
+   * network.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
+   * @throw std::runtime_error If TensorRT counts a tensor it cannot name, which it should never
+   * do.
+   * @return Names of every IO tensor.
+   */
+  [[nodiscard]] std::unordered_set<std::string> getIOTensorNames() const;
 
   /**
    * @brief Get tensor shape by index from TensorRT engine with fallback from TensorRT network.
