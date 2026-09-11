@@ -263,9 +263,21 @@ class InitializeInterface(object):
         max_steer_angle, the very value the interface normalizes a commanded tire
         angle by. Reads `vehicle_physics_config` (empty disables this) and writes
         only the keys it names.
+
+        The config values (45.5 deg steer normalization, a flat steering curve,
+        Lincoln mass/wheel radius) are calibrated for the 0.10 placeholder physics,
+        so this is a no-op on CARLA 0.9.x -- whose vehicles already have their own
+        correct physics -- to avoid changing steering gain and dynamics there.
         """
         path = str(self.interface.param_values.get("vehicle_physics_config", "")).strip()
         if not path:
+            return
+        if not self.interface.uses_chaos_physics:
+            print(
+                "INFO: Skipping vehicle_physics_config on CARLA "
+                f"{self.interface.carla_version}: it is calibrated for the 0.10 "
+                "placeholder physics and only applied on CARLA 0.10+."
+            )
             return
         settings = self._read_vehicle_physics_settings(path, self.ego_actor.type_id)
         if not settings:

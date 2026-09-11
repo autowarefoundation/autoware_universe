@@ -43,6 +43,11 @@ private:
   void on_timer();
   InputData take_data();
   bool has_all_data() const;
+  // Every retained input must also be recent: once a publisher stalls or exits its
+  // last message keeps sitting in input_data_, so has_all_data() alone would keep
+  // reporting the transition available/completed forever. Reject the cached values
+  // once their timestamps age past input_timeout_.
+  bool inputs_are_fresh(const rclcpp::Time & now) const;
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<ModeChangeAvailable>::SharedPtr pub_transition_available_;
@@ -62,6 +67,7 @@ private:
   // that). Holding the last message keeps a tick without new data from evaluating
   // the transition checks against default-constructed input.
   InputData input_data_;
+  double input_timeout_;  // [s] retained inputs older than this are treated as missing
   bool has_kinematics_{false};
   bool has_trajectory_{false};
   bool has_control_cmd_{false};
