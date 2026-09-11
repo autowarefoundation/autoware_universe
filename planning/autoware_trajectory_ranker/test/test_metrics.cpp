@@ -19,9 +19,9 @@
 #include "autoware/trajectory_ranker/metrics/lateral_deviation_metric.hpp"
 #include "autoware/trajectory_ranker/metrics/longitudinal_jerk_metric.hpp"
 #include "autoware/trajectory_ranker/metrics/steering_consistency_metric.hpp"
-#include "autoware/trajectory_ranker/metrics/time_to_collision_metric.hpp"
 #include "autoware/trajectory_ranker/metrics/trajectory_consistency_metric.hpp"
 
+#include <autoware_trajectory_ranker/autoware_trajectory_ranker_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -36,8 +36,6 @@ namespace autoware::trajectory_ranker::metrics
 {
 
 using autoware::trajectory_ranker::CoreData;
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjects;
 
 class TestMetrics : public ::testing::Test
 {
@@ -92,9 +90,8 @@ protected:
     }
 
     auto ideal = std::make_shared<TrajectoryPoints>();
-    auto objects = std::make_shared<PredictedObjects>();
     auto lanes = std::make_shared<lanelet::ConstLanelets>();
-    auto core_data = std::make_shared<CoreData>(points, ideal, objects, lanes, "test");
+    auto core_data = std::make_shared<CoreData>(points, ideal, lanes, "test");
 
     result_ =
       std::make_shared<autoware::trajectory_ranker::DataInterface>(core_data, 6);  // 6 metrics
@@ -103,18 +100,19 @@ protected:
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<vehicle_info_utils::VehicleInfo> vehicle_info_;
   std::shared_ptr<autoware::trajectory_ranker::DataInterface> result_;
+  trajectory_ranker_params::Params params_;
 };
 
 TEST_F(TestMetrics, TravelDistanceMetric)
 {
   TravelDistance metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   EXPECT_EQ(metric.name(), "TravelDistance");
   EXPECT_FALSE(metric.is_deviation());
 
-  metric.evaluate(result_, 100.0);
+  metric.evaluate(result_);
 
   // Just check evaluation doesn't throw
   EXPECT_NO_THROW();
@@ -123,38 +121,38 @@ TEST_F(TestMetrics, TravelDistanceMetric)
 TEST_F(TestMetrics, LateralAccelerationMetric)
 {
   LateralAcceleration metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   EXPECT_EQ(metric.name(), "LateralAcceleration");
   EXPECT_TRUE(metric.is_deviation());
 
-  EXPECT_NO_THROW(metric.evaluate(result_, 3.0));
+  EXPECT_NO_THROW(metric.evaluate(result_));
 }
 
 TEST_F(TestMetrics, LateralDeviationMetric)
 {
   LateralDeviation metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   EXPECT_EQ(metric.name(), "LateralDeviation");
   EXPECT_TRUE(metric.is_deviation());
 
   // For now, just test that evaluation doesn't throw
-  EXPECT_NO_THROW(metric.evaluate(result_, 1.0));
+  EXPECT_NO_THROW(metric.evaluate(result_));
 }
 
 TEST_F(TestMetrics, LongitudinalJerkMetric)
 {
   LongitudinalJerk metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   EXPECT_EQ(metric.name(), "LongitudinalJerk");
   EXPECT_TRUE(metric.is_deviation());
 
-  EXPECT_NO_THROW(metric.evaluate(result_, 2.0));
+  EXPECT_NO_THROW(metric.evaluate(result_));
 }
 
 TEST_F(TestMetrics, SteeringConsistencyMetric)
@@ -173,47 +171,14 @@ TEST_F(TestMetrics, SteeringConsistencyMetric)
   result_->setup(prev_points);
 
   SteeringConsistency metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   EXPECT_EQ(metric.name(), "SteeringConsistency");
   EXPECT_TRUE(metric.is_deviation());
 
   // For now, just test that evaluation doesn't throw
-  EXPECT_NO_THROW(metric.evaluate(result_, 0.5));
-}
-
-TEST_F(TestMetrics, TimeToCollisionMetric)
-{
-  TimeToCollision metric;
-  metric.init(vehicle_info_, 0.1);
-  metric.set_index(0);
-
-  EXPECT_EQ(metric.name(), "TimeToCollision");
-  EXPECT_FALSE(metric.is_deviation());
-
-  // Create predicted objects
-  auto objects = std::make_shared<PredictedObjects>();
-  PredictedObject obj;
-  obj.kinematics.initial_pose_with_covariance.pose.position.x = 100.0;  // Far away
-  obj.kinematics.initial_pose_with_covariance.pose.position.y = 0.0;
-  obj.kinematics.initial_pose_with_covariance.pose.orientation.w = 1.0;
-  obj.kinematics.initial_twist_with_covariance.twist.linear.x = 0.0;  // Stationary
-
-  autoware_perception_msgs::msg::PredictedPath path;
-  path.confidence = 1.0;
-  path.time_step = rclcpp::Duration::from_seconds(0.1);
-  geometry_msgs::msg::Pose path_pose;
-  path_pose.position = obj.kinematics.initial_pose_with_covariance.pose.position;
-  path_pose.orientation = obj.kinematics.initial_pose_with_covariance.pose.orientation;
-  path.path.push_back(path_pose);
-  path.path.push_back(path_pose);  // Stationary object
-
-  obj.kinematics.predicted_paths.push_back(path);
-  objects->objects.push_back(obj);
-
-  // For now, just test that evaluation doesn't throw
-  EXPECT_NO_THROW(metric.evaluate(result_, 10.0));
+  EXPECT_NO_THROW(metric.evaluate(result_));
 }
 
 TEST_F(TestMetrics, MetricWithEmptyTrajectory)
@@ -221,25 +186,24 @@ TEST_F(TestMetrics, MetricWithEmptyTrajectory)
   // Create empty result
   auto empty_points = std::make_shared<TrajectoryPoints>();
   auto empty_ideal = std::make_shared<TrajectoryPoints>();
-  auto empty_objects = std::make_shared<PredictedObjects>();
   auto empty_lanes = std::make_shared<lanelet::ConstLanelets>();
   auto empty_core_data =
-    std::make_shared<CoreData>(empty_points, empty_ideal, empty_objects, empty_lanes, "empty");
+    std::make_shared<CoreData>(empty_points, empty_ideal, empty_lanes, "empty");
   auto empty_result =
     std::make_shared<autoware::trajectory_ranker::DataInterface>(empty_core_data, 6);
 
   TravelDistance metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   // Should handle empty trajectory gracefully
-  EXPECT_NO_THROW(metric.evaluate(empty_result, 100.0));
+  EXPECT_NO_THROW(metric.evaluate(empty_result));
 }
 
 TEST_F(TestMetrics, TrajectoryConsistencyMetric)
 {
   TrajectoryConsistency metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   EXPECT_EQ(metric.name(), "TrajectoryConsistency");
@@ -280,19 +244,18 @@ TEST_F(TestMetrics, TrajectoryConsistencyMetric)
   }
 
   // Setup test data with trajectory history
-  auto objects = std::make_shared<PredictedObjects>();
   auto lanes = std::make_shared<lanelet::ConstLanelets>();
   std_msgs::msg::Header header;
   header.stamp = rclcpp::Time(static_cast<int64_t>(5 * 1e8));  // Current time
   unique_identifier_msgs::msg::UUID uuid;
 
   auto core_data = std::make_shared<CoreData>(
-    current_points, current_points, nullptr, objects, lanes, header, uuid, trajectory_history);
+    current_points, current_points, nullptr, lanes, header, uuid, trajectory_history);
 
   auto result = std::make_shared<autoware::trajectory_ranker::DataInterface>(core_data, 7);
 
   // Test evaluation with trajectory history
-  EXPECT_NO_THROW(metric.evaluate(result, 1.0));
+  EXPECT_NO_THROW(metric.evaluate(result));
 
   // Verify that points exist and metric was computed
   ASSERT_TRUE(result->points());
@@ -307,7 +270,7 @@ TEST_F(TestMetrics, TrajectoryConsistencyMetric)
 TEST_F(TestMetrics, TrajectoryConsistencyWithEmptyHistory)
 {
   TrajectoryConsistency metric;
-  metric.init(vehicle_info_, 0.1);
+  metric.init(vehicle_info_, params_.evaluation);
   metric.set_index(0);
 
   // Create result without trajectory history
@@ -320,7 +283,6 @@ TEST_F(TestMetrics, TrajectoryConsistencyWithEmptyHistory)
     points->push_back(pt);
   }
 
-  auto objects = std::make_shared<PredictedObjects>();
   auto lanes = std::make_shared<lanelet::ConstLanelets>();
   auto empty_history = std::make_shared<std::deque<autoware_planning_msgs::msg::Trajectory>>();
 
@@ -328,13 +290,13 @@ TEST_F(TestMetrics, TrajectoryConsistencyWithEmptyHistory)
   header.stamp = rclcpp::Time(0);
   unique_identifier_msgs::msg::UUID uuid;
 
-  auto core_data = std::make_shared<CoreData>(
-    points, points, nullptr, objects, lanes, header, uuid, empty_history);
+  auto core_data =
+    std::make_shared<CoreData>(points, points, nullptr, lanes, header, uuid, empty_history);
 
   auto result = std::make_shared<autoware::trajectory_ranker::DataInterface>(core_data, 7);
 
   // Should handle empty history gracefully (returns zero metric)
-  EXPECT_NO_THROW(metric.evaluate(result, 1.0));
+  EXPECT_NO_THROW(metric.evaluate(result));
 
   // Verify that points exist
   ASSERT_TRUE(result->points());

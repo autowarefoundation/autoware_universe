@@ -46,29 +46,43 @@ UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter:
 
   auto status = checker_->update_departure_status(traj_points, ego_state, hysteresis_state);
 
-  const bool is_feasible = status.status != boundary_departure_checker::DepartureType::CRITICAL;
+  const bool is_critical_departure =
+    status.status == boundary_departure_checker::DepartureType::CRITICAL;
 
-  if (!is_feasible) {
+  if (is_critical_departure) {
     std::move(
       status.debug_markers.markers.begin(), status.debug_markers.markers.end(),
       std::back_inserter(debug_markers_.markers));
   }
 
   RiskLevel risk_level;
-  risk_level.level = is_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
+  switch (status.status) {
+    case boundary_departure_checker::DepartureType::NEAR_BOUNDARY:
+      risk_level.level = RiskLevel::LOW_CAUTION;
+      break;
+    case boundary_departure_checker::DepartureType::CRITICAL:
+      risk_level.level = RiskLevel::DANGER;
+      break;
+    default:
+      risk_level.level = RiskLevel::SAFE;
+      break;
+  }
+
   std::vector<MetricReport> metrics{autoware_trajectory_validator::build<MetricReport>()
                                       .validator_name(get_name())
                                       .validator_category(category())
-                                      .metric_name("check_critical_departure")
-                                      .metric_value(is_feasible ? 1.0 : 0.0)
+                                      .metric_name("lat_dist_to_uncrossable_bound")
+                                      .metric_value(status.lat_dist_to_uncrossable_bound)
                                       .risk(risk_level)};
 
-  return ValidationResult{is_feasible, std::move(metrics)};
+  // Only a CRITICAL departure rejects the trajectory. NEAR_BOUNDARY is advisory.
+  return ValidationResult{!is_critical_departure, std::move(metrics)};
 }
 
 void UncrossableBoundaryDepartureFilter::update_parameters(const validator::Params & params)
 {
-  params_.lateral_margin_m = params.boundary_departure.lateral_margin_m;
+  params_.critical_departure_lateral_th_m = params.boundary_departure.lateral_margin_m;
+  params_.near_boundary_lateral_th_m = params.boundary_departure.near_boundary_lateral_th_m;
   params_.longitudinal_margin_m = params.boundary_departure.longitudinal_margin_m;
   params_.max_deceleration_mps2 = params.boundary_departure.max_deceleration_mps2;
   params_.max_jerk_mps3 = params.boundary_departure.max_jerk_mps3;

@@ -65,6 +65,12 @@ TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
     load_metric(filter, shadow_mode);
   }
 
+  for (const auto & plugin : plugins_) {
+    if (!plugin->is_shadow_mode()) {
+      active_filter_names_.insert(plugin->get_name());
+    }
+  }
+
   std::sort(plugins_.begin(), plugins_.end(), [](const auto & plugin1, const auto & plugin2) {
     return plugin1->get_name() < plugin2->get_name();
   });
@@ -144,7 +150,7 @@ TrajectoryValidatorReport TrajectoryValidatorWrapper::validate_trajectories(
 
   update_parameters();
 
-  const auto report = validator_ptr_->process(input_trajectories, context);
+  const auto report = validator_ptr_->process(input_trajectories, active_filter_names_, context);
 
   diagnostics_interface_ptr_->clear();
 

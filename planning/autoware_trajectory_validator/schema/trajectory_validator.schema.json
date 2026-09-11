@@ -233,6 +233,12 @@
               "description": "Lateral clearance margin from an uncrossable boundary [m]. Trajectories whose footprint comes within this margin are rejected.",
               "default": 0.01
             },
+            "near_boundary_lateral_th_m": {
+              "type": "number",
+              "description": "Lateral distance below which the trajectory is reported as near an uncrossable boundary [m]. Reported as a low caution risk level; it does not reject the trajectory.",
+              "default": 0.2,
+              "minimum": 0.0
+            },
             "longitudinal_margin_m": {
               "type": "number",
               "description": "Longitudinal look-ahead margin applied when projecting the vehicle footprint along the trajectory [m].",

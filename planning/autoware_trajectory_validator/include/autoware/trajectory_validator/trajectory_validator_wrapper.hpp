@@ -44,6 +44,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::trajectory_validator
@@ -59,6 +60,8 @@ using autoware_trajectory_validator::msg::ValidationReportArray;
 using autoware_utils_diagnostics::DiagnosticsInterface;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+
+using ValidationReports = std::vector<ValidationReport>;
 
 /**
  * @brief Adapter for TrajectoryValidator: manages plugin loading, parameter updates,
@@ -171,6 +174,7 @@ private:
   // Plugin infrastructure
   pluginlib::ClassLoader<plugin::ValidatorInterface> plugin_loader_;
   std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
+  std::unordered_set<std::string> active_filter_names_;
 
   // Publishers
   std::shared_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
