@@ -15,19 +15,22 @@
 #ifndef UTILS__TYPES_HPP_
 #define UTILS__TYPES_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 
 namespace autoware::default_adapi
 {
 
-template <class T>
-using Pub = typename autoware::component_interface_utils::Publisher<T>::SharedPtr;
-template <class T>
-using Sub = typename autoware::component_interface_utils::Subscription<T>::SharedPtr;
-template <class T>
-using Cli = typename autoware::component_interface_utils::Client<T>::SharedPtr;
-template <class T>
-using Srv = typename autoware::component_interface_utils::Service<T>::SharedPtr;
+using NodeT = autoware::agnocast_wrapper::Node;
+
+template <class T, class N = rclcpp::Node>
+using Pub = typename autoware::component_interface_utils::Publisher<T, N>::SharedPtr;
+template <class T, class N = rclcpp::Node>
+using Sub = typename autoware::component_interface_utils::Subscription<T, N>::SharedPtr;
+template <class T, class N = rclcpp::Node>
+using Cli = typename autoware::component_interface_utils::Client<T, N>::SharedPtr;
+template <class T, class N = rclcpp::Node>
+using Srv = typename autoware::component_interface_utils::Service<T, N>::SharedPtr;
 
 }  // namespace autoware::default_adapi
 
