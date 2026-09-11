@@ -68,7 +68,7 @@
     <arg
       name="vehicle_physics_config"
       default="$(find-pkg-share autoware_carla_interface)/config/vehicle_physics.yaml"
-      description="YAML with the physics written onto the ego after it spawns (mass, steering curve, per-axle wheel settings). CARLA 0.10 gives every car the same placeholder physics, which does not match the vehicle Autoware plans for. Empty keeps CARLA's own values"
+      description="YAML with the physics written onto the ego after it spawns (mass, steering curve, per-axle wheel settings). CARLA 0.10 gives every car the same placeholder physics, which does not match the vehicle Autoware plans for. Applied only on CARLA 0.10+ (calibrated for its placeholder physics; a no-op on 0.9.x, whose vehicles keep their own physics). Empty keeps CARLA's own values"
     />
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
     <arg name="wake_sleeping_physics" default="false" description="Nudge the ego physics body awake when launching from standstill (CARLA 0.10 sleeping-body workaround; not needed on 0.9.15)"/>

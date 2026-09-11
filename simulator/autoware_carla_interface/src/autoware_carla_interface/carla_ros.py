@@ -452,6 +452,10 @@ class carla_ros2_interface(object):
         # measured wheel angle is usable (0.9.x behavior).
         self.carla_version = None
         self._wheel_steer_angle_reliable = True
+        # Whether the server ships the CARLA 0.10 (UE5/Chaos) placeholder physics that
+        # vehicle_physics_config exists to correct. False until proven 0.10+ so the
+        # 0.10-only physics are never written on 0.9.x (or an unparsable version).
+        self.uses_chaos_physics = False
         # Speed unit the server samples steering_curve in (see set_carla_version).
         self._steering_curve_speed_scale = MPS_TO_KMH
         self.timestamp = None
@@ -1140,6 +1144,7 @@ class carla_ros2_interface(object):
             return
         major, minor = int(match.group(1)), int(match.group(2))
         self._wheel_steer_angle_reliable = (major, minor) < (0, 10)
+        self.uses_chaos_physics = (major, minor) >= (0, 10)
         # steering_curve is sampled against the forward speed in the unit the
         # underlying UE vehicle plugin uses: mph for Chaos (CARLA 0.10+ / UE5),
         # km/h for PhysX (CARLA 0.9.x / UE4).

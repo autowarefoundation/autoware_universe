@@ -152,6 +152,12 @@ class ScenarioBridgeNode(Node):
         self._mission: Optional[pb2.GetMissionResponse] = None
         self._localization_requested = False
         self._route_requested = False
+        # Whether THIS bridge's set-route request for the current mission has been
+        # accepted. The observed RouteState is transient-local, so on a (re)start a
+        # pre-existing route already reads SET; without this flag the bridge would
+        # treat that stale route as the mission's and engage / report ready against
+        # the old goal. Gates completion until our own route has landed.
+        self._route_accepted = False
         self._engage_requested = False
         self._readiness_inflight = False
         self._readiness_reported = False
@@ -331,6 +337,11 @@ class ScenarioBridgeNode(Node):
         ok, detail = _response_ok(future)
         if ok:
             self.get_logger().info(f"{label} accepted")
+            if latch == "_route_requested":
+                # The planner accepted OUR route for the current mission, so the
+                # SET routing state that follows is this mission's, not a stale one.
+                with self._lock:
+                    self._route_accepted = True
             return
         # Rejected (e.g. service not settled yet / ERROR_PLANNER_UNREADY): clear
         # the latch so the next pass retries.
@@ -382,8 +393,13 @@ class ScenarioBridgeNode(Node):
         The mission planner can bounce the request (e.g. ``ERROR_PLANNER_UNREADY``)
         while it is still settling; an unsuccessful response leaves ``_route_requested``
         clear so the next pass retries.
+
+        Deliberately not gated on the observed ``route_set``: a pre-existing route
+        from an earlier run already reads SET, and skipping on it would leave the new
+        mission's goal unset. The ``_route_requested`` latch alone stops re-sending an
+        in-flight or already-accepted request.
         """
-        if self._route_requested or self._aggregator.route_set:
+        if self._route_requested:
             return
         if not self._route_cli.service_is_ready():
             return
@@ -397,6 +413,9 @@ class ScenarioBridgeNode(Node):
     def _maybe_engage(self) -> None:
         """Call ``change_to_autonomous`` once the preconditions hold."""
         if self._engage_requested or not self._auto_engage:
+            return
+        # Require our own route to have landed, not just any observed SET route.
+        if not self._route_accepted:
             return
         if not self._aggregator.can_engage:
             return
@@ -418,6 +437,10 @@ class ScenarioBridgeNode(Node):
         """
         with self._lock:
             if self._readiness_reported or self._readiness_inflight:
+                return False
+            # Do not report ready off a stale SET route: our mission's route must
+            # have been accepted first (see _route_accepted).
+            if not self._route_accepted:
                 return False
             if not self._aggregator.ready:
                 return False
