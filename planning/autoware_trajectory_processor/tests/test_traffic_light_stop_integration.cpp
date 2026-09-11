@@ -92,6 +92,17 @@ TrajectoryPoints create_straight_trajectory(
   return trajectory;
 }
 
+/// Trajectory that cruises then ends with zero velocity at stop_x (stop attempt).
+TrajectoryPoints create_trajectory_with_stop_at(
+  double start_x, double stop_x, double cruise_velocity, double spacing = 1.0)
+{
+  auto trajectory = create_straight_trajectory(start_x, stop_x, cruise_velocity, spacing);
+  if (!trajectory.empty()) {
+    trajectory.back().longitudinal_velocity_mps = 0.0F;
+  }
+  return trajectory;
+}
+
 Odometry::ConstSharedPtr make_odometry(
   double x, double y, double velocity, const rclcpp::Time & stamp)
 {
@@ -233,10 +244,13 @@ protected:
     tl.treat_amber_light_as_red = false;
     tl.treat_unknown_light_as_red = false;
     tl.overshoot_tolerance = 0.0;
+    tl.min_lookahead_distance = 20.0;
     tl.th_stable_duration_red = 0.0;
     tl.th_stable_duration_amber = 0.0;
-    tl.th_amber_rejection_hysteresis = 0.0;
-    tl.crossing_time_limit = 2.75;
+    tl.th_stable_duration_unknown = 0.0;
+    tl.amber_rejection.th_hysteresis = 0.0;
+    tl.amber_rejection.reject_if_stop_detected = false;
+    tl.amber_rejection.crossing_time_limit = 2.75;
   }
 
   void create_and_set_map(lanelet::Id light_id, double stop_line_x)
@@ -411,12 +425,12 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithRedLightFrontOverh
 TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithAmberLightCanStop)
 {
   const lanelet::Id light_id = 200;
-  const double stop_x = 10.0;
+  const double stop_x = 15.0;
 
   create_and_set_map(light_id, stop_x);
   set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
 
-  auto trajectory = create_straight_trajectory(0.0, 11.0, 5.0);
+  auto trajectory = create_straight_trajectory(0.0, 16.0, 5.0);
   expect_modified_with_stop_before_stop_line(
     trajectory, make_default_input(), "Should insert stop point when amber light is stoppable");
 }
@@ -480,4 +494,59 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithUnknownLightAsRedL
   const bool modified = process_plugin(*plugin_, trajectory, make_default_input(10.0));
   EXPECT_TRUE(modified)
     << "Unknown treated as red should insert stop point even when not stoppable";
+}
+
+TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithAmberLightWhenPreviousStopIsDetected)
+{
+  const lanelet::Id light_id = 400;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  params_.traffic_light_stop.amber_rejection.reject_if_stop_detected = true;
+  params_.traffic_light_stop.amber_rejection.th_hysteresis = 5.0;
+  params_.traffic_light_stop.overshoot_tolerance = 0.5;
+  params_.traffic_light_stop.allow_if_cannot_stop_distance = 0.0;
+  params_.traffic_light_stop.amber_rejection.crossing_time_limit = 100.0;
+  plugin_->update_params(params_);
+
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  auto stopping_trajectory = create_trajectory_with_stop_at(0.0, stop_x - ego_front_offset, 5.0);
+  expect_not_modified(
+    stopping_trajectory, make_default_input(5.0),
+    "Input trajectory should not be modified when it already contains a valid stop point");
+
+  auto crossing_trajectory = create_straight_trajectory(0.0, 10.0, 10.0);
+  const bool modified = process_plugin(*plugin_, crossing_trajectory, make_default_input(10.0));
+  EXPECT_TRUE(modified) << "Should modify trajectory when a prior stop attempt is detected and "
+                           "reject_if_stop_detected is true";
+  EXPECT_FLOAT_EQ(crossing_trajectory.back().longitudinal_velocity_mps, 0.0F);
+}
+
+TEST_F(TrafficLightStopIntegrationTest, TrajectoryNotModifiedWhenRejectIfStopDetectedIsDisabled)
+{
+  const lanelet::Id light_id = 401;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  params_.traffic_light_stop.amber_rejection.reject_if_stop_detected = false;
+  params_.traffic_light_stop.amber_rejection.th_hysteresis = 5.0;
+  params_.traffic_light_stop.overshoot_tolerance = 0.5;
+  params_.traffic_light_stop.allow_if_cannot_stop_distance = 0.0;
+  params_.traffic_light_stop.amber_rejection.crossing_time_limit = 100.0;
+  plugin_->update_params(params_);
+
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  auto stopping_trajectory = create_trajectory_with_stop_at(0.0, stop_x - ego_front_offset, 5.0);
+  expect_not_modified(
+    stopping_trajectory, make_default_input(5.0),
+    "Input trajectory should not be modified when it already contains a valid stop point");
+
+  auto crossing_trajectory = create_straight_trajectory(0.0, 10.0, 10.0);
+  expect_not_modified(
+    crossing_trajectory, make_default_input(10.0),
+    "Input trajectory should not be modified when reject_if_stop_detected is false");
 }

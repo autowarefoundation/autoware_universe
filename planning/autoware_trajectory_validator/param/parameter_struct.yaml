@@ -142,6 +142,11 @@ validator:
       default_value: false
       description: when true, unknown lights are handled like red lights
       read_only: false
+    enable_arrow_aware_amber_passing:
+      type: bool
+      default_value: true
+      description: Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow
+      read_only: false
     stop_overshoot_margin:
       type: double
       default_value: 0.5
@@ -153,6 +158,13 @@ validator:
       description: allow crossing a stop line within this distance if ego cannot stop before the line plus its margin (m)
       validation:
         bounds<>: [0.0, 100.0]
+      read_only: false
+    min_lookahead_distance:
+      type: double
+      default_value: 20.0
+      description: Minimum forward trajectory length to scan for traffic light stop lines even at low ego speed (m)
+      validation:
+        bounds<>: [0.0, 300.0]
       read_only: false
     stable_duration_threshold_red:
       type: double
@@ -169,11 +181,6 @@ validator:
       default_value: 0.0
       description: Minimum duration an UNKNOWN signal must be seen before it is considered active (seconds)
       read_only: false
-    amber_rejection_hysteresis_duration:
-      type: double
-      default_value: 0.0
-      description: Hysteresis duration to persist an AMBER rejection (seconds)
-      read_only: false
     ego_stopped_velocity_threshold:
       type: double
       default_value: 0.01
@@ -189,6 +196,17 @@ validator:
         type: double
         default_value: 2.0
         description: jerk limit to calculate the stop distance used as trajectory length limit
+        read_only: false
+    amber_rejection:
+      hysteresis_duration:
+        type: double
+        default_value: 0.0
+        description: Hysteresis duration to persist an AMBER rejection (seconds)
+        read_only: false
+      reject_if_stop_detected:
+        type: bool
+        default_value: false
+        description: Reject if we detect a previous stop attempt from input trajectory
         read_only: false
 
   boundary_departure:
