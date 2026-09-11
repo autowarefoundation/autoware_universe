@@ -20,7 +20,7 @@ rclpy-free Python distribution that exposes a ``scenario`` console entrypoint an
 hosts the ``AutowareBridge`` gRPC server.  Rather than a Docker image, this
 installs it into a dedicated virtualenv and then ``exec``s the entrypoint, so the
 launched process *becomes* the runner.  The venv keeps the runner's dependencies
-(its CPython-3.10 CARLA 0.10 wheel, protobuf 4.x, ...) isolated from the ROS 2
+(its CPython-3.12 CARLA 0.10 wheel, protobuf 4.x, ...) isolated from the ROS 2
 Python environment -- which may even be a different Python version -- so the two
 never clash, and it is built with ``python3-venv`` + ``python3-pip`` (both
 rosdep-resolvable), so ``autoware_carla_interface`` stays declarable through
@@ -158,9 +158,10 @@ class ScenarioVenvRunner:
             the ``map`` group after the ``scenario`` one, so the group's default
             wins over what the scenario config sets unless the map is overridden
             too.
-        python: Interpreter used to build the venv.  Must be CPython 3.10 -- the
-            runner's CARLA 0.10.0 wheel is cp310-only -- independent of whatever
-            Python the ROS 2 node itself runs.
+        python: Interpreter used to build the venv.  Must match the wheelhouse's
+            CARLA 0.10.0 wheel ABI (cp312 for the current wheelhouse; matches
+            Ubuntu 24.04 / ROS 2 Jazzy) -- independent of whatever Python the ROS 2
+            node itself runs.
 
     The venv lives at a stable path under the user cache (keyed on the install args)
     and is reused across launches -- the install is skipped when its entrypoint
@@ -173,7 +174,7 @@ class ScenarioVenvRunner:
         scenario_name: str,
         *,
         overrides: Sequence[str] = (),
-        python: str = "python3.10",
+        python: str = "python3.12",
     ) -> None:
         self._install_args = list(install_args)
         self._scenario_name = scenario_name
@@ -256,7 +257,7 @@ def main(argv: Optional[Sequence[str]] = None) -> NoReturn:
         "directory of wheels) or a pip install source",
     )
     parser.add_argument(
-        "--python", default="python3.10", help="Interpreter used to build the venv (CPython 3.10)"
+        "--python", default="python3.12", help="Interpreter used to build the venv (CPython 3.12)"
     )
     parser.add_argument(
         "--pip-args", default="", help="Extra 'pip install' args (shlex-split) for a pip source"

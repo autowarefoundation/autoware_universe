@@ -34,7 +34,7 @@ import pytest
 
 
 def _args(**kw) -> argparse.Namespace:
-    return argparse.Namespace(**{"python": "python3.10", "pip_args": "", "overrides": "", **kw})
+    return argparse.Namespace(**{"python": "python3.12", "pip_args": "", "overrides": "", **kw})
 
 
 def _wheelhouse(tmp_path) -> "tuple":
@@ -42,7 +42,7 @@ def _wheelhouse(tmp_path) -> "tuple":
     wh = tmp_path / "wheelhouse"
     (wh / "sub").mkdir(parents=True)
     a = wh / "scenario-0.1.0-py3-none-any.whl"
-    b = wh / "sub" / "carla-0.10.0-cp310-cp310-linux_x86_64.whl"
+    b = wh / "sub" / "carla-0.10.0-cp312-cp312-linux_x86_64.whl"
     a.write_bytes(b"")
     b.write_bytes(b"")
     return wh, sorted([a, b])
@@ -76,9 +76,9 @@ def _runner(tmp_path, install_args) -> ScenarioVenvRunner:
 
 
 def test_venv_cmd_uses_configured_python(tmp_path):
-    runner = ScenarioVenvRunner(["pkg"], "s", python="python3.10")
+    runner = ScenarioVenvRunner(["pkg"], "s", python="python3.12")
     runner._venv_dir = tmp_path / "venv"
-    assert runner._venv_cmd() == ["python3.10", "-m", "venv", str(tmp_path / "venv")]
+    assert runner._venv_cmd() == ["python3.12", "-m", "venv", str(tmp_path / "venv")]
 
 
 def test_pip_cmd_passes_install_args(tmp_path):
@@ -156,12 +156,12 @@ def test_wheelhouse_install_args_from_zip(tmp_path, monkeypatch):
     archive = tmp_path / "wh.zip"
     with zipfile.ZipFile(archive, "w") as zf:
         zf.writestr("scenario-0.1.0-py3-none-any.whl", b"")
-        zf.writestr("deps/carla-0.10.0-cp310-cp310-linux_x86_64.whl", b"")
+        zf.writestr("deps/carla-0.10.0-cp312-cp312-linux_x86_64.whl", b"")
     args = _wheelhouse_install_args(str(archive))
     assert args[:2] == ["--no-index", "--no-deps"]
     names = sorted(Path(p).name for p in args[2:])
     assert names == [
-        "carla-0.10.0-cp310-cp310-linux_x86_64.whl",
+        "carla-0.10.0-cp312-cp312-linux_x86_64.whl",
         "scenario-0.1.0-py3-none-any.whl",
     ]
 
