@@ -425,12 +425,12 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithRedLightFrontOverh
 TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithAmberLightCanStop)
 {
   const lanelet::Id light_id = 200;
-  const double stop_x = 10.0;
+  const double stop_x = 15.0;
 
   create_and_set_map(light_id, stop_x);
   set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
 
-  auto trajectory = create_straight_trajectory(0.0, 11.0, 5.0);
+  auto trajectory = create_straight_trajectory(0.0, 16.0, 5.0);
   expect_modified_with_stop_before_stop_line(
     trajectory, make_default_input(), "Should insert stop point when amber light is stoppable");
 }
