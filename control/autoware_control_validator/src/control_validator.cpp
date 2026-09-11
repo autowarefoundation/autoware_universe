@@ -173,7 +173,7 @@ void VelocityValidator::validate(
       if (is_stopped || std::abs(v_vel) < params_.rolling_back_velocity) {
         return false;
       }
-  
+
       if (std::abs(t_vel) < stopped_vel_th) {
         return std::signbit(v_vel);
       }
