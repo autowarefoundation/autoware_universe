@@ -39,8 +39,15 @@ AGNOCAST_WRAPPER_NODES = [
     (CORE, "localization", "LocalizationNode", "localization_node"),
     (CORE, "routing", "RoutingNode", "routing_node"),
     (UNIVERSE, "diagnostics", "DiagnosticsNode", "diagnostics_node"),
+    (UNIVERSE, "fail_safe", "FailSafeNode", "fail_safe_node"),
+    (UNIVERSE, "heartbeat", "HeartbeatNode", "heartbeat_node"),
     (UNIVERSE, "manual/local", "ManualControlNode", "manual_control_node"),
     (UNIVERSE, "manual/remote", "ManualControlNode", "manual_control_node"),
+    (UNIVERSE, "perception", "PerceptionNode", "perception_node"),
+    (UNIVERSE, "vehicle_command", "VehicleCommandNode", "vehicle_command_node"),
+    (UNIVERSE, "vehicle_info", "VehicleInfoNode", "vehicle_info_node"),
+    (UNIVERSE, "vehicle_metrics", "VehicleMetricsNode", "vehicle_metrics_node"),
+    (UNIVERSE, "vehicle_status", "VehicleStatusNode", "vehicle_status_node"),
 ]
 
 
@@ -98,17 +105,10 @@ def launch_setup(context, *args, **kwargs):
 
     components = [
         create_api_node("autoware_default_adapi_universe", "autoware_state", "AutowareStateNode"),
-        create_api_node("autoware_default_adapi_universe", "fail_safe", "FailSafeNode"),
-        create_api_node("autoware_default_adapi_universe", "heartbeat", "HeartbeatNode"),
         create_api_node("autoware_default_adapi_universe", "motion", "MotionNode"),
         create_api_node("autoware_default_adapi_universe", "mrm_request", "MrmRequestNode"),
         create_api_node("autoware_default_adapi_universe", "operation_mode", "OperationModeNode"),
-        create_api_node("autoware_default_adapi_universe", "perception", "PerceptionNode"),
         create_api_node("autoware_default_adapi_universe", "planning", "PlanningNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_status", "VehicleStatusNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_command", "VehicleCommandNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_metrics", "VehicleMetricsNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_info", "VehicleInfoNode"),
         create_api_node("autoware_default_adapi_universe", "vehicle_door", "VehicleDoorNode"),
     ]
     nodes = []
