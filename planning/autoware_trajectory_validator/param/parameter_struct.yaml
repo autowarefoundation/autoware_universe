@@ -69,16 +69,6 @@ validator:
       default_value: 0.1
       description: maximum overshoot distance allowed to consider the trajectory feasible (m)
       read_only: false
-    nominal_deceleration:
-      type: double
-      default_value: 1.0
-      description: nominal deceleration to calculate the stop distance used as trajectory length limit (m/s^2)
-      read_only: false
-    nominal_jerk:
-      type: double
-      default_value: 1.0
-      description: nominal jerk to calculate the stop distance used as trajectory length limit (m/s^3)
-      read_only: false
     stop_duration:
       type: double
       default_value: 3.0
@@ -94,6 +84,32 @@ validator:
       default_value: false
       description: whether to use the embedded trajectory time to evaluate the stop duration
       read_only: false
+    stopping_params:
+      nominal_decel:
+        type: double
+        default_value: 1.0
+        description: nominal deceleration to calculate the stop distance used as trajectory length limit (m/s^2)
+        read_only: false
+      nominal_jerk:
+        type: double
+        default_value: 1.0
+        description: nominal jerk to calculate the stop distance used as trajectory length limit (m/s^3)
+        read_only: false
+      decel_limit:
+        type: double
+        default_value: 2.0
+        description: deceleration limit to calculate the stop distance used as trajectory length limit (m/s^2)
+        read_only: false
+      jerk_limit:
+        type: double
+        default_value: 2.0
+        description: jerk limit to calculate the stop distance used as trajectory length limit (m/s^3)
+        read_only: false
+      delay_response_time:
+        type: double
+        default_value: 0.5
+        description: delay response time used to estimate the minimum ego stopping distance (s)
+        read_only: false
 
   traffic_light:
     deceleration_limit:
