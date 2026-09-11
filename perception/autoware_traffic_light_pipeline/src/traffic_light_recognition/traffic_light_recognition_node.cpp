@@ -92,6 +92,7 @@ TrafficLightRecognitionNode::TrafficLightRecognitionNode(const rclcpp::NodeOptio
   camera_info_sub_.subscribe(
     this, "~/input/camera_info", rclcpp::SensorDataQoS().get_rmw_qos_profile());
   sync_ = std::make_unique<Sync>(SyncPolicy(10), image_sub_, camera_info_sub_);
+  sync_->setMaxIntervalDuration(rclcpp::Duration::from_seconds(0.05));
   sync_->registerCallback(
     std::bind(
       &TrafficLightRecognitionNode::sync_callback, this, std::placeholders::_1,
