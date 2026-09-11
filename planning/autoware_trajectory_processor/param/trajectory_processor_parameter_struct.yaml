@@ -110,9 +110,9 @@ trajectory_processor_params:
       type: double
       default_value: 0.5
       description: Delay response time used to estimate the minimum ego stopping distance [s]
-      read_only: false
       validation:
         bounds<>: [0.0, 10.0]
+      read_only: false
     arrived_distance_threshold:
       type: double
       default_value: 0.5
@@ -523,8 +523,13 @@ trajectory_processor_params:
       read_only: false
     treat_unknown_light_as_red:
       type: bool
-      default_value: false
+      default_value: true
       description: Treat unknown light as red light
+      read_only: false
+    enable_arrow_aware_amber_passing:
+      type: bool
+      default_value: true
+      description: Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow
       read_only: false
     overshoot_tolerance:
       type: double
@@ -535,10 +540,17 @@ trajectory_processor_params:
       read_only: false
     allow_if_cannot_stop_distance:
       type: double
-      default_value: 0.0
+      default_value: 1.0
       description: allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m]
       validation:
         bounds<>: [0.0, 100.0]
+      read_only: false
+    min_lookahead_distance:
+      type: double
+      default_value: 20.0
+      description: Minimum forward trajectory length to scan for traffic light stop lines even at low ego speed [m]
+      validation:
+        bounds<>: [0.0, 300.0]
       read_only: false
     th_stable_duration_red:
       type: double
@@ -556,39 +568,45 @@ trajectory_processor_params:
       read_only: false
     th_stable_duration_unknown:
       type: double
-      default_value: 0.0
+      default_value: 0.5
       description: Threshold for stable duration of unknown light [s]
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
-    th_amber_rejection_hysteresis:
-      type: double
-      default_value: 0.5
-      description: Threshold for amber rejection hysteresis [s]
-      validation:
-        bounds<>: [0.0, 10.0]
-      read_only: false
-    crossing_time_limit:
-      type: double
-      default_value: 2.75
-      description: Crossing time limit [s]
-      validation:
-        bounds<>: [0.0, 10.0]
-      read_only: false
-    delay_response_time:
-      type: double
-      default_value: 0.5
-      description: Delay response time used to estimate the minimum ego stopping distance [s]
-      validation:
-        bounds<>: [0.0, 10.0]
-      read_only: false
-    ego_stopped_vel_th:
-      type: double
-      default_value: 0.01
-      description: Velocity below which ego is considered stopped when checking traffic lights [m/s]
-      validation:
-        bounds<>: [0.0, 10.0]
-      read_only: false
+    amber_rejection:
+      th_hysteresis:
+        type: double
+        default_value: 0.5
+        description: Threshold for amber rejection hysteresis [s]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      reject_if_stop_detected:
+        type: bool
+        default_value: true
+        description: Reject if we detect a previous stop attempt from input trajectory
+        read_only: false
+      can_stop_decel:
+        type: double
+        default_value: 2.8
+        description: Deceleration threshold for ego vehicle to stop [m/s^2]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      can_stop_jerk:
+        type: double
+        default_value: 5.0
+        description: Jerk threshold for ego vehicle to stop [m/s^3]
+        validation:
+          bounds<>: [0.0, 100.0]
+        read_only: false
+      crossing_time_limit:
+        type: double
+        default_value: 2.75
+        description: Crossing time limit [s]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
   use_akima_spline_interpolation:
     type: bool
     default_value: false
