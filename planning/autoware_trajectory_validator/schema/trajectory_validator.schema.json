@@ -183,6 +183,11 @@
               "description": "When true, UNKNOWN lights are treated identically to red lights.",
               "default": false
             },
+            "enable_arrow_aware_amber_passing": {
+              "type": "boolean",
+              "description": "Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow (protected turn phase).",
+              "default": true
+            },
             "stop_overshoot_margin": {
               "type": "number",
               "description": "Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].",
@@ -193,6 +198,12 @@
               "type": "number",
               "description": "allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m].",
               "default": 0.0,
+              "minimum": 0.0
+            },
+            "min_lookahead_distance": {
+              "type": "number",
+              "description": "Minimum forward trajectory length to scan for traffic light stop lines even at low ego speed [m].",
+              "default": 20.0,
               "minimum": 0.0
             },
             "stable_duration_threshold_red": {
@@ -210,12 +221,6 @@
             "stable_duration_threshold_unknown": {
               "type": "number",
               "description": "Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving) [s].",
-              "default": 0.0,
-              "minimum": 0.0
-            },
-            "amber_rejection_hysteresis_duration": {
-              "type": "number",
-              "description": "Duration to persist an AMBER rejection state to prevent flipping [s].",
               "default": 0.0,
               "minimum": 0.0
             },
@@ -237,6 +242,24 @@
                   "type": "number",
                   "description": "Jerk limit used together with `deceleration_limit` to compute the trajectory scan length [m/s³].",
                   "default": 2.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "amber_rejection": {
+              "type": "object",
+              "properties": {
+                "hysteresis_duration": {
+                  "type": "number",
+                  "description": "Hysteresis duration to persist an AMBER rejection [s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "reject_if_stop_detected": {
+                  "type": "boolean",
+                  "description": "Reject if we detect a previous stop attempt from input trajectory.",
+                  "default": false
                 }
               },
               "required": [],
