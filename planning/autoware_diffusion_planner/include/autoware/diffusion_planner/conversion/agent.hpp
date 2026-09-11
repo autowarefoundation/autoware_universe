@@ -154,12 +154,15 @@ private:
 struct AgentData
 {
   // Legacy buffering: push unconditionally, fill new agents with copies, erase disappeared agents.
-  void update_histories(const TrackedObjects & objects);
+  void update_histories(
+    const TrackedObjects & objects, const bool remap_unsupported_objects_to_pedestrian = false);
 
   // Resampled buffering: dedup on advancing header stamp, reset on a backward time jump, grow
   // histories without repeat-fill, and retain absent agents until their newest observation ages
   // out of the history window.
-  void update_histories(const TrackedObjects & objects, const HistoryResamplingParams & params);
+  void update_histories(
+    const TrackedObjects & objects, const HistoryResamplingParams & params,
+    const bool remap_unsupported_objects_to_pedestrian = false);
 
   // Transform histories, trim to max_num_agent, and return the processed vector.
   std::vector<AgentHistory> transformed_and_trimmed_histories(
