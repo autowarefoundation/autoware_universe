@@ -174,9 +174,12 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE pickup_based_voxel_grid_downsample_filter_node)
 
 # -- Random Downsample Filter --
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::RandomDownsampleFilterComponent"
-  EXECUTABLE random_downsample_filter_node)
+  EXECUTABLE random_downsample_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::ApproximateDownsampleFilterComponent"
