@@ -41,6 +41,8 @@ Cells with No elevation value can be inpainted using the values of neighboring c
 
 ## Parameters
 
+{{ json_to_markdown("perception/autoware_elevation_map_loader/schema/elevation_map_parameters.schema.json") }}
+
 ### Node parameters
 
 | Name                              | Type        | Description                                                                                                                                                          | Default value |
