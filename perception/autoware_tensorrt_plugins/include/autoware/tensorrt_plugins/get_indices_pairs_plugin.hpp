@@ -127,6 +127,10 @@ private:
   GetIndicesPairsParameters params_;
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_;
+
+  // Set once the zero-output CUDA-graph-capture path has been reported, so engine builds do not
+  // repeat the warning for every timed tactic.
+  bool stream_capture_warned_{false};
 };
 
 }  // namespace nvinfer1::plugin

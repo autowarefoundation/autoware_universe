@@ -140,6 +140,10 @@ private:
 
   // Pre-allocated CPU mask tensor to avoid heap allocation during CUDA graph capture.
   tv::Tensor mask_tensor_;
+
+  // Set once the zero-output CUDA-graph-capture path has been reported, so engine builds do not
+  // repeat the warning for every timed tactic.
+  bool stream_capture_warned_{false};
 };
 
 }  // namespace nvinfer1::plugin
