@@ -28,9 +28,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -407,6 +410,118 @@ TEST(RRTStarTestSuite, Update)
 TEST(RRTStarTestSuite, InformedUpdate)
 {
   EXPECT_TRUE(test_algorithm(AlgorithmType::RRTSTAR_INFORMED_UPDATE));
+}
+
+struct EdtGridConfig
+{
+  int width;
+  int height;
+  double resolution;
+  int obstacle_percent;
+};
+
+nav_msgs::msg::OccupancyGrid makeRandomGrid(const EdtGridConfig & config, std::mt19937 & rng)
+{
+  std::uniform_int_distribution<int> percent(0, 99);
+  nav_msgs::msg::OccupancyGrid costmap_msg{};
+  costmap_msg.info.width = config.width;
+  costmap_msg.info.height = config.height;
+  costmap_msg.info.resolution = config.resolution;
+  costmap_msg.data.resize(config.width * config.height, 0);
+  for (auto & cell : costmap_msg.data) {
+    if (percent(rng) < config.obstacle_percent) {
+      cell = 100;
+    }
+  }
+  return costmap_msg;
+}
+
+// Distance from the given cell to the closest obstacle cell, by exhaustive
+// search. Uses the costmap's float-rounded resolution, like the transform.
+double bruteForceDistanceToObstacle(
+  const nav_msgs::msg::OccupancyGrid & costmap, const fpa::IndexXY & cell)
+{
+  const int width = costmap.info.width;
+  const int height = costmap.info.height;
+  const double resolution = costmap.info.resolution;
+  double min_squared = std::numeric_limits<double>::infinity();
+  for (int oi = 0; oi < height; ++oi) {
+    for (int oj = 0; oj < width; ++oj) {
+      if (costmap.data[oi * width + oj] < 100) {
+        continue;
+      }
+      const double dx = resolution * std::abs(static_cast<double>(cell.x - oj));
+      const double dy = resolution * std::abs(static_cast<double>(cell.y - oi));
+      min_squared = std::min(min_squared, dx * dx + dy * dy);
+    }
+  }
+  return std::sqrt(min_squared);
+}
+
+void expectEdtMatchesBruteForce(
+  fpa::AbstractPlanningAlgorithm & algo, const nav_msgs::msg::OccupancyGrid & costmap)
+{
+  const double resolution = costmap.info.resolution;
+  for (int i = 0; i < static_cast<int>(costmap.info.height); ++i) {
+    for (int j = 0; j < static_cast<int>(costmap.info.width); ++j) {
+      const double expected = bruteForceDistanceToObstacle(costmap, fpa::IndexXY{j, i});
+      const double actual =
+        algo.getDistanceToObstacle(create_pose_msg({j * resolution, i * resolution, 0.0}));
+      if (std::isinf(expected)) {
+        EXPECT_TRUE(std::isinf(actual)) << "cell (" << j << ", " << i << ")";
+      } else {
+        EXPECT_NEAR(expected, actual, 1e-9) << "cell (" << j << ", " << i << ")";
+      }
+    }
+  }
+}
+
+TEST(EDTMapTestSuite, MatchesBruteForceOnRandomGrids)
+{
+  const std::array<EdtGridConfig, 6> configs = {{
+    {1, 1, 0.2, 50},
+    {7, 5, 0.2, 30},
+    {12, 9, 0.5, 20},
+    {23, 17, 0.05, 10},
+    {16, 16, 0.2, 0},  // obstacle-free: every distance is infinite
+    {9, 4, 0.2, 100},  // fully occupied: every distance is zero
+  }};
+
+  auto algo = configure_astar(false);
+  std::mt19937 rng(42);
+  for (const auto & config : configs) {
+    const auto costmap_msg = makeRandomGrid(config, rng);
+    algo->setMap(costmap_msg);
+    expectEdtMatchesBruteForce(*algo, costmap_msg);
+  }
+}
+
+TEST(EDTMapTestSuite, NonFiniteResolutionTerminates)
+{
+  auto algo = configure_astar(false);
+
+  // Build the collision-index table from a well-formed map first, so the
+  // degenerate map below exercises only the distance transform.
+  nav_msgs::msg::OccupancyGrid sane_msg{};
+  sane_msg.info.width = 6;
+  sane_msg.info.height = 6;
+  sane_msg.info.resolution = 0.2;
+  sane_msg.data.resize(36, 0);
+  algo->setMap(sane_msg);
+
+  // Two obstacles in the same column force an envelope intersection, whose
+  // computation must not divide by the non-finite squared resolution.
+  nav_msgs::msg::OccupancyGrid degenerate_msg{};
+  degenerate_msg.info.width = 6;
+  degenerate_msg.info.height = 6;
+  degenerate_msg.info.resolution = std::numeric_limits<float>::infinity();
+  degenerate_msg.data.resize(36, 0);
+  degenerate_msg.data[0] = 100;
+  degenerate_msg.data[3 * 6] = 100;
+  algo->setMap(degenerate_msg);
+
+  const double distance = algo->getDistanceToObstacle(create_pose_msg({0.0, 0.0, 0.0}));
+  EXPECT_EQ(0.0, distance);
 }
 
 enum class MonotonicityType { INCREASING, DECREASING, NONE };
