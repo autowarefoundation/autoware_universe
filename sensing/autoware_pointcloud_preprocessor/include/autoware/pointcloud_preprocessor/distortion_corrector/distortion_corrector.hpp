@@ -16,22 +16,20 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__DISTORTION_CORRECTOR__DISTORTION_CORRECTOR_HPP_
 
 #include <Eigen/Core>
-#include <managed_transform_buffer/managed_transform_buffer.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <sophus/se3.hpp>
 #include <tf2/LinearMath/Transform.hpp>
-#include <tf2/convert.hpp>
-#include <tf2/transform_datatypes.hpp>
 
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace autoware::pointcloud_preprocessor
@@ -49,14 +47,31 @@ struct AngleConversion
   static constexpr float sign_threshold{0.1f};
 };
 
+// Reason why an input pointcloud was rejected. Reported to the caller instead of being logged, so
+// that the core stays free of ROS logging.
+enum class PointcloudValidity {
+  kValid,
+  kEmpty,
+  kMissingTimeStampField,
+  kIncompatibleLayout,
+};
+
+// Outcome of undistort_pointcloud(). Conditions that the node used to log directly are surfaced
+// here so the (ROS-free) core can report them to its caller.
+struct UndistortionResult
+{
+  PointcloudValidity validity{PointcloudValidity::kValid};
+  bool twist_queue_empty{false};
+  bool twist_timestamp_too_late{false};
+  bool imu_timestamp_too_late{false};
+};
+
 class DistortionCorrectorBase
 {
 protected:
   geometry_msgs::msg::TransformStamped::SharedPtr geometry_imu_to_base_link_ptr_;
   bool pointcloud_transform_needed_{false};
   bool pointcloud_transform_exists_{false};
-  bool imu_transform_exists_{false};
-  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
   std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;
@@ -64,40 +79,41 @@ protected:
   int timestamp_mismatch_count_{0};
   double timestamp_mismatch_fraction_{0.0};
 
-  rclcpp::Node & node_;
-
-  void get_imu_transformation(const std::string & base_frame, const std::string & imu_frame);
   void enqueue_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
+  void prune_twist_queue(int64_t first_point_stamp_nanoseconds);
+  void prune_angular_velocity_queue(int64_t first_point_stamp_nanoseconds);
   void get_twist_and_imu_iterator(
     bool use_imu, double first_point_time_stamp_sec,
     std::deque<geometry_msgs::msg::TwistStamped>::iterator & it_twist,
     std::deque<geometry_msgs::msg::Vector3Stamped>::iterator & it_imu);
-  void warn_if_timestamp_is_too_late(
-    bool is_twist_time_stamp_too_late, bool is_imu_time_stamp_too_late);
-  static tf2::Transform convert_matrix_to_transform(const Eigen::Matrix4f & matrix);
+  // The lidar-to-base-frame transform (header.frame_id = base frame, child_frame_id = lidar frame)
+  // is supplied by the caller; TF lookup remains outside the core.
+  virtual void set_pointcloud_transform(
+    const geometry_msgs::msg::TransformStamped & lidar_to_base_link) = 0;
+  virtual void initialize() = 0;
 
 public:
-  explicit DistortionCorrectorBase(rclcpp::Node & node) : node_(node)
-  {
-    managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
-  }
-
+  DistortionCorrectorBase() = default;
   virtual ~DistortionCorrectorBase() = default;
 
   [[nodiscard]] bool pointcloud_transform_exists() const;
   [[nodiscard]] bool pointcloud_transform_needed() const;
   std::deque<geometry_msgs::msg::TwistStamped> get_twist_queue();
   std::deque<geometry_msgs::msg::Vector3Stamped> get_angular_velocity_queue();
-  void process_twist_message(
-    const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr twist_msg);
+  // Inputs must be inserted in nondecreasing timestamp order. The corrector does not sort them.
+  void insert_twist(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr twist_msg);
 
-  void process_imu_message(
-    const std::string & base_frame, const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
+  // The IMU-to-base-frame transform must be provided (via set_imu_transform) before processing IMU
+  // messages, so that angular velocities can be rotated into the base frame.
+  void set_imu_transform(const geometry_msgs::msg::TransformStamped & imu_to_base_link);
+
+  // Inputs must be inserted in nondecreasing timestamp order. The corrector does not sort them.
+  void insert_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
 
   std::optional<AngleConversion> try_compute_angle_conversion(
     sensor_msgs::msg::PointCloud2 & pointcloud);
 
-  bool is_pointcloud_valid(sensor_msgs::msg::PointCloud2 & pointcloud);
+  PointcloudValidity check_pointcloud_validity(sensor_msgs::msg::PointCloud2 & pointcloud);
 
   [[nodiscard]] int get_timestamp_mismatch_count() const { return timestamp_mismatch_count_; }
   [[nodiscard]] double get_timestamp_mismatch_fraction() const
@@ -105,11 +121,9 @@ public:
     return timestamp_mismatch_fraction_;
   }
 
-  virtual void set_pointcloud_transform(
-    const std::string & base_frame, const std::string & lidar_frame) = 0;
-  virtual void initialize() = 0;
-  virtual void undistort_pointcloud(
+  virtual UndistortionResult undistort_pointcloud(
     bool use_imu, std::optional<AngleConversion> angle_conversion_opt,
+    const geometry_msgs::msg::TransformStamped & lidar_to_base_link,
     sensor_msgs::msg::PointCloud2 & pointcloud) = 0;
 };
 
@@ -117,10 +131,9 @@ template <class T>
 class DistortionCorrector : public DistortionCorrectorBase
 {
 public:
-  explicit DistortionCorrector(rclcpp::Node & node) : DistortionCorrectorBase(node) {}
-
-  void undistort_pointcloud(
+  UndistortionResult undistort_pointcloud(
     bool use_imu, std::optional<AngleConversion> angle_conversion_opt,
+    const geometry_msgs::msg::TransformStamped & lidar_to_base_link,
     sensor_msgs::msg::PointCloud2 & pointcloud) override;
 
   void undistort_point(
@@ -151,11 +164,12 @@ private:
   tf2::Transform tf2_lidar_to_base_link_;
   tf2::Transform tf2_base_link_to_lidar_;
 
-public:
-  explicit DistortionCorrector2D(rclcpp::Node & node) : DistortionCorrector(node) {}
+protected:
   void initialize() override;
   void set_pointcloud_transform(
-    const std::string & base_frame, const std::string & lidar_frame) override;
+    const geometry_msgs::msg::TransformStamped & lidar_to_base_link) override;
+
+public:
   void undistort_point_implementation(
     sensor_msgs::PointCloud2Iterator<float> & it_x, sensor_msgs::PointCloud2Iterator<float> & it_y,
     sensor_msgs::PointCloud2Iterator<float> & it_z,
@@ -177,11 +191,12 @@ private:
   Eigen::Matrix4f eigen_lidar_to_base_link_;
   Eigen::Matrix4f eigen_base_link_to_lidar_;
 
-public:
-  explicit DistortionCorrector3D(rclcpp::Node & node) : DistortionCorrector(node) {}
+protected:
   void initialize() override;
   void set_pointcloud_transform(
-    const std::string & base_frame, const std::string & lidar_frame) override;
+    const geometry_msgs::msg::TransformStamped & lidar_to_base_link) override;
+
+public:
   void undistort_point_implementation(
     sensor_msgs::PointCloud2Iterator<float> & it_x, sensor_msgs::PointCloud2Iterator<float> & it_y,
     sensor_msgs::PointCloud2Iterator<float> & it_z,
