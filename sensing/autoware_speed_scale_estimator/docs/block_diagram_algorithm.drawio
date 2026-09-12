@@ -1,0 +1,77 @@
+<mxfile host="65bd71144e">
+    <diagram name="estimation_algorithm" id="estimation-algorithm">
+        <mxGraphModel dx="501" dy="882" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Estimation Algorithm: SpeedScaleEstimator" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="10" width="420" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="in_pose" value="Pose (current / previous)&#10;from polling buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="70" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="in_vel" value="VelocityReport batch&#10;rolling buffer (sensor_buffer_duration)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="170" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="in_imu" value="IMU batch&#10;rolling buffer (sensor_buffer_duration)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="260" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="v_pose" value="calc_pose_velocity()&#10;3D distance / dt&#10;skip if dt &gt; max_pose_lag" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="60" width="230" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="sync_vel" value="find_nearest_velocity_report()&#10;timestamp sync&#10;(stamp_diff &lt;= max_stamp_lag)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="160" width="230" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="sync_imu" value="find_nearest_imu()&#10;timestamp sync&#10;(stamp_diff &lt;= max_stamp_lag)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="250" width="230" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="constraint" value="Constraint check&#10;- |ω_imu| &lt;= max_angular_velocity&#10;- min_speed &lt;= v_pose &lt;= max_speed&#10;- |v_wheel| &gt; 0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="150" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="kf" value="Scalar Kalman Filter&#10;Observation model: z = s * v_wheel&#10;Measurement: z = v_pose&#10;Observation matrix: H = v_wheel&#10;State: s (speed scale factor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+                    <mxGeometry x="950" y="145" width="260" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="out_ok" value="Updated result&#10;estimated_speed_scale_factor&#10;covariance, K, v_pose, v_wheel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="160" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="out_skip" value="Not updated&#10;keep previous scale factor&#10;UpdateFailureReason" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="280" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_pose" target="v_pose" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_vel" target="sync_vel" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_imu" target="sync_imu" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="v_pose" target="constraint" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="sync_vel" target="constraint" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" parent="1" source="sync_imu" target="constraint" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="constraint" target="kf" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="pass" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="kf" target="out_ok" edge="1">
+                    <mxGeometry x="-1" y="281" relative="1" as="geometry">
+                        <mxPoint x="-280" y="261" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e9" value="fail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="constraint" target="out_skip" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="910" y="200"/>
+                            <mxPoint x="910" y="315"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
