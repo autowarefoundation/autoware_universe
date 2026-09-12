@@ -709,7 +709,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
         slow_down_traj_points.at(inserted_idx.value()).longitudinal_velocity_mps =
           slow_down_traj_points.at(inserted_idx.value() + 1).longitudinal_velocity_mps;
       }
-      return inserted_idx.value();
+      return inserted_idx;
     }
     return std::nullopt;
   };
