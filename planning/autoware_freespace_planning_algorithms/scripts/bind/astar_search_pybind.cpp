@@ -150,7 +150,10 @@ PYBIND11_MODULE(autoware_freespace_planning_algorithms_pybind, p)
         &freespace_planning_algorithms::AstarParam::obstacle_distance_weight)
       .def_readwrite(
         "goal_lat_distance_weight",
-        &freespace_planning_algorithms::AstarParam::goal_lat_distance_weight);
+        &freespace_planning_algorithms::AstarParam::goal_lat_distance_weight)
+      .def_readwrite(
+        "prevent_dry_steering",
+        &freespace_planning_algorithms::AstarParam::prevent_dry_steering);
   auto pyPlannerCommonParam =
     py::class_<freespace_planning_algorithms::PlannerCommonParam>(p, "PlannerCommonParam")
       .def(py::init<>())

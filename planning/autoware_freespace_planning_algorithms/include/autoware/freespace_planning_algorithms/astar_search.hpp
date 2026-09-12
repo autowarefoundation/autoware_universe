@@ -55,6 +55,7 @@ struct AstarParam
   double smoothness_weight;
   double obstacle_distance_weight;
   double goal_lat_distance_weight;
+  bool prevent_dry_steering = false;
 };
 
 struct AstarNode
@@ -116,7 +117,8 @@ public:
         node.declare_parameter<double>("astar.distance_heuristic_weight"),
         node.declare_parameter<double>("astar.smoothness_weight"),
         node.declare_parameter<double>("astar.obstacle_distance_weight"),
-        node.declare_parameter<double>("astar.goal_lat_distance_weight")},
+        node.declare_parameter<double>("astar.goal_lat_distance_weight"),
+        node.declare_parameter<bool>("astar.prevent_dry_steering", false)},
       node.get_clock())
   {
   }
@@ -128,9 +130,10 @@ public:
 
   const PlannerWaypoints & getWaypoints() const { return waypoints_; }
 
-  inline int getKey(const IndexXYT & index)
+  inline int getKey(const IndexXYT & index, const bool is_back)
   {
-    return indexToId(index) * planner_common_param_.theta_size + index.theta;
+    return (indexToId(index) * planner_common_param_.theta_size + index.theta) * 2 +
+           static_cast<int>(is_back && astar_param_.prevent_dry_steering);
   }
 
 private:

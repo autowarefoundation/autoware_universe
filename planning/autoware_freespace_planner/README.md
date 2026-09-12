@@ -87,6 +87,7 @@ None
 | `smoothness_weight`         | double | cost factor for change in curvature                     |
 | `obstacle_distance_weight`  | double | cost factor for distance to obstacle                    |
 | `goal_lat_distance_weight`  | double | cost factor for lateral distance from goal              |
+| `prevent_dry_steering`      | bool   | whether to prevent dry steering during direction changes |
 
 #### RRT\* search parameters
 

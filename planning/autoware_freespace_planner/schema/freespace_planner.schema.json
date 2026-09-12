@@ -170,6 +170,11 @@
               "type": "number",
               "default": 0.5,
               "description": "Weight for lateral distance from original goal."
+            },
+            "prevent_dry_steering": {
+              "type": "boolean",
+              "default": false,
+              "description": "Keep the steering angle when switching between forward and reverse motion."
             }
           },
           "required": [
