@@ -44,6 +44,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <regex>
 #include <string>
@@ -52,8 +53,33 @@
 
 namespace
 {
+struct ReadContext
+{
+  int fd;
+  std::string error_message;
+};
+
 constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
-}  // namespace
+
+/**
+ * @brief exchanges the values of 2 bytes
+ * @param [inout] str a string reference to ATA string
+ * @param [in] size size of ATA string
+ * @note Each pair of bytes in an ATA string is swapped.
+ * FIRMWARE REVISION field example
+ * Word Value
+ * 23   6162h ("ba")
+ * 24   6364h ("dc")
+ * 25   6566h ("fe")
+ * 26   6720h (" g")
+ * -> "abcdefg "
+ */
+void swap_char(std::string & str, size_t size)
+{
+  for (auto i = 0U; i < size; i += 2U) {
+    std::swap(str[i], str[i + 1]);
+  }
+}
 
 /**
  * @brief ATA PASS-THROUGH (12) command
@@ -152,37 +178,6 @@ struct SmartData
 } __attribute__((packed));                  // Minimize total struct memory 514 to 512
 
 /**
- * @brief print usage
- */
-void usage()
-{
-  printf("Usage: hdd_reader [options]\n");
-  printf("  -h --help        : Display help\n");
-  printf("  -s --socket PATH : Path of UNIX domain socket\n");
-  printf("\n");
-}
-
-/**
- * @brief exchanges the values of 2 bytes
- * @param [inout] str a string reference to ATA string
- * @param [in] size size of ATA string
- * @note Each pair of bytes in an ATA string is swapped.
- * FIRMWARE REVISION field example
- * Word Value
- * 23   6162h ("ba")
- * 24   6364h ("dc")
- * 25   6566h ("fe")
- * 26   6720h (" g")
- * -> "abcdefg "
- */
-void swap_char(std::string & str, size_t size)
-{
-  for (auto i = 0U; i < size; i += 2U) {
-    std::swap(str[i], str[i + 1]);
-  }
-}
-
-/**
  * @brief get IDENTIFY DEVICE for ATA drive
  * @param [in] fd file descriptor to device
  * @param [out] info a pointer to HDD information
@@ -193,7 +188,7 @@ void swap_char(std::string & str, size_t size)
  * - ATA Command Set - 4  (ACS-4)
  *   http://www.t13.org/Documents/UploadedDocuments/docs2016/di529r14-ATAATAPI_Command_Set_-_4.pdf
  */
-int get_ata_identify(int fd, HddInfo * info)
+int get_ata_identity(const ReadContext & ctx, HddInfo * info)
 {
   sg_io_hdr_t hdr{};
   AtaPassThrough12 ata{};
@@ -219,8 +214,10 @@ int get_ata_identify(int fd, HddInfo * info)
   hdr.timeout = 1000;                // 1 second
 
   // send SCSI command to device
-  if (ioctl(fd, SG_IO, &hdr) < 0) {
-    return errno;
+  if (ioctl(ctx.fd, SG_IO, &hdr) < 0) {
+    int err = errno;
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(err));
+    return err;
   }
 
   // IDENTIFY DEVICE
@@ -253,7 +250,7 @@ int get_ata_identify(int fd, HddInfo * info)
  * - SMART Attribute Annex
  *   http://www.t13.org/documents/uploadeddocuments/docs2005/e05148r0-acs-smartattributesannex.pdf
  */
-int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device)
+int get_ata_smart_data(const ReadContext & ctx, HddInfo * info, const HddDevice & device)
 {
   sg_io_hdr_t hdr{};
   AtaPassThrough12 ata{};
@@ -282,7 +279,8 @@ int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device)
   hdr.timeout = 1000;                // 1 second
 
   // send SCSI command to device
-  if (ioctl(fd, SG_IO, &hdr) < 0) {
+  if (ioctl(ctx.fd, SG_IO, &hdr) < 0) {
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(errno));
     return errno;
   }
 
@@ -328,7 +326,7 @@ int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device)
  * - NVM Express 1.2b
  *   https://www.nvmexpress.org/wp-content/uploads/NVM_Express_1_2b_Gold_20160603.pdf
  */
-int get_nvme_identify(int fd, HddInfo * info)
+int get_nvme_identity(const ReadContext & ctx, HddInfo * info)
 {
   nvme_admin_cmd cmd{};
   char data[4096]{};  // Fixed size for Identify command
@@ -340,9 +338,11 @@ int get_nvme_identify(int fd, HddInfo * info)
   cmd.cdw10 = 0x01;                             // Identify Controller data structure
 
   // send Admin Command to device
-  int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
+  int ret = ioctl(ctx.fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
-    return errno;
+    int err = errno;
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(err));
+    return err;
   }
 
   // Identify Controller Data Structure
@@ -366,7 +366,7 @@ int get_nvme_identify(int fd, HddInfo * info)
  * - NVM Express 1.2b
  *   https://www.nvmexpress.org/wp-content/uploads/NVM_Express_1_2b_Gold_20160603.pdf
  */
-int get_nvme_smart_data(int fd, HddInfo * info)
+int get_nvme_smart_data(const ReadContext & ctx, HddInfo * info)
 {
   nvme_admin_cmd cmd{};
   unsigned char data[144]{};  // 36 Dword (get byte 0 to 143)
@@ -381,8 +381,9 @@ int get_nvme_smart_data(int fd, HddInfo * info)
                            // Bit 07:00 = 02h (SMART / Health Information)
 
   // send Admin Command to device
-  int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
+  int ret = ioctl(ctx.fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(errno));
     return errno;
   }
 
@@ -412,6 +413,83 @@ int get_nvme_smart_data(int fd, HddInfo * info)
   return EXIT_SUCCESS;
 }
 
+HddInfo read_hdd_info_in_sequence(
+  HddInfo * info, const std::function<int()> & first_step, const std::function<int()> & second_step)
+{
+  info->error_code_ = first_step();
+  if (info->error_code_ != 0) {
+    return *info;
+  }
+
+  info->error_code_ = second_step();
+  if (info->error_code_ != 0) {
+    return *info;
+  }
+
+  return *info;
+}
+
+HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
+{
+  const ReadContext identify_context{fd, "Failed to get IDENTIFY DEVICE for ATA drive"};
+  const ReadContext get_data_context{fd, "Failed to get SMART LOG for ATA drive"};
+
+  return read_hdd_info_in_sequence(
+    info, [&]() { return get_ata_identity(identify_context, info); },
+    [&]() { return get_ata_smart_data(get_data_context, info, hdd_device); });
+}
+
+HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
+{
+  const ReadContext identify_context{fd, "Failed to get Identify for NVMe drive"};
+  const ReadContext get_data_context{fd, "Failed to get SMART / Health Information for NVMe drive"};
+
+  return read_hdd_info_in_sequence(
+    info, [&]() { return get_nvme_identity(identify_context, info); },
+    [&]() { return get_nvme_smart_data(get_data_context, info); });
+}
+
+HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
+{
+  HddInfo info{};
+
+  int fd = open(hdd_device.name_.c_str(), O_RDONLY);
+  if (fd < 0) {
+    info.error_code_ = errno;
+    syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
+    return info;
+  }
+
+  const bool is_ata = boost::starts_with(hdd_device.name_, "/dev/sd");
+  const bool is_nvme = boost::starts_with(hdd_device.name_, "/dev/nvme");
+
+  if (is_ata) {
+    info = read_ata_hdd_info(fd, &info, hdd_device);
+  } else if (is_nvme) {
+    info = read_nvme_hdd_info(fd, &info);
+  }
+
+  info.error_code_ = close(fd);
+  if (info.error_code_ < 0) {
+    info.error_code_ = errno;
+    syslog(LOG_ERR, "Failed to close the file descriptor FD. %s\n", strerror(info.error_code_));
+  }
+
+  return info;
+}
+}  // namespace
+
+/**
+ * @brief print usage
+ */
+void usage()
+{
+  printf("Usage: hdd_reader [options]\n");
+  printf("  -h --help        : Display help\n");
+  printf("  -s --socket PATH : Path of UNIX domain socket\n");
+  printf("\n");
+}
+
 /**
  * @brief get HDD information
  * @param [in] boost::archive::text_iarchive object
@@ -430,61 +508,8 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
     return -1;
   }
 
-  for (auto & hdd_device : hdd_devices) {
-    HddInfo info{};
-
-    // Open a file
-    int fd = open(hdd_device.name_.c_str(), O_RDONLY);
-    if (fd < 0) {
-      info.error_code_ = errno;
-      syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
-      continue;
-    }
-
-    // AHCI device
-    if (boost::starts_with(hdd_device.name_.c_str(), "/dev/sd")) {
-      // Get IDENTIFY DEVICE for ATA drive
-      info.error_code_ = get_ata_identify(fd, &info);
-      if (info.error_code_ != 0) {
-        syslog(
-          LOG_ERR, "Failed to get IDENTIFY DEVICE for ATA drive. %s\n", strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-      // Get SMART DATA for ATA drive
-      info.error_code_ = get_ata_smart_data(fd, &info, hdd_device);
-      if (info.error_code_ != 0) {
-        syslog(LOG_ERR, "Failed to get SMART LOG for ATA drive. %s\n", strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-    } else if (boost::starts_with(hdd_device.name_.c_str(), "/dev/nvme")) {  // NVMe device
-      // Get Identify for NVMe drive
-      info.error_code_ = get_nvme_identify(fd, &info);
-      if (info.error_code_ != 0) {
-        syslog(LOG_ERR, "Failed to get Identify for NVMe drive. %s\n", strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-      // Get SMART / Health Information for NVMe drive
-      info.error_code_ = get_nvme_smart_data(fd, &info);
-      if (info.error_code_ != 0) {
-        syslog(
-          LOG_ERR, "Failed to get SMART / Health Information for NVMe drive. %s\n",
-          strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-    }
-
-    // Close the file descriptor FD
-    info.error_code_ = close(fd);
-    if (info.error_code_ < 0) {
-      info.error_code_ = errno;
-      syslog(LOG_ERR, "Failed to close the file descriptor FD. %s\n", strerror(info.error_code_));
-    }
-
-    list[hdd_device.name_] = info;
+  for (const auto & hdd_device : hdd_devices) {
+    list[hdd_device.name_] = read_hdd_info_for_device(hdd_device);
   }
 
   oa << list;
