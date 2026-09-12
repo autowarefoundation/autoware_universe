@@ -18,6 +18,7 @@
 #include "combine_cloud_handler_base.hpp"
 #include "traits.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -29,6 +30,7 @@
 namespace autoware::pointcloud_preprocessor
 {
 using autoware::point_types::PointXYZIRC;
+using autoware::point_types::PointXYZIRCT;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 
 template <typename MsgTraits>
@@ -41,10 +43,10 @@ public:
   CombineCloudHandler(
     rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud)
+    bool keep_input_frame_in_synchronized_pointcloud, OutputPointType output_point_type)
   : CombineCloudHandlerBase(
       node, input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-      keep_input_frame_in_synchronized_pointcloud)
+      keep_input_frame_in_synchronized_pointcloud, output_point_type)
   {
   }
 
@@ -57,6 +59,8 @@ public:
 
   void allocate_pointclouds() override {};
 
+  bool is_input_layout_supported(const sensor_msgs::msg::PointCloud2 & cloud) const override;
+
 protected:
   /// @brief RclcppTimeHash structure defines a custom hash function for the rclcpp::Time type by
   /// using its nanoseconds representation as the hash value.
@@ -68,9 +72,18 @@ protected:
     }
   };
 
-  static void convert_to_xyzirc_cloud(
+  /// Rewrites `input_cloud` into the configured output point type. For XYZIRCT,
+  /// `time_offset_ns` is added to every point's time_stamp.
+  void convert_to_output_cloud(
     const typename PointCloud2Traits::PointCloudMessage::ConstSharedPtr & input_cloud,
-    typename PointCloud2Traits::PointCloudMessage::UniquePtr & xyzirc_cloud);
+    typename PointCloud2Traits::PointCloudMessage::UniquePtr & output_cloud,
+    std::uint32_t time_offset_ns) const;
+
+  template <typename PointT, typename GeneratorT>
+  static void convert_cloud(
+    const typename PointCloud2Traits::PointCloudMessage::ConstSharedPtr & input_cloud,
+    typename PointCloud2Traits::PointCloudMessage::UniquePtr & output_cloud,
+    std::uint32_t time_offset_ns);
 
   void correct_pointcloud_motion(
     const std::unique_ptr<PointCloud2Traits::PointCloudMessage> & transformed_cloud_ptr,

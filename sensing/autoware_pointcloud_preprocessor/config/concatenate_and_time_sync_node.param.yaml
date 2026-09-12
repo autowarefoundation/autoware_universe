@@ -16,5 +16,6 @@
                     "/sensing/lidar/left/pointcloud_before_sync",
                 ]
     output_frame: base_link
+    output_point_type: XYZIRC
     matching_strategy:
       type: naive
