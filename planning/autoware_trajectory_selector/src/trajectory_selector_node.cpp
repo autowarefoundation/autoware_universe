@@ -88,9 +88,11 @@ void TrajectorySelectorNode::map_callback(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  if (!msg) return;
+
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
-  if (msg != nullptr) route_handler_ptr_->setMap(*msg);
+  route_handler_ptr_->setMap(*msg);
 }
 
 void TrajectorySelectorNode::route_callback(
@@ -98,8 +100,10 @@ void TrajectorySelectorNode::route_callback(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  if (!msg) return;
+
   route_ptr_ = std::make_shared<const LaneletRoute>(*msg);
-  if (msg != nullptr) route_handler_ptr_->setRoute(*msg);
+  route_handler_ptr_->setRoute(*msg);
 }
 
 void TrajectorySelectorNode::on_anchor_trajectories(
