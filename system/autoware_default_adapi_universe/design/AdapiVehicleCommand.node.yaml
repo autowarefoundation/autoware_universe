@@ -1,0 +1,65 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiVehicleCommand.node
+
+description: Relays the internal control and actuation commands to the API vehicle command topics.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::VehicleCommandNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    description: Control command from the control component.
+    remap_target: /control/command/control_cmd
+  - name: actuation_cmd
+    message_type: tier4_vehicle_msgs/msg/ActuationCommandStamped
+    description: Actuation command from the control component.
+    remap_target: /control/command/actuation_cmd
+
+publishers:
+  - name: pedals
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
+    description: Pedals command for the API.
+    remap_target: /api/control/command/pedals
+  - name: acceleration
+    message_type: autoware_adapi_v1_msgs/msg/AccelerationCommand
+    description: Acceleration command for the API.
+    remap_target: /api/control/command/acceleration
+  - name: velocity
+    message_type: autoware_adapi_v1_msgs/msg/VelocityCommand
+    description: Velocity command for the API.
+    remap_target: /api/control/command/velocity
+  - name: steering
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    description: Steering command for the API.
+    remap_target: /api/control/command/steering
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: relay_control
+    description: Splits the control command into the API acceleration, velocity and steering commands.
+    trigger_conditions:
+      - on_input: control_cmd
+    outcomes:
+      - to_output: acceleration
+      - to_output: velocity
+      - to_output: steering
+  - name: relay_actuation
+    description: Converts the actuation command into the API pedals command.
+    trigger_conditions:
+      - on_input: actuation_cmd
+    outcomes:
+      - to_output: pedals

@@ -1,0 +1,48 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiVehicleMetrics.node
+
+description: Publishes the vehicle metrics with the energy level normalized by the maximum capacity.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::VehicleMetricsNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: battery_charge
+    message_type: tier4_vehicle_msgs/msg/BatteryStatus
+    description: Battery status from the vehicle.
+    remap_target: /vehicle/status/battery_charge
+
+publishers:
+  - name: metrics
+    message_type: autoware_adapi_v1_msgs/msg/VehicleMetrics
+    description: Vehicle metrics for the API.
+    remap_target: /api/vehicle/metrics
+
+# parameters
+param_files: []
+
+param_values:
+  - name: update_rate
+    type: double
+    default: 0.1
+    description: Publish rate of the vehicle metrics [Hz].
+  - name: max_energy_level
+    type: double
+    default: 1.0
+    description: Maximum energy level used to normalize the battery charge.
+
+# processes
+processes:
+  - name: publish_metrics
+    description: Periodically publishes the normalized energy level from the latest battery status.
+    trigger_conditions: []
+    outcomes:
+      - to_output: metrics

@@ -1,0 +1,151 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: ComponentStateMonitor.node
+
+description: Aggregates the topic state monitor diagnostics into per-component launch and autonomous availability flags.
+
+package:
+  name: autoware_component_state_monitor
+  provider: autoware
+
+launch:
+  plugin: autoware::component_state_monitor::StateMonitor
+  executable: component_state_monitor_node
+  node_output: screen
+
+# interfaces
+# the monitored diagnostic names are given by the launch.<component> and
+# autonomous.<component> list parameters.
+subscribers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    description: Topic state monitor statuses, matched by hardware_id and status name.
+    global: /diagnostics
+
+publishers:
+  - name: launch/sensing
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/sensing
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: launch/perception
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/perception
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: launch/map
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/map
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: launch/localization
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/localization
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: launch/planning
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/planning
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: launch/control
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/control
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: launch/vehicle
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/vehicle
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: launch/system
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/launch/system
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/sensing
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/sensing
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/perception
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/perception
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/map
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/map
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/localization
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/localization
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/planning
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/planning
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/control
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/control
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/vehicle
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/vehicle
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: autonomous/system
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    remap_target: ~/autonomous/system
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: monitor
+    description: Publishes a component flag whenever all of its monitored statuses are OK and the flag changes.
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: launch/sensing
+      - to_output: launch/perception
+      - to_output: launch/map
+      - to_output: launch/localization
+      - to_output: launch/planning
+      - to_output: launch/control
+      - to_output: launch/vehicle
+      - to_output: launch/system
+      - to_output: autonomous/sensing
+      - to_output: autonomous/perception
+      - to_output: autonomous/map
+      - to_output: autonomous/localization
+      - to_output: autonomous/planning
+      - to_output: autonomous/control
+      - to_output: autonomous/vehicle
+      - to_output: autonomous/system

@@ -1,0 +1,90 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiAutowareState.node
+
+description: Publishes the legacy Autoware state derived from the localization, routing and operation mode API states and the component launch states.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::AutowareStateNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: localization_state
+    message_type: autoware_adapi_v1_msgs/msg/LocalizationInitializationState
+    description: Localization initialization state from the API.
+    remap_target: /api/localization/initialization_state
+  - name: routing_state
+    message_type: autoware_adapi_v1_msgs/msg/RouteState
+    description: Route state from the API.
+    remap_target: /api/routing/state
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    description: Operation mode state from the API.
+    remap_target: /api/operation_mode/state
+  - name: launch_state_sensing
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the sensing component.
+    remap_target: /system/component_state_monitor/component/launch/sensing
+  - name: launch_state_perception
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the perception component.
+    remap_target: /system/component_state_monitor/component/launch/perception
+  - name: launch_state_map
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the map component.
+    remap_target: /system/component_state_monitor/component/launch/map
+  - name: launch_state_localization
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the localization component.
+    remap_target: /system/component_state_monitor/component/launch/localization
+  - name: launch_state_planning
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the planning component.
+    remap_target: /system/component_state_monitor/component/launch/planning
+  - name: launch_state_control
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the control component.
+    remap_target: /system/component_state_monitor/component/launch/control
+  - name: launch_state_vehicle
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the vehicle component.
+    remap_target: /system/component_state_monitor/component/launch/vehicle
+  - name: launch_state_system
+    message_type: tier4_system_msgs/msg/ModeChangeAvailable
+    description: Launch state of the system component.
+    remap_target: /system/component_state_monitor/component/launch/system
+
+publishers:
+  - name: autoware_state
+    message_type: autoware_system_msgs/msg/AutowareState
+    description: Autoware state converted from the API states.
+    remap_target: /autoware/state
+
+servers:
+  - name: shutdown
+    message_type: std_srvs/srv/Trigger
+    description: Puts the Autoware state into finalizing.
+    remap_target: /autoware/shutdown
+
+# parameters
+param_files: []
+
+param_values:
+  - name: update_rate
+    type: double
+    default: 10.0
+    description: Publish rate of the Autoware state [Hz].
+
+# processes
+processes:
+  - name: publish_state
+    description: Periodically converts the latest API and launch states into the Autoware state and publishes it.
+    trigger_conditions: []
+    outcomes:
+      - to_output: autoware_state

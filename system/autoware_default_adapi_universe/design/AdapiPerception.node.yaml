@@ -1,0 +1,41 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiPerception.node
+
+description: Converts the recognized objects into the API dynamic object format.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::PerceptionNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+    description: Predicted objects from the object recognition.
+    remap_target: /perception/object_recognition/objects
+
+publishers:
+  - name: objects
+    message_type: autoware_adapi_v1_msgs/msg/DynamicObjectArray
+    description: Dynamic objects for the API.
+    remap_target: /api/perception/objects
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: relay_objects
+    description: Converts each predicted object message to the API message.
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: objects
