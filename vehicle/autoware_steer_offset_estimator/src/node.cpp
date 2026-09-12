@@ -23,13 +23,20 @@
 #include <cmath>
 #include <fstream>
 #include <functional>
+#include <limits>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::steer_offset_estimator
 {
+namespace
+{
+// Published in place of a value that could not be obtained, so that it is distinguishable from 0.0.
+constexpr double unavailable_value = std::numeric_limits<float>::max();
+}  // namespace
 
 SteerOffsetEstimatorParameters load_estimator_parameters(rclcpp::Node * node)
 {
@@ -68,8 +75,10 @@ SteerOffsetEstimatorNode::SteerOffsetEstimatorNode(const rclcpp::NodeOptions & n
   pub_debug_info_ = this->create_publisher<StringStamped>("~/output/debug_info", 1);
   pub_steer_offset_update_ = this->create_publisher<Float32Stamped>(
     "~/output/steering_offset_update", rclcpp::QoS{1}.transient_local());
+  pub_metrics_ = this->create_publisher<Float32MultiArrayStamped>("~/debug/metrics", 1);
 
   set_calibration_parameters();
+  update_calibration_file_offset();
 
   // Create timer
   auto update_hz = this->declare_parameter<double>("update_hz", 10.0);
@@ -147,10 +156,19 @@ void SteerOffsetEstimatorNode::on_timer()
     steers.emplace_back(*steer);
   }
 
+  // Mean of the steering angles used in this cycle, published as a debug metric
+  double steer_mean = unavailable_value;
+  if (!steers.empty()) {
+    const double steer_sum = std::accumulate(
+      steers.begin(), steers.end(), 0.0,
+      [](double sum, const auto & steer) { return sum + steer.steering_tire_angle; });
+    steer_mean = steer_sum / static_cast<double>(steers.size());
+  }
+
   auto result = estimator_.update(poses, steers);
   if (result) {
     set_latest_reliable_result(result.value());
-    publish_data(result.value());
+    publish_data(result.value(), steer_mean);
     check_auto_calibration();
   } else {
     RCLCPP_DEBUG(
@@ -180,7 +198,8 @@ void SteerOffsetEstimatorNode::set_latest_reliable_result(
   latest_reliable_result_ = result;
 }
 
-void SteerOffsetEstimatorNode::publish_data(const SteerOffsetEstimationUpdated & result)
+void SteerOffsetEstimatorNode::publish_data(
+  const SteerOffsetEstimationUpdated & result, const double steer_mean)
 {
   auto pub_float = [this](const auto & publisher, const double value) {
     autoware_internal_debug_msgs::msg::Float32Stamped msg;
@@ -208,6 +227,50 @@ void SteerOffsetEstimatorNode::publish_data(const SteerOffsetEstimationUpdated &
     result.offset, std::sqrt(result.covariance), result.velocity, result.angular_velocity,
     result.steering_angle, result.kalman_gain, result.residual);
   pub_debug_info_->publish(debug_info);
+
+  // The values are packed in the order documented for pub_metrics_ in node.hpp.
+  const double reliable_offset =
+    latest_reliable_result_ ? latest_reliable_result_->offset : unavailable_value;
+  const double reliable_covariance =
+    latest_reliable_result_ ? latest_reliable_result_->covariance : unavailable_value;
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped metrics;
+  metrics.stamp = this->now();
+  metrics.data = {
+    static_cast<float>(calibration_file_offset_), static_cast<float>(reliable_offset),
+    static_cast<float>(reliable_covariance), static_cast<float>(last_offset_update_),
+    static_cast<float>(steer_mean)};
+  pub_metrics_->publish(metrics);
+}
+
+tl::expected<double, std::string> SteerOffsetEstimatorNode::read_from_yaml(
+  const std::string & file_path, const std::string & param_name) const
+{
+  try {
+    YAML::Node config = YAML::LoadFile(file_path);
+    auto node = config["/**"]["ros__parameters"];
+    if (!node) {
+      return tl::make_unexpected("Could not find 'ros__parameters' key in YAML.");
+    }
+    if (!node[param_name]) {
+      return tl::make_unexpected(fmt::format("Could not find '{}' key in YAML.", param_name));
+    }
+    return node[param_name].as<double>();
+  } catch (const YAML::Exception & e) {
+    return tl::make_unexpected(fmt::format("YAML read exception: {}", e.what()));
+  }
+}
+
+void SteerOffsetEstimatorNode::update_calibration_file_offset()
+{
+  const auto value = read_from_yaml(
+    calibration_params_.calibration_file_path, calibration_params_.calibration_param_name);
+  if (!value) {
+    RCLCPP_WARN(
+      this->get_logger(), "Failed to read '%s' from %s: %s",
+      calibration_params_.calibration_param_name.c_str(),
+      calibration_params_.calibration_file_path.c_str(), value.error().c_str());
+  }
+  calibration_file_offset_ = value.value_or(unavailable_value);
 }
 
 bool SteerOffsetEstimatorNode::is_publish_update() const
@@ -311,7 +374,11 @@ tl::expected<double, std::string> SteerOffsetEstimatorNode::execute_calibration_
   const auto & param_path = calibration_params_.calibration_file_path;
   const auto & param_name = calibration_params_.calibration_param_name;
 
-  return write_to_yaml(param_path, param_name, steer_offset, true);
+  const auto write_result = write_to_yaml(param_path, param_name, steer_offset, true);
+  if (write_result) {
+    calibration_file_offset_ = write_result.value();
+  }
+  return write_result;
 }
 
 tl::expected<double, std::string> SteerOffsetEstimatorNode::write_to_yaml(
