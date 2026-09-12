@@ -39,60 +39,69 @@ namespace
 // deprecated identifiers out of the NVML 13+ implementation so this remains
 // compatible when those identifiers are removed from a future SDK.
 #if defined(NVML_API_VERSION) && NVML_API_VERSION >= 13
-const char * clockEventReasonToString(unsigned long long reason)  // NOLINT
-{
-  return (
-    (reason & nvmlClocksEventReasonGpuIdle)                     ? "GpuIdle"
-    : (reason & nvmlClocksEventReasonApplicationsClocksSetting) ? "ApplicationsClocksSetting"
-    : (reason & nvmlClocksEventReasonSwPowerCap)                ? "SwPowerCap"
-    : (reason & nvmlClocksThrottleReasonHwSlowdown)             ? "HwSlowdown"
-    : (reason & nvmlClocksEventReasonSyncBoost)                 ? "SyncBoost"
-    : (reason & nvmlClocksEventReasonSwThermalSlowdown)         ? "SwThermalSlowdown"
-    : (reason & nvmlClocksThrottleReasonHwThermalSlowdown)      ? "HwThermalSlowdown"
-    : (reason & nvmlClocksThrottleReasonHwPowerBrakeSlowdown)   ? "HwPowerBrakeSlowdown"
-    : (reason & nvmlClocksEventReasonDisplayClockSetting)       ? "DisplayClockSetting"
-                                                                : "UNKNOWN");
-}
+constexpr unsigned long long kClockEventReasonGpuIdle = nvmlClocksEventReasonGpuIdle;  // NOLINT
+constexpr unsigned long long kClockEventReasonApplicationsClocksSetting =  // NOLINT(runtime/int)
+  nvmlClocksEventReasonApplicationsClocksSetting;
+constexpr unsigned long long kClockEventReasonSwPowerCap =  // NOLINT(runtime/int)
+  nvmlClocksEventReasonSwPowerCap;
+constexpr unsigned long long kClockEventReasonSyncBoost = nvmlClocksEventReasonSyncBoost;  // NOLINT
+constexpr unsigned long long kClockEventReasonSwThermalSlowdown =  // NOLINT(runtime/int)
+  nvmlClocksEventReasonSwThermalSlowdown;
+constexpr unsigned long long kClockEventReasonDisplayClockSetting =  // NOLINT(runtime/int)
+  nvmlClocksEventReasonDisplayClockSetting;
 
-bool isIgnoredClockEventReason(unsigned long long reason)  // NOLINT
-{
-  switch (reason) {
-    case nvmlClocksEventReasonGpuIdle:
-    case nvmlClocksEventReasonApplicationsClocksSetting:
-    case nvmlClocksEventReasonSwPowerCap:
-      return true;
-    default:
-      return false;
-  }
-}
 #else
+constexpr unsigned long long kClockEventReasonGpuIdle = nvmlClocksThrottleReasonGpuIdle;  // NOLINT
+constexpr unsigned long long kClockEventReasonApplicationsClocksSetting =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonApplicationsClocksSetting;
+constexpr unsigned long long kClockEventReasonSwPowerCap =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonSwPowerCap;
+constexpr unsigned long long kClockEventReasonSyncBoost =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonSyncBoost;
+constexpr unsigned long long kClockEventReasonSwThermalSlowdown =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonSwThermalSlowdown;
+constexpr unsigned long long kClockEventReasonDisplayClockSetting =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonDisplayClockSetting;
+#endif
+
+struct ClockEventReasonName
+{
+  unsigned long long reason;  // NOLINT
+  const char * name;
+};
+
+constexpr ClockEventReasonName kClockEventReasonNames[] = {
+  {kClockEventReasonGpuIdle, "GpuIdle"},
+  {kClockEventReasonApplicationsClocksSetting, "ApplicationsClocksSetting"},
+  {kClockEventReasonSwPowerCap, "SwPowerCap"},
+  {nvmlClocksThrottleReasonHwSlowdown, "HwSlowdown"},
+  {kClockEventReasonSyncBoost, "SyncBoost"},
+  {kClockEventReasonSwThermalSlowdown, "SwThermalSlowdown"},
+  {nvmlClocksThrottleReasonHwThermalSlowdown, "HwThermalSlowdown"},
+  {nvmlClocksThrottleReasonHwPowerBrakeSlowdown, "HwPowerBrakeSlowdown"},
+  {kClockEventReasonDisplayClockSetting, "DisplayClockSetting"}};
+
 const char * clockEventReasonToString(unsigned long long reason)  // NOLINT
 {
-  return (
-    (reason & nvmlClocksThrottleReasonGpuIdle)                     ? "GpuIdle"
-    : (reason & nvmlClocksThrottleReasonApplicationsClocksSetting) ? "ApplicationsClocksSetting"
-    : (reason & nvmlClocksThrottleReasonSwPowerCap)                ? "SwPowerCap"
-    : (reason & nvmlClocksThrottleReasonHwSlowdown)                ? "HwSlowdown"
-    : (reason & nvmlClocksThrottleReasonSyncBoost)                 ? "SyncBoost"
-    : (reason & nvmlClocksThrottleReasonSwThermalSlowdown)         ? "SwThermalSlowdown"
-    : (reason & nvmlClocksThrottleReasonHwThermalSlowdown)         ? "HwThermalSlowdown"
-    : (reason & nvmlClocksThrottleReasonHwPowerBrakeSlowdown)      ? "HwPowerBrakeSlowdown"
-    : (reason & nvmlClocksThrottleReasonDisplayClockSetting)       ? "DisplayClockSetting"
-                                                                   : "UNKNOWN");
+  for (const auto & reason_name : kClockEventReasonNames) {
+    if (reason & reason_name.reason) {
+      return reason_name.name;
+    }
+  }
+  return "UNKNOWN";
 }
 
 bool isIgnoredClockEventReason(unsigned long long reason)  // NOLINT
 {
   switch (reason) {
-    case nvmlClocksThrottleReasonGpuIdle:
-    case nvmlClocksThrottleReasonApplicationsClocksSetting:
-    case nvmlClocksThrottleReasonSwPowerCap:
+    case kClockEventReasonGpuIdle:
+    case kClockEventReasonApplicationsClocksSetting:
+    case kClockEventReasonSwPowerCap:
       return true;
     default:
       return false;
   }
 }
-#endif
 
 // NVML 13 (CUDA 13) deprecated nvmlDeviceGetTemperature() and
 // nvmlDeviceGetCurrentClocksThrottleReasons() in favor of the V / Event variants.
