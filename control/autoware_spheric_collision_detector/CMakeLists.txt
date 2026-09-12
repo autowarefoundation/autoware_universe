@@ -6,7 +6,6 @@ autoware_package()
 
 include_directories(
   include
-  ${PCL_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
 )
