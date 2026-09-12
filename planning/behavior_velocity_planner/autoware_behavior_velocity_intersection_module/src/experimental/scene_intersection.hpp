@@ -15,15 +15,15 @@
 #ifndef EXPERIMENTAL__SCENE_INTERSECTION_HPP_
 #define EXPERIMENTAL__SCENE_INTERSECTION_HPP_
 
-#include "autoware/behavior_velocity_intersection_module/decision_result.hpp"
-#include "autoware/behavior_velocity_intersection_module/interpolated_path_info.hpp"
+#include "autoware/behavior_velocity_intersection_module/experimental/decision_result.hpp"
+#include "autoware/behavior_velocity_intersection_module/experimental/intersection_stoplines.hpp"
 #include "autoware/behavior_velocity_intersection_module/intersection_lanelets.hpp"
-#include "autoware/behavior_velocity_intersection_module/intersection_stoplines.hpp"
 #include "autoware/behavior_velocity_intersection_module/object_manager.hpp"
 #include "autoware/behavior_velocity_intersection_module/result.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
 #include <autoware/behavior_velocity_rtc_interface/experimental/scene_module_interface_with_rtc.hpp>
+#include <autoware/trajectory/utils/find_intervals.hpp>
 
 #include <memory>
 #include <optional>
@@ -36,6 +36,8 @@
 
 namespace autoware::behavior_velocity_planner::experimental
 {
+
+using autoware::experimental::trajectory::Interval;
 
 class IntersectionModule : public SceneModuleInterfaceWithRTC
 {
@@ -282,6 +284,16 @@ public:
     const std::vector<std::shared_ptr<ObjectInfo>> misjudge_objects;
   };
 
+  /**
+   * @brief
+   */
+  struct OcclusionStatus
+  {
+    OcclusionType occlusion_status;
+    bool is_occlusion_cleared_with_margin;
+    bool is_occlusion_state;
+  };
+
   IntersectionModule(
     const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
     const std::set<lanelet::Id> & associative_ids, const std::string & turn_direction,
@@ -422,8 +434,7 @@ private:
    * @brief this function is used to check if target stop position is feasible
    */
   bool can_smoothly_stop_at(
-    const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx,
-    const PlannerData & planner_data) const;
+    const double ego_s, const double stop_s, const PlannerData & planner_data) const;
 
   /** @}*/
 
@@ -518,20 +529,20 @@ private:
   /**
    * @brief analyze traffic_light/occupancy/objects context and return DecisionResult
    */
-  DecisionResult modifyPathVelocityDetail(PathWithLaneId * path, const PlannerData & planner_data);
+  DecisionResult modifyPathVelocityDetail(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data);
 
   /**
    * @brief set RTC value according to calculated DecisionResult
    */
-  void prepareRTCStatus(
-    const DecisionResult &, const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
+  void prepareRTCStatus(const DecisionResult & decision_result);
 
   /**
    * @brief act based on current RTC approval
    */
   void reactRTCApproval(
-    const DecisionResult & decision_result,
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const PlannerData & planner_data);
+    const DecisionResult & decision_result, Trajectory & path, const PlannerData & planner_data);
   /** @}*/
 
 private:
@@ -547,8 +558,8 @@ private:
    */
   struct BasicData
   {
-    InterpolatedPathInfo interpolated_path_info;
     IntersectionStopLines intersection_stoplines;
+    Interval lane_id_interval;
     PathLanelets path_lanelets;
   };
 
@@ -561,13 +572,15 @@ private:
    * To simplify modifyPathVelocityDetail(), this function is used at first
    */
   Result<BasicData, InternalError> prepareIntersectionData(
-    PathWithLaneId * path, const PlannerData & planner_data);
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data);
 
   /**
    * @brief find the associated stopline road marking of assigned lanelet
    */
-  std::optional<size_t> getStopLineIndexFromMap(
-    const InterpolatedPathInfo & interpolated_path_info,
+  std::optional<double> getStopLineIndexFromMap(
+    const Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound, const Interval & lane_id_interval,
     const lanelet::ConstLanelet & assigned_lanelet, const PlannerData & planner_data) const;
 
   /**
@@ -577,9 +590,10 @@ private:
     const lanelet::ConstLanelet & assigned_lanelet,
     const lanelet::CompoundPolygon3d & first_conflicting_area,
     const lanelet::ConstLanelet & first_attention_lane,
-    const InterpolatedPathInfo & interpolated_path_info,
     const IntersectionStopLines::PreviousStopPose & previous_stop_pose,
-    autoware_internal_planning_msgs::msg::PathWithLaneId * original_path,
+    const Interval & lane_id_interval, Trajectory & path,
+    const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
     const PlannerData & planner_data) const;
 
   /**
@@ -594,12 +608,11 @@ private:
    * @brief generate PathLanelets
    */
   std::optional<PathLanelets> generatePathLanelets(
-    const lanelet::ConstLanelets & lanelets_on_path,
-    const InterpolatedPathInfo & interpolated_path_info,
-    const lanelet::CompoundPolygon3d & first_conflicting_area,
+    const lanelet::ConstLanelets & lanelets_on_path, const Interval & lane_id_interval,
+    const Trajectory & path, const lanelet::CompoundPolygon3d & first_conflicting_area,
     const std::vector<lanelet::CompoundPolygon3d> & conflicting_areas,
     const std::optional<lanelet::CompoundPolygon3d> & first_attention_area,
-    const std::vector<lanelet::CompoundPolygon3d> & attention_areas, const size_t closest_idx,
+    const std::vector<lanelet::CompoundPolygon3d> & attention_areas, const double closest_s,
     const PlannerData & planner_data) const;
 
   /**
@@ -651,7 +664,6 @@ private:
    * intersection_lanelets.first_conflicting_lane(). They are ensured in prepareIntersectionData()
    */
   std::optional<StuckStop> isStuckStatus(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets,
     const PlannerData & planner_data) const;
 
@@ -682,15 +694,14 @@ private:
    * intersection_stoplines.default_stopline, intersection_stoplines.first_attention_stopline
    */
   std::optional<YieldStuckStop> isYieldStuckStatus(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const InterpolatedPathInfo & interpolated_path_info,
+    const Trajectory & path, const Interval & lane_id_interval,
     const IntersectionStopLines & intersection_stoplines, const PlannerData & planner_data) const;
 
   /**
    * @brief check yield stuck
    */
   bool checkYieldStuckVehicleInIntersection(
-    const InterpolatedPathInfo & interpolated_path_info,
+    const Trajectory & path, const Interval & lane_id_interval,
     const lanelet::ConstLanelets & attention_lanelets, const PlannerData & planner_data) const;
   /** @} */
 
@@ -707,12 +718,9 @@ private:
    * @attention this function has access to value() of occlusion_attention_divisions_,
    * intersection_lanelets_ intersection_lanelets.first_attention_area()
    */
-  std::tuple<
-    OcclusionType, bool /* module detection with margin */,
-    bool /* reconciled occlusion disapproval */>
-  getOcclusionStatus(
-    const TrafficPrioritizedLevel & traffic_prioritized_level,
-    const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data);
+  OcclusionStatus getOcclusionStatus(
+    const TrafficPrioritizedLevel & traffic_prioritized_level, const Trajectory & path,
+    const Interval & lane_id_interval, const PlannerData & planner_data);
 
   /**
    * @brief calculate detected occlusion status(NOT | STATICALLY | DYNAMICALLY)
@@ -720,7 +728,8 @@ private:
    * intersection_lanelets.first_attention_area(), occlusion_attention_divisions_
    */
   OcclusionType detectOcclusion(
-    const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data) const;
+    const Trajectory & path, const Interval & lane_id_interval,
+    const PlannerData & planner_data) const;
   /** @} */
 
 private:
@@ -739,9 +748,8 @@ private:
    * intersection_stoplines.occlusion_stopline
    */
   PassJudgeStatus isOverPassJudgeLinesStatus(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const bool is_occlusion_state, const IntersectionStopLines & intersection_stoplines,
-    const PlannerData & planner_data);
+    const Trajectory & path, const bool is_occlusion_state,
+    const IntersectionStopLines & intersection_stoplines, const PlannerData & planner_data);
   /** @} */
 
 private:
@@ -785,8 +793,8 @@ private:
    * intersection_stoplines.occlusion_peeking_stopline
    */
   std::optional<NonOccludedCollisionStop> isGreenPseudoCollisionStatus(
-    const size_t closest_idx, const size_t collision_stopline_idx,
-    const IntersectionStopLines & intersection_stoplines) const;
+    const double closest_s, const double collision_stopline_s,
+    const double occlusion_stopline_s) const;
 
   /**
    * @brief generate the message explaining why too_late_detect_objects/misjudge_objects exist and
@@ -801,7 +809,7 @@ private:
    * situation
    */
   std::string generateEgoRiskEvasiveDiagnosis(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+    const Trajectory & path, const double closest_s,
     const TimeDistanceArray & ego_time_distance_array,
     const std::vector<std::shared_ptr<ObjectInfo>> & too_late_detect_objects,
     const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects,
@@ -824,7 +832,7 @@ private:
    * intersection_stoplines.first_attention_stopline
    */
   TimeDistanceArray calcIntersectionPassingTime(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
+    const Trajectory & path, const Interval & lane_id_interval, const bool is_prioritized,
     const IntersectionStopLines & intersection_stoplines,
     autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array,
     const PlannerData & planner_data) const;
