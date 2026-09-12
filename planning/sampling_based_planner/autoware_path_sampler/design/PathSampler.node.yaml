@@ -26,8 +26,14 @@ publishers:
 
 # parameters
 param_files:
+  - name: common_param
+    default: $(find-pkg-share autoware_core_planning)/config/common.param.yaml
+  - name: nearest_search_param
+    default: $(find-pkg-share autoware_core_planning)/config/nearest_search.param.yaml
+  - name: vehicle_param
+    default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
   - name: path_sampler_param
-    default: $(find-pkg-share autoware_path_sampler)/config/path_sampler.param.yaml
+    default: config/path_sampler.param.yaml
 
 param_values: []
 
