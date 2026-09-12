@@ -20,16 +20,24 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-class DiagnosticsBase
+/// Templated on the node type so a diagnostic can be handed the
+/// autoware_utils::BasicDiagnosticsInterface the owning node holds; the interface type differs
+/// between rclcpp and agnocast_wrapper nodes, and a virtual method cannot be a template.
+template <typename NodeT = rclcpp::Node>
+class BasicDiagnosticsBase
 {
 public:
-  virtual ~DiagnosticsBase() = default;
+  using DiagnosticsInterfaceT = autoware_utils::BasicDiagnosticsInterface<NodeT>;
 
-  virtual void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const = 0;
+  virtual ~BasicDiagnosticsBase() = default;
+
+  virtual void add_to_interface(DiagnosticsInterfaceT & interface) const = 0;
 
   [[nodiscard]] virtual std::optional<std::pair<int, std::string>> evaluate_status() const
   {
     return std::nullopt;
   }
 };
+
+using DiagnosticsBase = BasicDiagnosticsBase<rclcpp::Node>;
 }  // namespace autoware::pointcloud_preprocessor
