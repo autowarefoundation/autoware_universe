@@ -18,6 +18,7 @@
 #include "autoware/multi_object_tracker/association/association_base.hpp"
 #include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/association/polar_association.hpp"
+#include "autoware/multi_object_tracker/association/uuid_association.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -69,6 +70,7 @@ private:
   double ego_pose_max_age_sec_;
   std::unique_ptr<BevAssociation> bev_association_;
   std::unique_ptr<PolarAssociation> polar_association_;
+  std::unique_ptr<UUIDAssociation> uuid_association_;
 
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 };
