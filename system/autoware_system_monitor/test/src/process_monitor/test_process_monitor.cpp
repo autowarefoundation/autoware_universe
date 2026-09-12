@@ -245,6 +245,22 @@ class ProcessMonitorTestSuiteWithDummyProc : public ProcessMonitorTestSuite,
 {
 };
 
+class ProcessMonitorTestSuiteWithUnfilledRanking : public ProcessMonitorTestSuite
+{
+protected:
+  void SetUp() override
+  {
+    using std::placeholders::_1;
+    rclcpp::init(0, nullptr);
+    rclcpp::NodeOptions node_options;
+    // The dummy data has six processes, leaving the seventh ranking entry unfilled.
+    node_options.append_parameter_override("num_of_procs", 7);
+    monitor_ = std::make_unique<TestProcessMonitor>("test_process_monitor", node_options);
+    sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+      "/diagnostics", 1000, std::bind(&TestProcessMonitor::diagCallback, monitor_.get(), _1));
+  }
+};
+
 DummyProcFile dummy_proc_files[] = {
   {"dummy_proc_base.tar.bz2"},  // Original test data. Used as the base for the variations.
   {"dummy_proc_stat_comm_variations.tar.bz2"},   // Test data with variations in the comm field of
@@ -343,6 +359,33 @@ TEST_F(ProcessMonitorTestSuite, highMemProcTest)
   for (int i = 0; i < monitor_->getNumOfProcs(); ++i) {
     ASSERT_TRUE(monitor_->findDiagStatus(fmt::format("High-mem Proc[{}]", i), status));
     ASSERT_EQ(status.level, DiagStatus::OK);
+  }
+}
+
+TEST_F(ProcessMonitorTestSuiteWithUnfilledRanking, emptyProcessStateTest)
+{
+  const std::string test_data_dir = exe_dir_ + "/test_data";
+  const std::string file_set_path = exe_dir_ + "/dummy_proc_base.tar.bz2";
+
+  int place_holder;
+  std::unique_ptr<int, std::function<void(int *)>> watch_dog(
+    &place_holder, [&](int *) { monitor_->cleanupTestData(test_data_dir); });
+
+  ASSERT_EQ(monitor_->prepareTestData(file_set_path, test_data_dir), 0);
+  monitor_->forceTimerEvent();
+  monitor_->update();
+
+  rclcpp::WallRate(2).sleep();
+  rclcpp::spin_some(monitor_->get_node_base_interface());
+
+  for (const std::string & task_name : {"High-load Proc[6]", "High-mem Proc[6]"}) {
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus(task_name, status));
+    ASSERT_EQ(status.level, DiagStatus::OK);
+
+    std::string process_state;
+    ASSERT_TRUE(findValue(status, "S", process_state));
+    EXPECT_TRUE(process_state.empty());
   }
 }
 
