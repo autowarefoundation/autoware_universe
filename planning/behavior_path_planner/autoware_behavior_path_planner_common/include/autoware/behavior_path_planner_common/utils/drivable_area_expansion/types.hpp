@@ -31,6 +31,7 @@ namespace autoware::behavior_path_planner::drivable_area_expansion
 {
 using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::PathPoint;
 using geometry_msgs::msg::Point;
