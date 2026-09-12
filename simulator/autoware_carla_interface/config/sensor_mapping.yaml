@@ -23,6 +23,17 @@ sensor_mappings:
       lower_fov: -30.0
       rotation_frequency: 20
       noise_stddev: 0.0
+      # SplatSim rendering settings (used only when render_with_splatsim:=true).
+      # Values mirror the real Velodyne HDL-64E sensor spec (CARLA's default
+      # LiDAR) instead of relying on the server-side defaults selected by 0.
+      sensor_type: HDL64E # built-in HDL-64E elevation table (actual per-channel vertical angles, +2.0 deg to -24.33 deg)
+      fps: 10.0 # 10 Hz frame rate
+      n_rows: 64 # 64 channels
+      n_columns: 2083 # 360 deg / 0.1728 deg horizontal resolution at 10 Hz
+      min_range_m: 0.9 # minimum range
+      max_range_m: 120.0 # maximum range
+      drop_threshold: 0.5 # return gating (explicit server default)
+      alpha_threshold: 0.1 # return gating (explicit server default)
 
   # CARLA multi-camera setup (6 cameras for 360-degree coverage)
   CAM_FRONT/camera_link:
@@ -38,6 +49,10 @@ sensor_mappings:
       image_size_x: 1600
       image_size_y: 900
       fov: 70.0
+      # SplatSim rendering settings (used only when render_with_splatsim:=true;
+      # other cameras inherit the SplatSimCameraConfig defaults / frequency_hz).
+      near_plane: 0.01
+      far_plane: 1000.0
 
   CAM_FRONT_LEFT/camera_link:
     carla_type: sensor.camera.rgb

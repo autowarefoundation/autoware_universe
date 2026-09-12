@@ -19,6 +19,7 @@ import signal
 import time
 
 import carla
+import yaml
 
 from .carla_ros import carla_ros2_interface
 from .modules.carla_data_provider import CarlaDataProvider
@@ -33,7 +34,6 @@ class CarlaWorldLoadError(RuntimeError):
 
 
 class SensorLoop(object):
-
     def __init__(self):
         self.start_game_time = None
         self.start_system_time = None
@@ -61,7 +61,6 @@ class SensorLoop(object):
 
 
 class InitializeInterface(object):
-
     def __init__(self):
         self.interface = carla_ros2_interface()
         self.param_ = self.interface.get_param()
@@ -170,6 +169,133 @@ class InitializeInterface(object):
             print("INFO: Applied a flat steering curve to the ego vehicle.")
         except RuntimeError as error:
             print(f"WARNING: Failed to flatten the steering curve: {error}")
+
+    @staticmethod
+    def _merge_physics_settings(base, override):
+        """Return *base* updated by *override*, one level deep for `wheels`."""
+        merged = dict(base)
+        for key, value in override.items():
+            if key == "wheels" and isinstance(value, dict):
+                wheels = {axle: dict(cfg) for axle, cfg in merged.get("wheels", {}).items()}
+                for axle, cfg in value.items():
+                    wheels[axle] = {**wheels.get(axle, {}), **cfg}
+                merged["wheels"] = wheels
+            else:
+                merged[key] = value
+        return merged
+
+    def _read_vehicle_physics_settings(self, path, blueprint_id):
+        """Return the physics settings for *blueprint_id*, or None if there are none."""
+        try:
+            with open(path) as config_file:
+                document = yaml.safe_load(config_file) or {}
+        except OSError as error:
+            print(f"WARNING: Cannot read vehicle_physics_config {path}: {error}")
+            return None
+        except yaml.YAMLError as error:
+            print(f"WARNING: Invalid vehicle_physics_config {path}: {error}")
+            return None
+
+        settings = document.get("default") or {}
+        settings = self._merge_physics_settings(
+            settings, (document.get("vehicles") or {}).get(blueprint_id) or {}
+        )
+        return settings or None
+
+    @staticmethod
+    def _apply_wheel_settings(physics, wheel_settings):
+        """Write the front/rear wheel settings onto *physics*; return the wheel list.
+
+        The steered wheels are the ones the server reports a non-zero
+        max_steer_angle for, so "front" keeps meaning the steered axle even after
+        this has been applied once.
+        """
+        wheels = list(physics.wheels)
+        steered = [w.max_steer_angle > 0.0 for w in wheels]
+        if not any(steered):  # nothing steers (yet): take the first half as front
+            steered = [i < len(wheels) / 2 for i in range(len(wheels))]
+        for wheel, is_front in zip(wheels, steered):
+            for key, value in (wheel_settings.get("front" if is_front else "rear") or {}).items():
+                if not hasattr(wheel, key):
+                    print(f"WARNING: Unknown wheel physics key '{key}'; skipped.")
+                    continue
+                setattr(wheel, key, float(value))
+        return wheels
+
+    def _apply_steer_normalization(self, settings, path):
+        """Take `steer_normalization_deg` out of *settings* and give it to the interface.
+
+        It is the one key read rather than written: CARLA 0.10 reports 70 deg of
+        steer for every car and ignores writes to a wheel's max_steer_angle, so the
+        angle a commanded tire angle is normalized by has to be configured. An
+        explicit ``max_wheel_steer_angle_deg`` wins over the file.
+        """
+        steer_deg = settings.pop("steer_normalization_deg", None)
+        if steer_deg is None:
+            return
+        if float(self.interface.param_values.get("max_wheel_steer_angle_deg", 0.0)) > 0.0:
+            return
+        self.interface.param_values["max_wheel_steer_angle_deg"] = float(steer_deg)
+        print(f"INFO: Steer normalization set to {float(steer_deg):.1f} deg from {path}.")
+
+    @staticmethod
+    def _write_physics_settings(physics, settings):
+        """Write *settings* onto *physics*; return the keys that were written."""
+        applied = []
+        for key, value in settings.items():
+            if key == "wheels":
+                physics.wheels = InitializeInterface._apply_wheel_settings(physics, value)
+            elif key == "steering_curve":
+                physics.steering_curve = [carla.Vector2D(float(x), float(y)) for x, y in value]
+            elif hasattr(physics, key):
+                setattr(physics, key, float(value))
+            else:
+                print(f"WARNING: Unknown vehicle physics key '{key}'; skipped.")
+                continue
+            applied.append(key)
+        return applied
+
+    def _apply_vehicle_physics(self):
+        """Apply the configured physics to the ego, so it moves like the modelled car.
+
+        CARLA 0.10 gives every vehicle the same placeholder physics, which does
+        not match the vehicle Autoware plans for -- most visibly the wheels'
+        max_steer_angle, the very value the interface normalizes a commanded tire
+        angle by. Reads `vehicle_physics_config` (empty disables this) and writes
+        only the keys it names.
+
+        The config values (45.5 deg steer normalization, a flat steering curve,
+        Lincoln mass/wheel radius) are calibrated for the 0.10 placeholder physics,
+        so this is a no-op on CARLA 0.9.x -- whose vehicles already have their own
+        correct physics -- to avoid changing steering gain and dynamics there.
+        """
+        path = str(self.interface.param_values.get("vehicle_physics_config", "")).strip()
+        if not path:
+            return
+        if not self.interface.uses_chaos_physics:
+            print(
+                "INFO: Skipping vehicle_physics_config on CARLA "
+                f"{self.interface.carla_version}: it is calibrated for the 0.10 "
+                "placeholder physics and only applied on CARLA 0.10+."
+            )
+            return
+        settings = self._read_vehicle_physics_settings(path, self.ego_actor.type_id)
+        if not settings:
+            print(f"INFO: No vehicle physics for {self.ego_actor.type_id} in {path}.")
+            return
+
+        self._apply_steer_normalization(settings, path)
+        try:
+            physics = self.ego_actor.get_physics_control()
+            applied = self._write_physics_settings(physics, settings)
+            self.ego_actor.apply_physics_control(physics)
+            self.interface.physics_control = self.ego_actor.get_physics_control()
+            print(
+                f"INFO: Applied vehicle physics from {path} to {self.ego_actor.type_id} "
+                f"({', '.join(applied) or 'nothing'})."
+            )
+        except (RuntimeError, TypeError, ValueError) as error:
+            print(f"WARNING: Failed to apply vehicle physics from {path}: {error}")
 
     def _reload_world(self, client):
         """Reload the world via client.load_world(); return the failure, if any."""
@@ -425,6 +551,7 @@ class InitializeInterface(object):
         self.ego_actor = self._spawn_ego_actor()
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
+        self._apply_vehicle_physics()
         if self.interface.param_values.get("flatten_steering_curve", False):
             self._flatten_steering_curve()
 
@@ -435,6 +562,10 @@ class InitializeInterface(object):
         # origin from the final map and apply any initial pose that arrived
         # (and was buffered) during startup.
         self.interface.on_world_ready()
+
+        # Initialize splatsim cameras and lidars after CARLA world and ego actor are ready
+        self.interface.init_splatsim_cameras()
+        self.interface.init_splatsim_lidars()
 
         # No-op unless traffic_light.force_green is enabled.
         self._force_green_traffic_lights()
