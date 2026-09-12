@@ -48,7 +48,10 @@ ament_target_dependencies(pointcloud_preprocessor_filter_base
   pcl_ros
   autoware_point_types
   managed_transform_buffer
+  autoware_agnocast_wrapper
 )
+
+autoware_agnocast_wrapper_setup(pointcloud_preprocessor_filter_base)
 
 add_library(faster_voxel_grid_downsample_filter SHARED
   src/downsample_filter/faster_voxel_grid_downsample_filter.cpp
@@ -171,9 +174,12 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE pickup_based_voxel_grid_downsample_filter_node)
 
 # -- Random Downsample Filter --
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::RandomDownsampleFilterComponent"
-  EXECUTABLE random_downsample_filter_node)
+  EXECUTABLE random_downsample_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::ApproximateDownsampleFilterComponent"
@@ -194,7 +200,7 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent"
   EXECUTABLE polar_voxel_outlier_filter_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
