@@ -81,6 +81,7 @@
 // Autoware utils
 #include <autoware/agnocast_wrapper/message_filters.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
@@ -283,16 +284,21 @@ protected:
    * versus an exact one (false by default). */
   bool approximate_sync_ = false;
 
+  /** \brief The wrapper node is the only one that can run on an AgnocastOnly executor, which
+   * never spins the rclcpp node ManagedTransformBuffer creates internally. Filters still
+   * instantiated with rclcpp::Node keep ManagedTransformBuffer and its transform caching. */
+  static constexpr bool kUseWrapperTf = std::is_same_v<NodeT, autoware::agnocast_wrapper::Node>;
+
+  std::unique_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_{nullptr};
+  std::unique_ptr<autoware::agnocast_wrapper::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
-  /** \brief Transform a pointcloud into target_frame via managed_tf_buffer_. Returns false on
-   * lookup failure. */
+  /** \brief Transform a pointcloud into target_frame. Returns false on lookup failure. */
   bool transform_pointcloud(
     const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & in,
     sensor_msgs::msg::PointCloud2 & out);
 
-  /** \brief Look up target_frame <- source_frame as an Eigen matrix at the given stamp, via
-   * managed_tf_buffer_. */
+  /** \brief Look up target_frame <- source_frame as an Eigen matrix at the given stamp. */
   std::optional<Eigen::Matrix4f> lookup_transform_matrix(
     const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & stamp);
 
@@ -510,6 +516,14 @@ private:
 /// than an alias: nodes in other namespaces write bare `: Filter(...)`, which resolves through
 /// the injected class name an alias does not have.
 class Filter : public FilterBase<rclcpp::Node>
+{
+public:
+  using FilterBase::FilterBase;
+};
+
+/// The `autoware::agnocast_wrapper::Node` instantiation migrated filter nodes derive from. A class
+/// rather than an alias for the same reason as `Filter`.
+class AgnocastFilter : public FilterBase<autoware::agnocast_wrapper::Node>
 {
 public:
   using FilterBase::FilterBase;
