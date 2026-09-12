@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_ground_segmentation)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 find_package(OpenCV REQUIRED)
@@ -34,6 +35,10 @@ target_link_libraries(${PROJECT_NAME}
   ${PCL_LIBRARIES}
 )
 
+ament_target_dependencies(${PROJECT_NAME}
+  autoware_agnocast_wrapper
+)
+
 if(OPENMP_FOUND)
   set_target_properties(${PROJECT_NAME} PROPERTIES
     COMPILE_FLAGS ${OpenMP_CXX_FLAGS}
@@ -53,9 +58,12 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE ransac_ground_filter_node)
 
 # -- Scan Ground Filter --
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::ground_segmentation::ScanGroundFilterComponent"
-  EXECUTABLE scan_ground_filter_node)
+  EXECUTABLE scan_ground_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 
 ament_auto_package(INSTALL_TO_SHARE
