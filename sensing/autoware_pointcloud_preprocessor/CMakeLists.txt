@@ -142,6 +142,14 @@ target_link_libraries(pointcloud_preprocessor_filter
   ${tf2_sensor_msgs_LIBRARIES}
 )
 
+target_include_directories(pointcloud_preprocessor_filter PRIVATE
+  ${agnocastlib_INCLUDE_DIRS}
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
+ament_target_dependencies(pointcloud_preprocessor_filter
+  autoware_agnocast_wrapper
+)
+
 # ========== Time synchronizer ==========
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::PointCloudDataSynchronizerComponent"
@@ -158,9 +166,12 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE concatenate_and_time_sync_node)
 
 # ========== CropBox ==========
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::CropBoxFilterComponent"
-  EXECUTABLE crop_box_filter_node)
+  EXECUTABLE crop_box_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 # ========== Down Sampler Filter ==========
 # -- Voxel Grid Downsample Filter --
@@ -243,13 +254,6 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE distortion_corrector_node)
 
 # ========== Blockage Diagnostics ===========
-target_include_directories(pointcloud_preprocessor_filter PRIVATE
-  ${agnocastlib_INCLUDE_DIRS}
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
-)
-ament_target_dependencies(pointcloud_preprocessor_filter
-  autoware_agnocast_wrapper
-)
 autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::BlockageDiagComponent"
   EXECUTABLE blockage_diag_node
