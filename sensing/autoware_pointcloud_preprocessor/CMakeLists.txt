@@ -396,4 +396,11 @@ if(BUILD_TESTING)
     TIMEOUT "50"
   )
 
+  # Black-box characterization test used as a refactoring safety net for the
+  # concatenate_data module. See the module docstring in the test for details.
+  add_ros_test(
+    test/test_concatenate_node_characterization.py
+    TIMEOUT "180"
+  )
+
 endif()
