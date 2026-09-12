@@ -1,0 +1,31 @@
+<launch>
+  <arg name="is_redundant" default="true"/>
+  <arg name="enable_autoware_ready_actions" default="true"/>
+  <arg name="mrm_reset_manager_param_file" default="$(find-pkg-share autoware_mrm_reset_manager)/config/mrm_reset_manager.param.yaml"/>
+
+  <arg name="input_reset_mrm" default="/system/mrm/reset"/>
+  <arg name="input_localization_initialization_state" default="/api/localization/initialization_state"/>
+  <arg name="input_route_state" default="/api/routing/state"/>
+  <arg name="input_operation_mode_state" default="/api/operation_mode/state"/>
+
+  <arg name="output_reset_diag_graph" default="/diagnostics_graph/reset"/>
+  <arg name="output_reset_redundancy_switcher" default="/system/redundancy_switcher/reset"/>
+  <arg name="output_set_aggregator_initializing" default="/system/aggregator/set_initializing"/>
+  <arg name="output_set_redundancy_switcher_interface_initializing" default="/system/redundancy_switcher_interface/set_initializing"/>
+
+  <node pkg="autoware_mrm_reset_manager" exec="autoware_mrm_reset_manager_node" name="autoware_mrm_reset_manager" output="screen">
+    <param from="$(var mrm_reset_manager_param_file)"/>
+    <param name="is_redundant" value="$(var is_redundant)"/>
+    <param name="enable_autoware_ready_actions" value="$(var enable_autoware_ready_actions)"/>
+
+    <remap from="~/input/reset_mrm" to="$(var input_reset_mrm)"/>
+    <remap from="~/input/localization_initialization_state" to="$(var input_localization_initialization_state)"/>
+    <remap from="~/input/route_state" to="$(var input_route_state)"/>
+    <remap from="~/input/operation_mode_state" to="$(var input_operation_mode_state)"/>
+
+    <remap from="~/output/reset_diag_graph" to="$(var output_reset_diag_graph)"/>
+    <remap from="~/output/reset_redundancy_switcher" to="$(var output_reset_redundancy_switcher)"/>
+    <remap from="~/output/set_aggregator_initializing" to="$(var output_set_aggregator_initializing)"/>
+    <remap from="~/output/set_redundancy_switcher_interface_initializing" to="$(var output_set_redundancy_switcher_interface_initializing)"/>
+  </node>
+</launch>
