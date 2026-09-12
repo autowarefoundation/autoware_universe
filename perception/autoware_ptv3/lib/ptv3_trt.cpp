@@ -20,8 +20,6 @@
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
-#include <autoware/point_types/memory.hpp>
-#include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/point_field.hpp>
@@ -32,6 +30,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -39,6 +38,19 @@ namespace autoware::ptv3
 {
 namespace
 {
+
+std::string joinSortedNames(std::vector<std::string> names)
+{
+  std::sort(names.begin(), names.end());
+  std::string joined;
+  for (std::size_t index = 0; index < names.size(); ++index) {
+    if (index > 0) {
+      joined += ", ";
+    }
+    joined += names[index];
+  }
+  return joined;
+}
 
 std::int64_t poolingDepth(const std::int64_t stride)
 {
@@ -62,6 +74,83 @@ std::string poolingClusterName(const std::size_t stage_index)
 std::string stageGridCoordName(const std::size_t stage_index)
 {
   return "point_grid_coord_" + std::to_string(stage_index);
+}
+
+/// IO tensor names TrtCommon reports: the parsed ONNX before setup(), the built or loaded engine
+/// after it. Enumerating is also the only way to ask without side effects, since TensorRT logs an
+/// error for every name an engine does not have.
+std::unordered_set<std::string> declaredTensors(const autoware::tensorrt_common::TrtCommon & trt)
+{
+  std::unordered_set<std::string> names;
+  for (std::int32_t index = 0; index < trt.getNbIOTensors(); ++index) {
+    const auto * name = trt.getIOTensorName(index);
+    if (name == nullptr) {
+      throw std::runtime_error("Encoder ONNX exposes an unnamed IO tensor.");
+    }
+    names.emplace(name);
+  }
+  return names;
+}
+
+/// Refuse an artifact whose interface this node cannot serve.
+void checkEncoderContract(
+  const PTv3Config & config, const std::unordered_set<std::string> & declared,
+  const std::unordered_set<std::string> & supported)
+{
+  std::vector<std::string> unsupported;
+  for (const auto & name : declared) {
+    if (supported.count(name) == 0) {
+      unsupported.push_back(name);
+    }
+  }
+  if (!unsupported.empty()) {
+    throw std::runtime_error(
+      "Encoder ONNX declares tensor(s) this node cannot supply: [" + joinSortedNames(unsupported) +
+      "]. The model's IO contract does not match this version of autoware_ptv3.");
+  }
+
+  // The voxel inputs and the point features they produce are not optional in any variant.
+  std::vector<std::string> missing;
+  std::vector<std::string> required{"voxels", "num_points_per_voxel", "grid_coord"};
+  for (std::size_t stage = 0; stage < config.enc_channels_.size(); ++stage) {
+    required.push_back(stageFeatureName(stage));
+  }
+  for (const auto & name : required) {
+    if (declared.count(name) == 0) {
+      missing.push_back(name);
+    }
+  }
+  if (!missing.empty()) {
+    throw std::runtime_error(
+      "Encoder ONNX is missing required tensor(s): [" + joinSortedNames(missing) +
+      "]. Check that the artifact matches the configured encoder channels.");
+  }
+}
+
+/// Bind a device address for an encoder input, skipping the ones this artifact does not declare.
+///
+/// Encoder variants that gate blocks off read a subset of the contract, and the exporter drops
+/// what the traced graph never consumes. Binding is therefore driven by the artifact rather than
+/// by name, so no single input needs a case of its own.
+void bindIfDeclared(
+  autoware::tensorrt_common::TrtCommon & trt, const std::unordered_set<std::string> & declared,
+  const std::string & name, void * data)
+{
+  if (declared.count(name) == 0) {
+    return;
+  }
+  trt.setTensorAddress(name.c_str(), data);
+}
+
+/// Set this frame's shape for an encoder input, skipping the ones this artifact does not declare.
+[[nodiscard]] bool setShapeIfDeclared(
+  autoware::tensorrt_common::TrtCommon & trt, const std::unordered_set<std::string> & declared,
+  const std::string & name, const nvinfer1::Dims & dims)
+{
+  if (declared.count(name) == 0) {
+    return true;
+  }
+  return trt.setInputShape(name.c_str(), dims);
 }
 
 }  // namespace
@@ -172,8 +261,11 @@ PTv3TRT::~PTv3TRT()
 
 void PTv3TRT::initPtr()
 {
+  voxels_d_ = autoware::cuda_utils::make_unique<float[]>(
+    config_.max_num_voxels_ * config_.max_points_per_voxel_ * config_.num_point_feature_size_);
+  num_points_per_voxel_d_ =
+    autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_);
   grid_coord_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
-  feat_d_ = autoware::cuda_utils::make_unique<float[]>(config_.max_num_voxels_ * 4);
   serialized_code_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
 
@@ -186,9 +278,6 @@ void PTv3TRT::initPtr()
         config_.stage_voxel_capacity(stage) * config_.enc_channels_[stage]));
   }
 
-  compact_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
-    config_.max_num_voxels_ * sizeof(CloudPointTypeXYZIRCAEDT));
-
   if (config_.use_seg3d_head_) {
     pred_labels_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
     pred_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
@@ -198,9 +287,10 @@ void PTv3TRT::initPtr()
         config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT));
     }
     if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
-      reconstructed_features_d_ = autoware::cuda_utils::make_unique<float[]>(
-        config_.cloud_capacity_ * config_.num_point_feature_size_);
-      inverse_map_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
+      // The inverse map covers every cropped point of the densified cloud; the reconstructed
+      // outputs cover only the published current frame.
+      inverse_map_d_ =
+        autoware::cuda_utils::make_unique<std::int64_t[]>(config_.densified_cloud_capacity_);
       reconstructed_labels_d_ =
         autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
       reconstructed_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
@@ -229,6 +319,7 @@ void PTv3TRT::initPtr()
     detection3d_post_ptr_ = std::make_unique<Detection3DPostprocess>(config_, stream_);
   }
 
+  aggregator_ptr_ = std::make_unique<SweepAggregator>(config_, stream_);
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
   if (config_.use_seg3d_head_) {
     post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
@@ -298,35 +389,82 @@ void PTv3TRT::createPointFields()
 
 void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 {
-  std::vector<autoware::tensorrt_common::NetworkIO> network_io;
+  // Models like LitePT declare only a subset of the PTv3 inputs, so check the
+  // network inputs and only wire up what's declared.
+  encoder_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
+    std::vector<std::string>{config_.plugins_path_});
 
-  // Inputs
-  network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
-  network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
-  network_io.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
+  const auto declared = declaredTensors(*encoder_trt_ptr_);
+  std::vector<autoware::tensorrt_common::NetworkIO> network_io;
+  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
+  // Names this node can supply, whether or not the artifact declares them.
+  std::unordered_set<std::string> supported;
+
+  const auto declare_io = [&declared, &network_io, &supported](
+                            const std::string & name, const nvinfer1::Dims & io_dims,
+                            const std::optional<nvinfer1::DataType> data_type = std::nullopt) {
+    supported.emplace(name);
+    if (declared.count(name) == 0) {
+      return;
+    }
+    network_io.emplace_back(name, io_dims, data_type);
+  };
+  const auto declare_profile = [&declared, &profile_dims](
+                                 const std::string & name, const nvinfer1::Dims & min_dims,
+                                 const nvinfer1::Dims & opt_dims, const nvinfer1::Dims & max_dims) {
+    if (declared.count(name) == 0) {
+      return;
+    }
+    profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
+  };
+
+  const std::int64_t num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
+
+  // Inputs: padded voxel points and their counts (the graph averages them per voxel), grid
+  // coordinates and the input level's serialization order.
+  const auto max_points_per_voxel = config_.max_points_per_voxel_;
+  const auto num_features = config_.num_point_feature_size_;
+  declare_io(
+    "voxels", nvinfer1::Dims{3, {-1, max_points_per_voxel, num_features}},
+    nvinfer1::DataType::kFLOAT);
+  declare_io("num_points_per_voxel", nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT32);
+  declare_io("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+  // The encoder consumes the input level's serialization order directly; it used to take the raw
+  // codes and argsort them in-graph, duplicating work the preprocessing already does for the
+  // pooling metadata. serialized_code stays a host-side buffer for chaining the pooling stages.
+  // Only consumed when the finest stage attends; a convolution-only stage 0 reads no base order.
+  for (const auto * name : {"serialized_order", "serialized_inverse"}) {
+    declare_io(name, nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::DataType::kINT64);
+  }
 
   // Outputs: per-encoder-stage point features point_feat_i [N_i, enc_channels[i]],
   // finest to deepest.
   for (std::size_t stage = 0; stage < config_.enc_channels_.size(); ++stage) {
-    network_io.emplace_back(
+    declare_io(
       stageFeatureName(stage), nvinfer1::Dims{2, {-1, config_.enc_channels_[stage]}},
       nvinfer1::DataType::kFLOAT);
   }
 
-  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
+  declare_profile(
+    "voxels", nvinfer1::Dims{3, {config_.voxels_num_[0], max_points_per_voxel, num_features}},
+    nvinfer1::Dims{3, {config_.voxels_num_[1], max_points_per_voxel, num_features}},
+    nvinfer1::Dims{3, {config_.voxels_num_[2], max_points_per_voxel, num_features}});
 
-  profile_dims.emplace_back(
+  declare_profile(
+    "num_points_per_voxel", nvinfer1::Dims{1, {config_.voxels_num_[0]}},
+    nvinfer1::Dims{1, {config_.voxels_num_[1]}}, nvinfer1::Dims{1, {config_.voxels_num_[2]}});
+
+  declare_profile(
     "grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
     nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
 
-  profile_dims.emplace_back(
-    "feat", nvinfer1::Dims{2, {config_.voxels_num_[0], 4}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], 4}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 4}});
-
-  profile_dims.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
-    nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
+  for (const auto * name : {"serialized_order", "serialized_inverse"}) {
+    declare_profile(
+      name, nvinfer1::Dims{2, {num_orders, config_.voxels_num_[0]}},
+      nvinfer1::Dims{2, {num_orders, config_.voxels_num_[1]}},
+      nvinfer1::Dims{2, {num_orders, config_.voxels_num_[2]}});
+  }
 
   // Serialized pooling metadata inputs are precomputed on device each frame and fed to the
   // engine. Cluster tensors are computed too but consumed only by the head engines
@@ -336,19 +474,18 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   // data-dependent, so they are declared dynamic and bounded by the voxel-count optimization
   // profile. A pooled (output) count is at most its input count, so all pooled dims are
   // conservatively bounded by [1, opt, max] voxels.
-  const auto add_pooling_io = [&network_io, &profile_dims](
+  const auto add_pooling_io = [&declare_io, &declare_profile](
                                 const std::string & name, const nvinfer1::Dims & io_dims,
                                 const nvinfer1::Dims & min_dims, const nvinfer1::Dims & opt_dims,
                                 const nvinfer1::Dims & max_dims,
                                 const std::optional<nvinfer1::DataType> data_type = std::nullopt) {
-    network_io.emplace_back(name, io_dims, data_type);
-    profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
+    declare_io(name, io_dims, data_type);
+    declare_profile(name, min_dims, opt_dims, max_dims);
   };
 
   const std::int64_t min_voxels = config_.voxels_num_[0];
   const std::int64_t opt_voxels = config_.voxels_num_[1];
   const std::int64_t max_voxels = config_.voxels_num_[2];
-  const std::int64_t num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
 
   for (std::size_t stage = 0; stage < config_.pooling_strides_.size(); ++stage) {
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
@@ -379,9 +516,7 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
       nvinfer1::Dims{2, {num_orders, max_voxels}});
   }
 
-  encoder_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{config_.plugins_path_});
+  checkEncoderContract(config_, declared, supported);
 
   if (!encoder_trt_ptr_->setup(
         std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
@@ -389,9 +524,21 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
     throw std::runtime_error("Failed to setup encoder TRT engine.");
   }
 
+  // Enumerate again, now that setup() has made the engine the source of IO, and keep the names:
+  // the per-frame paths ask which tensors exist, and asking TensorRT name by name would make it
+  // log an error for each one a gated artifact leaves out.
+  encoder_tensors_ = declaredTensors(*encoder_trt_ptr_);
+
+  // The voxel inputs, grid_coord and the point features are required of every variant;
+  // checkEncoderContract has already refused an artifact missing any of them.
+  encoder_trt_ptr_->setTensorAddress("voxels", voxels_d_.get());
+  encoder_trt_ptr_->setTensorAddress("num_points_per_voxel", num_points_per_voxel_d_.get());
   encoder_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
-  encoder_trt_ptr_->setTensorAddress("feat", feat_d_.get());
-  encoder_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+  bindIfDeclared(
+    *encoder_trt_ptr_, encoder_tensors_, "serialized_order", pre_ptr_->inputLevelSerializedOrder());
+  bindIfDeclared(
+    *encoder_trt_ptr_, encoder_tensors_, "serialized_inverse",
+    pre_ptr_->inputLevelSerializedInverse());
   for (std::size_t stage = 0; stage < stage_feat_d_.size(); ++stage) {
     encoder_trt_ptr_->setTensorAddress(stageFeatureName(stage).c_str(), stage_feat_d_[stage].get());
   }
@@ -446,11 +593,13 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
     }
     const auto counts = stageProfileCounts(stage);
     if (stage == 0) {
-      network_io.emplace_back(
-        "serialized_code", nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::DataType::kINT64);
-      profile_dims.emplace_back(
-        "serialized_code", nvinfer1::Dims{2, {num_orders, counts[0]}},
-        nvinfer1::Dims{2, {num_orders, counts[1]}}, nvinfer1::Dims{2, {num_orders, counts[2]}});
+      for (const auto * name : {"serialized_order", "serialized_inverse"}) {
+        network_io.emplace_back(
+          name, nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::DataType::kINT64);
+        profile_dims.emplace_back(
+          name, nvinfer1::Dims{2, {num_orders, counts[0]}},
+          nvinfer1::Dims{2, {num_orders, counts[1]}}, nvinfer1::Dims{2, {num_orders, counts[2]}});
+      }
       network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
       profile_dims.emplace_back(
         "grid_coord", nvinfer1::Dims{2, {counts[0], 3}}, nvinfer1::Dims{2, {counts[1], 3}},
@@ -504,7 +653,10 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
       continue;
     }
     if (stage == 0) {
-      seg3d_head_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+      seg3d_head_trt_ptr_->setTensorAddress(
+        "serialized_order", pre_ptr_->inputLevelSerializedOrder());
+      seg3d_head_trt_ptr_->setTensorAddress(
+        "serialized_inverse", pre_ptr_->inputLevelSerializedInverse());
       seg3d_head_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
       continue;
     }
@@ -523,22 +675,21 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
 
 void PTv3TRT::bindSerializedPoolingAddresses()
 {
-  // Metadata buffers are allocated once in allocateSerializedPoolingBuffers and never reallocated,
-  // so their device addresses are stable and can be bound a single time. The per-stage
-  // serialized_code buffers are only used to chain pooling stages on the host side and are not
-  // engine inputs, so they are intentionally not bound here.
+  // Metadata buffers are allocated once and never reallocated, so binding them here is enough.
+  // Per-stage serialized_code only chains the pooling stages host-side and is not an engine input.
+  // Metadata is generated for every stage, but a gated encoder reads only the part it declares.
   for (std::size_t stage = 0; stage < serialized_pooling_stages_d_.size(); ++stage) {
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
     auto & buffers = serialized_pooling_stages_d_[stage];
-    encoder_trt_ptr_->setTensorAddress((prefix + "indices").c_str(), buffers.indices.get());
-    encoder_trt_ptr_->setTensorAddress((prefix + "indptr").c_str(), buffers.indptr.get());
-    encoder_trt_ptr_->setTensorAddress(
-      (prefix + "head_indices").c_str(), buffers.head_indices.get());
-    encoder_trt_ptr_->setTensorAddress((prefix + "grid_coord").c_str(), buffers.grid_coord.get());
-    encoder_trt_ptr_->setTensorAddress(
-      (prefix + "serialized_order").c_str(), buffers.serialized_order.get());
-    encoder_trt_ptr_->setTensorAddress(
-      (prefix + "serialized_inverse").c_str(), buffers.serialized_inverse.get());
+    const auto bind = [this, &prefix](const std::string & field, void * data) {
+      bindIfDeclared(*encoder_trt_ptr_, encoder_tensors_, prefix + field, data);
+    };
+    bind("indices", buffers.indices.get());
+    bind("indptr", buffers.indptr.get());
+    bind("head_indices", buffers.head_indices.get());
+    bind("grid_coord", buffers.grid_coord.get());
+    bind("serialized_order", buffers.serialized_order.get());
+    bind("serialized_inverse", buffers.serialized_inverse.get());
   }
 }
 
@@ -579,18 +730,16 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
     const auto in_count = serialized_pooling_num_voxels_[stage];
     const auto out_count = serialized_pooling_num_voxels_[stage + 1];
-    success &=
-      encoder_trt_ptr_->setInputShape((prefix + "indices").c_str(), nvinfer1::Dims{1, {in_count}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "indptr").c_str(), nvinfer1::Dims{1, {out_count + 1}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "head_indices").c_str(), nvinfer1::Dims{1, {out_count}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "grid_coord").c_str(), nvinfer1::Dims{2, {out_count, 3}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "serialized_order").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
-    success &= encoder_trt_ptr_->setInputShape(
-      (prefix + "serialized_inverse").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
+    const auto set_shape = [this, &prefix, &success](
+                             const std::string & field, const nvinfer1::Dims & dims) {
+      success &= setShapeIfDeclared(*encoder_trt_ptr_, encoder_tensors_, prefix + field, dims);
+    };
+    set_shape("indices", nvinfer1::Dims{1, {in_count}});
+    set_shape("indptr", nvinfer1::Dims{1, {out_count + 1}});
+    set_shape("head_indices", nvinfer1::Dims{1, {out_count}});
+    set_shape("grid_coord", nvinfer1::Dims{2, {out_count, 3}});
+    set_shape("serialized_order", nvinfer1::Dims{2, {num_orders, out_count}});
+    set_shape("serialized_inverse", nvinfer1::Dims{2, {num_orders, out_count}});
   }
 
   return success;
@@ -694,32 +843,11 @@ void PTv3TRT::initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & tr
   }
 }
 
-CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const
-{
-  const auto & fields = cloud.fields;
-  const auto num_fields = fields.size();
-
-  if (num_fields == 10 && point_types::is_data_layout_compatible_with_point_xyzircaedt(fields)) {
-    return CloudFormat::XYZIRCAEDT;
-  }
-  if (num_fields == 9 && point_types::is_data_layout_compatible_with_point_xyziradrt(fields)) {
-    return CloudFormat::XYZIRADRT;
-  }
-  if (num_fields == 6 && point_types::is_data_layout_compatible_with_point_xyzirc(fields)) {
-    return CloudFormat::XYZIRC;
-  }
-  if (num_fields == 4 && point_types::is_data_layout_compatible_with_point_xyzi(fields)) {
-    return CloudFormat::XYZI;
-  }
-
-  return CloudFormat::UNKNOWN;
-}
-
 bool PTv3TRT::infer(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
-  bool should_publish_filtered_pointcloud, bool should_detect_objects,
-  std::optional<std::vector<Box3D>> & det_boxes3d,
+  const Eigen::Affine3f & affine_world2current, bool should_publish_segmented_pointcloud,
+  bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud,
+  bool should_detect_objects, std::optional<std::vector<Box3D>> & det_boxes3d,
   std::unordered_map<std::string, double> & proc_timing)
 {
   det_boxes3d.reset();
@@ -731,7 +859,7 @@ bool PTv3TRT::infer(
   const bool should_run_det3d = config_.use_det3d_head_ && should_detect_objects;
 
   stop_watch_ptr_->toc("processing/inner", true);
-  if (!preProcess(msg_ptr, should_run_seg3d)) {
+  if (!preProcess(msg_ptr, affine_world2current, should_run_seg3d)) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Pre-process failed. Skipping inference.");
     return false;
   }
@@ -794,17 +922,21 @@ bool PTv3TRT::infer(
 
 bool PTv3TRT::preProcess(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  const bool should_run_seg3d)
+  const Eigen::Affine3f & affine_world2current, const bool should_run_seg3d)
 {
   using autoware::cuda_utils::clear_async;
 
-  std::call_once(init_cloud_, [this, &msg_ptr]() {
-    input_format_ = detectCloudFormat(*msg_ptr);
-    if (input_format_ == CloudFormat::UNKNOWN) {
-      throw std::runtime_error(
-        "Unsupported point cloud type. Expected one of: XYZIRCAEDT (10 fields), "
-        "XYZIRADRT (9 fields), XYZIRC (6 fields), or XYZI (4 fields).");
-    }
+  aggregator_ptr_->enqueuePointCloud(msg_ptr, affine_world2current);
+  densified_cloud_ = aggregator_ptr_->aggregate();
+  num_current_points_ = static_cast<std::int64_t>(densified_cloud_.num_current_points);
+
+  if (densified_cloud_.num_current_points == 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping inference.");
+    return false;
+  }
+
+  std::call_once(init_cloud_, [this]() {
+    input_format_ = densified_cloud_.current_format;
 
     const auto requested_output_format = parse_cloud_format_string(config_.filter_output_format_);
     filtered_output_format_ =
@@ -876,24 +1008,11 @@ bool PTv3TRT::preProcess(
   });
   allocateSegOutputMessages();
 
-  const auto num_points = msg_ptr->height * msg_ptr->width;
-  if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::FULL) {
-    num_source_points_ = static_cast<std::int64_t>(num_points);
-    current_input_data_ = msg_ptr->data.get();
-  }
-
-  if (num_points == 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping inference.");
-    return false;
-  }
-
-  clear_async(feat_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 4, stream_);
+  clear_async(
+    num_points_per_voxel_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
   clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
   clear_async(
     serialized_code_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
-  clear_async(
-    compact_points_d_.get(),
-    static_cast<std::size_t>(config_.max_num_voxels_) * sizeof(CloudPointTypeXYZIRCAEDT), stream_);
   if (should_run_seg3d) {
     clear_async(pred_labels_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
     clear_async(
@@ -908,10 +1027,7 @@ bool PTv3TRT::preProcess(
     }
     if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
       clear_async(
-        reconstructed_features_d_.get(),
-        static_cast<std::size_t>(config_.cloud_capacity_) * config_.num_point_feature_size_,
-        stream_);
-      clear_async(inverse_map_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
+        inverse_map_d_.get(), static_cast<std::size_t>(config_.densified_cloud_capacity_), stream_);
       clear_async(
         reconstructed_labels_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
       clear_async(
@@ -923,18 +1039,20 @@ bool PTv3TRT::preProcess(
   }
 
   std::size_t num_cropped_points = 0;
+  std::size_t num_cropped_current_points = 0;
   const bool should_reconstruct_source =
     should_run_seg3d && config_.source_reconstruction_ != SourceReconstruction::NONE;
-  num_voxels_ = pre_ptr_->generateFeatures(
-    msg_ptr->data.get(), input_format_, num_points, feat_d_.get(), grid_coord_d_.get(),
-    serialized_code_d_.get(), compact_points_d_.get(),
-    should_reconstruct_source ? reconstructed_features_d_.get() : nullptr,
-    should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::PARTIAL
-      ? cropped_source_points_d_.get()
-      : nullptr,
-    should_reconstruct_source ? inverse_map_d_.get() : nullptr, &num_cropped_points);
+  num_voxels_ = pre_ptr_->generateVoxels(
+    densified_cloud_.points, densified_cloud_.num_points, densified_cloud_.num_current_points,
+    voxels_d_.get(), num_points_per_voxel_d_.get(), grid_coord_d_.get(), serialized_code_d_.get(),
+    should_reconstruct_source ? inverse_map_d_.get() : nullptr, &num_cropped_points,
+    &num_cropped_current_points);
+  num_cropped_current_points_ = static_cast<std::int64_t>(num_cropped_current_points);
+
   if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
-    num_cropped_points_ = static_cast<std::int64_t>(num_cropped_points);
+    pre_ptr_->extractCurrentSourcePoints(
+      densified_cloud_.current_msg->data.get(), densified_cloud_.current_format,
+      densified_cloud_.num_current_points, cropped_source_points_d_.get());
   }
 
   if (num_voxels_ < config_.min_num_voxels_) {
@@ -955,9 +1073,20 @@ bool PTv3TRT::preProcess(
 
   precomputeSerializedPoolingMetadata();
 
+  encoder_trt_ptr_->setInputShape(
+    "voxels", nvinfer1::Dims{
+                3, {num_voxels_, config_.max_points_per_voxel_, config_.num_point_feature_size_}});
+  encoder_trt_ptr_->setInputShape("num_points_per_voxel", nvinfer1::Dims{1, {num_voxels_}});
   encoder_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
-  encoder_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
-  encoder_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+  const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
+  for (const auto * name : {"serialized_order", "serialized_inverse"}) {
+    if (!setShapeIfDeclared(
+          *encoder_trt_ptr_, encoder_tensors_, name,
+          nvinfer1::Dims{2, {num_orders, num_voxels_}})) {
+      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Failed to set %s input shape.", name);
+      return false;
+    }
+  }
 
   if (!setSerializedPoolingInputShapes()) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Failed to set serialized pooling input shapes.");
@@ -999,7 +1128,9 @@ bool PTv3TRT::inferenceSeg3dHead()
     const auto stage_count_voxels = serialized_pooling_num_voxels_[stage];
     if (stage == 0) {
       success &= seg3d_head_trt_ptr_->setInputShape(
-        "serialized_code", nvinfer1::Dims{2, {num_orders, stage_count_voxels}});
+        "serialized_order", nvinfer1::Dims{2, {num_orders, stage_count_voxels}});
+      success &= seg3d_head_trt_ptr_->setInputShape(
+        "serialized_inverse", nvinfer1::Dims{2, {num_orders, stage_count_voxels}});
       success &= seg3d_head_trt_ptr_->setInputShape(
         "grid_coord", nvinfer1::Dims{2, {stage_count_voxels, 3}});
       continue;
@@ -1057,42 +1188,51 @@ bool PTv3TRT::postProcess(
   const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
   bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud)
 {
-  // Segmentation pointcloud
+  // Segmentation outputs describe the current frame only. Current-frame points form the
+  // leading block of the densified cloud and of every crop-derived array, so bounding the
+  // reconstruction counts to the current frame publishes exactly the input frame's points.
   if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     post_ptr_->reconstructPartial(
       inverse_map_d_.get(), pred_labels_d_.get(), pred_probs_d_.get(),
       reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
-      config_.segmentation_class_names_.size(), num_cropped_points_, num_voxels_);
+      config_.segmentation_class_names_.size(), num_cropped_current_points_, num_voxels_);
   }
   if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
     post_ptr_->reconstructFull(
       pre_ptr_->cropMask(), pre_ptr_->cropIndices(), inverse_map_d_.get(), pred_labels_d_.get(),
       pred_probs_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
-      config_.segmentation_class_names_.size(), num_source_points_, num_voxels_);
+      config_.segmentation_class_names_.size(), num_current_points_, num_voxels_);
   }
 
-  const auto source_features = config_.source_reconstruction_ != SourceReconstruction::NONE
-                                 ? reconstructed_features_d_.get()
-                                 : feat_d_.get();
+  // Without reconstruction the outputs sit at voxel level, positioned at each voxel's first
+  // point (slot 0 of the padded voxel), hence the padded row stride.
+  const auto source_features =
+    config_.source_reconstruction_ == SourceReconstruction::FULL      ? densified_cloud_.points
+    : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? pre_ptr_->croppedFeatures()
+                                                                      : voxels_d_.get();
+  const auto source_feature_stride =
+    config_.source_reconstruction_ == SourceReconstruction::NONE
+      ? config_.max_points_per_voxel_ * config_.num_point_feature_size_
+      : config_.num_point_feature_size_;
   const auto source_labels = config_.source_reconstruction_ != SourceReconstruction::NONE
                                ? reconstructed_labels_d_.get()
                                : pred_labels_d_.get();
   const auto source_probs = config_.source_reconstruction_ != SourceReconstruction::NONE
                               ? reconstructed_probs_d_.get()
                               : pred_probs_d_.get();
-  const auto source_points = config_.source_reconstruction_ == SourceReconstruction::FULL
-                               ? current_input_data_
-                             : config_.source_reconstruction_ == SourceReconstruction::PARTIAL
-                               ? cropped_source_points_d_.get()
-                               : compact_points_d_.get();
+  const void * source_points = config_.source_reconstruction_ == SourceReconstruction::FULL
+                                 ? densified_cloud_.current_msg->data.get()
+                               : config_.source_reconstruction_ == SourceReconstruction::PARTIAL
+                                 ? cropped_source_points_d_.get()
+                                 : nullptr;
   const auto num_source_output_points =
-    config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_source_points_
-    : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_points_
+    config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_current_points_
+    : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_current_points_
                                                                       : num_voxels_;
 
   if (should_publish_segmented_pointcloud) {
     const auto num_segmented_points = post_ptr_->createSegmentationPointcloud(
-      source_features, source_labels, source_probs,
+      source_features, source_feature_stride, source_labels, source_probs,
       reinterpret_cast<point_types::PointXYZCPE *>(segmented_points_msg_ptr_->data.get()),
       config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
@@ -1108,7 +1248,7 @@ bool PTv3TRT::postProcess(
   // Visualization pointcloud
   if (should_publish_visualization_pointcloud) {
     post_ptr_->createVisualizationPointcloud(
-      source_features, source_labels,
+      source_features, source_feature_stride, source_labels,
       reinterpret_cast<float *>(visualization_points_msg_ptr_->data.get()),
       config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
@@ -1119,8 +1259,14 @@ bool PTv3TRT::postProcess(
   }
 
   if (should_publish_filtered_pointcloud) {
+    // The filtered cloud is rebuilt from the current frame's original points; PTv3Config
+    // rejects filter classes in 'none' mode, where no per-point source exists.
+    if (source_points == nullptr) {
+      throw std::runtime_error(
+        "The filtered pointcloud requires source_reconstruction 'partial' or 'full'.");
+    }
     const auto num_filtered_points = post_ptr_->createFilteredPointcloud(
-      source_points, input_format_, filtered_output_format_, source_probs,
+      source_points, densified_cloud_.current_format, filtered_output_format_, source_probs,
       filtered_points_msg_ptr_->data.get(), config_.segmentation_class_names_.size(),
       num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));

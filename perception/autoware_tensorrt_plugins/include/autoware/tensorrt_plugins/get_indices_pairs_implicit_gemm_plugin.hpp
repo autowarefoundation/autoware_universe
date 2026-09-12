@@ -129,7 +129,7 @@ private:
   void initFieldsToSerialize();
 
   // upper bound of number of output indices. needed to bound memory usage.
-  static constexpr int out_indices_num_limit_{256000};
+  static constexpr int out_indices_num_limit_{512000};
 
   // Pre-allocated workspace size for thrust temporary buffer used by spconv sort operations.
   // 8 MiB is generous enough for CUB radix sort of up to out_indices_num_limit_ elements.

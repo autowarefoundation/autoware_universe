@@ -43,8 +43,10 @@ class PTv3Config
 public:
   PTv3Config(
     const bool use_seg3d_head, const bool use_det3d_head, const std::string & plugins_path,
-    const std::int64_t cloud_capacity, const std::vector<std::int64_t> & voxels_num,
+    const std::int64_t cloud_capacity, const std::string & densification_world_frame_id,
+    const std::int64_t densification_num_past_frames, const std::vector<std::int64_t> & voxels_num,
     const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size,
+    const std::int64_t max_points_per_voxel,
     const std::vector<std::string> & segmentation_class_names = {},
     const std::unordered_map<std::string, std::string> & segmentation_class_mapping = {},
     const std::vector<std::string> & serialization_orders = {},
@@ -72,6 +74,16 @@ public:
         "At least one of segmentation3d.use_head or detection3d.use_head must be true.");
     }
 
+    if (densification_world_frame_id.empty()) {
+      throw std::runtime_error("densification_world_frame_id must not be empty.");
+    }
+    if (densification_num_past_frames < 0) {
+      throw std::runtime_error("densification_num_past_frames must be non-negative.");
+    }
+    densification_world_frame_id_ = densification_world_frame_id;
+    densification_num_past_frames_ = densification_num_past_frames;
+    densified_cloud_capacity_ = cloud_capacity_ * (densification_num_past_frames_ + 1);
+
     if (voxels_num.size() == 3) {
       min_num_voxels_ = voxels_num[0];
       max_num_voxels_ = voxels_num[2];
@@ -93,6 +105,10 @@ public:
       voxel_y_size_ = voxel_size[1];
       voxel_z_size_ = voxel_size[2];
     }
+    if (max_points_per_voxel <= 0) {
+      throw std::runtime_error("max_points_per_voxel must be positive.");
+    }
+    max_points_per_voxel_ = max_points_per_voxel;
 
     // Cells the device grid mapping (see gridCoord) can emit per axis - one more than
     // round(extent / size) when a range border is not voxel-aligned. The largest coordinate comes
@@ -132,6 +148,14 @@ public:
       filter_output_format_ = filter_output_format;
       filter_apply_to_segmentation_ = filter_apply_to_segmentation;
       source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
+
+      // The filtered cloud is rebuilt from the current frame's original points, which requires
+      // per-point reconstruction. Voxel representatives can come from past sweeps, so there is
+      // no original-point source in 'none' mode.
+      if (source_reconstruction_ == SourceReconstruction::NONE && !filter_class_indices_.empty()) {
+        throw std::runtime_error(
+          "segmentation3d.filter.classes requires source_reconstruction 'partial' or 'full'.");
+      }
 
       // dec_depths drives the seg-head engine input set: block stages consume their
       if (dec_depths.size() != pooling_strides_.size()) {
@@ -450,10 +474,19 @@ public:
   std::size_t det_grid_y_size_{};
 
   // Common network parameters
-  std::int64_t cloud_capacity_{};
+  std::int64_t cloud_capacity_{};            // capacity of one lidar frame
+  std::int64_t densified_cloud_capacity_{};  // capacity of the multi-frame network input
   std::int64_t min_num_voxels_{};
   std::int64_t max_num_voxels_{};
-  const std::int64_t num_point_feature_size_{4};  // x, y, z, intensity
+  std::int64_t max_points_per_voxel_{};  // padded voxel slots, matches the training voxelizer
+  const std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, time_lag
+
+  // Densification parameters
+  std::string densification_world_frame_id_;
+  std::int64_t densification_num_past_frames_{};
+  // Sweep points inside the |x|,|y| box of this half width around the sweep's own origin
+  // are ego ghosts; the box and the value mirror the training loader's remove_close.
+  const float sweep_close_radius_{1.0F};
 
   // Pointcloud range in meters
   float min_x_range_{};

@@ -39,10 +39,10 @@ PTv3Config makeDetectionConfig(
   const std::vector<std::int64_t> & voxels_num = {1, 4, 8})
 {
   return PTv3Config(
-    false, true, "", 8, voxels_num, point_cloud_range, voxel_size, {}, {}, {"z", "z-trans"},
-    {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false, "", {}, {"CAR", "PEDESTRIAN"},
-    bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
-    true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
+    false, true, "", 8, "map", 1, voxels_num, point_cloud_range, voxel_size, 2, {}, {},
+    {"z", "z-trans"}, {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false, "", {},
+    {"CAR", "PEDESTRIAN"}, bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds,
+    yaw_norm_thresholds, true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
 }
 
 // Segmentation-only config exercising segmentation3d.class_mapping resolution.
@@ -52,9 +52,9 @@ PTv3Config makeSegmentationConfig(
 {
   std::vector<std::int64_t> palette(segmentation_class_names.size() * 3, 0);
   return PTv3Config(
-    true, false, "", 8, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F}, {1.0F, 1.0F, 1.0F},
-    segmentation_class_names, segmentation_class_mapping, {"z", "z-trans"}, {2, 2}, {8, 16, 32},
-    palette, {}, "xyzi", false, "partial", {0, 0});
+    true, false, "", 8, "map", 1, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F},
+    {1.0F, 1.0F, 1.0F}, 2, segmentation_class_names, segmentation_class_mapping, {"z", "z-trans"},
+    {2, 2}, {8, 16, 32}, palette, {}, "xyzi", false, "partial", {0, 0});
 }
 
 TEST(PTv3ConfigTest, AcceptsCompatibleDetectionGrid)

@@ -103,7 +103,7 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudDoesNotFilterConfiguredClass
   const auto config = makeTestConfig();
   PostprocessCuda postprocess(config, stream_);
 
-  // XYZ + padding for float4 input layout used by kernel.
+  // XYZ + one padding value per row: feature stride 4.
   const std::vector<float> features = {
     1.0f, 10.0f, 100.0f, 0.0f,  // label 0: car
     2.0f, 20.0f, 200.0f, 0.0f,  // label 1: truck (filtered)
@@ -126,7 +126,7 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudDoesNotFilterConfiguredClass
   copyToDevice(probs_d.get(), probs);
 
   const auto num_segmented_points = postprocess.createSegmentationPointcloud(
-    features_d.get(), labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
+    features_d.get(), 4, labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
     num_points);
 
   EXPECT_EQ(num_segmented_points, 4U);
@@ -172,7 +172,7 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndice
   const auto config = makeTestConfig(true);
   PostprocessCuda postprocess(config, stream_);
 
-  // XYZ + padding for float4 input layout used by kernel.
+  // XYZ + one padding value per row: feature stride 4.
   const std::vector<float> features = {
     1.0f, 10.0f, 100.0f, 0.0f,  // label 0: car
     2.0f, 20.0f, 200.0f, 0.0f,  // label 1: truck (filtered)
@@ -195,7 +195,7 @@ TEST_F(PostprocessKernelTest, SegmentationPointcloudFiltersConfiguredClassIndice
   copyToDevice(probs_d.get(), probs);
 
   const auto num_segmented_points = postprocess.createSegmentationPointcloud(
-    features_d.get(), labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
+    features_d.get(), 4, labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
     num_points);
 
   EXPECT_EQ(num_segmented_points, 3U);
