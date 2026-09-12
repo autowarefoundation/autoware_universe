@@ -15,6 +15,7 @@
 #pragma once
 
 #include "concatenation_info_manager.hpp"
+#include "matching_strategy_type.hpp"
 #include "traits.hpp"
 
 #include <deque>
@@ -60,7 +61,8 @@ public:
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
     managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>()),
     concatenation_info_manager_(
-      node.get_parameter("matching_strategy.type").as_string(), input_topics)
+      parse_matching_strategy(node.get_parameter("matching_strategy.type").as_string()),
+      input_topics)
   {
   }
 
