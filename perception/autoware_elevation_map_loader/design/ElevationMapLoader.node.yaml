@@ -25,7 +25,7 @@ subscribers:
     remap_target: input/pointcloud_map_metadata
   - name: map_hash
     message_type: tier4_external_api_msgs/msg/MapHash
-    global: /api/autoware/get/map/info/hash
+    remap_target: /api/autoware/get/map/info/hash
 
 publishers:
   - name: elevation_map
