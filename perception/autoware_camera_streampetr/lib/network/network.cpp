@@ -188,6 +188,9 @@ void StreamPetrNetwork::initialize_memory_and_profiling()
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
   mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
+  // cudaMalloc does not zero: without this the first inference would read garbage temporal state.
+  wipe_memory();
+
   // events for measurement - pass profiler to Duration objects
   dur_backbone_ = std::make_unique<Duration>("backbone", profiler_);
   dur_ptshead_ = std::make_unique<Duration>("ptshead", profiler_);
@@ -212,13 +215,13 @@ void StreamPetrNetwork::configure_nms_if_needed()
 
 void StreamPetrNetwork::wipe_memory()
 {
-  if (is_inference_initialized_) {
-    // Reset the memory buffers to zeros
-    pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
-    pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
-    pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
-    pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
-  }
+  pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
+  pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
+  pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
+  pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
+  // The timestamps in mem_buf are part of the same temporal state and must be dropped with it.
+  mem_.clear();
+  mem_.step_reset();
 }
 
 void StreamPetrNetwork::inference_detector(
@@ -322,6 +325,10 @@ void StreamPetrNetwork::postprocess(
 StreamPetrNetwork::~StreamPetrNetwork()
 {
   if (stream_) {
+    // Destroying a stream with work still in flight is undefined behaviour.
+    cudaStreamSynchronize(stream_);
+    mem_.release();
+    cudaStreamSynchronize(stream_);
     cudaStreamDestroy(stream_);
   }
 }
