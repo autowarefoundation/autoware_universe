@@ -161,12 +161,13 @@ void OccupancyGridMapProjectiveBlindSpot::updateWithPointCloud(
   cudaStreamSynchronize(stream_);
 }
 
-void OccupancyGridMapProjectiveBlindSpot::initRosParam(rclcpp::Node & node)
+void OccupancyGridMapProjectiveBlindSpot::initRosParam(
+  rclcpp::node_interfaces::NodeParametersInterface & parameters)
 {
-  projection_dz_threshold_ =
-    node.declare_parameter<float>("OccupancyGridMapProjectiveBlindSpot.projection_dz_threshold");
-  obstacle_separation_threshold_ = node.declare_parameter<float>(
-    "OccupancyGridMapProjectiveBlindSpot.obstacle_separation_threshold");
+  projection_dz_threshold_ = utils::declareParameter<float>(
+    parameters, "OccupancyGridMapProjectiveBlindSpot.projection_dz_threshold");
+  obstacle_separation_threshold_ = utils::declareParameter<float>(
+    parameters, "OccupancyGridMapProjectiveBlindSpot.obstacle_separation_threshold");
 }
 
 }  // namespace costmap_2d

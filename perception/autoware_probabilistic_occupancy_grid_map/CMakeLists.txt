@@ -84,9 +84,13 @@ if(${CUDA_FOUND})
     ${PROJECT_NAME}_cuda
   )
 
-  rclcpp_components_register_node(pointcloud_based_occupancy_grid_map
+  autoware_agnocast_wrapper_setup(pointcloud_based_occupancy_grid_map)
+
+  autoware_agnocast_wrapper_register_node(pointcloud_based_occupancy_grid_map
     PLUGIN "autoware::occupancy_grid_map::PointcloudBasedOccupancyGridMapNode"
     EXECUTABLE pointcloud_based_occupancy_grid_map_node
+    AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+    ROS2_EXECUTOR SingleThreadedExecutor
   )
 
   # GridMapFusionNode

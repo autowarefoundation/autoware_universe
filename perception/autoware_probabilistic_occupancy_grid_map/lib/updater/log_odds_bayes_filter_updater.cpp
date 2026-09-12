@@ -29,7 +29,8 @@ namespace autoware::occupancy_grid_map
 namespace costmap_2d
 {
 
-void OccupancyGridMapLOBFUpdater::initRosParam(rclcpp::Node & /*node*/)
+void OccupancyGridMapLOBFUpdater::initRosParam(
+  rclcpp::node_interfaces::NodeParametersInterface & /*parameters*/)
 {
   // nothing to load
 }
