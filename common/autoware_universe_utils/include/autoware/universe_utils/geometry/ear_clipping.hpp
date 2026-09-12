@@ -18,6 +18,7 @@
 #include "autoware/universe_utils/geometry/alt_geometry.hpp"
 
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace autoware::universe_utils
@@ -35,6 +36,29 @@ struct LinkedPoint
   std::optional<std::size_t> next_index;
   [[nodiscard]] double x() const { return pt.x(); }
   [[nodiscard]] double y() const { return pt.y(); }
+
+  // Accessors for the doubly-linked structure. Once a node has been linked via
+  // insert_point(), prev_index/next_index are always set and are never cleared.
+  // prev()/next() therefore assert that invariant and throw on violation rather
+  // than silently returning a default, which would propagate a subtly wrong
+  // triangulation downstream. Use has_prev()/has_next() at the few sites that
+  // must legitimately check (e.g. loop termination).
+  [[nodiscard]] std::size_t prev() const
+  {
+    if (!prev_index.has_value()) {
+      throw std::logic_error("LinkedPoint::prev() called on unlinked node");
+    }
+    return prev_index.value();
+  }
+  [[nodiscard]] std::size_t next() const
+  {
+    if (!next_index.has_value()) {
+      throw std::logic_error("LinkedPoint::next() called on unlinked node");
+    }
+    return next_index.value();
+  }
+  [[nodiscard]] bool has_prev() const { return prev_index.has_value(); }
+  [[nodiscard]] bool has_next() const { return next_index.has_value(); }
 };
 
 /**
