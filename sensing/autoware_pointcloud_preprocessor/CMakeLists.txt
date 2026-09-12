@@ -3,6 +3,9 @@ project(autoware_pointcloud_preprocessor)
 
 find_package(autoware_cmake REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  find_package(agnocastlib REQUIRED)
+endif()
 autoware_package()
 
 # Suppress CGAL warning
@@ -247,10 +250,13 @@ target_include_directories(pointcloud_preprocessor_filter PRIVATE
 ament_target_dependencies(pointcloud_preprocessor_filter
   autoware_agnocast_wrapper
 )
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  ament_target_dependencies(pointcloud_preprocessor_filter SYSTEM agnocastlib)
+endif()
 autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::BlockageDiagComponent"
   EXECUTABLE blockage_diag_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 

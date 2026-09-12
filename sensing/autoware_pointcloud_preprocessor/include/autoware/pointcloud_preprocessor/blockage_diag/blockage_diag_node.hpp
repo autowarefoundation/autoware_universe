@@ -21,13 +21,15 @@
 #include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
 
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/header.hpp>
 
@@ -44,28 +46,25 @@
 namespace autoware::pointcloud_preprocessor
 {
 using diagnostic_updater::DiagnosticStatusWrapper;
-using diagnostic_updater::Updater;
 
-class BlockageDiagComponent : public rclcpp::Node
+class BlockageDiagComponent : public autoware::agnocast_wrapper::Node
 {
 private:
   /** \brief Parameter service callback result : needed to be hold */
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
-  image_transport::Publisher lidar_depth_map_pub_;
-  image_transport::Publisher blockage_mask_pub_;
-  image_transport::Publisher single_frame_dust_mask_pub;
-  image_transport::Publisher multi_frame_dust_mask_pub;
-  image_transport::Publisher blockage_dust_merged_pub;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr
-    ground_blockage_ratio_pub_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr
-    sky_blockage_ratio_pub_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr
-    ground_dust_ratio_pub_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image) lidar_depth_map_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image) blockage_mask_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image) single_frame_dust_mask_pub;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image) multi_frame_dust_mask_pub;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image) blockage_dust_merged_pub;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float32Stamped)
+  ground_blockage_ratio_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float32Stamped) sky_blockage_ratio_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float32Stamped) ground_dust_ratio_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::StringStamped) blockage_type_pub_;
 
   // cppcheck-suppress unknownMacro
   AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) pointcloud_sub_;
@@ -97,7 +96,7 @@ private:
     const DustDetectionResult & dust_result, const std_msgs::msg::Header & input_header,
     const cv::Mat & blockage_mask_multi_frame);
 
-  Updater updater_{this};
+  autoware::agnocast_wrapper::diagnostic_updater::Updater updater_{this};
 
   // PointCloud2 to depth image converter
   std::unique_ptr<pointcloud2_to_depth_image::PointCloud2ToDepthImage> depth_image_converter_;
