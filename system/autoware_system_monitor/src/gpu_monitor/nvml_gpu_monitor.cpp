@@ -35,6 +35,65 @@
 
 namespace
 {
+// NVML 13 renamed clock throttle reasons to clock event reasons. Keep the
+// deprecated identifiers out of the NVML 13+ implementation so this remains
+// compatible when those identifiers are removed from a future SDK.
+#if defined(NVML_API_VERSION) && NVML_API_VERSION >= 13
+const char * clockEventReasonToString(unsigned long long reason)  // NOLINT
+{
+  return (
+    (reason & nvmlClocksEventReasonGpuIdle)                     ? "GpuIdle"
+    : (reason & nvmlClocksEventReasonApplicationsClocksSetting) ? "ApplicationsClocksSetting"
+    : (reason & nvmlClocksEventReasonSwPowerCap)                ? "SwPowerCap"
+    : (reason & nvmlClocksThrottleReasonHwSlowdown)             ? "HwSlowdown"
+    : (reason & nvmlClocksEventReasonSyncBoost)                 ? "SyncBoost"
+    : (reason & nvmlClocksEventReasonSwThermalSlowdown)         ? "SwThermalSlowdown"
+    : (reason & nvmlClocksThrottleReasonHwThermalSlowdown)      ? "HwThermalSlowdown"
+    : (reason & nvmlClocksThrottleReasonHwPowerBrakeSlowdown)   ? "HwPowerBrakeSlowdown"
+    : (reason & nvmlClocksEventReasonDisplayClockSetting)       ? "DisplayClockSetting"
+                                                                : "UNKNOWN");
+}
+
+bool isIgnoredClockEventReason(unsigned long long reason)  // NOLINT
+{
+  switch (reason) {
+    case nvmlClocksEventReasonGpuIdle:
+    case nvmlClocksEventReasonApplicationsClocksSetting:
+    case nvmlClocksEventReasonSwPowerCap:
+      return true;
+    default:
+      return false;
+  }
+}
+#else
+const char * clockEventReasonToString(unsigned long long reason)  // NOLINT
+{
+  return (
+    (reason & nvmlClocksThrottleReasonGpuIdle)                     ? "GpuIdle"
+    : (reason & nvmlClocksThrottleReasonApplicationsClocksSetting) ? "ApplicationsClocksSetting"
+    : (reason & nvmlClocksThrottleReasonSwPowerCap)                ? "SwPowerCap"
+    : (reason & nvmlClocksThrottleReasonHwSlowdown)                ? "HwSlowdown"
+    : (reason & nvmlClocksThrottleReasonSyncBoost)                 ? "SyncBoost"
+    : (reason & nvmlClocksThrottleReasonSwThermalSlowdown)         ? "SwThermalSlowdown"
+    : (reason & nvmlClocksThrottleReasonHwThermalSlowdown)         ? "HwThermalSlowdown"
+    : (reason & nvmlClocksThrottleReasonHwPowerBrakeSlowdown)      ? "HwPowerBrakeSlowdown"
+    : (reason & nvmlClocksThrottleReasonDisplayClockSetting)       ? "DisplayClockSetting"
+                                                                   : "UNKNOWN");
+}
+
+bool isIgnoredClockEventReason(unsigned long long reason)  // NOLINT
+{
+  switch (reason) {
+    case nvmlClocksThrottleReasonGpuIdle:
+    case nvmlClocksThrottleReasonApplicationsClocksSetting:
+    case nvmlClocksThrottleReasonSwPowerCap:
+      return true;
+    default:
+      return false;
+  }
+}
+#endif
+
 // NVML 13 (CUDA 13) deprecated nvmlDeviceGetTemperature() and
 // nvmlDeviceGetCurrentClocksThrottleReasons() in favor of the V / Event variants.
 // These thin wrappers select the appropriate API at compile time so the monitor
@@ -394,30 +453,23 @@ void GPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
       return;
     }
 
-    unsigned long long clocksThrottleReasons = 0LL;  // NOLINT
-    ret = getClocksEventReasons(itr->device, &clocksThrottleReasons);
+    unsigned long long clocksEventReasons = 0LL;  // NOLINT
+    ret = getClocksEventReasons(itr->device, &clocksEventReasons);
     if (ret != NVML_SUCCESS) {
-      stat.summary(DiagStatus::ERROR, "Failed to retrieve current clocks throttling reasons");
+      stat.summary(DiagStatus::ERROR, "Failed to retrieve current clock event reasons");
       stat.add(fmt::format("GPU {}: name", index), itr->name);
       stat.add(fmt::format("GPU {}: bus-id", index), itr->pci.busId);
       stat.add(fmt::format("GPU {}: content", index), nvmlErrorString(ret));
       return;
     }
 
-    while (clocksThrottleReasons) {
-      unsigned long long flag = clocksThrottleReasons & ((~clocksThrottleReasons) + 1);  // NOLINT
-      clocksThrottleReasons ^= flag;
-      reasons.emplace_back(reasonToString(flag));
+    while (clocksEventReasons) {
+      unsigned long long flag = clocksEventReasons & ((~clocksEventReasons) + 1);  // NOLINT
+      clocksEventReasons ^= flag;
+      reasons.emplace_back(clockEventReasonToString(flag));
 
-      switch (flag) {
-        case nvmlClocksThrottleReasonGpuIdle:
-        case nvmlClocksThrottleReasonApplicationsClocksSetting:
-        case nvmlClocksThrottleReasonSwPowerCap:
-          // we do not treat as error
-          break;
-        default:
-          level = DiagStatus::ERROR;
-          break;
+      if (!isIgnoredClockEventReason(flag)) {
+        level = DiagStatus::ERROR;
       }
     }
 
@@ -522,26 +574,19 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus() const
       continue;
     }
 
-    unsigned long long clocksThrottleReasons = 0LL;  // NOLINT
-    ret = getClocksEventReasons(itr->device, &clocksThrottleReasons);
+    unsigned long long clocksEventReasons = 0LL;  // NOLINT
+    ret = getClocksEventReasons(itr->device, &clocksEventReasons);
     if (ret != NVML_SUCCESS) {
       continue;
     }
 
     int thermal_throttling = DiagStatus::OK;
-    while (clocksThrottleReasons) {
-      unsigned long long flag = clocksThrottleReasons & ((~clocksThrottleReasons) + 1);  // NOLINT
-      clocksThrottleReasons ^= flag;
+    while (clocksEventReasons) {
+      unsigned long long flag = clocksEventReasons & ((~clocksEventReasons) + 1);  // NOLINT
+      clocksEventReasons ^= flag;
 
-      switch (flag) {
-        case nvmlClocksThrottleReasonGpuIdle:
-        case nvmlClocksThrottleReasonApplicationsClocksSetting:
-        case nvmlClocksThrottleReasonSwPowerCap:
-          // we do not treat as error
-          break;
-        default:
-          thermal_throttling = DiagStatus::ERROR;
-          break;
+      if (!isIgnoredClockEventReason(flag)) {
+        thermal_throttling = DiagStatus::ERROR;
       }
     }
 
