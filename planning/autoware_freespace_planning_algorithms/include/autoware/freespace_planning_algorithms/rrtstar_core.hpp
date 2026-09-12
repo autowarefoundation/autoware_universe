@@ -74,6 +74,8 @@ public:
 
   bool isValidPose(const Pose & pose) const { return isInside(pose) && is_obstacle_free_(pose); }
   double getReedsSheppRadius() const { return rsspace_.rho_; }
+  // Reseed the sampler, so tests can make the sampling sequence deterministic.
+  void setSeed(const std::mt19937::result_type seed) { rand_gen_.seed(seed); }
 
 private:
   bool isInside(const Pose & p) const;
@@ -154,6 +156,9 @@ private:
   const double collision_check_resolution_;
   const bool is_informed_;
   CSpace cspace_;
+
+  void updateGoalLink(
+    const NodeSharedPtr & node_new, const bool is_reached, const bool did_reconnect);
 };
 
 }  // namespace autoware::freespace_planning_algorithms::rrtstar_core
