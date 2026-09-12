@@ -60,6 +60,16 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
     <arg name="max_wheel_steer_angle_deg" default="0.0" description="Override the wheel max steer angle [deg] used for steer normalization; 0 uses the physics value"/>
+    <arg
+      name="steering_lag_time_constant"
+      default="0.05"
+      description="Time constant [s] of the first-order lag on the steer command, standing in for the steering actuator. CARLA 0.10's own steering settles in ~0.1 s, so a larger value only adds delay the controller cannot see"
+    />
+    <arg
+      name="vehicle_physics_config"
+      default="$(find-pkg-share autoware_carla_interface)/config/vehicle_physics.yaml"
+      description="YAML with the physics written onto the ego after it spawns (mass, steering curve, per-axle wheel settings). CARLA 0.10 gives every car the same placeholder physics, which does not match the vehicle Autoware plans for. Applied only on CARLA 0.10+ (calibrated for its placeholder physics; a no-op on 0.9.x, whose vehicles keep their own physics). Empty keeps CARLA's own values"
+    />
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
     <arg name="wake_sleeping_physics" default="false" description="Nudge the ego physics body awake when launching from standstill (CARLA 0.10 sleeping-body workaround; not needed on 0.9.15)"/>
     <arg name="traffic_light.publish" default="false" description="Publish CARLA traffic-light states on /perception/traffic_light_recognition/traffic_signals"/>
@@ -75,6 +85,41 @@
       name="traffic_light.id_map"
       default=""
       description="Optional override 'opendrive_id:group_id[|group_id...],...' that pins a CARLA signal id to one or more Autoware group ids, taking precedence over position matching"
+    />
+
+    <!-- cspell:ignore virtualenv -->
+    <!-- Scenario bridge (closed-loop with the CARLA scenario runner).
+         Set with_scenario:=<install-source>#<scenario-name> to run a scenario
+         closed loop; empty (the default) leaves the bridge off, i.e. the current
+         behavior. Pass ego_vehicle_role_name:=Ego so the scenario framework can
+         attach to the ego this interface node spawns. -->
+    <arg
+      name="with_scenario"
+      default=""
+      description="Run a CARLA scenario closed loop, as '&lt;source&gt;#&lt;scenario-name&gt;' (the '#' separates source from scenario, since sources use ':' '@' '/'). &lt;source&gt; is a wheelhouse (a .zip of wheels or a directory of wheels, installed offline with pip --no-index --no-deps) or a pip install source; it is installed into a venv and its 'scenario' entrypoint hosts the gRPC server. Empty (default) disables the scenario_bridge node (current behavior)."
+    />
+    <arg
+      name="scenario_python"
+      default="python3.12"
+      description="Interpreter used to build the scenario runner's virtualenv (must match the wheelhouse's CARLA 0.10 wheel ABI; cp312 for the current wheelhouse)"
+    />
+    <arg name="scenario_pip_args" default="" description="Extra 'pip install' args for the scenario runner venv, e.g. '--find-links /path/to/carla_wheels' for the vendored CARLA wheel"/>
+    <arg
+      name="scenario_overrides"
+      default=""
+      description="Extra Hydra overrides for the scenario runner, e.g. 'map=town10hd_opt'. A scenario authored for a map other than the runner's default needs its map named here, since Hydra resolves the map group after the scenario one"
+    />
+    <arg name="bridge_address" default="localhost:50052" description="host:port of the scenario-runner AutowareBridge gRPC server to dial"/>
+    <arg name="auto_engage" default="true" description="Auto change_to_autonomous once localization is initialized, the route is set, and autonomous mode is available (scenario/sim only)"/>
+    <arg
+      name="initialize_localization"
+      default="true"
+      description="Call /api/localization/initialize from the mission initial pose; set false for stacks that localize outside the AD API (CARLA ground-truth / E2E, localization:=false)"
+    />
+    <arg
+      name="require_localization_initialized"
+      default="true"
+      description="Require LocalizationInitializationState=INITIALIZED for readiness; set false alongside initialize_localization for ground-truth / E2E localization"
     />
 
     <!-- CARLA Interface -->
@@ -104,6 +149,8 @@
       <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>
       <param name="max_wheel_steer_angle_deg" value="$(var max_wheel_steer_angle_deg)"/>
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
+      <param name="vehicle_physics_config" value="$(var vehicle_physics_config)"/>
+      <param name="steering_lag_time_constant" value="$(var steering_lag_time_constant)"/>
       <param name="wake_sleeping_physics" value="$(var wake_sleeping_physics)"/>
       <param name="traffic_light.publish" value="$(var traffic_light.publish)"/>
       <param name="traffic_light.force_green" value="$(var traffic_light.force_green)"/>
@@ -111,6 +158,30 @@
       <param name="traffic_light.match_distance" value="$(var traffic_light.match_distance)"/>
       <param name="traffic_light.match_ratio" value="$(var traffic_light.match_ratio)"/>
       <param name="traffic_light.id_map" value="$(var traffic_light.id_map)"/>
+    </node>
+
+    <!-- Scenario runner: install the runner (named by with_scenario) into a
+         virtualenv and exec its gRPC server. Launch owns this process's lifecycle
+         (start/stop); the scenario_bridge node below only dials it. Only run when
+         with_scenario is non-empty. -->
+    <!-- The command's arguments carry no quotes on purpose: the XML frontend splits
+         cmd into tokens before substituting, so a quoted substitution breaks the
+         parse outright, while an option written as 'opt=$(var x)' stays one token
+         even when x is empty or holds spaces. -->
+    <executable
+      cmd="ros2 run autoware_carla_interface scenario_runner $(var with_scenario) --python=$(var scenario_python) --pip-args=$(var scenario_pip_args) --overrides=$(var scenario_overrides)"
+      output="screen"
+      if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)"
+    />
+
+    <!-- Scenario bridge: dial the runner's gRPC server, pull the mission, and
+         drive Autoware's localization init / routing / engage and report
+         readiness. Only launched when with_scenario is non-empty. -->
+    <node pkg="autoware_carla_interface" exec="scenario_bridge" name="scenario_bridge" output="screen" if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)">
+      <param name="bridge_address" value="$(var bridge_address)"/>
+      <param name="auto_engage" value="$(var auto_engage)"/>
+      <param name="initialize_localization" value="$(var initialize_localization)"/>
+      <param name="require_localization_initialized" value="$(var require_localization_initialized)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>
