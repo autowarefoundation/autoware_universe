@@ -66,7 +66,7 @@ TopicStateMonitorNode::TopicStateMonitorNode(const rclcpp::NodeOptions & node_op
     this->add_on_set_parameters_callback(std::bind(&TopicStateMonitorNode::onParameter, this, _1));
 
   // Core
-  topic_state_monitor_ = std::make_unique<TopicStateMonitor>(*this, param_);
+  topic_state_monitor_ = std::make_unique<TopicStateMonitor>(get_clock(), param_);
 
   // Subscriber
   rclcpp::QoS qos = rclcpp::QoS{1};
@@ -79,8 +79,8 @@ TopicStateMonitorNode::TopicStateMonitorNode(const rclcpp::NodeOptions & node_op
 
   if (node_param_.is_transform) {
     sub_transform_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-      node_param_.topic, qos, [this](tf2_msgs::msg::TFMessage::ConstSharedPtr msg) {
-        for (const auto & transform : msg->transforms) {
+      node_param_.topic, qos, [this](const tf2_msgs::msg::TFMessage & msg) {
+        for (const auto & transform : msg.transforms) {
           if (
             transform.header.frame_id == node_param_.frame_id &&
             transform.child_frame_id == node_param_.child_frame_id) {
@@ -91,7 +91,7 @@ TopicStateMonitorNode::TopicStateMonitorNode(const rclcpp::NodeOptions & node_op
   } else {
     sub_topic_ = this->create_generic_subscription(
       node_param_.topic, node_param_.topic_type, qos,
-      [this]([[maybe_unused]] std::shared_ptr<rclcpp::SerializedMessage> msg) {
+      [this]([[maybe_unused]] std::shared_ptr<const rclcpp::SerializedMessage> msg) {
         topic_state_monitor_->update();
       });
   }
