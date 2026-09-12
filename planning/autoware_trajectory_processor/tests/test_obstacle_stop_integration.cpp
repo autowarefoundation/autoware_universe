@@ -225,6 +225,7 @@ protected:
     params_.stopping_constraints.nominal_deceleration = 1.0;
     params_.stopping_constraints.maximum_deceleration = 4.0;
     params_.stopping_constraints.jerk_limit = 3.0;
+    params_.stopping_constraints.delay_response_time = 0.0;
     params_.stopping_constraints.arrived_distance_threshold = 0.5;
 
     auto & p = params_.obstacle_stop;
@@ -233,7 +234,8 @@ protected:
     p.enable_stop_for_objects = true;
     p.enable_stop_for_pointcloud = true;
     p.stop_margin = 6.0;
-    p.lateral_margin = 0.5;
+    p.objects.lateral_margin.car = 0.5;
+    p.objects.lateral_margin.unknown = 0.5;
 
     p.obstacle_tracking.on_time_buffer = 0.01;
     p.obstacle_tracking.off_time_buffer = 1.0;
@@ -244,14 +246,10 @@ protected:
 
     p.objects.target_objects.bbox = {"car"};
     p.objects.target_objects.polygon = {"car"};
-
-    p.pointcloud.target_types = {"unknown"};
-    p.pointcloud.height_buffer = 0.5;
-    p.pointcloud.min_height = 0.2;
+    p.objects.target_objects.pointcloud = {"unknown"};
 
     p.rss_params.enable = true;
     p.rss_params.object_decel.car = 1.5;
-    p.rss_params.reaction_time = 0.2;
     p.rss_params.safety_margin = 2.0;
     p.rss_params.ego_decel = 4.0;
     p.rss_params.lookahead_horizon = 1.5;

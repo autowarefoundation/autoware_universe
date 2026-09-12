@@ -167,12 +167,6 @@
               "default": 3.0,
               "minimum": 0.0
             },
-            "lateral_margin": {
-              "type": "number",
-              "description": "Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]",
-              "default": 0.5,
-              "minimum": 0
-            },
             "duplicate_check_threshold": {
               "type": "number",
               "description": "Threshold to check if the stop point is already in the trajectory [m]",
@@ -261,6 +255,14 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "pointcloud": {
+                      "type": "array",
+                      "description": "Types of pointcloud to consider for obstacle stop",
+                      "default": ["structure", "vegetation"],
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [],
@@ -283,33 +285,92 @@
                   "description": "Safety buffer to expand object shape [m]",
                   "default": 0,
                   "minimum": 0
-                }
-              },
-              "required": [],
-              "additionalProperties": false
-            },
-            "pointcloud": {
-              "type": "object",
-              "properties": {
-                "target_types": {
-                  "type": "array",
-                  "description": "Pointcloud types to consider for obstacle stop",
-                  "default": ["hazard", "structure", "vegetation"],
-                  "items": {
-                    "type": "string"
-                  }
                 },
-                "height_buffer": {
+                "pointcloud_height_buffer": {
                   "type": "number",
-                  "description": "Height buffer to add above ego height [m]",
-                  "default": 0.5,
-                  "minimum": 0
+                  "description": "Height buffer to add above ego height for pointcloud [m]",
+                  "default": 0.2,
+                  "minimum": 0.0
                 },
-                "min_height": {
+                "pointcloud_min_height": {
                   "type": "number",
                   "description": "Minimum height of pointcloud [m]",
                   "default": 0.2,
-                  "minimum": 0
+                  "minimum": 0.0
+                },
+                "lateral_margin": {
+                  "type": "object",
+                  "description": "Lateral margin on top of ego width from trajectory, per object or pointcloud class [m]",
+                  "properties": {
+                    "car": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for car objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "truck": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for truck objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "bus": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for bus objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "trailer": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for trailer objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "motorcycle": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for motorcycle objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "bicycle": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for bicycle objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "pedestrian": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for pedestrian objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "hazard": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for hazard objects [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "structure": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for structure pointcloud [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "vegetation": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for vegetation pointcloud [m]",
+                      "default": 0.1,
+                      "minimum": 0.0
+                    },
+                    "unknown": {
+                      "type": "number",
+                      "description": "Lateral margin on top of ego width for unknown objects and unclassified pointcloud [m]",
+                      "default": 0.0,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
                 }
               },
               "required": [],
@@ -384,16 +445,10 @@
                   "default": 4,
                   "minimum": 0
                 },
-                "reaction_time": {
-                  "type": "number",
-                  "description": "Reaction time to consider for RSS calculation [s]",
-                  "default": 0.2,
-                  "minimum": 0
-                },
                 "safety_margin": {
                   "type": "number",
                   "description": "Safety margin to consider for RSS calculation [m]",
-                  "default": 2,
+                  "default": 1.5,
                   "minimum": 0
                 },
                 "lookahead_horizon": {

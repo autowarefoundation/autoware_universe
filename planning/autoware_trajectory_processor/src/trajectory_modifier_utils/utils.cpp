@@ -88,10 +88,11 @@ bool is_stop_trajectory(const TrajectoryPoints & traj_points, const double stopp
 
 double clamp_stop_point_arc_length(
   const double stop_point_arc_length, const double max_length, const double ego_vel,
-  const double ego_accel, const double decel_limit, const double jerk_limit)
+  const double ego_accel, const double decel_limit, const double jerk_limit,
+  const double time_delay)
 {
   auto min_stopping_distance =
-    motion_utils::calculate_stop_distance(ego_vel, ego_accel, decel_limit, jerk_limit, 0.0);
+    motion_utils::calculate_stop_distance(ego_vel, ego_accel, decel_limit, jerk_limit, time_delay);
   if (!min_stopping_distance) min_stopping_distance = 0.0;
   return std::clamp(stop_point_arc_length, min_stopping_distance.value(), max_length);
 }
