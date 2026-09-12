@@ -1,4 +1,5 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="param_file" default="$(find-pkg-share autoware_ar_tag_based_localizer)/config/ar_tag_based_localizer.param.yaml"/>
   <arg name="node_name" default="ar_tag_based_localizer"/>
 
@@ -15,6 +16,7 @@
   <arg name="debug_detected_tag" default="~/debug/detected_tag"/>
 
   <node pkg="autoware_ar_tag_based_localizer" exec="autoware_ar_tag_based_localizer_node" name="$(var node_name)" output="both">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/lanelet2_map" to="$(var input_lanelet2_map)"/>
     <remap from="~/input/image" to="$(var input_image)"/>
     <remap from="~/input/camera_info" to="$(var input_camera_info)"/>
