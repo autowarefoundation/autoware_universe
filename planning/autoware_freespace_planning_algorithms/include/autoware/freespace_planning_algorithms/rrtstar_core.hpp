@@ -90,6 +90,12 @@ using NodeSharedPtr = std::shared_ptr<Node>;
 using NodeConstSharedPtr = std::shared_ptr<const Node>;
 using NodeWeakPtr = std::weak_ptr<Node>;
 
+struct NeighborCandidate
+{
+  NodeConstSharedPtr node;
+  double distance_to_new;
+};
+
 struct Node
 {
   Pose pose;
@@ -135,15 +141,15 @@ public:
 
 private:
   NodeConstSharedPtr findNearestNode(const Pose & x_rand) const;
-  std::vector<NodeConstSharedPtr> findNeighborNodes(const Pose & pose) const;
+  std::vector<NeighborCandidate> findNeighborNodes(const Pose & pose) const;
   NodeSharedPtr addNewNode(const Pose & pose, NodeSharedPtr node_parent);
   NodeConstSharedPtr getBestParentNode(
     const Pose & pose_new, const NodeConstSharedPtr & node_nearest,
-    const std::vector<NodeConstSharedPtr> & neighbor_nodes) const;
+    const std::vector<NeighborCandidate> & neighbor_nodes) const;
   void reconnect(const NodeSharedPtr & node_new, const NodeSharedPtr & node_reconnect);
   NodeConstSharedPtr getReconnectTargeNode(
     const NodeConstSharedPtr node_new,
-    const std::vector<NodeConstSharedPtr> & neighbor_nodes) const;
+    const std::vector<NeighborCandidate> & neighbor_nodes) const;
 
   NodeSharedPtr node_start_;
   NodeSharedPtr node_goal_;

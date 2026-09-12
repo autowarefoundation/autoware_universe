@@ -347,7 +347,7 @@ NodeConstSharedPtr RRTStar::findNearestNode(const Pose & x_rand) const
   return node_nearest;
 }
 
-std::vector<NodeConstSharedPtr> RRTStar::findNeighborNodes(const Pose & x_new) const
+std::vector<NeighborCandidate> RRTStar::findNeighborNodes(const Pose & x_new) const
 {
   // In the original paper of rrtstar, radius is shrinking over time.
   // However, because we use reeds-shepp distance metric instead of Euclidean metric,
@@ -362,12 +362,13 @@ std::vector<NodeConstSharedPtr> RRTStar::findNeighborNodes(const Pose & x_new) c
 
   const double radius_neighbor = mu_;
 
-  std::vector<NodeConstSharedPtr> nodes;
+  std::vector<NeighborCandidate> nodes;
   for (auto & node : nodes_) {
     if (cspace_.distanceLowerBound(node->pose, x_new) > radius_neighbor) continue;
-    const bool is_neighbor = (cspace_.distance(node->pose, x_new) < radius_neighbor);
+    const double distance_to_new = cspace_.distance(node->pose, x_new);
+    const bool is_neighbor = (distance_to_new < radius_neighbor);
     if (is_neighbor) {
-      nodes.push_back(node);
+      nodes.push_back(NeighborCandidate{node, distance_to_new});
     }
   }
   return nodes;
@@ -385,11 +386,12 @@ NodeSharedPtr RRTStar::addNewNode(const Pose & pose, NodeSharedPtr node_parent)
 }
 
 NodeConstSharedPtr RRTStar::getReconnectTargeNode(
-  const NodeConstSharedPtr node_new, const std::vector<NodeConstSharedPtr> & neighbor_nodes) const
+  const NodeConstSharedPtr node_new, const std::vector<NeighborCandidate> & neighbor_nodes) const
 {
   NodeConstSharedPtr node_reconnect = nullptr;
 
-  for (const auto & node_neighbor : neighbor_nodes) {
+  for (const auto & candidate : neighbor_nodes) {
+    const auto & node_neighbor = candidate.node;
     if (
       cspace_.isValidPath_child2parent(
         node_neighbor->pose, node_new->pose, collision_check_resolution_)) {
@@ -406,14 +408,15 @@ NodeConstSharedPtr RRTStar::getReconnectTargeNode(
 
 NodeConstSharedPtr RRTStar::getBestParentNode(
   const Pose & pose_new, const NodeConstSharedPtr & node_nearest,
-  const std::vector<NodeConstSharedPtr> & neighbor_nodes) const
+  const std::vector<NeighborCandidate> & neighbor_nodes) const
 {
   NodeConstSharedPtr node_best = node_nearest;
   double cost_min =
     *(node_nearest->cost_from_start) + cspace_.distance(node_nearest->pose, pose_new);
-  for (const auto & node : neighbor_nodes) {
+  for (const auto & candidate : neighbor_nodes) {
+    const auto & node = candidate.node;
     const double cost_start_to_new =
-      *(node->cost_from_start) + cspace_.distance(node->pose, pose_new);
+      *(node->cost_from_start) + candidate.distance_to_new;
     if (cost_start_to_new < cost_min) {
       if (cspace_.isValidPath_child2parent(pose_new, node->pose, collision_check_resolution_)) {
         node_best = node;
