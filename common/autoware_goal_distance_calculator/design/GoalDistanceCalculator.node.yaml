@@ -21,7 +21,7 @@ subscribers:
     global: /tf_static
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
-    global: /planning/mission_planning/route
+    remap_target: /planning/mission_planning/route
 
 publishers:
   - name: deviation/lateral

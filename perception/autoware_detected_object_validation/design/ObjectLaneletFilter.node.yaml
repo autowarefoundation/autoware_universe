@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::detected_object_validation::DetectedObjectLaneletFilterNode
+  plugin: autoware::detected_object_validation::lanelet_filter::DetectedObjectLaneletFilterNode
   executable: object_lanelet_filter_node
   node_output: screen
 

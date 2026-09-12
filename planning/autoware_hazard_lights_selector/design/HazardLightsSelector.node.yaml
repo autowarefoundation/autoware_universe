@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::hazard_lights_selector::HazardLightsSelectorNode
+  plugin: autoware::hazard_lights_selector::HazardLightsSelector
   executable: autoware_hazard_lights_selector_node
   node_output: screen
 
@@ -17,7 +17,7 @@ subscribers:
   - name: lane_driving_hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
     remap_target: input/planning/hazard_lights_command
-  - name: parking_hazard_lights_cmd
+  - name: system_hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
     remap_target: input/system/hazard_lights_command
 

@@ -35,7 +35,7 @@ publishers:
   - name: current_velocity_limit_mps
     message_type: autoware_internal_planning_msgs/msg/VelocityLimit
   - name: processing_time_detail
-    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeDetail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
     remap_target: ~/debug/processing_time_detail_ms
   - name: processing_time
     message_type: autoware_internal_debug_msgs/msg/Float64Stamped

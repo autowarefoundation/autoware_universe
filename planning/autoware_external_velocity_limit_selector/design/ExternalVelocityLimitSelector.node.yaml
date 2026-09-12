@@ -16,6 +16,7 @@ launch:
 subscribers:
   - name: api_limit
     message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+    global: /planning/scenario_planning/max_velocity_default
     remap_target: input/velocity_limit_from_api
   - name: internal_limit
     message_type: autoware_internal_planning_msgs/msg/VelocityLimit

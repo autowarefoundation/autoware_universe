@@ -57,7 +57,7 @@ param_files:
   - name: node_param
     default: config/camera_streampetr.param.yaml
   - name: model_param
-    default: ml_package_camera_streampetr.param.yaml
+    default: config/ml_package_camera_streampetr.param.yaml
 
 param_values:
   - name: build_only
