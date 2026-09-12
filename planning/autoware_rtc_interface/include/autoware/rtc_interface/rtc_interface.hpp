@@ -29,8 +29,10 @@
 #include "tier4_rtc_msgs/srv/cooperate_commands.hpp"
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::rtc_interface
@@ -47,10 +49,11 @@ using tier4_rtc_msgs::srv::AutoMode;
 using tier4_rtc_msgs::srv::CooperateCommands;
 using unique_identifier_msgs::msg::UUID;
 
-class RTCInterface
+template <class NodeT = rclcpp::Node>
+class BasicRTCInterface
 {
 public:
-  RTCInterface(rclcpp::Node * node, const std::string & name, const bool enable_rtc = true);
+  BasicRTCInterface(NodeT * node, const std::string & name, const bool enable_rtc = true);
   void publishCooperateStatus(const rclcpp::Time & stamp);
   /// @brief update the cooperate status of the module identified by the given UUID
   /// @param[in] uuid unique ID of the module
@@ -93,12 +96,18 @@ private:
   rclcpp::Logger getLogger() const;
   bool isLocked() const;
 
-  rclcpp::Publisher<CooperateStatusArray>::SharedPtr pub_statuses_;
-  rclcpp::Publisher<AutoModeStatus>::SharedPtr pub_auto_mode_status_;
-  rclcpp::Service<CooperateCommands>::SharedPtr srv_commands_;
-  rclcpp::Service<AutoMode>::SharedPtr srv_auto_mode_;
+  using CooperateStatusPublisherPtr =
+    decltype(std::declval<NodeT *>()->template create_publisher<CooperateStatusArray>(
+      std::string{}, 1));
+  using AutoModeStatusPublisherPtr =
+    decltype(std::declval<NodeT *>()->template create_publisher<AutoModeStatus>(std::string{}, 1));
+
+  CooperateStatusPublisherPtr pub_statuses_;
+  AutoModeStatusPublisherPtr pub_auto_mode_status_;
+  std::shared_ptr<void> srv_commands_;
+  std::shared_ptr<void> srv_auto_mode_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  std::shared_ptr<void> timer_;
   rclcpp::Clock::SharedPtr clock_;
   rclcpp::Logger logger_;
 
@@ -118,6 +127,8 @@ private:
 public:
   friend class RTCInterfaceTest;
 };
+
+using RTCInterface = BasicRTCInterface<rclcpp::Node>;
 
 }  // namespace autoware::rtc_interface
 
