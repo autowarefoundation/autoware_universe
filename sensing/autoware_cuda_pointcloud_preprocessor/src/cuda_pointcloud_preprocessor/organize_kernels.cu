@@ -23,9 +23,9 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 __global__ void organizeKernel(
   const InputPointType * __restrict__ input_points, std::uint32_t * index_tensor,
-  std::int32_t * ring_indexes, std::int32_t initial_max_rings, std::int32_t * output_max_rings,
-  std::int32_t initial_max_points_per_ring, std::int32_t * output_max_points_per_ring,
-  int num_points)
+  std::int32_t * ring_indexes, std::int32_t initial_max_rings,
+  std::int32_t * output_rings_overflowed, std::int32_t initial_max_points_per_ring,
+  std::int32_t * output_points_per_ring_overflowed, int num_points)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= num_points) {
@@ -34,15 +34,17 @@ __global__ void organizeKernel(
 
   auto ring = input_points[idx].channel;
 
+  // The two outputs are flags: they are reset to 0 every frame and only raised here, so a
+  // non-zero value means at least one point did not fit and was dropped.
   if (ring >= initial_max_rings) {
-    atomicMax(output_max_rings, ring);
+    atomicOr(output_rings_overflowed, 1);
     return;
   }
 
   int next_offset = atomicAdd(&ring_indexes[ring], 1);
 
   if (next_offset >= initial_max_points_per_ring) {
-    atomicMax(output_max_points_per_ring, next_offset);
+    atomicOr(output_points_per_ring_overflowed, 1);
     return;
   }
 
@@ -96,13 +98,13 @@ std::size_t querySortWorkspace(
 
 void organizeLaunch(
   const InputPointType * input_points, std::uint32_t * index_tensor, std::int32_t * ring_indexes,
-  std::int32_t initial_max_rings, std::int32_t * output_max_rings,
-  std::int32_t initial_max_points_per_ring, std::int32_t * output_max_points_per_ring,
+  std::int32_t initial_max_rings, std::int32_t * output_rings_overflowed,
+  std::int32_t initial_max_points_per_ring, std::int32_t * output_points_per_ring_overflowed,
   int num_points, int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
 {
   organizeKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    input_points, index_tensor, ring_indexes, initial_max_rings, output_max_rings,
-    initial_max_points_per_ring, output_max_points_per_ring, num_points);
+    input_points, index_tensor, ring_indexes, initial_max_rings, output_rings_overflowed,
+    initial_max_points_per_ring, output_points_per_ring_overflowed, num_points);
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 

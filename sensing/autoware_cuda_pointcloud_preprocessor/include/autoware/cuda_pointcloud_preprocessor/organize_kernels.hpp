@@ -28,8 +28,8 @@ std::size_t querySortWorkspace(
 
 void organizeLaunch(
   const InputPointType * input_points, std::uint32_t * index_tensor, std::int32_t * ring_indexes,
-  std::int32_t initial_max_rings, std::int32_t * output_max_rings,
-  std::int32_t initial_max_points_per_ring, std::int32_t * output_max_points_per_ring,
+  std::int32_t initial_max_rings, std::int32_t * output_rings_overflowed,
+  std::int32_t initial_max_points_per_ring, std::int32_t * output_points_per_ring_overflowed,
   int num_points, int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
 void gatherLaunch(
