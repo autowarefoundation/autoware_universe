@@ -77,6 +77,11 @@ private:
   float voxel_size_x_;
   float voxel_size_y_;
   float voxel_size_z_;
+  float roi_x_min_;
+  float roi_x_max_;
+  float roi_y_min_;
+  float roi_y_max_;
+  bool enable_roi_exclusion_;
 
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
