@@ -14,10 +14,13 @@
 
 #include "topic_state_monitor.hpp"
 
+#include <memory>
+#include <utility>
+
 namespace autoware::topic_state_monitor
 {
-TopicStateMonitor::TopicStateMonitor(rclcpp::Node & node, const Param & param)
-: clock_(node.get_clock())
+TopicStateMonitor::TopicStateMonitor(rclcpp::Clock::SharedPtr clock, const Param & param)
+: clock_(std::move(clock))
 {
   param_ = param;
 }

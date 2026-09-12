@@ -18,6 +18,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <deque>
+#include <memory>
 #include <string>
 
 namespace autoware::topic_state_monitor
@@ -41,7 +42,7 @@ enum class TopicStatus : int8_t {
 class TopicStateMonitor
 {
 public:
-  explicit TopicStateMonitor(rclcpp::Node & node, const Param & param);
+  explicit TopicStateMonitor(rclcpp::Clock::SharedPtr clock, const Param & param);
 
   void setParam(const Param & param) { param_ = param; }
 
