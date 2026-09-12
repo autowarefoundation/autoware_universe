@@ -15,6 +15,8 @@
 #ifndef PIPELINE_LATENCY_MONITOR_NODE_HPP_
 #define PIPELINE_LATENCY_MONITOR_NODE_HPP_
 
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -53,7 +55,7 @@ struct ProcessInput
   std::deque<ProcessData> latency_history;
 };
 
-class PipelineLatencyMonitorNode : public rclcpp::Node
+class PipelineLatencyMonitorNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit PipelineLatencyMonitorNode(const rclcpp::NodeOptions & options);
@@ -72,20 +74,20 @@ private:
   double total_latency_ms_{};
 
   // Subscribers to the input topics
-  std::vector<rclcpp::GenericSubscription::SharedPtr> generic_subscribers_;
+  std::vector<AUTOWARE_GENERIC_SUBSCRIPTION_PTR> generic_subscribers_;
 
   // Publishers
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    total_latency_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped) total_latency_pub_;
 
   // Debug publisher
-  std::unique_ptr<autoware_utils_debug::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    debug_publisher_;
 
   // Diagnostic updater
-  diagnostic_updater::Updater diagnostic_updater_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater diagnostic_updater_;
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   // Callback functions
   void on_timer();
