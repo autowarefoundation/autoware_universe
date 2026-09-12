@@ -14,6 +14,7 @@
 
 #include "label_based_euclidean_cluster_node.hpp"
 
+#include "autoware/euclidean_cluster/label_based_euclidean_cluster.hpp"
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <autoware/object_recognition_utils/object_classification.hpp>
@@ -30,6 +31,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -166,12 +168,11 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   // Load parameters
   const auto min_probability = static_cast<float>(
     autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "min_probability"));
-  const auto min_cluster_size_m = static_cast<float>(
-    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "min_cluster_size_m"));
-  const auto shape_policy = to_shape_policy(
-    autoware_utils_rclcpp::get_or_declare_parameter<uint8_t>(*this, "shape_policy"));
+  preprocessor_ = std::make_unique<PointCloudPreprocessor>(min_probability);
 
   // Initialize the default voxel grid based euclidean cluster
+  const auto shape_policy = to_shape_policy(
+    autoware_utils_rclcpp::get_or_declare_parameter<uint8_t>(*this, "shape_policy"));
   const auto use_height =
     autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_height");
   const auto min_points_per_cluster = static_cast<int>(
@@ -190,6 +191,8 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       *this, "large_cluster_max_points_per_voxel"));
   const auto max_voxels_per_cluster = static_cast<int>(
     autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_voxels_per_cluster"));
+  const auto min_cluster_size_m = static_cast<float>(
+    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "min_cluster_size_m"));
 
   auto default_cluster = std::make_shared<VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
@@ -260,9 +263,8 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   const auto confusable_groups = load_confusable_groups(*this);
 
   // Create the core clustering processor
-  processor_ = std::make_unique<LabelBasedEuclideanCluster>(
-    min_probability, shape_policy, default_cluster, label_cluster_executers, shape_estimator,
-    confusable_groups);
+  cluster_ = std::make_unique<LabelBasedEuclideanCluster>(
+    shape_policy, default_cluster, label_cluster_executers, shape_estimator, confusable_groups);
 
   // Set up ROS pub/sub
   using std::placeholders::_1;
@@ -288,8 +290,15 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
 {
   stop_watch_ptr_->toc("processing_time", true);
 
+  auto preprocessed = preprocessor_->process(*input_msg);
+  if (!preprocessed) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000, "Skipping pointcloud: %s", preprocessed.error().c_str());
+    return;
+  }
+
   // Process the point cloud using the core cluster
-  auto result = processor_->process(*input_msg);
+  auto result = cluster_->process(*preprocessed);
   if (!result) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Skipping pointcloud: %s", result.error().c_str());

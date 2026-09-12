@@ -17,6 +17,7 @@
 #include "autoware/euclidean_cluster/confusable_cluster_merger.hpp"
 #include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
 
+#include <autoware/point_types/types.hpp>
 #include <autoware/shape_estimation/shape_estimator.hpp>
 #include <tl/expected.hpp>
 
@@ -36,6 +37,25 @@ enum ShapePolicy : uint8_t {
   LABEL_DEPEND = 1,
 };
 
+class PointCloudPreprocessor
+{
+public:
+  using result_t = tl::expected<pcl::PointCloud<point_types::PointXYZCPE>, std::string>;
+
+  /// @brief Construct a semantic point cloud preprocessor.
+  /// @param min_probability Minimum confidence required to retain a point.
+  explicit PointCloudPreprocessor(float min_probability);
+
+  /// @brief Validate, convert, and filter an input semantic point cloud.
+  /// @param input_msg Input point cloud, which must be a densely packed
+  ///        `autoware::point_types::PointXYZCPE` cloud.
+  /// @return Filtered PCL cloud, or an error string when the input layout is invalid.
+  result_t process(const sensor_msgs::msg::PointCloud2 & input_msg);
+
+private:
+  float min_probability_;
+};
+
 /// @brief Core clustering logic without ROS dependencies.
 ///
 /// This class encapsulates the semantic point cloud clustering algorithm, independent of
@@ -44,13 +64,15 @@ enum ShapePolicy : uint8_t {
 ///
 /// The input is assumed to be an `autoware::point_types::PointXYZCPE` cloud, whose `class_id`
 /// values are `autoware::object_recognition_utils::PointCloudClassification` values.
+/// Probability filtering and ROS-to-PCL conversion are performed by `PointCloudPreprocessor`
+/// before this class is called.
 ///
 /// The clustering process:
-/// 1. Filters and splits points by semantic label
+/// 1. Splits preprocessed points by semantic label
 /// 2. Runs independent euclidean clustering per label
 /// 3. Merges over-segmented clusters across confusable labels
 /// 4. Estimates shapes and poses for each cluster
-/// 5. Returns structured detected objects
+/// 5. Returns detected objects and non-object semantic segments
 class LabelBasedEuclideanCluster
 {
 public:
@@ -63,15 +85,13 @@ public:
   using result_t = tl::expected<Output, std::string>;
 
   /// @brief Construct with full configuration for clustering and shape estimation.
-  /// @param min_probability Minimum confidence threshold for points.
   /// @param shape_policy Strategy for shape estimation (ALL_POLYGON or LABEL_DEPEND).
   /// @param default_cluster Default cluster executer used when no per-label override exists.
   /// @param label_cluster_executers Optional per-label cluster executer overrides.
   /// @param shape_estimator Shape estimator for converting clusters to DetectedObjects.
   /// @param confusable_groups Optional label groups for post-clustering merge.
   LabelBasedEuclideanCluster(
-    float min_probability, ShapePolicy shape_policy,
-    std::shared_ptr<EuclideanClusterInterface> default_cluster,
+    ShapePolicy shape_policy, std::shared_ptr<EuclideanClusterInterface> default_cluster,
     const std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>> &
       label_cluster_executers,
     std::shared_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator,
@@ -82,14 +102,11 @@ public:
   /// Note: Returned messages will have empty frame_id and timestamp.
   /// The caller (ROS node) must populate these fields from the input message.
   ///
-  /// @param input_msg Input point cloud, which must be a densely packed
-  ///        `autoware::point_types::PointXYZCPE` cloud (x, y, z, class_id, probability, entropy).
-  /// @return Output messages without frame_id or timestamp populated, or an error string when the
-  ///         input layout is not `autoware::point_types::PointXYZCPE`.
-  [[nodiscard]] result_t process(const sensor_msgs::msg::PointCloud2 & input_msg);
+  /// @param input Preprocessed `autoware::point_types::PointXYZCPE` cloud.
+  /// @return Output messages without frame_id or timestamp populated.
+  [[nodiscard]] result_t process(const pcl::PointCloud<point_types::PointXYZCPE> & input);
 
 private:
-  float min_probability_;
   ShapePolicy shape_policy_;
   std::shared_ptr<EuclideanClusterInterface> default_cluster_;
   std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>>
