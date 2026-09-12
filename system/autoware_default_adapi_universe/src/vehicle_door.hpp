@@ -16,10 +16,11 @@
 #define VEHICLE_DOOR_HPP_
 
 #include <autoware/adapi_specs/vehicle.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_specs_universe/vehicle.hpp>
 #include <autoware/component_interface_utils/status.hpp>
-#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <optional>
@@ -30,7 +31,7 @@
 namespace autoware::default_adapi
 {
 
-class VehicleDoorNode : public rclcpp::Node
+class VehicleDoorNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit VehicleDoorNode(const rclcpp::NodeOptions & options);
@@ -52,20 +53,20 @@ private:
     const ExternalDoorCommand::Service::Request::SharedPtr req,
     const ExternalDoorCommand::Service::Response::SharedPtr res);
 
-  diagnostic_updater::Updater diagnostics_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater diagnostics_;
   rclcpp::CallbackGroup::SharedPtr group_cli_;
-  Srv<ExternalDoorCommand> srv_command_;
-  Srv<ExternalDoorLayout> srv_layout_;
-  Pub<ExternalDoorStatus> pub_status_;
-  Cli<InternalDoorCommand> cli_command_;
-  Cli<InternalDoorLayout> cli_layout_;
-  Sub<InternalDoorStatus> sub_status_;
+  Srv<ExternalDoorCommand, NodeT> srv_command_;
+  Srv<ExternalDoorLayout, NodeT> srv_layout_;
+  Pub<ExternalDoorStatus, NodeT> pub_status_;
+  Cli<InternalDoorCommand, NodeT> cli_command_;
+  Cli<InternalDoorLayout, NodeT> cli_layout_;
+  Sub<InternalDoorStatus, NodeT> sub_status_;
   std::optional<InternalDoorStatus::Message> status_;
 
   bool check_autoware_control_;
   bool is_autoware_control_;
   bool is_stop_mode_;
-  Sub<OperationModeState> sub_operation_mode_;
+  Sub<OperationModeState, NodeT> sub_operation_mode_;
 };
 
 }  // namespace autoware::default_adapi
