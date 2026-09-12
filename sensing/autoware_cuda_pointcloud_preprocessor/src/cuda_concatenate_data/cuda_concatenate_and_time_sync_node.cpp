@@ -14,7 +14,7 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.hpp"
 
-#include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_cloud_collector.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
@@ -55,7 +55,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
 
     auto pointcloud_sub =
       std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
-        *this, topic, callback, combine_cloud_handler_->stream(topic));
+        *this, topic, callback, concatenator_->combine_cloud_handler().stream(topic));
     pointcloud_subs_.push_back(pointcloud_sub);
   }
 
