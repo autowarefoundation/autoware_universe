@@ -21,6 +21,7 @@ namespace autoware::default_adapi
 {
 
 // The buffer VehicleStopChecker keeps, reproduced here because its base takes it as an argument.
+// Ref. https://github.com/autowarefoundation/autoware_core/blob/758b6c65b276447b2784275b37054c57ed8061cc/common/autoware_motion_utils/include/autoware/motion_utils/vehicle/vehicle_state_checker.hpp#L64
 constexpr double velocity_buffer_time_sec = 10.0;
 
 MotionNode::MotionNode(const rclcpp::NodeOptions & options)
