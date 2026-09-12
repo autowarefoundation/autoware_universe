@@ -117,6 +117,30 @@ struct Node
   }
 
   NodeSharedPtr getParent() const { return parent.lock(); }
+
+  double getCostFromStart() const
+  {
+    if (!cost_from_start.has_value()) {
+      throw std::bad_optional_access();
+    }
+    return *cost_from_start;
+  }
+
+  double getCostToGoal() const
+  {
+    if (!cost_to_goal.has_value()) {
+      throw std::bad_optional_access();
+    }
+    return *cost_to_goal;
+  }
+
+  double getCostToParent() const
+  {
+    if (!cost_to_parent.has_value()) {
+      throw std::bad_optional_access();
+    }
+    return *cost_to_parent;
+  }
 };
 
 class RRTStar
@@ -130,7 +154,7 @@ public:
   void deleteNodeUsingBranchAndBound();
   std::vector<Pose> sampleSolutionWaypoints() const;
   void dumpState(std::string filename) const;
-  double getSolutionCost() const { return *node_goal_->cost_from_start; }
+  double getSolutionCost() const { return node_goal_->getCostFromStart(); }
   std::vector<NodeConstSharedPtr> getNodes() const;
 
 private:
