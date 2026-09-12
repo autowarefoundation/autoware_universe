@@ -2,9 +2,11 @@
   <arg name="route" default="/planning/mission_planning/route"/>
   <arg name="map" default="/map/vector_map"/>
   <arg name="distance" default="~/distance"/>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.py"/>
   <node pkg="autoware_path_distance_calculator" exec="autoware_path_distance_calculator_node" name="path_distance_calculator">
     <remap from="~/input/route" to="$(var route)"/>
     <remap from="~/input/map" to="$(var map)"/>
     <remap from="~/output/distance" to="$(var distance)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>
