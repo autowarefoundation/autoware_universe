@@ -1,0 +1,140 @@
+# Example conversion configurations for topic_converter.py
+# Use these as reference when launching generic_value_calibrator_with_converter.launch.xml
+
+# ============================================================================
+# Example 1: Calibrate Control Acceleration
+# ============================================================================
+# This is the most common use case - calibrating a custom actuator command
+# against the acceleration requested by the control system.
+#
+# Launch command:
+#   ros2 launch autoware_generic_value_calibrator generic_value_calibrator_with_converter.launch.xml \
+#     enable_converter:=true \
+#     input_topic:=/control/command/control_cmd \
+#     conversion_type:=control_acceleration \
+#     converted_topic:=/generic/input/value
+#
+# Description:
+#   Extracts the longitudinal.acceleration field from Control messages
+#   and converts it to Float64Stamped for calibration.
+
+# ============================================================================
+# Example 2: Calibrate Control Velocity
+# ============================================================================
+# Launch command:
+#   ros2 launch autoware_generic_value_calibrator generic_value_calibrator_with_converter.launch.xml \
+#     enable_converter:=true \
+#     input_topic:=/control/command/control_cmd \
+#     conversion_type:=control_velocity \
+#     converted_topic:=/generic/input/value
+#
+# Description:
+#   Extracts the longitudinal.velocity field from Control messages.
+
+# ============================================================================
+# Example 3: Calibrate Steering Angle
+# ============================================================================
+# Launch command:
+#   ros2 launch autoware_generic_value_calibrator generic_value_calibrator_with_converter.launch.xml \
+#     enable_converter:=true \
+#     input_topic:=/control/command/control_cmd \
+#     conversion_type:=control_steering_angle \
+#     converted_topic:=/generic/input/steering_value
+#
+# Description:
+#   Extracts the lateral.steering_tire_angle field from Control messages.
+#   Useful for calibrating custom steering actuators.
+
+# ============================================================================
+# Example 4: Calibrate Odometry Velocity with Scaling
+# ============================================================================
+# Launch command:
+#   ros2 launch autoware_generic_value_calibrator generic_value_calibrator_with_converter.launch.xml \
+#     enable_converter:=true \
+#     input_topic:=/vehicle/odometry \
+#     conversion_type:=odom_linear_x \
+#     scale_factor:=3.6 \
+#     converted_topic:=/generic/input/velocity_kmh
+#
+# Description:
+#   Extracts linear velocity X from Odometry and converts from m/s to km/h.
+
+# ============================================================================
+# Example 5: Calibrate TwistStamped Angular Velocity
+# ============================================================================
+# Launch command:
+#   ros2 launch autoware_generic_value_calibrator generic_value_calibrator_with_converter.launch.xml \
+#     enable_converter:=true \
+#     input_topic:=/vehicle/twist \
+#     conversion_type:=twist_angular_z \
+#     converted_topic:=/generic/input/yaw_rate
+#
+# Description:
+#   Extracts angular velocity Z (yaw rate) from TwistStamped messages.
+
+# ============================================================================
+# Example 6: Custom Field Extraction with Offset
+# ============================================================================
+# Launch command:
+#   ros2 launch autoware_generic_value_calibrator generic_value_calibrator_with_converter.launch.xml \
+#     enable_converter:=true \
+#     input_topic:=/custom/sensor/data \
+#     conversion_type:=control_acceleration \
+#     custom_field:=data.measured_force \
+#     scale_factor:=0.001 \
+#     offset:=-1.5 \
+#     converted_topic:=/generic/input/force
+#
+# Description:
+#   Extracts a custom field using dot notation, applies scaling and offset.
+#   Formula: output = input * 0.001 - 1.5
+
+# ============================================================================
+# Example 7: Without Converter (Direct Float64Stamped Input)
+# ============================================================================
+# Launch command:
+#   ros2 launch autoware_generic_value_calibrator generic_value_calibrator_with_converter.launch.xml \
+#     enable_converter:=false
+#
+# Description:
+#   Disable the converter if your input is already Float64Stamped.
+#   The calibrator will directly subscribe to the configured input topic.
+
+# ============================================================================
+# Available Conversion Types
+# ============================================================================
+# From autoware_control_msgs/Control:
+#   - control_acceleration        : longitudinal.acceleration
+#   - control_velocity            : longitudinal.velocity
+#   - control_steering_angle      : lateral.steering_tire_angle
+#   - control_steering_rate       : lateral.steering_tire_rotation_rate
+#
+# From nav_msgs/Odometry:
+#   - odom_linear_x              : twist.twist.linear.x
+#   - odom_linear_y              : twist.twist.linear.y
+#   - odom_angular_z             : twist.twist.angular.z
+#
+# From geometry_msgs/TwistStamped:
+#   - twist_linear_x             : twist.linear.x
+#   - twist_angular_z            : twist.angular.z
+#
+# From geometry_msgs/AccelStamped:
+#   - accel_linear_x             : accel.linear.x
+#
+# Custom:
+#   Set conversion_type to any of the above and use custom_field parameter
+#   to override the default field extraction path.
+
+# ============================================================================
+# Testing the Converter Alone
+# ============================================================================
+# You can test the converter without running the calibrator:
+#
+#   ros2 run autoware_generic_value_calibrator topic_converter.py \
+#     --ros-args \
+#     -p input_topic:=/control/command/control_cmd \
+#     -p output_topic:=/test/float64_output \
+#     -p conversion_type:=control_acceleration
+#
+# Then monitor the output:
+#   ros2 topic echo /test/float64_output
