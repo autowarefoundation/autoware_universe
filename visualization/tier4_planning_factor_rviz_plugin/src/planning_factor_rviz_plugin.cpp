@@ -207,7 +207,8 @@ void PlanningFactorRvizPlugin::start_vehicle_info_request()
         }
       }
     } catch (...) {
-      // Ignore exceptions during shutdown
+      // Intentionally ignore exceptions during shutdown.
+      return;
     }
   }).detach();
 }
