@@ -1,0 +1,241 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_planning_validator",
+  "type": "object",
+  "definitions": {
+    "autoware_planning_validator": {
+      "type": "object",
+      "properties": {
+        "handling_type": {
+          "type": "object",
+          "description": "Operation option when invalid trajectory is detected. 0: publish the trajectory even if it is invalid, 1: stop publishing the trajectory, 2: publish the last validated trajectory.",
+          "properties": {
+            "noncritical": {
+              "type": "integer",
+              "description": "Handling type for noncritical error",
+              "default": 0
+            },
+            "critical": {
+              "type": "integer",
+              "description": "Handling type for critical error",
+              "default": 2
+            }
+          },
+          "required": ["noncritical", "critical"],
+          "additionalProperties": false
+        },
+        "publish_diag": {
+          "type": "boolean",
+          "description": "If true, diagnostic msg is published.",
+          "default": true
+        },
+        "diag_error_count_threshold": {
+          "type": "integer",
+          "description": "Threshold for error count.",
+          "default": 0
+        },
+        "display_on_terminal": {
+          "type": "boolean",
+          "description": "Show error msg on terminal.",
+          "default": true
+        },
+        "enable_soft_stop_on_prev_traj": {
+          "type": "boolean",
+          "description": "Enable soft stop on previous trajectory.",
+          "default": true
+        },
+        "soft_stop_deceleration": {
+          "type": "number",
+          "description": "Soft stop deceleration (m/s^2).",
+          "default": -1.0
+        },
+        "soft_stop_jerk_lim": {
+          "type": "number",
+          "description": "Soft stop jerk limit (m/s^3).",
+          "default": 0.3
+        },
+        "validity_checks": {
+          "type": "object",
+          "properties": {
+            "latency": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "threshold": { "type": "number", "default": 1.0 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "threshold", "is_critical"],
+              "additionalProperties": false
+            },
+            "interval": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "threshold": { "type": "number", "default": 100.0 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "threshold", "is_critical"],
+              "additionalProperties": false
+            },
+            "curvature": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "threshold": { "type": "number", "default": 1.0 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "threshold", "is_critical"],
+              "additionalProperties": false
+            },
+            "relative_angle": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "threshold": { "type": "number", "default": 2.0 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "threshold", "is_critical"],
+              "additionalProperties": false
+            },
+            "acceleration": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "lateral_th": { "type": "number", "default": 9.8 },
+                "longitudinal_max_th": { "type": "number", "default": 9.8 },
+                "longitudinal_min_th": { "type": "number", "default": -9.8 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": [
+                "enable",
+                "lateral_th",
+                "longitudinal_max_th",
+                "longitudinal_min_th",
+                "is_critical"
+              ],
+              "additionalProperties": false
+            },
+            "lateral_jerk": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "threshold": { "type": "number", "default": 7.0 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "threshold", "is_critical"],
+              "additionalProperties": false
+            },
+            "steering": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "threshold": { "type": "number", "default": 1.414 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "threshold", "is_critical"],
+              "additionalProperties": false
+            },
+            "steering_rate": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "threshold": { "type": "number", "default": 10.0 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "threshold", "is_critical"],
+              "additionalProperties": false
+            },
+            "deviation": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "velocity_th": { "type": "number", "default": 100.0 },
+                "distance_th": { "type": "number", "default": 100.0 },
+                "lon_distance_th": { "type": "number", "default": 1.0 },
+                "yaw_th": { "type": "number", "default": 1.5708 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": [
+                "enable",
+                "velocity_th",
+                "distance_th",
+                "lon_distance_th",
+                "yaw_th",
+                "is_critical"
+              ],
+              "additionalProperties": false
+            },
+            "forward_trajectory_length": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "acceleration": { "type": "number", "default": -3.0 },
+                "margin": { "type": "number", "default": 2.0 },
+                "is_critical": { "type": "boolean", "default": false }
+              },
+              "required": ["enable", "acceleration", "margin", "is_critical"],
+              "additionalProperties": false
+            },
+            "trajectory_shift": {
+              "type": "object",
+              "properties": {
+                "enable": { "type": "boolean", "default": true },
+                "lat_shift_th": { "type": "number", "default": 0.5 },
+                "forward_shift_th": { "type": "number", "default": 1.0 },
+                "backward_shift_th": { "type": "number", "default": 0.1 },
+                "is_critical": { "type": "boolean", "default": true }
+              },
+              "required": [
+                "enable",
+                "lat_shift_th",
+                "forward_shift_th",
+                "backward_shift_th",
+                "is_critical"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "latency",
+            "interval",
+            "curvature",
+            "relative_angle",
+            "acceleration",
+            "lateral_jerk",
+            "steering",
+            "steering_rate",
+            "deviation",
+            "forward_trajectory_length",
+            "trajectory_shift"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "handling_type",
+        "publish_diag",
+        "diag_error_count_threshold",
+        "display_on_terminal",
+        "enable_soft_stop_on_prev_traj",
+        "soft_stop_deceleration",
+        "soft_stop_jerk_lim",
+        "validity_checks"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/autoware_planning_validator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
