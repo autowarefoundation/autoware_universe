@@ -124,6 +124,15 @@ void AstarSearch::setMap(const nav_msgs::msg::OccupancyGrid & costmap)
     collision_vehicle_shape_.base_length * base_length_max_expansion_factor_, min_expansion_dist_);
 }
 
+// Record a node the first time a search moves it out of the default state, so
+// the next reset only has to restore the recorded nodes.
+void AstarSearch::recordFirstTouch(const AstarNode & node, const IndexXYT & index)
+{
+  if (node.status == NodeStatus::None) {
+    touched_node_ids_.push_back(getKey(index));
+  }
+}
+
 void AstarSearch::resetData()
 {
   // clearing openlist is necessary because otherwise remaining elements of openlist
@@ -131,7 +140,15 @@ void AstarSearch::resetData()
   openlist_ = std::priority_queue<AstarNode *, std::vector<AstarNode *>, NodeComparison>();
   const int nb_of_grid_nodes = costmap_.info.width * costmap_.info.height;
   const int total_astar_node_count = nb_of_grid_nodes * planner_common_param_.theta_size;
-  graph_.assign(total_astar_node_count, AstarNode{});
+  if (graph_.size() != static_cast<size_t>(total_astar_node_count)) {
+    graph_.assign(total_astar_node_count, AstarNode{});
+    touched_node_ids_.clear();
+  } else {
+    for (const int id : touched_node_ids_) {
+      graph_[id] = AstarNode{};
+    }
+    touched_node_ids_.clear();
+  }
   col_free_distance_map_.assign(nb_of_grid_nodes, std::numeric_limits<double>::max());
   shifted_goal_pose_ = {};
 }
@@ -258,6 +275,7 @@ void AstarSearch::setStartNode(const double cost_offset)
   const auto index = pose2index(costmap_, start_pose_, planner_common_param_.theta_size);
   // Set start node
   AstarNode * start_node = &graph_[getKey(index)];
+  recordFirstTouch(*start_node, index);
   const double initial_cost = estimateCost(start_pose_, index) + cost_offset;
   start_node->set(start_pose_, 0.0, initial_cost, 0, false);
   start_node->dir_distance = 0.0;
@@ -372,6 +390,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
     double total_cost = move_cost + estimateCost(next_pose, next_index);
     // Compare cost
     if (next_node->status == NodeStatus::None || next_node->fc > total_cost) {
+      recordFirstTouch(*next_node, next_index);
       next_node->status = NodeStatus::Open;
       next_node->set(next_pose, move_cost, total_cost, steering_index, is_back);
       next_node->dir_distance =
