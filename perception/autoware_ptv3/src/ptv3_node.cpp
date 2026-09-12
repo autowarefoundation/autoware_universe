@@ -79,6 +79,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   const bool use_seg3d_head = this->declare_parameter<bool>("segmentation3d.use_head", descriptor);
   std::optional<tensorrt_common::TrtCommonConfig> seg3d_head_trt_config;
   std::vector<std::string> segmentation_class_names;
+  std::unordered_map<std::string, std::string> segmentation_class_mapping;
   std::vector<std::int64_t> palette;
   std::vector<std::string> filter_classes;
   std::string filter_output_format;
@@ -95,6 +96,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       this->declare_parameter<std::vector<std::string>>("segmentation3d.class_names", descriptor);
     palette =
       this->declare_parameter<std::vector<std::int64_t>>("segmentation3d.palette", descriptor);
+
+    segmentation_class_mapping = declare_class_mapping(*this, segmentation_class_names, descriptor);
     filter_classes = this->declare_parameter<std::vector<std::string>>(
       "segmentation3d.filter.classes", descriptor);
     filter_output_format =
@@ -191,11 +194,11 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
 
   PTv3Config config(
     use_seg3d_head, use_det3d_head, plugins_path, cloud_capacity, voxels_num, point_cloud_range,
-    voxel_size, segmentation_class_names, serialization_orders, pooling_strides, enc_channels,
-    palette, filter_classes, filter_output_format, filter_apply_to_segmentation,
-    source_reconstruction, dec_depths, detection_class_names_, bbox_voxel_size,
-    distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds, has_twist_,
-    num_proposals, post_center_range);
+    voxel_size, segmentation_class_names, segmentation_class_mapping, serialization_orders,
+    pooling_strides, enc_channels, palette, filter_classes, filter_output_format,
+    filter_apply_to_segmentation, source_reconstruction, dec_depths, detection_class_names_,
+    bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
+    has_twist_, num_proposals, post_center_range);
 
   const auto encoder_trt_config = tensorrt_common::TrtCommonConfig(
     encoder_onnx_path, trt_precision, encoder_engine_path, encoder_workspace_size);

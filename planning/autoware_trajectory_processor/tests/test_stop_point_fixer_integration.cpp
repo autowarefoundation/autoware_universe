@@ -14,10 +14,11 @@
 
 #include "autoware/trajectory_processor/trajectory_modifier_plugins/stop_point_fixer.hpp"
 #include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
+#include "trajectory_processor_test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
-#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
@@ -25,15 +26,18 @@
 #include <memory>
 #include <vector>
 
-using autoware::trajectory_modifier::TrajectoryModifierContext;
-using autoware::trajectory_modifier::plugin::InputData;
-using autoware::trajectory_modifier::plugin::StopPointFixer;
-using autoware::trajectory_modifier::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::TrajectoryProcessorContext;
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::StopPointFixer;
+using autoware::trajectory_processor::plugin::TrajectoryPoints;
+using autoware::trajectory_processor::test::process_plugin;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
 namespace
 {
-InputData make_input_data(double ego_x, double ego_y, double vx, double vy = 0.0, double vz = 0.0)
+TrajectoryProcessorData make_input_data(
+  double ego_x, double ego_y, double vx, double vy = 0.0, double vz = 0.0)
 {
   nav_msgs::msg::Odometry current_odometry;
   current_odometry.pose.pose.position.x = ego_x;
@@ -42,7 +46,7 @@ InputData make_input_data(double ego_x, double ego_y, double vx, double vy = 0.0
   current_odometry.twist.twist.linear.x = vx;
   current_odometry.twist.twist.linear.y = vy;
   current_odometry.twist.twist.linear.z = vz;
-  InputData input;
+  TrajectoryProcessorData input;
   input.current_odometry = std::make_shared<nav_msgs::msg::Odometry>(current_odometry);
   return input;
 }
@@ -94,12 +98,14 @@ protected:
 
     node_ = std::make_shared<rclcpp::Node>("test_node", node_options);
     time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>();
-    context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
+    context_ = std::make_shared<TrajectoryProcessorContext>(node_.get());
     params_.use_stop_point_fixer = true;
     params_.stop_point_fixer.velocity_threshold = 0.1;
     params_.stop_point_fixer.min_distance_threshold = 1.0;
     plugin_ = std::make_unique<StopPointFixer>();
-    plugin_->initialize("test_stop_point_fixer", node_.get(), time_keeper_, context_, params_);
+    plugin_->initialize(
+      "test_stop_point_fixer", node_.get(), time_keeper_, context_,
+      TrajectoryProcessorParams{params_});
   }
 
   void TearDown() override
@@ -112,8 +118,8 @@ protected:
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<StopPointFixer> plugin_;
-  trajectory_modifier_params::Params params_;
-  std::shared_ptr<TrajectoryModifierContext> context_;
+  trajectory_processor_params::Params params_;
+  std::shared_ptr<TrajectoryProcessorContext> context_;
 };
 
 // Test is_trajectory_modification_required method
@@ -123,7 +129,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationNotRequiredWhenDisab
   trajectory.push_back(create_trajectory_point(10.0, 0.0));
 
   params_.use_stop_point_fixer = false;  // Disabled
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto input = make_input_data(0.0, 0.0, 0.05);  // Stationary, close to target
 
@@ -199,7 +205,7 @@ TEST_F(StopPointFixerIntegrationTest, ModifyTrajectoryWhenRequired)
   // Verify modification is required first
   EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, input));
 
-  plugin_->modify_trajectory(trajectory, input);
+  process_plugin(*plugin_, trajectory, input);
 
   // Should replace with two stop points at ego position (minimum for Control)
   EXPECT_EQ(trajectory.size(), 3);
@@ -226,7 +232,7 @@ TEST_F(StopPointFixerIntegrationTest, ModifyTrajectoryWhenNotRequired)
   // Verify modification is not required
   EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, input));
 
-  plugin_->modify_trajectory(trajectory, input);
+  process_plugin(*plugin_, trajectory, input);
 
   // Trajectory should remain unchanged
   EXPECT_EQ(trajectory.size(), original_trajectory.size());
@@ -244,7 +250,7 @@ TEST_F(StopPointFixerIntegrationTest, ParameterUpdateSuccess)
   params_.stop_point_fixer.velocity_threshold = 0.2;
   params_.stop_point_fixer.min_distance_threshold = 2.0;
 
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   EXPECT_FLOAT_EQ(
     plugin_->get_params().velocity_threshold, params_.stop_point_fixer.velocity_threshold);
@@ -344,7 +350,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceLongStopFlag_False_LongStopConditionD
   parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", false);
   params_.stop_point_fixer.force_stop_long_stopped_trajectories = false;
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto min_stop_duration_s = params_.stop_point_fixer.min_stop_duration;
   TrajectoryPoints trajectory;
@@ -361,7 +367,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceLongStopFlag_True_LongStopConditionTr
   params_.stop_point_fixer.force_stop_long_stopped_trajectories = true;
   params_.stop_point_fixer.force_stop_close_stopped_trajectories = false;
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto min_stop_duration_s = params_.stop_point_fixer.min_stop_duration;
   TrajectoryPoints trajectory;
@@ -380,7 +386,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_False_CloseStopConditio
   params_.stop_point_fixer.force_stop_long_stopped_trajectories = true;
   params_.stop_point_fixer.force_stop_close_stopped_trajectories = false;
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   TrajectoryPoints trajectory;
   trajectory.push_back(create_trajectory_point_with_time(0.5, 0.0, 1.0, 0));
@@ -395,7 +401,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_True_CloseStopCondition
   params_.stop_point_fixer.force_stop_close_stopped_trajectories = true;
   params_.stop_point_fixer.force_stop_long_stopped_trajectories = false;
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   TrajectoryPoints trajectory;
   trajectory.push_back(
@@ -413,7 +419,7 @@ TEST_F(StopPointFixerIntegrationTest, BothFlags_False_NeitherConditionTriggers)
   params_.stop_point_fixer.force_stop_long_stopped_trajectories = false;
   params_.stop_point_fixer.force_stop_close_stopped_trajectories = false;
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto min_stop_duration_s = params_.stop_point_fixer.min_stop_duration;
   TrajectoryPoints trajectory;
@@ -435,7 +441,7 @@ TEST_F(StopPointFixerIntegrationTest, RuntimeDefault_StationaryEgo_TriggersModif
   trajectory.push_back(create_trajectory_point(0.5, 0.0, 1.0));
 
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto input = make_input_data(0.0, 0.0, 0.05);
 
@@ -449,7 +455,7 @@ TEST_F(StopPointFixerIntegrationTest, RuntimeDefault_MovingEgoAboveThreshold_Sup
   trajectory.push_back(create_trajectory_point(0.5, 0.0, 1.0));
 
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto input = make_input_data(0.0, 0.0, 0.15);
 
@@ -467,7 +473,7 @@ TEST_F(
   trajectory.push_back(create_trajectory_point(0.5, 0.0, 1.0));
 
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto input = make_input_data(0.0, 0.0, 0.15);
 
@@ -542,21 +548,21 @@ TEST_F(StopPointFixerIntegrationTest, ParameterUpdate_LongStopFlagCanBeToggledAt
     create_trajectory_point_with_duration(5.0, 0.0, 0.0, min_stop_duration_s * 2.0));
 
   params_.use_stop_point_fixer = true;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryProcessorParams{params_});
 
   auto input = make_input_data(0.0, 0.0, 0.05);
 
   {
     params_.stop_point_fixer.force_stop_long_stopped_trajectories = false;
     params_.stop_point_fixer.force_stop_close_stopped_trajectories = false;
-    plugin_->update_params(params_);
+    plugin_->update_params(TrajectoryProcessorParams{params_});
     EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, input));
   }
 
   {
     params_.stop_point_fixer.force_stop_long_stopped_trajectories = true;
     params_.stop_point_fixer.force_stop_close_stopped_trajectories = false;
-    plugin_->update_params(params_);
+    plugin_->update_params(TrajectoryProcessorParams{params_});
     EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, input));
   }
 }

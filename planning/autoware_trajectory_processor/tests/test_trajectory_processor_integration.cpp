@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_processor/trajectory_modifier.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer.hpp"
+#include "autoware/trajectory_processor/trajectory_processor.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -126,65 +125,58 @@ protected:
   void SetUp() override
   {
     // Setup node options with parameters
-    auto modifier_options = rclcpp::NodeOptions{};
-    auto optimizer_options = rclcpp::NodeOptions{};
+    auto processor_options = rclcpp::NodeOptions{};
     auto test_options = rclcpp::NodeOptions{};
 
     // Force all nodes to use simulated time
-    modifier_options.append_parameter_override("use_sim_time", true);
-    optimizer_options.append_parameter_override("use_sim_time", true);
+    processor_options.append_parameter_override("use_sim_time", true);
     test_options.append_parameter_override("use_sim_time", true);
 
-    const auto modifier_dir =
+    const auto processor_dir =
       ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
-    const auto optimizer_dir =
-      ament_index_cpp::get_package_share_directory("autoware_trajectory_processor");
+    const auto core_planning_dir =
+      ament_index_cpp::get_package_share_directory("autoware_core_planning");
     const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
-    optimizer_options.append_parameter_override(
+    processor_options.append_parameter_override(
       "trajectory_velocity_optimizer.smooth_velocities", true);
 
-    // Remap modifier output to optimizer input and load param files
-    modifier_options.arguments(
-      {"--ros-args", "--params-file", modifier_dir + "/config/trajectory_modifier.param.yaml",
-       "--params-file", test_utils_dir + "/config/test_vehicle_info.param.yaml", "-r",
-       "~/output/candidate_trajectories:=/combined/trajectories", "-r",
-       "~/input/odometry:=/localization/kinematic_state", "-r",
-       "~/input/acceleration:=/localization/acceleration", "-r",
-       "~/input/objects:=/perception/object_recognition/objects", "-r",
-       "~/input/pointcloud:=/perception/obstacle_segmentation/pointcloud"});
-    optimizer_options.arguments(
+    processor_options.arguments(
       {"--ros-args",
        "--params-file",
-       optimizer_dir + "/config/trajectory_optimizer.param.yaml",
+       processor_dir + "/config/trajectory_processor.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_qp_smoother.param.yaml",
+       core_planning_dir + "/config/common.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_point_fixer.param.yaml",
+       processor_dir + "/config/trajectory_smoothing/elastic_band_smoother.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_qp_smoother.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_extender.param.yaml",
+       processor_dir + "/config/plugins/trajectory_point_fixer.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_spline_smoother.param.yaml",
+       processor_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_extender.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_spline_smoother.param.yaml",
        "--params-file",
-       optimizer_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml",
+       processor_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml",
+       "--params-file",
+       processor_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml",
+       "--params-file",
+       processor_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml",
        "--params-file",
        test_utils_dir + "/config/test_vehicle_info.param.yaml",
        "-r",
-       "~/input/trajectories:=/combined/trajectories",
-       "-r",
        "~/input/odometry:=/localization/kinematic_state",
        "-r",
-       "~/input/acceleration:=/localization/acceleration"});
+       "~/input/acceleration:=/localization/acceleration",
+       "-r",
+       "~/input/objects:=/perception/object_recognition/objects",
+       "-r",
+       "~/input/pointcloud:=/perception/obstacle_segmentation/pointcloud"});
 
-    modifier_node_ =
-      std::make_shared<autoware::trajectory_modifier::TrajectoryModifier>(modifier_options);
-    optimizer_node_ =
-      std::make_shared<autoware::trajectory_optimizer::TrajectoryOptimizer>(optimizer_options);
+    processor_node_ =
+      std::make_shared<autoware::trajectory_processor::TrajectoryProcessor>(processor_options);
 
     test_node_ = std::make_shared<rclcpp::Node>("test_node", test_options);
 
@@ -194,7 +186,7 @@ protected:
 
     // Publishers for inputs
     pub_tra_ = test_node_->create_publisher<CandidateTrajectories>(
-      "/trajectory_modifier/input/candidate_trajectories", 1);
+      "/trajectory_processor/input/trajectories", 1);
     pub_odo_ = test_node_->create_publisher<Odometry>("/localization/kinematic_state", 1);
     pub_acc_ =
       test_node_->create_publisher<AccelWithCovarianceStamped>("/localization/acceleration", 1);
@@ -203,14 +195,19 @@ protected:
 
     // Subscriber for final output
     sub_output_ = test_node_->create_subscription<Trajectory>(
-      "/trajectory_optimizer/output/trajectory", 1, [this](const Trajectory::ConstSharedPtr msg) {
+      "/trajectory_processor/output/trajectory", 1, [this](const Trajectory::ConstSharedPtr msg) {
         output_received_ = true;
         latest_output_ = *msg;
       });
+    sub_candidate_output_ = test_node_->create_subscription<CandidateTrajectories>(
+      "/trajectory_processor/output/trajectories", 1,
+      [this](const CandidateTrajectories::ConstSharedPtr msg) {
+        candidate_output_received_ = true;
+        latest_candidate_output_ = *msg;
+      });
 
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
-    executor_->add_node(modifier_node_);
-    executor_->add_node(optimizer_node_);
+    executor_->add_node(processor_node_->get_node_base_interface());
     executor_->add_node(test_node_);
   }
 
@@ -254,8 +251,7 @@ protected:
     }
   }
 
-  std::shared_ptr<autoware::trajectory_modifier::TrajectoryModifier> modifier_node_;
-  std::shared_ptr<autoware::trajectory_optimizer::TrajectoryOptimizer> optimizer_node_;
+  std::shared_ptr<autoware::trajectory_processor::TrajectoryProcessor> processor_node_;
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
 
@@ -267,10 +263,63 @@ protected:
   rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr pub_acc_;
   rclcpp::Publisher<PredictedObjects>::SharedPtr pub_obj_;
   rclcpp::Subscription<Trajectory>::SharedPtr sub_output_;
+  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_candidate_output_;
 
   bool output_received_{false};
+  bool candidate_output_received_{false};
   Trajectory latest_output_;
+  CandidateTrajectories latest_candidate_output_;
 };
+
+TEST_F(TrajectoryProcessorIntegrationTest, RejectsInputWithoutRequiredState)
+{
+  const auto trajectories = create_straight_trajectories(10.0, 2.0, sim_time_);
+  for (int i = 0; i < 10; ++i) {
+    pub_tra_->publish(trajectories);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+
+  EXPECT_FALSE(output_received_);
+  EXPECT_FALSE(candidate_output_received_);
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, PublishesEmptyCandidateArrayWithoutSelectedTrajectory)
+{
+  const CandidateTrajectories empty;
+  const auto odometry = create_odometry(0.0);
+  for (int i = 0; i < 20 && !candidate_output_received_; ++i) {
+    publish_mandatory_inputs(empty, odometry);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+
+  ASSERT_TRUE(candidate_output_received_);
+  EXPECT_TRUE(latest_candidate_output_.candidate_trajectories.empty());
+  EXPECT_FALSE(output_received_);
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, AppliesFallbackToEveryShortCandidate)
+{
+  CandidateTrajectories input;
+  for (double y : {0.0, 1.0}) {
+    CandidateTrajectory candidate;
+    candidate.header.frame_id = "map";
+    candidate.header.stamp = sim_time_;
+    candidate.points.push_back(create_trajectory_point(0.0, y, 0.0));
+    input.candidate_trajectories.push_back(candidate);
+  }
+
+  const auto odometry = create_odometry(0.0);
+  for (int i = 0; i < 20 && !candidate_output_received_; ++i) {
+    publish_mandatory_inputs(input, odometry);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+
+  ASSERT_TRUE(candidate_output_received_);
+  ASSERT_EQ(latest_candidate_output_.candidate_trajectories.size(), 2U);
+  for (const auto & candidate : latest_candidate_output_.candidate_trajectories) {
+    EXPECT_EQ(candidate.points.size(), 3U);
+  }
+}
 
 TEST_F(TrajectoryProcessorIntegrationTest, BasicPipelineTest)
 {

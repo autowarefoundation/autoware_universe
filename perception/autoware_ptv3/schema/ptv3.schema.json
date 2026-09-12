@@ -137,6 +137,29 @@
           "description": "Controls mapping of voxel predictions back to source points. 'none': voxel representative points; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.",
           "enum": ["none", "partial", "full"]
         },
+        "class_mapping": {
+          "type": "object",
+          "description": "Mapping from each segmentation3d.class_names entry to a PointCloudClassification value. Keys must match class_names exactly and every class_names entry must be present.",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "CAR",
+              "TRUCK",
+              "BUS",
+              "MOTORCYCLE",
+              "BICYCLE",
+              "PEDESTRIAN",
+              "ANIMAL",
+              "HAZARD",
+              "FLAT_SURFACE",
+              "STRUCTURE",
+              "VEGETATION",
+              "NOISE",
+              "INVALID"
+            ]
+          },
+          "minProperties": 1
+        },
         "filter": {
           "$ref": "#/definitions/filter"
         },
@@ -159,7 +182,13 @@
             "required": ["use_head"]
           },
           "then": {
-            "required": ["onnx_path", "engine_path", "source_reconstruction", "filter"]
+            "required": [
+              "onnx_path",
+              "engine_path",
+              "source_reconstruction",
+              "class_mapping",
+              "filter"
+            ]
           }
         }
       ],
@@ -254,8 +283,8 @@
         },
         "trt_precision": {
           "type": "string",
-          "description": "TensorRT inference precision.",
-          "enum": ["fp16", "fp32"]
+          "description": "How the TensorRT engines are built. \"fp16\" and \"fp32\" request a precision for a weakly typed build, letting the builder assign tensor precisions. \"strongly-typed\" takes every tensor precision from the model itself.",
+          "enum": ["fp16", "fp32", "strongly-typed"]
         },
         "cloud_capacity": {
           "type": "integer",

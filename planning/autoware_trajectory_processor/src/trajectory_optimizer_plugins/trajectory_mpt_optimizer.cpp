@@ -32,18 +32,19 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
-void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryMPTOptimizer::on_initialize(const TrajectoryProcessorParams & params)
 {
-  auto node_ptr = get_node_ptr();
-  RCLCPP_INFO(node_ptr->get_logger(), "MPT Optimizer plugin: Starting initialization...");
+  RCLCPP_INFO(get_logger(), "MPT Optimizer plugin: Starting initialization...");
 
   try {
     // Get vehicle info
-    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
-    RCLCPP_INFO(node_ptr->get_logger(), "MPT: Vehicle info loaded");
+    vehicle_info_ = with_node([](auto * node) {
+      return autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo();
+    });
+    RCLCPP_INFO(get_logger(), "MPT: Vehicle info loaded");
 
     // Initialize debug data
     debug_data_ptr_ = std::make_shared<DebugData>();
@@ -71,33 +72,34 @@ void TrajectoryMPTOptimizer::on_initialize(const TrajectoryOptimizerParams & par
     mpt_params_.acceleration_moving_average_window =
       params.trajectory_mpt_optimizer.acceleration_moving_average_window;
 
-    RCLCPP_INFO(node_ptr->get_logger(), "MPT: Parameters set up");
+    RCLCPP_INFO(get_logger(), "MPT: Parameters set up");
 
     // Create TimeKeeper for performance profiling
-    auto debug_pub = node_ptr->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
-      "~/debug/mpt_processing_time_detail_ms", 1);
-    mpt_time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_pub);
-    RCLCPP_INFO(node_ptr->get_logger(), "MPT: TimeKeeper created");
+    with_node([&](auto * node) {
+      auto debug_pub = node->template create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
+        "~/debug/mpt_processing_time_detail_ms", 1);
+      mpt_time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_pub);
+      RCLCPP_INFO(get_logger(), "MPT: TimeKeeper created");
 
-    // Initialize MPT optimizer
-    mpt_optimizer_ptr_ = std::make_shared<MPTOptimizer>(
-      node_ptr, mpt_params_.enable_debug_info, ego_nearest_param_, vehicle_info_, traj_param_,
-      debug_data_ptr_, mpt_time_keeper_);
-    RCLCPP_INFO(node_ptr->get_logger(), "MPT: MPTOptimizer created");
+      // Initialize MPT optimizer
+      mpt_optimizer_ptr_ = std::make_shared<MPTOptimizer>(
+        node, mpt_params_.enable_debug_info, ego_nearest_param_, vehicle_info_, traj_param_,
+        debug_data_ptr_, mpt_time_keeper_);
+    });
+    RCLCPP_INFO(get_logger(), "MPT: MPTOptimizer created");
 
     // Create debug markers publisher
-    debug_markers_pub_ = node_ptr->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "~/debug/mpt_bounds_markers", 1);
+    debug_markers_pub_ =
+      make_publisher<visualization_msgs::msg::MarkerArray>("~/debug/mpt_bounds_markers");
 
-    RCLCPP_INFO(node_ptr->get_logger(), "MPT Optimizer plugin initialized successfully!");
+    RCLCPP_INFO(get_logger(), "MPT Optimizer plugin initialized successfully!");
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(
-      node_ptr->get_logger(), "MPT Optimizer plugin initialization FAILED: %s", e.what());
+    RCLCPP_ERROR(get_logger(), "MPT Optimizer plugin initialization FAILED: %s", e.what());
     throw;
   }
 }
 
-void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryMPTOptimizer::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_mpt_optimizer;
   mpt_params_ = params.trajectory_mpt_optimizer;
@@ -141,24 +143,23 @@ void TrajectoryMPTOptimizer::update_params(const TrajectoryOptimizerParams & par
   }
 }
 
-void TrajectoryMPTOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryMPTOptimizer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
   // Skip if MPT optimizer is disabled
-  if (!enabled_) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
 
   // Minimum points required for optimization
   constexpr size_t min_points_for_optimization = 10;
   if (traj_points.size() < min_points_for_optimization) {
     RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "MPT: Trajectory too short (%zu < %zu points), skipping", traj_points.size(),
-      min_points_for_optimization);
-    return;
+      get_logger(), *get_clock(), 5000, "MPT: Trajectory too short (%zu < %zu points), skipping",
+      traj_points.size(), min_points_for_optimization);
+    return ProcessingResult::Unchanged;
   }
 
   // Reset previous data if configured (for diffusion planner's new trajectories each cycle)
@@ -189,16 +190,14 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
   // Apply optimized trajectory if successful
   if (!optimized_traj) {
     RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "MPT: Optimization failed, keeping original trajectory");
-    return;
+      get_logger(), *get_clock(), 5000, "MPT: Optimization failed, keeping original trajectory");
+    return ProcessingResult::Unchanged;
   }
   // Validate optimized trajectory
   if (optimized_traj->empty()) {
     RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "MPT: Returned empty trajectory, keeping original");
-    return;
+      get_logger(), *get_clock(), 5000, "MPT: Returned empty trajectory, keeping original");
+    return ProcessingResult::Unchanged;
   }
 
   // Apply optimized trajectory
@@ -209,19 +208,20 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
     traj_points, mpt_params_.acceleration_moving_average_window);
 
   RCLCPP_DEBUG_THROTTLE(
-    get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-    "MPT: Optimized %zu->%zu points, recalculated dynamics", original_size, traj_points.size());
+    get_logger(), *get_clock(), 5000, "MPT: Optimized %zu->%zu points, recalculated dynamics",
+    original_size, traj_points.size());
+  return ProcessingResult::Modified;
 }
 
 PlannerData TrajectoryMPTOptimizer::create_planner_data(
   const TrajectoryPoints & traj_points, const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
-  const TrajectoryOptimizerData & data) const
+  const TrajectoryProcessorData & data) const
 {
   PlannerData planner_data;
 
   // Create header from odometry frame
-  planner_data.header.stamp = get_node_ptr()->now();
-  planner_data.header.frame_id = data.current_odometry.header.frame_id;
+  planner_data.header.stamp = now();
+  planner_data.header.frame_id = data.current_odometry->header.frame_id;
 
   // Set trajectory points
   planner_data.traj_points = traj_points;
@@ -231,8 +231,8 @@ PlannerData TrajectoryMPTOptimizer::create_planner_data(
   planner_data.right_bound = bounds.right_bound;
 
   // Set ego state
-  planner_data.ego_pose = data.current_odometry.pose.pose;
-  planner_data.ego_vel = data.current_odometry.twist.twist.linear.x;
+  planner_data.ego_pose = data.current_odometry->pose.pose;
+  planner_data.ego_vel = data.current_odometry->twist.twist.linear.x;
 
   return planner_data;
 }
@@ -241,12 +241,12 @@ void TrajectoryMPTOptimizer::publish_debug_markers(
   const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
   const TrajectoryPoints & traj_points) const
 {
-  if (debug_markers_pub_->get_subscription_count() == 0) {
+  if (debug_markers_pub_.get_subscription_count() == 0) {
     return;
   }
 
   visualization_msgs::msg::MarkerArray markers;
-  const auto now = get_node_ptr()->now();
+  const auto now = this->now();
   const std::string frame_id = "map";
 
   // Left bound marker (green)
@@ -299,13 +299,13 @@ void TrajectoryMPTOptimizer::publish_debug_markers(
   }
   markers.markers.push_back(traj_marker);
 
-  debug_markers_pub_->publish(markers);
+  debug_markers_pub_(markers);
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // Export plugin
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

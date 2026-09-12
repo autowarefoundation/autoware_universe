@@ -15,8 +15,6 @@
 #ifndef INPUT_HPP_
 #define INPUT_HPP_
 
-#endif  // INPUT_HPP_
-
 #include "autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp"
 #include "autoware_internal_planning_msgs/msg/path_with_lane_id.hpp"
 #include "autoware_planning_msgs/msg/path_point.hpp"
@@ -42,3 +40,5 @@ Twist generateSampleEgoTwist(float && l_x, float && l_y, float && l_z);
 
 Pose generateEgoSamplePose(float && p_x, float && p_y, float && p_z);
 }  // namespace autoware::behavior_path_planner
+
+#endif  // INPUT_HPP_

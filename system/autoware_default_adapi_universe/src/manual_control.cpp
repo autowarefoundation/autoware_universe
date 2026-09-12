@@ -18,13 +18,14 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace autoware::default_adapi
 {
 
 ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
-: Node("manual_control", options),
-  diag_updater_(std::make_unique<diagnostic_updater::Updater>(this))
+: autoware::agnocast_wrapper::Node("manual_control", options),
+  diag_updater_(std::make_unique<autoware::agnocast_wrapper::diagnostic_updater::Updater>(this))
 {
   // NOTE: Do not enable interfaces for velocity and acceleration mode in the constructor.
   //       Enable the comment out process and enable interface when the service is called.
@@ -75,8 +76,9 @@ ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
     ns_ + "/control_mode/select", std::bind(&ManualControlNode::on_select_mode, this, _1, _2));
   pub_mode_status_ = create_publisher<ManualControlModeStatus>(
     ns_ + "/control_mode/status", rclcpp::QoS(1).transient_local());
-  sub_operation_mode_ = PollingSubscription<OperationModeState>::create_subscription(
-    this, "/api/operation_mode/state", rclcpp::QoS(1).transient_local());
+  sub_operation_mode_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<OperationModeState>(
+      this, "/api/operation_mode/state", rclcpp::QoS(1).transient_local());
 
   // Initialize the current manual control mode.
   update_mode_status(ManualControlMode::DISABLED);
@@ -86,10 +88,10 @@ void ManualControlNode::update_mode_status(uint8_t mode)
 {
   current_mode_.mode = mode;
 
-  ManualControlModeStatus msg;
-  msg.stamp = now();
-  msg.mode = current_mode_;
-  pub_mode_status_->publish(msg);
+  auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_mode_status_);
+  msg->stamp = now();
+  msg->mode = current_mode_;
+  pub_mode_status_->publish(std::move(msg));
 }
 
 void ManualControlNode::on_list_mode(

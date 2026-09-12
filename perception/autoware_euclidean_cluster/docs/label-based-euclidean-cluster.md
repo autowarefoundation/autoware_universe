@@ -8,20 +8,25 @@
 It groups points by semantic class, clusters each label bucket independently, and estimates a shape for every resulting cluster.
 Non-object semantic labels are published as segment pointclouds.
 
-This node is intended for segmented pointcloud inputs that provide semantic labels as `class_id`, and optionally per-point confidence as `probability`.
+This node is intended for segmented pointcloud inputs published as `autoware::point_types::PointXYZCPE`, which carry the semantic label as `class_id` and the per-point confidence as `probability`.
 
 ## Inputs / Outputs
 
 ### Input
 
-| Name                 | Type                            | Description                                 |
-| -------------------- | ------------------------------- | ------------------------------------------- |
-| `~/input/pointcloud` | `sensor_msgs::msg::PointCloud2` | segmented pointcloud with `x`, `y`, and `z` |
+| Name                 | Type                            | Description                                          |
+| -------------------- | ------------------------------- | ---------------------------------------------------- |
+| `~/input/pointcloud` | `sensor_msgs::msg::PointCloud2` | segmented `autoware::point_types::PointXYZCPE` cloud |
 
-Optional input fields used by the node:
+The input point type is assumed to be `autoware::point_types::PointXYZCPE`, that is a densely packed
+24-byte point with the following fields. Clouds with any other layout are rejected and reported with
+a throttled warning.
 
-- `class_id` (`uint8`): semantic class index for each point.
+- `x`, `y`, `z` (`float32`): point position.
+- `class_id` (`uint8`): `PointCloudClassification` value for each point.
 - `probability` (`float32`): semantic confidence for each point.
+- `entropy` (`float32`): normalized prediction entropy, `NaN` when it is unavailable. Not used by
+  this node, but preserved in the segment output.
 
 ### Output
 
@@ -32,16 +37,24 @@ Optional input fields used by the node:
 
 ## Processing Flow
 
-1. Validate that the incoming pointcloud contains `x`, `y`, and `z`.
-2. Interpret `class_id` values as `SemanticLabel`.
-3. Send object-compatible SemanticLabels through clustering and copy non-object or unknown SemanticLabels to `output_segments`.
-4. If the pointcloud has a `probability` field, drop points with `probability < min_probability`.
+1. Validate that the incoming pointcloud is a densely packed `autoware::point_types::PointXYZCPE` cloud.
+2. Interpret `class_id` values as `PointCloudClassification`.
+3. Send object-compatible classifications through clustering and copy non-object or unknown classifications to `output_segments`.
+4. Drop points with `probability < min_probability`.
 5. Split object-compatible points into buckets keyed by the Autoware object label.
 6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
 7. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
 8. Compute the average semantic probability for each output cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label filtered cloud, rather than rematching points by coordinate.
 9. Estimate a shape and pose for each cluster with `ShapeEstimator`.
 10. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
+
+### Filtering Clusters
+
+Clusters can optionally be filtered by their physical size after label-based clustering.
+The size is the diameter of an XY bounding circle around the cluster, which is independent of object heading.
+`min_cluster_size_m: 0.0` disables the global filter.
+A value under `label_cluster_params.<label>.min_cluster_size_m` overrides it for that label; setting the override to `0.0` disables filtering for that label.
+This allows large-object labels such as `truck` to reject implausibly small false positives while leaving small `hazard` objects unfiltered.
 
 ## Shape Estimation Behavior
 
@@ -82,6 +95,7 @@ hazards need a tighter tolerance and finer voxels than cars or trucks.
 - Each override block accepts the same keys as the global clustering parameters.
 - Any key omitted inside an override block falls back to the corresponding global value, so a block
   only needs to list the parameters that differ.
+- `min_cluster_size_m` is also accepted in an override block and is evaluated after clustering.
 - A label with no override block (or an empty one) keeps using the global default cluster.
 - When a label-specific cluster is created, the node logs `Using custom cluster params for label '<label>'` at startup.
 
@@ -143,15 +157,14 @@ confusable_label_groups:
 ## Default Configuration Notes
 
 The default parameter file keeps shared clustering and shape-estimation parameters only.
-Object selection is derived from `SemanticLabel` compatibility.
+Object selection is derived from `PointCloudClassification` compatibility.
 
 ## Assumptions / Known Limits
 
-- The node assumes the incoming pointcloud already represents semantically segmented points.
-- `class_id` values are interpreted as `SemanticLabel` values.
-- Non-object or unknown `SemanticLabel` values are copied to `output/pointcloud` with the original point fields preserved.
-- When the input has no `class_id` field, all points are clustered together as `UNKNOWN`.
-- When the input has no `probability` field, every point is treated as confidence `1.0`.
+- The node assumes the incoming pointcloud already represents semantically segmented points and uses the `autoware::point_types::PointXYZCPE` layout.
+- `class_id` values are interpreted as `PointCloudClassification` values.
+- Non-object or unknown `PointCloudClassification` values are copied to `output/pointcloud` with the original point fields preserved.
+- Inputs whose layout differs from `autoware::point_types::PointXYZCPE` are rejected instead of being clustered with default values.
 - Clustering is spatial only; there is no temporal association or tracking.
 
 ## Intended Usage

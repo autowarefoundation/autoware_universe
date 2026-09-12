@@ -95,4 +95,3 @@ public:
 
 // clang-format off
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__DUAL_RETURN_OUTLIER_FILTER_NODE_HPP_  // NOLINT
-// clang-format on

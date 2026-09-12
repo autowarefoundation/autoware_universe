@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
+namespace autoware::trajectory_processor::plugin::trajectory_velocity_optimizer_utils
 {
 
 void clamp_velocities(
@@ -270,4 +270,4 @@ void filter_velocity(
   }
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_velocity_optimizer_utils

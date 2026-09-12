@@ -34,7 +34,7 @@ namespace autoware::default_adapi
 {
 
 VehicleInfoNode::VehicleInfoNode(const rclcpp::NodeOptions & options)
-: Node("vehicle_info", options)
+: autoware::agnocast_wrapper::Node("vehicle_info", options)
 {
   const auto on_vehicle_dimensions = [this](auto, auto res) {
     res->status.success = true;
@@ -61,7 +61,7 @@ VehicleInfoNode::VehicleInfoNode(const rclcpp::NodeOptions & options)
   dimensions_.footprint.points.push_back(create_point(-b, -l));
   dimensions_.footprint.points.push_back(create_point(-b, +r));
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   adaptor.init_srv(srv_dimensions_, on_vehicle_dimensions);
 }
 

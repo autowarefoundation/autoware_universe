@@ -60,4 +60,3 @@ private:
 }  // namespace autoware::predicted_path_postprocessor::processor
 // clang-format off
 #endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_PENETRATION_BY_STATIC_OBJECTS_HPP_  // NOLINT
-// clang-format on

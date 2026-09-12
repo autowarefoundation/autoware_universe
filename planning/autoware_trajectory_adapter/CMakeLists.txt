@@ -4,22 +4,13 @@ project(autoware_trajectory_adapter)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-include_directories(
-  SYSTEM
-)
+set(trajectory_adapter_lib_target ${PROJECT_NAME}_lib)
 
-ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/trajectory_adapter_node.cpp
-)
-
-autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::trajectory_adapter::TrajectoryAdapterNode"
-  EXECUTABLE ${PROJECT_NAME}_node
-  ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+ament_auto_add_library(${trajectory_adapter_lib_target} SHARED
+  src/trajectory_adapter.cpp
+  src/trajectory_adapter_wrapper.cpp
 )
 
 ament_auto_package(
   INSTALL_TO_SHARE
-  launch
 )

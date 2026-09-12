@@ -60,8 +60,9 @@ void BlindSpotModuleManager::launchNewModules(
     const auto turn_direction =
       turn_direction_str == "left" ? TurnDirection::Left : TurnDirection::Right;
 
-    if (get_neighboring_turn_lanelet(
-          planner_data_->route_handler_, ll, planner_data_->current_odometry->pose)) {
+    if (
+      get_neighboring_turn_lanelet(
+        planner_data_->route_handler_, ll, planner_data_->current_odometry->pose)) {
       continue;
     }
 

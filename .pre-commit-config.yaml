@@ -47,7 +47,7 @@ repos:
       - id: check-package-depends
 
   - repo: https://github.com/tier4/pre-commit-hooks-ros
-    rev: v0.10.2
+    rev: v0.10.3
     hooks:
       - id: flake8-ros
       - id: prettier-xacro
@@ -80,7 +80,7 @@ repos:
         args: [--line-length=100]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v21.1.8
+    rev: v22.1.5
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
@@ -109,7 +109,7 @@ repos:
         additional_dependencies: [prettier@2.7.1, "@prettier/plugin-xml@2.2.0"]
 
   - repo: https://github.com/autowarefoundation/autoware_system_designer
-    rev: v0.4.1
+    rev: v0.4.2
     hooks:
       - id: lint-system-design-format
         args: [--format=github-actions]

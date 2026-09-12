@@ -44,14 +44,15 @@ std_msgs::msg::ColorRGBA getColorFromId(int id)
 }
 }  // namespace
 
-PlanningValidatorDebugMarkerPublisher::PlanningValidatorDebugMarkerPublisher(rclcpp::Node * node)
+PlanningValidatorDebugMarkerPublisher::PlanningValidatorDebugMarkerPublisher(
+  autoware::agnocast_wrapper::Node * node)
 : node_(node)
 {
   debug_viz_pub_ =
-    node_->create_publisher<visualization_msgs::msg::MarkerArray>("~/debug/marker", 1);
+    node_->create_publisher<visualization_msgs::msg::MarkerArray>("~/debug/marker", rclcpp::QoS{1});
 
   virtual_wall_pub_ =
-    node_->create_publisher<visualization_msgs::msg::MarkerArray>("~/virtual_wall", 1);
+    node_->create_publisher<visualization_msgs::msg::MarkerArray>("~/virtual_wall", rclcpp::QoS{1});
 }
 
 void PlanningValidatorDebugMarkerPublisher::clearMarkers()

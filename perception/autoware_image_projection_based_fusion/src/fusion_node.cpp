@@ -24,17 +24,20 @@
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tier4_perception_msgs/msg/detected_object_with_feature.hpp>
 
 #include <boost/optional.hpp>
 
+#include <atomic>
 #include <cmath>
 #include <limits>
 #include <list>
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -46,7 +49,9 @@ using autoware_utils::ScopedTimeTrack;
 template <class Msg3D, class Msg2D, class ExportObj>
 FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
   const std::string & node_name, const rclcpp::NodeOptions & options)
-: Node(node_name, options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
+: autoware::agnocast_wrapper::Node(node_name, options),
+  tf_buffer_(this->get_clock()),
+  tf_listener_(tf_buffer_, *this)
 {
   // set rois_number
   rois_number_ = static_cast<std::size_t>(declare_parameter<int32_t>("rois_number"));
@@ -99,8 +104,9 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     auto qos = rclcpp::QoS{1}.best_effort();
 
     camera_info_subs_[rois_id] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-      topic, qos, [this, rois_id](const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) {
-        this->camera_info_callback(msg, rois_id);
+      topic, qos,
+      [this, rois_id](AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::CameraInfo) msg) {
+        this->camera_info_callback(std::move(msg), rois_id);
       });
   }
 
@@ -112,15 +118,15 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     auto qos = rclcpp::QoS{1}.best_effort();
 
     rois_subs_[rois_id] = this->create_subscription<Msg2D>(
-      topic, qos, [this, rois_id](const typename Msg2D::ConstSharedPtr msg) {
-        this->rois_callback(msg, rois_id);
+      topic, qos, [this, rois_id](AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg2D) msg) {
+        this->rois_callback(std::move(msg), rois_id);
       });
   }
 
   // Subscribe 3D input msg
   msg3d_sub_ = this->create_subscription<Msg3D>(
     "input", rclcpp::QoS(1).best_effort(),
-    [this](const typename Msg3D::ConstSharedPtr msg) { this->sub_callback(msg); });
+    [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg3D) msg) { this->sub_callback(std::move(msg)); });
 
   // initialization on each 2d detections
   initialize_det2d_status(rois_number_);
@@ -158,7 +164,9 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
       std::make_shared<Debugger>(this, rois_number_, image_buffer_size, input_camera_topics);
 
     // input topic timing publisher
-    debug_internal_pub_ = std::make_unique<autoware_utils::DebugPublisher>(this, get_name());
+    debug_internal_pub_ =
+      std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        this, get_name());
   }
   collector_debug_mode_ = declare_parameter<bool>("collector_debug_mode");
 
@@ -175,7 +183,9 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
   // initialize debug tool
   {
     stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
-    debug_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, get_name());
+    debug_publisher_ =
+      std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        this, get_name());
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
   }
@@ -190,15 +200,17 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
 {
   if (matching_strategy_ == "naive") {
     fusion_matching_strategy_ = std::make_unique<NaiveMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
-      std::dynamic_pointer_cast<FusionNode>(shared_from_this()), id_to_offset_map_);
+      std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), id_to_offset_map_);
   } else if (matching_strategy_ == "advanced") {
     fusion_matching_strategy_ = std::make_unique<AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
-      std::dynamic_pointer_cast<FusionNode>(shared_from_this()), id_to_offset_map_);
+      std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), id_to_offset_map_);
     // subscribe concatenation_info
     sub_concatenation_info_ =
       this->create_subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
         "input/concatenation_info", rclcpp::SensorDataQoS().keep_last(10),
-        std::bind(&FusionNode::concatenation_info_callback, this, std::placeholders::_1));
+        [this](
+          AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)
+            msg) { this->concatenation_info_callback(std::move(msg)); });
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
   }
@@ -211,8 +223,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_collector_list()
   for (size_t i = 0; i < num_of_collectors; ++i) {
     fusion_collectors_.emplace_back(
       std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
-        std::dynamic_pointer_cast<FusionNode>(shared_from_this()), rois_number_, det2d_status_list_,
-        collector_debug_mode_));
+        std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), rois_number_,
+        det2d_status_list_, collector_debug_mode_));
   }
   init_collector_list_ = true;
 }
@@ -252,7 +264,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_det2d_status(std::size_t ro
 
 template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
-  const sensor_msgs::msg::CameraInfo::ConstSharedPtr input_camera_info_msg,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::CameraInfo) input_camera_info_msg,
   const std::size_t rois_id)
 {
   if (rois_id >= det2d_status_list_.size()) {
@@ -263,24 +275,30 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
   // This assume the camera info does not change while the node is running
   auto & det2d_status = det2d_status_list_.at(rois_id);
   if (det2d_status.camera_projector_ptr == nullptr && check_camera_info(*input_camera_info_msg)) {
-    std::atomic<bool> initializing{true};
-    std::thread([this, &initializing, rois_id]() {
+    // The flag is shared with the logging thread so that it outlives this scope even if the
+    // thread is still running, and the thread is joined below to guarantee that `this` stays
+    // valid for the whole lifetime of the thread.
+    auto initializing = std::make_shared<std::atomic<bool>>(true);
+    std::thread logging_thread([this, initializing, rois_id]() {
       rclcpp::Rate rate(1.0);  // 1 Hz
-      while (rclcpp::ok() && initializing.load()) {
+      while (rclcpp::ok() && initializing->load()) {
         RCLCPP_WARN(
           this->get_logger(), "Still initializing camera projector for ROI %zu... please wait...",
           rois_id);
         rate.sleep();
       }
-    }).detach();
+    });
 
     det2d_status.camera_projector_ptr = std::make_unique<CameraProjection>(
       *input_camera_info_msg, approx_grid_cell_w_size_, approx_grid_cell_h_size_,
       det2d_status.project_to_unrectified_image, det2d_status.approximate_camera_projection);
     det2d_status.camera_projector_ptr->initialize();
 
-    // Mark as finished
-    initializing = false;
+    // Mark as finished and wait for the logging thread to exit, so that no stray warning is
+    // printed after the message below and no thread outlives this node.
+    initializing->store(false);
+    logging_thread.join();
+
     RCLCPP_INFO(
       this->get_logger(), "Camera projector initialization for ROI %zu finished.", rois_id);
 
@@ -328,7 +346,6 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
     publish(output_msg);
   }
 
-  // Move collected diagnostics info
   diagnostic_collector_info_ = std::move(collector_info);
   diagnostic_id_to_stamp_map_ = std::move(id_to_stamp_map);
 
@@ -367,7 +384,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
-void FusionNode<Msg3D, Msg2D, ExportObj>::sub_callback(const typename Msg3D::ConstSharedPtr msg3d)
+void FusionNode<Msg3D, Msg2D, ExportObj>::sub_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg3D) msg3d)
 {
   if (!fusion_matching_strategy_) {
     initialize_strategy();
@@ -444,7 +462,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::sub_callback(const typename Msg3D::Con
 
 template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::rois_callback(
-  const typename Msg2D::ConstSharedPtr rois_msg, const std::size_t rois_id)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg2D) rois_msg, const std::size_t rois_id)
 {
   if (!fusion_matching_strategy_) {
     initialize_strategy();
@@ -515,7 +533,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::rois_callback(
 
 template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::concatenation_info_callback(
-  const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)
+    concatenation_info_msg)
 {
   if (
     concatenation_info_msg->matching_strategy ==
@@ -629,7 +648,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::manage_collector_list()
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
-std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr>
+std::optional<
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)>
 FusionNode<Msg3D, Msg2D, ExportObj>::find_concatenation_info(double timestamp)
 {
   auto it = concatenated_info_map_.find(timestamp);

@@ -18,17 +18,11 @@ from dataclasses import field
 import launch
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
-from launch.actions import OpaqueFunction
-from launch.conditions import IfCondition
-from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
-from launch_ros.actions import ComposableNodeContainer
-from launch_ros.actions import LoadComposableNodes
-from launch_ros.descriptions import ComposableNode
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-import yaml
 
 
 @dataclass(frozen=True)
@@ -55,7 +49,7 @@ class LaunchArgument:
 
 # === Node information ===
 PACKAGE_NAME = "autoware_euclidean_cluster"
-PLUGIN_NAME = "autoware::euclidean_cluster::LabelBasedEuclideanClusterNode"
+EXECUTABLE_NAME = "label_based_euclidean_cluster_node"
 NODE_NAME = "label_based_euclidean_cluster"
 
 # === Launch arguments ===
@@ -71,58 +65,9 @@ PARAM_PATH = LaunchArgument(
     ],
 )
 
-USE_POINTCLOUD_CONTAINER = LaunchArgument("use_pointcloud_container", "false")
-POINTCLOUD_CONTAINER_NAME = LaunchArgument("pointcloud_container_name", "pointcloud_container")
-
-
-def launch_setup(context, *args, **kwargs):
-    def load_composable_node_param(param_path):
-        with open(LaunchConfiguration(param_path).perform(context), "r") as f:
-            return yaml.safe_load(f)["/**"]["ros__parameters"]
-
-    ns = ""
-    component = ComposableNode(
-        package=PACKAGE_NAME,
-        namespace=ns,
-        plugin=PLUGIN_NAME,
-        name=NODE_NAME,
-        remappings=[
-            INPUT_POINTCLOUD.remapping,
-            OUTPUT_OBJECTS.remapping,
-            OUTPUT_POINTCLOUD.remapping,
-        ],
-        parameters=[load_composable_node_param(PARAM_PATH.name)],
-    )
-
-    container = ComposableNodeContainer(
-        name=POINTCLOUD_CONTAINER_NAME.name,
-        namespace=ns,
-        package=LaunchConfiguration("container_package"),
-        executable=LaunchConfiguration("container_executable"),
-        composable_node_descriptions=[],
-        output="screen",
-        condition=UnlessCondition(USE_POINTCLOUD_CONTAINER.config),
-        additional_env={
-            "LD_PRELOAD": LaunchConfiguration("ld_preload_value"),
-        },
-    )
-
-    target_container = (
-        POINTCLOUD_CONTAINER_NAME.config
-        if IfCondition(USE_POINTCLOUD_CONTAINER.config).evaluate(context)
-        else container
-    )
-
-    loader = LoadComposableNodes(
-        composable_node_descriptions=[component],
-        target_container=target_container,
-    )
-
-    return [container, loader]
-
 
 def generate_launch_description():
-    # Resolve LD_PRELOAD / container package / container executable based on ENABLE_AGNOCAST.
+    # Resolve LD_PRELOAD based on ENABLE_AGNOCAST.
     agnocast_env = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -135,6 +80,23 @@ def generate_launch_description():
         ),
     )
 
+    node = Node(
+        package=PACKAGE_NAME,
+        executable=EXECUTABLE_NAME,
+        name=NODE_NAME,
+        namespace="",
+        remappings=[
+            INPUT_POINTCLOUD.remapping,
+            OUTPUT_OBJECTS.remapping,
+            OUTPUT_POINTCLOUD.remapping,
+        ],
+        parameters=[PARAM_PATH.config],
+        output="screen",
+        additional_env={
+            "LD_PRELOAD": LaunchConfiguration("ld_preload_value"),
+        },
+    )
+
     return launch.LaunchDescription(
         [
             agnocast_env,
@@ -144,9 +106,6 @@ def generate_launch_description():
             OUTPUT_POINTCLOUD.declare(),
             # Parameters
             PARAM_PATH.declare(),
-            # Container
-            USE_POINTCLOUD_CONTAINER.declare(),
-            POINTCLOUD_CONTAINER_NAME.declare(),
-            OpaqueFunction(function=launch_setup),
+            node,
         ]
     )

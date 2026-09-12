@@ -12,23 +12,23 @@ The default trajectory optimizer pipeline runs many plugins in sequence after ba
 
 ```yaml
 plugin_names:
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+  - "autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+  - "autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryExtender"
 ```
 
 **TrajectoryTemporalMPTOptimizer** is intended to replace that entire post-`TrajectoryPointFixer` chain with a single joint optimization step. When enabled, a minimal pipeline is:
 
 ```yaml
 plugin_names:
-  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-  - "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"
+  - "autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer"
 
 use_temporal_mpt_optimizer: true
 ```
@@ -96,7 +96,7 @@ Unit tests for this logic live in `tests/test_trajectory_temporal_mpt_optimizer_
 Two steps are required:
 
 1. Add the plugin class to `plugin_names` in `config/trajectory_optimizer.param.yaml` (position sets when it runs relative to other plugins).
-2. Set `use_temporal_mpt_optimizer: true` (runtime gate inside `optimize_trajectory()`).
+2. Set `use_temporal_mpt_optimizer: true` (runtime gate inside `process()`).
 
 To disable completely, remove the class from `plugin_names`. Setting only `use_temporal_mpt_optimizer: false` skips optimization but still loads and initializes acados if the plugin remains in the list.
 

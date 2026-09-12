@@ -4,7 +4,6 @@
   <name>autoware_surround_obstacle_checker</name>
   <version>0.52.0</version>
   <description>The autoware_surround_obstacle_checker package</description>
-  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
   <license>Apache License 2.0</license>
 

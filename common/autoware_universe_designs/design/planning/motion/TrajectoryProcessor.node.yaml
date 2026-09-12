@@ -1,0 +1,61 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: TrajectoryProcessor.node
+package:
+  name: autoware_trajectory_processor
+  provider: autoware
+launch:
+  plugin: autoware::trajectory_processor::TrajectoryProcessor
+  executable: autoware_trajectory_processor_node
+# interfaces
+subscribers:
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: external_velocity_limit_mps
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: current_velocity_limit_mps
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeDetail
+    remap_target: ~/debug/processing_time_detail_ms
+  - name: processing_time
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: ~/debug/processing_time_ms
+  - name: cluster_points
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/obstacle_stop/debug/cluster_points
+  - name: marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/obstacle_stop/debug/marker
+# parameters
+param_files:
+  - name: trajectory_processor_param
+    default: config/trajectory_processor.param.yaml
+param_values: []
+# processes
+processes:
+  - name: process_trajectories
+    trigger_conditions:
+      - on_input: trajectories
+    outcomes:
+      - to_output: trajectory
+      - to_output: trajectories

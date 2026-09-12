@@ -40,6 +40,7 @@ using detail::compareWinnerSubstance;
 using detail::DecisionContext;
 using detail::ensureConfident;
 using detail::ensureObject;
+using detail::ensurePublishConfident;
 using detail::findCandidatePairs;
 using detail::isRedundant;
 using detail::TrackerSnapshot;
@@ -134,6 +135,9 @@ std::vector<TrackerSnapshot> buildSnapshots(
       tracker->getElapsedTimeFromFullMeasurement(time) > full_measure_stale_threshold;
     snap.uuid = tracker->getUUID().uuid;
     snap.existence_probs = tracker->getExistenceProbabilityVector();
+    for (const auto & prob : snap.existence_probs) {
+      snap.channel_support += prob.existence_probability;
+    }
     snapshots.push_back(std::move(snap));
   }
   return snapshots;
@@ -148,7 +152,8 @@ std::vector<TrackerSnapshot> buildSnapshots(
 enum class PairDecision { NoMerge, LeftAbsorbsRight, RightAbsorbsLeft };
 
 // Ranking picks the survivor; it must be confident and carry a parametric shape (never
-// polygon-only), and the pair must be spatially redundant. Otherwise the pair does not merge.
+// polygon-only), the publish horizon must not drop it while keeping the loser, and the pair must be
+// spatially redundant. Otherwise the pair does not merge.
 PairDecision decidePair(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionContext & ctx)
 {
   const bool a_survives = compareForSurvival(a, b, ctx) > 0;
@@ -156,6 +161,11 @@ PairDecision decidePair(TrackerSnapshot & a, TrackerSnapshot & b, const Decision
   TrackerSnapshot & loser = a_survives ? b : a;
 
   if (!ensureConfident(winner, ctx)) {
+    return PairDecision::NoMerge;
+  }
+  // An exported tracker is never erased for one the publish gate would drop; when neither is
+  // exported the pair still consolidates.
+  if (!ensurePublishConfident(winner, ctx) && ensurePublishConfident(loser, ctx)) {
     return PairDecision::NoMerge;
   }
   const auto * winner_object = ensureObject(winner, ctx.time);

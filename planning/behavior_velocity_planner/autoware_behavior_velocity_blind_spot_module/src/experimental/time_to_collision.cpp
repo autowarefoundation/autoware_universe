@@ -110,8 +110,9 @@ std::optional<TimeInterval> compute_passage_time_interval(
   for (const auto & [pose, time] : future_profile) {
     const auto path_point_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(pose));
-    if (boost::geometry::intersects(
-          path_point_footprint, lanelet::utils::to2D(entry_line).basicLineString())) {
+    if (
+      boost::geometry::intersects(
+        path_point_footprint, lanelet::utils::to2D(entry_line).basicLineString())) {
       entry_time = time;
       break;
     }
@@ -125,8 +126,9 @@ std::optional<TimeInterval> compute_passage_time_interval(
   for (const auto & [pose, time] : future_profile | ranges::views::reverse) {
     const auto path_point_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(pose));
-    if (boost::geometry::intersects(
-          path_point_footprint, lanelet::utils::to2D(exit_line).basicLineString())) {
+    if (
+      boost::geometry::intersects(
+        path_point_footprint, lanelet::utils::to2D(exit_line).basicLineString())) {
       exit_time = time;
       break;
     }
@@ -167,8 +169,9 @@ compute_passage_time_intervals(
       if (boost::geometry::intersects(object_poly, lanelet::utils::to2D(line1).basicLineString())) {
         entry_time = i * new_time_step;
         break;
-      } else if (boost::geometry::intersects(
-                   object_poly, lanelet::utils::to2D(entry_line).basicLineString())) {
+      } else if (
+        boost::geometry::intersects(
+          object_poly, lanelet::utils::to2D(entry_line).basicLineString())) {
         entry_time = i * new_time_step;
         break;
       }

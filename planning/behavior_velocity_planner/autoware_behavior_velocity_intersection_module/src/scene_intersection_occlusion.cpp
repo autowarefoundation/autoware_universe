@@ -285,10 +285,11 @@ IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
     if (poly_area < possible_object_area) continue;
     // check bounding box size
     const auto bbox = cv::minAreaRect(approx_contour);
-    if (const auto size = bbox.size; std::min(size.height, size.width) <
-                                       std::min(possible_object_bbox_x, possible_object_bbox_y) ||
-                                     std::max(size.height, size.width) <
-                                       std::max(possible_object_bbox_x, possible_object_bbox_y)) {
+    if (
+      const auto size = bbox.size; std::min(size.height, size.width) <
+                                     std::min(possible_object_bbox_x, possible_object_bbox_y) ||
+                                   std::max(size.height, size.width) <
+                                     std::max(possible_object_bbox_x, possible_object_bbox_y)) {
       continue;
     }
     valid_contours.push_back(approx_contour);

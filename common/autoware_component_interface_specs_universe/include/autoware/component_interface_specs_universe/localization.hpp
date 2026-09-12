@@ -15,49 +15,18 @@
 #ifndef AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__LOCALIZATION_HPP_
 #define AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__LOCALIZATION_HPP_
 
-#include <rclcpp/qos.hpp>
+#include <autoware/component_interface_specs/localization.hpp>
 
-#include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
-#include <autoware_localization_msgs/srv/initialize_localization.hpp>
-#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-
+// Re-export the core specs so universe consumers keep resolving the canonical
+// (single-version-authority) type; core is the sole definition and version authority.
 namespace autoware::component_interface_specs_universe::localization
 {
-
-struct Initialize
-{
-  using Service = autoware_localization_msgs::srv::InitializeLocalization;
-  static constexpr char name[] = "/localization/initialize";
-};
-
-struct InitializationState
-{
-  using Message = autoware_adapi_v1_msgs::msg::LocalizationInitializationState;
-  static constexpr char name[] = "/localization/initialization_state";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
-};
-
-struct KinematicState
-{
-  using Message = nav_msgs::msg::Odometry;
-  static constexpr char name[] = "/localization/kinematic_state";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
-struct Acceleration
-{
-  using Message = geometry_msgs::msg::AccelWithCovarianceStamped;
-  static constexpr char name[] = "/localization/acceleration";
-  static constexpr size_t depth = 1;
-  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
-};
-
+using autoware::component_interface_specs::localization::Acceleration;
+using autoware::component_interface_specs::localization::InitializationState;
+using autoware::component_interface_specs::localization::Initialize;
+using autoware::component_interface_specs::localization::KinematicState;
+using autoware::component_interface_specs::localization::Specs;
+using autoware::component_interface_specs::localization::version;
 }  // namespace autoware::component_interface_specs_universe::localization
 
 #endif  // AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__LOCALIZATION_HPP_

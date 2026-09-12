@@ -14,8 +14,8 @@ if(NOT (CUDAToolkit_FOUND AND TENSORRT_FOUND))
   return()
 endif()
 
-if(TENSORRT_VERSION VERSION_LESS 8.5)
-  message(WARNING "Unsupported version TensorRT ${TENSORRT_VERSION} detected. This package requires TensorRT 8.5 or later.")
+if(TENSORRT_VERSION VERSION_LESS 10.0)
+  message(WARNING "Unsupported version TensorRT ${TENSORRT_VERSION} detected. This package requires TensorRT 10.0 or later.")
   return()
 endif()
 

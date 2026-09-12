@@ -18,7 +18,7 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_
 
 #include "autoware/trajectory_processor/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
-#include "autoware/trajectory_processor/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
@@ -28,16 +28,21 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
+using autoware::trajectory_processor::TrajectoryProcessorData;
+using autoware::trajectory_processor::TrajectoryProcessorParams;
+using autoware::trajectory_processor::plugin::ProcessingResult;
+using autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
+using autoware::trajectory_processor::plugin::ContinuousJerkSmoother;
 using autoware_internal_planning_msgs::msg::VelocityLimit;
 
 struct TrajectoryVelocityOptimizerParams
@@ -58,26 +63,26 @@ struct TrajectoryVelocityOptimizerParams
   ContinuousJerkSmootherParams continuous_jerk_smoother_params;
 };
 
-class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
+class TrajectoryVelocityOptimizer : public TrajectoryProcessorPluginBase
 {
 public:
   TrajectoryVelocityOptimizer() = default;
   ~TrajectoryVelocityOptimizer() = default;
 
-  void optimize_trajectory(TrajectoryPoints & traj_points, TrajectoryOptimizerData & data) override;
-  void update_params(const TrajectoryOptimizerParams & params) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryProcessorData & data) override;
+  void update_params(const TrajectoryProcessorParams & params) override;
 
 protected:
-  void on_initialize(const TrajectoryOptimizerParams & params) override;
+  void on_initialize(const TrajectoryProcessorParams & params) override;
 
 private:
   std::shared_ptr<ContinuousJerkSmoother> continuous_jerk_smoother_{nullptr};
   TrajectoryVelocityOptimizerParams velocity_params_;
-  std::shared_ptr<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>
+  autoware::agnocast_wrapper::polling::PollingSubscriber<VelocityLimit>::SharedPtr
     sub_planning_velocity_;
-  rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
+  PublisherHandle<VelocityLimit> pub_velocity_limit_;
 };
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_

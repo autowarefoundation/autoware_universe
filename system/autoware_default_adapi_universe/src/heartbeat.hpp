@@ -16,6 +16,8 @@
 #define HEARTBEAT_HPP_
 
 #include <autoware/adapi_specs/system.hpp>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 // This file should be included after messages.
@@ -24,14 +26,14 @@
 namespace autoware::default_adapi
 {
 
-class HeartbeatNode : public rclcpp::Node
+class HeartbeatNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit HeartbeatNode(const rclcpp::NodeOptions & options);
 
 private:
-  rclcpp::TimerBase::SharedPtr timer_;
-  Pub<autoware::adapi_specs::system::Heartbeat> pub_;
+  AUTOWARE_TIMER_PTR timer_;
+  Pub<autoware::adapi_specs::system::Heartbeat, NodeT> pub_;
   uint16_t sequence_ = 0;
 };
 

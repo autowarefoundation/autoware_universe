@@ -22,13 +22,13 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
-void TrajectoryPointFixer::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectoryPointFixer::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
-  if (!enabled_) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
   auto & semantic_speed_tracker = data.semantic_speed_tracker;
   trajectory_point_fixer_utils::remove_invalid_points(traj_points);
@@ -40,7 +40,7 @@ void TrajectoryPointFixer::optimize_trajectory(
 
   if (fixer_params_.resample_close_points) {
     trajectory_point_fixer_utils::resample_close_proximity_points(
-      traj_points, semantic_speed_tracker, data.current_odometry,
+      traj_points, semantic_speed_tracker, *data.current_odometry,
       fixer_params_.min_dist_to_resample_m, fixer_params_.stop_detection_velocity_threshold_mps);
   }
 
@@ -53,23 +53,24 @@ void TrajectoryPointFixer::optimize_trajectory(
       traj_points, semantic_speed_tracker, fixer_params_.stop_detection_velocity_threshold_mps);
     trajectory_point_fixer_utils::build_stop_approach_ranges(traj_points, semantic_speed_tracker);
   }
+  return ProcessingResult::Modified;
 }
 
-void TrajectoryPointFixer::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectoryPointFixer::on_initialize(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_trajectory_point_fixer;
   fixer_params_ = params.trajectory_point_fixer;
 }
 
-void TrajectoryPointFixer::update_params(const TrajectoryOptimizerParams & params)
+void TrajectoryPointFixer::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_trajectory_point_fixer;
   fixer_params_ = params.trajectory_point_fixer;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryPointFixer,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectoryPointFixer,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

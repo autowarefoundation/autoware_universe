@@ -23,13 +23,13 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
-void TrajectorySplineSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, TrajectoryOptimizerData & data)
+ProcessingResult TrajectorySplineSmoother::process(
+  TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
 {
-  if (!enabled_) {
-    return;
+  if (!enabled_ || !data.current_odometry) {
+    return ProcessingResult::Unchanged;
   }
   trajectory_spline_smoother_utils::apply_spline(
     traj_points, spline_params_.interpolation_resolution_m,
@@ -39,24 +39,25 @@ void TrajectorySplineSmoother::optimize_trajectory(
   // and the current vehicle position. This is necessary to ensure that the time_from_start values
   // are consistent with the new trajectory. For now, we will use the motion_utils function.
   autoware::motion_utils::calculate_time_from_start(
-    traj_points, data.current_odometry.pose.pose.position);
+    traj_points, data.current_odometry->pose.pose.position);
+  return ProcessingResult::Modified;
 }
 
-void TrajectorySplineSmoother::on_initialize(const TrajectoryOptimizerParams & params)
+void TrajectorySplineSmoother::on_initialize(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_akima_spline_interpolation;
   spline_params_ = params.trajectory_spline_smoother;
 }
 
-void TrajectorySplineSmoother::update_params(const TrajectoryOptimizerParams & params)
+void TrajectorySplineSmoother::update_params(const TrajectoryProcessorParams & params)
 {
   enabled_ = params.use_akima_spline_interpolation;
   spline_params_ = params.trajectory_spline_smoother;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother,
-  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
+  autoware::trajectory_processor::plugin::TrajectorySplineSmoother,
+  autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

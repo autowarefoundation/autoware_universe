@@ -55,7 +55,7 @@ using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_utils::get_or_declare_parameter;
 
 void RearCollisionChecker::init(
-  rclcpp::Node & node, const std::string & name,
+  autoware::agnocast_wrapper::Node & node, const std::string & name,
   const std::shared_ptr<PlanningValidatorContext> & context)
 {
   module_name_ = name;
@@ -87,8 +87,8 @@ void RearCollisionChecker::init(
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(pub_debug_processing_time_detail_);
 
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      &node, "rear_collision_checker");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(&node, "rear_collision_checker");
 
   setup_diag();
 }

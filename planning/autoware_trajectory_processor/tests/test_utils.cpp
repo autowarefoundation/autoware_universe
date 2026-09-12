@@ -21,7 +21,7 @@
 #include <cmath>
 #include <vector>
 
-using autoware::trajectory_modifier::utils::TrajectoryPoints;
+using autoware::trajectory_processor::utils::TrajectoryPoints;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
 class UtilsTest : public ::testing::Test
@@ -71,14 +71,14 @@ protected:
 TEST_F(UtilsTest, ValidateEmptyTrajectory)
 {
   TrajectoryPoints empty_trajectory;
-  EXPECT_FALSE(autoware::trajectory_modifier::utils::validate_trajectory(empty_trajectory));
+  EXPECT_FALSE(autoware::trajectory_processor::utils::validate_trajectory(empty_trajectory));
 }
 
 TEST_F(UtilsTest, ValidateNonEmptyTrajectory)
 {
   TrajectoryPoints trajectory;
   trajectory.push_back(create_trajectory_point(0.0, 0.0));
-  EXPECT_TRUE(autoware::trajectory_modifier::utils::validate_trajectory(trajectory));
+  EXPECT_TRUE(autoware::trajectory_processor::utils::validate_trajectory(trajectory));
 }
 
 TEST_F(UtilsTest, ValidateMultiplePointTrajectory)
@@ -87,7 +87,7 @@ TEST_F(UtilsTest, ValidateMultiplePointTrajectory)
   trajectory.push_back(create_trajectory_point(0.0, 0.0));
   trajectory.push_back(create_trajectory_point(1.0, 1.0));
   trajectory.push_back(create_trajectory_point(2.0, 2.0));
-  EXPECT_TRUE(autoware::trajectory_modifier::utils::validate_trajectory(trajectory));
+  EXPECT_TRUE(autoware::trajectory_processor::utils::validate_trajectory(trajectory));
 }
 
 // Test calculate_distance_to_last_point function
@@ -96,7 +96,7 @@ TEST_F(UtilsTest, CalculateDistanceEmptyTrajectory)
   TrajectoryPoints empty_trajectory;
   auto ego_pose = create_pose(0.0, 0.0);
 
-  double distance = autoware::trajectory_modifier::utils::calculate_distance_to_last_point(
+  double distance = autoware::trajectory_processor::utils::calculate_distance_to_last_point(
     empty_trajectory, ego_pose);
   EXPECT_DOUBLE_EQ(distance, 0.0);
 }
@@ -109,7 +109,7 @@ TEST_F(UtilsTest, CalculateDistanceSamePosition)
   auto ego_pose = create_pose(5.0, 5.0);
 
   double distance =
-    autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
+    autoware::trajectory_processor::utils::calculate_distance_to_last_point(trajectory, ego_pose);
   EXPECT_DOUBLE_EQ(distance, 0.0);
 }
 
@@ -121,7 +121,7 @@ TEST_F(UtilsTest, CalculateDistanceHorizontal)
   auto ego_pose = create_pose(0.0, 0.0);
 
   double distance =
-    autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
+    autoware::trajectory_processor::utils::calculate_distance_to_last_point(trajectory, ego_pose);
   EXPECT_DOUBLE_EQ(distance, 10.0);
 }
 
@@ -133,7 +133,7 @@ TEST_F(UtilsTest, CalculateDistanceVertical)
   auto ego_pose = create_pose(0.0, 0.0);
 
   double distance =
-    autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
+    autoware::trajectory_processor::utils::calculate_distance_to_last_point(trajectory, ego_pose);
   EXPECT_DOUBLE_EQ(distance, 8.0);
 }
 
@@ -145,7 +145,7 @@ TEST_F(UtilsTest, CalculateDistanceDiagonal)
   auto ego_pose = create_pose(0.0, 0.0);
 
   double distance =
-    autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
+    autoware::trajectory_processor::utils::calculate_distance_to_last_point(trajectory, ego_pose);
   EXPECT_DOUBLE_EQ(distance, 5.0);  // 3-4-5 triangle
 }
 
@@ -158,7 +158,7 @@ TEST_F(UtilsTest, CalculateDistanceMultiplePointsUsesLast)
   auto ego_pose = create_pose(0.0, 0.0);
 
   double distance =
-    autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
+    autoware::trajectory_processor::utils::calculate_distance_to_last_point(trajectory, ego_pose);
   EXPECT_NEAR(
     distance, 10.0, 0.1);  // 6-8-10 triangle, allowing tolerance for arc length calculation
 }
@@ -171,7 +171,7 @@ TEST_F(UtilsTest, CalculateDistanceNegativeCoordinates)
   auto ego_pose = create_pose(0.0, 0.0);
 
   double distance =
-    autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
+    autoware::trajectory_processor::utils::calculate_distance_to_last_point(trajectory, ego_pose);
   EXPECT_DOUBLE_EQ(distance, 5.0);
 }
 
@@ -183,7 +183,7 @@ TEST_F(UtilsTest, CalculateDistanceLargeDistance)
   auto ego_pose = create_pose(0.0, 0.0);
 
   double distance =
-    autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
+    autoware::trajectory_processor::utils::calculate_distance_to_last_point(trajectory, ego_pose);
   EXPECT_NEAR(distance, 1414.2135, 0.001);  // sqrt(2) * 1000
 }
 
@@ -193,7 +193,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingZeroVelocity)
   auto twist = create_twist(0.0, 0.0, 0.0);
   double threshold = 0.1;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_FALSE(is_moving);
 }
 
@@ -202,7 +202,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingBelowThreshold)
   auto twist = create_twist(0.05, 0.0, 0.0);
   double threshold = 0.1;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_FALSE(is_moving);
 }
 
@@ -211,7 +211,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingAtThreshold)
   auto twist = create_twist(0.1, 0.0, 0.0);
   double threshold = 0.1;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_FALSE(is_moving);  // Equal to threshold, not greater
 }
 
@@ -220,7 +220,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingAboveThreshold)
   auto twist = create_twist(0.15, 0.0, 0.0);
   double threshold = 0.1;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_TRUE(is_moving);
 }
 
@@ -229,7 +229,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingYAxisOnly)
   auto twist = create_twist(0.0, 0.15, 0.0);
   double threshold = 0.1;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_TRUE(is_moving);
 }
 
@@ -238,7 +238,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingZAxisOnly)
   auto twist = create_twist(0.0, 0.0, 0.15);
   double threshold = 0.1;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_TRUE(is_moving);
 }
 
@@ -248,7 +248,7 @@ TEST_F(UtilsTest, IsEgoVehicleMoving3DVelocity)
   double threshold = 0.1;
 
   // sqrt(0.06^2 + 0.06^2 + 0.06^2) = sqrt(0.0108) ≈ 0.104 > 0.1
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_TRUE(is_moving);
 }
 
@@ -258,7 +258,7 @@ TEST_F(UtilsTest, IsEgoVehicleMoving3DVelocityBelow)
   double threshold = 0.1;
 
   // sqrt(0.05^2 + 0.05^2 + 0.05^2) = sqrt(0.0075) ≈ 0.087 < 0.1
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_FALSE(is_moving);
 }
 
@@ -267,7 +267,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingHighThreshold)
   auto twist = create_twist(1.0, 0.0, 0.0);
   double threshold = 2.0;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_FALSE(is_moving);
 }
 
@@ -276,7 +276,7 @@ TEST_F(UtilsTest, IsEgoVehicleMovingNegativeVelocity)
   auto twist = create_twist(-0.15, 0.0, 0.0);
   double threshold = 0.1;
 
-  bool is_moving = autoware::trajectory_modifier::utils::is_ego_vehicle_moving(twist, threshold);
+  bool is_moving = autoware::trajectory_processor::utils::is_ego_vehicle_moving(twist, threshold);
   EXPECT_TRUE(is_moving);  // Magnitude is what matters
 }
 
@@ -286,7 +286,7 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointEmptyTrajectory)
   TrajectoryPoints trajectory;
   auto ego_pose = create_pose(5.0, 10.0);
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+  autoware::trajectory_processor::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 3);
@@ -312,7 +312,7 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointNonEmptyTrajectory)
 
   auto ego_pose = create_pose(7.0, 8.0);
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+  autoware::trajectory_processor::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 3);
@@ -340,7 +340,7 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointPoseOrientation)
   ego_pose.orientation.z = 0.3;
   ego_pose.orientation.w = 0.9;
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+  autoware::trajectory_processor::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 3);
@@ -365,7 +365,7 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointNegativeCoordinates)
 
   auto ego_pose = create_pose(-5.0, -7.5);
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+  autoware::trajectory_processor::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 3);

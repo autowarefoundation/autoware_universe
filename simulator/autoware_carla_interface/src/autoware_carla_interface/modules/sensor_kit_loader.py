@@ -27,6 +27,7 @@ from ament_index_python.packages import get_package_share_directory
 import yaml
 
 from .coordinate_transformer import CoordinateTransformer
+from .sensor_manager import SUPPORTED_IMAGE_ENCODINGS
 from .sensor_manager import SensorConfig
 
 # Default vehicle wheelbase in meters (distance between front and rear axles)
@@ -619,6 +620,14 @@ class SensorKitLoader:
         if transform:
             transform = self._carla_baselink_to_vehicle_center_transform(transform)
 
+        image_encoding = ros_config.get("image_encoding", "bgra8")
+        if image_encoding not in SUPPORTED_IMAGE_ENCODINGS:
+            self.logger.warning(
+                f"Unsupported image_encoding '{image_encoding}' for sensor '{sensor_name}'; "
+                f"using bgra8. Supported: {', '.join(SUPPORTED_IMAGE_ENCODINGS)}"
+            )
+            image_encoding = "bgra8"
+
         config = SensorConfig(
             sensor_id=mapping.get("id", sensor_name),
             sensor_type=mapping.get("carla_type", "unknown"),
@@ -629,6 +638,7 @@ class SensorKitLoader:
             topic_info=topic_info,
             frequency_hz=ros_config.get("frequency_hz", 20.0),
             qos_profile=ros_config.get("qos_profile", "reliable"),
+            image_encoding=image_encoding,
             parameters=mapping.get("parameters", {}),
             transform=transform,
             covariance=mapping.get("covariance"),

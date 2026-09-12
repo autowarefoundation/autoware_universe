@@ -58,7 +58,7 @@ stop
 
 ### Context & Data
 
-The module utilizes the following data from `TrajectoryModifierContext` & `InputData`:
+The module utilizes the following data from `TrajectoryProcessorContext` and `TrajectoryProcessorData`:
 
 - **Vehicle Info**: Used to account for the vehicle's dimensions (longitudinal offset) when checking for stop line intersections & computing stopping margin.
 - **Lanelet Map**: Used to find regulatory elements (traffic lights) and their associated stop lines.
@@ -80,6 +80,7 @@ The module parameters are grouped under `traffic_light_stop` section of `traject
 | `treat_unknown_light_as_red`    | bool   | false   | When true, unknown lights are treated identically to red lights (rejection on intersection).                      |
 | `overshoot_tolerance`           | double | 0.0     | [m] Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible.     |
 | `allow_if_cannot_stop_distance` | double | 0.0     | [m] Allow crossing when the ego front is within this distance and ego cannot stop before the stop line.           |
+| `min_lookahead_distance`        | double | 20.0    | [m] Minimum forward length to scan for stop lines even when comfortable stopping distance is shorter.             |
 | `th_stable_duration_red`        | double | 0.2     | [s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).           |
 | `th_stable_duration_amber`      | double | 0.2     | [s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).        |
 | `th_stable_duration_unknown`    | double | 0.0     | [s] Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving).      |
