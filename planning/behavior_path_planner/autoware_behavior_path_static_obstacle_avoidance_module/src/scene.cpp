@@ -1270,6 +1270,11 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
     output.path, ego_idx, planner_data_->parameters.forward_path_length,
     planner_data_->parameters.backward_path_length);
 
+  // Path shifting / sparse resampling can drop short intermediate lane ids. Restore them from the
+  // unshifted reference path so downstream modules (e.g. stop_line) can still find regulatory
+  // elements.
+  utils::restoreMissingLaneIds(output.path, data.reference_path_rough);
+
   // Drivable area generation.
   {
     DrivableAreaInfo current_drivable_area_info;
