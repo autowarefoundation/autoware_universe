@@ -20,12 +20,14 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-class CropBoxDiagnostics : public DiagnosticsBase
+template <typename NodeT = rclcpp::Node>
+class BasicCropBoxDiagnostics : public BasicDiagnosticsBase<NodeT>
 {
 public:
-  explicit CropBoxDiagnostics(int skipped_count) : skipped_count_(skipped_count) {}
+  explicit BasicCropBoxDiagnostics(int skipped_count) : skipped_count_(skipped_count) {}
 
-  void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const override
+  void add_to_interface(
+    typename BasicDiagnosticsBase<NodeT>::DiagnosticsInterfaceT & interface) const override
   {
     interface.add_key_value("Skipped NaN point count", skipped_count_);
   }
@@ -33,5 +35,7 @@ public:
 private:
   int skipped_count_;
 };
+
+using CropBoxDiagnostics = BasicCropBoxDiagnostics<rclcpp::Node>;
 
 }  // namespace autoware::pointcloud_preprocessor

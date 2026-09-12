@@ -66,14 +66,14 @@
 namespace autoware::pointcloud_preprocessor
 {
 CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & options)
-: Filter("CropBoxFilter", options)
+: AgnocastFilter("CropBoxFilter", options)
 {
   // initialize debug tool
   {
-    using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
-    debug_publisher_ = std::make_unique<DebugPublisher>(this, this->get_name());
+    debug_publisher_ =
+      std::make_unique<autoware_utils::BasicDebugPublisher<NodeType>>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
   }
@@ -95,11 +95,11 @@ CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & optio
   }
 
   // Diagnostic
-  diagnostics_interface_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
+  diagnostics_interface_ = std::make_unique<autoware_utils::BasicDiagnosticsInterface<NodeType>>(
+    this, this->get_fully_qualified_name());
   // set additional publishers
   {
-    rclcpp::PublisherOptions pub_options;
+    AUTOWARE_PUBLISHER_OPTIONS pub_options;
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     crop_box_polygon_pub_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>(
       "~/crop_box_polygon", 10, pub_options);
@@ -218,18 +218,18 @@ void CropBoxFilterComponent::faster_filter(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 
-  auto latency_diagnostics = std::make_shared<LatencyDiagnostics>(
+  auto latency_diagnostics = std::make_shared<BasicLatencyDiagnostics<NodeType>>(
     input->header.stamp, processing_time_ms, pipeline_latency_ms,
     param_.processing_time_threshold_sec * 1000.0);
-  auto pass_rate_diagnostics = std::make_shared<PassRateDiagnostics>(
+  auto pass_rate_diagnostics = std::make_shared<BasicPassRateDiagnostics<NodeType>>(
     static_cast<int>(input->width * input->height), static_cast<int>(output.width * output.height));
-  auto crop_box_diagnostics = std::make_shared<CropBoxDiagnostics>(skipped_count);
+  auto crop_box_diagnostics = std::make_shared<BasicCropBoxDiagnostics<NodeType>>(skipped_count);
 
   publish_diagnostics({latency_diagnostics, pass_rate_diagnostics, crop_box_diagnostics});
 }
 
 void CropBoxFilterComponent::publish_diagnostics(
-  const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics)
+  const std::vector<std::shared_ptr<const BasicDiagnosticsBase<NodeType>>> & diagnostics)
 {
   diagnostics_interface_->clear();
 
@@ -278,32 +278,32 @@ void CropBoxFilterComponent::publish_crop_box_polygon()
   const double z1 = param_.min_z;
   const double z2 = param_.max_z;
 
-  geometry_msgs::msg::PolygonStamped polygon_msg;
-  polygon_msg.header.frame_id = tf_input_frame_;
-  polygon_msg.header.stamp = get_clock()->now();
-  polygon_msg.polygon.points.push_back(generatePoint(x1, y1, z1));
-  polygon_msg.polygon.points.push_back(generatePoint(x2, y2, z1));
-  polygon_msg.polygon.points.push_back(generatePoint(x3, y3, z1));
-  polygon_msg.polygon.points.push_back(generatePoint(x4, y4, z1));
-  polygon_msg.polygon.points.push_back(generatePoint(x1, y1, z1));
+  auto polygon_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(crop_box_polygon_pub_);
+  polygon_msg->header.frame_id = tf_input_frame_;
+  polygon_msg->header.stamp = get_clock()->now();
+  polygon_msg->polygon.points.push_back(generatePoint(x1, y1, z1));
+  polygon_msg->polygon.points.push_back(generatePoint(x2, y2, z1));
+  polygon_msg->polygon.points.push_back(generatePoint(x3, y3, z1));
+  polygon_msg->polygon.points.push_back(generatePoint(x4, y4, z1));
+  polygon_msg->polygon.points.push_back(generatePoint(x1, y1, z1));
 
-  polygon_msg.polygon.points.push_back(generatePoint(x1, y1, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x1, y1, z2));
 
-  polygon_msg.polygon.points.push_back(generatePoint(x2, y2, z2));
-  polygon_msg.polygon.points.push_back(generatePoint(x2, y2, z1));
-  polygon_msg.polygon.points.push_back(generatePoint(x2, y2, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x2, y2, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x2, y2, z1));
+  polygon_msg->polygon.points.push_back(generatePoint(x2, y2, z2));
 
-  polygon_msg.polygon.points.push_back(generatePoint(x3, y3, z2));
-  polygon_msg.polygon.points.push_back(generatePoint(x3, y3, z1));
-  polygon_msg.polygon.points.push_back(generatePoint(x3, y3, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x3, y3, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x3, y3, z1));
+  polygon_msg->polygon.points.push_back(generatePoint(x3, y3, z2));
 
-  polygon_msg.polygon.points.push_back(generatePoint(x4, y4, z2));
-  polygon_msg.polygon.points.push_back(generatePoint(x4, y4, z1));
-  polygon_msg.polygon.points.push_back(generatePoint(x4, y4, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x4, y4, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x4, y4, z1));
+  polygon_msg->polygon.points.push_back(generatePoint(x4, y4, z2));
 
-  polygon_msg.polygon.points.push_back(generatePoint(x1, y1, z2));
+  polygon_msg->polygon.points.push_back(generatePoint(x1, y1, z2));
 
-  crop_box_polygon_pub_->publish(polygon_msg);
+  crop_box_polygon_pub_->publish(std::move(polygon_msg));
 }
 
 rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::param_callback(
