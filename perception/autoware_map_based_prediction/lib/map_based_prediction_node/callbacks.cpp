@@ -38,11 +38,12 @@ using autoware_utils::ScopedTimeTrack;
 // MapCallback
 // ---------------------------------------------------------------------------
 
-MapCallback::MapCallback(rclcpp::Node * node, NodeState & state) : node_(node), state_(state)
+MapCallback::MapCallback(autoware::agnocast_wrapper::Node * node, NodeState & state)
+: node_(node), state_(state)
 {
 }
 
-void MapCallback::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
+void MapCallback::mapCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
   RCLCPP_DEBUG(node_->get_logger(), "[Map Based Prediction]: Start loading lanelet");
 
@@ -68,25 +69,24 @@ void MapCallback::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
 // ObjectsCallback
 // ---------------------------------------------------------------------------
 
-ObjectsCallback::ObjectsCallback(rclcpp::Node * node, NodeState & state)
-: node_(node),
-  state_(state),
-  sub_traffic_signals_(node, "/traffic_signals"),
-  transform_listener_(node)
+ObjectsCallback::ObjectsCallback(autoware::agnocast_wrapper::Node * node, NodeState & state)
+: state_(state), transform_listener_(node)
 {
+  sub_traffic_signals_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<TrafficLightGroupArray>(
+      node, "/traffic_signals", rclcpp::QoS{1});
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
 }
 
-void ObjectsCallback::setObjectsPublisher(
-  rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects)
+void ObjectsCallback::setObjectsPublisher(AUTOWARE_PUBLISHER_PTR(PredictedObjects) pub_objects)
 {
   pub_objects_ = std::move(pub_objects);
 }
 
 void ObjectsCallback::setDebugMarkersPublisher(
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_markers)
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) pub_debug_markers)
 {
   pub_debug_markers_ = std::move(pub_debug_markers);
 }
@@ -96,12 +96,14 @@ void ObjectsCallback::setDiagnostics(Diagnostics * diagnostics)
   diagnostics_ = diagnostics;
 }
 
-void ObjectsCallback::trafficSignalsCallback(const TrafficLightGroupArray::ConstSharedPtr msg)
+void ObjectsCallback::trafficSignalsCallback(
+  const std::shared_ptr<const TrafficLightGroupArray> & msg)
 {
   state_.predictor_vru->setTrafficSignal(*msg);
 }
 
-void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_objects)
+void ObjectsCallback::objectsCallback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & in_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
@@ -109,7 +111,7 @@ void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_ob
   stop_watch_ptr_->toc("processing_time", true);
 
   {
-    const auto msg = sub_traffic_signals_.take_data();
+    const auto msg = sub_traffic_signals_->take_data();
     if (msg) trafficSignalsCallback(msg);
   }
 
@@ -131,7 +133,8 @@ void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_ob
   state_.predictor_vru->removeOldKnownMatches(
     objects_detected_time, state_.params.object_buffer_time_length);
 
-  PredictedObjects output;
+  auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_objects_);
+  PredictedObjects & output = *output_msg;
   output.header = in_objects->header;
   output.header.frame_id = "map";
 
@@ -190,24 +193,30 @@ void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_ob
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
-  publish(output, debug_markers);
+  const auto output_stamp = output.header.stamp;
+  publish(std::move(output_msg), debug_markers);
 
   const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
   const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
 
-  if (diagnostics_) diagnostics_->update(output.header.stamp, processing_time_ms, cyclic_time_ms);
+  if (diagnostics_) diagnostics_->update(output_stamp, processing_time_ms, cyclic_time_ms);
 }
 
 void ObjectsCallback::publish(
-  const PredictedObjects & output, const visualization_msgs::msg::MarkerArray & debug_markers) const
+  AUTOWARE_MESSAGE_UNIQUE_PTR(PredictedObjects) output,
+  const visualization_msgs::msg::MarkerArray & debug_markers) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
 
-  pub_objects_->publish(output);
-  if (diagnostics_)
-    diagnostics_->publishIfSubscribed<PredictedObjects>(pub_objects_, output.header.stamp);
-  if (pub_debug_markers_) pub_debug_markers_->publish(debug_markers);
+  const auto stamp = output->header.stamp;
+  pub_objects_->publish(std::move(output));
+  if (diagnostics_) diagnostics_->publishIfSubscribed<PredictedObjects>(pub_objects_, stamp);
+  if (pub_debug_markers_) {
+    auto debug_markers_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_debug_markers_);
+    *debug_markers_msg = debug_markers;
+    pub_debug_markers_->publish(std::move(debug_markers_msg));
+  }
 }
 
 }  // namespace autoware::map_based_prediction

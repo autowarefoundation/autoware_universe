@@ -1,0 +1,42 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: Lanelet2MapFilter.node
+
+package:
+  name: autoware_pointcloud_preprocessor
+  provider: autoware
+
+launch:
+  plugin: autoware::pointcloud_preprocessor::Lanelet2MapFilterComponent
+  executable: vector_map_filter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: input/vector_map
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: input/pointcloud
+
+publishers:
+  - name: output
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: output
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/lanelet2_map_filter_node.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: output

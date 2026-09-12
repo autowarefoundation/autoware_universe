@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::traffic_light::TrafficLightArbiter
+  plugin: autoware::traffic_light::TrafficLightArbiterNode
   executable: traffic_light_arbiter_node
   node_output: screen
 

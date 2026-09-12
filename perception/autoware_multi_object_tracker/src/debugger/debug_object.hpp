@@ -15,7 +15,7 @@
 #ifndef DEBUGGER__DEBUG_OBJECT_HPP_
 #define DEBUGGER__DEBUG_OBJECT_HPP_
 
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -56,7 +56,7 @@ struct ObjectData
   // detection channel id
   uint channel_id;
 
-  // tracker type name (e.g. "multi_vehicle_tracker", "static_tracker")
+  // tracker type name (ex. "general_vehicle_tracker", "static_tracker")
   std::string tracker_type_str;
 };
 

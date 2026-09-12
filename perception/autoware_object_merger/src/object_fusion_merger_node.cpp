@@ -497,9 +497,9 @@ namespace autoware::object_merger
  * @param node_options ROS node options used for component construction.
  */
 ObjectFusionMergerNode::ObjectFusionMergerNode(const rclcpp::NodeOptions & node_options)
-: rclcpp::Node("object_fusion_merger_node", node_options),
+: Node("object_fusion_merger_node", node_options),
   tf_buffer_(get_clock()),
-  tf_listener_(tf_buffer_),
+  tf_listener_(tf_buffer_, *this),
   main_object_sub_(this, "input/main_objects", rclcpp::QoS{1}.get_rmw_qos_profile()),
   sub_object_sub_(this, "input/sub_objects", rclcpp::QoS{1}.get_rmw_qos_profile())
 {
@@ -518,11 +518,14 @@ ObjectFusionMergerNode::ObjectFusionMergerNode(const rclcpp::NodeOptions & node_
   fused_objects_pub_ = create_publisher<DetectedObjects>("output/objects", rclcpp::QoS{1});
   other_objects_pub_ = create_publisher<DetectedObjects>("output/other_objects", rclcpp::QoS{1});
 
-  processing_time_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, get_name());
+  processing_time_publisher_ =
+    std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, get_name());
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
 }
 
 /**
@@ -532,8 +535,8 @@ ObjectFusionMergerNode::ObjectFusionMergerNode(const rclcpp::NodeOptions & node_
  * @param sub_objects_msg Sub detected objects input message.
  */
 void ObjectFusionMergerNode::callback(
-  const DetectedObjects::ConstSharedPtr & main_objects_msg,
-  const DetectedObjects::ConstSharedPtr & sub_objects_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & main_objects_msg,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & sub_objects_msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
 
@@ -557,8 +560,13 @@ void ObjectFusionMergerNode::callback(
   }
 
   const auto result = fuse_objects(transformed_main_objects, transformed_sub_objects);
-  fused_objects_pub_->publish(result.fused_objects);
-  other_objects_pub_->publish(result.other_objects);
+
+  auto fused_output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(fused_objects_pub_);
+  auto other_output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(other_objects_pub_);
+  *fused_output = result.fused_objects;
+  *other_output = result.other_objects;
+  fused_objects_pub_->publish(std::move(fused_output));
+  other_objects_pub_->publish(std::move(other_output));
 
   // Publish debug info
   published_time_publisher_->publish_if_subscribed(
@@ -582,7 +590,7 @@ ObjectFusionMergerNode::FusionResult ObjectFusionMergerNode::fuse_objects(
   const auto & main_objects = main_objects_msg.objects;
   const auto & sub_objects = sub_objects_msg.objects;
 
-  const auto grouped_inputs = classify_sub_objects_by_overlap(main_objects, sub_objects);
+  auto grouped_inputs = classify_sub_objects_by_overlap(main_objects, sub_objects);
   auto fused_main_objects =
     build_fused_main_objects(main_objects, grouped_inputs, keep_input_dimensions_);
 
@@ -591,9 +599,10 @@ ObjectFusionMergerNode::FusionResult ObjectFusionMergerNode::fuse_objects(
                         .frame_id(base_link_frame_id_);
 
   return FusionResult{
-    autoware_perception_msgs::build<DetectedObjects>().header(header).objects(fused_main_objects),
     autoware_perception_msgs::build<DetectedObjects>().header(header).objects(
-      grouped_inputs.other_objects)};
+      std::move(fused_main_objects)),
+    autoware_perception_msgs::build<DetectedObjects>().header(header).objects(
+      std::move(grouped_inputs.other_objects))};
 }
 }  // namespace autoware::object_merger
 

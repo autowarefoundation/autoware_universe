@@ -17,7 +17,6 @@
 
 #include "autoware/lidar_centerpoint/centerpoint_trt.hpp"
 #include "autoware/lidar_centerpoint/detection_class_remapper.hpp"
-#include "autoware/lidar_centerpoint/postprocess/non_maximum_suppression.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
@@ -28,6 +27,7 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/negotiated_types.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <perception_utils/iou_bev_nms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -73,7 +73,7 @@ private:
   std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
   diagnostic_updater::Updater diagnostic_processing_time_updater_{this};
 
-  NonMaximumSuppression iou_bev_nms_;
+  perception_utils::IouBevNms iou_bev_nms_;
   DetectionClassRemapper detection_class_remapper_;
 
   std::unique_ptr<CenterPointTRT> detector_ptr_{nullptr};

@@ -15,21 +15,17 @@
 #ifndef AUTOWARE__OBJECT_MERGER__OBJECT_FUSION_MERGER_NODE_HPP_
 #define AUTOWARE__OBJECT_MERGER__OBJECT_FUSION_MERGER_NODE_HPP_
 
-#include "autoware_utils/ros/debug_publisher.hpp"
-#include "autoware_utils/ros/published_time_publisher.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 
-#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware/agnocast_wrapper/message_filters.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
+#include <autoware_utils_debug/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_object.hpp"
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
-
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <chrono>
 #include <memory>
@@ -43,7 +39,7 @@ namespace autoware::object_merger
  * @brief Merge two detected-object streams by expanding each main object with uniquely overlapped
  * sub objects.
  */
-class ObjectFusionMergerNode : public rclcpp::Node
+class ObjectFusionMergerNode : public autoware::agnocast_wrapper::Node
 {
 public:
   /**
@@ -56,9 +52,9 @@ public:
 private:
   using DetectedObject = autoware_perception_msgs::msg::DetectedObject;
   using DetectedObjects = autoware_perception_msgs::msg::DetectedObjects;
-  using SyncPolicy =
-    message_filters::sync_policies::ApproximateTime<DetectedObjects, DetectedObjects>;
-  using Sync = message_filters::Synchronizer<SyncPolicy>;
+  using SyncPolicy = autoware::agnocast_wrapper::message_filters::sync_policies::ApproximateTime<
+    DetectedObjects, DetectedObjects>;
+  using Sync = autoware::agnocast_wrapper::message_filters::Synchronizer<SyncPolicy>;
 
   struct FusionResult
   {
@@ -73,8 +69,8 @@ private:
    * @param sub_objects_msg Sub detected objects input.
    */
   void callback(
-    const DetectedObjects::ConstSharedPtr & main_objects_msg,
-    const DetectedObjects::ConstSharedPtr & sub_objects_msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & main_objects_msg,
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & sub_objects_msg);
 
   /**
    * @brief Group sub objects by unique overlap and produce fused and unmatched outputs.
@@ -86,20 +82,23 @@ private:
   FusionResult fuse_objects(
     const DetectedObjects & main_objects_msg, const DetectedObjects & sub_objects_msg);
 
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
-  rclcpp::Publisher<DetectedObjects>::SharedPtr fused_objects_pub_;
-  rclcpp::Publisher<DetectedObjects>::SharedPtr other_objects_pub_;
-  message_filters::Subscriber<DetectedObjects> main_object_sub_{};
-  message_filters::Subscriber<DetectedObjects> sub_object_sub_{};
+  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  autoware::agnocast_wrapper::TransformListener tf_listener_;
+  AUTOWARE_PUBLISHER_PTR(DetectedObjects) fused_objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(DetectedObjects) other_objects_pub_;
+  autoware::agnocast_wrapper::message_filters::Subscriber<DetectedObjects> main_object_sub_{};
+  autoware::agnocast_wrapper::message_filters::Subscriber<DetectedObjects> sub_object_sub_{};
   std::shared_ptr<Sync> sync_ptr_;
 
   std::string base_link_frame_id_;
   bool keep_input_dimensions_;
 
-  std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    processing_time_publisher_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
+    published_time_publisher_;
 };
 }  // namespace autoware::object_merger
 

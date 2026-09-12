@@ -18,10 +18,11 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 
-#include <angles/angles/angles.h>
+#include <angles/angles.h>
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::planning_validator
 {
@@ -34,6 +35,10 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
   sub_trajectory_ = create_subscription<Trajectory>(
     "~/input/trajectory", rclcpp::QoS{1},
     std::bind(&PlanningValidatorNode::onTrajectory, this, std::placeholders::_1));
+
+  sub_odometry_ = create_subscription<Odometry>(
+    "/localization/kinematic_state", rclcpp::QoS{1},
+    std::bind(&PlanningValidatorNode::onOdometry, this, std::placeholders::_1));
 
   // publishers
   pub_traj_ = create_publisher<Trajectory>("~/output/trajectory", 1);
@@ -55,8 +60,10 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
     manager_.load_plugin(*this, name, context_);
   }
 
-  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  logger_configure_ = std::make_unique<
+    autoware_utils_logging::BasicLoggerLevelConfigure<autoware::agnocast_wrapper::Node>>(this);
+  published_time_publisher_ = std::make_unique<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
 }
 
 void PlanningValidatorNode::setupParameters()
@@ -73,6 +80,8 @@ void PlanningValidatorNode::setupParameters()
   p.publish_diag = declare_parameter<bool>("publish_diag");
   p.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
   p.display_on_terminal = declare_parameter<bool>("display_on_terminal");
+  p.allow_area = declare_parameter<bool>("allow_area", false);
+  context_->data->route_handler->setAllowArea(p.allow_area);
 
   p.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
   p.soft_stop_jerk_lim = declare_parameter<double>("soft_stop_jerk_lim");
@@ -96,25 +105,38 @@ bool PlanningValidatorNode::isDataReady()
 void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
 {
   auto & data = context_->data;
-  data->current_kinematics = sub_kinematics_.take_data();
-  data->current_acceleration = sub_acceleration_.take_data();
-  data->obstacle_pointcloud = sub_pointcloud_.take_data();
-  data->traffic_signals = sub_traffic_signals_.take_data();
+  data->current_kinematics = sub_kinematics_->take_data();
+  data->current_acceleration = sub_acceleration_->take_data();
+  data->obstacle_pointcloud = sub_pointcloud_->take_data();
+  data->traffic_signals = sub_traffic_signals_->take_data();
   data->set_current_trajectory(traj_msg);
-  data->set_route(sub_route_.take_data());
-  data->set_map(sub_lanelet_map_bin_.take_data());
+
+  data->set_route(sub_route_->take_data());
+  data->set_map(sub_lanelet_map_bin_->take_data());
 }
 
-void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj_msg)
+void PlanningValidatorNode::onOdometry(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) & msg)
+{
+  geometry_msgs::msg::TwistStamped twist;
+  twist.header = msg->header;
+  twist.twist = msg->twist.twist;
+  context_->vehicle_stop_checker_->addTwist(twist);
+}
+
+void PlanningValidatorNode::onTrajectory(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) & traj_in)
 {
   stop_watch_.tic(__func__);
+
+  const Trajectory::ConstSharedPtr traj_msg =
+    traj_in ? std::make_shared<const Trajectory>(*traj_in) : nullptr;
 
   setData(traj_msg);
 
   if (!isDataReady()) return;
 
   // Check operational mode state
-  OperationModeState::ConstSharedPtr operation_mode_msg = sub_operational_state_.take_data();
+  const OperationModeState::ConstSharedPtr operation_mode_msg = sub_operational_state_->take_data();
   if (operation_mode_msg) {
     flag_autonomous_control_enabled_ = infer_autonomous_control_state(operation_mode_msg);
   }

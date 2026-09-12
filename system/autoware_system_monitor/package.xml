@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_system_monitor</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>The system_monitor package</description>
   <maintainer email="fumihito.ito@tier4.jp">Fumihito Ito</maintainer>
   <maintainer email="tetsuhiro.kawaguchi@tier4.jp">TetsuKawa</maintainer>
@@ -17,17 +17,20 @@
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>fmt</depend>
+  <depend>libboost-dev</depend>
   <depend>libboost-filesystem-dev</depend>
   <depend>libboost-regex-dev</depend>
   <depend>libboost-serialization-dev</depend>
   <depend>libboost-thread-dev</depend>
   <depend>libnl-3-dev</depend>
+  <depend>rcl_interfaces</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>tier4_external_api_msgs</depend>
 
   <exec_depend>chrony</exec_depend>
+  <exec_depend>edac-utils</exec_depend>
   <exec_depend>sysstat</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>

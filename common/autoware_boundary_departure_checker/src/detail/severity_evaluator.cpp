@@ -17,7 +17,9 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
+#include <optional>
 
 namespace autoware::boundary_departure_checker::severity_evaluator
 {
@@ -31,7 +33,11 @@ ProjectionsToBound filter_and_assign_departure_types(
   DepartureCheckThresholds thresholds;
   thresholds.min_braking_distance = min_braking_dist;
   thresholds.cutoff_time = param.time_to_departure_cutoff_s;
-  thresholds.th_lat_critical = param.lateral_margin_m;
+  thresholds.th_lat_critical = param.critical_departure_lateral_th_m;
+  // A near boundary threshold below the critical margin would leave projections inside the critical
+  // margin unclassified, so the advisory band always covers at least the critical margin.
+  thresholds.th_near_boundary =
+    std::max(param.near_boundary_lateral_th_m, param.critical_departure_lateral_th_m);
 
   for (size_t idx = 0; idx < side_value.size(); ++idx) {
     const auto & original_candidate = side_value[idx];
@@ -46,26 +52,24 @@ ProjectionsToBound filter_and_assign_departure_types(
     out.push_back(original_candidate);
     out.back().departure_type = assign_departure_type(metrics, thresholds);
 
-    if (out.back().is_critical()) break;
+    if (out.back().is_critical()) {
+      return out;
+    }
   }
 
   return out;
 }
 
-std::optional<CriticalPointPair> apply_backward_buffer_and_filter(
+std::optional<DeparturePointPair> apply_backward_buffer_and_filter(
   const ProjectionsToBound & side_value, const UncrossableBoundaryDepartureParam & param)
 {
-  if (side_value.empty() || side_value.back().is_none_departure()) return std::nullopt;
+  if (side_value.empty() || !side_value.back().is_critical()) return std::nullopt;
 
+  DeparturePointPair result;
   const auto & departure_point = side_value.back();
 
-  CriticalPointPair result;
   result.physical_departure_point = departure_point;
   result.safety_buffer_start = departure_point;
-
-  if (!departure_point.is_critical()) {
-    return result;
-  }
 
   for (auto it = std::next(side_value.rbegin()); it != side_value.rend(); ++it) {
     const double dist_between_proj =
@@ -84,39 +88,79 @@ std::optional<CriticalPointPair> apply_backward_buffer_and_filter(
 DepartureType assign_departure_type(
   const ProjectionEvaluationMetrics & metrics, const DepartureCheckThresholds & thresholds)
 {
-  if (metrics.lat_dist > thresholds.th_lat_critical) {
-    return DepartureType::NONE;
+  const auto footprint_overlaps_critical_margin = metrics.lat_dist <= thresholds.th_lat_critical;
+  const auto ego_cannot_stop_before_departure =
+    metrics.lon_dist_to_departure <= thresholds.min_braking_distance ||
+    metrics.time_from_start <= thresholds.cutoff_time;
+
+  if (footprint_overlaps_critical_margin && ego_cannot_stop_before_departure) {
+    return DepartureType::CRITICAL;
   }
 
-  if (
-    metrics.lon_dist_to_departure > thresholds.min_braking_distance &&
-    metrics.time_from_start > thresholds.cutoff_time) {
-    return DepartureType::APPROACHING;
+  if (metrics.lat_dist <= thresholds.th_near_boundary) {
+    return DepartureType::NEAR_BOUNDARY;
   }
 
-  return DepartureType::CRITICAL;
+  return DepartureType::NONE;
 }
 
-Side<std::optional<CriticalPointPair>> evaluate_projections_severity(
+Side<std::optional<DeparturePointPair>> evaluate_projections_severity(
   const Side<ProjectionsToBound> & projections_to_bound,
   const UncrossableBoundaryDepartureParam & param, const EgoDynamicState & ego_state,
   const vehicle_info_utils::VehicleInfo & vehicle_info)
 {
   const auto min_braking_dist = calc_minimum_braking_distance(ego_state, param, vehicle_info);
 
-  return projections_to_bound.transform_each_side([&](const auto & side_value) {
-    const auto min_to_bounds =
-      filter_and_assign_departure_types(side_value, param, min_braking_dist);
-    return apply_backward_buffer_and_filter(min_to_bounds, param);
-  });
+  return projections_to_bound.transform_each_side(
+    [&](const auto & side_value) -> std::optional<DeparturePointPair> {
+      const auto min_to_bounds =
+        filter_and_assign_departure_types(side_value, param, min_braking_dist);
+
+      if (min_to_bounds.empty()) return std::nullopt;
+
+      if (min_to_bounds.back().is_critical()) {
+        return apply_backward_buffer_and_filter(min_to_bounds, param);
+      }
+
+      const auto closest_to_bound = std::min_element(
+        min_to_bounds.begin(), min_to_bounds.end(),
+        [](const ProjectionToBound & lhs, const ProjectionToBound & rhs) {
+          return lhs.lat_dist < rhs.lat_dist;
+        });
+
+      return DeparturePointPair{*closest_to_bound, *closest_to_bound};
+    });
 }
 
-bool is_critical(const Side<std::optional<CriticalPointPair>> & evaluated_projections)
+bool is_critical(const Side<std::optional<DeparturePointPair>> & evaluated_projections)
 {
   return evaluated_projections.any_of_side([](const auto & critical_pair_opt) {
     return critical_pair_opt.has_value() &&
            critical_pair_opt->physical_departure_point.is_critical();
   });
+}
+
+bool is_near_boundary(const Side<std::optional<DeparturePointPair>> & evaluated_projections)
+{
+  return evaluated_projections.any_of_side([](const auto & departure_pair_opt) {
+    return departure_pair_opt.has_value() &&
+           departure_pair_opt->physical_departure_point.is_near_boundary();
+  });
+}
+
+double get_min_lateral_distance_to_bound(
+  const Side<std::optional<DeparturePointPair>> & evaluated_projections)
+{
+  auto min_lat_dist = std::numeric_limits<double>::infinity();
+  evaluated_projections.for_each_side([&min_lat_dist](const auto & departure_pair_opt) {
+    if (!departure_pair_opt.has_value()) return;
+    // A projection that failed to find a segment keeps its sentinel default. Treat it as "no
+    // measurement" instead of letting the sentinel be published as a real distance.
+    const auto lat_dist = departure_pair_opt->physical_departure_point.lat_dist;
+    if (!std::isfinite(lat_dist) || lat_dist >= std::numeric_limits<double>::max()) return;
+    min_lat_dist = std::min(min_lat_dist, lat_dist);
+  });
+  return min_lat_dist;
 }
 
 double calc_minimum_braking_distance(

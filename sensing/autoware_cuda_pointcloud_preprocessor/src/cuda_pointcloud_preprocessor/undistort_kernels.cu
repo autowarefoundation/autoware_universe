@@ -21,6 +21,9 @@
 #include <Eigen/Geometry>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
+#include <cassert>
+#include <stdexcept>
+
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
@@ -165,12 +168,13 @@ void undistort3DLaunch(
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
-void setupTwist2DStructs(
+std::size_t setupTwist2DStructs(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
   thrust::device_vector<TwistStruct2D> & device_twist_2d_structs, cudaStream_t & stream)
 {
+  assert(twist_queue.size() + angular_velocity_queue.size() <= device_twist_2d_structs.size());
   std::vector<TwistStruct2D> host_twist_2d_structs;
   host_twist_2d_structs.reserve(twist_queue.size() + angular_velocity_queue.size());
 
@@ -246,19 +250,24 @@ void setupTwist2DStructs(
     cum_y += d * sin(cum_theta);
   }
 
-  // Copy to device
-  device_twist_2d_structs.resize(host_twist_2d_structs.size());
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    thrust::raw_pointer_cast(device_twist_2d_structs.data()), host_twist_2d_structs.data(),
-    host_twist_2d_structs.size() * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream));
+  if (host_twist_2d_structs.size() > device_twist_2d_structs.size()) {
+    throw std::runtime_error("Twist2D struct capacity exceeded");
+  }
+  if (!host_twist_2d_structs.empty()) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      thrust::raw_pointer_cast(device_twist_2d_structs.data()), host_twist_2d_structs.data(),
+      host_twist_2d_structs.size() * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream));
+  }
+  return host_twist_2d_structs.size();
 }
 
-void setupTwist3DStructs(
+std::size_t setupTwist3DStructs(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
   thrust::device_vector<TwistStruct3D> & device_twist_3d_structs, cudaStream_t & stream)
 {
+  assert(twist_queue.size() + angular_velocity_queue.size() <= device_twist_3d_structs.size());
   std::vector<TwistStruct3D> host_twist_3d_structs;
   host_twist_3d_structs.reserve(twist_queue.size() + angular_velocity_queue.size());
 
@@ -339,11 +348,15 @@ void setupTwist3DStructs(
     cum_transform = cum_transform * delta_transform;
   }
 
-  // Copy to device
-  device_twist_3d_structs.resize(host_twist_3d_structs.size());
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    thrust::raw_pointer_cast(device_twist_3d_structs.data()), host_twist_3d_structs.data(),
-    host_twist_3d_structs.size() * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream));
+  if (host_twist_3d_structs.size() > device_twist_3d_structs.size()) {
+    throw std::runtime_error("Twist3D struct capacity exceeded");
+  }
+  if (!host_twist_3d_structs.empty()) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      thrust::raw_pointer_cast(device_twist_3d_structs.data()), host_twist_3d_structs.data(),
+      host_twist_3d_structs.size() * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream));
+  }
+  return host_twist_3d_structs.size();
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

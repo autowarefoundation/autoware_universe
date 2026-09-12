@@ -195,6 +195,10 @@ public:
     set_return_types(primary_types, primary_return_type_dev_);
   }
 
+  /// CUDA stream used by this filter to consume input pointclouds.
+  /// Enables stream-ordered producer/consumer lifetime handling.
+  cudaStream_t stream() const { return stream_; }
+
 protected:
   enum class ReductionType : uint8_t { Min, Max, Sum };
 
@@ -280,5 +284,5 @@ private:
 };
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
-#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_OUTLIER_FILTER__CUDA_POLAR_VOXEL_OUTLIER_FILTER_HPP_
 /* *INDENT-ON* */
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_OUTLIER_FILTER__CUDA_POLAR_VOXEL_OUTLIER_FILTER_HPP_

@@ -49,9 +49,6 @@ else()
 endif()
 
 if(TRT_AVAIL AND CUDA_AVAIL)
-  find_package(ament_cmake_auto REQUIRED)
-  ament_auto_find_build_dependencies()
-
   include_directories(
     include
     ${CUDA_INCLUDE_DIRS}
@@ -81,6 +78,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/postprocess_kernel.cu
+    lib/postprocess/detection3d_postprocess.cu
     lib/preprocess/preprocess_kernel.cu
   )
 
@@ -89,8 +87,18 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ${autoware_cuda_utils_INCLUDE_DIRS}
   )
 
+  # detection3d_postprocess_test needs this: it host-compiles Thrust and gets no ament_target_dependencies.
+  target_link_libraries(${PROJECT_NAME}_cuda_lib
+    autoware_cuda_utils::autoware_cuda_utils
+  )
+
+  ament_target_dependencies(${PROJECT_NAME}_cuda_lib
+    autoware_point_types
+  )
+
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/ptv3_trt.cpp
+    lib/ros_utils.cpp
   )
 
   target_compile_definitions(${PROJECT_NAME}_lib PRIVATE
@@ -132,17 +140,77 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     DESTINATION lib
   )
 
-  ament_auto_package(
+  if(BUILD_TESTING)
+    ament_add_gtest(ptv3_config_test
+      test/ptv3_config_test.cpp
+    )
+    target_include_directories(ptv3_config_test PRIVATE include)
+    ament_target_dependencies(ptv3_config_test autoware_point_types)
+
+    ament_add_gtest(serialized_pooling_metadata_test
+      test/serialized_pooling_metadata_test.cpp
+    )
+    if(TARGET serialized_pooling_metadata_test)
+      target_link_libraries(serialized_pooling_metadata_test
+        CUDA::cudart
+        ${PROJECT_NAME}_cuda_lib
+      )
+      target_include_directories(serialized_pooling_metadata_test PRIVATE
+        include
+        ${CUDA_INCLUDE_DIRS}
+      )
+    endif()
+
+    ament_add_gtest(test_preprocess_kernel
+      test/test_preprocess_kernel.cpp
+    )
+
+    target_link_libraries(test_preprocess_kernel
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+
+    ament_add_gtest(postprocess_kernel_test
+      test/postprocess_kernel_test.cpp
+    )
+    target_link_libraries(postprocess_kernel_test
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+    target_include_directories(postprocess_kernel_test PRIVATE
+      include
+      ${CUDA_INCLUDE_DIRS}
+    )
+
+    ament_target_dependencies(postprocess_kernel_test autoware_point_types)
+
+    ament_add_gtest(detection3d_postprocess_test
+      test/detection3d_postprocess_test.cpp
+    )
+
+    target_link_libraries(detection3d_postprocess_test
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+
+    ament_add_ros_isolated_gtest(ros_utils_test
+      test/ros_utils_test.cpp
+    )
+
+    target_link_libraries(ros_utils_test
+      ${PROJECT_NAME}_lib
+    )
+
+  endif()
+
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
       config
   )
 
 else()
-  find_package(ament_cmake_auto REQUIRED)
-  ament_auto_find_build_dependencies()
-
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
   )

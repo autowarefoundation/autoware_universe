@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: NetMonitor.node
+
+package:
+  name: autoware_system_monitor
+  provider: autoware
+
+launch:
+  plugin: NetMonitor
+  executable: net_monitor
+  node_output: screen
+
+# interfaces
+# diagnostics are advertised to /diagnostics via diagnostic_updater.
+subscribers: []
+
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+  - name: network_status
+    message_type: tier4_external_api_msgs/msg/NetworkStatus
+    remap_target: ~/network_status
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/net_monitor.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: monitor
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: diagnostics

@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<class_libraries>
+  <library path="autoware_trajectory_optimizer_plugins">
+    <class type="autoware::trajectory_processor::plugin::TrajectoryPointFixer"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Removes invalid trajectory points (NaN, Inf, close proximity)
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Kinematic Feasibility Enforcer plugin. Enforces Ackermann steering geometry and yaw rate constraints on trajectory points using forward-propagating adjustment from ego pose. Ensures trajectories are kinematically feasible before QP smoothing.
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectoryQPSmoother"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        QP-based trajectory smoother with fidelity and smoothness constraints
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Elastic Band trajectory smoother for path optimization
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectorySplineSmoother"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Akima spline-based trajectory interpolation and smoothing
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Velocity profile optimization with lateral acceleration limits and jerk filtering
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectoryExtender"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Extends trajectory backward with ego vehicle history
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        MPT (Model Predictive Trajectory) optimizer. Optimizes trajectory geometry using QP-based optimization with adaptive corridor bounds. Refines paths within vehicle-centric constraints after kinematic feasibility and QP smoothing.
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Temporal MPT optimizer plugin. Tracks a time-ordered reference trajectory using an acados MPC
+        on a temporal kinematic bicycle model and overwrites the first N+1 points of the trajectory.
+      </description>
+    </class>
+  </library>
+  <library path="autoware_trajectory_modifier_plugins">
+    <class type="autoware::trajectory_processor::plugin::StopPointFixer"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Modifies the stop point of a trajectory to align with the obstacle stop point
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::ObstacleStop"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Modifies the trajectory to avoid obstacles by stopping
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::VelocityModifier"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Modifies the velocity of a trajectory to smooth the motion
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::SurroundObstacleStop"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Replaces the trajectory with zero velocity when obstacles surround a stopped ego vehicle
+      </description>
+    </class>
+    <class type="autoware::trajectory_processor::plugin::TrafficLightStop"
+          base_class_type="autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase">
+      <description>
+        Modifies the trajectory to stop at traffic lights
+      </description>
+    </class>
+  </library>
+</class_libraries>

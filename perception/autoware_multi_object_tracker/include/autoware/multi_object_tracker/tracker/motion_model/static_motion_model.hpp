@@ -21,7 +21,6 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/twist.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace autoware::multi_object_tracker
 {
@@ -53,8 +52,6 @@ public:
   bool updateStatePose(const double & x, const double & y, const std::array<double, 36> & pose_cov);
 
   bool adjustPosition(const double & x, const double & y);
-
-  bool limitStates();
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 

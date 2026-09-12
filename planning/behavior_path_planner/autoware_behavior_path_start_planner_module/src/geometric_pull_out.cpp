@@ -136,8 +136,9 @@ std::optional<PullOutPath> GeometricPullOut::plan(
     start_planner_utils::calc_start_and_end_shift_length(
       pull_out_lanes, output.start_pose, output.end_pose);
 
-  if (isPullOutPathCollided(
-        output, planner_data, parameters_.geometric_collision_check_distance_from_end)) {
+  if (
+    isPullOutPathCollided(
+      output, planner_data, parameters_.geometric_collision_check_distance_from_end)) {
     planner_debug_data.conditions_evaluation.emplace_back("collision");
     return {};
   }

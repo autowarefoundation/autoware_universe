@@ -21,37 +21,90 @@
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/types.h>
 
+#include <algorithm>
 #include <vector>
 
 namespace autoware::euclidean_cluster
 {
+/// @brief One clustered object together with the indices of its source points.
+struct IndexedCluster
+{
+  /// @brief Clustered points copied from the source cloud.
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  /// @brief Indices of the source points that contributed to this cluster.
+  pcl::Indices indices;
+};
+
 class EuclideanClusterInterface
 {
 public:
   EuclideanClusterInterface() = default;
-  EuclideanClusterInterface(bool use_height, int min_cluster_size, int max_cluster_size)
+  EuclideanClusterInterface(
+    bool use_height, int min_points_per_cluster, int max_cluster_size,
+    float min_cluster_size = 0.0F)
   : use_height_(use_height),
-    min_cluster_size_(min_cluster_size),
-    max_cluster_size_(max_cluster_size)
+    min_points_per_cluster_(min_points_per_cluster),
+    max_cluster_size_(max_cluster_size),
+    min_cluster_size_(min_cluster_size)
   {
   }
   virtual ~EuclideanClusterInterface() = default;
   void setUseHeight(bool use_height) { use_height_ = use_height; }
-  void setMinClusterSize(int size) { min_cluster_size_ = size; }
+  void setMinClusterSize(int size) { min_points_per_cluster_ = size; }
   void setMaxClusterSize(int size) { max_cluster_size_ = size; }
+  void setMinClusterSize(float size) { min_cluster_size_ = size; }
+
+  /// @brief Cluster a point cloud and return only point copies for each cluster.
+  /// @details This legacy overload preserves the existing interface for callers that do not need
+  ///          source-point bookkeeping.
   virtual bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) = 0;
+
+  /// @brief Cluster a point cloud and preserve which source points contributed to each cluster.
+  /// @details Returned indices are relative to the input `pointcloud` passed to this overload.
+  virtual bool cluster(
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+    std::vector<IndexedCluster> & clusters) = 0;
 
   virtual bool cluster(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_msg,
     tier4_perception_msgs::msg::DetectedObjectsWithFeature & output_clusters) = 0;
 
 protected:
+  /// @brief Return whether a cluster meets the configured XY physical-size threshold.
+  /// @details A zero threshold disables this filter.
+  bool isClusterLargeEnough(const pcl::PointCloud<pcl::PointXYZ> & cluster) const
+  {
+    if (min_cluster_size_ <= 0.0F) {
+      return true;
+    }
+    if (cluster.empty()) {
+      return false;
+    }
+
+    float center_x = 0.0F;
+    float center_y = 0.0F;
+    for (const auto & point : cluster) {
+      center_x += point.x;
+      center_y += point.y;
+    }
+    center_x /= static_cast<float>(cluster.size());
+    center_y /= static_cast<float>(cluster.size());
+
+    float radius = 0.0F;
+    for (const auto & point : cluster) {
+      radius = std::max(radius, std::hypot(point.x - center_x, point.y - center_y));
+    }
+    return 2.0F * radius >= min_cluster_size_;
+  }
+
   bool use_height_ = true;
-  int min_cluster_size_;
+  int min_points_per_cluster_;
   int max_cluster_size_;
+  float min_cluster_size_ = 0.0F;
 };
 
 }  // namespace autoware::euclidean_cluster

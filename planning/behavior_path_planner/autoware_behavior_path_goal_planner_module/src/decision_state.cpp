@@ -129,12 +129,13 @@ PathDecisionState PathDecisionStateController::get_next_state(
   const auto & parking_path_curvatures = pull_over_path.parking_path_curvatures();
   const double margin =
     parameters.object_recognition_collision_check_hard_margins.back() * hysteresis_factor;
-  if (goal_planner_utils::checkObjectsCollision(
-        parking_path, parking_path_curvatures, static_target_objects, dynamic_target_objects,
-        planner_data->parameters, margin,
-        /*extract_static_objects=*/false, parameters.maximum_deceleration,
-        parameters.object_recognition_collision_check_max_extra_stopping_margin,
-        parameters.collision_check_outer_margin_factor, ego_polygons_expanded, true)) {
+  if (
+    goal_planner_utils::checkObjectsCollision(
+      parking_path, parking_path_curvatures, static_target_objects, dynamic_target_objects,
+      planner_data->parameters, margin,
+      /*extract_static_objects=*/false, parameters.maximum_deceleration,
+      parameters.object_recognition_collision_check_max_extra_stopping_margin,
+      parameters.collision_check_outer_margin_factor, ego_polygons_expanded, true)) {
     if (is_deciding) {
       RCLCPP_INFO(
         logger_, "[DecidingPathStatus]: DECIDING->NOT_DECIDED. path has collision with objects");

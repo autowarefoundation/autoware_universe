@@ -14,15 +14,18 @@
 
 #include "autoware/pointcloud_preprocessor/outlier_filter/polar_voxel_outlier_filter_node.hpp"
 
+#include <Eigen/Eigenvalues>
 #include <autoware/pointcloud_preprocessor/utility/memory.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/point_field.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -42,6 +45,7 @@ static constexpr double diagnostics_update_period_sec = 0.1;
 static constexpr size_t point_cloud_height_organized = 1;
 static constexpr double TWO_PI = 2.0 * M_PI;
 static constexpr int marker_resolution = 50;
+static constexpr size_t low_visibility_debug_field_count = 9;
 
 template <typename... T>
 bool all_finite(T... values)
@@ -72,6 +76,45 @@ static inline bool within_circular_range(
                    (domain_min <= value_lower && value_upper <= user_max_mod);
   }
   return within_range;
+}
+
+static void append_low_visibility_debug_fields(sensor_msgs::msg::PointCloud2 & cloud)
+{
+  auto append_field = [&cloud](const std::string & name, const uint8_t datatype) {
+    sensor_msgs::msg::PointField field;
+    field.name = name;
+    field.offset = cloud.point_step;
+    field.datatype = datatype;
+    field.count = 1;
+    cloud.fields.push_back(field);
+    cloud.point_step += sizeof(float);
+  };
+
+  append_field("voxel_radius_idx", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_azimuth_idx", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_elevation_idx", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_entropy", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_anisotropy", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_point_count", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_average_intensity", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_secondary_return_count", sensor_msgs::msg::PointField::FLOAT32);
+  append_field("voxel_secondary_return_ratio", sensor_msgs::msg::PointField::FLOAT32);
+}
+
+static std::array<float, low_visibility_debug_field_count> make_low_visibility_debug_values(
+  const std::optional<PointVoxelInfo> & point_info,
+  const PolarVoxelOutlierFilterComponent::LowVisibilityVoxelStats & stats)
+{
+  return {
+    point_info.has_value() ? static_cast<float>(point_info->voxel_idx.radius_idx) : 0.0F,
+    point_info.has_value() ? static_cast<float>(point_info->voxel_idx.azimuth_idx) : 0.0F,
+    point_info.has_value() ? static_cast<float>(point_info->voxel_idx.elevation_idx) : 0.0F,
+    static_cast<float>(stats.geometric_metrics.entropy),
+    static_cast<float>(stats.geometric_metrics.anisotropy),
+    static_cast<float>(stats.point_count),
+    stats.average_intensity,
+    static_cast<float>(stats.secondary_return_count),
+    stats.secondary_return_ratio};
 }
 
 PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
@@ -105,10 +148,21 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
     static_cast<int>(declare_parameter<int64_t>("secondary_noise_threshold"));
+  low_visibility_entropy_threshold_ =
+    declare_parameter<double>("low_visibility_entropy_threshold", 0.0);
+  low_visibility_anisotropy_threshold_ =
+    declare_parameter<double>("low_visibility_anisotropy_threshold", 1.0);
+  low_visibility_average_intensity_threshold_ =
+    declare_parameter<double>("low_visibility_average_intensity_threshold", 255.0);
+  low_visibility_sparse_voxel_point_count_threshold_ = static_cast<int>(
+    declare_parameter<int64_t>("low_visibility_sparse_voxel_point_count_threshold", int64_t{10}));
+  low_visibility_sparse_voxel_secondary_return_ratio_threshold_ =
+    declare_parameter<double>("low_visibility_sparse_voxel_secondary_return_ratio_threshold", 0.2);
   visibility_estimation_max_secondary_voxel_count_ =
     static_cast<int>(declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count"));
   visibility_estimation_only_ = declare_parameter<bool>("visibility_estimation_only");
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud");
+  publish_low_visibility_voxels_ = declare_parameter<bool>("publish_low_visibility_voxels", false);
   bool publish_area_marker = declare_parameter<bool>("publish_area_marker");
   int num_frames_hysteresis_transition = declare_parameter<int>("num_frames_hysteresis_transition");
   bool immediate_report_error = declare_parameter<bool>("immediate_report_error");
@@ -145,6 +199,11 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     "polar_voxel_outlier_filter/debug/visibility", rclcpp::SensorDataQoS());
   ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "polar_voxel_outlier_filter/debug/filter_ratio", rclcpp::SensorDataQoS());
+
+  if (publish_low_visibility_voxels_) {
+    low_visibility_voxels_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
+      "polar_voxel_outlier_filter/debug/low_visibility_voxels", rclcpp::SensorDataQoS());
+  }
 
   // Create noise cloud publisher if enabled
   if (publish_noise_cloud_) {
@@ -200,19 +259,18 @@ void PolarVoxelOutlierFilterComponent::filter(
     throw std::invalid_argument("Input point cloud is null");
   }
 
-  // Phase 1: Validate inputs
+  // Phase 1: Validate inputs and detect point cloud format
   validate_filter_inputs(*input, indices);
-
-  // Check if we have pre-computed polar coordinates
-  bool has_polar_coords = has_polar_coordinates(*input);
-
-  if (has_polar_coords) {
-    RCLCPP_DEBUG_ONCE(
-      get_logger(), "Processing PointXYZIRCAEDT format with pre-computed polar coordinates");
-  } else {
-    RCLCPP_DEBUG_ONCE(
-      get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
-  }
+  std::call_once(input_format_once_flag_, [this, &input]() {
+    if (has_polar_coordinates(*input)) {
+      input_format_ = InputPointCloudFormat::PointXYZIRCAEDT;
+      RCLCPP_DEBUG(
+        get_logger(), "Processing PointXYZIRCAEDT format with pre-computed polar coordinates");
+    } else {
+      input_format_ = InputPointCloudFormat::PointXYZIRC;
+      RCLCPP_DEBUG(get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
+    }
+  });
 
   // Phase 2: Collect voxel information (unified for both formats)
   auto point_voxel_info = collect_voxel_info(*input);
@@ -224,16 +282,25 @@ void PolarVoxelOutlierFilterComponent::filter(
   // Phase 4: Create valid points mask
   auto valid_points_mask = create_valid_points_mask(point_voxel_info, valid_voxels);
 
+  GeometricMetricsMap geometric_metrics;
+  const bool needs_geometric_metrics = use_return_type_classification_ || publish_noise_cloud_;
+  if (needs_geometric_metrics) {
+    geometric_metrics =
+      calculate_geometric_shannon_metrics_by_voxel(*input, point_voxel_info, voxel_point_counts);
+  }
+
   // Phase 5: Create output (normal or empty based on mode)
   create_output(*input, valid_points_mask, output);
 
   // Phase 6: Conditionally publish noise cloud
   if (publish_noise_cloud_) {
-    publish_noise_cloud(*input, valid_points_mask);
+    publish_noise_cloud(
+      *input, valid_points_mask, point_voxel_info, voxel_point_counts, geometric_metrics);
   }
 
   // Phase 7: Publish diagnostics (always run for visibility estimation)
-  publish_diagnostics(voxel_point_counts, valid_points_mask);
+  publish_diagnostics(
+    voxel_point_counts, valid_points_mask, *input, point_voxel_info, geometric_metrics);
 
   // (optional) Phase 8: Publish marker to visualize area to be used for visibility estimation
   if (area_marker_pub_) {
@@ -247,7 +314,8 @@ PolarVoxelOutlierFilterComponent::collect_voxel_info(const PointCloud2 & input)
   PointVoxelInfoVector point_voxel_info;
   point_voxel_info.reserve(input.width * input.height);
 
-  bool has_polar_coords = has_polar_coordinates(input);
+  const bool has_polar_coords =
+    input_format_ == InputPointCloudFormat::PointXYZIRCAEDT || has_polar_coordinates(input);
 
   if (has_polar_coords) {
     process_polar_points(input, point_voxel_info);
@@ -266,12 +334,23 @@ void PolarVoxelOutlierFilterComponent::process_polar_points(
   sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(input, "azimuth");
   sensor_msgs::PointCloud2ConstIterator<float> iter_elevation(input, "elevation");
   sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(input, "intensity");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
 
-  for (; iter_distance != iter_distance.end();
-       ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_intensity, ++iter_return_type) {
-    point_voxel_info.emplace_back(process_polar_point(
-      *iter_distance, *iter_azimuth, *iter_elevation, *iter_intensity, *iter_return_type));
+  if (use_return_type_classification_) {
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
+    for (; iter_distance != iter_distance.end();
+         ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_intensity, ++iter_return_type) {
+      point_voxel_info.emplace_back(process_polar_point(
+        *iter_distance, *iter_azimuth, *iter_elevation, *iter_intensity, *iter_return_type));
+    }
+  } else {
+    // Simple mode: return_type is unused, pass a placeholder value.
+    const uint8_t placeholder_return_type =
+      primary_return_types_.empty() ? 0U : static_cast<uint8_t>(primary_return_types_.front());
+    for (; iter_distance != iter_distance.end();
+         ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_intensity) {
+      point_voxel_info.emplace_back(process_polar_point(
+        *iter_distance, *iter_azimuth, *iter_elevation, *iter_intensity, placeholder_return_type));
+    }
   }
 }
 
@@ -283,12 +362,22 @@ void PolarVoxelOutlierFilterComponent::process_cartesian_points(
   sensor_msgs::PointCloud2ConstIterator<float> iter_y(input, "y");
   sensor_msgs::PointCloud2ConstIterator<float> iter_z(input, "z");
   sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(input, "intensity");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
 
-  for (; iter_x != iter_x.end();
-       ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_return_type) {
-    point_voxel_info.emplace_back(
-      process_cartesian_point(*iter_x, *iter_y, *iter_z, *iter_intensity, *iter_return_type));
+  if (use_return_type_classification_) {
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
+    for (; iter_x != iter_x.end();
+         ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_return_type) {
+      point_voxel_info.emplace_back(
+        process_cartesian_point(*iter_x, *iter_y, *iter_z, *iter_intensity, *iter_return_type));
+    }
+  } else {
+    // Simple mode: return_type is unused, pass a placeholder value.
+    const uint8_t placeholder_return_type =
+      primary_return_types_.empty() ? 0U : static_cast<uint8_t>(primary_return_types_.front());
+    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_intensity) {
+      point_voxel_info.emplace_back(process_cartesian_point(
+        *iter_x, *iter_y, *iter_z, *iter_intensity, placeholder_return_type));
+    }
   }
 }
 
@@ -308,7 +397,7 @@ std::optional<PointVoxelInfo> PolarVoxelOutlierFilterComponent::process_polar_po
   // Step 3: Create voxel index and determine point classification
   PolarVoxelIndex voxel_idx = polar_to_polar_voxel(*polar_opt);
 
-  return PointVoxelInfo{voxel_idx, is_primary, passes_intensity};
+  return PointVoxelInfo{voxel_idx, is_primary, passes_intensity, intensity};
 }
 
 std::optional<PointVoxelInfo> PolarVoxelOutlierFilterComponent::process_cartesian_point(
@@ -411,15 +500,50 @@ void PolarVoxelOutlierFilterComponent::create_filtered_output(
 }
 
 void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
-  const PointCloud2 & input, const ValidPointsMask & valid_points_mask) const
+  const PointCloud2 & input, const ValidPointsMask & valid_points_mask,
+  const PointVoxelInfoVector & point_voxel_info, const VoxelPointCountMap & voxel_point_counts,
+  const GeometricMetricsMap & geometric_metrics) const
 {
   if (!publish_noise_cloud_ || !noise_cloud_pub_) {
     return;
   }
 
   sensor_msgs::msg::PointCloud2 noise_cloud;
-  setup_output_header(
-    noise_cloud, input, std::count(valid_points_mask.begin(), valid_points_mask.end(), false));
+  noise_cloud.header = input.header;
+  noise_cloud.height = point_cloud_height_organized;
+  noise_cloud.width =
+    static_cast<uint32_t>(std::count(valid_points_mask.begin(), valid_points_mask.end(), false));
+  noise_cloud.point_step = input.point_step;
+  noise_cloud.fields = input.fields;
+  append_low_visibility_debug_fields(noise_cloud);
+  noise_cloud.is_bigendian = input.is_bigendian;
+  noise_cloud.row_step = noise_cloud.width * noise_cloud.point_step;
+  noise_cloud.is_dense = input.is_dense;
+  noise_cloud.data.resize(noise_cloud.row_step * noise_cloud.height);
+
+  std::unordered_map<PolarVoxelIndex, LowVisibilityVoxelStats, PolarVoxelIndexHash>
+    voxel_stats_cache;
+  auto get_voxel_stats = [&](const PolarVoxelIndex & voxel_idx) {
+    auto stats_it = voxel_stats_cache.find(voxel_idx);
+    if (stats_it != voxel_stats_cache.end()) {
+      return stats_it->second;
+    }
+
+    LowVisibilityVoxelStats stats{};
+    const auto count_it = voxel_point_counts.find(voxel_idx);
+    if (count_it != voxel_point_counts.end()) {
+      const auto & counts = count_it->second;
+      const auto metrics_it = geometric_metrics.find(voxel_idx);
+      stats.geometric_metrics =
+        metrics_it != geometric_metrics.end() ? metrics_it->second : GeometricShannonMetrics{};
+      stats.point_count = counts.point_count();
+      stats.average_intensity = counts.average_intensity();
+      stats.secondary_return_count = counts.secondary_return_count;
+      stats.secondary_return_ratio = counts.secondary_return_ratio();
+    }
+
+    return voxel_stats_cache.emplace(voxel_idx, stats).first->second;
+  };
 
   size_t noise_idx = 0;
   for (size_t i = 0; i < valid_points_mask.size(); ++i) {
@@ -427,6 +551,13 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
       std::memcpy(
         &noise_cloud.data[noise_idx * noise_cloud.point_step], &input.data[i * input.point_step],
         input.point_step);
+      const auto & point_info = point_voxel_info[i];
+      const auto stats =
+        point_info.has_value() ? get_voxel_stats(point_info->voxel_idx) : LowVisibilityVoxelStats{};
+      const auto debug_values = make_low_visibility_debug_values(point_info, stats);
+      std::memcpy(
+        &noise_cloud.data[noise_idx * noise_cloud.point_step + input.point_step],
+        debug_values.data(), debug_values.size() * sizeof(float));
       noise_idx++;
     }
   }
@@ -435,33 +566,77 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
 }
 
 void PolarVoxelOutlierFilterComponent::publish_diagnostics(
-  const VoxelPointCountMap & voxel_point_counts, const ValidPointsMask & valid_points_mask)
+  const VoxelPointCountMap & voxel_point_counts, const ValidPointsMask & valid_points_mask,
+  const PointCloud2 & input, const PointVoxelInfoVector & point_voxel_info,
+  const GeometricMetricsMap & geometric_metrics)
 {
   // Calculate metrics
-  calculate_visibility_metric(voxel_point_counts);
+  calculate_visibility_metric(voxel_point_counts, geometric_metrics);
   calculate_filter_ratio_metric(valid_points_mask);
 
   // Publish metrics
   publish_visibility_metric();
   publish_filter_ratio_metric();
+  publish_low_visibility_voxels(input, point_voxel_info);
 }
 
 void PolarVoxelOutlierFilterComponent::calculate_visibility_metric(
-  const VoxelPointCountMap & voxel_point_counts)
+  const VoxelPointCountMap & voxel_point_counts, const GeometricMetricsMap & geometric_metrics)
 {
   if (!use_return_type_classification_) {
     visibility_.reset();
+    selected_low_visibility_voxels_.clear();
+    selected_low_visibility_voxel_stats_.clear();
     return;
   }
 
-  uint32_t low_visibility_voxels_count = 0;
-  for (const auto & [voxel_idx, counts] : voxel_point_counts) {
-    if (
-      counts.is_in_visibility_range &&
-      !counts.meets_secondary_threshold(secondary_noise_threshold_)) {
-      low_visibility_voxels_count++;
+  selected_low_visibility_voxels_.clear();
+  selected_low_visibility_voxel_stats_.clear();
+  selected_low_visibility_voxels_.reserve(voxel_point_counts.size());
+  for (const auto & [candidate, counts] : voxel_point_counts) {
+    if (!counts.is_in_visibility_range) {
+      continue;
     }
+
+    const auto average_intensity = counts.average_intensity();
+    const auto point_count = counts.point_count();
+    const auto secondary_return_ratio = counts.secondary_return_ratio();
+    const bool is_secondary_noise_candidate =
+      !counts.meets_secondary_threshold(secondary_noise_threshold_);
+    const bool is_sparse_low_intensity_secondary_voxel =
+      point_count < static_cast<size_t>(low_visibility_sparse_voxel_point_count_threshold_) &&
+      secondary_return_ratio > low_visibility_sparse_voxel_secondary_return_ratio_threshold_ &&
+      average_intensity < low_visibility_average_intensity_threshold_;
+
+    if (!is_secondary_noise_candidate && !is_sparse_low_intensity_secondary_voxel) {
+      continue;
+    }
+
+    const auto geometric_metrics_it = geometric_metrics.find(candidate);
+    const auto candidate_geometric_metrics = geometric_metrics_it != geometric_metrics.end()
+                                               ? geometric_metrics_it->second
+                                               : GeometricShannonMetrics{};
+    if (!is_sparse_low_intensity_secondary_voxel) {
+      if (average_intensity > low_visibility_average_intensity_threshold_) {
+        continue;
+      }
+      if (candidate_geometric_metrics.entropy < low_visibility_entropy_threshold_) {
+        continue;
+      }
+      if (candidate_geometric_metrics.anisotropy > low_visibility_anisotropy_threshold_) {
+        continue;
+      }
+    }
+
+    selected_low_visibility_voxels_.push_back(candidate);
+    selected_low_visibility_voxel_stats_.emplace(
+      candidate, LowVisibilityVoxelStats{
+                   candidate_geometric_metrics, point_count, average_intensity,
+                   counts.secondary_return_count, secondary_return_ratio});
   }
+
+  const uint32_t low_visibility_voxels_count =
+    static_cast<uint32_t>(selected_low_visibility_voxels_.size());
 
   // Calculate visibility based on the proportion of maximum allowable voxels that fail the
   // secondary threshold test
@@ -502,6 +677,58 @@ void PolarVoxelOutlierFilterComponent::publish_filter_ratio_metric()
   ratio_msg.stamp = this->now();
   ratio_msg.data = static_cast<float>(filter_ratio_.value_or(0.0));
   ratio_pub_->publish(ratio_msg);
+}
+
+void PolarVoxelOutlierFilterComponent::publish_low_visibility_voxels(
+  const PointCloud2 & input, const PointVoxelInfoVector & point_voxel_info) const
+{
+  if (!publish_low_visibility_voxels_ || !low_visibility_voxels_pub_) {
+    return;
+  }
+
+  const VoxelIndexSet selected_voxels(
+    selected_low_visibility_voxels_.begin(), selected_low_visibility_voxels_.end());
+  const auto is_selected_low_visibility_point =
+    [&selected_voxels](const std::optional<PointVoxelInfo> & point_info) {
+      return point_info.has_value() && selected_voxels.count(point_info->voxel_idx) > 0;
+    };
+
+  const size_t selected_point_count = std::count_if(
+    point_voxel_info.begin(), point_voxel_info.end(), is_selected_low_visibility_point);
+
+  sensor_msgs::msg::PointCloud2 cloud;
+  cloud.header = input.header;
+  cloud.height = point_cloud_height_organized;
+  cloud.width = static_cast<uint32_t>(selected_point_count);
+  cloud.point_step = input.point_step;
+  cloud.fields = input.fields;
+  append_low_visibility_debug_fields(cloud);
+  cloud.is_bigendian = input.is_bigendian;
+  cloud.row_step = cloud.width * cloud.point_step;
+  cloud.is_dense = input.is_dense;
+  cloud.data.resize(cloud.row_step * cloud.height);
+  // RCLCPP_WARN(get_logger(), "Publishing low visibility voxels: %zu points",
+  // selected_point_count);
+  size_t output_idx = 0;
+  for (size_t input_idx = 0; input_idx < point_voxel_info.size(); ++input_idx) {
+    const auto & point_info = point_voxel_info[input_idx];
+    if (is_selected_low_visibility_point(point_info)) {
+      const auto stats_it = selected_low_visibility_voxel_stats_.find(point_info->voxel_idx);
+      const auto stats = stats_it != selected_low_visibility_voxel_stats_.end()
+                           ? stats_it->second
+                           : LowVisibilityVoxelStats{};
+      std::memcpy(
+        &cloud.data[output_idx * cloud.point_step], &input.data[input_idx * input.point_step],
+        input.point_step);
+      const auto debug_values = make_low_visibility_debug_values(point_info, stats);
+      std::memcpy(
+        &cloud.data[output_idx * cloud.point_step + input.point_step], debug_values.data(),
+        debug_values.size() * sizeof(float));
+      ++output_idx;
+    }
+  }
+
+  low_visibility_voxels_pub_->publish(cloud);
 }
 
 bool PolarVoxelOutlierFilterComponent::has_polar_coordinates(const PointCloud2 & input)
@@ -567,6 +794,104 @@ bool PolarVoxelOutlierFilterComponent::has_sufficient_radius(const PolarCoordina
   return std::abs(polar.radius) >= std::numeric_limits<double>::epsilon();
 }
 
+void PolarVoxelOutlierFilterComponent::GeometricStatsAccumulator::add(
+  const double x, const double y, const double z)
+{
+  ++point_count;
+  sum_x += x;
+  sum_y += y;
+  sum_z += z;
+  sum_xx += x * x;
+  sum_xy += x * y;
+  sum_xz += x * z;
+  sum_yy += y * y;
+  sum_yz += y * z;
+  sum_zz += z * z;
+}
+
+PolarVoxelOutlierFilterComponent::GeometricShannonMetrics
+PolarVoxelOutlierFilterComponent::GeometricStatsAccumulator::calculate_metrics() const
+{
+  if (point_count < 3) {
+    return {};
+  }
+
+  const double point_count_d = static_cast<double>(point_count);
+  const double mean_x = sum_x / point_count_d;
+  const double mean_y = sum_y / point_count_d;
+  const double mean_z = sum_z / point_count_d;
+
+  Eigen::Matrix3d covariance;
+  covariance << sum_xx / point_count_d - mean_x * mean_x, sum_xy / point_count_d - mean_x * mean_y,
+    sum_xz / point_count_d - mean_x * mean_z, sum_xy / point_count_d - mean_x * mean_y,
+    sum_yy / point_count_d - mean_y * mean_y, sum_yz / point_count_d - mean_y * mean_z,
+    sum_xz / point_count_d - mean_x * mean_z, sum_yz / point_count_d - mean_y * mean_z,
+    sum_zz / point_count_d - mean_z * mean_z;
+
+  const Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(covariance);
+  if (solver.info() != Eigen::Success) {
+    return {};
+  }
+
+  const Eigen::Vector3d eigenvalues = solver.eigenvalues().cwiseMax(0.0);
+  const double eigenvalue_sum = eigenvalues.sum();
+  if (eigenvalue_sum <= std::numeric_limits<double>::epsilon()) {
+    return {};
+  }
+
+  double entropy = 0.0;
+  for (int i = 0; i < eigenvalues.size(); ++i) {
+    const double probability = eigenvalues[i] / eigenvalue_sum;
+    if (probability > std::numeric_limits<double>::epsilon()) {
+      entropy -= probability * std::log(probability);
+    }
+  }
+
+  const double largest_eigenvalue = eigenvalues.maxCoeff();
+  const double smallest_eigenvalue = eigenvalues.minCoeff();
+  const double anisotropy = largest_eigenvalue > std::numeric_limits<double>::epsilon()
+                              ? (largest_eigenvalue - smallest_eigenvalue) / largest_eigenvalue
+                              : 0.0;
+
+  return {entropy / std::log(3.0), anisotropy};
+}
+
+PolarVoxelOutlierFilterComponent::GeometricMetricsMap
+PolarVoxelOutlierFilterComponent::calculate_geometric_shannon_metrics_by_voxel(
+  const PointCloud2 & input, const PointVoxelInfoVector & point_voxel_info,
+  const VoxelPointCountMap & voxel_point_counts) const
+{
+  GeometricStatsMap geometric_stats;
+  geometric_stats.reserve(voxel_point_counts.size());
+
+  sensor_msgs::PointCloud2ConstIterator<float> iter_x(input, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_y(input, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_z(input, "z");
+
+  for (size_t i = 0; i < point_voxel_info.size(); ++i, ++iter_x, ++iter_y, ++iter_z) {
+    const auto & info_opt = point_voxel_info[i];
+    if (!info_opt.has_value() || !all_finite(*iter_x, *iter_y, *iter_z)) {
+      continue;
+    }
+
+    // Entropy and anisotropy are calculated only for visibility-range voxels to save computation.
+    const auto count_it = voxel_point_counts.find(info_opt->voxel_idx);
+    if (count_it == voxel_point_counts.end() || !count_it->second.is_in_visibility_range) {
+      continue;
+    }
+
+    geometric_stats[info_opt->voxel_idx].add(*iter_x, *iter_y, *iter_z);
+  }
+
+  GeometricMetricsMap geometric_metrics;
+  geometric_metrics.reserve(geometric_stats.size());
+  for (const auto & [voxel_idx, stats] : geometric_stats) {
+    geometric_metrics.emplace(voxel_idx, stats.calculate_metrics());
+  }
+
+  return geometric_metrics;
+}
+
 PolarVoxelOutlierFilterComponent::VoxelPointCountMap
 PolarVoxelOutlierFilterComponent::count_voxel_points(
   const PointVoxelInfoVector & point_voxel_info) const
@@ -575,10 +900,14 @@ PolarVoxelOutlierFilterComponent::count_voxel_points(
   for (const auto & info_opt : point_voxel_info) {
     if (info_opt.has_value()) {
       const auto & info = info_opt.value();
+      voxel_point_counts[info.voxel_idx].intensity_sum += info.intensity;
       if (info.is_primary) {
         voxel_point_counts[info.voxel_idx].primary_count++;
-      } else if (info.meets_intensity_threshold) {
-        voxel_point_counts[info.voxel_idx].secondary_count++;
+      } else {
+        voxel_point_counts[info.voxel_idx].secondary_return_count++;
+        if (info.meets_intensity_threshold) {
+          voxel_point_counts[info.voxel_idx].secondary_count++;
+        }
       }
     }
   }
@@ -636,6 +965,20 @@ void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter 
      [this](const auto & p) { voxel_points_threshold_ = static_cast<int>(p.as_int()); }},
     {"secondary_noise_threshold",
      [this](const auto & p) { secondary_noise_threshold_ = static_cast<int>(p.as_int()); }},
+    {"low_visibility_entropy_threshold",
+     [this](const auto & p) { low_visibility_entropy_threshold_ = p.as_double(); }},
+    {"low_visibility_anisotropy_threshold",
+     [this](const auto & p) { low_visibility_anisotropy_threshold_ = p.as_double(); }},
+    {"low_visibility_average_intensity_threshold",
+     [this](const auto & p) { low_visibility_average_intensity_threshold_ = p.as_double(); }},
+    {"low_visibility_sparse_voxel_point_count_threshold",
+     [this](const auto & p) {
+       low_visibility_sparse_voxel_point_count_threshold_ = static_cast<int>(p.as_int());
+     }},
+    {"low_visibility_sparse_voxel_secondary_return_ratio_threshold",
+     [this](const auto & p) {
+       low_visibility_sparse_voxel_secondary_return_ratio_threshold_ = p.as_double();
+     }},
     {"intensity_threshold",
      [this](const auto & p) { intensity_threshold_ = static_cast<int>(p.as_int()); }},
     {"visibility_estimation_max_secondary_voxel_count",
@@ -669,7 +1012,9 @@ void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter 
     {"filter_secondary_returns",
      [this](const auto & p) { enable_secondary_return_filtering_ = p.as_bool(); }},
     {"primary_return_types", [this](const auto & p) { update_primary_return_types(p); }},
-    {"publish_noise_cloud", [this](const auto & p) { update_publish_noise_cloud(p); }}};
+    {"publish_noise_cloud", [this](const auto & p) { update_publish_noise_cloud(p); }},
+    {"publish_low_visibility_voxels",
+     [this](const auto & p) { update_publish_low_visibility_voxels(p); }}};
 
   const auto & name = param.get_name();
   auto it = parameter_updaters.find(name);
@@ -702,12 +1047,38 @@ void PolarVoxelOutlierFilterComponent::update_publish_noise_cloud(const rclcpp::
 
   publish_noise_cloud_ = new_value;
 
+  if (!publish_noise_cloud_) {
+    noise_cloud_pub_.reset();
+    return;
+  }
+
   // Recreate publisher if needed
-  if (publish_noise_cloud_ && !noise_cloud_pub_) {
+  if (!noise_cloud_pub_) {
     rclcpp::PublisherOptions pub_options;
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     noise_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
       "polar_voxel_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(), pub_options);
+  }
+}
+
+void PolarVoxelOutlierFilterComponent::update_publish_low_visibility_voxels(
+  const rclcpp::Parameter & param)
+{
+  bool new_value = param.as_bool();
+  if (new_value == publish_low_visibility_voxels_) {
+    return;
+  }
+
+  publish_low_visibility_voxels_ = new_value;
+
+  if (!publish_low_visibility_voxels_) {
+    low_visibility_voxels_pub_.reset();
+    return;
+  }
+
+  if (!low_visibility_voxels_pub_) {
+    low_visibility_voxels_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
+      "polar_voxel_outlier_filter/debug/low_visibility_voxels", rclcpp::SensorDataQoS());
   }
 }
 
@@ -804,6 +1175,17 @@ bool PolarVoxelOutlierFilterComponent::validate_intensity_threshold(
   int val = param.as_int();
   if (val < 0 || val > 255) {
     reason = "intensity_threshold must be between 0 and 255";
+    return false;
+  }
+  return true;
+}
+
+bool PolarVoxelOutlierFilterComponent::validate_average_intensity_threshold(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  double val = param.as_double();
+  if (val < 0.0 || val > 255.0) {
+    reason = "low_visibility_average_intensity_threshold must be between 0.0 and 255.0";
     return false;
   }
   return true;
@@ -923,6 +1305,29 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
     {"secondary_noise_threshold",
      {validate_non_negative_int,
       [this](const rclcpp::Parameter & p) { secondary_noise_threshold_ = p.as_int(); }}},
+    {"low_visibility_entropy_threshold",
+     {validate_normalized,
+      [this](const rclcpp::Parameter & p) { low_visibility_entropy_threshold_ = p.as_double(); }}},
+    {"low_visibility_anisotropy_threshold",
+     {validate_normalized,
+      [this](const rclcpp::Parameter & p) {
+        low_visibility_anisotropy_threshold_ = p.as_double();
+      }}},
+    {"low_visibility_average_intensity_threshold",
+     {validate_average_intensity_threshold,
+      [this](const rclcpp::Parameter & p) {
+        low_visibility_average_intensity_threshold_ = p.as_double();
+      }}},
+    {"low_visibility_sparse_voxel_point_count_threshold",
+     {validate_non_negative_int,
+      [this](const rclcpp::Parameter & p) {
+        low_visibility_sparse_voxel_point_count_threshold_ = p.as_int();
+      }}},
+    {"low_visibility_sparse_voxel_secondary_return_ratio_threshold",
+     {validate_normalized,
+      [this](const rclcpp::Parameter & p) {
+        low_visibility_sparse_voxel_secondary_return_ratio_threshold_ = p.as_double();
+      }}},
     {"visibility_estimation_max_secondary_voxel_count",
      {validate_non_negative_int,
       [this](const rclcpp::Parameter & p) {
@@ -939,7 +1344,9 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
     {"visibility_estimation_only",
      {nullptr, [this](const rclcpp::Parameter & p) { visibility_estimation_only_ = p.as_bool(); }}},
     {"publish_noise_cloud",
-     {nullptr, [this](const rclcpp::Parameter & p) { publish_noise_cloud_ = p.as_bool(); }}},
+     {nullptr, [this](const rclcpp::Parameter & p) { update_publish_noise_cloud(p); }}},
+    {"publish_low_visibility_voxels",
+     {nullptr, [this](const rclcpp::Parameter & p) { update_publish_low_visibility_voxels(p); }}},
     {"filter_ratio_error_threshold",
      {validate_normalized,
       [this](const rclcpp::Parameter & p) { filter_ratio_error_threshold_ = p.as_double(); }}},
@@ -1008,6 +1415,16 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
   stat.add("Estimation Minimum Elevation (rad)", visibility_estimation_min_elevation_rad_);
   stat.add("Estimation Maximum Elevation (rad)", visibility_estimation_max_elevation_rad_);
   stat.add("Max Secondary Voxels", visibility_estimation_max_secondary_voxel_count_);
+  stat.add("Low Visibility Entropy Threshold", low_visibility_entropy_threshold_);
+  stat.add("Low Visibility Anisotropy Threshold", low_visibility_anisotropy_threshold_);
+  stat.add(
+    "Low Visibility Average Intensity Threshold", low_visibility_average_intensity_threshold_);
+  stat.add(
+    "Low Visibility Sparse Voxel Point Count Threshold",
+    low_visibility_sparse_voxel_point_count_threshold_);
+  stat.add(
+    "Low Visibility Sparse Voxel Secondary Return Ratio Threshold",
+    low_visibility_sparse_voxel_secondary_return_ratio_threshold_);
   stat.add("Effective state", custom_diagnostic_tasks::get_level_string(visibility_state));
   stat.add(
     "Candidate state",

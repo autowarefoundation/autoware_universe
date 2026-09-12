@@ -7,6 +7,11 @@
   <arg name="process_monitor_config_file" default="$(find-pkg-share autoware_system_monitor)/config/process_monitor.param.yaml"/>
   <arg name="gpu_monitor_config_file" default="$(find-pkg-share autoware_system_monitor)/config/gpu_monitor.param.yaml"/>
   <arg name="voltage_monitor_config_file" default="$(find-pkg-share autoware_system_monitor)/config/voltage_monitor.param.yaml"/>
+  <arg
+    name="hdd_mount_point"
+    default="/"
+    description="mount point of the disk to monitor. Set to a bind mount of the host root (e.g. /host_root) when running in a container, because the container root is overlayfs and has no block device"
+  />
 
   <group>
     <node_container pkg="rclcpp_components" exec="component_container_mt" name="system_monitor_container" namespace="system_monitor" output="screen">
@@ -27,6 +32,7 @@
       </composable_node>
       <composable_node pkg="autoware_system_monitor" plugin="HddMonitor" name="hdd_monitor">
         <param from="$(var hdd_monitor_config_file)"/>
+        <param name="disks.disk0.name" value="$(var hdd_mount_point)"/>
       </composable_node>
       <composable_node pkg="autoware_system_monitor" plugin="GPUMonitor" name="gpu_monitor">
         <param from="$(var gpu_monitor_config_file)"/>

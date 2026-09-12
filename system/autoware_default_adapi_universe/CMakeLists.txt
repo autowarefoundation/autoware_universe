@@ -25,20 +25,76 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 rclcpp_components_register_nodes(${PROJECT_NAME}
   "autoware::default_adapi::AutowareStateNode"
-  "autoware::default_adapi::DiagnosticsNode"
-  "autoware::default_adapi::FailSafeNode"
-  "autoware::default_adapi::HeartbeatNode"
-  "autoware::default_adapi::ManualControlNode"
   "autoware::default_adapi::MotionNode"
   "autoware::default_adapi::MrmRequestNode"
   "autoware::default_adapi::OperationModeNode"
-  "autoware::default_adapi::PerceptionNode"
   "autoware::default_adapi::PlanningNode"
-  "autoware::default_adapi::VehicleStatusNode"
-  "autoware::default_adapi::VehicleCommandNode"
-  "autoware::default_adapi::VehicleMetricsNode"
-  "autoware::default_adapi::VehicleInfoNode"
   "autoware::default_adapi::VehicleDoorNode"
+)
+
+# These nodes derive from autoware::agnocast_wrapper::Node, which requires an AgnocastOnly
+# executor, so they also get standalone executables.
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::DiagnosticsNode"
+  EXECUTABLE diagnostics_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::FailSafeNode"
+  EXECUTABLE fail_safe_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::HeartbeatNode"
+  EXECUTABLE heartbeat_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::ManualControlNode"
+  EXECUTABLE manual_control_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::PerceptionNode"
+  EXECUTABLE perception_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::VehicleCommandNode"
+  EXECUTABLE vehicle_command_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::VehicleInfoNode"
+  EXECUTABLE vehicle_info_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::VehicleMetricsNode"
+  EXECUTABLE vehicle_metrics_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::default_adapi::VehicleStatusNode"
+  EXECUTABLE vehicle_status_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)

@@ -22,8 +22,9 @@
 namespace autoware::trajectory_validator::plugin::safety
 {
 UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext & context)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (const auto validate_context = validate_filter_context(context); !validate_context) {
     return tl::make_unexpected(validate_context.error());
   }
@@ -39,30 +40,49 @@ UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter:
   ego_state.acceleration = context.acceleration->accel.accel.linear.x;
   ego_state.current_time_s = rclcpp::Time(context.odometry->header.stamp).seconds();
 
-  auto status = checker_->update_departure_status(traj_points, ego_state);
+  // Evaluate each generator's trajectory against its own hysteresis state so that a critical
+  // verdict for one trajectory does not bleed into another through the shared ON/OFF buffers.
+  auto & hysteresis_state = hysteresis_states_[candidate_trajectory.generator_id.uuid];
 
-  const bool is_feasible = status.status != boundary_departure_checker::DepartureType::CRITICAL;
+  auto status = checker_->update_departure_status(traj_points, ego_state, hysteresis_state);
 
-  if (!is_feasible) {
+  const bool is_critical_departure =
+    status.status == boundary_departure_checker::DepartureType::CRITICAL;
+
+  if (is_critical_departure) {
     std::move(
       status.debug_markers.markers.begin(), status.debug_markers.markers.end(),
       std::back_inserter(debug_markers_.markers));
   }
 
-  std::vector<MetricReport> metrics{
-    autoware_trajectory_validator::build<MetricReport>()
-      .validator_name(get_name())
-      .validator_category(category())
-      .metric_name("check_critical_departure")
-      .metric_value(is_feasible ? 1.0 : 0.0)
-      .level(!is_feasible ? MetricReport::ERROR : MetricReport::OK)};
+  RiskLevel risk_level;
+  switch (status.status) {
+    case boundary_departure_checker::DepartureType::NEAR_BOUNDARY:
+      risk_level.level = RiskLevel::LOW_CAUTION;
+      break;
+    case boundary_departure_checker::DepartureType::CRITICAL:
+      risk_level.level = RiskLevel::DANGER;
+      break;
+    default:
+      risk_level.level = RiskLevel::SAFE;
+      break;
+  }
 
-  return ValidationResult{is_feasible, std::move(metrics)};
+  std::vector<MetricReport> metrics{autoware_trajectory_validator::build<MetricReport>()
+                                      .validator_name(get_name())
+                                      .validator_category(category())
+                                      .metric_name("lat_dist_to_uncrossable_bound")
+                                      .metric_value(status.lat_dist_to_uncrossable_bound)
+                                      .risk(risk_level)};
+
+  // Only a CRITICAL departure rejects the trajectory. NEAR_BOUNDARY is advisory.
+  return ValidationResult{!is_critical_departure, std::move(metrics)};
 }
 
 void UncrossableBoundaryDepartureFilter::update_parameters(const validator::Params & params)
 {
-  params_.lateral_margin_m = params.boundary_departure.lateral_margin_m;
+  params_.critical_departure_lateral_th_m = params.boundary_departure.lateral_margin_m;
+  params_.near_boundary_lateral_th_m = params.boundary_departure.near_boundary_lateral_th_m;
   params_.longitudinal_margin_m = params.boundary_departure.longitudinal_margin_m;
   params_.max_deceleration_mps2 = params.boundary_departure.max_deceleration_mps2;
   params_.max_jerk_mps3 = params.boundary_departure.max_jerk_mps3;

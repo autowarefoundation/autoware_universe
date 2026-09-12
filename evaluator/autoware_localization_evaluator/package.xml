@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_localization_evaluator</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>localization evaluator ROS 2 node</description>
 
   <maintainer email="dominik.jargot@robotec.ai">Dominik Jargot</maintainer>
@@ -21,6 +21,7 @@
   <depend>diagnostic_msgs</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
+  <depend>libboost-dev</depend>
   <depend>message_filters</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
@@ -29,6 +30,7 @@
   <depend>tf2_ros</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>

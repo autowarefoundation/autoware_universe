@@ -20,6 +20,8 @@
 #include "autoware/tracking_object_merger/utils/utils.hpp"
 #include "autoware_utils_diagnostics/diagnostics_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/published_time_publisher.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
@@ -28,9 +30,6 @@
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
 #include <std_msgs/msg/header.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <map>
 #include <memory>
@@ -42,7 +41,7 @@
 namespace autoware::tracking_object_merger
 {
 
-class DecorativeTrackerMergerNode : public rclcpp::Node
+class DecorativeTrackerMergerNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit DecorativeTrackerMergerNode(const rclcpp::NodeOptions & node_options);
@@ -54,9 +53,10 @@ private:
     std::unordered_map<std::string, std::unique_ptr<DataAssociation>> & data_association_map);
 
   void mainObjectsCallback(
-    const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr & main_objects);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) &
+    main_objects);
   void subObjectsCallback(
-    const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr & msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) & msg);
 
   bool decorativeMerger(
     const MEASUREMENT_STATE input_sensor,
@@ -75,16 +75,17 @@ private:
   void updateDiagnostics();
 
 private:
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr merged_object_pub_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr sub_main_objects_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr sub_sub_objects_;
+  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  autoware::agnocast_wrapper::TransformListener tf_listener_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) merged_object_pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_perception_msgs::msg::TrackedObjects) sub_main_objects_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_perception_msgs::msg::TrackedObjects) sub_sub_objects_;
   // debug object publisher
-  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr debug_object_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) debug_object_pub_;
   bool publish_interpolated_sub_objects_;
   std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils_debug::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    processing_time_publisher_;
 
   /* handle objects */
   std::unordered_map<MEASUREMENT_STATE, std::function<void(TrackedObject &, const TrackedObject &)>>
@@ -103,7 +104,9 @@ private:
   // tracker default settings
   TrackerStateParameter tracker_state_parameter_;
 
-  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
+    published_time_publisher_;
 
   // merge policy (currently not used)
   struct
@@ -128,7 +131,9 @@ private:
   } logging_;
 
   // diagnostics
-  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_ptr_;
+  std::unique_ptr<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
+    diagnostics_interface_ptr_;
   double delay_main_objects_tolerance_;
   double duration_empty_main_objects_tolerance_;
   double delay_sub_objects_tolerance_;

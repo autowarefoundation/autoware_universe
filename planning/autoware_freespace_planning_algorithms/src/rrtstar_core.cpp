@@ -390,8 +390,9 @@ NodeConstSharedPtr RRTStar::getReconnectTargeNode(
   NodeConstSharedPtr node_reconnect = nullptr;
 
   for (const auto & node_neighbor : neighbor_nodes) {
-    if (cspace_.isValidPath_child2parent(
-          node_neighbor->pose, node_new->pose, collision_check_resolution_)) {
+    if (
+      cspace_.isValidPath_child2parent(
+        node_neighbor->pose, node_new->pose, collision_check_resolution_)) {
       const double cost_from_start_rewired =
         *node_new->cost_from_start + cspace_.distance(node_new->pose, node_neighbor->pose);
       if (cost_from_start_rewired < *node_neighbor->cost_from_start) {

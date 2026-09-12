@@ -32,6 +32,8 @@ ament_auto_add_library(map_based_prediction_node SHARED
   lib/predictor_vru/history.cpp
   lib/predictor_vru/traffic_signal.cpp
   lib/predictor_vru/fence.cpp
+  lib/predictor_vru/vegetation.cpp
+  lib/predictor_vru/road_boundary.cpp
   lib/utils.cpp
 )
 
@@ -44,7 +46,7 @@ autoware_agnocast_wrapper_register_node(map_based_prediction_node
   PLUGIN "autoware::map_based_prediction::MapBasedPredictionNode"
   EXECUTABLE map_based_prediction
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ## Tests

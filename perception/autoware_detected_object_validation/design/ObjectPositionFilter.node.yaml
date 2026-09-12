@@ -1,0 +1,39 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ObjectPositionFilter.node
+
+package:
+  name: autoware_detected_object_validation
+  provider: autoware
+
+launch:
+  plugin: autoware::detected_object_validation::position_filter::ObjectPositionFilterNode
+  executable: object_position_filter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: object
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: input/object
+
+publishers:
+  - name: object
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: output/object
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/object_position_filter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: object
+    outcomes:
+      - to_output: object

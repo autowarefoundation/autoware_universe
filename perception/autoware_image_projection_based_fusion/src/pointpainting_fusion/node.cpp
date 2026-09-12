@@ -34,6 +34,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -213,10 +214,11 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
 
   // subscriber
-  std::function<void(const PointCloudMsgType::ConstSharedPtr msg)> sub_callback =
-    std::bind(&PointPaintingFusionNode::sub_callback, this, std::placeholders::_1);
   msg3d_sub_ = this->create_subscription<PointCloudMsgType>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS().keep_last(3), sub_callback);
+    "~/input/pointcloud", rclcpp::SensorDataQoS().keep_last(3),
+    [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloudMsgType) msg) {
+      this->sub_callback(std::move(msg));
+    });
 
   // publisher
   pub_ptr_ = this->create_publisher<DetectedObjects>("~/output/objects", rclcpp::QoS{1});
@@ -227,10 +229,10 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
   {
-    autoware::lidar_centerpoint::NMSParams p;
-    p.search_distance_2d_ =
+    perception_utils::IouBevNmsParams p;
+    p.search_distance_2d =
       this->declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
-    p.iou_threshold_ = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
+    p.iou_threshold = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
     iou_bev_nms_.setParameters(p);
   }
 
@@ -248,8 +250,9 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
   // create detector
   detector_ptr_ = std::make_unique<image_projection_based_fusion::PointPaintingTRT>(
     encoder_param, head_param, densification_param, config);
-  diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pointpainting_trt");
+  diagnostics_interface_ptr_ = std::make_unique<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
+    this, "pointpainting_trt");
 
   // setup diagnostics
   {
@@ -261,7 +264,6 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     diagnostic_processing_time_updater_.add(
       "pointpainting_processing_time_status", this,
       &PointPaintingFusionNode::diagnosePointPaintingProcessingTime);
-    // msec -> sec
     diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1e3);
   }
 
@@ -470,8 +472,9 @@ dc   | dc dc dc  dc ||zc|
 
       // project
       Eigen::Vector2d projected_point;
-      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
-            cv::Point3d(p_x, p_y, p_z), projected_point)) {
+      if (
+        det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+          cv::Point3d(p_x, p_y, p_z), projected_point)) {
         // iterate 2d bbox
         for (const auto & feature_object : objects) {
           sensor_msgs::msg::RegionOfInterest roi = feature_object.feature.roi;

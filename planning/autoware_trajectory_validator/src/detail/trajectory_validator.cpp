@@ -14,19 +14,26 @@
 
 #include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
 
+#include "autoware/trajectory_validator/detail/risk_utils.hpp"
+
 #include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
 #include <algorithm>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace autoware::trajectory_validator
 {
+using autoware_trajectory_validator::msg::RiskLevel;
+using autoware_trajectory_validator::msg::ValidationReport;
+
 TrajectoryValidatorReport TrajectoryValidator::process(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
+  const std::unordered_set<std::string> & active_filter_names,
   const ValidatorContext & context) const
 {
   TrajectoryValidatorReport report;
@@ -40,9 +47,10 @@ TrajectoryValidatorReport TrajectoryValidator::process(
     uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
   }
 
-  for (const auto & trajectory : input_trajectories.candidate_trajectories) {
+  for (const auto & candidate_trajectory : input_trajectories.candidate_trajectories) {
     EvaluationTable table;
-    const auto hex_generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+    const auto hex_generator_id =
+      autoware_utils_uuid::to_hex_string(candidate_trajectory.generator_id);
     table.generator_id = hex_generator_id;
 
     std::vector<autoware_trajectory_validator::msg::MetricReport> combined_metrics;
@@ -53,20 +61,34 @@ TrajectoryValidatorReport TrajectoryValidator::process(
       evaluation.is_shadow_mode = plugin->is_shadow_mode();
 
       stop_watch.tic(evaluation.plugin_name);
-      const auto res = plugin->is_feasible(trajectory.points, context);
+      const auto res = plugin->is_feasible(candidate_trajectory, context);
 
+      RiskLevel risk_level;
       if (!res) {
         evaluation.is_feasible = false;
         evaluation.reason = res.error();
+        // NOTE: If the plugin fails unexpectedly, treat it as a DANGER risk level.
+        risk_level.level = RiskLevel::DANGER;
       } else {
         const auto & val = res.value();
         evaluation.is_feasible = val.is_feasible;
         if (!val.is_feasible) {
           evaluation.reason = "Found failed metrics";
         }
+        risk_level.level = worst_risk_level(val.metrics);
         combined_metrics.insert(combined_metrics.end(), val.metrics.begin(), val.metrics.end());
+        report.planning_factors.factors.insert(
+          report.planning_factors.factors.end(), val.planning_factors.factors.begin(),
+          val.planning_factors.factors.end());
       }
 
+      combined_metrics.push_back(
+        autoware_trajectory_validator::build<autoware_trajectory_validator::msg::MetricReport>()
+          .validator_name(plugin->get_name())
+          .validator_category(plugin->category())
+          .metric_name("trajectory_feasibility")
+          .metric_value(evaluation.is_feasible ? 1.0 : 0.0)
+          .risk(risk_level));
       report.processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
 
       table.plugin_evaluations.push_back(evaluation);
@@ -75,22 +97,27 @@ TrajectoryValidatorReport TrajectoryValidator::process(
     report.evaluation_tables.push_back(table);
 
     if (table.all_acceptable()) {
-      report.valid_trajectories.candidate_trajectories.push_back(trajectory);
+      report.valid_trajectories.candidate_trajectories.push_back(candidate_trajectory);
     }
 
-    const bool all_feasible = table.all_feasible();
-    if (all_feasible) {
+    if (table.all_feasible()) {
       report.num_feasible_trajectories++;
     }
 
+    // only consider metrics from active filters for final trajectory risk level
+    std::vector<autoware_trajectory_validator::msg::MetricReport> active_metrics;
+    std::copy_if(
+      combined_metrics.begin(), combined_metrics.end(), std::back_inserter(active_metrics),
+      [&](const auto & metric) { return active_filter_names.count(metric.validator_name) > 0; });
+
+    RiskLevel risk_level;
+    risk_level.level = worst_risk_level(active_metrics);
     report.validation_reports.push_back(
       autoware_trajectory_validator::build<autoware_trajectory_validator::msg::ValidationReport>()
-        .trajectory_stamp(trajectory.header.stamp)
-        .generator_id(trajectory.generator_id)
+        .trajectory_stamp(candidate_trajectory.header.stamp)
+        .generator_id(candidate_trajectory.generator_id)
         .generator_name(uuid_to_name.at(hex_generator_id))
-        .level(
-          all_feasible ? autoware_trajectory_validator::msg::ValidationReport::OK
-                       : autoware_trajectory_validator::msg::ValidationReport::ERROR)
+        .risk(risk_level)
         .metrics(std::move(combined_metrics)));
   }
 

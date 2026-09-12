@@ -302,12 +302,13 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       const auto object_enter_time = std::get<0>(object_enter_exit_time);
       const auto object_exit_time = std::get<1>(object_enter_exit_time);
 
-      if (const auto initial_passage_index = object_passage_interval.interval_position.first;
-          check_if_path_is_overtaking_ego(
-            ego_lane, autoware_utils::to_polygon2d(
-                        precise_predicted_path.at(
-                          std::min(initial_passage_index + 1, precise_predicted_path.size() - 1)),
-                        predicted_object.shape))) {
+      if (
+        const auto initial_passage_index = object_passage_interval.interval_position.first;
+        check_if_path_is_overtaking_ego(
+          ego_lane, autoware_utils::to_polygon2d(
+                      precise_predicted_path.at(
+                        std::min(initial_passage_index + 1, precise_predicted_path.size() - 1)),
+                      predicted_object.shape))) {
         // NOTE(soblin): this is to ignore a path overtaking ego from behind
         continue;
       }

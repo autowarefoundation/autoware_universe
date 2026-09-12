@@ -66,6 +66,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/utils/geometry_utils.cpp
 )
 
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} acados_interface)
 

@@ -122,6 +122,7 @@ private:
   double th_stopped_time_sec_;
   double th_stopped_velocity_mps_;
   bool enable_mode_switching_;
+  bool allow_area_;
   bool is_parking_completed_;
 
   boost::optional<rclcpp::Time> lane_driving_stop_time_;

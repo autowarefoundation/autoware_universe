@@ -19,7 +19,8 @@
 namespace autoware::default_adapi
 {
 
-HeartbeatNode::HeartbeatNode(const rclcpp::NodeOptions & options) : Node("heartbeat", options)
+HeartbeatNode::HeartbeatNode(const rclcpp::NodeOptions & options)
+: autoware::agnocast_wrapper::Node("heartbeat", options)
 {
   // Move this function so that the timer no longer holds it as a reference.
   const auto on_timer = [this]() {
@@ -29,11 +30,11 @@ HeartbeatNode::HeartbeatNode(const rclcpp::NodeOptions & options) : Node("heartb
     pub_->publish(heartbeat);
   };
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   adaptor.init_pub(pub_);
 
   const auto period = rclcpp::Rate(10.0).period();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, std::move(on_timer));
+  timer_ = autoware::agnocast_wrapper::create_timer(this, get_clock(), period, std::move(on_timer));
 }
 
 }  // namespace autoware::default_adapi

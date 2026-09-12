@@ -151,6 +151,11 @@ bool NoStoppingAreaModule::modifyPathVelocity(
   const auto & predicted_obj_arr_ptr = planner_data.predicted_objects;
   const auto & current_pose = planner_data.current_odometry->pose;
 
+  if (!predicted_obj_arr_ptr) {
+    setSafe(true);
+    return true;
+  }
+
   // Reset data
   debug_data_ = no_stopping_area::DebugData();
   debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
@@ -209,16 +214,18 @@ bool NoStoppingAreaModule::modifyPathVelocity(
     if (stuck_vehicle_detect_area) {
       debug_data_.stuck_vehicle_detect_area = toGeomPoly(*stuck_vehicle_detect_area);
       // Find stuck vehicle in no stopping area
-      if (check_stuck_vehicles_in_no_stopping_area(
-            *stuck_vehicle_detect_area, predicted_obj_arr_ptr)) {
+      if (
+        check_stuck_vehicles_in_no_stopping_area(
+          *stuck_vehicle_detect_area, predicted_obj_arr_ptr)) {
         return true;
       }
     }
     if (stop_line_detect_area) {
       debug_data_.stop_line_detect_area = toGeomPoly(*stop_line_detect_area);
       // Find stop line in no stopping area
-      if (no_stopping_area::check_stop_lines_in_no_stopping_area(
-            path, *stop_line_detect_area, debug_data_)) {
+      if (
+        no_stopping_area::check_stop_lines_in_no_stopping_area(
+          path, *stop_line_detect_area, debug_data_)) {
         return true;
       }
     }

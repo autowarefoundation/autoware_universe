@@ -18,6 +18,7 @@
 #include "autoware/map_based_prediction/data_structure.hpp"
 
 #include <Eigen/Core>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -45,7 +46,7 @@ public:
     double no_crossing_intention_duration{1.0};
   };
 
-  explicit CrosswalkUserHistoryManager(rclcpp::Node & node) : node_(node) {}
+  explicit CrosswalkUserHistoryManager(autoware::agnocast_wrapper::Node & node) : node_(node) {}
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
   {
@@ -99,7 +100,7 @@ public:
   }
 
 private:
-  rclcpp::Node & node_;
+  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   std::unordered_map<std::string, TrackedObject> current_crosswalk_users_;

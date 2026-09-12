@@ -5,46 +5,34 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 pluginlib_export_plugin_description_file(autoware_trajectory_ranker plugins.xml)
 
-generate_parameter_library(trajectory_ranker_parameters
-  param/trajectory_ranker_parameters.yaml
+generate_parameter_library(${PROJECT_NAME}_param
+  param/trajectory_ranker_parameter_struct.yaml
 )
 
 include_directories(
   SYSTEM
 )
 
-ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/trajectory_ranker_node.cpp
+set(trajectory_ranker_lib_target ${PROJECT_NAME}_lib)
+
+ament_auto_add_library(${trajectory_ranker_lib_target} SHARED
+  src/trajectory_ranker_wrapper.cpp
+  src/trajectory_ranker.cpp
   src/evaluation.cpp
   src/utils.cpp
 )
 
-ament_auto_add_library(simple_trajectory_ranker_node SHARED
-  src/simple_trajectory_ranker_node.cpp
+target_link_libraries(${trajectory_ranker_lib_target}
+  ${PROJECT_NAME}_param
 )
 
-target_link_libraries(${PROJECT_NAME}
-  trajectory_ranker_parameters
-)
-
-target_compile_options(${PROJECT_NAME} PUBLIC
+target_compile_options(${trajectory_ranker_lib_target} PUBLIC
   -Wno-error=deprecated-declarations
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::trajectory_ranker::TrajectoryRanker"
-  EXECUTABLE ${PROJECT_NAME}_node
-)
-
-rclcpp_components_register_node(simple_trajectory_ranker_node
-  PLUGIN "autoware::trajectory_ranker::SimpleTrajectoryRanker"
-  EXECUTABLE simple_trajectory_ranker
-)
-
-ament_auto_add_library(autoware_trajectory_ranker_plugins SHARED
+ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   src/metrics/lateral_acceleration_metric.cpp
   src/metrics/longitudinal_jerk_metric.cpp
-  src/metrics/time_to_collision_metric.cpp
   src/metrics/distance_metric.cpp
   src/metrics/lateral_deviation_metric.cpp
   src/metrics/steering_consistency_metric.cpp
@@ -52,8 +40,8 @@ ament_auto_add_library(autoware_trajectory_ranker_plugins SHARED
   src/metrics/metrics_utils.cpp
 )
 
-target_link_libraries(autoware_trajectory_ranker_plugins
-  ${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}_plugins
+  ${trajectory_ranker_lib_target}
 )
 
 if(BUILD_TESTING)
@@ -64,42 +52,42 @@ if(BUILD_TESTING)
     test/test_utils.cpp
   )
   target_link_libraries(test_utils
-    ${PROJECT_NAME}
+  ${trajectory_ranker_lib_target}
   )
 
   ament_add_gtest(test_metrics_utils
     test/test_metrics_utils.cpp
   )
   target_link_libraries(test_metrics_utils
-    autoware_trajectory_ranker_plugins
+    ${PROJECT_NAME}_plugins
   )
 
   ament_add_gtest(test_evaluator
     test/test_evaluator.cpp
   )
   target_link_libraries(test_evaluator
-    ${PROJECT_NAME}
-    autoware_trajectory_ranker_plugins
+    ${trajectory_ranker_lib_target}
+    ${PROJECT_NAME}_plugins
   )
 
   ament_add_gtest(test_metrics
     test/test_metrics.cpp
   )
   target_link_libraries(test_metrics
-    ${PROJECT_NAME}
-    autoware_trajectory_ranker_plugins
+    ${trajectory_ranker_lib_target}
+    ${PROJECT_NAME}_plugins
   )
 
-  ament_add_gtest(test_simple_trajectory_ranker_node
-    test/simple_trajectory_ranker_node_test.cpp
+  ament_add_gtest(test_trajectory_ranker_integration
+    test/test_trajectory_ranker_integration.cpp
   )
-  target_link_libraries(test_simple_trajectory_ranker_node
-    simple_trajectory_ranker_node
+  target_link_libraries(test_trajectory_ranker_integration
+    ${trajectory_ranker_lib_target}
+    ${PROJECT_NAME}_plugins
   )
 endif()
 
 ament_auto_package(
   INSTALL_TO_SHARE
   config
-  launch
 )

@@ -9,6 +9,8 @@
   <!-- vehicle info -->
   <arg name="vehicle_info_param_file" default="$(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_lane_departure_checker" exec="lane_departure_checker_node" name="lane_departure_checker_node" output="screen">
     <remap from="~/input/odometry" to="$(var input/odometry)"/>
     <remap from="~/input/lanelet_map_bin" to="$(var input/lanelet_map_bin)"/>
@@ -17,5 +19,6 @@
     <remap from="~/input/predicted_trajectory" to="$(var input/predicted_trajectory)"/>
     <param from="$(var config_file)"/>
     <param from="$(var vehicle_info_param_file)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>

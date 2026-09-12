@@ -92,7 +92,7 @@ double find_reach_time(
   double upper = max;
   double t;
   int iter = 0;
-  for (int i = 0;; i++) {
+  for (;;) {
     t = 0.5 * (lower + upper);
     const double fx = f(t, j, a, v, d);
     // std::cout<<"fx: "<<fx<<" up: "<<upper<<" lo: "<<lower<<" t: "<<t<<std::endl;
@@ -771,10 +771,11 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
       return feasible_slow_down_vel;
     }();
 
-    if (std::none_of(
-          slow_down_traj_points.begin() + (slow_down_start_idx ? *slow_down_start_idx : 0),
-          slow_down_traj_points.begin() + *slow_down_end_idx,
-          [&](const auto & tp) { return stable_slow_down_vel < tp.longitudinal_velocity_mps; })) {
+    if (
+      std::none_of(
+        slow_down_traj_points.begin() + (slow_down_start_idx ? *slow_down_start_idx : 0),
+        slow_down_traj_points.begin() + *slow_down_end_idx,
+        [&](const auto & tp) { return stable_slow_down_vel < tp.longitudinal_velocity_mps; })) {
       RCLCPP_DEBUG(
         logger_,
         "[SlowDown] Ignore obstacle (%s) since slow down velocity (%f) is higher than trajectory "

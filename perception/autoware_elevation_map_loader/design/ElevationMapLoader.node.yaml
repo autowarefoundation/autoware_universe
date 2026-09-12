@@ -1,0 +1,57 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ElevationMapLoader.node
+
+package:
+  name: autoware_elevation_map_loader
+  provider: autoware
+
+launch:
+  plugin: autoware::elevation_map_loader::ElevationMapLoaderNode
+  executable: elevation_map_loader_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: input/vector_map
+  - name: pointcloud_map
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: input/pointcloud_map
+  - name: pointcloud_map_metadata
+    message_type: autoware_map_msgs/msg/PointCloudMapMetaData
+    remap_target: input/pointcloud_map_metadata
+  - name: map_hash
+    message_type: tier4_external_api_msgs/msg/MapHash
+    global: /api/autoware/get/map/info/hash
+
+publishers:
+  - name: elevation_map
+    message_type: grid_map_msgs/msg/GridMap
+    remap_target: output/elevation_map
+  - name: elevation_map_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: output/elevation_map_cloud
+
+clients:
+  - name: get_selected_pointcloud_map
+    message_type: autoware_map_msgs/srv/GetSelectedPointCloudMap
+    remap_target: service/get_selected_pointcloud_map
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/elevation_map_parameters.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: load
+    trigger_conditions:
+      - on_input: pointcloud_map
+    outcomes:
+      - to_output: elevation_map
+      - to_output: elevation_map_cloud

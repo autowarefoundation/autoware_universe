@@ -1,0 +1,53 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: CudaPointCloudConcatenateDataSynchronizer.node
+
+package:
+  name: autoware_cuda_pointcloud_preprocessor
+  provider: autoware
+
+launch:
+  plugin: autoware::cuda_pointcloud_preprocessor::CudaPointCloudConcatenateDataSynchronizerComponent
+  executable: cuda_concatenate_and_time_sync_node
+  node_output: screen
+
+# interfaces
+# NOTE: input clouds are built dynamically from the input_topics parameter
+# (input1/input2 representative). Cloud I/O uses cuda_blackboard transport
+# (CudaPointCloud2); represented as sensor_msgs/msg/PointCloud2 (negotiated
+# ROS-graph type). Mirrors the merged ConcatenateAndTimeSync design.
+subscribers:
+  - name: twist
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: input1
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: input2
+    message_type: sensor_msgs/msg/PointCloud2
+
+publishers:
+  - name: output
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: output
+  - name: output_info
+    message_type: autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo
+    remap_target: output_info
+
+# parameters
+param_files: []
+
+param_values:
+  - name: input_topics
+    type: array
+    default: "[${input input1}, ${input input2}]"
+
+# processes
+processes:
+  - name: concatenate
+    trigger_conditions:
+      - on_input: input1
+      - on_input: input2
+    outcomes:
+      - to_output: output

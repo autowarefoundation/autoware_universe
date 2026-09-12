@@ -68,9 +68,10 @@ bool isTrafficSignalStop(
   const autoware_perception_msgs::msg::TrafficLightGroup & tl_state)
 {
   const auto & elements = tl_state.elements;
-  if (hasTrafficLightShapeAndColor(
-        elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
-        autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
+  if (
+    hasTrafficLightShapeAndColor(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+      autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
     return false;
   }
 

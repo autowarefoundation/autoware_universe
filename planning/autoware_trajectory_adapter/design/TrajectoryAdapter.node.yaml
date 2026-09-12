@@ -1,0 +1,29 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: TrajectoryAdapter.node
+package:
+  name: autoware_trajectory_adapter
+  provider: autoware
+launch:
+  plugin: autoware::trajectory_adapter::TrajectoryAdapterNode
+  executable: autoware_trajectory_adapter_node
+# interfaces
+subscribers:
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
+    remap_target: ~/debug/processing_time_detail_ms/trajectory_adapter
+# parameters
+param_files: []
+param_values: []
+# processes
+processes:
+  - name: adapt_trajectory
+    trigger_conditions:
+      - on_input: trajectories
+    outcomes:
+      - to_output: trajectory

@@ -1433,11 +1433,13 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
   const auto route_case = [&]() {
     if (original_bound_itr->id() != original_bound_rev_itr->id()) {
       return RouteCase::ROUTE_IS_PASS_THROUGH_FREESPACE;
-    } else if (boost::geometry::within(
-                 to2D(original_bound.front().basicPoint()), to2D(polygon).basicPolygon())) {
+    } else if (
+      boost::geometry::within(
+        to2D(original_bound.front().basicPoint()), to2D(polygon).basicPolygon())) {
       return RouteCase::INIT_POS_IS_IN_FREESPACE;
-    } else if (boost::geometry::within(
-                 to2D(original_bound.back().basicPoint()), to2D(polygon).basicPolygon())) {
+    } else if (
+      boost::geometry::within(
+        to2D(original_bound.back().basicPoint()), to2D(polygon).basicPolygon())) {
       return RouteCase::GOAL_POS_IS_IN_FREESPACE;
     }
     return RouteCase::OTHER;
@@ -1521,8 +1523,9 @@ std::vector<geometry_msgs::msg::Point> postProcess(
         if (checkHasSameLane(ignore_lanelets, transformed_lane)) {
           continue;
         }
-        if (boost::geometry::intersects(
-              lane.polygon2d().basicPolygon(), transformed_lane.polygon2d().basicPolygon())) {
+        if (
+          boost::geometry::intersects(
+            lane.polygon2d().basicPolygon(), transformed_lane.polygon2d().basicPolygon())) {
           return true;
         }
       }
@@ -1569,7 +1572,13 @@ std::vector<geometry_msgs::msg::Point> postProcess(
   }
 
   if (!is_driving_forward) {
-    std::reverse(tmp_bound.begin(), tmp_bound.end());
+    const bool has_direction_change_tag =
+      std::any_of(lanelets.begin(), lanelets.end(), [](const lanelet::ConstLanelet & lanelet) {
+        return lanelet.attributeOr("direction_change", "none") == std::string("yes");
+      });
+    if (!has_direction_change_tag) {
+      std::reverse(tmp_bound.begin(), tmp_bound.end());
+    }
   }
 
   const auto start_idx = [&]() {

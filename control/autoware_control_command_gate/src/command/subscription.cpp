@@ -19,8 +19,18 @@
 namespace autoware::control_command_gate
 {
 
+bool validate_command(const Control & msg)
+{
+  if (!std::isfinite(msg.longitudinal.velocity)) return false;
+  if (!std::isfinite(msg.longitudinal.acceleration)) return false;
+  if (!std::isfinite(msg.longitudinal.jerk)) return false;
+  if (!std::isfinite(msg.lateral.steering_tire_angle)) return false;
+  if (!std::isfinite(msg.lateral.steering_tire_rotation_rate)) return false;
+  return true;
+}
+
 CommandSubscription::CommandSubscription(uint16_t id, const std::string & name, rclcpp::Node & node)
-: CommandSource(id, name)
+: CommandSource(id, name), clock_(node.get_clock()), logger_(node.get_logger())
 {
   using std::placeholders::_1;
   const auto control_qos = rclcpp::QoS(5);
@@ -41,6 +51,12 @@ CommandSubscription::CommandSubscription(uint16_t id, const std::string & name, 
 
 void CommandSubscription::on_control(const Control & msg)
 {
+  // NOTE: The control command filter does not handle NaN.
+  if (!validate_command(msg)) {
+    RCLCPP_ERROR_STREAM_THROTTLE(logger_, *clock_, 1000, "invalid control from " + source_name_);
+    return;
+  }
+
   // NOTE: Control does not need to be saved because it is sent periodically.
   send_control(msg);
 }

@@ -384,10 +384,11 @@ std::vector<UnsafeObject> BlindSpotModule::collect_unsafe_objects(
       compute_time_interval_for_passing_line(attention_object, first_line, entry_line, second_line);
     for (const auto & object_passage_interval : object_passage_intervals) {
       const auto & [object_entry, object_exit, predicted_path] = object_passage_interval;
-      if (const auto collision_time = get_unsafe_time_if_critical(
-            ego_passage_time_interval, {object_entry, object_exit}, planner_param_.ttc_start_margin,
-            planner_param_.ttc_end_margin);
-          collision_time) {
+      if (
+        const auto collision_time = get_unsafe_time_if_critical(
+          ego_passage_time_interval, {object_entry, object_exit}, planner_param_.ttc_start_margin,
+          planner_param_.ttc_end_margin);
+        collision_time) {
         unsafe_objects.emplace_back(
           attention_object, collision_time.value(), predicted_path,
           std::make_pair(object_entry, object_exit));

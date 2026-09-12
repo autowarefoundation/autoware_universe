@@ -1,0 +1,56 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: PerceptionOnlineEvaluator.node
+package:
+  name: autoware_perception_online_evaluator
+  provider: autoware
+launch:
+  plugin: autoware::perception_diagnostics::PerceptionOnlineEvaluatorNode
+  executable: autoware_perception_online_evaluator_node
+  node_output: screen
+# interfaces
+subscribers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+publishers:
+  - name: metrics
+    message_type: tier4_metric_msgs/msg/MetricArray
+  - name: markers
+    message_type: visualization_msgs/msg/MarkerArray
+# parameters
+param_files:
+  - name: perception_online_evaluator_param
+    default: $(find-pkg-share autoware_perception_online_evaluator)/param/perception_online_evaluator.defaults.yaml
+param_values:
+  - name: selected_metrics
+    type: string_array
+    default: [lateral_deviation, yaw_deviation, predicted_path_deviation, yaw_rate, objects_count]
+  - name: smoothing_window_size
+    type: int
+    default: 11
+  - name: prediction_time_horizons
+    type: array
+    default: [1.0, 2.0, 3.0, 5.0]
+  - name: stopped_velocity_threshold
+    type: double
+    default: 1.0
+  - name: detection_radius_list
+    type: array
+    default: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0]
+  - name: detection_height_list
+    type: array
+    default: [10.0]
+  - name: detection_count_purge_seconds
+    type: double
+    default: 36000.0
+  - name: objects_count_window_seconds
+    type: double
+    default: 1.0
+# processes
+processes:
+  - name: evaluate_perception
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: metrics
+      - to_output: markers

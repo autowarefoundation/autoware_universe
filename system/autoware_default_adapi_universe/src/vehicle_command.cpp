@@ -18,9 +18,9 @@ namespace autoware::default_adapi
 {
 
 VehicleCommandNode::VehicleCommandNode(const rclcpp::NodeOptions & options)
-: Node("vehicle_command", options)
+: autoware::agnocast_wrapper::Node("vehicle_command", options)
 {
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   adaptor.init_pub(pub_pedals_);
   adaptor.init_pub(pub_acceleration_);
   adaptor.init_pub(pub_velocity_);

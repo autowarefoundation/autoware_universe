@@ -1,0 +1,87 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: TRTBEVFormer.node
+
+package:
+  name: autoware_tensorrt_bevformer
+  provider: autoware
+
+launch:
+  plugin: autoware::tensorrt_bevformer::TRTBEVFormerNode
+  executable: autoware_tensorrt_bevformer_node
+  node_output: screen
+
+# interfaces
+# six fixed surround-view cameras (image + camera_info each), message_filters-synced,
+# plus a can_bus input (ego kinematic state used as BEVFormer can_bus signal).
+subscribers:
+  - name: image_f
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_f
+  - name: camera_info_f
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_f/camera_info
+  - name: image_fr
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_fr
+  - name: camera_info_fr
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_fr/camera_info
+  - name: image_fl
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_fl
+  - name: camera_info_fl
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_fl/camera_info
+  - name: image_b
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_b
+  - name: camera_info_b
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_b/camera_info
+  - name: image_bl
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_bl
+  - name: camera_info_bl
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_bl/camera_info
+  - name: image_br
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/topic_img_br
+  - name: camera_info_br
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/topic_img_br/camera_info
+  - name: can_bus
+    message_type: autoware_localization_msgs/msg/KinematicState
+    remap_target: ~/input/can_bus
+
+publishers:
+  - name: boxes
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output_boxes
+  - name: bboxes_markers
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/output_bboxes
+
+# parameters
+param_files: []
+
+param_values:
+  - name: model_params.precision
+    type: string
+    default: fp32
+  - name: model_params.engine_file
+    type: string
+    default: ""
+  - name: model_params.onnx_file
+    type: string
+    default: ""
+
+# processes
+processes:
+  - name: detect
+    trigger_conditions:
+      - on_input: image_f
+    outcomes:
+      - to_output: boxes

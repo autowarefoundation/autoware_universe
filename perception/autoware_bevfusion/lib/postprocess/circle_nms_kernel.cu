@@ -78,7 +78,11 @@ __global__ void circleNMS_Kernel(
       start = threadIdx.x + 1;
     }
     for (std::size_t i = start; i < col_size; i++) {
-      if (dist2dPow(cur_box, block_boxes + i) < dist2d_pow_threshold) {
+      // If the score is 0 (invalid) or the distance is less than the threshold, set the
+      // corresponding bit in t
+      if (
+        (block_boxes[i].score == 0.f) ||
+        dist2dPow(cur_box, &block_boxes[i]) < dist2d_pow_threshold) {
         t |= 1ULL << i;
       }
     }
@@ -87,50 +91,61 @@ __global__ void circleNMS_Kernel(
 }
 
 cudaError_t circleNMS_launch(
-  const thrust::device_vector<Box3D> & boxes3d, const std::size_t num_boxes3d,
-  std::size_t col_blocks, const float distance_threshold,
-  thrust::device_vector<std::uint64_t> & mask, cudaStream_t stream)
+  Box3D * boxes3d, const std::size_t num_boxes3d, std::size_t col_blocks,
+  const float distance_threshold, std::uint64_t * mask, cudaStream_t stream)
 {
   const float dist2d_pow_thres = powf(distance_threshold, 2);
 
   dim3 blocks(col_blocks, col_blocks);
   dim3 threads(THREADS_PER_BLOCK_NMS);
   circleNMS_Kernel<<<blocks, threads, 0, stream>>>(
-    thrust::raw_pointer_cast(boxes3d.data()), num_boxes3d, col_blocks, dist2d_pow_thres,
-    thrust::raw_pointer_cast(mask.data()));
+    boxes3d, num_boxes3d, col_blocks, dist2d_pow_thres, mask);
 
   return cudaGetLastError();
 }
 
-std::size_t circleNMS(
-  thrust::device_vector<Box3D> & boxes3d, const float distance_threshold,
-  thrust::device_vector<bool> & keep_mask, cudaStream_t stream)
+CircleNMS::CircleNMS(const BEVFusionConfig & config, cudaStream_t stream)
+: config_(config), stream_(stream)
 {
-  const auto num_boxes3d = boxes3d.size();
-  const auto col_blocks = divup(num_boxes3d, THREADS_PER_BLOCK_NMS);
-  thrust::device_vector<std::uint64_t> mask_d(num_boxes3d * col_blocks);
+  // Allocate memory for NMS
+  col_blocks_ = divup(config_.num_proposals_, THREADS_PER_BLOCK_NMS);
 
-  CHECK_CUDA_ERROR(
-    circleNMS_launch(boxes3d, num_boxes3d, col_blocks, distance_threshold, mask_d, stream));
+  // Final keep mask for NMS
+  final_keep_mask_d_ =
+    autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.num_proposals_ * col_blocks_);
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    final_keep_mask_d_.get(), 0, config_.num_proposals_ * col_blocks_ * sizeof(std::uint64_t),
+    stream_));
+
+  final_keep_mask_h_.resize(config_.num_proposals_ * col_blocks_);
+}
+
+std::vector<std::uint8_t> CircleNMS::circleNMS(
+  Box3D * descending_sorted_bboxes, cudaStream_t stream)
+{
+  CHECK_CUDA_ERROR(circleNMS_launch(
+    descending_sorted_bboxes, config_.num_proposals_, col_blocks_,
+    config_.circle_nms_dist_threshold_, final_keep_mask_d_.get(), stream));
 
   // memcpy device to host
-  thrust::host_vector<std::uint64_t> mask_h(mask_d.size());
-  thrust::copy(mask_d.begin(), mask_d.end(), mask_h.begin());
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    final_keep_mask_h_.data(), final_keep_mask_d_.get(),
+    config_.num_proposals_ * col_blocks_ * sizeof(std::uint64_t), cudaMemcpyDeviceToHost, stream));
 
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
   // generate keep_mask
-  std::vector<std::uint64_t> remv_h(col_blocks);
-  thrust::host_vector<bool> keep_mask_h(keep_mask.size());
+  std::vector<std::uint64_t> remv_h(col_blocks_);
+  std::vector<std::uint8_t> keep_mask_h(config_.num_proposals_);
   std::size_t num_to_keep = 0;
-  for (std::size_t i = 0; i < num_boxes3d; i++) {
+  for (std::size_t i = 0; i < config_.num_proposals_; i++) {
     auto nblock = i / THREADS_PER_BLOCK_NMS;
     auto inblock = i % THREADS_PER_BLOCK_NMS;
 
     if (!(remv_h[nblock] & (1ULL << inblock))) {
       keep_mask_h[i] = true;
       num_to_keep++;
-      std::uint64_t * p = &mask_h[0] + i * col_blocks;
-      for (std::size_t j = nblock; j < col_blocks; j++) {
+      std::uint64_t * p = &final_keep_mask_h_[0] + i * col_blocks_;
+      for (std::size_t j = nblock; j < col_blocks_; j++) {
         remv_h[j] |= p[j];
       }
     } else {
@@ -138,10 +153,7 @@ std::size_t circleNMS(
     }
   }
 
-  // memcpy host to device
-  keep_mask = keep_mask_h;
-
-  return num_to_keep;
+  return keep_mask_h;
 }
 
 }  // namespace autoware::bevfusion

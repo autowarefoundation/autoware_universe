@@ -41,7 +41,7 @@ ProjectionsToBound filter_and_assign_departure_types(
  * @param[in] param checker parameters
  * @return evaluated critical point pair if found
  */
-std::optional<CriticalPointPair> apply_backward_buffer_and_filter(
+std::optional<DeparturePointPair> apply_backward_buffer_and_filter(
   const ProjectionsToBound & side_value, const UncrossableBoundaryDepartureParam & param);
 
 /**
@@ -61,7 +61,7 @@ DepartureType assign_departure_type(
  * @param[in] vehicle_info vehicle information
  * @return evaluated critical point pairs for both sides
  */
-Side<std::optional<CriticalPointPair>> evaluate_projections_severity(
+Side<std::optional<DeparturePointPair>> evaluate_projections_severity(
   const Side<ProjectionsToBound> & projections_to_bound,
   const UncrossableBoundaryDepartureParam & param, const EgoDynamicState & ego_state,
   const vehicle_info_utils::VehicleInfo & vehicle_info);
@@ -71,7 +71,22 @@ Side<std::optional<CriticalPointPair>> evaluate_projections_severity(
  * @param[in] evaluated_projections evaluated critical point pairs for both sides
  * @return true if critical
  */
-bool is_critical(const Side<std::optional<CriticalPointPair>> & evaluated_projections);
+bool is_critical(const Side<std::optional<DeparturePointPair>> & evaluated_projections);
+
+/**
+ * @brief Check if any side is near an uncrossable boundary.
+ * @param[in] evaluated_projections evaluated departure point pairs for both sides
+ * @return true if near boundary
+ */
+bool is_near_boundary(const Side<std::optional<DeparturePointPair>> & evaluated_projections);
+
+/**
+ * @brief Get the smallest lateral distance to an uncrossable boundary among both sides.
+ * @param[in] evaluated_projections evaluated departure point pairs for both sides
+ * @return minimum lateral distance [m], or the maximum double value if no projection exists
+ */
+double get_min_lateral_distance_to_bound(
+  const Side<std::optional<DeparturePointPair>> & evaluated_projections);
 
 /**
  * @brief Calculate minimum braking distance.

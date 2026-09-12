@@ -1,0 +1,58 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: DistanceBasedCompareMap.node
+
+package:
+  name: autoware_compare_map_segmentation
+  provider: autoware
+
+launch:
+  plugin: autoware::compare_map_segmentation::DistanceBasedCompareMapFilterComponent
+  executable: distance_based_compare_map_filter_node
+  node_output: screen
+
+# interfaces
+# map source selected by use_dynamic_map_loading: static -> "map" pointcloud;
+# dynamic -> kinematic_state + GetDifferentialPointCloudMap service.
+subscribers:
+  - name: input
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: input
+  - name: map
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: map
+  - name: kinematic_state
+    message_type: nav_msgs/msg/Odometry
+    remap_target: kinematic_state
+
+publishers:
+  - name: output
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: output
+
+clients:
+  - name: map_loader_service
+    message_type: autoware_map_msgs/srv/GetDifferentialPointCloudMap
+    remap_target: map_loader_service
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/distance_based_compare_map_filter.param.yaml
+
+param_values:
+  - name: input_frame
+    type: string
+    default: base_link
+  - name: output_frame
+    type: string
+    default: base_link
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: input
+    outcomes:
+      - to_output: output

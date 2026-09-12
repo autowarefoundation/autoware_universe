@@ -16,6 +16,7 @@
 
 #include "autoware/boundary_departure_checker/detail/debug.hpp"
 #include "autoware/boundary_departure_checker/detail/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/detail/severity_evaluator.hpp"
 
 #include <autoware_utils_system/stop_watch.hpp>
 
@@ -38,7 +39,8 @@ void UncrossableBoundaryChecker::update_parameters(const UncrossableBoundaryDepa
 }
 
 DepartureResult UncrossableBoundaryChecker::update_departure_status(
-  const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state)
+  const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state,
+  HysteresisState & state)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -55,13 +57,29 @@ DepartureResult UncrossableBoundaryChecker::update_departure_status(
     evaluator_ptr_->evaluate(predicted_traj, footprints_sides, ego_state);
 
   const auto hysteresis_result =
-    update_and_judge(hysteresis_state_, evaluation_result, param_, ego_state.current_time_s);
+    update_and_judge(state, evaluation_result, param_, ego_state.current_time_s);
 
-  hysteresis_state_ = hysteresis_result.updated_state;
+  state = hysteresis_result.updated_state;
 
+  // CRITICAL is hysteresis filtered, whereas NEAR_BOUNDARY is a non-latching advisory taken
+  // directly from the current evaluation. A CRITICAL projection that the hysteresis buffer still
+  // suppresses is reported as NEAR_BOUNDARY, so the reported severity never dips back to NONE while
+  // ego closes on the boundary.
+  const auto footprint_is_close_to_bound =
+    evaluation_result && (severity_evaluator::is_near_boundary(*evaluation_result) ||
+                          severity_evaluator::is_critical(*evaluation_result));
   result.status = hysteresis_result.status;
-  result.debug_markers = debug::create_debug_markers(
-    hysteresis_state_, footprints, ego_state, param_.enable_developer_marker);
+  if (result.status == DepartureType::NONE && footprint_is_close_to_bound) {
+    result.status = DepartureType::NEAR_BOUNDARY;
+  }
+
+  if (evaluation_result) {
+    result.lat_dist_to_uncrossable_bound =
+      severity_evaluator::get_min_lateral_distance_to_bound(*evaluation_result);
+  }
+
+  result.debug_markers =
+    debug::create_debug_markers(state, footprints, ego_state, param_.enable_developer_marker);
   return result;
 }
 

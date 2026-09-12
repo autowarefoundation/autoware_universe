@@ -1,0 +1,29 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: LineSegmentsOverlay.node
+package:
+  name: yabloc_image_processing
+  provider: autoware
+launch:
+  plugin: yabloc::line_segments_overlay::LineSegmentsOverlay
+  executable: yabloc_line_segments_overlay_node
+# interfaces
+subscribers:
+  - name: image_raw
+    message_type: sensor_msgs/msg/Image
+  - name: line_segments
+    message_type: sensor_msgs/msg/PointCloud2
+publishers:
+  - name: image_with_colored_line_segments
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/debug/image_with_colored_line_segments
+# parameters
+param_files: []
+param_values: []
+# processes
+processes:
+  - name: overlay_line_segments
+    trigger_conditions:
+      - on_input: image_raw
+    outcomes:
+      - to_output: image_with_colored_line_segments

@@ -22,6 +22,7 @@
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <autoware_vehicle_msgs/srv/control_mode_command.hpp>
 #include <tier4_external_api_msgs/msg/election_status.hpp>
+#include <tier4_system_msgs/msg/command_filter_status.hpp>
 #include <tier4_system_msgs/msg/command_source_status.hpp>
 #include <tier4_system_msgs/srv/select_command_source.hpp>
 
@@ -45,15 +46,19 @@ public:
 private:
   using SelectCommandSource = tier4_system_msgs::srv::SelectCommandSource;
   using CommandSourceStatus = tier4_system_msgs::msg::CommandSourceStatus;
+  using CommandFilterStatus = tier4_system_msgs::msg::CommandFilterStatus;
   void on_source_status(const CommandSourceStatus & msg);
+  void on_filter_status(const CommandFilterStatus & msg);
 
   rclcpp::Node & node_;
   rclcpp::Client<SelectCommandSource>::SharedPtr cli_source_select_;
   rclcpp::Subscription<CommandSourceStatus>::SharedPtr sub_source_status_;
+  rclcpp::Subscription<CommandFilterStatus>::SharedPtr sub_filter_status_;
 
   bool requesting_ = false;
   Callback notification_callback_;
-  CommandSourceStatus status_;
+  CommandSourceStatus source_status_;
+  CommandFilterStatus filter_status_;
 };
 
 class VehicleGateInterface

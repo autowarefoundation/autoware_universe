@@ -582,7 +582,9 @@ void NormalLaneChange::insert_stop_point_on_current_lanes(
   const auto & bpp_param_ptr = common_data_ptr_->bpp_param_ptr;
   const auto dist_to_terminal_stop = std::invoke([&]() -> double {
     const auto & curr_lanes_poly = common_data_ptr_->lanes_polygon_ptr->current;
-    if (!utils::isEgoWithinOriginalLane(curr_lanes_poly, getEgoPose(), *bpp_param_ptr)) {
+    if (!utils::isEgoWithinOriginalLane(
+          curr_lanes_poly, getEgoPose(), *bpp_param_ptr,
+          lane_change_parameters_->overhang_tolerance)) {
       return dist_from_path_front + dist_to_terminal_start;
     }
 
@@ -1039,9 +1041,10 @@ FilteredLanesObjects NormalLaneChange::filter_objects() const
 
     const auto ahead_of_ego = ego_object_proximity.is_ahead_of_ego;
 
-    if (utils::lane_change::filter_target_lane_objects(
-          common_data_ptr_, ext_object, dist_ego_to_current_lanes_center, ego_object_proximity,
-          is_before_terminal, target_lane_leading, filtered_objects.target_lane_trailing)) {
+    if (
+      utils::lane_change::filter_target_lane_objects(
+        common_data_ptr_, ext_object, dist_ego_to_current_lanes_center, ego_object_proximity,
+        is_before_terminal, target_lane_leading, filtered_objects.target_lane_trailing)) {
       continue;
     }
 
@@ -1369,8 +1372,9 @@ bool NormalLaneChange::check_candidate_path_safety(
   const LaneChangePath & candidate_path, const lane_change::TargetObjects & target_objects) const
 {
   const auto is_stuck = common_data_ptr_->transient_data.is_ego_stuck;
-  if (utils::lane_change::has_overtaking_turn_lane_object(
-        common_data_ptr_, filtered_objects_.target_lane_trailing)) {
+  if (
+    utils::lane_change::has_overtaking_turn_lane_object(
+      common_data_ptr_, filtered_objects_.target_lane_trailing)) {
     throw std::logic_error("Ego is nearby intersection, and there might be overtaking vehicle.");
   }
 
@@ -1525,8 +1529,9 @@ PathSafetyStatus NormalLaneChange::isApprovedPathSafe() const
     return {false, true};
   }
 
-  if (utils::lane_change::is_delay_lane_change(
-        common_data_ptr_, path, filtered_objects_.target_lane_leading.stopped, debug_data)) {
+  if (
+    utils::lane_change::is_delay_lane_change(
+      common_data_ptr_, path, filtered_objects_.target_lane_leading.stopped, debug_data)) {
     RCLCPP_DEBUG(logger_, "Lane change has been delayed.");
     return {false, false};
   }

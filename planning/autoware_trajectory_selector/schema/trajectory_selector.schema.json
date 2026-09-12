@@ -5,7 +5,35 @@
   "definitions": {
     "trajectory_selector": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "generator_name_prefixes": {
+          "type": "array",
+          "description": "List of generator name prefixes",
+          "default": [
+            "DiffusionPlanner_",
+            "MinimumRuleBasedPlanner_Go",
+            "MinimumRuleBasedPlanner_Stop"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "fallback_period_ms": {
+          "type": "integer",
+          "default": 150,
+          "minimum": 1,
+          "description": "fallback timer period in milliseconds",
+          "validation": {
+            "gt_eq<>": 100
+          }
+        },
+        "enable_ranker": {
+          "type": "boolean",
+          "default": false,
+          "description": "enable trajectory ranker"
+        }
+      },
+      "required": ["fallback_period_ms"],
       "additionalProperties": false
     }
   },

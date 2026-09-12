@@ -1,4 +1,5 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="node_name" default="pose_instability_detector"/>
   <arg name="param_file" default="$(find-pkg-share autoware_pose_instability_detector)/config/pose_instability_detector.param.yaml"/>
 
@@ -7,6 +8,7 @@
   <arg name="input_twist" default="~/input/twist"/>
 
   <node pkg="autoware_pose_instability_detector" exec="autoware_pose_instability_detector_node" name="$(var node_name)" output="both">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/twist" to="$(var input_twist)"/>
     <param from="$(var param_file)"/>

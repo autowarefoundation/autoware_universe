@@ -62,33 +62,34 @@ const std::unordered_map<std::string, tier4_perception_msgs::msg::TrafficLightEl
      {"down_right", tier4_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW},
      {"cross", tier4_perception_msgs::msg::TrafficLightElement::CROSS}});
 
-tier4_perception_msgs::msg::TrafficLightElement::_color_type convertColorStringtoT4(
+tier4_perception_msgs::msg::TrafficLightElement::_color_type convert_color_string_to_t4(
   const std::string & label)
 {
   return at_or(string2color, label, tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN);
 }
 
-tier4_perception_msgs::msg::TrafficLightElement::_shape_type convertShapeStringtoT4(
+tier4_perception_msgs::msg::TrafficLightElement::_shape_type convert_shape_string_to_t4(
   const std::string & label)
 {
   return at_or(string2shape, label, tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN);
 }
 
-std::string convertColorT4toString(
+std::string convert_color_t4_to_string(
   const tier4_perception_msgs::msg::TrafficLightElement::_color_type & label)
 {
   return at_or(color2string, label, std::string("unknown"));
 }
 
-std::string convertShapeT4toString(
+std::string convert_shape_t4_to_string(
   const tier4_perception_msgs::msg::TrafficLightElement::_shape_type & label)
 {
   return at_or(shape2string, label, std::string("unknown"));
 }
 
-bool isColorLabel(const std::string & label)
+bool is_color_label(const std::string & label)
 {
-  return convertColorStringtoT4(label) != tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
+  return convert_color_string_to_t4(label) !=
+         tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
 }
 
 double compute_brightness(const cv::Mat & img)

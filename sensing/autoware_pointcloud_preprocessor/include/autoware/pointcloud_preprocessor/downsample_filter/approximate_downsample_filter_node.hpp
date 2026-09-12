@@ -84,4 +84,3 @@ public:
 
 // clang-format off
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__APPROXIMATE_DOWNSAMPLE_FILTER_NODE_HPP_  // NOLINT
-// clang-format on

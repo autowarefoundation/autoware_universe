@@ -1,8 +1,10 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="input/odom" default="/localization/kinematic_state"/>
   <arg name="param_file" default="$(find-pkg-share autoware_localization_error_monitor)/config/localization_error_monitor.param.yaml"/>
 
   <node pkg="autoware_localization_error_monitor" exec="autoware_localization_error_monitor_node" output="both">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="input/odom" to="$(var input/odom)"/>
     <param from="$(var param_file)"/>
   </node>

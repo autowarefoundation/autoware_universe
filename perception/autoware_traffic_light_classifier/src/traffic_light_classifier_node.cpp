@@ -13,60 +13,98 @@
 // limitations under the License.
 #include "traffic_light_classifier_node.hpp"
 
-#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include "classifier_params.hpp"
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
-#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeOptions & options)
+namespace
+{
+// Set `value` from the parameter named `name` if present; return whether it was found.
+bool update_param(
+  const std::vector<rclcpp::Parameter> & parameters, const std::string & name, int & value)
+{
+  for (const auto & parameter : parameters) {
+    if (parameter.get_name() == name) {
+      value = parameter.as_int();
+      return true;
+    }
+  }
+  return false;
+}
+}  // namespace
+
+TrafficLightClassifierNode::TrafficLightClassifierNode(const rclcpp::NodeOptions & options)
 : Node("traffic_light_classifier_node", options)
 {
-  classify_traffic_light_type_ = this->declare_parameter<int>("traffic_light_type");
+  const auto classify_traffic_light_type =
+    static_cast<uint8_t>(this->declare_parameter<int>("traffic_light_type"));
 
   using std::placeholders::_1;
   using std::placeholders::_2;
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
-  over_exposure_threshold_ = this->declare_parameter<double>("over_exposure_threshold");
-  under_exposure_threshold_ = this->declare_parameter<double>("under_exposure_threshold");
+  const auto over_exposure_threshold = this->declare_parameter<double>("over_exposure_threshold");
+  const auto under_exposure_threshold = this->declare_parameter<double>("under_exposure_threshold");
 
   if (is_approximate_sync_) {
     approximate_sync_.reset(new ApproximateSync(ApproximateSyncPolicy(10), image_sub_, roi_sub_));
     approximate_sync_->registerCallback(
-      std::bind(&TrafficLightClassifierNodelet::imageRoiCallback, this, _1, _2));
+      std::bind(&TrafficLightClassifierNode::image_roi_callback, this, _1, _2));
   } else {
     sync_.reset(new Sync(SyncPolicy(10), image_sub_, roi_sub_));
     sync_->registerCallback(
-      std::bind(&TrafficLightClassifierNodelet::imageRoiCallback, this, _1, _2));
+      std::bind(&TrafficLightClassifierNode::image_roi_callback, this, _1, _2));
   }
 
   traffic_signal_array_pub_ = this->create_publisher<tier4_perception_msgs::msg::TrafficLightArray>(
     "~/output/traffic_signals", rclcpp::QoS{1});
 
-  using std::chrono_literals::operator""ms;
-  timer_ = rclcpp::create_timer(
-    this, get_clock(), 100ms, std::bind(&TrafficLightClassifierNodelet::connectCb, this));
+  // Subscribe unconditionally; message_filters delivers synchronized image + ROI pairs to
+  // image_roi_callback. (Previously a 100 ms timer-driven connectCb subscribed lazily, only while
+  // the output had subscribers; always-on is simpler, and the callback no-ops until classifier_
+  // is set.)
+  image_sub_.subscribe(this, "~/input/image", "raw", rmw_qos_profile_sensor_data);
+  roi_sub_.subscribe(this, "~/input/rois", rclcpp::QoS{1}.get_rmw_qos_profile());
 
   int classifier_type = this->declare_parameter<int>("classifier_type");
-  if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
-    classifier_ptr_ = std::make_shared<ColorClassifier>(this);
-  } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
+  std::shared_ptr<ClassifierInterface> classifier_ptr;
+  if (classifier_type == TrafficLightClassifierNode::ClassifierType::HSVFilter) {
+    // Keep a typed handle so the node can drive the color backend's dynamic reconfigure.
+    color_classifier_ = std::make_shared<ColorClassifier>(declare_hsv_config(this));
+    set_param_res_ = this->add_on_set_parameters_callback(
+      std::bind(&TrafficLightClassifierNode::on_set_parameters_callback, this, _1));
+    classifier_ptr = color_classifier_;
+  } else if (classifier_type == TrafficLightClassifierNode::ClassifierType::CNN) {
 #if ENABLE_GPU
-    classifier_ptr_ = std::make_shared<CNNClassifier>(this);
+    classifier_ptr = std::make_shared<CNNClassifier>(declare_cnn_config(this));
 #else
     RCLCPP_ERROR(this->get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
-  } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::LampRecognizer) {
+  } else if (classifier_type == TrafficLightClassifierNode::ClassifierType::LampRecognizer) {
 #if ENABLE_GPU
-    classifier_ptr_ = std::make_shared<CnnLampRecognizer>(this);
+    auto lamp_config = declare_lamp_config(this);
+    // The recognizer needs its traffic-light type at construction (pedestrian lamps force CIRCLE);
+    // it is declared once as its own parameter, so pass it in rather than re-declaring.
+    lamp_config.traffic_light_type = classify_traffic_light_type;
+    classifier_ptr = std::make_shared<CnnLampRecognizer>(lamp_config);
 #else
     RCLCPP_ERROR(
       this->get_logger(), "please install CUDA, CUDNN and TensorRT to use LampRecognizer");
 #endif
+  }
+
+  if (classifier_ptr) {
+    classifier_ = std::make_unique<TrafficLightClassifier>(
+      classifier_ptr, classify_traffic_light_type, over_exposure_threshold,
+      under_exposure_threshold);
+    debug_image_pub_ = image_transport::create_publisher(
+      this, "~/output/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
   }
 
   diagnostics_interface_ptr_ =
@@ -78,128 +116,84 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   }
 }
 
-void TrafficLightClassifierNodelet::connectCb()
-{
-  // set callbacks only when there are subscribers to this node
-  if (
-    traffic_signal_array_pub_->get_subscription_count() == 0 &&
-    traffic_signal_array_pub_->get_intra_process_subscription_count() == 0) {
-    image_sub_.unsubscribe();
-    roi_sub_.unsubscribe();
-  } else if (!image_sub_.getSubscriber()) {
-    image_sub_.subscribe(this, "~/input/image", "raw", rmw_qos_profile_sensor_data);
-    roi_sub_.subscribe(this, "~/input/rois", rclcpp::QoS{1}.get_rmw_qos_profile());
-  }
-}
-
-void TrafficLightClassifierNodelet::imageRoiCallback(
+void TrafficLightClassifierNode::image_roi_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
   const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_rois_msg)
 {
-  if (classifier_ptr_.use_count() == 0) {
+  if (!classifier_) {
     return;
   }
-  tier4_perception_msgs::msg::TrafficLightArray output_msg;
+  auto result = classifier_->classify(*input_image_msg, *input_rois_msg);
+  if (!result) {
+    RCLCPP_ERROR(this->get_logger(), "failed classify image, abort callback");
+    return;
+  }
+
+  traffic_signal_array_pub_->publish(result->signals);
+
+  // No rois means classify took its empty-input short-circuit: nothing was classified,
+  // so there is nothing to report diagnostics or a debug view for.
   if (input_rois_msg->rois.empty()) {
-    output_msg.header = input_image_msg->header;
-    traffic_signal_array_pub_->publish(output_msg);
     return;
   }
-
-  cv_bridge::CvImagePtr cv_ptr;
-  try {
-    cv_ptr = cv_bridge::toCvCopy(input_image_msg, sensor_msgs::image_encodings::RGB8);
-  } catch (cv_bridge::Exception & e) {
-    RCLCPP_ERROR(
-      this->get_logger(), "Could not convert from '%s' to 'rgb8'.",
-      input_image_msg->encoding.c_str());
-  }
-
-  output_msg.signals.resize(input_rois_msg->rois.size());
-
-  bool detect_over_exposure = false;
-  bool detect_under_exposure = false;
-
-  std::vector<cv::Mat> images;
-  std::vector<size_t> exposure_out_of_range_indices;
-  size_t idx_valid_roi = 0;
-  for (const auto & input_roi : input_rois_msg->rois) {
-    // ignore if the roi is not the type to be classified
-    if (input_roi.traffic_light_type != classify_traffic_light_type_) {
-      continue;
-    }
-    // skip if the roi size is zero
-    if (input_roi.roi.height == 0 || input_roi.roi.width == 0) {
-      continue;
-    }
-
-    // set traffic light id and type
-    output_msg.signals[idx_valid_roi].traffic_light_id = input_roi.traffic_light_id;
-    output_msg.signals[idx_valid_roi].traffic_light_type = input_roi.traffic_light_type;
-
-    const sensor_msgs::msg::RegionOfInterest & roi = input_roi.roi;
-    auto roi_img = cv_ptr->image(cv::Rect(roi.x_offset, roi.y_offset, roi.width, roi.height));
-    const double brightness = utils::compute_brightness(roi_img);
-    if (brightness >= over_exposure_threshold_) {
-      exposure_out_of_range_indices.emplace_back(idx_valid_roi);
-      detect_over_exposure = true;
-    } else if (brightness <= under_exposure_threshold_) {
-      exposure_out_of_range_indices.emplace_back(idx_valid_roi);
-      detect_under_exposure = true;
-    }
-    images.emplace_back(roi_img);
-    idx_valid_roi++;
-  }
-
-  // classify the images
-  output_msg.signals.resize(images.size());
-  if (!images.empty()) {
-    if (!classifier_ptr_->getTrafficSignals(images, output_msg)) {
-      RCLCPP_ERROR(this->get_logger(), "failed classify image, abort callback");
-      return;
-    }
-  }
-
-  // append the undetected rois as unknown
-  for (const auto & input_roi : input_rois_msg->rois) {
-    // if the type is the target type but the roi size is zero, the roi is undetected
-    if (
-      (input_roi.roi.height == 0 || input_roi.roi.width == 0) &&
-      input_roi.traffic_light_type == classify_traffic_light_type_) {
-      tier4_perception_msgs::msg::TrafficLight signal;
-      signal.traffic_light_id = input_roi.traffic_light_id;
-      signal.traffic_light_type = input_roi.traffic_light_type;
-      traffic_light_utils::setSignalUnknown(signal, 0.0);
-      output_msg.signals.push_back(signal);
-    }
-  }
-
-  // overwrite the out-of-range exposure rois with unknown
-  for (const auto & idx : exposure_out_of_range_indices) {
-    auto & signal = output_msg.signals.at(idx);
-    traffic_light_utils::setSignalUnknown(signal, 0.0);
-  }
-
-  output_msg.header = input_image_msg->header;
-  traffic_signal_array_pub_->publish(output_msg);
 
   // publish diagnostics
   diagnostics_interface_ptr_->clear();
   diagnostics_interface_ptr_->add_key_value(
-    "detect_traffic_light_over_exposure", detect_over_exposure);
+    "detect_traffic_light_over_exposure", result->detected_over_exposure);
   diagnostics_interface_ptr_->add_key_value(
-    "detect_traffic_light_under_exposure", detect_under_exposure);
+    "detect_traffic_light_under_exposure", result->detected_under_exposure);
 
-  if (detect_over_exposure || detect_under_exposure) {
+  if (result->detected_over_exposure || result->detected_under_exposure) {
     diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
       "Detected out-of-range exposure in ROI. Corresponding ROI was overwritten with UNKNOWN.");
   }
-  diagnostics_interface_ptr_->publish(output_msg.header.stamp);
+  diagnostics_interface_ptr_->publish(result->signals.header.stamp);
+
+  // Publish the debug view last, and only when a consumer is attached (building it is a cold path),
+  // so a debug-rendering failure cannot skip the primary signal output or diagnostics above.
+  if (debug_image_pub_.getNumSubscribers() > 0) {
+    const auto debug_image_msg = classifier_->make_debug_image(*result);
+    if (debug_image_msg) {
+      debug_image_pub_.publish(debug_image_msg);
+    }
+  }
+}
+
+rcl_interfaces::msg::SetParametersResult TrafficLightClassifierNode::on_set_parameters_callback(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  HSVConfig config = color_classifier_->get_config();
+  update_param(parameters, "green_min_h", config.green_min_h);
+  update_param(parameters, "green_min_s", config.green_min_s);
+  update_param(parameters, "green_min_v", config.green_min_v);
+  update_param(parameters, "green_max_h", config.green_max_h);
+  update_param(parameters, "green_max_s", config.green_max_s);
+  update_param(parameters, "green_max_v", config.green_max_v);
+  update_param(parameters, "yellow_min_h", config.yellow_min_h);
+  update_param(parameters, "yellow_min_s", config.yellow_min_s);
+  update_param(parameters, "yellow_min_v", config.yellow_min_v);
+  update_param(parameters, "yellow_max_h", config.yellow_max_h);
+  update_param(parameters, "yellow_max_s", config.yellow_max_s);
+  update_param(parameters, "yellow_max_v", config.yellow_max_v);
+  update_param(parameters, "red_min_h", config.red_min_h);
+  update_param(parameters, "red_min_s", config.red_min_s);
+  update_param(parameters, "red_min_v", config.red_min_v);
+  update_param(parameters, "red_max_h", config.red_max_h);
+  update_param(parameters, "red_max_s", config.red_max_s);
+  update_param(parameters, "red_max_v", config.red_max_v);
+
+  color_classifier_->set_config(config);
+
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+  return result;
 }
 
 }  // namespace autoware::traffic_light
 
 #include <rclcpp_components/register_node_macro.hpp>
 
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::traffic_light::TrafficLightClassifierNodelet)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::traffic_light::TrafficLightClassifierNode)

@@ -2,6 +2,19 @@
 Changelog for package autoware_trajectory_follower_node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(trajectory_follower): add lichtblick plot config (`#12678 <https://github.com/autowarefoundation/autoware_universe/issues/12678>`_)
+  * add lichtblick config
+  * use State transition
+  * add cspell
+  * add ln
+  ---------
+* feat: remove deprecated planning interface (`#12636 <https://github.com/autowarefoundation/autoware_universe/issues/12636>`_)
+  remove deprecated planning interface
+* Contributors: Yuki TAKAGI, Yukihiro Saito, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
