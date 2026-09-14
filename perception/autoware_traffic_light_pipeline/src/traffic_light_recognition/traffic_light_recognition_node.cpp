@@ -82,6 +82,21 @@ TrafficLightRecognitionNode::TrafficLightRecognitionNode(const rclcpp::NodeOptio
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_)
 {
+  if (declare_parameter<bool>("build_only")) {
+    build_engines_and_shutdown();
+    return;
+  }
+
+  // Load the TensorRT engines once here: the vector map is fed later through set_map(), which
+  // rebuilds only the map based detector.
+  try {
+    recognition_ = std::make_unique<TrafficLightRecognition>(config_, tf_buffer_);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(get_logger(), "failed to initialize traffic light recognition: %s", e.what());
+    rclcpp::shutdown();
+    return;
+  }
+
   // Subscribers -------------------------------------------------------------------------------
   vector_map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
@@ -104,10 +119,6 @@ TrafficLightRecognitionNode::TrafficLightRecognitionNode(const rclcpp::NodeOptio
     "~/output/traffic_signals", rclcpp::QoS{1});
   rois_pub_ = create_publisher<tier4_perception_msgs::msg::TrafficLightRoiArray>(
     "~/output/rois", rclcpp::QoS{1});
-
-  if (declare_parameter<bool>("build_only")) {
-    build_engines_and_shutdown();
-  }
 }
 
 void TrafficLightRecognitionNode::build_engines_and_shutdown()
@@ -124,16 +135,12 @@ void TrafficLightRecognitionNode::build_engines_and_shutdown()
 void TrafficLightRecognitionNode::vector_map_callback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
 {
-  recognition_ = std::make_unique<TrafficLightRecognition>(config_, *msg, tf_buffer_);
+  recognition_->set_map(*msg);
 }
 
 void TrafficLightRecognitionNode::route_callback(
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg)
 {
-  if (!recognition_) {
-    RCLCPP_ERROR(get_logger(), "vector map not received yet: dropping route");
-    return;
-  }
   const auto error = recognition_->set_route(*msg);
   if (error) {
     RCLCPP_ERROR(get_logger(), "%s", error->message.c_str());
@@ -144,12 +151,6 @@ void TrafficLightRecognitionNode::sync_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & image_msg,
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg)
 {
-  if (!recognition_) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 5000, "vector map not received yet: dropping frame");
-    return;
-  }
-
   // Wait for the transform at the exact moment to become available.
   const rclcpp::Time latest_required_stamp =
     rclcpp::Time(camera_info_msg->header.stamp) +

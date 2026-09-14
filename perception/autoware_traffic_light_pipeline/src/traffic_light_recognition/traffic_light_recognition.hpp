@@ -69,8 +69,9 @@ class TrafficLightRecognition
 {
 public:
   TrafficLightRecognition(
-    const TrafficLightRecognitionConfig & config,
-    const autoware_map_msgs::msg::LaneletMapBin & map_msg, const tf2::BufferCore & tf_buffer);
+    const TrafficLightRecognitionConfig & config, const tf2::BufferCore & tf_buffer);
+
+  void set_map(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
   std::optional<SetRouteError> set_route(
     const autoware_planning_msgs::msg::LaneletRoute & route_msg);
@@ -79,8 +80,10 @@ public:
     const sensor_msgs::msg::Image & image, const sensor_msgs::msg::CameraInfo & camera_info);
 
 private:
+  TrafficLightMapBasedDetectorConfig map_based_detector_config_;
+
   autoware::tensorrt_yolox::TrtYoloXDetector whole_image_detector_;
-  TrafficLightMapBasedDetector map_based_detector_;
+  std::optional<TrafficLightMapBasedDetector> map_based_detector_;
   TrafficLightClassifier car_classifier_;
   TrafficLightClassifier pedestrian_classifier_;
   const tf2::BufferCore & tf_buffer_;

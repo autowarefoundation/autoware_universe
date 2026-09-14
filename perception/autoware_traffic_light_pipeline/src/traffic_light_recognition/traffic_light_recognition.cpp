@@ -135,31 +135,42 @@ void build_engines(const TrafficLightRecognitionConfig & config)
 }
 
 TrafficLightRecognition::TrafficLightRecognition(
-  const TrafficLightRecognitionConfig & config,
-  const autoware_map_msgs::msg::LaneletMapBin & map_msg, const tf2::BufferCore & tf_buffer)
-: whole_image_detector_(make_whole_image_detector_config(config)),
-  map_based_detector_(make_map_based_detector_config(config), map_msg),
+  const TrafficLightRecognitionConfig & config, const tf2::BufferCore & tf_buffer)
+: map_based_detector_config_(make_map_based_detector_config(config)),
+  whole_image_detector_(make_whole_image_detector_config(config)),
   car_classifier_(make_car_classifier(config)),
   pedestrian_classifier_(make_pedestrian_classifier(config)),
   tf_buffer_(tf_buffer)
 {
 }
 
+void TrafficLightRecognition::set_map(const autoware_map_msgs::msg::LaneletMapBin & map_msg)
+{
+  map_based_detector_.emplace(map_based_detector_config_, map_msg);
+}
+
 std::optional<SetRouteError> TrafficLightRecognition::set_route(
   const autoware_planning_msgs::msg::LaneletRoute & route_msg)
 {
-  return map_based_detector_.set_route(route_msg);
+  if (!map_based_detector_) {
+    return SetRouteError{"vector map is not set yet"};
+  }
+  return map_based_detector_->set_route(route_msg);
 }
 
 tl::expected<TrafficLightRecognitionResult, std::string> TrafficLightRecognition::run(
   const sensor_msgs::msg::Image & image, const sensor_msgs::msg::CameraInfo & camera_info)
 {
+  if (!map_based_detector_) {
+    return tl::make_unexpected(std::string("vector map is not set yet"));
+  }
+
   const auto detected = whole_image_detector_.detect(image);
   if (!detected) {
     return tl::make_unexpected("whole_image_detector failed: " + detected.error());
   }
 
-  const auto map_based_result = map_based_detector_.detect(tf_buffer_, camera_info);
+  const auto map_based_result = map_based_detector_->detect(tf_buffer_, camera_info);
 
   const auto selected_rois = select(
     detected->objects, map_based_result.rough_rois, map_based_result.expect_rois, camera_info);
