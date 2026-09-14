@@ -20,8 +20,9 @@
 #include "path_planner.hpp"
 #include "velocity_smoother.hpp"
 
-#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
-#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
@@ -38,7 +39,9 @@
 
 namespace autoware::minimum_rule_based_planner
 {
-class MinimumRuleBasedPlannerNode : public rclcpp::Node
+namespace namespace_polling = autoware::agnocast_wrapper::polling;
+
+class MinimumRuleBasedPlannerNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MinimumRuleBasedPlannerNode(const rclcpp::NodeOptions & options);
@@ -81,15 +84,15 @@ private:
   void publish_debug_trajectory(
     const std::string & plugin_name, const TrajectoryPoints & traj_points) const;
 
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
   std::shared_ptr<::minimum_rule_based_planner::ParamListener> param_listener_;
   const UUID generator_uuid_;
   const VehicleInfo vehicle_info_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_pub_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    debug_processing_time_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
+  debug_processing_time_detail_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped)
+  debug_processing_time_pub_;
   std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   minimum_rule_based_planner::Params params_;
   /** @} */
@@ -118,7 +121,7 @@ private:
   std::shared_ptr<OptimizerPluginInterface> path_smoother_;
   std::shared_ptr<autoware::trajectory_processor::TrajectoryProcessorContext> optimizer_context_;
   std::unique_ptr<VelocitySmoother> velocity_smoother_;
-  std::map<std::string, rclcpp::Publisher<Trajectory>::SharedPtr>
+  std::map<std::string, AUTOWARE_PUBLISHER_PTR(Trajectory)>
     pub_debug_optimizer_module_trajectories_;
   /** @} */
 
@@ -136,8 +139,7 @@ private:
   bool initialized_modifiers_{false};
   ModifierPluginLoader modifier_plugin_loader_;
   std::vector<std::shared_ptr<plugin::PluginInterface>> modifier_plugins_;
-  std::map<std::string, rclcpp::Publisher<Trajectory>::SharedPtr>
-    pub_debug_modifier_module_trajectories_;
+  std::map<std::string, AUTOWARE_PUBLISHER_PTR(Trajectory)> pub_debug_modifier_module_trajectories_;
 
   std::shared_ptr<plugin::ModifierContext> modifier_context_;
   /** @} */
@@ -148,42 +150,36 @@ private:
    * @defgroup subscribers and publishers
    * @{
    */
-  autoware_utils::InterProcessPollingSubscriber<
-    LaneletRoute, autoware_utils::polling_policy::Newest>
-    route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
+  namespace_polling::PollingSubscriber<
+    LaneletRoute, namespace_polling::polling_policy::Newest>::SharedPtr route_subscriber_;
   LaneletRoute::ConstSharedPtr route_ptr_;
 
-  autoware_utils::InterProcessPollingSubscriber<
-    LaneletMapBin, autoware_utils::polling_policy::Newest>
-    vector_map_subscriber_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
+  namespace_polling::PollingSubscriber<
+    LaneletMapBin, namespace_polling::polling_policy::Newest>::SharedPtr vector_map_subscriber_;
   LaneletMapBin::ConstSharedPtr lanelet_map_bin_ptr_;
 
-  autoware_utils::InterProcessPollingSubscriber<Odometry> odometry_subscriber_{
-    this, "~/input/odometry"};
+  namespace_polling::PollingSubscriber<Odometry>::SharedPtr odometry_subscriber_;
   Odometry::ConstSharedPtr odometry_ptr_;
 
-  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
-    acceleration_subscriber_{this, "~/input/acceleration"};
+  namespace_polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    acceleration_subscriber_;
   AccelWithCovarianceStamped::ConstSharedPtr acceleration_ptr_;
 
-  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> objects_subscriber_{
-    this, "~/input/objects"};
+  namespace_polling::PollingSubscriber<PredictedObjects>::SharedPtr objects_subscriber_;
   PredictedObjects::ConstSharedPtr predicted_objects_ptr_;
 
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<PointCloud2> pointcloud_subscriber_{
-    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
+  namespace_polling::PollingSubscriber<PointCloud2>::SharedPtr pointcloud_subscriber_;
   PointCloud2::ConstSharedPtr obstacle_pointcloud_ptr_;
 
   //! test input: bypasses path planning when provided
-  autoware_utils::InterProcessPollingSubscriber<
-    PathWithLaneId, autoware_utils::polling_policy::Newest>
-    test_path_with_lane_id_subscriber_{this, "~/input/test/path_with_lane_id"};
+  namespace_polling::PollingSubscriber<PathWithLaneId, namespace_polling::polling_policy::Newest>::
+    SharedPtr test_path_with_lane_id_subscriber_;
   PathWithLaneId::ConstSharedPtr test_path_with_lane_id_ptr;
 
-  rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
-  rclcpp::Publisher<PathWithLaneId>::SharedPtr pub_debug_path_;
-  rclcpp::Publisher<Trajectory>::SharedPtr pub_debug_trajectory_;
-  rclcpp::Publisher<Trajectory>::SharedPtr pub_debug_shifted_trajectory_;
+  AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) pub_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(PathWithLaneId) pub_debug_path_;
+  AUTOWARE_PUBLISHER_PTR(Trajectory) pub_debug_trajectory_;
+  AUTOWARE_PUBLISHER_PTR(Trajectory) pub_debug_shifted_trajectory_;
   /** @} */
 };
 

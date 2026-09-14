@@ -22,7 +22,7 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin
+namespace autoware::trajectory_processor::plugin
 {
 ProcessingResult TrajectoryExtender::process(
   TrajectoryPoints & traj_points, TrajectoryProcessorData & data)
@@ -55,9 +55,9 @@ void TrajectoryExtender::update_params(const TrajectoryProcessorParams & params)
   extender_params_ = params.trajectory_extender;
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_optimizer::plugin::TrajectoryExtender,
+  autoware::trajectory_processor::plugin::TrajectoryExtender,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

@@ -19,6 +19,7 @@
 #include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 
 #include <autoware/cuda_utils/cuda_utils.hpp>
+#include <autoware/point_types/memory.hpp>
 #include <autoware_utils/math/constants.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 
@@ -216,6 +217,19 @@ bool CenterPointTRT::preprocess(
   const tf2_ros::Buffer & tf_buffer)
 {
   using autoware::cuda_utils::clear_async;
+
+  // The voxel generator strides the buffer by sizeof(InputPointType), so a prefix-compatible but
+  // wider layout would be misread.
+  if (
+    !autoware::point_types::is_data_layout_compatible_with_point_xyzirc(
+      input_pointcloud_msg_ptr->fields) ||
+    input_pointcloud_msg_ptr->point_step != sizeof(InputPointType)) {
+    RCLCPP_ERROR_ONCE(
+      rclcpp::get_logger(config_.logger_name_.c_str()),
+      "Expected PointXYZIRC (point_step %zu), got %u. Skipping.", sizeof(InputPointType),
+      input_pointcloud_msg_ptr->point_step);
+    return false;
+  }
 
   bool is_success = vg_ptr_->enqueuePointCloud(input_pointcloud_msg_ptr, tf_buffer);
   if (!is_success) {

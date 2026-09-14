@@ -23,8 +23,7 @@ namespace autoware::trajectory_ranker::metrics
 {
 
 void LongitudinalJerk::evaluate(
-  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const float max_value) const
+  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result) const
 {
   const auto points = result->points();
   if (!points || points->size() < 2) {
@@ -36,7 +35,7 @@ void LongitudinalJerk::evaluate(
   constexpr float epsilon = 1.0e-3f;
   const float time_resolution = resolution() > epsilon ? resolution() : epsilon;
 
-  if (max_value < epsilon) {
+  if (params_.maximum < epsilon) {
     result->set_metric(index(), jerk);
     return;
   }
@@ -52,11 +51,16 @@ void LongitudinalJerk::evaluate(
 
   for (size_t i = 0; i < acceleration.size() - 1; i++) {
     const auto calculated_jerk = (acceleration.at(i + 1) - acceleration.at(i)) / time_resolution;
-    jerk.at(i) = std::min(1.0f, static_cast<float>(std::abs(calculated_jerk)) / max_value);
+    jerk.at(i) = std::min(1.0f, static_cast<float>(std::abs(calculated_jerk) / params_.maximum));
   }
   jerk.back() = jerk.at(jerk.size() - 2);
 
   result->set_metric(index(), jerk);
+}
+
+void LongitudinalJerk::setup_parameters(const trajectory_ranker_params::Params::Evaluation & params)
+{
+  params_ = params.longitudinal_jerk;
 }
 
 }  // namespace autoware::trajectory_ranker::metrics

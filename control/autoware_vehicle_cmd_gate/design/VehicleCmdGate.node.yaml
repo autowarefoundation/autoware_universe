@@ -48,6 +48,7 @@ subscribers:
     remap_target: input/external_emergency_stop_heartbeat
   - name: gate_mode
     message_type: tier4_control_msgs/msg/GateMode
+    global: /control/gate_mode_cmd
     remap_target: input/gate_mode
   - name: emergency_control_cmd
     message_type: autoware_control_msgs/msg/Control
@@ -105,10 +106,13 @@ publishers:
     remap_target: output/operation_mode
   - name: is_paused
     message_type: tier4_control_msgs/msg/IsPaused
+    remap_target: /control/vehicle_cmd_gate/is_paused
   - name: is_start_requested
     message_type: tier4_control_msgs/msg/IsStartRequested
+    remap_target: /control/vehicle_cmd_gate/is_start_requested
   - name: is_stopped
     message_type: tier4_control_msgs/msg/IsStopped
+    remap_target: /control/vehicle_cmd_gate/is_stopped
   - name: is_filter_activated
     message_type: autoware_vehicle_cmd_gate/msg/IsFilterActivated
 
@@ -127,8 +131,10 @@ servers:
     remap_target: ~/service/clear_external_emergency_stop
   - name: set_pause
     message_type: tier4_control_msgs/srv/SetPause
+    remap_target: /control/vehicle_cmd_gate/set_pause
   - name: set_stop
     message_type: tier4_control_msgs/srv/SetStop
+    remap_target: /control/vehicle_cmd_gate/set_stop
 
 # parameters
 param_files:

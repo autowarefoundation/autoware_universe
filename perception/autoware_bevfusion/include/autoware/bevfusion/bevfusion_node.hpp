@@ -18,7 +18,6 @@
 #include "autoware/bevfusion/bevfusion_trt.hpp"
 #include "autoware/bevfusion/camera/camera_data.hpp"
 #include "autoware/bevfusion/detection_class_remapper.hpp"
-#include "autoware/bevfusion/postprocess/non_maximum_suppression.hpp"
 #include "autoware/bevfusion/preprocess/pointcloud_densification.hpp"
 #include "autoware/bevfusion/visibility_control.hpp"
 
@@ -33,6 +32,7 @@
 #include <cuda_blackboard/negotiated_types.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
+#include <perception_utils/iou_bev_nms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -133,7 +133,7 @@ private:
   std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
   diagnostic_updater::Updater diagnostic_processing_time_updater_{this};
 
-  NonMaximumSuppression iou_bev_nms_;
+  perception_utils::IouBevNms iou_bev_nms_;
 
   std::unique_ptr<BEVFusionTRT> detector_ptr_{nullptr};
   std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_detector_trt_;

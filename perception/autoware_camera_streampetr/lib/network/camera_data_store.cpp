@@ -30,8 +30,12 @@ module provides classes and functions for dense matrices and vectors, as well as
 algebra operations. */
 #include <Eigen/Dense>
 
+#include <sensor_msgs/image_encodings.hpp>
+
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -85,7 +89,7 @@ static CameraMatrices create_camera_matrices(
   return matrices;
 }
 
-static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
+static void update_intrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 {
   Eigen::Matrix3f K;
   K << K_4x4[0], K_4x4[1], K_4x4[2], K_4x4[4], K_4x4[5], K_4x4[6], K_4x4[8], K_4x4[9], K_4x4[10];
@@ -112,19 +116,22 @@ CameraDataStore::CameraDataStore(
   anchor_camera_id_(anchor_camera_id),
   preprocess_time_ms_(0.0f),
   is_distorted_image_(is_distorted_image),
-  logger_(node->get_logger())
+  logger_(node->get_logger()),
+  clock_(node->get_clock()),
+  input_rejected_(rois_number)
 {
   image_input_ = std::make_shared<Tensor>(
     "image_input", nvinfer1::Dims{5, {1, rois_number, 3, image_height, image_width}},
     nvinfer1::DataType::kFLOAT);  // {num_dims, batch_size, rois_number, num_channels, height,
                                   // width}
 
+  // RGB order, matching the model's input channel order.
   image_input_mean_ = std::make_shared<Tensor>(
     "image_input_mean", nvinfer1::Dims{1, {3}}, nvinfer1::DataType::kFLOAT);
-  image_input_mean_->load_from_vector({103.530, 116.280, 123.675});
+  image_input_mean_->load_from_vector({123.675, 116.280, 103.530});
   image_input_std_ =
     std::make_shared<Tensor>("image_input_std", nvinfer1::Dims{1, {3}}, nvinfer1::DataType::kFLOAT);
-  image_input_std_->load_from_vector({57.375, 57.120, 58.395});
+  image_input_std_->load_from_vector({58.395, 57.120, 57.375});
 
   camera_image_timestamp_ = std::vector<double>(rois_number, -1.0);
   camera_link_names_ = std::vector<std::string>(rois_number, "");
@@ -142,7 +149,7 @@ CameraDataStore::CameraDataStore(
   undistort_map_y_gpu_.resize(rois_number, nullptr);
   undistortion_maps_computed_.resize(rois_number, false);
 
-  ego_mask_roi_configs_ = loadEgoMaskRoiConfigs(ego_mask_params, rois_number_);
+  ego_mask_roi_configs_ = load_ego_mask_roi_configs(ego_mask_params, rois_number_);
   ego_mask_gpu_.resize(rois_number_, nullptr);
   ego_mask_width_.resize(rois_number_, 0);
   ego_mask_height_.resize(rois_number_, 0);
@@ -164,6 +171,12 @@ CameraDataStore::~CameraDataStore()
 void CameraDataStore::update_camera_image(
   const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg)
 {
+  // Keep this above ++active_updates_ below, so an early return here has no counter to decrement.
+  bool swap_rb = false;
+  if (!validate_image_message(camera_id, input_camera_image_msg, swap_rb)) {
+    return;
+  }
+
   {
     std::unique_lock<std::mutex> lock(freeze_mutex_);
     freeze_cv_.wait(lock, [&]() { return !is_frozen_; });  // Wait if frozen
@@ -182,9 +195,10 @@ void CameraDataStore::update_camera_image(
   // Process image based on distortion settings
   std::unique_ptr<Tensor> image_input_tensor;
   if (is_distorted_image_ && camera_info_list_[camera_id]) {
-    image_input_tensor = process_distorted_image(camera_id, input_camera_image_msg, params);
+    image_input_tensor =
+      process_distorted_image(camera_id, input_camera_image_msg, params, swap_rb);
   } else {
-    image_input_tensor = process_regular_image(input_camera_image_msg, params, camera_id);
+    image_input_tensor = process_regular_image(input_camera_image_msg, params, camera_id, swap_rb);
   }
 
   // Check if image processing failed
@@ -201,7 +215,7 @@ void CameraDataStore::update_camera_image(
   }
 
   // Launch CUDA kernel for resizing and ROI extraction
-  auto err = resizeAndExtractRoi_launch(
+  auto err = resize_and_extract_roi_launch(
     static_cast<std::uint8_t *>(image_input_tensor->ptr), static_cast<float *>(image_input_->ptr),
     params.camera_offset, params.original_height, params.original_width, params.newH, params.newW,
     image_height_, image_width_, params.start_y, params.start_x,
@@ -210,7 +224,7 @@ void CameraDataStore::update_camera_image(
 
   if (err != cudaSuccess) {
     RCLCPP_ERROR(
-      logger_, "resizeAndExtractRoi_launch failed with error: %s", cudaGetErrorString(err));
+      logger_, "resize_and_extract_roi_launch failed with error: %s", cudaGetErrorString(err));
   }
 
   // Update metadata and timing
@@ -223,6 +237,51 @@ void CameraDataStore::update_camera_image(
       freeze_cv_.notify_all();  // Notify freeze_updates() to continue
     }
   }
+}
+
+bool CameraDataStore::validate_image_message(
+  const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg, bool & swap_rb)
+{
+  const std::string & encoding = input_camera_image_msg->encoding;
+
+  if (encoding == sensor_msgs::image_encodings::RGB8) {
+    swap_rb = false;
+  } else if (encoding == sensor_msgs::image_encodings::BGR8) {
+    swap_rb = true;
+  } else {
+    // Anything else (mono, bayer, 16-bit, alpha) has a different channel count or stride, so the
+    // fixed 3-byte-per-pixel upload below would misread the buffer.
+    RCLCPP_ERROR_THROTTLE(
+      logger_, *clock_, 10000 /* ms */,
+      "Camera %d publishes unsupported encoding '%s'. Only 'rgb8' and 'bgr8' can be fed to the "
+      "model; dropping frames from this camera.",
+      camera_id, encoding.c_str());
+    input_rejected_[camera_id] = true;
+    return false;
+  }
+
+  // Both upload paths cudaMemcpyAsync exactly height * width * 3 densely packed bytes out of the
+  // message without looking at step, but sensor_msgs/Image permits a padded row stride
+  // (step > width * 3) and does not guarantee data is large enough. A padded stride would
+  // silently shear every row of the model input; a truncated buffer would make the copy a
+  // host-side out-of-bounds read.
+  const size_t row_bytes = static_cast<size_t>(input_camera_image_msg->width) * 3;
+  const size_t expected_size = static_cast<size_t>(input_camera_image_msg->height) * row_bytes;
+  if (
+    input_camera_image_msg->step != row_bytes ||
+    input_camera_image_msg->data.size() < expected_size) {
+    RCLCPP_ERROR_THROTTLE(
+      logger_, *clock_, 10000 /* ms */,
+      "Camera %d publishes %ux%u '%s' with step %u and %zu bytes, but a densely packed buffer of "
+      "step %zu and %zu bytes is required; dropping frames from this camera.",
+      camera_id, input_camera_image_msg->width, input_camera_image_msg->height, encoding.c_str(),
+      input_camera_image_msg->step, input_camera_image_msg->data.size(), row_bytes, expected_size);
+    input_rejected_[camera_id] = true;
+    return false;
+  }
+
+  input_rejected_[camera_id] = false;
+  return true;
 }
 
 CameraDataStore::ImageProcessingParams CameraDataStore::calculate_image_processing_params(
@@ -258,7 +317,7 @@ CameraDataStore::ImageProcessingParams CameraDataStore::calculate_image_processi
 
 std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_image(
   const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
-  ImageProcessingParams & params)
+  ImageProcessingParams & params, const bool swap_rb)
 {
   // Check if undistortion maps are available
   if (
@@ -286,6 +345,20 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
     input_tensor->ptr, input_camera_image_msg->data.data(), input_tensor->nbytes(),
     cudaMemcpyHostToDevice, streams_[camera_id]);
 
+  // Convert to RGB immediately after the upload so every later stage (remap, ego mask, resize)
+  // sees the model's channel order regardless of the source encoding.
+  if (swap_rb) {
+    auto err_convert = convert_bgr_to_rgb_launch(
+      static_cast<std::uint8_t *>(input_tensor->ptr), original_height, original_width,
+      streams_[camera_id]);
+    if (err_convert != cudaSuccess) {
+      RCLCPP_ERROR(
+        logger_, "convert_bgr_to_rgb_launch failed for camera %d: %s", camera_id,
+        cudaGetErrorString(err_convert));
+      return nullptr;
+    }
+  }
+
   // Allocate GPU memory for undistorted image (same size as input - full resolution)
   auto image_input_tensor = std::make_unique<Tensor>(
     "camera_img", nvinfer1::Dims{3, {original_height, original_width, 3}},
@@ -309,13 +382,13 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
 
   if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
     const auto & cfg = ego_mask_roi_configs_[camera_id].value();
-    auto err_mask = applyEgoMask_launch(
+    auto err_mask = apply_ego_mask_launch(
       static_cast<std::uint8_t *>(image_input_tensor->ptr),
       static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), original_height,
-      original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2], streams_[camera_id]);
+      original_width, cfg.fill_rgb[0], cfg.fill_rgb[1], cfg.fill_rgb[2], streams_[camera_id]);
     if (err_mask != cudaSuccess) {
       RCLCPP_ERROR(
-        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        logger_, "apply_ego_mask_launch failed for camera %d: %s", camera_id,
         cudaGetErrorString(err_mask));
       return nullptr;
     }
@@ -326,7 +399,7 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
 
 std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
   const Image::ConstSharedPtr & input_camera_image_msg, const ImageProcessingParams & params,
-  const int camera_id)
+  const int camera_id, const bool swap_rb)
 {
   auto image_input_tensor = std::make_unique<Tensor>(
     "camera_img", nvinfer1::Dims{3, {params.original_height, params.original_width, 3}},
@@ -335,16 +408,30 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
     image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),
     cudaMemcpyHostToDevice, streams_.at(camera_id));
 
+  // Convert to RGB immediately after the upload so every later stage (ego mask, resize) sees the
+  // model's channel order regardless of the source encoding.
+  if (swap_rb) {
+    auto err_convert = convert_bgr_to_rgb_launch(
+      static_cast<std::uint8_t *>(image_input_tensor->ptr), params.original_height,
+      params.original_width, streams_.at(camera_id));
+    if (err_convert != cudaSuccess) {
+      RCLCPP_ERROR(
+        logger_, "convert_bgr_to_rgb_launch failed for camera %d: %s", camera_id,
+        cudaGetErrorString(err_convert));
+      return nullptr;
+    }
+  }
+
   if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
     const auto & cfg = ego_mask_roi_configs_[camera_id].value();
-    auto err_mask = applyEgoMask_launch(
+    auto err_mask = apply_ego_mask_launch(
       static_cast<std::uint8_t *>(image_input_tensor->ptr),
       static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), params.original_height,
-      params.original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2],
+      params.original_width, cfg.fill_rgb[0], cfg.fill_rgb[1], cfg.fill_rgb[2],
       streams_.at(camera_id));
     if (err_mask != cudaSuccess) {
       RCLCPP_ERROR(
-        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        logger_, "apply_ego_mask_launch failed for camera %d: %s", camera_id,
         cudaGetErrorString(err_mask));
       return nullptr;
     }
@@ -362,8 +449,7 @@ void CameraDataStore::update_metadata_and_timing(
   camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
 
   auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  preprocess_time_ms_ = duration.count();
+  preprocess_time_ms_ = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 }
 
 void CameraDataStore::update_camera_info(
@@ -405,7 +491,8 @@ void CameraDataStore::build_ego_mask_gpu(const int camera_id, const int width, c
     return;
   }
 
-  const auto raster = buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
+  const auto raster =
+    build_ego_mask_raster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
   if (raster.size() == 0) {
     RCLCPP_WARN(logger_, "Empty ego mask raster for camera %d", camera_id);
     return;
@@ -451,6 +538,18 @@ bool CameraDataStore::check_if_all_camera_image_received() const
     }
   }
   return true;
+}
+
+std::vector<CameraDataStore::CameraStatus> CameraDataStore::get_camera_status() const
+{
+  std::vector<CameraStatus> status(rois_number_);
+  for (size_t camera_id = 0; camera_id < rois_number_; ++camera_id) {
+    status[camera_id].camera_info_received = static_cast<bool>(camera_info_list_[camera_id]);
+    status[camera_id].image_received = camera_image_timestamp_[camera_id] >= 0;
+    status[camera_id].input_rejected = input_rejected_[camera_id];
+    status[camera_id].last_image_timestamp = camera_image_timestamp_[camera_id];
+  }
+  return status;
 }
 
 float CameraDataStore::check_if_all_images_synced() const
@@ -526,7 +625,7 @@ std::vector<float> CameraDataStore::get_camera_info_vector() const
 
     Eigen::Matrix3f transform_mat = T * S;
 
-    updateIntrinsics(K_4x4.data(), transform_mat);
+    update_intrinsics(K_4x4.data(), transform_mat);
 
     intrinsics_all.insert(intrinsics_all.end(), K_4x4.begin(), K_4x4.end());
   }

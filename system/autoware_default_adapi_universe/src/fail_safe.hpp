@@ -16,6 +16,7 @@
 #define FAIL_SAFE_HPP_
 
 #include <autoware/adapi_specs/fail_safe.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -28,7 +29,7 @@
 namespace autoware::default_adapi
 {
 
-class FailSafeNode : public rclcpp::Node
+class FailSafeNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit FailSafeNode(const rclcpp::NodeOptions & options);
@@ -36,9 +37,9 @@ public:
 private:
   using MrmDescription = autoware::adapi_specs::fail_safe::MrmDescription::Service;
   using MrmState = autoware::adapi_specs::fail_safe::MrmState::Message;
-  Srv<autoware::adapi_specs::fail_safe::MrmDescription> srv_mrm_description_;
-  Pub<autoware::adapi_specs::fail_safe::MrmState> pub_mrm_state_;
-  Sub<autoware::component_interface_specs_universe::system::MrmState> sub_mrm_state_;
+  Srv<autoware::adapi_specs::fail_safe::MrmDescription, NodeT> srv_mrm_description_;
+  Pub<autoware::adapi_specs::fail_safe::MrmState, NodeT> pub_mrm_state_;
+  Sub<autoware::component_interface_specs_universe::system::MrmState, NodeT> sub_mrm_state_;
   MrmState prev_state_;
   void on_state(const MrmState::ConstSharedPtr msg);
   void on_mrm_description(

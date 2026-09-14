@@ -190,7 +190,13 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
         """Set the world and world settings."""
         CarlaDataProvider._world = world
         CarlaDataProvider._sync_flag = world.get_settings().synchronous_mode
-        CarlaDataProvider._map = world.get_map()
+        try:
+            CarlaDataProvider._map = world.get_map()
+        except RuntimeError as error:
+            # Some CARLA levels (e.g. certain 0.10 maps) do not expose parseable
+            # OpenDRIVE metadata. Continue without a map instead of aborting.
+            print("WARNING: CarlaDataProvider couldn't load the map: {}".format(error))
+            CarlaDataProvider._map = None
         CarlaDataProvider._blueprint_library = world.get_blueprint_library()
         CarlaDataProvider.generate_spawn_points()
         CarlaDataProvider.prepare_map()
@@ -245,27 +251,48 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
         return [(getattr(carla.WeatherParameters, x), format_name(x)) for x in presets]
 
     @staticmethod
-    def prepare_map():
-        """Set the current map and loads all traffic lights for this map to_traffic_light_map."""
-        if CarlaDataProvider._map is None:
+    def _load_map():
+        """Load the OpenDRIVE map, tolerating levels without parseable metadata."""
+        if CarlaDataProvider._map is not None:
+            return
+        try:
             CarlaDataProvider._map = CarlaDataProvider._world.get_map()
+        except RuntimeError as error:
+            # Traffic light registration relies on world actors, not the
+            # OpenDRIVE map, so it still works without a parseable map.
+            print("WARNING: CarlaDataProvider couldn't load the map: {}".format(error))
+            CarlaDataProvider._map = None
 
-        # Parse all traffic lights
+    @staticmethod
+    def _register_traffic_lights():
+        """Register all traffic lights in the world into _traffic_light_map."""
         CarlaDataProvider._traffic_light_map.clear()
         for traffic_light in CarlaDataProvider._world.get_actors().filter("*traffic_light*"):
-            if traffic_light not in list(CarlaDataProvider._traffic_light_map):
-                CarlaDataProvider._traffic_light_map[traffic_light] = traffic_light.get_transform()
-            else:
+            if traffic_light in list(CarlaDataProvider._traffic_light_map):
                 raise KeyError(
                     "Traffic light '{}' already registered. Cannot register twice!".format(
                         traffic_light.id
                     )
                 )
+            CarlaDataProvider._traffic_light_map[traffic_light] = traffic_light.get_transform()
+
+    @staticmethod
+    def prepare_map():
+        """Set the current map and loads all traffic lights for this map to_traffic_light_map."""
+        CarlaDataProvider._load_map()
+        CarlaDataProvider._register_traffic_lights()
 
     @staticmethod
     def generate_spawn_points():
         """Generate spawn points for the current map."""
-        spawn_points = list(CarlaDataProvider.get_map(CarlaDataProvider._world).get_spawn_points())
+        try:
+            carla_map = CarlaDataProvider.get_map(CarlaDataProvider._world)
+            spawn_points = list(carla_map.get_spawn_points())
+        except RuntimeError as error:
+            # Without parseable OpenDRIVE metadata (e.g. some CARLA 0.10 levels)
+            # there are no map spawn points; continue with an empty list.
+            print("WARNING: CarlaDataProvider couldn't generate spawn points: {}".format(error))
+            spawn_points = []
         CarlaDataProvider._rng.shuffle(spawn_points)
         CarlaDataProvider._spawn_points = spawn_points
         CarlaDataProvider._spawn_index = 0
@@ -485,6 +512,53 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
         return actors
 
     @staticmethod
+    def _spawn_actor_random(blueprint):
+        """Retry random map spawn points until one succeeds; return (actor, spawn_point)."""
+        actor = None
+        spawn_point = None
+        while not actor:
+            spawn_point = CarlaDataProvider._rng.choice(CarlaDataProvider._spawn_points)
+            actor = CarlaDataProvider._world.try_spawn_actor(blueprint, spawn_point)
+        return actor, spawn_point
+
+    @staticmethod
+    def _spawn_actor_at(blueprint, model, spawn_point):
+        """Spawn an actor at a fixed transform, lifting non-prop models off the ground."""
+        # For non prop models, slightly lift the actor to avoid collisions with the ground
+        z_offset = 0.2 if "prop" not in model else 0
+
+        # DO NOT USE spawn_point directly, as this will modify spawn_point permanently
+        _spawn_point = carla.Transform(carla.Location(), spawn_point.rotation)
+        _spawn_point.location.x = spawn_point.location.x
+        _spawn_point.location.y = spawn_point.location.y
+        _spawn_point.location.z = spawn_point.location.z + z_offset
+        return CarlaDataProvider._world.try_spawn_actor(blueprint, _spawn_point)
+
+    @staticmethod
+    def _spawn_actor(blueprint, model, spawn_point, random_location):
+        """Spawn an actor, handling random placement and the no-spawn-points fallback.
+
+        Returns (actor, spawn_point), where spawn_point is the transform the actor
+        was registered against.
+        """
+        if random_location and not CarlaDataProvider._spawn_points:
+            # No map spawn points (e.g. CARLA levels without parseable OpenDRIVE
+            # metadata). Fall back to the map origin so the default launch path
+            # can still bring up the ego vehicle; the caller can pass an explicit
+            # spawn_point for a more suitable location.
+            print(
+                "WARNING: No map spawn points available for random placement; "
+                "falling back to the map origin."
+            )
+            spawn_point = carla.Transform()
+            return CarlaDataProvider._spawn_actor_at(blueprint, model, spawn_point), spawn_point
+
+        if random_location:
+            return CarlaDataProvider._spawn_actor_random(blueprint)
+
+        return CarlaDataProvider._spawn_actor_at(blueprint, model, spawn_point), spawn_point
+
+    @staticmethod
     def request_new_actor(
         model,
         spawn_point,
@@ -501,22 +575,9 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
             model, rolename, color, actor_category, attribute_filter
         )
 
-        if random_location:
-            actor = None
-            while not actor:
-                spawn_point = CarlaDataProvider._rng.choice(CarlaDataProvider._spawn_points)
-                actor = CarlaDataProvider._world.try_spawn_actor(blueprint, spawn_point)
-
-        else:
-            # For non prop models, slightly lift the actor to avoid collisions with the ground
-            z_offset = 0.2 if "prop" not in model else 0
-
-            # DO NOT USE spawn_point directly, as this will modify spawn_point permanently
-            _spawn_point = carla.Transform(carla.Location(), spawn_point.rotation)
-            _spawn_point.location.x = spawn_point.location.x
-            _spawn_point.location.y = spawn_point.location.y
-            _spawn_point.location.z = spawn_point.location.z + z_offset
-            actor = CarlaDataProvider._world.try_spawn_actor(blueprint, _spawn_point)
+        actor, spawn_point = CarlaDataProvider._spawn_actor(
+            blueprint, model, spawn_point, random_location
+        )
 
         if actor is None:
             print(

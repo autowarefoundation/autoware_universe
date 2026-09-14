@@ -42,7 +42,7 @@ class SensorConfig:
     frequency_hz: float = 20.0
     qos_profile: str = "reliable"
     # What a camera's pixels are published as. A consumer that only wants
-    # luminance otherwise pays four times the bytes through serialisation and
+    # luminance otherwise pays four times the bytes through serialization and
     # the transport for three channels it discards on arrival.
     image_encoding: str = "bgra8"
     parameters: Dict[str, Any] = field(default_factory=dict)
@@ -205,7 +205,13 @@ class SensorRegistry:
             return True
 
         time_diff = current_time - sensor.last_publish_time
-        return time_diff >= (1.0 / sensor.frequency_hz)
+        # A sensor producing at exactly the publish rate lands on time_diff
+        # values that fall a float rounding step short of the period, and
+        # those frames are dropped. The next frame then arrives a whole period
+        # late, so the sensor publishes at a fraction of the rate it was
+        # configured for. The tolerance is orders of magnitude below any
+        # simulation step, so it cannot let a genuinely early frame through.
+        return time_diff >= (1.0 / sensor.frequency_hz) - 1e-9
 
     def get_all_sensors(self) -> Dict[str, SensorConfig]:
         """

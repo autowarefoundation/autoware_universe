@@ -86,6 +86,12 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     SYSTEM PUBLIC
     ${autoware_cuda_utils_INCLUDE_DIRS}
   )
+
+  # detection3d_postprocess_test needs this: it host-compiles Thrust and gets no ament_target_dependencies.
+  target_link_libraries(${PROJECT_NAME}_cuda_lib
+    autoware_cuda_utils::autoware_cuda_utils
+  )
+
   ament_target_dependencies(${PROJECT_NAME}_cuda_lib
     autoware_point_types
   )
@@ -139,6 +145,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       test/ptv3_config_test.cpp
     )
     target_include_directories(ptv3_config_test PRIVATE include)
+    ament_target_dependencies(ptv3_config_test autoware_point_types)
 
     ament_add_gtest(serialized_pooling_metadata_test
       test/serialized_pooling_metadata_test.cpp
@@ -186,7 +193,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       ${PROJECT_NAME}_cuda_lib
     )
 
-    ament_add_gtest(ros_utils_test
+    ament_add_ros_isolated_gtest(ros_utils_test
       test/ros_utils_test.cpp
     )
 
@@ -196,14 +203,14 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   endif()
 
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
       config
   )
 
 else()
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
   )

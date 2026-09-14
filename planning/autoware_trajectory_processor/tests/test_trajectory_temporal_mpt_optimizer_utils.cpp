@@ -20,11 +20,11 @@
 #include <cmath>
 #include <vector>
 
-using autoware::trajectory_optimizer::plugin::trajectory_temporal_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_temporal_mpt_optimizer_utils::
   build_temporal_mpt_references;
-using autoware::trajectory_optimizer::plugin::trajectory_temporal_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_temporal_mpt_optimizer_utils::
   compute_yaw_psi_bias;
-using autoware::trajectory_optimizer::plugin::trajectory_temporal_mpt_optimizer_utils::
+using autoware::trajectory_processor::plugin::trajectory_temporal_mpt_optimizer_utils::
   find_closest_trajectory_index;
 using trajectory_optimizer_test_utils::create_point;
 using trajectory_optimizer_test_utils::create_point_with_yaw;

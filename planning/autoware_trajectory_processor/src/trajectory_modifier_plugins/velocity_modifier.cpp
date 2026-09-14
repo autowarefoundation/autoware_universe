@@ -22,7 +22,7 @@
 #include <cmath>
 #include <utility>
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 using autoware::experimental::trajectory::interpolator::AkimaSpline;
@@ -97,7 +97,7 @@ ProcessingResult VelocityModifier::process(
       .build(trajectory);
   if (!trajectory_interpolation_util) {
     RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "[TM VelocityModifier] Failed to build interpolation trajectory");
     return ProcessingResult::Unchanged;
   }
@@ -106,7 +106,7 @@ ProcessingResult VelocityModifier::process(
 
   if (dt < 1e-3) {
     RCLCPP_ERROR_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      get_logger(), *get_clock(), 1000,
       "[TM VelocityModifier] Invalid trajectory time step: %f, unable to interpolate trajectory",
       dt);
     traj_points = std::move(trajectory);
@@ -179,9 +179,9 @@ size_t VelocityModifier::update_velocities(
   return vel_update_start_index;
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::VelocityModifier,
+  autoware::trajectory_processor::plugin::VelocityModifier,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

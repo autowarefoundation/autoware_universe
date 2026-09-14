@@ -33,7 +33,7 @@
 #include <memory>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::utils
+namespace autoware::trajectory_processor::utils
 {
 
 using autoware::path_smoother::CommonParam;
@@ -110,6 +110,6 @@ void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt = false,
   const double constant_dt = 0.1);
 
-};  // namespace autoware::trajectory_optimizer::utils
+};  // namespace autoware::trajectory_processor::utils
 
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__UTILS_HPP_

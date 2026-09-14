@@ -15,20 +15,41 @@
 #ifndef AUTOWARE__BEVFUSION__POSTPROCESS__CIRCLE_NMS_KERNEL_HPP_
 #define AUTOWARE__BEVFUSION__POSTPROCESS__CIRCLE_NMS_KERNEL_HPP_
 
+#include "autoware/bevfusion/bevfusion_config.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
-#include <thrust/device_vector.h>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+
+#include <cuda.h>
+#include <cuda_runtime_api.h>
 
 #include <cstddef>
+#include <cstdint>
+#include <vector>
 
 namespace autoware::bevfusion
 {
-// Non-maximum suppression (NMS) uses the distance on the xy plane instead of
-// intersection over union (IoU) to suppress overlapped objects.
-std::size_t circleNMS(
-  thrust::device_vector<Box3D> & boxes3d, const float distance_threshold,
-  thrust::device_vector<bool> & keep_mask, cudaStream_t stream);
+using autoware::cuda_utils::CudaUniquePtr;
 
+class CircleNMS
+{
+public:
+  explicit CircleNMS(const BEVFusionConfig & config, cudaStream_t stream);
+  // Non-maximum suppression (NMS) uses the distance on the xy plane instead of
+  // intersection over union (IoU) to suppress overlapped objects.
+  // Note: the mask uses std::uint8_t (not bool) because std::vector<bool> is bit-packed and
+  // cannot be copied to the device as a contiguous byte array.
+  std::vector<std::uint8_t> circleNMS(Box3D * descending_sorted_bboxes, cudaStream_t stream);
+
+private:
+  BEVFusionConfig config_;
+  cudaStream_t stream_;
+
+  // Memory for NMS
+  std::vector<std::uint64_t> final_keep_mask_h_;
+  CudaUniquePtr<std::uint64_t[]> final_keep_mask_d_{nullptr};
+  std::size_t col_blocks_ = 0;
+};
 }  // namespace autoware::bevfusion
 
 #endif  // AUTOWARE__BEVFUSION__POSTPROCESS__CIRCLE_NMS_KERNEL_HPP_

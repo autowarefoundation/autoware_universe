@@ -300,7 +300,7 @@ TEST(CnnLampRecognizerDebugImageTest, HandlesNullElements)
 // ================== GPU-gated tests of the TensorRT classify() path ==================
 
 // Lamp recognizer model, downloaded under autoware_data by the ansible artifacts role:
-// https://awf.ml.dev.web.auto/perception/models/traffic_light_classifier/v4/traffic_light_lamp_recognizer_comlops.onnx
+// https://huggingface.co/AutowareFoundation/traffic_light_classifier/tree/v4.0
 constexpr char model_filename[] = "traffic_light_lamp_recognizer_comlops.onnx";
 
 // Resolve a file under autoware_data, trying the canonical ml_models/ layout and the legacy

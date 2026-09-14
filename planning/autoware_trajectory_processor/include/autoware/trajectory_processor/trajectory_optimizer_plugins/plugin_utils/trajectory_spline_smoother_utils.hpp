@@ -21,7 +21,7 @@
 
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_spline_smoother_utils
+namespace autoware::trajectory_processor::plugin::trajectory_spline_smoother_utils
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -42,7 +42,7 @@ void apply_spline(
   TrajectoryPoints & traj_points, double interpolation_resolution_m,
   double max_distance_discrepancy_m, bool preserve_original_orientation);
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_spline_smoother_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_spline_smoother_utils
 
 // NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_SPLINE_SMOOTHER_UTILS_HPP_

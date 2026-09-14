@@ -22,8 +22,11 @@
 
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <algorithm>
+#include <cstdint>
 #include <iomanip>
 #include <memory>
 #include <sstream>
@@ -36,82 +39,95 @@ using autoware::obstacle_proximity_checker::ObstacleTypeParameters;
 using autoware::obstacle_proximity_checker::Parameters;
 
 ObstacleTypeParameters to_obstacle_type_parameters(
-  const double front_distance, const double side_distance, const double back_distance)
+  const double front_distance, const double side_distance, const double back_distance,
+  const bool enable_bbox_check = true, const bool enable_polygon_check = true)
 {
   ObstacleTypeParameters parameters;
   parameters.surround_check_front_distance = front_distance;
   parameters.surround_check_side_distance = side_distance;
   parameters.surround_check_back_distance = back_distance;
+  parameters.enable_bbox_check = enable_bbox_check;
+  parameters.enable_polygon_check = enable_polygon_check;
   return parameters;
 }
 
 Parameters to_proximity_checker_parameters(
-  const trajectory_modifier_params::Params::SurroundObstacleStop & params)
+  const trajectory_processor_params::Params::SurroundObstacleStop & params)
 {
   Parameters parameters;
   parameters.pointcloud_enable_check = params.use_pointcloud;
 
-  const std::unordered_set<std::string> enabled_object_types(
-    params.object_types.begin(), params.object_types.end());
+  const std::unordered_set<std::string> bbox_enabled_object_types(
+    params.target_objects.bbox.begin(), params.target_objects.bbox.end());
+  const std::unordered_set<std::string> polygon_enabled_object_types(
+    params.target_objects.polygon.begin(), params.target_objects.polygon.end());
 
-  const auto set_object_enable = [&](const std::string & label) {
-    parameters.object_type_enable_check[label] = enabled_object_types.count(label) > 0;
+  auto is_bbox_enabled = [&](const std::string & label) {
+    return bbox_enabled_object_types.count(label) > 0;
   };
-  set_object_enable("unknown");
-  set_object_enable("car");
-  set_object_enable("truck");
-  set_object_enable("bus");
-  set_object_enable("trailer");
-  set_object_enable("motorcycle");
-  set_object_enable("bicycle");
-  set_object_enable("pedestrian");
-  set_object_enable("hazard");
-  set_object_enable("animal");
+  auto is_polygon_enabled = [&](const std::string & label) {
+    return polygon_enabled_object_types.count(label) > 0;
+  };
 
   const auto & front = params.front_distance_th;
   const auto & side = params.side_distance_th;
   const auto & back = params.back_distance_th;
+  auto get_object_distance_thresholds = [&](const std::string & label) {
+    if (label == "car") return std::make_tuple(front.car, side.car, back.car);
+    if (label == "truck") return std::make_tuple(front.truck, side.truck, back.truck);
+    if (label == "bus") return std::make_tuple(front.bus, side.bus, back.bus);
+    if (label == "trailer") return std::make_tuple(front.trailer, side.trailer, back.trailer);
+    if (label == "motorcycle")
+      return std::make_tuple(front.motorcycle, side.motorcycle, back.motorcycle);
+    if (label == "bicycle") return std::make_tuple(front.bicycle, side.bicycle, back.bicycle);
+    if (label == "pedestrian")
+      return std::make_tuple(front.pedestrian, side.pedestrian, back.pedestrian);
+    if (label == "hazard") return std::make_tuple(front.hazard, side.hazard, back.hazard);
+    if (label == "animal") return std::make_tuple(front.animal, side.animal, back.animal);
+    return std::make_tuple(front.unknown, side.unknown, back.unknown);
+  };
+
+  const auto set_object_params = [&](const std::string & label) {
+    const auto bbox_enabled = is_bbox_enabled(label);
+    const auto polygon_enabled = is_polygon_enabled(label);
+    const auto [front, side, back] = get_object_distance_thresholds(label);
+    parameters.object_type_enable_check[label] = bbox_enabled || polygon_enabled;
+    parameters.obstacle_types_map[label] =
+      to_obstacle_type_parameters(front, side, back, bbox_enabled, polygon_enabled);
+  };
+  set_object_params("unknown");
+  set_object_params("car");
+  set_object_params("truck");
+  set_object_params("bus");
+  set_object_params("trailer");
+  set_object_params("motorcycle");
+  set_object_params("bicycle");
+  set_object_params("pedestrian");
+  set_object_params("hazard");
+  set_object_params("animal");
 
   parameters.obstacle_types_map["pointcloud"] =
     to_obstacle_type_parameters(front.pointcloud, side.pointcloud, back.pointcloud);
-  parameters.obstacle_types_map["unknown"] =
-    to_obstacle_type_parameters(front.unknown, side.unknown, back.unknown);
-  parameters.obstacle_types_map["car"] = to_obstacle_type_parameters(front.car, side.car, back.car);
-  parameters.obstacle_types_map["truck"] =
-    to_obstacle_type_parameters(front.truck, side.truck, back.truck);
-  parameters.obstacle_types_map["bus"] = to_obstacle_type_parameters(front.bus, side.bus, back.bus);
-  parameters.obstacle_types_map["trailer"] =
-    to_obstacle_type_parameters(front.trailer, side.trailer, back.trailer);
-  parameters.obstacle_types_map["motorcycle"] =
-    to_obstacle_type_parameters(front.motorcycle, side.motorcycle, back.motorcycle);
-  parameters.obstacle_types_map["bicycle"] =
-    to_obstacle_type_parameters(front.bicycle, side.bicycle, back.bicycle);
-  parameters.obstacle_types_map["pedestrian"] =
-    to_obstacle_type_parameters(front.pedestrian, side.pedestrian, back.pedestrian);
-  parameters.obstacle_types_map["hazard"] =
-    to_obstacle_type_parameters(front.hazard, side.hazard, back.hazard);
-  parameters.obstacle_types_map["animal"] =
-    to_obstacle_type_parameters(front.animal, side.animal, back.animal);
   return parameters;
 }
 }  // namespace
 
-namespace autoware::trajectory_modifier::plugin
+namespace autoware::trajectory_processor::plugin
 {
 
 void SurroundObstacleStop::on_initialize(const TrajectoryProcessorParams & params)
 {
-  const auto node_ptr = get_node_ptr();
-  planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "modifier_surround_obstacle_stop");
+  init_planning_factor_interface("modifier_surround_obstacle_stop");
 
-  pub_debug_text_ =
-    node_ptr->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
+  pub_debug_text_ = make_publisher<StringStamped>("~/surround_obstacle_stop/debug/text");
 
   enabled_ = params.use_surround_obstacle_stop;
   params_ = params.surround_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
+
+  pointcloud_filter_ =
+    std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
+      params_.target_objects.pointcloud);
 
   proximity_checker_ = std::make_unique<obstacle_proximity_checker::ProximityChecker>(
     to_proximity_checker_parameters(params_), context_->vehicle_info);
@@ -123,6 +139,7 @@ void SurroundObstacleStop::update_params(const TrajectoryProcessorParams & param
   params_ = params.surround_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
   proximity_checker_->update_parameters(to_proximity_checker_parameters(params_));
+  pointcloud_filter_->set_params(params_.target_objects.pointcloud);
 }
 
 bool SurroundObstacleStop::check_inputs(const TrajectoryProcessorData & input) const
@@ -158,11 +175,34 @@ obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_in
 
   Eigen::Affine3f isometry =
     tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
-  pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
-  pcl::fromROSMsg(*input.obstacle_pointcloud, transformed_pointcloud);
-  autoware_utils::transform_pointcloud(transformed_pointcloud, transformed_pointcloud, isometry);
+  PointCloud::Ptr transformed_pointcloud(new PointCloud);
+  pcl::fromROSMsg(*input.obstacle_pointcloud, *transformed_pointcloud);
+  for (auto & p : transformed_pointcloud->points) {
+    const Eigen::Vector3f q = isometry * Eigen::Vector3f(p.x, p.y, p.z);
+    p.x = q.x();
+    p.y = q.y();
+    p.z = q.z();
+  }
 
-  checker_inputs.pointcloud_in_base_link = transformed_pointcloud.makeShared();
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  const auto ego_rear_offset = context_->vehicle_info.rear_overhang_m;
+  const auto ego_side_offset = context_->vehicle_info.vehicle_width_m / 2.0;
+  const auto front_offset =
+    ego_front_offset + params_.front_distance_th.pointcloud + params_.hysteresis_distance;
+  const auto rear_offset =
+    ego_rear_offset + params_.back_distance_th.pointcloud + params_.hysteresis_distance;
+  const auto side_offset =
+    ego_side_offset + params_.side_distance_th.pointcloud + params_.hysteresis_distance;
+  const auto [min_x, max_x] = std::pair(-rear_offset, front_offset);
+  const auto [min_y, max_y] = std::pair(-side_offset, side_offset);
+  pointcloud_filter_->filter_pointcloud(
+    transformed_pointcloud, min_x, max_x, min_y, max_y, -10.0, 10.0);
+
+  // ProximityChecker expects PointXYZ; drop CPE fields after label/range filtering.
+  pcl::PointCloud<pcl::PointXYZ>::Ptr xyz_pointcloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::copyPointCloud(*transformed_pointcloud, *xyz_pointcloud);
+
+  checker_inputs.pointcloud_in_base_link = xyz_pointcloud;
 
   return checker_inputs;
 }
@@ -259,7 +299,7 @@ ProcessingResult SurroundObstacleStop::process(
     autoware_internal_planning_msgs::msg::SafetyFactorArray{});
 
   RCLCPP_WARN_THROTTLE(
-    get_node_ptr()->get_logger(), *get_clock(), 1000,
+    get_logger(), *get_clock(), 1000,
     "[TM SurroundObstacleStop] Replaced trajectory with zero velocity due to nearby obstacle.");
 
   publish_debug_string(true);
@@ -277,12 +317,12 @@ void SurroundObstacleStop::publish_debug_string(const bool is_active) const
   StringStamped string_stamp;
   string_stamp.stamp = get_clock()->now();
   string_stamp.data = ss.str();
-  pub_debug_text_->publish(string_stamp);
+  pub_debug_text_(string_stamp);
 }
 
-}  // namespace autoware::trajectory_modifier::plugin
+}  // namespace autoware::trajectory_processor::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_modifier::plugin::SurroundObstacleStop,
+  autoware::trajectory_processor::plugin::SurroundObstacleStop,
   autoware::trajectory_processor::plugin::TrajectoryProcessorPluginBase)

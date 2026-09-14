@@ -15,48 +15,13 @@
 #ifndef AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_PROCESSOR_PARAMETERS_HPP_
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_PROCESSOR_PARAMETERS_HPP_
 
-#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
-#include <autoware_trajectory_processor/trajectory_optimizer_param.hpp>
-
-#include <utility>
+#include <autoware_trajectory_processor/trajectory_processor_param.hpp>
 
 namespace autoware::trajectory_processor
 {
 
-/// @brief Compatibility parameter superset for modifier and optimizer plugins.
-///
-/// Keeping the generated structures intact preserves existing ROS names, validation, and defaults
-/// during the plugin API migration.
-struct TrajectoryProcessorParams : public trajectory_modifier_params::Params,
-                                   public trajectory_optimizer_node_params::Params
-{
-  /// @brief Construct both parameter groups with their generated defaults.
-  TrajectoryProcessorParams() = default;
-
-  /// @brief Construct the superset from modifier parameters.
-  explicit TrajectoryProcessorParams(trajectory_modifier_params::Params params)
-  : trajectory_modifier_params::Params{std::move(params)}
-  {
-  }
-
-  /// @brief Construct the superset from optimizer parameters.
-  explicit TrajectoryProcessorParams(trajectory_optimizer_node_params::Params params)
-  : trajectory_optimizer_node_params::Params{std::move(params)}
-  {
-  }
-
-  /// @brief Return the modifier portion of the common parameter snapshot.
-  [[nodiscard]] trajectory_modifier_params::Params & modifier_params() { return *this; }
-  /// @brief Return the modifier portion of the common parameter snapshot.
-  [[nodiscard]] const trajectory_modifier_params::Params & modifier_params() const { return *this; }
-  /// @brief Return the optimizer portion of the common parameter snapshot.
-  [[nodiscard]] trajectory_optimizer_node_params::Params & optimizer_params() { return *this; }
-  /// @brief Return the optimizer portion of the common parameter snapshot.
-  [[nodiscard]] const trajectory_optimizer_node_params::Params & optimizer_params() const
-  {
-    return *this;
-  }
-};
+/// @brief Unified generated parameter snapshot shared by every trajectory processor plugin.
+using TrajectoryProcessorParams = trajectory_processor_params::Params;
 
 }  // namespace autoware::trajectory_processor
 

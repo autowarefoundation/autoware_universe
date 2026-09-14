@@ -29,9 +29,9 @@ auto allow_dynamic_params(const rclcpp::NodeOptions & original_options)
 }
 
 FailSafeNode::FailSafeNode(const rclcpp::NodeOptions & options)
-: Node("fail_safe", allow_dynamic_params(options))
+: autoware::agnocast_wrapper::Node("fail_safe", allow_dynamic_params(options))
 {
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   adaptor.init_pub(pub_mrm_state_);
   adaptor.init_sub(sub_mrm_state_, this, &FailSafeNode::on_state);
   adaptor.init_srv(srv_mrm_description_, this, &FailSafeNode::on_mrm_description);

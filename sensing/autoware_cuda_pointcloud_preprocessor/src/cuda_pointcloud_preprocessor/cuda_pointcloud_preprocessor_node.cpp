@@ -16,7 +16,9 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/memory.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/queue_bounds.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/crop_box_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/diagnostics_base.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/distortion_corrector_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
@@ -34,7 +36,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <deque>
 #include <memory>
 #include <string>
@@ -44,6 +48,82 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 using sensor_msgs::msg::PointCloud2;
+namespace
+{
+
+std::size_t queue_size_from_frequency(const double max_frequency_hz)
+{
+  // TODO(mojomex): derive from a future pointcloud_frequency param instead of assuming 10 Hz.
+  constexpr double assumed_pointcloud_frequency_hz = 10.0;
+  if (max_frequency_hz <= 0.0) {
+    throw std::runtime_error("Queue frequency parameters must be positive");
+  }
+  return static_cast<std::size_t>(std::ceil(max_frequency_hz / assumed_pointcloud_frequency_hz)) +
+         1U;
+}
+
+class InputBoundsDiagnostics : public autoware::pointcloud_preprocessor::DiagnosticsBase
+{
+public:
+  InputBoundsDiagnostics(
+    const std::size_t input_points, const std::size_t max_input_points,
+    const std::size_t truncated_points, const std::size_t twist_queue_size,
+    const std::size_t max_twist_queue_size, const std::size_t dropped_twists,
+    const std::size_t imu_queue_size, const std::size_t max_imu_queue_size,
+    const std::size_t dropped_imus, const bool ring_overflow)
+  : input_points_(input_points),
+    max_input_points_(max_input_points),
+    truncated_points_(truncated_points),
+    twist_queue_size_(twist_queue_size),
+    max_twist_queue_size_(max_twist_queue_size),
+    dropped_twists_(dropped_twists),
+    imu_queue_size_(imu_queue_size),
+    max_imu_queue_size_(max_imu_queue_size),
+    dropped_imus_(dropped_imus),
+    ring_overflow_(ring_overflow)
+  {
+  }
+
+  void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const override
+  {
+    interface.add_key_value("Input point count", input_points_);
+    interface.add_key_value("Maximum input point count", max_input_points_);
+    interface.add_key_value("Truncated input point count", truncated_points_);
+    interface.add_key_value("Twist queue size", twist_queue_size_);
+    interface.add_key_value("Maximum twist queue size", max_twist_queue_size_);
+    interface.add_key_value("Dropped twist count", dropped_twists_);
+    interface.add_key_value("IMU queue size", imu_queue_size_);
+    interface.add_key_value("Maximum IMU queue size", max_imu_queue_size_);
+    interface.add_key_value("Dropped IMU count", dropped_imus_);
+    interface.add_key_value("Ring organization overflow", ring_overflow_);
+  }
+
+  [[nodiscard]] std::optional<std::pair<int, std::string>> evaluate_status() const override
+  {
+    if (truncated_points_ > 0 || dropped_twists_ > 0 || dropped_imus_ > 0 || ring_overflow_) {
+      return std::make_pair(
+        diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+        "[ERROR]: input bounds exceeded; truncated_points=" + std::to_string(truncated_points_) +
+          ", dropped_twists=" + std::to_string(dropped_twists_) + ", dropped_imus=" +
+          std::to_string(dropped_imus_) + ", ring_overflow=" + (ring_overflow_ ? "true" : "false"));
+    }
+    return std::nullopt;
+  }
+
+private:
+  std::size_t input_points_;
+  std::size_t max_input_points_;
+  std::size_t truncated_points_;
+  std::size_t twist_queue_size_;
+  std::size_t max_twist_queue_size_;
+  std::size_t dropped_twists_;
+  std::size_t imu_queue_size_;
+  std::size_t max_imu_queue_size_;
+  std::size_t dropped_imus_;
+  bool ring_overflow_;
+};
+
+}  // namespace
 
 CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   const rclcpp::NodeOptions & node_options)
@@ -62,6 +142,29 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   use_3d_undistortion_ = declare_parameter<bool>("use_3d_distortion_correction");
   use_imu_ = declare_parameter<bool>("use_imu");
   bool enable_ring_outlier_filter = declare_parameter<bool>("enable_ring_outlier_filter");
+  input_bounds_params_.max_input_point_count =
+    static_cast<std::size_t>(declare_parameter<int64_t>("max_input_point_count"));
+  input_bounds_params_.max_ring_count =
+    static_cast<int>(declare_parameter<int64_t>("max_ring_count"));
+  input_bounds_params_.max_points_per_ring =
+    static_cast<int>(declare_parameter<int64_t>("max_points_per_ring"));
+  const auto max_twist_frequency_hz = declare_parameter<double>("max_twist_frequency_hz");
+  const auto max_imu_frequency_hz = declare_parameter<double>("max_imu_frequency_hz");
+  input_bounds_params_.max_twist_subscriber_queue_size =
+    queue_size_from_frequency(max_twist_frequency_hz);
+  input_bounds_params_.max_imu_subscriber_queue_size =
+    queue_size_from_frequency(max_imu_frequency_hz);
+  // TODO(mojomex): equates to 1s of messages, should be made tighter in the future
+  input_bounds_params_.max_twist_queue_size =
+    static_cast<std::size_t>(std::ceil(max_twist_frequency_hz));
+  input_bounds_params_.max_imu_queue_size =
+    static_cast<std::size_t>(std::ceil(max_imu_frequency_hz));
+
+  if (
+    input_bounds_params_.max_input_point_count == 0 || input_bounds_params_.max_ring_count <= 0 ||
+    input_bounds_params_.max_points_per_ring <= 0) {
+    throw std::runtime_error("Pointcloud preprocessor capacity parameters must be positive");
+  }
 
   RingOutlierFilterParameters ring_outlier_filter_parameters;
   ring_outlier_filter_parameters.distance_ratio =
@@ -133,25 +236,28 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
     std::bind(&CudaPointcloudPreprocessorNode::pointcloudCallback, this, std::placeholders::_1),
     sub_options);
 
-  // Twist queue size needs to be larger than 'twist frequency' / 'pointcloud frequency'.
-  // To avoid individual tuning, a sufficiently large value is hard-coded.
-  // With 100, it can handle twist updates up to 1000Hz if the pointcloud is 10Hz.
-  const uint16_t TWIST_QUEUE_SIZE = 100;
   twist_sub_ = autoware_utils::InterProcessPollingSubscriber<
     geometry_msgs::msg::TwistWithCovarianceStamped, autoware_utils::polling_policy::All>::
-    create_subscription(this, "~/input/twist", rclcpp::QoS(TWIST_QUEUE_SIZE));
+    create_subscription(
+      this, "~/input/twist", rclcpp::QoS(input_bounds_params_.max_twist_subscriber_queue_size));
 
   if (use_imu_) {
     imu_sub_ = autoware_utils::InterProcessPollingSubscriber<
       sensor_msgs::msg::Imu, autoware_utils::polling_policy::All>::
-      create_subscription(this, "~/input/imu", rclcpp::QoS(TWIST_QUEUE_SIZE));
+      create_subscription(
+        this, "~/input/imu", rclcpp::QoS(input_bounds_params_.max_imu_subscriber_queue_size));
   }
 
   CudaPointcloudPreprocessor::UndistortionType undistortion_type =
     use_3d_undistortion_ ? CudaPointcloudPreprocessor::UndistortionType::Undistortion3D
                          : CudaPointcloudPreprocessor::UndistortionType::Undistortion2D;
 
-  cuda_pointcloud_preprocessor_ = std::make_unique<CudaPointcloudPreprocessor>();
+  const PreprocessorCapacity preprocessor_capacity{
+    input_bounds_params_.max_input_point_count, input_bounds_params_.max_ring_count,
+    input_bounds_params_.max_points_per_ring,
+    input_bounds_params_.max_twist_queue_size + input_bounds_params_.max_imu_queue_size};
+  cuda_pointcloud_preprocessor_ =
+    std::make_unique<CudaPointcloudPreprocessor>(preprocessor_capacity);
   cuda_pointcloud_preprocessor_->setRingOutlierFilterParameters(ring_outlier_filter_parameters);
   cuda_pointcloud_preprocessor_->setRingOutlierFilterActive(enable_ring_outlier_filter);
   cuda_pointcloud_preprocessor_->setCropBoxParameters(crop_box_parameters);
@@ -194,54 +300,14 @@ bool CudaPointcloudPreprocessorNode::getTransform(
   return true;
 }
 
-void CudaPointcloudPreprocessorNode::twistCallback(
+void CudaPointcloudPreprocessorNode::insertTwistMessage(
   const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg)
 {
-  while (!twist_queue_.empty()) {
-    // for replay rosbag
-    bool backwards_time_jump_detected =
-      rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(twist_msg.header.stamp);
-    bool is_queue_longer_than_1s =
-      rclcpp::Time(twist_queue_.front().header.stamp) <
-      rclcpp::Time(twist_msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
-
-    if (backwards_time_jump_detected) {
-      twist_queue_.clear();
-    } else if (is_queue_longer_than_1s) {
-      twist_queue_.pop_front();
-    } else {
-      break;
-    }
-  }
-
-  auto it = std::lower_bound(
-    twist_queue_.begin(), twist_queue_.end(), twist_msg.header.stamp,
-    [](const auto & twist, const auto & stamp) {
-      return rclcpp::Time(twist.header.stamp) < stamp;
-    });
-  twist_queue_.insert(it, twist_msg);
+  detail::insert_sorted(twist_queue_, twist_msg);
 }
 
-void CudaPointcloudPreprocessorNode::imuCallback(const sensor_msgs::msg::Imu & imu_msg)
+void CudaPointcloudPreprocessorNode::insertImuMessage(const sensor_msgs::msg::Imu & imu_msg)
 {
-  while (!angular_velocity_queue_.empty()) {
-    // for rosbag replay
-    bool backwards_time_jump_detected = rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
-                                        rclcpp::Time(imu_msg.header.stamp);
-
-    bool is_queue_longer_than_1s =
-      rclcpp::Time(angular_velocity_queue_.front().header.stamp) <
-      rclcpp::Time(imu_msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
-
-    if (backwards_time_jump_detected) {
-      angular_velocity_queue_.clear();
-    } else if (is_queue_longer_than_1s) {
-      angular_velocity_queue_.pop_front();
-    } else {
-      break;
-    }
-  }
-
   tf2::Transform imu_to_base_tf2{};
   getTransform(base_frame_, imu_msg.header.frame_id, &imu_to_base_tf2);
   geometry_msgs::msg::TransformStamped imu_to_base_msg;
@@ -254,12 +320,7 @@ void CudaPointcloudPreprocessorNode::imuCallback(const sensor_msgs::msg::Imu & i
   tf2::doTransform(angular_velocity, transformed_angular_velocity, imu_to_base_msg);
   transformed_angular_velocity.header = imu_msg.header;
 
-  auto it = std::lower_bound(
-    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), imu_msg.header.stamp,
-    [](const auto & angular_velocity, const auto & stamp) {
-      return rclcpp::Time(angular_velocity.header.stamp) < stamp;
-    });
-  angular_velocity_queue_.insert(it, transformed_angular_velocity);
+  detail::insert_sorted(angular_velocity_queue_, transformed_angular_velocity);
 }
 
 void CudaPointcloudPreprocessorNode::pointcloudCallback(
@@ -267,6 +328,13 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2) input_pointcloud_msg_ptr)
 {
   const auto & input_pointcloud_msg = *input_pointcloud_msg_ptr;
+  latest_input_bounds_status_ = {};
+  latest_input_bounds_status_.input_point_count =
+    static_cast<std::size_t>(input_pointcloud_msg.width) * input_pointcloud_msg.height;
+  latest_input_bounds_status_.truncated_point_count =
+    latest_input_bounds_status_.input_point_count > input_bounds_params_.max_input_point_count
+      ? latest_input_bounds_status_.input_point_count - input_bounds_params_.max_input_point_count
+      : 0U;
 
   if (!validatePointcloudLayout(input_pointcloud_msg)) {
     return;
@@ -338,20 +406,15 @@ void CudaPointcloudPreprocessorNode::updateTwistQueue(std::uint64_t first_point_
 {
   std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
     twist_sub_->take_data();
+
+  latest_input_bounds_status_.dropped_twist_count += detail::prepare_queue_update(
+    twist_queue_, twist_msgs, input_bounds_params_.max_twist_queue_size, first_point_stamp);
   for (const auto & msg : twist_msgs) {
-    twistCallback(*msg);
+    if (detail::is_backward_time_jump(twist_queue_, msg->header.stamp)) {
+      twist_queue_.clear();
+    }
+    insertTwistMessage(*msg);
   }
-
-  // Find the last twist message that is before the first point's timestamp
-  // and remove all older messages.
-  auto it = std::lower_bound(
-    twist_queue_.begin(), twist_queue_.end(), first_point_stamp,
-    [](const auto & twist, const std::uint64_t stamp) {
-      // To prevent potential precision loss, use nanoseconds
-      return rclcpp::Time(twist.header.stamp).nanoseconds() < stamp;
-    });
-
-  twist_queue_.erase(twist_queue_.begin(), it);
 }
 
 void CudaPointcloudPreprocessorNode::updateImuQueue(std::uint64_t first_point_stamp)
@@ -359,20 +422,15 @@ void CudaPointcloudPreprocessorNode::updateImuQueue(std::uint64_t first_point_st
   if (!imu_sub_) return;
 
   std::vector<sensor_msgs::msg::Imu::ConstSharedPtr> imu_msgs = imu_sub_->take_data();
+
+  latest_input_bounds_status_.dropped_imu_count += detail::prepare_queue_update(
+    angular_velocity_queue_, imu_msgs, input_bounds_params_.max_imu_queue_size, first_point_stamp);
   for (const auto & msg : imu_msgs) {
-    imuCallback(*msg);
+    if (detail::is_backward_time_jump(angular_velocity_queue_, msg->header.stamp)) {
+      angular_velocity_queue_.clear();
+    }
+    insertImuMessage(*msg);
   }
-
-  // Find the last angular velocity message that is before the first point's timestamp
-  // and remove all older messages.
-  auto it = std::lower_bound(
-    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), first_point_stamp,
-    [](const auto & angular_velocity, const std::uint64_t stamp) {
-      //  To prevent potential precision loss, use nanoseconds
-      return rclcpp::Time(angular_velocity.header.stamp).nanoseconds() < stamp;
-    });
-
-  angular_velocity_queue_.erase(angular_velocity_queue_.begin(), it);
 }
 
 std::optional<geometry_msgs::msg::TransformStamped>
@@ -435,11 +493,18 @@ void CudaPointcloudPreprocessorNode::publishDiagnostics(
 
   auto crop_box_diag =
     std::make_shared<autoware::pointcloud_preprocessor::CropBoxDiagnostics>(skipped_nan_count);
+  auto input_bounds_diag = std::make_shared<InputBoundsDiagnostics>(
+    latest_input_bounds_status_.input_point_count, input_bounds_params_.max_input_point_count,
+    latest_input_bounds_status_.truncated_point_count, twist_queue_.size(),
+    input_bounds_params_.max_twist_queue_size, latest_input_bounds_status_.dropped_twist_count,
+    angular_velocity_queue_.size(), input_bounds_params_.max_imu_queue_size,
+    latest_input_bounds_status_.dropped_imu_count, stats.ring_overflow);
 
   diagnostics_interface_->clear();
 
   std::vector<std::shared_ptr<const autoware::pointcloud_preprocessor::DiagnosticsBase>>
-    diagnostics = {latency_diag, pass_rate_diag, crop_box_diag, distortion_corrector_diag};
+    diagnostics = {
+      latency_diag, pass_rate_diag, crop_box_diag, distortion_corrector_diag, input_bounds_diag};
 
   int worst_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
   std::string message;

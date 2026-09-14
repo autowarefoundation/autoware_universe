@@ -5,6 +5,7 @@
   <description>autoware_camera_streampetr</description>
   <maintainer email="samratthapa120@gmail.com">samrat</maintainer>
   <maintainer email="kokseang.tan@tier4.jp">Kok Seang Tan</maintainer>
+  <maintainer email="yihsiang.fang@tier4.jp">Yi-Hsiang Fang</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
@@ -16,10 +17,13 @@
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>
   <depend>nav_msgs</depend>
+  <depend>perception_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>

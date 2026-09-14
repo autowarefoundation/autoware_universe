@@ -19,8 +19,8 @@
 
 #include <vector>
 
-using autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils::clamp_velocities;
-using autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils::set_max_velocity;
+using autoware::trajectory_processor::plugin::trajectory_velocity_optimizer_utils::clamp_velocities;
+using autoware::trajectory_processor::plugin::trajectory_velocity_optimizer_utils::set_max_velocity;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using trajectory_optimizer_test_utils::create_sample_trajectory;
 

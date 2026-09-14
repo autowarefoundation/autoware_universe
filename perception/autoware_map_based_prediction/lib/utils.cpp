@@ -29,6 +29,7 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <deque>
 #include <limits>
 #include <memory>
@@ -539,6 +540,37 @@ double lateral_distance_to_lanelet_bounds(
     distance = std::min(distance, bound_distance);
   }
   return distance;
+}
+
+double ObjectDecelerationParams::get(const uint8_t label) const
+{
+  const auto itr = per_label.find(label);
+  return itr != per_label.end() ? itr->second : 0.0;
+}
+
+double distance_to_stop_with_deceleration(const double speed, const double deceleration)
+{
+  if (speed <= 0.0) {
+    return 0.0;
+  }
+
+  if (deceleration >= 0.0) {
+    return std::numeric_limits<double>::infinity();
+  }
+
+  return (speed * speed) / (2.0 * -deceleration);
+}
+
+lanelet::BasicLineString2d to_linestring_2d(
+  const std::vector<geometry_msgs::msg::Pose> & path, const size_t last_idx)
+{
+  lanelet::BasicLineString2d linestring;
+  linestring.reserve(std::min(last_idx + 1, path.size()));
+  for (auto i = 0UL; i <= last_idx && i < path.size(); ++i) {
+    const auto & position = path.at(i).position;
+    linestring.emplace_back(position.x, position.y);
+  }
+  return linestring;
 }
 
 }  // namespace utils

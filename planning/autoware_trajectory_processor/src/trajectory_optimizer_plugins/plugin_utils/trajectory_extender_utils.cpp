@@ -22,7 +22,7 @@
 #include <cmath>
 #include <vector>
 
-namespace autoware::trajectory_optimizer::plugin::trajectory_extender_utils
+namespace autoware::trajectory_processor::plugin::trajectory_extender_utils
 {
 
 void add_ego_state_to_trajectory(
@@ -122,4 +122,4 @@ void expand_trajectory_with_ego_history(
   });
 }
 
-}  // namespace autoware::trajectory_optimizer::plugin::trajectory_extender_utils
+}  // namespace autoware::trajectory_processor::plugin::trajectory_extender_utils
