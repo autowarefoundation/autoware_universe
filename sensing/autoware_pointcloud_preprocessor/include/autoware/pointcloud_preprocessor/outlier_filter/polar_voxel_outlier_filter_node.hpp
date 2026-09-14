@@ -19,6 +19,7 @@
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -131,7 +132,7 @@ struct VoxelPointCounts
 
 enum class InputPointCloudFormat { PointXYZIRC, PointXYZIRCAEDT };
 
-class PolarVoxelOutlierFilterComponent : public autoware::pointcloud_preprocessor::Filter
+class PolarVoxelOutlierFilterComponent : public autoware::pointcloud_preprocessor::AgnocastFilter
 {
 public:
   explicit PolarVoxelOutlierFilterComponent(const rclcpp::NodeOptions & options);
@@ -325,17 +326,13 @@ protected:
   std::once_flag input_format_once_flag_;
 
   // Publishers and diagnostics
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr ratio_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr noise_cloud_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr low_visibility_voxels_pub_;
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr area_marker_pub_;
-  diagnostic_updater::Updater updater_;
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
-
-  // TODO(Koichi98): Remove once Filter base class supports agnocast_wrapper.
-  // cppcheck-suppress unknownMacro
-  AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) agnocast_sub_input_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float32Stamped) visibility_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float32Stamped) ratio_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::PointCloud2) noise_cloud_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::PointCloud2) low_visibility_voxels_pub_;
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::Marker) area_marker_pub_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater updater_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   // Diagnostic helper methods
   void calculate_visibility_metric(

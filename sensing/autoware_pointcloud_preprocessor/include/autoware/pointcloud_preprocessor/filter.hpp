@@ -70,12 +70,18 @@
 #include <sensor_msgs/msg/point_cloud2.h>
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 // Autoware utils
+#include <autoware/agnocast_wrapper/message_filters.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
@@ -85,6 +91,7 @@
 namespace autoware::pointcloud_preprocessor
 {
 namespace sync_policies = message_filters::sync_policies;
+namespace agnocast_mf = autoware::agnocast_wrapper::message_filters;
 
 /** \brief For parameter service callback */
 template <typename T>
@@ -100,10 +107,11 @@ bool get_param(const std::vector<rclcpp::Parameter> & p, const std::string & nam
   return false;
 }
 
-/** \brief @b Filter represents the base filter class. Some generic 3D operations that are
+/** \brief @b FilterBase represents the base filter class. Some generic 3D operations that are
  * applicable to all filters are defined here as static methods. \author Radu Bogdan Rusu
  */
-class Filter : public rclcpp::Node
+template <typename NodeT = rclcpp::Node>
+class FilterBase : public NodeT
 {
 public:
   using PointCloud2 = sensor_msgs::msg::PointCloud2;
@@ -124,28 +132,60 @@ public:
   using IndicesPtr = pcl::IndicesPtr;
   using IndicesConstPtr = pcl::IndicesConstPtr;
 
+  using PublisherPtr = decltype(std::declval<NodeT *>()->template create_publisher<PointCloud2>(
+    std::string{}, rclcpp::QoS(1)));
+
+  // True only for agnocast_wrapper::Node in a USE_AGNOCAST_ENABLED build: without that macro
+  // its create_publisher hands back the rclcpp publisher, so NodeT alone cannot tell the
+  // builds apart.
+  static constexpr bool kIsAgnocastNode =
+    !std::is_same_v<PublisherPtr, typename rclcpp::Publisher<PointCloud2>::SharedPtr>;
+
+  template <typename MessageT>
+  using MessageFiltersSubscriber = std::conditional_t<
+    kIsAgnocastNode, agnocast_mf::Subscriber<MessageT>,
+    message_filters::Subscriber<MessageT, NodeT>>;
+
+  template <template <typename...> class Policy, template <typename...> class AgnocastPolicy>
+  using SyncPolicy = std::conditional_t<
+    kIsAgnocastNode, agnocast_mf::Synchronizer<AgnocastPolicy<PointCloud2, PointIndices>>,
+    message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>>;
+
+  template <template <typename...> class Policy, template <typename...> class AgnocastPolicy>
+  using SyncPolicyArg = std::conditional_t<
+    kIsAgnocastNode, AgnocastPolicy<PointCloud2, PointIndices>, Policy<PointCloud2, PointIndices>>;
+
   using ExactTimeSyncPolicy =
-    message_filters::Synchronizer<sync_policies::ExactTime<PointCloud2, PointIndices>>;
+    SyncPolicy<sync_policies::ExactTime, agnocast_mf::sync_policies::ExactTime>;
   using ApproximateTimeSyncPolicy =
-    message_filters::Synchronizer<sync_policies::ApproximateTime<PointCloud2, PointIndices>>;
+    SyncPolicy<sync_policies::ApproximateTime, agnocast_mf::sync_policies::ApproximateTime>;
 
   PCL_MAKE_ALIGNED_OPERATOR_NEW
-  explicit Filter(
+  explicit FilterBase(
     const std::string & filter_name = "pointcloud_preprocessor_filter",
     const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
 protected:
+  using SubscriptionPtr =
+    decltype(std::declval<NodeT *>()->template create_subscription<PointCloud2>(
+      std::string{}, rclcpp::QoS(1), std::function<void(const PointCloud2ConstPtr)>{}));
+
+  using OutputMessagePtr = std::conditional_t<
+    kIsAgnocastNode, AUTOWARE_MESSAGE_UNIQUE_PTR(PointCloud2), std::unique_ptr<PointCloud2>>;
+
+  OutputMessagePtr allocate_output_message();
+
   /** \brief The input PointCloud2 subscriber. */
-  rclcpp::Subscription<PointCloud2>::SharedPtr sub_input_;
+  SubscriptionPtr sub_input_;
 
   /** \brief The output PointCloud2 publisher. */
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_output_;
+  PublisherPtr pub_output_;
 
   /** \brief The message filter subscriber for PointCloud2. */
-  message_filters::Subscriber<PointCloud2> sub_input_filter_;
+  MessageFiltersSubscriber<PointCloud2> sub_input_filter_;
 
   /** \brief The message filter subscriber for PointIndices. */
-  message_filters::Subscriber<PointIndices> sub_indices_filter_;
+  MessageFiltersSubscriber<PointIndices> sub_indices_filter_;
 
   /** \brief The desired user filter field name. */
   std::string filter_field_name_;
@@ -175,12 +215,12 @@ protected:
   std::mutex mutex_;
 
   /** \brief The diagnostic message */
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
+  std::unique_ptr<autoware_utils::BasicDiagnosticsInterface<NodeT>> diagnostics_interface_;
 
   /** \brief processing time publisher. **/
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::BasicDebugPublisher<NodeT>> debug_publisher_;
+  std::unique_ptr<autoware_utils::BasicPublishedTimePublisher<NodeT>> published_time_publisher_;
 
   /** \brief Virtual abstract filter method. To be implemented by every child.
    * \param input the input point cloud dataset.
@@ -212,7 +252,7 @@ protected:
   /** \brief PointCloud2 + Indices data callback. */
   virtual void input_indices_callback(
     const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices);
-  virtual bool convert_output_costly(std::unique_ptr<PointCloud2> & output);
+  virtual bool convert_output_costly(OutputMessagePtr & output);
 
   //////////////////////
   // from PCLNodelet //
@@ -244,16 +284,21 @@ protected:
    * versus an exact one (false by default). */
   bool approximate_sync_ = false;
 
+  /** \brief The wrapper node is the only one that can run on an AgnocastOnly executor, which
+   * never spins the rclcpp node ManagedTransformBuffer creates internally. Filters still
+   * instantiated with rclcpp::Node keep ManagedTransformBuffer and its transform caching. */
+  static constexpr bool kUseWrapperTf = std::is_same_v<NodeT, autoware::agnocast_wrapper::Node>;
+
+  std::unique_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_{nullptr};
+  std::unique_ptr<autoware::agnocast_wrapper::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
-  /** \brief Transform a pointcloud into target_frame via managed_tf_buffer_. Returns false on
-   * lookup failure. */
+  /** \brief Transform a pointcloud into target_frame. Returns false on lookup failure. */
   bool transform_pointcloud(
     const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & in,
     sensor_msgs::msg::PointCloud2 & out);
 
-  /** \brief Look up target_frame <- source_frame as an Eigen matrix at the given stamp, via
-   * managed_tf_buffer_. */
+  /** \brief Look up target_frame <- source_frame as an Eigen matrix at the given stamp. */
   std::optional<Eigen::Matrix4f> lookup_transform_matrix(
     const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & stamp);
 
@@ -446,12 +491,13 @@ private:
   std::shared_ptr<ExactTimeSyncPolicy> sync_input_indices_e_;
   std::shared_ptr<ApproximateTimeSyncPolicy> sync_input_indices_a_;
 
-  // Builds a Policy<PointCloud2, PointIndices> synchronizer over sub_input_filter_ /
+  // Builds a SyncPolicy<Policy, AgnocastPolicy> synchronizer over sub_input_filter_ /
   // sub_indices_filter_ and registers callback on it. Shared by the exact- and
-  // approximate-time branches of subscribe(), which otherwise only differ in this type.
-  template <template <typename...> class Policy, typename Callback>
-  std::shared_ptr<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>> make_sync(
-    Callback callback);
+  // approximate-time branches of subscribe(), which otherwise only differ in this policy pair.
+  template <
+    template <typename...> class Policy, template <typename...> class AgnocastPolicy,
+    typename Callback>
+  std::shared_ptr<SyncPolicy<Policy, AgnocastPolicy>> make_sync(Callback callback);
 
   /** \brief Get a matrix for conversion from the original frame to the target frame */
   bool calculate_transform_matrix(
@@ -465,6 +511,24 @@ private:
 
   void setup_tf();
 };
+
+/// The `rclcpp::Node` instantiation every filter node still on rclcpp derives from. A class rather
+/// than an alias: nodes in other namespaces write bare `: Filter(...)`, which resolves through
+/// the injected class name an alias does not have.
+class Filter : public FilterBase<rclcpp::Node>
+{
+public:
+  using FilterBase::FilterBase;
+};
+
+/// The `autoware::agnocast_wrapper::Node` instantiation migrated filter nodes derive from. A class
+/// rather than an alias for the same reason as `Filter`.
+class AgnocastFilter : public FilterBase<autoware::agnocast_wrapper::Node>
+{
+public:
+  using FilterBase::FilterBase;
+};
+
 }  // namespace autoware::pointcloud_preprocessor
 
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__FILTER_HPP_
