@@ -102,6 +102,12 @@ MIN_STEERING_CURVE_FACTOR = 0.2
 MPS_TO_MPH = 2.2369362920544
 MPS_TO_KMH = 3.6
 
+#: First-order steering lag time constant [s] used on CARLA 0.9.x. This restores the
+#: pre-0.10 default so a with_scenario-empty 0.9 run keeps its previous steering
+#: response; only 0.10+ uses the shorter steering_lag_time_constant param (see the
+#: PR #13319 review on carla_ros.py control_callback).
+LEGACY_STEERING_LAG_TAU = 0.2
+
 # One consistent snapshot of the ego actor, read under a single lock so that the
 # published status reports all describe the same simulation step.
 EgoState = namedtuple(
@@ -960,13 +966,16 @@ class carla_ros2_interface(object):
         """Time constant [s] of the first-order lag applied to the steer command."""
         return float(self.param_values.get("steering_lag_time_constant", self.tau))
 
-    def first_order_steering(self, steer_input):
+    def first_order_steering(self, steer_input, tau=None):
         """
         First order steering model.
 
         Gracefully handles:
         - Early control commands before first simulation tick (returns raw input)
         - Multiple commands in same CARLA tick (preserves filter state, no zero spike)
+
+        ``tau`` overrides the lag time constant [s]; when None the
+        steering_lag_time_constant param is used (the CARLA 0.10+ default).
 
         """
         # Guard against control commands arriving before first sensor callback
@@ -987,7 +996,8 @@ class carla_ros2_interface(object):
             return self.prev_steer_output
 
         # Normal case: time has advanced, apply low-pass filter
-        tau = self._steering_lag_time_constant()
+        if tau is None:
+            tau = self._steering_lag_time_constant()
         steer_output = self.prev_steer_output + (steer_input - self.prev_steer_output) * (
             dt / (tau + dt) if tau > 0.0 else 1.0
         )
@@ -1068,28 +1078,59 @@ class carla_ros2_interface(object):
             self._apply_min_positive_throttle(out_cmd, in_cmd)
             self._wake_sleeping_physics(out_cmd, in_cmd)
 
-            # steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter
-            # passes control_cmd.steering_tire_angle through), while
-            # VehicleControl.steer expects a fraction of the wheel's max steer
-            # angle in [-1, 1]. Normalize by the max wheel angle; the sign flips
-            # because Autoware is CCW-positive and CARLA CW-positive.
-            #
-            # The simulator then scales that fraction by the vehicle's
-            # steering_curve before turning the wheels, and CARLA 0.10 both ships
-            # a curve that halves the steering by ~11 mph and ignores writes that
-            # would flatten it. Divide the fraction by the same factor so the
-            # wheels reach the angle Autoware asked for: without this the ego gets
-            # about half the steering it commanded at driving speed and runs wide
-            # through every curve.
-            curve_factor = self._steering_curve_factor(self._ego_speed_mps())
-            curve_factor = max(curve_factor, MIN_STEERING_CURVE_FACTOR)
-            steer_norm = -in_cmd.actuation.steer_cmd / (
-                self._max_wheel_steer_angle_rad() * curve_factor
-            )
-            steer_norm = max(-1.0, min(1.0, steer_norm))
-            out_cmd.steer = self.first_order_steering(steer_norm)
+            # The steering-curve compensation and the short lag are only correct
+            # for the CARLA 0.10 (Chaos) placeholder physics; a 0.9.x run keeps
+            # the original curve-multiply model so with_scenario-empty 0.9 launches
+            # are unchanged (see the PR #13319 review).
+            if self.uses_chaos_physics:
+                out_cmd.steer = self._chaos_steer_cmd(in_cmd)
+            else:
+                out_cmd.steer = self._legacy_steer_cmd(in_cmd)
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
+
+    def _chaos_steer_cmd(self, in_cmd):
+        """Steer fraction for CARLA 0.10+ (Chaos physics). Needs _state_lock held.
+
+        steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter passes
+        control_cmd.steering_tire_angle through), while VehicleControl.steer
+        expects a fraction of the wheel's max steer angle in [-1, 1]. Normalize by
+        the max wheel angle; the sign flips because Autoware is CCW-positive and
+        CARLA CW-positive.
+
+        The simulator then scales that fraction by the vehicle's steering_curve
+        before turning the wheels, and CARLA 0.10 both ships a curve that halves
+        the steering by ~11 mph and ignores writes that would flatten it. Divide
+        the fraction by the same factor so the wheels reach the angle Autoware
+        asked for: without this the ego gets about half the steering it commanded
+        at driving speed and runs wide through every curve.
+        """
+        curve_factor = self._steering_curve_factor(self._ego_speed_mps())
+        curve_factor = max(curve_factor, MIN_STEERING_CURVE_FACTOR)
+        steer_norm = -in_cmd.actuation.steer_cmd / (
+            self._max_wheel_steer_angle_rad() * curve_factor
+        )
+        steer_norm = max(-1.0, min(1.0, steer_norm))
+        return self.first_order_steering(steer_norm)
+
+    def _legacy_steer_cmd(self, in_cmd):
+        """Steer fraction for CARLA 0.9.x (PhysX). Needs _state_lock held.
+
+        The pre-0.10 model: the steering_curve is a multiplier sampled at the
+        forward speed, and the longer LEGACY_STEERING_LAG_TAU lag is applied, so a
+        with_scenario-empty 0.9 run keeps its previous steering response.
+        """
+        steer_curve = self.physics_control.steering_curve
+        current_vel = self.ego_actor.get_velocity()
+        max_steer_ratio = numpy.interp(
+            abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
+        )
+        return (
+            self.first_order_steering(
+                -in_cmd.actuation.steer_cmd, tau=LEGACY_STEERING_LAG_TAU
+            )
+            * max_steer_ratio
+        )
 
     def _physics_max_wheel_steer_angle_rad(self):
         """Max steerable wheel angle [rad] reported by the vehicle physics.
