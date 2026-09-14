@@ -21,6 +21,7 @@
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <diagnostic_msgs/msg/key_value.hpp>
+#include <std_msgs/msg/header.hpp>
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
 
 #include <fstream>
@@ -82,6 +83,16 @@ diagnostic_msgs::msg::DiagnosticArray make_exposure_diagnostics(
   diagnostics.header.stamp = stamp;
   diagnostics.status.push_back(status);
   return diagnostics;
+}
+
+TrafficLightRecognitionResult make_empty_result(
+  const std::string & node_name, const std_msgs::msg::Header & image_header)
+{
+  TrafficLightRecognitionResult result;
+  result.merged_signals.header = image_header;
+  result.selected_rois.header = image_header;
+  result.diagnostics = make_exposure_diagnostics(node_name, image_header.stamp, false, false);
+  return result;
 }
 
 autoware::tensorrt_yolox::TrtYoloXDetectorConfig make_whole_image_detector_config(
@@ -209,12 +220,15 @@ tl::expected<TrafficLightRecognitionResult, std::string> TrafficLightRecognition
     return tl::make_unexpected(std::string("vector map is not set yet"));
   }
 
+  const auto map_based_result = map_based_detector_->detect(tf_buffer_, camera_info);
+  if (map_based_result.expect_rois.rois.empty()) {
+    return make_empty_result(diagnostics_node_name_, image.header);
+  }
+
   const auto detected = whole_image_detector_.detect(image);
   if (!detected) {
     return tl::make_unexpected("whole_image_detector failed: " + detected.error());
   }
-
-  const auto map_based_result = map_based_detector_->detect(tf_buffer_, camera_info);
 
   const auto selected_rois = select(
     detected->objects, map_based_result.rough_rois, map_based_result.expect_rois, camera_info);
