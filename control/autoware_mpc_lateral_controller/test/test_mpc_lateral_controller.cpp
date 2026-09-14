@@ -121,6 +121,52 @@ Trajectory arc_path(const double radius)
   return make_trajectory(std::move(points));
 }
 
+/// A path built to make every tuning parameter of the controller reach the command.
+/// It carries four features, each of which reaches a different group of parameters.
+///
+/// The path runs straight for three metres and then follows a circle of radius 30 m. The
+/// controller picks the weight set of each point of the prediction from the curvature
+/// there, so a path that is straight on one part and curved on another uses both sets in
+/// the same cycle.
+///
+/// The target speed steps up part way along, which is what makes the controller smooth the
+/// speed of the reference. A path whose target speed already matches the measured speed
+/// leaves that smoothing with nothing to do.
+///
+/// The path is displaced from the map origin, where the ego stays, so the controller sees
+/// a lateral and a heading error. Without an error the optimisation returns the
+/// feed-forward angle and the weights do not reach the command at all.
+Trajectory tuning_probe_path()
+{
+  constexpr double radius = 30.0;
+  constexpr double straight_length = 3.0;
+  constexpr double lateral_error = 0.5;
+  constexpr double heading_error = 0.1;
+  constexpr double speed_before_step = 3.0;
+  constexpr double speed_after_step = 12.0;
+  constexpr double step_distance = 4.0;
+
+  std::vector<TrajectoryPoint> points;
+  for (double distance = -3.0; distance <= 60.0; distance += 0.25) {
+    const double angle = distance < straight_length ? 0.0 : (distance - straight_length) / radius;
+    const double x =
+      distance < straight_length ? distance : straight_length + radius * std::sin(angle);
+    const double y = distance < straight_length ? 0.0 : radius * (1.0 - std::cos(angle));
+
+    // Move the path away from the ego rather than the ego away from the path, so that the
+    // ego pose stays where every other test in this file keeps it.
+    const double placed_x = x * std::cos(heading_error) + y * std::sin(heading_error);
+    const double placed_y =
+      -x * std::sin(heading_error) + y * std::cos(heading_error) - lateral_error;
+
+    auto point = make_point(placed_x, placed_y, angle - heading_error);
+    point.longitudinal_velocity_mps =
+      static_cast<float>(distance < step_distance ? speed_before_step : speed_after_step);
+    points.push_back(point);
+  }
+  return make_trajectory(std::move(points));
+}
+
 /// A path whose points carry a time_from_start. The temporal reference mode requires those
 /// times to increase along the path and rejects the path when they do not.
 Trajectory straight_path_with_time_from_start(const bool increasing)
@@ -233,6 +279,10 @@ struct ControllerOptions
   /// Lets the controller apply the steering offset it is given. With this setting off, the
   /// offset is dropped and never reaches the command.
   bool enable_auto_steering_offset_removal = true;
+
+  /// Values written over the ones the shipped parameter files carry. A test that has to
+  /// tell one tuning parameter from another gives each of them a different value here.
+  std::vector<rclcpp::Parameter> tuning;
 };
 
 class MpcLateralControllerTest : public ::testing::Test
@@ -371,6 +421,10 @@ protected:
     // Every controller reads a simulated clock, so a test sets the time itself and no
     // result depends on how fast the machine runs.
     options.append_parameter_override("use_sim_time", true);
+
+    for (const auto & parameter : controller_options.tuning) {
+      options.parameter_overrides().push_back(parameter);
+    }
 
     return options;
   }
@@ -561,12 +615,14 @@ TEST_P(MpcLateralControllerModelTest, RightCurveCommandsNegativeSteering)
   EXPECT_LT(output.control_cmd.steering_tire_angle, 0.0f);
 }
 
-/// A vehicle of wheelbase L held at a steering angle drives a circle, and the radius of
-/// that circle is L / tan(angle). A vehicle already on a circle of radius R therefore
-/// stays on it at one angle only, atan(L / R); every other angle takes it off the circle.
-/// That angle is what the controller has to command once the vehicle sits on the circle
-/// and its steering has reached the commanded angle. The two tests below check it for the
-/// two vehicle models that describe the vehicle by its geometry alone.
+/// These two tests check steering angle more precisely in kinetics models
+/// A vehicle of wheelbase L held at a steering angle drives a circle of radius
+/// L / tan(angle), so a vehicle already on a circle of radius R stays on it at one angle
+/// only, atan(L / R). That is the angle to command once the vehicle sits on the circle and
+/// its steering has reached the commanded angle.
+///
+/// These tests don't check the gains(i.e. mpc_weight_*) because the optimization reaches a cost of
+/// zero regardless of them.
 ///
 /// The dynamics model is intentionally excluded: its calculation nature requires a simulated
 /// vehicle and thus it's out of scope of unit test.
@@ -592,6 +648,91 @@ TEST_F(MpcLateralControllerTest, KinematicsNoDelayModelSteersAnArcAtTheAngleTheR
 
   const double angle_holding_the_circle = std::atan(wheel_base / arc_radius);
   EXPECT_NEAR(command, angle_holding_the_circle, arc_relative_tolerance * angle_holding_the_circle);
+}
+
+/// Every value the controller reads to tune the optimisation has to reach the command.
+/// This test gives each of them a value of its own and pins the command that follows, so
+/// that a value which stops reaching the command, or which is read into the wrong field,
+/// changes the result.
+///
+/// The expected angles below carry no meaning of their own. They are what this controller
+/// returns today, recorded so that a change becomes visible.
+///
+/// Two values do not reach the command. low_curvature_weight.steer_rate and
+/// low_curvature_weight.steer_acc are declared as parameters and can be set, but the code
+/// that builds the weight on the steering rate and on the steering acceleration reads the
+/// nominal pair whatever the curvature is, so nothing reads the two below the threshold.
+TEST_F(MpcLateralControllerTest, EveryTuningParameterReachesTheCommand)
+{
+  ControllerOptions options;
+  options.tuning = {
+    // A different value for each, so that reading one into the field of another changes
+    // the command.
+    rclcpp::Parameter("mpc_weight_lat_error", 0.11),
+    rclcpp::Parameter("mpc_weight_heading_error", 0.22),
+    rclcpp::Parameter("mpc_weight_heading_error_squared_vel", 0.33),
+    rclcpp::Parameter("mpc_weight_steering_input", 0.44),
+    rclcpp::Parameter("mpc_weight_steering_input_squared_vel", 0.55),
+    rclcpp::Parameter("mpc_weight_lat_jerk", 0.66),
+    // The weight on the steering rate is divided by the square of the control period and
+    // the one on the steering acceleration by its fourth power, so a value of the size the
+    // others carry would raise these two terms above every other term by six orders of
+    // magnitude and leave the command at zero. Both stay near the size the shipped files
+    // give them.
+    rclcpp::Parameter("mpc_weight_steer_rate", 1.0e-3),
+    rclcpp::Parameter("mpc_weight_steer_acc", 3.0e-6),
+    rclcpp::Parameter("mpc_weight_terminal_lat_error", 0.99),
+    rclcpp::Parameter("mpc_weight_terminal_heading_error", 1.11),
+    rclcpp::Parameter("mpc_low_curvature_weight_lat_error", 1.22),
+    rclcpp::Parameter("mpc_low_curvature_weight_heading_error", 1.33),
+    rclcpp::Parameter("mpc_low_curvature_weight_heading_error_squared_vel", 1.44),
+    rclcpp::Parameter("mpc_low_curvature_weight_steering_input", 1.55),
+    rclcpp::Parameter("mpc_low_curvature_weight_steering_input_squared_vel", 1.66),
+    rclcpp::Parameter("mpc_low_curvature_weight_lat_jerk", 1.77),
+    rclcpp::Parameter("vehicle_model_steer_tau", 0.23),
+    rclcpp::Parameter("mpc_prediction_dt", 0.09),
+    rclcpp::Parameter("input_delay", 0.15),
+    rclcpp::Parameter("mpc_zero_ff_steer_deg", 0.4),
+    rclcpp::Parameter("mpc_min_prediction_length", 4.3),
+    rclcpp::Parameter("mpc_velocity_time_constant", 2.5),
+    rclcpp::Parameter("mpc_acceleration_limit", 1.9),
+    // The straight part of the path sits below this threshold and the curved part above
+    // it, so the controller uses both weight sets within one prediction. The shipped value
+    // is zero, which no curvature is below, so the set below the threshold is never used.
+    rclcpp::Parameter("mpc_low_curvature_thresh_curvature", 0.02),
+    // A short prediction gives the weights on its last point a share of the command large
+    // enough to see. Over the shipped fifty points that share falls to a ten thousandth of
+    // the command, which a float no longer separates.
+    rclcpp::Parameter("mpc_prediction_horizon", 10),
+    // The shipped solver stops at a tolerance, which leaves the last digits of its answer
+    // free to move between releases of that solver and between machines. The other solver
+    // the controller offers returns the answer of the same cost function directly, which
+    // is what a recorded value needs. It also ignores the cap on how far the command may
+    // move during one control period, and with the shipped cap that cap rather than the
+    // cost function would decide the command of the first cycle.
+    rclcpp::Parameter("qp_solver_type", std::string("unconstraint_fast")),
+  };
+  // The controller predicts over the larger of mpc_prediction_dt and a step it derives
+  // from mpc_min_prediction_length, so one cycle only shows whichever of the two is
+  // larger. The first command below leaves the derived step larger, which is the case the
+  // shipped values give, and the second raises mpc_prediction_dt above it.
+  ControllerOptions with_a_longer_step = options;
+  for (auto & parameter : with_a_longer_step.tuning) {
+    if (parameter.get_name() == "mpc_prediction_dt") {
+      parameter = rclcpp::Parameter("mpc_prediction_dt", 0.5);
+    }
+  }
+  auto controller = make_controller(options);
+  auto controller_with_a_longer_step = make_controller(with_a_longer_step);
+  const auto input = Input().following(tuning_probe_path()).driving_at(3.0);
+
+  advance_clock(ctrl_period);
+  const auto command = controller->run(input).control_cmd.steering_tire_angle;
+  const auto command_with_a_longer_step =
+    controller_with_a_longer_step->run(input).control_cmd.steering_tire_angle;
+
+  EXPECT_FLOAT_EQ(command, -0.002773088f);
+  EXPECT_FLOAT_EQ(command_with_a_longer_step, -0.0034486512f);
 }
 
 /// use_steer_prediction selects where the optimisation gets its initial angle. One source
