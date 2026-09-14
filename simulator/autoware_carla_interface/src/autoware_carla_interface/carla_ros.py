@@ -1126,9 +1126,7 @@ class carla_ros2_interface(object):
             abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
         )
         return (
-            self.first_order_steering(
-                -in_cmd.actuation.steer_cmd, tau=LEGACY_STEERING_LAG_TAU
-            )
+            self.first_order_steering(-in_cmd.actuation.steer_cmd, tau=LEGACY_STEERING_LAG_TAU)
             * max_steer_ratio
         )
 
