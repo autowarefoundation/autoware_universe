@@ -664,7 +664,9 @@ bool NetMonitor::connect_service()
 
   // Connect socket
   boost::system::error_code error_code;
-  error_code = socket_->connect(endpoint, error_code);
+  // The error code set to the argument "error_code" is also returned as the return value.
+  // The return value is deprecated in Boost.Asio and will become void in the future.
+  socket_->connect(endpoint, error_code);  // NOLINT(bugprone-unused-return-value)
 
   if (error_code) {
     RCLCPP_ERROR_ONCE(get_logger(), "Failed to connect socket. %s", error_code.message().c_str());
