@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_processor/docs/continuous_jerk_filter/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_modifier/docs/qp_smoother/">
       
       
-        <link rel="prev" href="../TrafficLightStop/">
+        <link rel="prev" href="../mpt_optimizer/">
       
       
-        <link rel="next" href="../kinematic_feasibility_enforcer/">
+        <link rel="next" href="../temporal_mpt_optimizer/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Continuous Jerk Filter - Autoware Universe Documentation</title>
+        <title>QP-Based Trajectory Smoother - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#continuous-jerk-filter" class="md-skip">
+        <a href="#qp-based-trajectory-smoother" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Continuous Jerk Filter
+              QP-Based Trajectory Smoother
             
           </span>
         </div>
@@ -14823,7 +14823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../autoware_trajectory_modifier" class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -22631,22 +22631,33 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-overview-introduction" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Overview Introduction
+        Overview
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="1. Overview Introduction">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mathematical-formulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mathematical Formulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mathematical Formulation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#decision-variables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Features
+        Decision Variables
       
     </span>
   </a>
@@ -22654,10 +22665,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#design-philosophy" class="md-nav__link">
+  <a href="#objective-function" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Design Philosophy
+        Objective Function
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constraints
       
     </span>
   </a>
@@ -22670,22 +22692,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-mathematical-formulation" class="md-nav__link">
+  <a href="#velocity-based-fidelity-weighting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Mathematical Formulation
+        Velocity-Based Fidelity Weighting
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="2. Mathematical Formulation">
+    <nav class="md-nav" aria-label="Velocity-Based Fidelity Weighting">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#21-optimization-variables" class="md-nav__link">
+  <a href="#motivation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.1 Optimization Variables
+        Motivation
       
     </span>
   </a>
@@ -22693,10 +22715,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#22-objective-function" class="md-nav__link">
+  <a href="#sigmoid-weight-function" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.2 Objective Function
+        Sigmoid Weight Function
       
     </span>
   </a>
@@ -22704,21 +22726,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#23-constraints" class="md-nav__link">
+  <a href="#weight-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.3 Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#24-stop-point-detection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.4 Stop Point Detection
+        Weight Behavior
       
     </span>
   </a>
@@ -22731,22 +22742,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-class-structures" class="md-nav__link">
+  <a href="#stop-point-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Class Structures
+        Stop Point Handling
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="3. Class Structures">
+    <nav class="md-nav" aria-label="Stop Point Handling">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#31-continuousjerksmootherparams" class="md-nav__link">
+  <a href="#hard-position-constraint" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.1 ContinuousJerkSmootherParams
+        Hard Position Constraint
       
     </span>
   </a>
@@ -22754,10 +22765,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#32-continuousjerksmoother-class" class="md-nav__link">
+  <a href="#velocity-profile-preservation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.2 ContinuousJerkSmoother Class
+        Velocity Profile Preservation
       
     </span>
   </a>
@@ -22770,22 +22781,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-implementation-details" class="md-nav__link">
+  <a href="#post-processing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Implementation Details
+        Post-Processing
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="4. Implementation Details">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#41-qp-problem-setup" class="md-nav__link">
+  <a href="#core-optimization-weights" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4.1 QP Problem Setup
+        Core Optimization Weights
       
     </span>
   </a>
@@ -22793,10 +22815,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#42-variable-indexing" class="md-nav__link">
+  <a href="#velocity-based-fidelity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4.2 Variable Indexing
+        Velocity-Based Fidelity
       
     </span>
   </a>
@@ -22804,10 +22826,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#43-error-handling" class="md-nav__link">
+  <a href="#point-constraints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4.3 Error Handling
+        Point Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solver-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solver Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#orientation-preservation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orientation Preservation
       
     </span>
   </a>
@@ -22820,10 +22864,154 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-usage-example" class="md-nav__link">
+  <a href="#usage-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Usage Example
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-disable-velocity-based-fidelity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Disable Velocity-Based Fidelity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-tune-velocity-threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Tune Velocity Threshold
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-more-aggressive-low-speed-smoothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3: More Aggressive Low-Speed Smoothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-4-sharper-transition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 4: Sharper Transition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-5-constrain-only-first-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 5: Constrain Only First Point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-6-constrain-last-2-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 6: Constrain Last 2 Points
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-7-preserve-larger-initial-region" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 7: Preserve Larger Initial Region
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debugging
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Debugging">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#view-debug-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View Debug Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-parameter-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check Parameter Values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitor-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitor Performance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
       
     </span>
   </a>
@@ -22831,21 +23019,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-integration-with-trajectory-optimizer" class="md-nav__link">
+  <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Integration with Trajectory Optimizer
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-performance-considerations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. Performance Considerations
+        References
       
     </span>
   </a>
@@ -22872,204 +23049,251 @@
   
 
 
-<div><h1 id="continuous-jerk-filter">Continuous Jerk Filter<a class="headerlink" href="#continuous-jerk-filter" title="Permanent link">#</a></h1>
-<h2 id="1-overview-introduction">1. Overview Introduction<a class="headerlink" href="#1-overview-introduction" title="Permanent link">#</a></h2>
-<p>The <strong>Continuous Jerk Smoother</strong> provides jerk-constrained velocity smoothing for neural network output trajectories, ensuring kinematic feasibility while maintaining smooth motion profiles.</p>
-<h3 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">#</a></h3>
+<div><h1 id="qp-based-trajectory-smoother">QP-Based Trajectory Smoother<a class="headerlink" href="#qp-based-trajectory-smoother" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>The QP (Quadratic Programming) smoother is a plugin in the trajectory optimizer that provides optimization-based trajectory smoothing using the OSQP solver. It smooths the geometric path (x,y positions) while maintaining path fidelity to the original trajectory from the planner.</p>
+<h2 id="mathematical-formulation">Mathematical Formulation<a class="headerlink" href="#mathematical-formulation" title="Permanent link">#</a></h2>
+<h3 id="decision-variables">Decision Variables<a class="headerlink" href="#decision-variables" title="Permanent link">#</a></h3>
+<p>The optimization operates on 2D path positions:</p>
+<div class="highlight"><pre><span></span><code>x = [x_0, y_0, x_1, y_1, ..., x_{N-1}, y_{N-1}]
+</code></pre></div>
+<p>where N is the number of trajectory points.</p>
+<h3 id="objective-function">Objective Function<a class="headerlink" href="#objective-function" title="Permanent link">#</a></h3>
+<p>The optimizer minimizes a weighted combination of two terms:</p>
+<div class="highlight"><pre><span></span><code>minimize: J = J_smoothness + J_fidelity
+</code></pre></div>
+<h4 id="smoothness-term">Smoothness Term<a class="headerlink" href="#smoothness-term" title="Permanent link">#</a></h4>
+<p>Minimizes path curvature using second-order finite differences:</p>
+<div class="highlight"><pre><span></span><code>J_smoothness = w_smoothness * Σ ||(p_{i+1} - 2*p_i + p_{i-1})||²
+</code></pre></div>
+<p>This term is scaled by <code>1/dt²</code> for velocity-aware smoothing.</p>
+<h4 id="fidelity-term">Fidelity Term<a class="headerlink" href="#fidelity-term" title="Permanent link">#</a></h4>
+<p>Keeps the smoothed path close to the original trajectory:</p>
+<div class="highlight"><pre><span></span><code>J_fidelity = Σ w_i * ||p_i - p_i^orig||²
+</code></pre></div>
+<p>where <code>w_i</code> is the per-point fidelity weight (see Velocity-Based Fidelity section).</p>
+<h3 id="constraints">Constraints<a class="headerlink" href="#constraints" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Jerk-constrained optimization</strong>: Enforces jerk limits for comfortable passenger experience</li>
-<li><strong>Stop point detection</strong>: Automatically detects and handles zero-velocity points in trajectories</li>
-<li><strong>Reference tracking</strong>: Tracks input trajectory velocities and accelerations as soft constraints</li>
-<li><strong>Hard constraint enforcement</strong>: Enforces velocity upper bounds (including lateral acceleration limits)</li>
-<li><strong>QP-based formulation</strong>: Uses quadratic programming for efficient optimization</li>
+<li><strong>Start points</strong>: Configurable number of points from trajectory start are fixed (controlled by <code>num_constrained_points_start</code> parameter, default: 3)</li>
+<li><strong>End points</strong>: Configurable number of points from trajectory end are fixed (controlled by <code>num_constrained_points_end</code> parameter, default: 0)</li>
 </ul>
-<h3 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">#</a></h3>
-<p>The smoother is adapted from <code>JerkFilteredSmoother</code> but specifically designed for <strong>neural network output paths</strong>. It optimizes velocity profiles while respecting acceleration and jerk constraints, making it suitable for autonomous driving applications where smooth motion is critical.</p>
-<h2 id="2-mathematical-formulation">2. Mathematical Formulation<a class="headerlink" href="#2-mathematical-formulation" title="Permanent link">#</a></h2>
-<h3 id="21-optimization-variables">2.1 Optimization Variables<a class="headerlink" href="#21-optimization-variables" title="Permanent link">#</a></h3>
-<p>The optimization uses the following variables for N trajectory points:</p>
-<div class="arithmatex">\[
-x = \begin{bmatrix}
-  b[0], b[1], ..., b[N-1], \\
-  a[0], a[1], ..., a[N-1], \\
-  \delta[0], ..., \delta[N-1], \\
-  \sigma[0], \sigma[1], ..., \sigma[N-1], \\
-  \gamma[0], \gamma[1], ..., \gamma[N-1]
-\end{bmatrix}
-\]</div>
-<p>Where:</p>
+<h2 id="velocity-based-fidelity-weighting">Velocity-Based Fidelity Weighting<a class="headerlink" href="#velocity-based-fidelity-weighting" title="Permanent link">#</a></h2>
+<h3 id="motivation">Motivation<a class="headerlink" href="#motivation" title="Permanent link">#</a></h3>
+<p>At low speeds, trajectory noise from the planner can cause jittery behavior. The velocity-based fidelity feature addresses this by:</p>
 <ul>
-<li><span class="arithmatex">\(b[i] = v[i]^2\)</span> (velocity squared)</li>
-<li><span class="arithmatex">\(a[i]\)</span> = acceleration at point i</li>
-<li><span class="arithmatex">\(\delta[i]\)</span>, <span class="arithmatex">\(\sigma[i]\)</span>, <span class="arithmatex">\(\gamma[i]\)</span> = slack variables for soft constraints</li>
+<li><strong>Low speeds</strong>: Lower fidelity weight → more aggressive smoothing.</li>
+<li><strong>High speeds</strong>: Higher fidelity weight → preserve planner intent.</li>
 </ul>
-<h3 id="22-objective-function">2.2 Objective Function<a class="headerlink" href="#22-objective-function" title="Permanent link">#</a></h3>
-<p>The optimization minimizes a weighted sum of several objectives:</p>
-<h4 id="221-jerk-minimization">2.2.1 Jerk Minimization<a class="headerlink" href="#221-jerk-minimization" title="Permanent link">#</a></h4>
-<p>Minimizes the squared jerk along the trajectory:</p>
-<div class="arithmatex">\[
-J_{jerk} = \sum_{i} w_{jerk} \cdot \left(\frac{a[i+1] - a[i]}{\Delta s} \cdot v_{ref}[i]\right)^2 \cdot \Delta s
-\]</div>
-<p>Where:</p>
+<h3 id="sigmoid-weight-function">Sigmoid Weight Function<a class="headerlink" href="#sigmoid-weight-function" title="Permanent link">#</a></h3>
+<p>Per-point fidelity weights are computed using a sigmoid function:</p>
+<div class="highlight"><pre><span></span><code>w_i = w_min + (w_max - w_min) * σ(k * (|v_i| - v_th))
+
+where σ(x) = 1 / (1 + exp(-x))
+</code></pre></div>
+<p><strong>Parameters:</strong></p>
 <ul>
-<li><span class="arithmatex">\(w_{jerk}\)</span> = jerk weight parameter</li>
-<li><span class="arithmatex">\(\Delta s\)</span> = distance between consecutive points</li>
-<li><span class="arithmatex">\(v_{ref}[i]\)</span> = reference velocity at segment i</li>
+<li><code>v_th</code>: Velocity threshold at sigmoid midpoint (default: 0.3 m/s)</li>
+<li><code>k</code>: Sigmoid sharpness (default: 50.0, higher = sharper transition)</li>
+<li><code>w_min</code>: Minimum weight at very low speeds (default: 0.01)</li>
+<li><code>w_max</code>: Maximum weight at high speeds (default: 1.0)</li>
 </ul>
-<h4 id="222-velocity-tracking">2.2.2 Velocity Tracking<a class="headerlink" href="#222-velocity-tracking" title="Permanent link">#</a></h4>
-<p>Tracks reference velocities from input trajectory:</p>
-<div class="arithmatex">\[
-J_{vel} = \sum_{i} w_{vel} \cdot (b[i] - v_{ref}[i]^2)^2
-\]</div>
-<h4 id="223-acceleration-tracking">2.2.3 Acceleration Tracking<a class="headerlink" href="#223-acceleration-tracking" title="Permanent link">#</a></h4>
-<p>Tracks reference accelerations from input trajectory:</p>
-<div class="arithmatex">\[
-J_{accel} = \sum_{i} w_{accel} \cdot (a[i] - a_{ref}[i])^2
-\]</div>
-<h4 id="224-slack-variable-penalties">2.2.4 Slack Variable Penalties<a class="headerlink" href="#224-slack-variable-penalties" title="Permanent link">#</a></h4>
-<p>Penalizes constraint violations:</p>
-<div class="arithmatex">\[
-J_{slack} = \sum_{i} (w_v \cdot \delta[i]^2 + w_a \cdot \sigma[i]^2 + w_j \cdot \gamma[i]^2)
-\]</div>
-<h3 id="23-constraints">2.3 Constraints<a class="headerlink" href="#23-constraints" title="Permanent link">#</a></h3>
-<h4 id="231-velocity-upper-bound-soft">2.3.1 Velocity Upper Bound (Soft)<a class="headerlink" href="#231-velocity-upper-bound-soft" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-0 \leq b[i] - \delta[i] \leq v_{max}[i]^2
-\]</div>
-<p>Where <span class="arithmatex">\(<span class="arithmatex">\(v_{max}[i]\)</span>\)</span> includes lateral acceleration limits.</p>
-<h4 id="232-acceleration-limits-soft">2.3.2 Acceleration Limits (Soft)<a class="headerlink" href="#232-acceleration-limits-soft" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-a_{min} \leq a[i] - \sigma[i] \leq a_{max}
-\]</div>
-<h4 id="233-jerk-limits-soft">2.3.3 Jerk Limits (Soft)<a class="headerlink" href="#233-jerk-limits-soft" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-j_{min} \cdot \Delta s \leq (a[i+1] - a[i]) \cdot v_{ref}[i] - \gamma[i] \cdot \Delta s \leq j_{max} \cdot \Delta s
-\]</div>
-<h4 id="234-dynamics-constraint-hard">2.3.4 Dynamics Constraint (Hard)<a class="headerlink" href="#234-dynamics-constraint-hard" title="Permanent link">#</a></h4>
-<p>Relates velocity squared to acceleration:</p>
-<div class="arithmatex">\[
-\frac{b[i+1] - b[i]}{\Delta s} = 2 \cdot a[i]
-\]</div>
-<p>Derived from kinematic relation: <span class="arithmatex">\(\frac{d(v^2)}{ds} = 2a\)</span></p>
-<h4 id="235-initial-conditions-hard">2.3.5 Initial Conditions (Hard)<a class="headerlink" href="#235-initial-conditions-hard" title="Permanent link">#</a></h4>
-<div class="arithmatex">\[
-b[0] = v_0^2
-\]</div>
-<div class="arithmatex">\[
-a[0] = a_0
-\]</div>
-<h3 id="24-stop-point-detection">2.4 Stop Point Detection<a class="headerlink" href="#24-stop-point-detection" title="Permanent link">#</a></h3>
-<p>The optimizer automatically detects stop points (zero velocity) and:</p>
+<p><strong>Key Properties:</strong></p>
+<ul>
+<li>Uses absolute velocity magnitude to handle reverse driving</li>
+<li>Smooth continuous transition (no discontinuities)</li>
+<li>Velocity threshold defines where weight is halfway between min/max</li>
+<li>Sharpness controls how rapidly weight changes near threshold</li>
+</ul>
+<h3 id="weight-behavior">Weight Behavior<a class="headerlink" href="#weight-behavior" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>weight
+1.0 |           _______  (high speed, preserve path)
+    |          /
+    |         /
+0.01|_______/            (low speed, allow smoothing)
+      0    v_th      v_max
+           (0.3 m/s)
+             speed
+</code></pre></div>
+<h2 id="stop-point-handling">Stop Point Handling<a class="headerlink" href="#stop-point-handling" title="Permanent link">#</a></h2>
+<p>When <code>TrajectoryPointFixer</code> detects a deceleration-to-stop zone, it populates the shared
+<code>SemanticSpeedTracker</code> with the range of points covering the deceleration. The QP smoother
+uses this information in two ways:</p>
+<h3 id="hard-position-constraint">Hard Position Constraint<a class="headerlink" href="#hard-position-constraint" title="Permanent link">#</a></h3>
+<p>Each detected stop point is added as an equality constraint in the OSQP problem, pinning its
+position regardless of the smoothness weight:</p>
+<div class="highlight"><pre><span></span><code>p[stop_idx] = p[stop_idx]^orig    (hard constraint)
+</code></pre></div>
+<p>This prevents the smoother from displacing the vehicle's intended stop position.</p>
+<h3 id="velocity-profile-preservation">Velocity Profile Preservation<a class="headerlink" href="#velocity-profile-preservation" title="Permanent link">#</a></h3>
+<p>After the geometric velocity recalculation and moving average, the planner's original velocity
+profile is restored for all points in detected stop approach ranges:</p>
+<div class="highlight"><pre><span></span><code>v[i] = input_trajectory[i].v    (for i in stop approach range)
+v[stop_idx] = 0.0               (stop forced to zero unconditionally)
+</code></pre></div>
+<p>This ensures the downstream jerk smoother (<code>TrajectoryVelocityOptimizer</code>) receives the correct
+<code>v_ref</code> profile and can plan a kinematically feasible deceleration to zero.</p>
+<h2 id="post-processing">Post-Processing<a class="headerlink" href="#post-processing" title="Permanent link">#</a></h2>
+<p>After QP optimization solves for smoothed positions, the following are applied in order:</p>
 <ol>
-<li>Optimizes only up to the stop point</li>
-<li>Sets velocities to zero for points after the stop</li>
-<li>Reduces computational complexity</li>
+<li><strong>Orientation</strong>: Computed from path tangent between consecutive points</li>
+<li><strong>Velocity</strong>: Derived from position differences and time step (<code>v[i] = ds/dt</code>)</li>
+<li><strong>Velocity smoothing</strong>: 3-point moving average to reduce numerical differentiation noise</li>
+<li><strong>Stop zone restoration</strong>: Input velocities restored for detected stop approach ranges; stop
+   point forced to zero</li>
+<li><strong>Acceleration</strong>: Derived from velocity differences</li>
 </ol>
-<h2 id="3-class-structures">3. Class Structures<a class="headerlink" href="#3-class-structures" title="Permanent link">#</a></h2>
-<h3 id="31-continuousjerksmootherparams">3.1 <code>ContinuousJerkSmootherParams</code><a class="headerlink" href="#31-continuousjerksmootherparams" title="Permanent link">#</a></h3>
-<p>Configuration structure containing all tunable parameters:</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="c1">// QP optimization weights</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">jerk_weight</span><span class="p">{</span><span class="mf">10.0</span><span class="p">};</span><span class="w">                </span><span class="c1">// Weight for jerk minimization</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_v_weight</span><span class="p">{</span><span class="mf">10000.0</span><span class="p">};</span><span class="w">           </span><span class="c1">// Weight for velocity limit violation</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_a_weight</span><span class="p">{</span><span class="mf">5000.0</span><span class="p">};</span><span class="w">            </span><span class="c1">// Weight for acceleration limit violation</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_j_weight</span><span class="p">{</span><span class="mf">200.0</span><span class="p">};</span><span class="w">             </span><span class="c1">// Weight for jerk limit violation</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">velocity_tracking_weight</span><span class="p">{</span><span class="mf">100.0</span><span class="p">};</span><span class="w">  </span><span class="c1">// Weight for tracking reference velocity</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">accel_tracking_weight</span><span class="p">{</span><span class="mf">10.0</span><span class="p">};</span><span class="w">      </span><span class="c1">// Weight for tracking reference acceleration</span>
-
-<span class="w">  </span><span class="c1">// Kinematic limits</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">max_accel</span><span class="p">{</span><span class="mf">2.0</span><span class="p">};</span><span class="w">   </span><span class="c1">// Maximum acceleration [m/s²]</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">min_decel</span><span class="p">{</span><span class="mf">-3.0</span><span class="p">};</span><span class="w">  </span><span class="c1">// Minimum deceleration [m/s²]</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">max_jerk</span><span class="p">{</span><span class="mf">1.5</span><span class="p">};</span><span class="w">    </span><span class="c1">// Maximum jerk [m/s³]</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">min_jerk</span><span class="p">{</span><span class="mf">-1.5</span><span class="p">};</span><span class="w">   </span><span class="c1">// Minimum jerk [m/s³]</span>
-<span class="p">};</span>
-</code></pre></div>
-<h3 id="32-continuousjerksmoother-class">3.2 <code>ContinuousJerkSmoother</code> Class<a class="headerlink" href="#32-continuousjerksmoother-class" title="Permanent link">#</a></h3>
-<h4 id="321-public-interface">3.2.1 Public Interface<a class="headerlink" href="#321-public-interface" title="Permanent link">#</a></h4>
-<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ContinuousJerkSmoother</span><span class="w"> </span><span class="p">{</span>
-<span class="k">public</span><span class="o">:</span>
-<span class="w">  </span><span class="c1">// Constructor</span>
-<span class="w">  </span><span class="k">explicit</span><span class="w"> </span><span class="n">ContinuousJerkSmoother</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">params</span><span class="p">);</span>
-
-<span class="w">  </span><span class="c1">// Main smoothing function</span>
-<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v0</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Initial velocity [m/s]</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">a0</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Initial acceleration [m/s²]</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">TrajectoryPoints</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w">     </span><span class="c1">// Input trajectory points</span>
-<span class="w">    </span><span class="n">TrajectoryPoints</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">output</span><span class="p">,</span><span class="w">          </span><span class="c1">// Output smoothed trajectory points</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">max_velocity_per_point</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">  </span><span class="c1">// Per-point velocity upper bounds</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="w">  </span><span class="c1">// Parameter management</span>
-<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="nf">set_params</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">params</span><span class="p">);</span>
-<span class="w">  </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="nf">get_params</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="p">;</span>
-
-<span class="w">  </span><span class="o">~</span><span class="n">ContinuousJerkSmoother</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
-<span class="p">};</span>
-</code></pre></div>
-<h2 id="4-implementation-details">4. Implementation Details<a class="headerlink" href="#4-implementation-details" title="Permanent link">#</a></h2>
-<h3 id="41-qp-problem-setup">4.1 QP Problem Setup<a class="headerlink" href="#41-qp-problem-setup" title="Permanent link">#</a></h3>
-<p>The optimization problem is formulated as:</p>
-<div class="arithmatex">\[
-\begin{align}
-\text{minimize:} &amp; \quad \frac{1}{2} x^T P x + q^T x \\
-\text{subject to:} &amp; \quad l \leq Ax \leq u
-\end{align}
-\]</div>
-<p>Where:</p>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<h3 id="core-optimization-weights">Core Optimization Weights<a class="headerlink" href="#core-optimization-weights" title="Permanent link">#</a></h3>
 <ul>
-<li><span class="arithmatex">\(P\)</span> = Hessian matrix (quadratic terms)</li>
-<li><span class="arithmatex">\(q\)</span> = Linear term vector</li>
-<li><span class="arithmatex">\(A\)</span> = Constraint matrix</li>
-<li><span class="arithmatex">\(l\)</span>, <span class="arithmatex">\(<span class="arithmatex">\(u\)</span>\)</span> = Lower and upper bounds</li>
+<li><code>weight_smoothness</code> (default: 10.0)<ul>
+<li>Controls smoothness penalty</li>
+<li>Higher values → smoother but more deviation from original path</li>
 </ul>
-<h3 id="42-variable-indexing">4.2 Variable Indexing<a class="headerlink" href="#42-variable-indexing" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code><span class="n">IDX_B0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of b variables (velocity squared)</span>
-<span class="n">IDX_A0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of a variables (acceleration)</span>
-<span class="n">IDX_DELTA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of delta variables (velocity slack)</span>
-<span class="n">IDX_SIGMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of sigma variables (acceleration slack)</span>
-<span class="n">IDX_GAMMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of gamma variables (jerk slack)</span>
-</code></pre></div>
-<h3 id="43-error-handling">4.3 Error Handling<a class="headerlink" href="#43-error-handling" title="Permanent link">#</a></h3>
+</li>
+<li><code>weight_fidelity</code> (default: 1.0)<ul>
+<li>Baseline fidelity weight (used when velocity-based feature disabled)</li>
+<li>Higher values → closer to original path</li>
+</ul>
+</li>
+</ul>
+<h3 id="velocity-based-fidelity">Velocity-Based Fidelity<a class="headerlink" href="#velocity-based-fidelity" title="Permanent link">#</a></h3>
 <ul>
-<li>Returns <code>false</code> if optimization fails</li>
-<li>Logs warnings for empty trajectories or optimization failures</li>
-<li>Handles NaN values in optimization results</li>
-<li>Provides fallback behavior for edge cases</li>
+<li><code>use_velocity_based_fidelity</code> (default: true)<ul>
+<li>Master switch for velocity-dependent weighting</li>
+<li>Set to <code>true</code> to enable feature</li>
 </ul>
-<h2 id="5-usage-example">5. Usage Example<a class="headerlink" href="#5-usage-example" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><span class="c1">// Create smoother with default parameters</span>
-<span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="n">params</span><span class="p">;</span>
-<span class="n">params</span><span class="p">.</span><span class="n">max_accel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.5</span><span class="p">;</span>
-<span class="n">params</span><span class="p">.</span><span class="n">min_decel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-4.0</span><span class="p">;</span>
-<span class="n">params</span><span class="p">.</span><span class="n">max_jerk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.0</span><span class="p">;</span>
-<span class="n">params</span><span class="p">.</span><span class="n">min_jerk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-2.0</span><span class="p">;</span>
-
-<span class="n">ContinuousJerkSmoother</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="n">params</span><span class="p">);</span>
-
-<span class="c1">// Apply smoothing</span>
-<span class="kt">double</span><span class="w"> </span><span class="n">v0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">;</span><span class="w">  </span><span class="c1">// Initial velocity [m/s]</span>
-<span class="kt">double</span><span class="w"> </span><span class="n">a0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w">  </span><span class="c1">// Initial acceleration [m/s²]</span>
-<span class="n">TrajectoryPoints</span><span class="w"> </span><span class="n">input_trajectory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
-<span class="n">TrajectoryPoints</span><span class="w"> </span><span class="n">output_trajectory</span><span class="p">;</span>
-
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">max_velocities</span><span class="p">(</span><span class="n">input_trajectory</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span><span class="w"> </span><span class="mf">10.0</span><span class="p">);</span><span class="w">  </span><span class="c1">// 10 m/s limit</span>
-
-<span class="kt">bool</span><span class="w"> </span><span class="n">success</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">smoother</span><span class="p">.</span><span class="n">apply</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span><span class="w"> </span><span class="n">a0</span><span class="p">,</span><span class="w"> </span><span class="n">input_trajectory</span><span class="p">,</span><span class="w"> </span><span class="n">output_trajectory</span><span class="p">,</span><span class="w"> </span><span class="n">max_velocities</span><span class="p">);</span>
+</li>
+<li><code>velocity_threshold_mps</code> (default: 0.3)<ul>
+<li>Speed at which sigmoid transitions (midpoint)</li>
+<li>Lower values → earlier transition to high fidelity</li>
+</ul>
+</li>
+<li><code>sigmoid_sharpness</code> (default: 50.0)<ul>
+<li>Controls transition steepness</li>
+<li>Range: [1, 100], higher = sharper step-like transition</li>
+</ul>
+</li>
+<li><code>min_fidelity_weight</code> (default: 0.01)<ul>
+<li>Weight applied at very low speeds</li>
+<li>Lower values → more aggressive smoothing when stopped/slow</li>
+</ul>
+</li>
+<li><code>max_fidelity_weight</code> (default: 1.0)<ul>
+<li>Weight applied at high speeds</li>
+<li>Higher values → stronger preservation of planner path</li>
+</ul>
+</li>
+</ul>
+<h3 id="point-constraints">Point Constraints<a class="headerlink" href="#point-constraints" title="Permanent link">#</a></h3>
+<ul>
+<li><code>num_constrained_points_start</code> (default: 3)<ul>
+<li>Number of points from trajectory start to fix as hard constraints</li>
+<li>Recommended: 3 to preserve initial acceleration</li>
+<li>Set to 0 to allow all points to be optimized (may cause initial state discontinuities)</li>
+</ul>
+</li>
+<li><code>num_constrained_points_end</code> (default: 0)<ul>
+<li>Number of points from trajectory end to fix as hard constraints</li>
+<li>Set to 0 for maximum smoothness at trajectory end</li>
+<li>Increase if you need to preserve goal state and acceleration</li>
+</ul>
+</li>
+</ul>
+<h3 id="solver-settings">Solver Settings<a class="headerlink" href="#solver-settings" title="Permanent link">#</a></h3>
+<ul>
+<li><code>time_step_s</code> (default: 0.1)<ul>
+<li>Time discretization for velocity/acceleration calculations</li>
+</ul>
+</li>
+<li><code>osqp_eps_abs</code> / <code>osqp_eps_rel</code> (default: 1e-4)<ul>
+<li>OSQP solver convergence tolerances</li>
+</ul>
+</li>
+<li><code>osqp_max_iter</code> (default: 100)<ul>
+<li>Maximum solver iterations</li>
+</ul>
+</li>
+<li><code>osqp_verbose</code> (default: false)<ul>
+<li>Enable OSQP debug output</li>
+</ul>
+</li>
+</ul>
+<h3 id="orientation-preservation">Orientation Preservation<a class="headerlink" href="#orientation-preservation" title="Permanent link">#</a></h3>
+<ul>
+<li><code>preserve_input_trajectory_orientation</code> (default: false)<ul>
+<li>Copy orientations from the original input trajectory (nearest-neighbor match) instead of
+  deriving them from the smoothed path tangent</li>
+</ul>
+</li>
+<li><code>max_distance_for_orientation_m</code> (default: 5.0)<ul>
+<li>Maximum search distance for nearest-neighbor orientation matching [m]</li>
+</ul>
+</li>
+</ul>
+<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">#</a></h2>
+<h3 id="example-1-disable-velocity-based-fidelity">Example 1: Disable Velocity-Based Fidelity<a class="headerlink" href="#example-1-disable-velocity-based-fidelity" title="Permanent link">#</a></h3>
+<p>Velocity-based fidelity is enabled by default. To disable it and use a uniform fidelity weight:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity<span class="w"> </span><span class="nb">false</span>
 </code></pre></div>
-<h2 id="6-integration-with-trajectory-optimizer">6. Integration with Trajectory Optimizer<a class="headerlink" href="#6-integration-with-trajectory-optimizer" title="Permanent link">#</a></h2>
-<p>The continuous jerk smoother is typically used within the trajectory velocity optimizer pipeline:</p>
+<h3 id="example-2-tune-velocity-threshold">Example 2: Tune Velocity Threshold<a class="headerlink" href="#example-2-tune-velocity-threshold" title="Permanent link">#</a></h3>
+<p>To make the transition occur at higher speeds (0.5 m/s instead of 0.3 m/s):</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.velocity_threshold_mps<span class="w"> </span><span class="m">0</span>.5
+</code></pre></div>
+<h3 id="example-3-more-aggressive-low-speed-smoothing">Example 3: More Aggressive Low-Speed Smoothing<a class="headerlink" href="#example-3-more-aggressive-low-speed-smoothing" title="Permanent link">#</a></h3>
+<p>To allow even more smoothing at low speeds:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.min_fidelity_weight<span class="w"> </span><span class="m">0</span>.005
+</code></pre></div>
+<h3 id="example-4-sharper-transition">Example 4: Sharper Transition<a class="headerlink" href="#example-4-sharper-transition" title="Permanent link">#</a></h3>
+<p>To make the velocity-based transition more step-like:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.sigmoid_sharpness<span class="w"> </span><span class="m">80</span>.0
+</code></pre></div>
+<h3 id="example-5-constrain-only-first-point">Example 5: Constrain Only First Point<a class="headerlink" href="#example-5-constrain-only-first-point" title="Permanent link">#</a></h3>
+<p>For maximum smoothness (only preserve initial position):</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">1</span>
+</code></pre></div>
+<h3 id="example-6-constrain-last-2-points">Example 6: Constrain Last 2 Points<a class="headerlink" href="#example-6-constrain-last-2-points" title="Permanent link">#</a></h3>
+<p>To preserve the goal state exactly:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end<span class="w"> </span><span class="m">2</span>
+</code></pre></div>
+<h3 id="example-7-preserve-larger-initial-region">Example 7: Preserve Larger Initial Region<a class="headerlink" href="#example-7-preserve-larger-initial-region" title="Permanent link">#</a></h3>
+<p>To preserve the first 5 points (useful for very noisy planners):</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">5</span>
+</code></pre></div>
+<h2 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">#</a></h2>
+<h3 id="view-debug-logs">View Debug Logs<a class="headerlink" href="#view-debug-logs" title="Permanent link">#</a></h3>
+<p>Enable debug logging to see weight statistics and solver diagnostics:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_trajectory_optimizer<span class="w"> </span>autoware_trajectory_optimizer_node<span class="w"> </span>--ros-args<span class="w"> </span>--log-level<span class="w"> </span>trajectory_optimizer:<span class="o">=</span>debug
+</code></pre></div>
+<h3 id="check-parameter-values">Check Parameter Values<a class="headerlink" href="#check-parameter-values" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check if velocity-based fidelity is enabled</span>
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity
+
+<span class="c1"># Check weight configuration</span>
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.min_fidelity_weight
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.max_fidelity_weight
+
+<span class="c1"># Check constraint configuration</span>
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end
+</code></pre></div>
+<h3 id="monitor-performance">Monitor Performance<a class="headerlink" href="#monitor-performance" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># View processing time metrics</span>
+ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>/planning/trajectory_optimizer/debug/processing_time_detail_ms
+</code></pre></div>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
 <ol>
-<li><strong>Input</strong>: Raw trajectory with reference velocities</li>
-<li><strong>Preprocessing</strong>: Calculate per-point velocity limits (considering lateral acceleration)</li>
-<li><strong>Optimization</strong>: Apply continuous jerk smoothing</li>
-<li><strong>Output</strong>: Kinematically feasible trajectory with smooth velocity profile</li>
+<li><strong>Path deviation</strong>: Heavy smoothing can cause deviation from original path</li>
+<li><strong>Velocity outside stop zones differs from planner intent</strong>: Velocity is recalculated from
+   smoothed geometry for normal trajectory segments; only detected stop approach zones preserve
+   the planner's velocity profile</li>
+<li><strong>Computational cost</strong>: QP solve adds overhead compared to simpler smoothers</li>
+<li><strong>Parameter sensitivity</strong>: Requires tuning for specific vehicle dynamics</li>
 </ol>
-<h2 id="7-performance-considerations">7. Performance Considerations<a class="headerlink" href="#7-performance-considerations" title="Permanent link">#</a></h2>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
 <ul>
-<li><strong>Computational Complexity</strong>: <span class="arithmatex">\(<span class="arithmatex">\(O(N^3)\)</span>\)</span> for QP solving, but N is typically small (≤ 100 points)</li>
-<li><strong>Memory Usage</strong>: Matrices of size <span class="arithmatex">\(<span class="arithmatex">\((5N \times 5N)\)</span>\)</span> for P and <span class="arithmatex">\(<span class="arithmatex">\((4N \times 5N)\)</span>\)</span> for A</li>
-<li><strong>Real-time Feasibility</strong>: Suitable for real-time operation with typical trajectory lengths</li>
+<li>OSQP Solver: <a href="https://osqp.org/">https://osqp.org/</a></li>
+<li>Autoware OSQP Interface: <code>autoware_osqp_interface</code> package</li>
+<li>Parent Package: <code>autoware_trajectory_optimizer</code></li>
 </ul></div>
 
 
@@ -23106,7 +23330,7 @@ a[0] = a_0
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../TrafficLightStop/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Traffic Light Stop">
+          <a href="../mpt_optimizer/" class="md-footer__link md-footer__link--prev" aria-label="Previous: MPT (Model Predictive Trajectory) Optimizer">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23116,20 +23340,20 @@ a[0] = a_0
                 Previous
               </span>
               <div class="md-ellipsis">
-                Traffic Light Stop
+                MPT (Model Predictive Trajectory) Optimizer
               </div>
             </div>
           </a>
         
         
           
-          <a href="../kinematic_feasibility_enforcer/" class="md-footer__link md-footer__link--next" aria-label="Next: Ackermann Kinematic Feasibility Enforcer">
+          <a href="../temporal_mpt_optimizer/" class="md-footer__link md-footer__link--next" aria-label="Next: Temporal MPT Optimizer">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Ackermann Kinematic Feasibility Enforcer
+                Temporal MPT Optimizer
               </div>
             </div>
             <div class="md-footer__button md-icon">

@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_processor/docs/TrafficLightStop/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_modifier/docs/trajectory_optimizer_specification/">
       
       
-        <link rel="prev" href="../../">
+        <link rel="prev" href="../temporal_mpt_optimizer/">
       
       
-        <link rel="next" href="../continuous_jerk_filter/">
+        <link rel="next" href="../../../autoware_trajectory_ranker/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Traffic Light Stop - Autoware Universe Documentation</title>
+        <title>Trajectory Optimizer - Specification and Assumptions - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#traffic-light-stop" class="md-skip">
+        <a href="#trajectory-optimizer-specification-and-assumptions" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Traffic Light Stop
+              Trajectory Optimizer - Specification and Assumptions
             
           </span>
         </div>
@@ -14823,7 +14823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../autoware_trajectory_modifier" class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -22631,10 +22631,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purposerole" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose/Role
+        Overview
       
     </span>
   </a>
@@ -22642,10 +22642,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#algorithm-overview" class="md-nav__link">
+  <a href="#core-design-principle-positions-are-primary-kinematics-are-derived" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Algorithm Overview
+        Core Design Principle: Positions Are Primary, Kinematics Are Derived
       
     </span>
   </a>
@@ -22653,22 +22653,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#interface" class="md-nav__link">
+  <a href="#input-requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Interface
+        Input Requirements
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Interface">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-velocity-and-acceleration-are-computed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Velocity and Acceleration Are Computed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plugin-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plugin Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin Pipeline">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#context-data" class="md-nav__link">
+  <a href="#default-pipeline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Context &amp; Data
+        Default Pipeline
       
     </span>
   </a>
@@ -22676,10 +22698,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
+  <a href="#plugin-descriptions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Parameters
+        Plugin Descriptions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabled-plugins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabled Plugins
       
     </span>
   </a>
@@ -22688,6 +22721,50 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ordering-constraints-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ordering Constraints Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-arc-length-resampling-is-avoided" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Arc-Length Resampling Is Avoided
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#orientation-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orientation Handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Limitations
+      
+    </span>
+  </a>
   
 </li>
       
@@ -22711,130 +22788,316 @@
   
 
 
-<div><h1 id="traffic-light-stop">Traffic Light Stop<a class="headerlink" href="#traffic-light-stop" title="Permanent link">#</a></h1>
-<h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
-<p>This module modifies DP trajectories if they are found to run through a red or amber traffic light. If it finds that the DP trajectories causes the ego to cross or overshoot a red/amber traffic light, it will insert a stop point to ensure traffic rules compliance.</p>
-<p>This module uses the TrafficLightComplianceChecker to check for violations. For details of the compliance checker logic refer to
-<a href="../../../../common/autoware_traffic_light_compliance_checker/">Compliance Checker Documentation</a>.</p>
-<p>The TrafficLightComplianceChecker will check for violations and return the results. The traffic light stop module will then scan the provided results for any red/amber light crossing. If the trajectory is crossing a red/amber light then a stop point is inserted.</p>
-<h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
-<p>The following diagram shows the overall logic flow of the TrafficLightStop module:</p>
-<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjEiIGRhdGEtZGlhZ3JhbS10eXBlPSJBQ1RJVklUWSIgc3R5bGU9IndpZHRoOjQwM3B4O2hlaWdodDoxMjY0cHg7YmFja2dyb3VuZDojRkZGRkZGOyIgd2lkdGg9IjQwM3B4IiBoZWlnaHQ9IjEyNjRweCIgdmlld0JveD0iMCAwIDQwMyAxMjY0IiB6b29tQW5kUGFuPSJtYWduaWZ5IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyI+PD9wbGFudHVtbCAxLjIwMjYuOGJldGExPz48ZGVmcy8+PGcgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGxlbmd0aEFkanVzdD0ic3BhY2luZyI+PGVsbGlwc2UgY3g9IjIwMy44MTEiIGN5PSIyNSIgcng9IjEwIiByeT0iMTAiIGZpbGw9IiMyMjIiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48cmVjdCB4PSI1Ni4wMzYiIHk9IjQ1IiB3aWR0aD0iMzAxLjQyMyIgaGVpZ2h0PSI1NDIuMzkxIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48cGF0aCBkPSJNMjM0LjkzOCw0NSBMMjM0LjkzOCw1NC4yOTcgTDIyNC45MzgsNjQuMjk3IEw1Ni4wMzYsNjQuMjk3IiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIGZpbGw9Im5vbmUiLz48dGV4dCB4PSI1OS4wMzYiIHk9IjU4Ljk5NSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxNCIgdGV4dExlbmd0aD0iMTY4LjkwMiI+SXMgTW9kaWZpY2F0aW9uIFJlcXVpcmVkPC90ZXh0PjxyZWN0IHg9IjE1Ni4wMDYiIHk9IjEzMS4zMDkiIHdpZHRoPSI5NS42MDkiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRkZGRkUwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE2Ni4wMDYiIHk9IjE1Mi40NDciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9Ijc1LjYwOSI+UmV0dXJuIEZhbHNlPC90ZXh0PjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iMjA0LjM5MSIgcng9IjExIiByeT0iMTEiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48ZWxsaXBzZSBjeD0iMjAzLjgxMSIgY3k9IjIwNC4zOTEiIHJ4PSI2IiByeT0iNiIgZmlsbD0iIzIyMiIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iOTMuMTY0LDgxLjI5NywzMTQuNDU4LDgxLjI5NywzMjYuNDU4LDk0LjEwMiwzMTQuNDU4LDEwNi45MDYsOTMuMTY0LDEwNi45MDYsODEuMTY0LDk0LjEwMiw5My4xNjQsODEuMjk3IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMjA3LjgxMSIgeT0iMTE3LjExNyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTkuMDA4Ij55ZXM8L3RleHQ+PHRleHQgeD0iOTMuMTY0IiB5PSI5MS41MDciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjIxNy43OTgiPklzIEZlYXR1cmUgRGlzYWJsZWQgT1IgSW52YWxpZCBJbnB1dCBPUjwvdGV4dD48dGV4dCB4PSIxMDQuNTY0IiB5PSIxMDQuMzEyIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxOTguNDk0Ij5Db21wbGlhbmNlIENoZWNrZXIgTm90IEluaXRpYWxpemVkPzwvdGV4dD48dGV4dCB4PSIzMjYuNDU4IiB5PSI5MS41MDciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjEzLjcwMiI+bm88L3RleHQ+PHJlY3QgeD0iNjYuMDM2IiB5PSIyNTcuMzkxIiB3aWR0aD0iMjc1LjU1MSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iNzYuMDM2IiB5PSIyNzguNTI5IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIyNTUuNTUxIj5Db25zdHVjdCBDb21wbGlhbmNlIENoZWNrZXIgSW5wdXQgU3RydWN0PC90ZXh0PjxyZWN0IHg9IjExOC4yOSIgeT0iMzExLjM1OSIgd2lkdGg9IjE3MS4wNDMiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjQUREOEU2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjEyOC4yOSIgeT0iMzMyLjQ5OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTUxLjA0MyI+UnVuIENvbXBsaWFuY2UgQ2hlY2tlcjwvdGV4dD48cmVjdCB4PSIxNTYuMDA2IiB5PSI0MTUuMzQiIHdpZHRoPSI5NS42MDkiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRkZGRkUwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE2Ni4wMDYiIHk9IjQzNi40NzkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9Ijc1LjYwOSI+UmV0dXJuIEZhbHNlPC90ZXh0PjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iNDg4LjQyMiIgcng9IjExIiByeT0iMTEiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48ZWxsaXBzZSBjeD0iMjAzLjgxMSIgY3k9IjQ4OC40MjIiIHJ4PSI2IiByeT0iNiIgZmlsbD0iIzIyMiIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTMxLjczNiwzNjUuMzI4LDI3NS44ODYsMzY1LjMyOCwyODcuODg2LDM3OC4xMzMsMjc1Ljg4NiwzOTAuOTM4LDEzMS43MzYsMzkwLjkzOCwxMTkuNzM2LDM3OC4xMzMsMTMxLjczNiwzNjUuMzI4IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMjA3LjgxMSIgeT0iNDAxLjE0OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTkuMDA4Ij55ZXM8L3RleHQ+PHRleHQgeD0iMTMxLjczNiIgeT0iMzc1LjUzOSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTQwLjY1MyI+SXMgUmVzdWx0cyBVbmF2YWlsYWJsZSBPUjwvdGV4dD48dGV4dCB4PSIxNDIuNjkzIiB5PSIzODguMzQzIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxMjIuMjM1Ij5ObyBWaW9sYXRpb24gaXMgRm91bmQ/PC90ZXh0Pjx0ZXh0IHg9IjI4Ny44ODYiIHk9IjM3NS41MzkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjEzLjcwMiI+bm88L3RleHQ+PHJlY3QgeD0iODUuOTE0IiB5PSI1NDEuNDIyIiB3aWR0aD0iMjM1Ljc5NSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iOTUuOTE0IiB5PSI1NjIuNTYxIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIyMTUuNzk1Ij5TZXQgTmVhcmVzdCBWaW9sYXRpb24gJmFtcDsgRGVidWcgRGF0YTwvdGV4dD48cmVjdCB4PSIxNiIgeT0iNTk3LjM5MSIgd2lkdGg9IjM2Ny41ODMiIGhlaWdodD0iNTUwLjk5NiIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PHBhdGggZD0iTTE0OC4yNjgsNTk3LjM5MSBMMTQ4LjI2OCw2MDYuNjg4IEwxMzguMjY4LDYxNi42ODggTDE2LDYxNi42ODgiIHN0eWxlPSJzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MS41OyIgZmlsbD0ibm9uZSIvPjx0ZXh0IHg9IjE5IiB5PSI2MTEuMzg2IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjE0IiB0ZXh0TGVuZ3RoPSIxMjIuMjY4Ij5Nb2RpZnkgVHJhamVjdG9yeTwvdGV4dD48cmVjdCB4PSIxMTAuNjY3IiB5PSI2MzMuNjg4IiB3aWR0aD0iMTg2LjI4OSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMTIwLjY2NyIgeT0iNjU0LjgyNiIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTY2LjI4OSI+Q2FsY3VsYXRlIFRyYWplY3RvcnkgTGVuZ3RoPC90ZXh0PjxyZWN0IHg9IjEyNy43MzUiIHk9IjY4Ny42NTYiIHdpZHRoPSIxNTIuMTUyIiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0FERDhFNiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIxMzcuNzM1IiB5PSI3MDguNzk1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIxMzIuMTUyIj5DYWxjdWxhdGUgU3RvcCBNYXJnaW48L3RleHQ+PHJlY3QgeD0iMzkuMjYxIiB5PSI3NDEuNjI1IiB3aWR0aD0iMzI5LjEiIGhlaWdodD0iNDcuOTM4IiBmaWxsPSIjQUREOEU2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9Ijg4Ljg0NCIgeT0iNzYyLjc2NCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMjI5LjkzNCI+Q2FsY3VsYXRlIFRhcmdldCBTdG9wIFBvaW50IEFyYyBsZW5ndGg8L3RleHQ+PHRleHQgeD0iNDkuMjYxIiB5PSI3NzYuNzMyIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIzMDkuMSI+KENsYW1wZWQgYnkgTWluLiBTdG9wcGluZyBEaXN0YW5jZSAmYW1wOyBUcmFqIExlbmd0aCk8L3RleHQ+PHJlY3QgeD0iMTU2LjAwNiIgeT0iODU3Ljk2NSIgd2lkdGg9Ijk1LjYwOSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGRkZGRTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMTY2LjAwNiIgeT0iODc5LjEwNCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iNzUuNjA5Ij5SZXR1cm4gRmFsc2U8L3RleHQ+PGVsbGlwc2UgY3g9IjIwMy44MTEiIGN5PSI5MzEuNDQ5IiByeD0iMTEiIHJ5PSIxMSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iOTMxLjQ0OSIgcng9IjYiIHJ5PSI2IiBmaWxsPSIjMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxMjYuMjUsODA5LjU2MywyODEuMzcyLDgwOS41NjMsMjkzLjM3Miw4MjEuNTYzLDI4MS4zNzIsODMzLjU2MywxMjYuMjUsODMzLjU2MywxMTQuMjUsODIxLjU2MywxMjYuMjUsODA5LjU2MyIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9IjIwNy44MTEiIHk9Ijg0My43NzMiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjE5LjAwOCI+eWVzPC90ZXh0Pjx0ZXh0IHg9IjEyNi4yNSIgeT0iODI1LjM3MSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTU1LjEyMyI+SXMgU3RvcCBQb2ludCBFeGlzdHMgYWxyZWFkeT88L3RleHQ+PHRleHQgeD0iMjkzLjM3MiIgeT0iODE4Ljk2OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTMuNzAyIj5ubzwvdGV4dD48cG9seWdvbiBwb2ludHM9IjExNy44MTQsOTg0LjQ0OSwyODkuODA4LDk4NC40NDksMzAxLjgwOCw5OTYuNDQ5LDI4OS44MDgsMTAwOC40NDksMTE3LjgxNCwxMDA4LjQ0OSwxMDUuODE0LDk5Ni40NDksMTE3LjgxNCw5ODQuNDQ5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMTE3LjgxNCIgeT0iMTAwMC4yNTciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjE3MS45OTMiPklzIEFycml2ZWQgYXQgVGFyZ2V0IFN0b3AgUG9pbnQ/PC90ZXh0Pjx0ZXh0IHg9Ijg2LjgwNiIgeT0iOTkzLjg1NSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTkuMDA4Ij55ZXM8L3RleHQ+PHRleHQgeD0iMzAxLjgwOCIgeT0iOTkzLjg1NSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTMuNzAyIj5ubzwvdGV4dD48cmVjdCB4PSIyOCIgeT0iMTAxOC40NDkiIHdpZHRoPSIxMzUuNjI5IiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIzOCIgeT0iMTAzOS41ODgiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjExNS42MjkiPlNldCBTdG9wIFRyYWplY3Rvcnk8L3RleHQ+PHJlY3QgeD0iMjUyLjAzMiIgeT0iMTAxOC40NDkiIHdpZHRoPSIxMTkuNTUxIiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIyNjIuMDMyIiB5PSIxMDM5LjU4OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iOTkuNTUxIj5JbnNlcnQgU3RvcCBQb2ludDwvdGV4dD48cG9seWdvbiBwb2ludHM9IjIwMy44MTEsMTA1OC40MTgsMjE1LjgxMSwxMDcwLjQxOCwyMDMuODExLDEwODIuNDE4LDE5MS44MTEsMTA3MC40MTgsMjAzLjgxMSwxMDU4LjQxOCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxyZWN0IHg9IjEzNS4zODEiIHk9IjExMDIuNDE4IiB3aWR0aD0iMTM2Ljg1OSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMTQ1LjM4MSIgeT0iMTEyMy41NTciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjExNi44NTkiPlNldCBQbGFubmluZyBGYWN0b3I8L3RleHQ+PHJlY3QgeD0iMTU3Ljk5MyIgeT0iMTE2OC4zODciIHdpZHRoPSI5MS42MzciIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjOTBFRTkwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE2Ny45OTMiIHk9IjExODkuNTI1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSI3MS42MzciPlJldHVybiBUcnVlPC90ZXh0PjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iMTIzMy4zNTUiIHJ4PSIxMSIgcnk9IjExIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9IjIwMy44MTEiIGN5PSIxMjMzLjM1NSIgcng9IjYiIHJ5PSI2IiBmaWxsPSIjMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIxNjUuMjc3IiB4Mj0iMjAzLjgxMSIgeTI9IjE5My4zOTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsMTgzLjM5MSwyMDMuODExLDE5My4zOTEsMjA3LjgxMSwxODMuMzkxLDIwMy44MTEsMTg3LjM5MSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjEwNi45MDYiIHgyPSIyMDMuODExIiB5Mj0iMTMxLjMwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSwxMjEuMzA5LDIwMy44MTEsMTMxLjMwOSwyMDcuODExLDEyMS4zMDksMjAzLjgxMSwxMjUuMzA5IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzMjYuNDU4IiB5MT0iOTQuMTAyIiB4Mj0iMzM4LjQ1OCIgeTI9Ijk0LjEwMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzM0LjQ1OCwxNjMuMzkxLDMzOC40NTgsMTczLjM5MSwzNDIuNDU4LDE2My4zOTEsMzM4LjQ1OCwxNjcuMzkxIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzMzguNDU4IiB5MT0iOTQuMTAyIiB4Mj0iMzM4LjQ1OCIgeTI9IjIzNy4zOTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMzM4LjQ1OCIgeTE9IjIzNy4zOTEiIHgyPSIyMDMuODExIiB5Mj0iMjM3LjM5MSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iMjM3LjM5MSIgeDI9IjIwMy44MTEiIHkyPSIyNTcuMzkxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDI0Ny4zOTEsMjAzLjgxMSwyNTcuMzkxLDIwNy44MTEsMjQ3LjM5MSwyMDMuODExLDI1MS4zOTEiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIyOTEuMzU5IiB4Mj0iMjAzLjgxMSIgeTI9IjMxMS4zNTkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsMzAxLjM1OSwyMDMuODExLDMxMS4zNTksMjA3LjgxMSwzMDEuMzU5LDIwMy44MTEsMzA1LjM1OSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjQ0OS4zMDkiIHgyPSIyMDMuODExIiB5Mj0iNDc3LjQyMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw0NjcuNDIyLDIwMy44MTEsNDc3LjQyMiwyMDcuODExLDQ2Ny40MjIsMjAzLjgxMSw0NzEuNDIyIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iMzkwLjkzOCIgeDI9IjIwMy44MTEiIHkyPSI0MTUuMzQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsNDA1LjM0LDIwMy44MTEsNDE1LjM0LDIwNy44MTEsNDA1LjM0LDIwMy44MTEsNDA5LjM0IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyODcuODg2IiB5MT0iMzc4LjEzMyIgeDI9IjI5OS44ODYiIHkyPSIzNzguMTMzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIyOTUuODg2LDQ0Ny40MjIsMjk5Ljg4Niw0NTcuNDIyLDMwMy44ODYsNDQ3LjQyMiwyOTkuODg2LDQ1MS40MjIiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjI5OS44ODYiIHkxPSIzNzguMTMzIiB4Mj0iMjk5Ljg4NiIgeTI9IjUyMS40MjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMjk5Ljg4NiIgeTE9IjUyMS40MjIiIHgyPSIyMDMuODExIiB5Mj0iNTIxLjQyMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iNTIxLjQyMiIgeDI9IjIwMy44MTEiIHkyPSI1NDEuNDIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDUzMS40MjIsMjAzLjgxMSw1NDEuNDIyLDIwNy44MTEsNTMxLjQyMiwyMDMuODExLDUzNS40MjIiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIzNDUuMzI4IiB4Mj0iMjAzLjgxMSIgeTI9IjM2NS4zMjgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsMzU1LjMyOCwyMDMuODExLDM2NS4zMjgsMjA3LjgxMSwzNTUuMzI4LDIwMy44MTEsMzU5LjMyOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjM1IiB4Mj0iMjAzLjgxMSIgeTI9IjgxLjI5NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw3MS4yOTcsMjAzLjgxMSw4MS4yOTcsMjA3LjgxMSw3MS4yOTcsMjAzLjgxMSw3NS4yOTciIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSI2NjcuNjU2IiB4Mj0iMjAzLjgxMSIgeTI9IjY4Ny42NTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsNjc3LjY1NiwyMDMuODExLDY4Ny42NTYsMjA3LjgxMSw2NzcuNjU2LDIwMy44MTEsNjgxLjY1NiIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjcyMS42MjUiIHgyPSIyMDMuODExIiB5Mj0iNzQxLjYyNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw3MzEuNjI1LDIwMy44MTEsNzQxLjYyNSwyMDcuODExLDczMS42MjUsMjAzLjgxMSw3MzUuNjI1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iODkxLjkzNCIgeDI9IjIwMy44MTEiIHkyPSI5MjAuNDQ5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDkxMC40NDksMjAzLjgxMSw5MjAuNDQ5LDIwNy44MTEsOTEwLjQ0OSwyMDMuODExLDkxNC40NDkiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSI4MzMuNTYzIiB4Mj0iMjAzLjgxMSIgeTI9Ijg1Ny45NjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsODQ3Ljk2NSwyMDMuODExLDg1Ny45NjUsMjA3LjgxMSw4NDcuOTY1LDIwMy44MTEsODUxLjk2NSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjkzLjM3MiIgeTE9IjgyMS41NjMiIHgyPSIzMDUuMzcyIiB5Mj0iODIxLjU2MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzAxLjM3Miw4OTAuNDQ5LDMwNS4zNzIsOTAwLjQ0OSwzMDkuMzcyLDg5MC40NDksMzA1LjM3Miw4OTQuNDQ5IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzMDUuMzcyIiB5MT0iODIxLjU2MyIgeDI9IjMwNS4zNzIiIHkyPSI5NjQuNDQ5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjMwNS4zNzIiIHkxPSI5NjQuNDQ5IiB4Mj0iMjAzLjgxMSIgeTI9Ijk2NC40NDkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9Ijk2NC40NDkiIHgyPSIyMDMuODExIiB5Mj0iOTg0LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw5NzQuNDQ5LDIwMy44MTEsOTg0LjQ0OSwyMDcuODExLDk3NC40NDksMjAzLjgxMSw5NzguNDQ5IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iNzg5LjU2MyIgeDI9IjIwMy44MTEiIHkyPSI4MDkuNTYzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDc5OS41NjMsMjAzLjgxMSw4MDkuNTYzLDIwNy44MTEsNzk5LjU2MywyMDMuODExLDgwMy41NjMiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjEwNS44MTQiIHkxPSI5OTYuNDQ5IiB4Mj0iOTUuODE0IiB5Mj0iOTk2LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI5NS44MTQiIHkxPSI5OTYuNDQ5IiB4Mj0iOTUuODE0IiB5Mj0iMTAxOC40NDkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjkxLjgxNCwxMDA4LjQ0OSw5NS44MTQsMTAxOC40NDksOTkuODE0LDEwMDguNDQ5LDk1LjgxNCwxMDEyLjQ0OSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzAxLjgwOCIgeTE9Ijk5Ni40NDkiIHgyPSIzMTEuODA4IiB5Mj0iOTk2LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIzMTEuODA4IiB5MT0iOTk2LjQ0OSIgeDI9IjMxMS44MDgiIHkyPSIxMDE4LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzA3LjgwOCwxMDA4LjQ0OSwzMTEuODA4LDEwMTguNDQ5LDMxNS44MDgsMTAwOC40NDksMzExLjgwOCwxMDEyLjQ0OSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iOTUuODE0IiB5MT0iMTA1Mi40MTgiIHgyPSI5NS44MTQiIHkyPSIxMDcwLjQxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI5NS44MTQiIHkxPSIxMDcwLjQxOCIgeDI9IjE5MS44MTEiIHkyPSIxMDcwLjQxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTgxLjgxMSwxMDY2LjQxOCwxOTEuODExLDEwNzAuNDE4LDE4MS44MTEsMTA3NC40MTgsMTg1LjgxMSwxMDcwLjQxOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzExLjgwOCIgeTE9IjEwNTIuNDE4IiB4Mj0iMzExLjgwOCIgeTI9IjEwNzAuNDE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjMxMS44MDgiIHkxPSIxMDcwLjQxOCIgeDI9IjIxNS44MTEiIHkyPSIxMDcwLjQxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMjI1LjgxMSwxMDY2LjQxOCwyMTUuODExLDEwNzAuNDE4LDIyNS44MTEsMTA3NC40MTgsMjIxLjgxMSwxMDcwLjQxOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjEwODIuNDE4IiB4Mj0iMjAzLjgxMSIgeTI9IjExMDIuNDE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDEwOTIuNDE4LDIwMy44MTEsMTEwMi40MTgsMjA3LjgxMSwxMDkyLjQxOCwyMDMuODExLDEwOTYuNDE4IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iNTc1LjM5MSIgeDI9IjIwMy44MTEiIHkyPSI2MzMuNjg4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDYyMy42ODgsMjAzLjgxMSw2MzMuNjg4LDIwNy44MTEsNjIzLjY4OCwyMDMuODExLDYyNy42ODgiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIxMTM2LjM4NyIgeDI9IjIwMy44MTEiIHkyPSIxMTY4LjM4NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSwxMTU4LjM4NywyMDMuODExLDExNjguMzg3LDIwNy44MTEsMTE1OC4zODcsMjAzLjgxMSwxMTYyLjM4NyIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjEyMDIuMzU1IiB4Mj0iMjAzLjgxMSIgeTI9IjEyMjIuMzU1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDEyMTIuMzU1LDIwMy44MTEsMTIyMi4zNTUsMjA3LjgxMSwxMjEyLjM1NSwyMDMuODExLDEyMTYuMzU1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjw/cGxhbnR1bWwtc3JjIGhMQjFSamYwNEJ0eEFxUUE1QzZiN20xSEFjZjJZbkhlMUJISGZMbTZVcDFSYmJidFR2UTZMbHR0WmVxSkI0WHhJSXdzakZGY3BOamw5Y21DYi1YbjJwY2pDNWZQcUFDQ2gyYnVJb29Hd09UeTRmdkhJeW1zWE5VSHl6SFB2LTdZX2pEdVNQQzRHSXo5TElYWDc2M1lTaENvNk9mbjMzRnc0T3NkNzd1ZFBXS1RCT3k4OU5nMmVHY3VqNWh2RjhDbnh6MlFORnpiYkVoWFdMRXRCUXIxcFdaSURNS1J5WjFyZVdXWkhoNl9BN19WMUxhSkdzVEZlUGxxUGdJcTMyRXFXVmZOTG5VdGZiWkJEeEJNX1JvLUxlc2tKNFhCcTY3TkpPWExPejlCN0dVOWNTMEJxbXZRdmtBcl9pcHRtS1BJamp1aXlXaXpmeDM2eU9vMlBYbFcyLUNFWlFyUzdwbkU3Tm1ycFh3SUNYZkQ1VXFSczlnSm05SkdLdjNNVzRpT3FaOE1DNEoxS3dMX2NsTkxremwzbWtEdG9pSnZsVXdqYndCRGVmOUctX3NNazkzck1KMTd4NW9ibUdIek9WV19nOEsySTB4V0VzVnF3V08tMHJrSkZ0MGRqUldqektRTVV2V09WYlZaSWlENVRKcklIdHpQWXNoYVRGLW5XSFJ6cFFEczFhM2gyVkZ6d3lEazlXb3lEcGlMWWQ5a3dNSjhfQWJ1SkJGVmVrc0RFUDFsel9WUlV4c3BvNW1iQ0NBZ3pOb0hKb09NRlh1elZGSDR0NVp1Mm0wMD8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title=""></p>
-<h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
-<h3 id="context-data">Context &amp; Data<a class="headerlink" href="#context-data" title="Permanent link">#</a></h3>
-<p>The module utilizes the following data from <code>TrajectoryProcessorContext</code> and <code>TrajectoryProcessorData</code>:</p>
+<div><h1 id="trajectory-optimizer-specification-and-assumptions">Trajectory Optimizer - Specification and Assumptions<a class="headerlink" href="#trajectory-optimizer-specification-and-assumptions" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>This document describes the current specification, design assumptions, and known limitations of
+<code>autoware_trajectory_optimizer</code>. It is written for engineers integrating upstream planners or
+modifying the pipeline. Read this before touching plugin ordering or resampling logic.</p>
+<hr>
+<h2 id="core-design-principle-positions-are-primary-kinematics-are-derived">Core Design Principle: Positions Are Primary, Kinematics Are Derived<a class="headerlink" href="#core-design-principle-positions-are-primary-kinematics-are-derived" title="Permanent link">#</a></h2>
+<p>The optimizer works in the <strong>position domain</strong>. The path geometry (x, y per point) is what the
+optimization models operate on. Velocity and acceleration fields in the output <code>TrajectoryPoint</code>
+messages are <strong>not preserved from the input</strong> - they are recomputed as numerical derivatives of
+the smoothed positions over a fixed time step.</p>
+<p>This is not an approximation or a convenience. It is the fundamental contract of the pipeline:</p>
 <ul>
-<li><strong>Vehicle Info</strong>: Used to account for the vehicle's dimensions (longitudinal offset) when checking for stop line intersections &amp; computing stopping margin.</li>
-<li><strong>Lanelet Map</strong>: Used to find regulatory elements (traffic lights) and their associated stop lines.</li>
-<li><strong>Traffic Light Signals</strong>: Provides the current state (color) of traffic light groups.</li>
-<li><strong>Route</strong>: Used to map traffic light signals to lanelets and filter those that are relevant to the vehicle's path.</li>
-<li><strong>Odometry</strong>: Provides the current ego velocity to determine if ego is stopped and to calculate stopping distances.</li>
-<li><strong>Acceleration</strong>: Provides the current ego acceleration to calculate stopping distances.</li>
+<li>The upstream planner provides positions sampled at a <strong>constant time interval</strong> (dt).</li>
+<li>The optimizer adjusts those positions (smooths the path).</li>
+<li>Kinematics are recalculated from the new positions using the same dt.</li>
 </ul>
-<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
-<p>The module parameters are grouped under <code>traffic_light_stop</code> section of <code>trajectory_modifier.param.yaml</code></p>
+<p>If you treat the velocity or acceleration fields coming out of the planner as optimization inputs
+to be preserved, you have misunderstood the system.</p>
+<hr>
+<h2 id="input-requirements">Input Requirements<a class="headerlink" href="#input-requirements" title="Permanent link">#</a></h2>
+<p>The optimizer expects trajectory points sampled at a <strong>constant dt</strong>, currently provided by the
+diffusion planner upstream. This means:</p>
+<ul>
+<li><code>time_from_start[i+1] - time_from_start[i]</code> must be constant and equal to the configured
+  <code>trajectory_qp_smoother.time_step_s</code> (default: 0.1 s).</li>
+<li>Arc length between consecutive points is <strong>not</strong> constant - it varies with velocity.</li>
+<li>Points at low speed are close together in space. Points at high speed are far apart.</li>
+</ul>
+<p>Do not arc-length resample the input trajectory before feeding it to the optimizer. Arc-length
+resampling destroys the constant-dt structure and breaks the QP smoother assumptions. The QP
+smoother never reads <code>time_from_start</code> from the input - it blindly assumes the configured
+<code>time_step_s</code> applies uniformly to every consecutive point pair. If your input has variable dt,
+the QP solver will silently compute wrong velocities and accelerations.</p>
+<hr>
+<h2 id="how-velocity-and-acceleration-are-computed">How Velocity and Acceleration Are Computed<a class="headerlink" href="#how-velocity-and-acceleration-are-computed" title="Permanent link">#</a></h2>
+<p>After the QP smoother adjusts point positions, the output kinematics are derived as follows:</p>
+<p><strong>Velocity</strong> (second pass, <code>post_process_trajectory</code>):</p>
+<div class="highlight"><pre><span></span><code>v[i] = || p[i] - p[i-1] || / dt        (for i &gt;= 1)
+v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)
+</code></pre></div>
+<p>A 3-point moving average is then applied starting at index 0, which overwrites v[0] with
+<code>(v_input[0] + v_geom[1] + v_geom[2]) / 3</code>. v[0] is therefore not purely preserved - it is
+blended with the geometric velocities of the next two points.</p>
+<p><strong>Acceleration</strong> (fourth pass, <code>recalculate_longitudinal_acceleration</code>):</p>
+<div class="highlight"><pre><span></span><code>a[i] = (v[i+1] - v[i]) / dt
+</code></pre></div>
+<p>The last point gets <code>0.0</code> (explicitly zeroed).</p>
+<p><strong>Consequences:</strong></p>
+<ul>
+<li>Any velocity profile set by the upstream planner (including stop points, speed limits,
+  deceleration ramps) is <strong>overwritten</strong> for all points. Even v[0], which is initially copied
+  from the input, is blended with the next two geometric velocities by the moving average.</li>
+<li>The velocity at each point reflects only how far the optimizer moved that point relative
+  to the previous one over one dt interval.</li>
+<li>There is no mechanism inside the QP smoother to respect a maximum speed constraint per point.
+  Speed limiting happens in a separate plugin (<code>TrajectoryVelocityOptimizer</code>) that runs later.</li>
+</ul>
+<hr>
+<h2 id="plugin-pipeline">Plugin Pipeline<a class="headerlink" href="#plugin-pipeline" title="Permanent link">#</a></h2>
+<p>Plugins are loaded in the order specified by <code>plugin_names</code>. Execution order is critical.</p>
+<h3 id="default-pipeline">Default Pipeline<a class="headerlink" href="#default-pipeline" title="Permanent link">#</a></h3>
+<p>The full <code>plugin_names</code> list (from <code>config/trajectory_optimizer.param.yaml</code>) and each plugin's
+enabled state:</p>
+<div class="highlight"><pre><span></span><code>TrajectoryPointFixer                      [ON]
+TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- first pass, before QP
+TrajectoryQPSmoother                      [ON]
+TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- second pass, after QP
+TrajectoryEBSmootherOptimizer             [OFF]
+TrajectorySplineSmoother                  [ON]
+TrajectoryMPTOptimizer                    [OFF]
+TrajectoryVelocityOptimizer               [ON]
+TrajectoryExtender                        [OFF]
+</code></pre></div>
+<p>Note that <code>TrajectoryKinematicFeasibilityEnforcer</code> is listed twice in <code>plugin_names</code> and runs
+both before and after the QP smoother. Each pass is a separate plugin instance operating
+independently.</p>
+<h3 id="plugin-descriptions">Plugin Descriptions<a class="headerlink" href="#plugin-descriptions" title="Permanent link">#</a></h3>
+<h4 id="trajectorypointfixer-enabled">TrajectoryPointFixer (enabled)<a class="headerlink" href="#trajectorypointfixer-enabled" title="Permanent link">#</a></h4>
+<p>Removes duplicate or numerically degenerate points (zero-distance, NaN positions). Optionally
+resamples closely-spaced points. Also runs stop-approach detection and populates the shared
+<code>SemanticSpeedTracker</code> for use by downstream plugins.</p>
+<p>Does not modify velocities or time stamps.</p>
+<p><strong>Stop-approach detection:</strong> Points that are much closer together than normal represent a stop
+zone. With a constant <code>dt</code>, <code>v = ds/dt</code> approaches zero as <code>ds</code> approaches zero, so geometric
+proximity IS a reliable stop indicator. Detection runs in three stages:</p>
+<ol>
+<li><code>remove_close_proximity_points</code>: marks points that are geometric near-duplicates (<code>ds &lt;
+min_dist_to_remove_m</code>) as stop candidates.</li>
+<li><code>resample_close_proximity_points</code>: resamples clusters of closely-spaced points and marks the
+   cluster endpoint as a stop candidate if the speed is decreasing.</li>
+<li><code>build_stop_approach_ranges</code>: processes all candidates, confirms speed is decreasing toward
+   the candidate (not increasing — that would be a take-off), traces back the deceleration onset,
+   and stores the resulting range in <code>SemanticSpeedTracker.slow_down_ranges</code>.</li>
+</ol>
+<p>If no candidates produce valid stop approach ranges, a velocity-profile scan
+(<code>detect_velocity_based_stop</code>) is run as a fallback for constant-spacing trajectories where no
+geometric clusters exist.</p>
+<h4 id="trajectorykinematicfeasibilityenforcer-enabled-runs-twice">TrajectoryKinematicFeasibilityEnforcer (enabled, runs twice)<a class="headerlink" href="#trajectorykinematicfeasibilityenforcer-enabled-runs-twice" title="Permanent link">#</a></h4>
+<p>Forward-propagating filter that clamps heading changes at each trajectory segment to respect
+Ackermann steering geometry and a maximum yaw rate limit. At each step:</p>
+<div class="highlight"><pre><span></span><code>delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)
+</code></pre></div>
+<p>where <code>kappa_max = tan(delta_max) / L</code>, <code>s</code> is the segment arc length, and <code>avg_dt</code> is a single
+average time step computed from all <code>time_from_start</code> deltas in the input trajectory (fallback:
+0.1 s). The same <code>avg_dt</code> is used for every segment - per-segment dt is not recomputed from
+distance or velocity.</p>
+<p>Positions are adjusted to enforce this limit while preserving segment arc lengths. Velocities
+and <code>time_from_start</code> are not modified.</p>
+<p>Running it <strong>before</strong> the QP smoother pre-conditions the path so the QP operates on a
+kinematically plausible input. Running it <strong>after</strong> the QP smoother catches any constraint
+violations reintroduced by the smoothing. The second pass uses the same parameter set as the
+first.</p>
+<h4 id="trajectoryqpsmoother-enabled">TrajectoryQPSmoother (enabled)<a class="headerlink" href="#trajectoryqpsmoother-enabled" title="Permanent link">#</a></h4>
+<p>The primary path smoother. Solves a quadratic program that minimizes path curvature
+(<code>||p[i+1] - 2*p[i] + p[i-1]||^2 / dt^2</code>) while penalizing deviation from the input path.</p>
+<p>Decision variables: <code>[x_0, y_0, ..., x_{N-1}, y_{N-1}]</code> - positions only.</p>
+<p>Hard constraints: the first <code>num_constrained_points_start</code> and last <code>num_constrained_points_end</code>
+points are fixed to their input positions (defaults: start = 3, end = 0). Additionally, any
+stop points detected by <code>TrajectoryPointFixer</code> (via <code>SemanticSpeedTracker</code>) are added as hard
+equality constraints, pinning their positions regardless of smoothness weight.</p>
+<p>After solving, velocities and accelerations are recomputed from the smoothed positions as
+described above. For points within detected stop approach ranges, the planner's original velocity
+profile is restored after the moving average step, preserving the intended deceleration curve.
+The stop point itself is forced to zero velocity unconditionally. Orientations are recalculated
+from the smoothed path geometry. Optionally, orientations can instead be copied from the original
+input trajectory via nearest-neighbor matching (<code>preserve_input_trajectory_orientation</code>), but
+this is <strong>disabled by default</strong>.</p>
+<p><strong>The QP smoother must run before any plugin that resamples the trajectory.</strong> Resampling
+(changing the number of points or their spacing in arc length) breaks the constant-dt assumption
+and invalidates the curvature penalty scaling.</p>
+<h4 id="trajectorysplinesmoother-enabled">TrajectorySplineSmoother (enabled)<a class="headerlink" href="#trajectorysplinesmoother-enabled" title="Permanent link">#</a></h4>
+<p>Resamples the trajectory using Akima spline interpolation at a fixed arc-length resolution
+(<code>interpolation_resolution_m</code>, default: 0.2 m).
+<code>preserve_input_trajectory_orientation</code> is available but <strong>disabled by default</strong>; orientations
+are computed from the spline geometry. After resampling, <code>time_from_start</code> is recomputed for all trajectory points; any <code>time_from_start</code> values supplied by upstream modules are therefore overwritten.</p>
+<p>This plugin <strong>breaks the constant-dt property</strong>. After it runs, points are no longer at uniform
+time intervals - they are at uniform arc-length intervals. This is intentional and necessary:
+the downstream controller requires points that are not too close in space, regardless of velocity.
+If points are too close (as they are at low speed with constant-dt sampling), the controller
+produces poor curvature tracking.</p>
+<p>The spline smoother must run <strong>after</strong> the QP smoother for this reason.</p>
+<h4 id="trajectoryvelocityoptimizer-enabled">TrajectoryVelocityOptimizer (enabled)<a class="headerlink" href="#trajectoryvelocityoptimizer-enabled" title="Permanent link">#</a></h4>
+<p>Operates on the velocity profile of the trajectory after the path geometry has been fixed by
+the smoothers. It does not modify positions.</p>
+<p>Responsibilities:</p>
+<ul>
+<li><strong>Speed cap</strong> (<code>limit_speed</code>, enabled by default): applies a global maximum speed from an
+  external velocity limit topic or the configured default.</li>
+<li><strong>Lateral acceleration limiting</strong> (<code>limit_lateral_acceleration</code>, disabled by default): for each consecutive point pair, it
+  computes <code>yaw_rate = |delta_yaw / delta_time|</code> from orientation differences and
+  <code>time_from_start</code>. If <code>v * yaw_rate &gt; a_lat_max</code>, the point's speed is capped to
+  <code>v_limit = a_lat_max / yaw_rate</code>.</li>
+<li><strong>Jerk-filtered velocity smoothing</strong> (<code>smooth_velocities</code>, disabled by default): runs the
+  in-package <code>ContinuousJerkSmoother</code> (QP-based, via <code>autoware_qp_interface</code>) that enforces
+  <code>limit.max_acc</code>, <code>limit.min_acc</code>, <code>limit.max_jerk</code>, <code>limit.min_jerk</code> on the velocity profile.</li>
+<li><strong>Pull-out speed</strong> (<code>set_engage_speed</code>, disabled by default): clamps initial velocity to
+  <code>target_pull_out_speed_mps</code> when the vehicle is near standstill. Applied after speed limiting
+  and jerk smoothing so those stages cannot overwrite the engage/pull-out constraints.</li>
+</ul>
+<p>The velocity optimizer is the only stage where velocity values in the output trajectory are
+computed with awareness of physical limits. Everything before it treats velocity as a side effect
+of position geometry.</p>
+<h3 id="disabled-plugins">Disabled Plugins<a class="headerlink" href="#disabled-plugins" title="Permanent link">#</a></h3>
+<h4 id="trajectoryebsmootheroptimizer-disabled">TrajectoryEBSmootherOptimizer (disabled)<a class="headerlink" href="#trajectoryebsmootheroptimizer-disabled" title="Permanent link">#</a></h4>
+<p>Elastic Band path smoother wrapping <code>autoware_path_smoother</code>. Resamples the trajectory
+internally. After smoothing, recomputes <code>time_from_start</code> from velocity and arc length.</p>
+<p>This plugin is effectively deprecated in the current pipeline. It conflicts with the QP smoother
+ordering constraint and its output quality relative to the QP smoother does not justify its
+presence. It exists for historical reasons.</p>
+<h4 id="trajectoryextender-disabled">TrajectoryExtender (disabled)<a class="headerlink" href="#trajectoryextender-disabled" title="Permanent link">#</a></h4>
+<p>Extends the trajectory backward by prepending past ego states stored in a rolling history buffer.
+The intent is to provide the controller a trajectory that starts behind the vehicle's current
+position, giving it a smooth reference even when the vehicle has advanced past the planner's
+output head.</p>
+<p>Known issue: the extender introduces a discontinuity at the junction between the history points
+and the planner output, which causes artifacts in the QP smoother and degrades smoothing results.
+For this reason it is disabled and its placement in the pipeline is near the end (after smoothers)
+to minimize damage if enabled. This discontinuity is an open problem.</p>
+<h4 id="trajectorymptoptimizer-disabled-experimental">TrajectoryMPTOptimizer (disabled, experimental)<a class="headerlink" href="#trajectorymptoptimizer-disabled-experimental" title="Permanent link">#</a></h4>
+<p>Model Predictive Trajectory optimizer wrapping <code>autoware_path_optimizer</code>'s <code>MPTOptimizer</code>.
+Takes the trajectory and constructs simple perpendicular corridor bounds around it, then solves
+a bicycle-model QP to refine the path within those bounds.</p>
+<p>After optimization, recomputes kinematics using kinematic equations (<code>v^2 = v0^2 + 2as</code>) rather
+than constant dt, propagating <code>time_from_start</code> forward through the trajectory.</p>
+<p>This plugin was conceived as a complement to or replacement for the spline smoother, but it did
+not produce results good enough to justify enabling it by default. The corridor bounds are
+synthetic (perpendicular offsets from the reference path) rather than derived from map data,
+which limits the optimizer's ability to meaningfully reshape the trajectory.</p>
+<hr>
+<h2 id="ordering-constraints-summary">Ordering Constraints Summary<a class="headerlink" href="#ordering-constraints-summary" title="Permanent link">#</a></h2>
 <table>
 <thead>
 <tr>
-<th>Parameter name</th>
-<th>Type</th>
-<th>Default</th>
-<th>Description</th>
+<th>Rule</th>
+<th>Reason</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>stop_margin</code></td>
-<td>double</td>
-<td>0.75</td>
-<td>[m] Distance to keep from stop line (measured from ego front)</td>
+<td>Kinematic enforcer before QP</td>
+<td>Pre-conditions path so QP operates on feasible input</td>
 </tr>
 <tr>
-<td><code>stop_for_red_light</code></td>
-<td>bool</td>
-<td>true</td>
-<td>Flag to enable/disable stopping for red light violation</td>
+<td>QP smoother before spline/EB smoother</td>
+<td>Both resampling plugins destroy constant-dt; QP needs it</td>
 </tr>
 <tr>
-<td><code>stop_for_amber_light</code></td>
-<td>bool</td>
-<td>false</td>
-<td>Flag to enable/disable stopping for amber light violation</td>
+<td>Kinematic enforcer after QP (second pass)</td>
+<td>Catches constraint violations reintroduced by smoothing</td>
 </tr>
 <tr>
-<td><code>treat_amber_light_as_red</code></td>
-<td>bool</td>
-<td>false</td>
-<td>When true, amber lights are treated identically to red lights (rejection on intersection regardless of distance).</td>
+<td>QP smoother before velocity optimizer</td>
+<td>Velocity optimizer works on the final path geometry</td>
 </tr>
 <tr>
-<td><code>treat_unknown_light_as_red</code></td>
-<td>bool</td>
-<td>false</td>
-<td>When true, unknown lights are treated identically to red lights (rejection on intersection).</td>
+<td>Point fixer at start</td>
+<td>Degenerate inputs break the QP solver</td>
 </tr>
 <tr>
-<td><code>overshoot_tolerance</code></td>
-<td>double</td>
-<td>0.0</td>
-<td>[m] Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible.</td>
-</tr>
-<tr>
-<td><code>allow_if_cannot_stop_distance</code></td>
-<td>double</td>
-<td>0.0</td>
-<td>[m] Allow crossing when the ego front is within this distance and ego cannot stop before the stop line.</td>
-</tr>
-<tr>
-<td><code>min_lookahead_distance</code></td>
-<td>double</td>
-<td>20.0</td>
-<td>[m] Minimum forward length to scan for stop lines even when comfortable stopping distance is shorter.</td>
-</tr>
-<tr>
-<td><code>th_stable_duration_red</code></td>
-<td>double</td>
-<td>0.2</td>
-<td>[s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).</td>
-</tr>
-<tr>
-<td><code>th_stable_duration_amber</code></td>
-<td>double</td>
-<td>0.2</td>
-<td>[s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).</td>
-</tr>
-<tr>
-<td><code>th_stable_duration_unknown</code></td>
-<td>double</td>
-<td>0.0</td>
-<td>[s] Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving).</td>
-</tr>
-<tr>
-<td><code>th_amber_rejection_hysteresis</code></td>
-<td>double</td>
-<td>0.5</td>
-<td>[s] Duration to persist an amber rejection state to prevent "flipping" due to minor velocity/distance changes.</td>
-</tr>
-<tr>
-<td><code>crossing_time_limit</code></td>
-<td>double</td>
-<td>2.75</td>
-<td>[s] Maximum time allowed for the ego vehicle to cross the stop line after an amber light appears.</td>
-</tr>
-<tr>
-<td><code>delay_response_time</code></td>
-<td>double</td>
-<td>0.5</td>
-<td>[s] Delay response time used to estimate the minimum ego stopping distance.</td>
-</tr>
-<tr>
-<td><code>ego_stopped_vel_th</code></td>
-<td>double</td>
-<td>0.01</td>
-<td>[m/s] Velocity below which ego is considered stopped when checking traffic lights.</td>
+<td>Extender after smoothers (if enabled)</td>
+<td>Discontinuity artifacts damage smoother output</td>
 </tr>
 </tbody>
-</table></div>
+</table>
+<hr>
+<h2 id="why-arc-length-resampling-is-avoided">Why Arc-Length Resampling Is Avoided<a class="headerlink" href="#why-arc-length-resampling-is-avoided" title="Permanent link">#</a></h2>
+<p>The optimizer operates under a contract with the upstream planner: the planner outputs (x, y)
+positions at a constant time interval. The optimizer's job is to refine those positions while
+introducing the minimum changes necessary to produce a smooth, feasible path.</p>
+<p>This minimal-change philosophy is deliberate. If the optimizer aggressively resamples and
+reshapes the trajectory, it becomes impossible to attribute failures correctly. When something
+goes wrong in the vehicle's behavior, you need to know whether the fault is on the model side
+(the planner produced a bad trajectory) or on the optimizer side (the optimizer distorted a
+good one). Heavy arc-length resampling muddles that boundary: the optimizer's output no longer
+resembles the planner's intent, and debugging becomes guesswork.</p>
+<p>By preserving the relative spacing of points - moving them laterally to smooth the path, but
+not redistributing them along the arc - the optimizer keeps the planner's intent legible in its
+output. Each output point corresponds directly to an input point. Deviations are local and
+bounded by the fidelity weight.</p>
+<p>Arc-length resampling also has a concrete technical incompatibility with the QP smoother. The
+curvature penalty term:</p>
+<div class="highlight"><pre><span></span><code>J_smooth = weight_smoothness / dt^2 * sum || p[i+1] - 2*p[i] + p[i-1] ||^2
+</code></pre></div>
+<p>is a second-order finite difference approximation of acceleration, valid only when consecutive
+points are separated by a constant time interval <code>dt</code>. After arc-length resampling, points are
+separated by a constant spatial interval <code>ds</code> instead. The QP smoother has no way to detect
+this - it will still run and converge, but the weight scaling is wrong and the
+smoothness-vs-fidelity tradeoff will be miscalibrated relative to the configured parameters.</p>
+<p>The spline smoother at the end of the pipeline does arc-length resample. This is a known and
+accepted exception: the downstream controller requires points that are not too close in space,
+and at low speed with constant-dt sampling they are. The spline smoother runs after all
+position-domain optimization is complete, so it does not corrupt any optimizer's assumptions.
+Any plugin that arc-length resamples before the QP smoother has no place in this pipeline.</p>
+<hr>
+<h2 id="orientation-handling">Orientation Handling<a class="headerlink" href="#orientation-handling" title="Permanent link">#</a></h2>
+<p>Orientations are not optimized directly by any plugin. They are recomputed from path geometry
+after position changes:</p>
+<div class="highlight"><pre><span></span><code>yaw[i] = atan2(y[i+1] - y[i], x[i+1] - x[i])
+</code></pre></div>
+<p>Both the QP smoother and the spline smoother offer <code>preserve_input_trajectory_orientation</code>, which
+copies orientations from the original input via nearest-neighbor matching instead of computing
+them from the smoothed geometry. This option is <strong>disabled by default in both plugins</strong>, so
+orientations are derived purely from the smoothed path tangent.</p>
+<p>When enabled, the rationale is that the diffusion planner produces orientations that encode the
+intended heading, which may differ from the pure geometric tangent of the smoothed path. If the
+smoothing deviation is small relative to the configured distance threshold (QP smoother:
+<code>max_distance_for_orientation_m</code>; spline smoother: <code>max_distance_discrepancy_m</code>; both default
+to 5.0 m), the copied orientation is close enough to the geometric tangent that the error is
+acceptable.</p>
+<hr>
+<h2 id="known-limitations">Known Limitations<a class="headerlink" href="#known-limitations" title="Permanent link">#</a></h2>
+<ol>
+<li>
+<p><strong>Stop velocity preservation depends on detection.</strong> Stop points are detected from geometric
+   proximity (<code>ds &lt; min_dist_to_remove_m</code>) and velocity profile. If a planner encodes a stop
+   zone with point spacings above the detection threshold and no near-zero velocities below
+   <code>stop_detection_velocity_threshold_mps</code>, the stop will not be detected and the QP smoother
+   will overwrite the velocity profile as normal.</p>
+</li>
+<li>
+<p><strong>Constant-dt is broken at the pipeline end.</strong> The spline smoother as the last geometric step
+   converts the trajectory to arc-length parameterization. Downstream consumers receive a
+   trajectory that does not have constant-dt points. This is currently acceptable for the
+   controller but means the optimizer output cannot be cleanly fed back into another constant-dt
+   optimizer pass.</p>
+</li>
+<li>
+<p><strong>The QP smoother ignores <code>time_from_start</code> in the input.</strong> It uses its own configured
+   <code>time_step_s</code> uniformly. If the input trajectory has a different dt (e.g., because a resampler
+   ran earlier), the QP smoother will produce incorrect velocities without warning.</p>
+</li>
+<li>
+<p><strong>Velocities outside detected stop zones are geometric.</strong> For points not in a detected stop
+   approach range, velocities are recomputed from position differences and blended through a
+   3-point moving average. The planner's velocity values are not preserved there. For detected
+   stop approach zones, the planner's original velocity profile is restored after the moving
+   average and the stop point is forced to zero (see TrajectoryQPSmoother section).</p>
+</li>
+<li>
+<p><strong>Trajectory extender discontinuity is unresolved.</strong> The history-based backward extension
+   creates a positional gap at the junction point that propagates through the smoothers. No fix
+   is currently planned.</p>
+</li>
+<li>
+<p><strong>MPT bounds are not map-aware.</strong> The MPT optimizer's corridor bounds are simple perpendicular
+   offsets, not derived from lanelet or drivable area data. The optimizer has no knowledge of
+   actual road boundaries. Currently, there are no plans to introduce a map dependency into the optimizer node.</p>
+</li>
+</ol></div>
 
 
 
@@ -22870,7 +23133,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Autoware Trajectory Processor">
+          <a href="../temporal_mpt_optimizer/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Temporal MPT Optimizer">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -22880,20 +23143,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Autoware Trajectory Processor
+                Temporal MPT Optimizer
               </div>
             </div>
           </a>
         
         
           
-          <a href="../continuous_jerk_filter/" class="md-footer__link md-footer__link--next" aria-label="Next: Continuous Jerk Filter">
+          <a href="../../../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Ranker">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Continuous Jerk Filter
+                Trajectory Ranker
               </div>
             </div>
             <div class="md-footer__button md-icon">
