@@ -221,11 +221,12 @@ std::vector<Point> expected_points_in_output_frame(size_t sensor_index, double m
   const auto & translation = sensor_translations.at(sensor_index);
   std::vector<Point> points;
   for (const auto & point : sensor_points) {
-    points.push_back(Point{
-      static_cast<float>(point[0] + translation[0] + motion_shift_x),
-      static_cast<float>(point[1] + translation[1]), static_cast<float>(point[2] + translation[2]),
-      sensor_intensities.at(sensor_index), sensor_return_types.at(sensor_index),
-      sensor_channels.at(sensor_index)});
+    points.push_back(
+      Point{
+        static_cast<float>(point[0] + translation[0] + motion_shift_x),
+        static_cast<float>(point[1] + translation[1]),
+        static_cast<float>(point[2] + translation[2]), sensor_intensities.at(sensor_index),
+        sensor_return_types.at(sensor_index), sensor_channels.at(sensor_index)});
   }
   return points;
 }
@@ -301,10 +302,11 @@ std::vector<Point> expected_points_in_sensor_frame(size_t sensor_index, double m
 {
   std::vector<Point> points;
   for (const auto & point : sensor_points) {
-    points.push_back(Point{
-      static_cast<float>(point[0] + motion_shift_x), point[1], point[2],
-      sensor_intensities.at(sensor_index), sensor_return_types.at(sensor_index),
-      sensor_channels.at(sensor_index)});
+    points.push_back(
+      Point{
+        static_cast<float>(point[0] + motion_shift_x), point[1], point[2],
+        sensor_intensities.at(sensor_index), sensor_return_types.at(sensor_index),
+        sensor_channels.at(sensor_index)});
   }
   return points;
 }
@@ -591,8 +593,9 @@ protected:
   // Gives the node time to do nothing, for the tests that assert on silence.
   void wait_out_the_timeout()
   {
-    spin_for(std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::duration<double>(timeout_sec * 4)));
+    spin_for(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(timeout_sec * 4)));
   }
 
   // The slice of the concatenated cloud that `info` attributes to `sensor_index`. Going
@@ -962,9 +965,10 @@ TEST_F(ConcatenateNodeTest, AdvertisesConcatenationInfoTopic)
   start(make_advanced_with_twist_params());
 
   // Assert
-  expect_node_has_publisher_for(ExpectedTopic{
-    get_concatenation_info_topic(), "autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo",
-    rclcpp::ReliabilityPolicy::BestEffort, rclcpp::DurabilityPolicy::Volatile, 5});
+  expect_node_has_publisher_for(
+    ExpectedTopic{
+      get_concatenation_info_topic(), "autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo",
+      rclcpp::ReliabilityPolicy::BestEffort, rclcpp::DurabilityPolicy::Volatile, 5});
 }
 
 TEST_F(ConcatenateNodeTest, AdvertisesOneSynchronizedCloudTopicPerInput)
