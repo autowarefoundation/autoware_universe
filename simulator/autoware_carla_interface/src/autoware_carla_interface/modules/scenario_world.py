@@ -9,83 +9,68 @@ in scenario mode the interface does not load the world, it waits for the
 from __future__ import annotations
 
 import time
-from typing import Callable
 
 
-def _runner_world_signals(client, expected, query_world_map):
-    """Return ``(map_ok, sync_on, ticking, current_map_name)`` for the live world.
-
-    * ``map_ok`` - the active map is the expected one, or its name could not be
-      read (CARLA 0.10 levels expose no OpenDRIVE metadata; fall back to the other
-      signals then).
-    * ``sync_on`` - synchronous mode is enabled; the interface never enables it in
-      scenario mode, so this can only be the runner having taken ownership.
-    * ``ticking`` - an external tick was observed, i.e. the runner is actively
-      driving the world (so a runtime-init / wait_for_tick spawn will be applied).
-    """
-    world = client.get_world()
-    current, query_failed = query_world_map(client)
-    map_ok = query_failed or (current is not None and current.lower() == expected)
-    sync_on = False
-    ticking = False
-    if map_ok:
-        try:
-            sync_on = world.get_settings().synchronous_mode
-        except RuntimeError:
-            sync_on = False
-    if map_ok and sync_on:
-        try:
-            # Blocks until the runner ticks; times out when nothing drives it yet.
-            world.wait_for_tick(2.0)
-            ticking = True
-        except RuntimeError:
-            ticking = False
-    return map_ok, sync_on, ticking, current
+def _active_map(client):
+    """Return ``(name_lower, could_not_read)`` for the world's active map."""
+    try:
+        return client.get_world().get_map().name.split("/")[-1].lower(), False
+    except RuntimeError:
+        # CARLA 0.10 levels can expose no parseable OpenDRIVE metadata.
+        return None, True
 
 
-def wait_for_external_world(
-    client,
-    carla_map: str,
-    timeout: float,
-    logger,
-    query_world_map: Callable,
-    normalize_map_name: Callable[[str], str],
-):
+def _sync_enabled(world) -> bool:
+    """Whether synchronous mode is on (the runner enabling it = it owns the world)."""
+    try:
+        return bool(world.get_settings().synchronous_mode)
+    except RuntimeError:
+        return False
+
+
+def _observed_tick(world) -> bool:
+    """Whether an external tick arrived within a short wait (runner is driving)."""
+    try:
+        world.wait_for_tick(2.0)
+        return True
+    except RuntimeError:
+        return False
+
+
+def wait_for_external_world(client, expected_map: str, timeout: float, logger):
     """Wait until the scenario runner is driving its world, then return it.
 
     The runner loads the map, destroys leftover actors (exempting the ego role),
     enables synchronous mode, and then drives the clock while it waits for this
-    node to spawn the "Ego" actor. Adopt only once all three signals hold together
-    (see :func:`_runner_world_signals`): requiring synchronous mode - not just a
-    tick - rules out the async default world CARLA starts on, whose free-running
-    ticks would otherwise cause a premature adopt/spawn into the wrong (soon
-    reloaded) world. On timeout, adopt whatever world is up so the bridge still
-    starts, surfacing the misconfiguration in the log.
+    node to spawn the "Ego" actor. Adopt only once three signals hold together:
+    the active map is the expected one (skipped when its name cannot be read),
+    synchronous mode is on (this node never enables it in scenario mode, so that
+    means the runner owns the world), and an external tick is observed (the runner
+    is actively driving, so a wait_for_tick spawn is applied, not deadlocked).
+
+    Requiring synchronous mode - not just a tick - rules out the async default
+    world CARLA starts on, whose free-running ticks would otherwise cause a
+    premature adopt/spawn into the wrong (soon-reloaded) world. On timeout, adopt
+    whatever world is up so the bridge still starts, surfacing it in the log.
     """
-    expected = normalize_map_name(carla_map).lower()
+    expected = expected_map.split("/")[-1].lower()
     deadline = time.time() + max(float(timeout), 1.0)
     logger.info(
-        "Scenario mode: waiting for the scenario runner to drive its world "
-        f"(expected map '{expected}') before spawning the ego; not loading the "
-        "world here (the runner owns it)."
+        f"Scenario mode: waiting for the scenario runner to drive its world "
+        f"(expected map '{expected}'); not loading the world here (the runner owns it)."
     )
     while True:
-        map_ok, sync_on, ticking, current = _runner_world_signals(
-            client, expected, query_world_map
-        )
-        if map_ok and sync_on and ticking:
-            logger.info(
-                "Adopted the scenario runner's live CARLA world (map "
-                f"'{current if current is not None else 'unknown'}', synchronous)."
-            )
+        current, unreadable = _active_map(client)
+        owned = (unreadable or current == expected) and _sync_enabled(client.get_world())
+        if owned and _observed_tick(client.get_world()):
+            logger.info(f"Adopted the scenario runner's live CARLA world (map '{current}').")
             return client.get_world()
         if time.time() >= deadline:
             logger.warning(
                 f"Timed out after {timeout:.0f}s waiting for the scenario runner "
-                f"(active map: {current}, synchronous: {sync_on}, external tick: "
-                f"{ticking}); adopting the current world as-is. Check that "
-                "with_scenario's map matches carla_map and that the runner is running."
+                f"(active map: {current}, owned: {owned}); adopting the current world "
+                "as-is. Check that with_scenario's map matches carla_map and the runner runs."
             )
             return client.get_world()
-        if not (map_ok and sync_on):
+        if not owned:
             time.sleep(1.0)

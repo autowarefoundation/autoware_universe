@@ -519,12 +519,7 @@ class InitializeInterface(object):
     def _wait_for_external_world(self, client):
         """Adopt the scenario runner's world (see modules.scenario_world)."""
         self.world = scenario_world.wait_for_external_world(
-            client,
-            self.carla_map,
-            self.scenario_world_wait_timeout,
-            self.logger,
-            self._query_world_map,
-            self._normalize_map_name,
+            client, self.carla_map, self.scenario_world_wait_timeout, self.logger
         )
 
     def _spawn_ego_actor(self):
