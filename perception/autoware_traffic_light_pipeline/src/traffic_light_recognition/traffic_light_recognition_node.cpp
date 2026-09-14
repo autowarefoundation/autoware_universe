@@ -72,6 +72,8 @@ TrafficLightRecognitionConfig declare_recognition_config(rclcpp::Node * node)
   config.under_exposure_threshold =
     node->declare_parameter<double>("classifier.under_exposure_threshold");
 
+  config.diagnostics_node_name = node->get_name();
+
   return config;
 }
 }  // namespace
@@ -119,6 +121,8 @@ TrafficLightRecognitionNode::TrafficLightRecognitionNode(const rclcpp::NodeOptio
     "~/output/traffic_signals", rclcpp::QoS{1});
   rois_pub_ = create_publisher<tier4_perception_msgs::msg::TrafficLightRoiArray>(
     "~/output/rois", rclcpp::QoS{1});
+  diagnostics_pub_ =
+    create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", rclcpp::QoS{10});
 }
 
 void TrafficLightRecognitionNode::build_engines_and_shutdown()
@@ -174,6 +178,7 @@ void TrafficLightRecognitionNode::sync_callback(
 
   signals_pub_->publish(result->merged_signals);
   rois_pub_->publish(result->selected_rois);
+  diagnostics_pub_->publish(result->diagnostics);
 }
 
 }  // namespace autoware::traffic_light

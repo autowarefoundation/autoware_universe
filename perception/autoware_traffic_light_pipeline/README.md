@@ -14,6 +14,7 @@ Single-node composition of the traffic light recognition pipeline.
 | Subscribed | `~/input/route`            | `autoware_planning_msgs/msg/LaneletRoute`        |
 | Published  | `~/output/traffic_signals` | `tier4_perception_msgs/msg/TrafficLightArray`    |
 | Published  | `~/output/rois`            | `tier4_perception_msgs/msg/TrafficLightRoiArray` |
+| Published  | `/diagnostics`             | `diagnostic_msgs/msg/DiagnosticArray`            |
 
 ### Node parameters
 

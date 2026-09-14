@@ -19,6 +19,8 @@
 #include <autoware/traffic_light_classifier/classifier/cnn_classifier.hpp>
 #include <autoware/traffic_light_selector/traffic_light_selector.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <diagnostic_msgs/msg/key_value.hpp>
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
 
 #include <fstream>
@@ -44,6 +46,42 @@ std::vector<std::string> read_label_file(const std::string & filepath)
     labels.push_back(label);
   }
   return labels;
+}
+
+diagnostic_msgs::msg::KeyValue make_key_value(const std::string & key, const bool value)
+{
+  diagnostic_msgs::msg::KeyValue key_value;
+  key_value.key = key;
+  key_value.value = value ? "True" : "False";
+  return key_value;
+}
+
+diagnostic_msgs::msg::DiagnosticArray make_exposure_diagnostics(
+  const std::string & node_name, const builtin_interfaces::msg::Time & stamp,
+  const bool detected_over_exposure, const bool detected_under_exposure)
+{
+  diagnostic_msgs::msg::DiagnosticStatus status;
+  status.name = node_name + ": traffic_light_classifier";
+  status.hardware_id = node_name;
+  status.values.push_back(
+    make_key_value("detect_traffic_light_over_exposure", detected_over_exposure));
+  status.values.push_back(
+    make_key_value("detect_traffic_light_under_exposure", detected_under_exposure));
+
+  if (detected_over_exposure || detected_under_exposure) {
+    status.level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    status.message =
+      "Detected out-of-range exposure in ROI. Corresponding ROI was overwritten "
+      "with UNKNOWN.";
+  } else {
+    status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    status.message = "OK";
+  }
+
+  diagnostic_msgs::msg::DiagnosticArray diagnostics;
+  diagnostics.header.stamp = stamp;
+  diagnostics.status.push_back(status);
+  return diagnostics;
 }
 
 autoware::tensorrt_yolox::TrtYoloXDetectorConfig make_whole_image_detector_config(
@@ -140,6 +178,7 @@ TrafficLightRecognition::TrafficLightRecognition(
   whole_image_detector_(make_whole_image_detector_config(config)),
   car_classifier_(make_car_classifier(config)),
   pedestrian_classifier_(make_pedestrian_classifier(config)),
+  diagnostics_node_name_(config.diagnostics_node_name),
   tf_buffer_(tf_buffer)
 {
 }
@@ -194,6 +233,10 @@ tl::expected<TrafficLightRecognitionResult, std::string> TrafficLightRecognition
   result.merged_signals =
     TrafficLightCategoryMerger::merge(car_result->signals, pedestrian_result->signals);
   result.selected_rois = selected_rois;
+  result.diagnostics = make_exposure_diagnostics(
+    diagnostics_node_name_, image.header.stamp,
+    car_result->detected_over_exposure || pedestrian_result->detected_over_exposure,
+    car_result->detected_under_exposure || pedestrian_result->detected_under_exposure);
   return result;
 }
 

@@ -22,6 +22,7 @@
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -54,6 +55,8 @@ struct TrafficLightRecognitionConfig
 
   double over_exposure_threshold;
   double under_exposure_threshold;
+
+  std::string diagnostics_node_name;
 };
 
 // Builds (and discards) the detector's TensorRT engines.
@@ -63,6 +66,7 @@ struct TrafficLightRecognitionResult
 {
   tier4_perception_msgs::msg::TrafficLightArray merged_signals;
   tier4_perception_msgs::msg::TrafficLightRoiArray selected_rois;
+  diagnostic_msgs::msg::DiagnosticArray diagnostics;
 };
 
 class TrafficLightRecognition
@@ -86,6 +90,7 @@ private:
   std::optional<TrafficLightMapBasedDetector> map_based_detector_;
   TrafficLightClassifier car_classifier_;
   TrafficLightClassifier pedestrian_classifier_;
+  std::string diagnostics_node_name_;
   const tf2::BufferCore & tf_buffer_;
 };
 

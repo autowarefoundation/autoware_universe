@@ -21,6 +21,7 @@
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -65,6 +66,7 @@ private:
 
   rclcpp::Publisher<tier4_perception_msgs::msg::TrafficLightArray>::SharedPtr signals_pub_;
   rclcpp::Publisher<tier4_perception_msgs::msg::TrafficLightRoiArray>::SharedPtr rois_pub_;
+  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_pub_;
 
   using SyncPolicy = message_filters::sync_policies::ApproximateTime<
     sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo>;

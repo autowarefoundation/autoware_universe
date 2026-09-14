@@ -18,6 +18,7 @@
   <depend>autoware_traffic_light_classifier</depend>
   <depend>autoware_traffic_light_map_based_detector</depend>
   <depend>autoware_traffic_light_selector</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>message_filters</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
