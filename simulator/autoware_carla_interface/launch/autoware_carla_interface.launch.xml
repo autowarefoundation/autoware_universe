@@ -205,6 +205,7 @@
          cmd into tokens before substituting, so a quoted substitution breaks the
          parse outright, while an option written as 'opt=$(var x)' stays one token
          even when x is empty or holds spaces. -->
+    <!-- cspell:ignore execv -->
     <!-- Invoke the installed console script directly (not via 'ros2 run'): the
          <executable> is then launch's direct child, and the runner's os.execv
          replaces that very process with the venv gRPC server, so a shutdown signal
