@@ -18,15 +18,16 @@
 #include "autoware/ptv3/postprocess/detection3d_postprocess.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
+#include "autoware/ptv3/preprocess/sweep_aggregator.hpp"
 #include "autoware/ptv3/utils.hpp"
 #include "autoware/ptv3/visibility_control.hpp"
 
+#include <Eigen/Geometry>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
-#include <array>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -54,9 +55,9 @@ public:
   // cSpell:ignore probs
   bool infer(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-    bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
-    bool should_publish_filtered_pointcloud, bool should_detect_objects,
-    std::optional<std::vector<Box3D>> & det_boxes3d,
+    const Eigen::Affine3f & affine_world2current, bool should_publish_segmented_pointcloud,
+    bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud,
+    bool should_detect_objects, std::optional<std::vector<Box3D>> & det_boxes3d,
     std::unordered_map<std::string, double> & proc_timing);
 
   void setPublishSegmentedPointcloud(
@@ -73,7 +74,6 @@ public:
 protected:
   void initPtr();
   void initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-  [[nodiscard]] std::array<std::int64_t, 3> stageProfileCounts(std::size_t stage_index) const;
   void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
@@ -82,10 +82,10 @@ protected:
   void bindSerializedPoolingAddresses();
   void precomputeSerializedPoolingMetadata();
   bool setSerializedPoolingInputShapes();
-  [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
 
   bool preProcess(
-    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr, bool should_run_seg3d);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const Eigen::Affine3f & affine_world2current, bool should_run_seg3d);
 
   bool inferenceEncoder();
   bool inferenceSeg3dHead();
@@ -102,6 +102,7 @@ protected:
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> detection3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
+  std::unique_ptr<SweepAggregator> aggregator_ptr_{nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
   std::unique_ptr<Detection3DPostprocess> detection3d_post_ptr_{nullptr};
@@ -144,20 +145,22 @@ protected:
   CudaUniquePtrHost<std::int64_t[]> serialized_pooling_num_voxels_;
   std::vector<std::int64_t> serialized_pooling_depths_;
 
-  // Preprocess outputs
+  // Preprocess outputs. All seg outputs describe the current frame only; the densified
+  // tail (sweep points) feeds the network but is never published.
+  DensifiedCloud densified_cloud_;
   std::int64_t num_voxels_{0};
-  std::int64_t num_cropped_points_{0};        // only for partial
-  std::int64_t num_source_points_{0};         // only for full
-  const void * current_input_data_{nullptr};  // only for full
+  std::int64_t num_current_points_{0};
+  std::int64_t num_cropped_current_points_{0};  // only for partial
 
-  CudaUniquePtr<std::uint8_t[]> compact_points_d_{nullptr};
   CudaUniquePtr<std::uint8_t[]> cropped_source_points_d_{nullptr};  // only for partial
-  CudaUniquePtr<float[]> reconstructed_features_d_{nullptr};        // only for partial and full
   CudaUniquePtr<std::int64_t[]> inverse_map_d_{nullptr};            // only for partial and full
   CudaUniquePtr<std::int64_t[]> reconstructed_labels_d_{nullptr};   // only for partial and full
   CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};           // only for partial and full
+  // Encoder inputs: padded voxel points [num_voxels, max_points_per_voxel, 5], their valid point
+  // counts, grid coordinates and serialized codes.
+  CudaUniquePtr<float[]> voxels_d_{nullptr};
+  CudaUniquePtr<std::int32_t[]> num_points_per_voxel_d_{nullptr};
   CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
-  CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
 
   // Encoder outputs shared with all the heads: per-stage point features,
