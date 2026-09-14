@@ -15,9 +15,10 @@
 #ifndef AUTOWARE__SHIFT_DECIDER__AUTOWARE_SHIFT_DECIDER_HPP_
 #define AUTOWARE__SHIFT_DECIDER__AUTOWARE_SHIFT_DECIDER_HPP_
 
-#include "autoware_utils/ros/polling_subscriber.hpp"
 #include "shift_decider_parameters.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
@@ -30,28 +31,31 @@
 namespace autoware::shift_decider
 {
 
-class ShiftDecider : public rclcpp::Node
+class ShiftDecider : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ShiftDecider(const rclcpp::NodeOptions & node_options);
 
 private:
   void onTimer();
-  void onControlCmd(autoware_control_msgs::msg::Control::SharedPtr msg);
-  void onAutowareState(autoware_system_msgs::msg::AutowareState::SharedPtr msg);
-  void onCurrentGear(autoware_vehicle_msgs::msg::GearReport::SharedPtr msg);
   void updateCurrentShiftCmd();
   void initTimer(double period_s);
 
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_shift_cmd_;
-  autoware_utils::InterProcessPollingSubscriber<autoware_control_msgs::msg::Control>
-    sub_control_cmd_{this, "input/control_cmd"};
-  autoware_utils::InterProcessPollingSubscriber<autoware_system_msgs::msg::AutowareState>
-    sub_autoware_state_{this, "input/state"};
-  autoware_utils::InterProcessPollingSubscriber<autoware_vehicle_msgs::msg::GearReport>
-    sub_current_gear_{this, "input/current_gear"};
+  AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::GearCommand) pub_shift_cmd_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_control_msgs::msg::Control>::SharedPtr sub_control_cmd_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_control_msgs::msg::Control>(this, "input/control_cmd");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_system_msgs::msg::AutowareState>::SharedPtr sub_autoware_state_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_system_msgs::msg::AutowareState>(this, "input/state");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    autoware_vehicle_msgs::msg::GearReport>::SharedPtr sub_current_gear_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      autoware_vehicle_msgs::msg::GearReport>(this, "input/current_gear");
 
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   autoware_control_msgs::msg::Control::ConstSharedPtr control_cmd_;
   autoware_system_msgs::msg::AutowareState::ConstSharedPtr autoware_state_;

@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Centerpoint ML model package",
+  "type": "object",
+  "definitions": {
+    "ml_package": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Model bundle version. The node reads major version 4 from minor version 1 upward; a minor bump may add manifest entries the node requires.",
+          "default": "v4.1",
+          "pattern": "^v?[0-9]+\\.[0-9]+$"
+        },
+        "encoder_onnx_path": {
+          "type": "string",
+          "description": "VoxelFeatureEncoder ONNX file, relative to model_path (absolute paths allowed).",
+          "default": "pts_voxel_encoder.onnx"
+        },
+        "encoder_engine_path": {
+          "type": "string",
+          "description": "VoxelFeatureEncoder TensorRT Engine file, relative to model_path (absolute paths allowed).",
+          "default": "pts_voxel_encoder.engine"
+        },
+        "head_onnx_path": {
+          "type": "string",
+          "description": "DetectionHead ONNX file, relative to model_path (absolute paths allowed).",
+          "default": "pts_backbone_neck_head.onnx"
+        },
+        "head_engine_path": {
+          "type": "string",
+          "description": "DetectionHead TensorRT Engine file, relative to model_path (absolute paths allowed).",
+          "default": "pts_backbone_neck_head.engine"
+        },
+        "class_remapper_param_path": {
+          "type": "string",
+          "description": "Class remapper parameter file, relative to model_path (absolute paths allowed).",
+          "default": "detection_class_remapper.param.yaml"
+        },
+        "trt_precision": {
+          "type": "string",
+          "description": "TensorRT inference precision.",
+          "default": "fp16",
+          "enum": ["fp32", "fp16"]
+        },
+        "model_params": {
+          "type": "object",
+          "description": "Parameters for model configuration.",
+          "properties": {
+            "class_names": {
+              "type": "array",
+              "description": "An array of class names will be predicted.",
+              "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
+              "uniqueItems": true
+            },
+            "has_twist": {
+              "type": "boolean",
+              "description": "Indicates whether the model outputs twist value.",
+              "default": false
+            },
+            "point_feature_size": {
+              "type": "integer",
+              "description": "A number of channels of point feature layer.",
+              "default": 4
+            },
+            "has_variance": {
+              "type": "boolean",
+              "description": "Indicates whether the model outputs variance value.",
+              "default": false
+            },
+            "max_voxel_size": {
+              "type": "integer",
+              "description": "A maximum size of voxel grid.",
+              "default": 40000
+            },
+            "point_cloud_range": {
+              "type": "array",
+              "description": "The range of the point cloud in [min_x, min_y, min_z, max_x, max_y, max_z] order. [m]",
+              "default": [-76.8, -76.8, -4.0, 76.8, 76.8, 6.0]
+            },
+            "voxel_size": {
+              "type": "array",
+              "description": "The size of a voxel in [x, y, z] order. [m]",
+              "default": [0.32, 0.32, 10.0]
+            },
+            "downsample_factor": {
+              "type": "integer",
+              "description": "A scale factor of downsampling points",
+              "default": 1,
+              "minimum": 1
+            },
+            "encoder_in_feature_size": {
+              "type": "integer",
+              "description": "A size of encoder input feature channels.",
+              "default": 9
+            },
+            "yaw_norm_thresholds": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              },
+              "description": "A minimum norm of the predicted yaw vector per class, in the order of `class_names`. Objects below the threshold are discarded.",
+              "default": [0.3, 0.3, 0.3, 0.3, 0.0]
+            },
+            "detection_score_thresholds": {
+              "type": "object",
+              "description": "A dictionary of minimum confidence scores for each class and a distance bin upper limits.",
+              "properties": {
+                "distance_bin_upper_limits": {
+                  "type": "array",
+                  "description": "An array of upper bounds of each distance bin.",
+                  "default": [50.0, 90.0, 121.0, 200.0]
+                },
+                "min_confidence_scores": {
+                  "type": "object",
+                  "description": "A dictionary of minimum confidence scores for each class.",
+                  "properties": {
+                    "CAR": {
+                      "type": "array",
+                      "description": "A minimum confidence score for CAR in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "TRUCK": {
+                      "type": "array",
+                      "description": "A minimum confidence score for TRUCK in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BUS": {
+                      "type": "array",
+                      "description": "A minimum confidence score for BUS in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BICYCLE": {
+                      "type": "array",
+                      "description": "A minimum confidence score for BICYCLE in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "PEDESTRIAN": {
+                      "type": "array",
+                      "description": "A minimum confidence score for PEDESTRIAN in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "version",
+        "encoder_onnx_path",
+        "encoder_engine_path",
+        "head_onnx_path",
+        "head_engine_path",
+        "class_remapper_param_path",
+        "trt_precision",
+        "model_params"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/ml_package"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

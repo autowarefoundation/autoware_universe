@@ -1,0 +1,78 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: VadNode.node
+package:
+  name: autoware_tensorrt_vad
+  provider: autoware
+launch:
+  plugin: autoware::tensorrt_vad::VadNode
+  executable: vad_node
+  node_output: screen
+# interfaces
+subscribers:
+  - name: kinematic_state
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: ros_transform_static
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf_static
+  - name: image0
+    message_type: sensor_msgs/msg/Image
+  - name: image1
+    message_type: sensor_msgs/msg/Image
+  - name: image2
+    message_type: sensor_msgs/msg/Image
+  - name: image3
+    message_type: sensor_msgs/msg/Image
+  - name: image4
+    message_type: sensor_msgs/msg/Image
+  - name: image5
+    message_type: sensor_msgs/msg/Image
+  - name: camera_info0
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info1
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info2
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info3
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info4
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera_info5
+    message_type: sensor_msgs/msg/CameraInfo
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: map
+    message_type: visualization_msgs/msg/MarkerArray
+# parameters
+param_files:
+  - name: vad_param
+    default: $(find-pkg-share autoware_tensorrt_vad)/config/vad_carla_tiny.param.yaml
+  - name: object_class_remapper_param
+    default: $(find-pkg-share autoware_tensorrt_vad)/config/object_class_remapper_carla_tiny.param.yaml
+param_values:
+  - name: node_params.num_cameras
+    type: int
+    default: 6
+  - name: sync_params.sync_tolerance_ms
+    type: double
+    default: 500.0
+  - name: model_param_path
+    type: string
+    default: ""
+# processes
+processes:
+  - name: run_vad_inference
+    trigger_conditions:
+      - on_input: image0
+    outcomes:
+      - to_output: trajectory
+      - to_output: trajectories
+      - to_output: objects
+      - to_output: map

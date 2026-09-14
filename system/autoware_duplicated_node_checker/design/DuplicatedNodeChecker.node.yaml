@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: DuplicatedNodeChecker.node
+
+package:
+  name: autoware_duplicated_node_checker
+  provider: autoware
+
+launch:
+  plugin: autoware::duplicated_node_checker::DuplicatedNodeChecker
+  executable: autoware_duplicated_node_checker_node
+  node_output: screen
+
+# interfaces
+# diagnostics are advertised to /diagnostics via diagnostic_updater.
+subscribers: []
+
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/duplicated_node_checker.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: monitor
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: diagnostics

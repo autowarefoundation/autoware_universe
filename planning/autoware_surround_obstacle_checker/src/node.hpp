@@ -22,6 +22,7 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
+#include <autoware/obstacle_proximity_checker/obstacle_proximity_checker.hpp>
 #include <autoware_surround_obstacle_checker/surround_obstacle_checker_node_parameters.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -64,11 +65,9 @@ private:
 
   void onTimer();
 
-  std::optional<StopObstacle> getNearestObstacle() const;
+  obstacle_proximity_checker::Parameters toProximityCheckerParameters() const;
 
-  std::optional<StopObstacle> getNearestObstacleByPointCloud() const;
-
-  std::optional<StopObstacle> getNearestObstacleByDynamicObject() const;
+  obstacle_proximity_checker::Inputs toProximityCheckerInputs() const;
 
   std::optional<geometry_msgs::msg::TransformStamped> getTransform(
     const std::string & source, const std::string & target, const rclcpp::Time & stamp,
@@ -98,6 +97,9 @@ private:
 
   // stop checker
   std::unique_ptr<VehicleStopChecker> vehicle_stop_checker_;
+
+  // proximity checker
+  std::unique_ptr<obstacle_proximity_checker::ProximityChecker> proximity_checker_;
 
   // debug
   std::shared_ptr<SurroundObstacleCheckerDebugNode> debug_ptr_;

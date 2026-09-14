@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__PERCEPTION_ANALYTICS_CALCULATOR_HPP_
 #define AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__PERCEPTION_ANALYTICS_CALCULATOR_HPP_
 
-#include "tf2_ros/buffer.h"
+#include <autoware/agnocast_wrapper/tf2.hpp>
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 
@@ -78,7 +78,7 @@ public:
    * @param tf_buffer   TF buffer used for transforms
    * @return FrameMetrics
    */
-  FrameMetrics calculate(const tf2_ros::Buffer & tf_buffer) const;
+  FrameMetrics calculate(const autoware::agnocast_wrapper::Buffer & tf_buffer) const;
 
 private:
   mutable std::mutex predicted_objects_mutex_;

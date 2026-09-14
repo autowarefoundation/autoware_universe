@@ -2,6 +2,127 @@
 Changelog for package autoware_traffic_light_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* test(autoware_traffic_light_visualization): retire characterization test and rename core unit test (`#12612 <https://github.com/autowarefoundation/autoware_universe/issues/12612>`_)
+  * test(autoware_traffic_light_visualization): retire characterization test for TrafficLightMapVisualizerNode
+  The characterization test introduced in `#12487 <https://github.com/autowarefoundation/autoware_universe/issues/12487>`_ has served its purpose
+  as the safety net during the refactor series (`#12511 <https://github.com/autowarefoundation/autoware_universe/issues/12511>`_ / `#12553 <https://github.com/autowarefoundation/autoware_universe/issues/12553>`_ / `#12591 <https://github.com/autowarefoundation/autoware_universe/issues/12591>`_
+  / `#12596 <https://github.com/autowarefoundation/autoware_universe/issues/12596>`_). Its scope is now fully covered by the finer-grained layers:
+  - extract_bulbs unit tests: lanelet -> Bulb conversion
+  - TrafficLightVisualizer core unit tests: bulb -> marker generation
+  - Node smoke tests: pub/sub plumbing and map-not-received guard
+  Remove the characterization test and its CMakeLists.txt entry. The
+  remaining test executables run an order of magnitude faster, with no
+  loss of behavioural coverage.
+  * test(autoware_traffic_light_visualization): rename TrafficLightVisualizer unit test to take the package's main test slot
+  With the characterization test retired, the unit test file for
+  TrafficLightVisualizer is the most natural fit for the package's main
+  test name. Rename it from test_traffic_light_map_visualizer_core.cpp
+  to test_traffic_light_map_visualizer.cpp and update the matching
+  ament_add_gtest target name in CMakeLists.txt accordingly.
+  No content changes; this is a pure rename + CMake target rename.
+* test(autoware_traffic_light_visualization): add extract_bulbs unit tests and node smoke test (`#12596 <https://github.com/autowarefoundation/autoware_universe/issues/12596>`_)
+  test(autoware_traffic_light_visualization): add extract_bulbs unit tests and node smoke test
+  - 9 unit tests for extract_bulbs (attribute filters, color resolution, multi-bulb / multi-traffic-light cases).
+  - 2 Node smoke tests (happy path + detection-before-map guard).
+  - Move test files into test/traffic_light_map_visualizer/ to mirror src/.
+  No production code change.
+  Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+* test(autoware_traffic_light_visualization): add unit tests for TrafficLightVisualizer (`#12591 <https://github.com/autowarefoundation/autoware_universe/issues/12591>`_)
+  * test(autoware_traffic_light_visualization): add unit tests for TrafficLightVisualizer
+  After Option B refactor, TrafficLightVisualizer is independent of
+  lanelet primitives, so its marker generation logic can be exercised
+  directly with synthetic Bulb structures. The new test file covers
+  8 cases (color mapping, silent skip, partial matches, multi-group
+  aggregation, and the empty-input boundaries) without ROS spin-up.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): inline single-use test helpers
+  make_point and make_element each had only one caller (make_bulb and
+  make_group respectively). Folding them into their callers keeps the
+  test helpers complete in one place and removes a layer of indirection.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): replace magic group ids with named constants
+  Promotes 100, 200, 999 to test_group_id, another_test_group_id, and
+  non_existent_group_id, matching the existing arbitrary_id /
+  non_existent_id convention used in the characterization tests.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): align EmptyDetection test with AAA pattern
+  Extract make_detection({}) into the Arrange section so the test follows
+  the same structure as the other seven cases.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): use non_existent_group_id constant in Test 5
+  The constant was already defined but unused; the test referenced the
+  literal 999 directly. Switch to the named constant for consistency
+  with test_group_id and another_test_group_id.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): zero out unused bulb positions
+  The position values 1.0, 2.0, 3.0 in single-bulb tests and the
+  positions 1.0/2.0/3.0 keyed to the bulb id in OnlyDetectedColorsAreShown
+  were never asserted. Use 0, 0, 0 uniformly to remove setup noise.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): promote arbitrary bulb id 42 to named constant
+  Match the existing arbitrary_id / non_existent_id naming convention.
+  Bulb ids 1-4 in OnlyDetectedColorsAreShown and TwoGroupsBothMatched
+  remain numeric since those values are intentionally distinct.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): assert marker inherits bulb id and position
+  Position drives where rviz draws the marker, so it is part of the
+  observable output contract. Add a focused test that verifies both the
+  id and the x/y/z coordinates flow from Bulb to Marker.
+  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): strengthen multi-group attribution checks
+  # Conflicts:
+  #	perception/autoware_traffic_light_visualization/test/test_extract_bulbs.cpp
+  * test(autoware_traffic_light_visualization): silence position noise via make_bulb overload
+  * test(autoware_traffic_light_visualization): cover marker header, group mix, and per-bulb position
+  * test(autoware_traffic_light_visualization): drop trivial MarkerHeaderCarriesStampAndMapFrame test
+  * test(autoware_traffic_light_visualization): reorder test_traffic_light_map_visualizer_core by scenario
+  * test(autoware_traffic_light_visualization): drop trivial id/position assignment test
+  MarkerInheritsBulbIdAndPosition only verifies that bulb.id and
+  bulb.position propagate through create_bulb_marker as direct
+  assignments, which is low value to test in isolation. The
+  TwoGroupsBothMatchedProduceFourMarkers test already covers per-bulb id
+  and position propagation, and the characterization test exercises the
+  end-to-end path. Remove the redundant trivial test.
+  * test(autoware_traffic_light_visualization): inline single-use helpers and document id-to-x setup in TwoGroupsBothMatchedProduceFourMarkers
+  - Inline collect_marker_ids and index_markers_by_id into the only test
+  that uses them. The two map/set lookups are now built in a single pass
+  over the markers, matching the pattern from b631187c0 of inlining
+  single-use test helpers.
+  - Add a setup comment explaining the bulb id N -> x = N.0 convention so
+  the position assertions are self-explanatory and the aliasing-guard
+  intent is visible.
+  ---------
+  Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+* refactor(autoware_traffic_light_visualization): introduce Bulb struct and tidy internal naming (`#12553 <https://github.com/autowarefoundation/autoware_universe/issues/12553>`_)
+  Second of a planned series of incremental refactors for
+  traffic_light_map_visualizer (follow-up to `#12511 <https://github.com/autowarefoundation/autoware_universe/issues/12511>`_).
+  - Introduce Bulb { id, position, color } and BulbsByGroupId, and
+  extract `extract_bulbs(map_traffic_lights) -> BulbsByGroupId` as a
+  free function. TrafficLightVisualizer no longer holds
+  lanelet::ConstPoint3d; lanelet API knowledge is confined to the
+  conversion seam.
+  - Extract `parse_bulb_color` helper.
+  - Tidy helper signatures (pass Time by value, hoist `using` to
+  namespace scope) and scope TrafficLightGroupArray / LaneletMapBin
+  aliases to the node class private section.
+  - Internal renames for clarity: viz_lanelet_map -> lanelet_map,
+  regulatory_element -> traffic_light, traffic_lights ->
+  map_traffic_lights, current_time -> stamp, plus subscription /
+  publisher / callback member updates.
+  - Drop noisy "Map is loaded" debug log.
+  - Update copyright year to 2020-2026.
+  Behavior is preserved end-to-end; the characterization test from
+  `#12487 <https://github.com/autowarefoundation/autoware_universe/issues/12487>`_ acts as the safety net.
+* refactor(autoware_traffic_light_visualization): split TrafficLightVisualizer class from Node and tidy internals (`#12511 <https://github.com/autowarefoundation/autoware_universe/issues/12511>`_)
+  * refactor(autoware_traffic_light_visualization): extract TrafficLightVisualizer from node
+  * refactor(autoware_traffic_light_visualization): improve readability of TrafficLightVisualizer
+  * refactor(autoware_traffic_light_visualization): inline marker namespace literal
+  * docs(autoware_traffic_light_visualization): annotate marker_lifetime_ns with 200 ms
+* Contributors: Takayuki AKAMINE, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -1,0 +1,35 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: KinematicEvaluator.node
+package:
+  name: autoware_kinematic_evaluator
+  provider: autoware
+launch:
+  plugin: autoware::kinematic_diagnostics::KinematicEvaluatorNode
+  executable: autoware_kinematic_evaluator_node
+  node_output: screen
+# interfaces
+subscribers:
+  - name: twist
+    message_type: nav_msgs/msg/Odometry
+publishers:
+  - name: metrics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+# parameters
+param_files:
+  - name: kinematic_evaluator_param
+    default: $(find-pkg-share autoware_kinematic_evaluator)/param/kinematic_evaluator.defaults.yaml
+param_values:
+  - name: output_file
+    type: string
+    default: kinematic_metrics.results
+  - name: selected_metrics
+    type: string_array
+    default: [velocity_stats]
+# processes
+processes:
+  - name: evaluate_kinematics
+    trigger_conditions:
+      - on_input: twist
+    outcomes:
+      - to_output: metrics

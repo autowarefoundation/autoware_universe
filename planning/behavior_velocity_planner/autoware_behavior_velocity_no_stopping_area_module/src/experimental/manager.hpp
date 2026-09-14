@@ -33,7 +33,9 @@ public:
 
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
-    return RequiredSubscriptionInfo{};
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
   }
 
 private:

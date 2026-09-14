@@ -64,13 +64,16 @@ private:
     bool MOTORCYCLE;
     bool BICYCLE;
     bool PEDESTRIAN;
+    bool ANIMAL;
+    bool HAZARD;
 
     bool isDetectionTargetLabel(const uint8_t label) const
     {
       return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
              (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
              (label == Label::TRAILER && TRAILER) || (label == Label::MOTORCYCLE && MOTORCYCLE) ||
-             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN);
+             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
+             (label == Label::ANIMAL && ANIMAL) || (label == Label::HAZARD && HAZARD);
     }
 
     static uint8_t getLabelShape(const uint8_t label)

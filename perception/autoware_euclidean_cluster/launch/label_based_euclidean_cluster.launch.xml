@@ -1,0 +1,14 @@
+<launch>
+  <arg name="input/pointcloud" default="~/input/segmented/pointcloud"/>
+  <arg name="output/objects" default="~/output/objects"/>
+  <arg name="output/pointcloud" default="~/output/pointcloud"/>
+
+  <arg name="param_path" default="$(find-pkg-share autoware_euclidean_cluster)/config/label_based_euclidean_cluster.param.yaml"/>
+
+  <include file="$(find-pkg-share autoware_euclidean_cluster)/launch/label_based_euclidean_cluster.launch.py">
+    <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
+    <arg name="output/objects" value="$(var output/objects)"/>
+    <arg name="output/pointcloud" value="$(var output/pointcloud)"/>
+    <arg name="param_path" value="$(var param_path)"/>
+  </include>
+</launch>

@@ -1,0 +1,50 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: VectorMapTFGenerator.node
+
+description: Broadcasts a static transform from the map frame to the viewer frame placed at the centroid of the Lanelet2 map points.
+
+package:
+  name: autoware_map_tf_generator
+  provider: autoware
+
+launch:
+  plugin: autoware::map_tf_generator::VectorMapTFGeneratorNode
+  executable: autoware_vector_map_tf_generator
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    description: Lanelet2 map whose point centroid anchors the viewer frame.
+    remap_target: vector_map
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+publishers:
+  - name: ros_transform_static
+    message_type: tf2_msgs/msg/TFMessage
+    description: Static transform from the map frame to the viewer frame.
+    global: /tf_static
+
+servers: []
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/map_tf_generator.param.yaml
+    description: Map and viewer frame IDs.
+
+param_values: []
+
+# processes
+processes:
+  - name: broadcast_map_tf
+    description: Computes the map point centroid and broadcasts the static transform when the map arrives.
+    trigger_conditions:
+      - on_input: vector_map
+    outcomes:
+      - to_output: ros_transform_static

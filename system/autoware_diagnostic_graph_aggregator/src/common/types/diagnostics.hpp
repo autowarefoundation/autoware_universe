@@ -19,7 +19,6 @@
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_system_msgs/msg/diag_graph_status.hpp>
 #include <tier4_system_msgs/msg/diag_graph_struct.hpp>
-#include <tier4_system_msgs/srv/reset_diag_graph.hpp>
 
 namespace autoware::diagnostic_graph_aggregator
 {
@@ -36,7 +35,7 @@ using DiagLeafStruct = tier4_system_msgs::msg::DiagLeafStruct;
 using DiagLeafStatus = tier4_system_msgs::msg::DiagLeafStatus;
 using DiagLinkStruct = tier4_system_msgs::msg::DiagLinkStruct;
 using DiagLinkStatus = tier4_system_msgs::msg::DiagLinkStatus;
-using ResetDiagGraph = tier4_system_msgs::srv::ResetDiagGraph;
+
 }  // namespace autoware::diagnostic_graph_aggregator
 
 #endif  // COMMON__TYPES__DIAGNOSTICS_HPP_

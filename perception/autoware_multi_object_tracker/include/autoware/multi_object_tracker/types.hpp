@@ -59,9 +59,10 @@ enum class TrackerType {
   BIG_VEHICLE = 23,
   VEHICLE = 24,
   POLYGON = 30,
+  STATIC = 31,
 };
 
-inline constexpr std::array<TrackerType, 9> ALL_TRACKER_TYPES = {
+inline constexpr std::array<TrackerType, 10> ALL_TRACKER_TYPES = {
   TrackerType::PEDESTRIAN_AND_BICYCLE,
   TrackerType::PEDESTRIAN,
   TrackerType::BICYCLE,
@@ -70,7 +71,8 @@ inline constexpr std::array<TrackerType, 9> ALL_TRACKER_TYPES = {
   TrackerType::NORMAL_VEHICLE,
   TrackerType::BIG_VEHICLE,
   TrackerType::VEHICLE,
-  TrackerType::POLYGON};
+  TrackerType::POLYGON,
+  TrackerType::STATIC};
 
 inline bool isVehicleTrackerType(const TrackerType tracker_type)
 {
@@ -80,7 +82,7 @@ inline bool isVehicleTrackerType(const TrackerType tracker_type)
          tracker_type == TrackerType::VEHICLE;
 }
 
-inline const std::array<TrackerType, 9> & allTrackerTypes()
+inline const std::array<TrackerType, 10> & allTrackerTypes()
 {
   return ALL_TRACKER_TYPES;
 }
@@ -106,8 +108,38 @@ inline std::string toString(const TrackerType tracker_type)
       return "vehicle_tracker";
     case TrackerType::POLYGON:
       return "polygon_tracker";
+    case TrackerType::STATIC:
+      return "static_tracker";
     default:
       return "polygon_tracker";
+  }
+}
+
+inline std::string toShortString(const TrackerType tracker_type)
+{
+  switch (tracker_type) {
+    case TrackerType::PEDESTRIAN_AND_BICYCLE:
+      return "ped&bic";
+    case TrackerType::PEDESTRIAN:
+      return "ped";
+    case TrackerType::BICYCLE:
+      return "bic";
+    case TrackerType::MULTIPLE_VEHICLE:
+      return "multi_veh";
+    case TrackerType::GENERAL_VEHICLE:
+      return "general_veh";
+    case TrackerType::NORMAL_VEHICLE:
+      return "normal_veh";
+    case TrackerType::BIG_VEHICLE:
+      return "big_veh";
+    case TrackerType::VEHICLE:
+      return "veh";
+    case TrackerType::POLYGON:
+      return "poly";
+    case TrackerType::STATIC:
+      return "static";
+    default:
+      return "default";
   }
 }
 
@@ -124,6 +156,7 @@ inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name
   if (tracker_name == "big_vehicle_tracker") return TrackerType::BIG_VEHICLE;
   if (tracker_name == "vehicle_tracker") return TrackerType::VEHICLE;
   if (tracker_name == "polygon_tracker") return TrackerType::POLYGON;
+  if (tracker_name == "static_tracker") return TrackerType::STATIC;
   return std::nullopt;
 }
 
@@ -216,6 +249,7 @@ struct ObjectKinematics
   OrientationAvailability orientation_availability;
   bool has_twist = false;
   bool has_twist_covariance = false;
+  bool is_stationary = false;
 };
 
 struct DynamicObject
@@ -408,6 +442,7 @@ using types::allTrackerTypes;
 using types::isVehicleTrackerType;
 using types::ShapeType;
 using types::toShapeType;
+using types::toShortString;
 using types::toString;
 using types::toTrackerType;
 using types::TrackerType;

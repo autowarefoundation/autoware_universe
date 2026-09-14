@@ -15,14 +15,18 @@
 #ifndef AUTOWARE__PTV3__PTV3_CONFIG_HPP_
 #define AUTOWARE__PTV3__PTV3_CONFIG_HPP_
 
+#include <autoware/point_types/types.hpp>
+
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::ptv3
@@ -38,16 +42,35 @@ class PTv3Config
 {
 public:
   PTv3Config(
-    const std::string & plugins_path, const std::int64_t cloud_capacity,
-    const std::vector<std::int64_t> & voxels_num, const std::vector<float> & point_cloud_range,
-    const std::vector<float> & voxel_size, const std::vector<std::string> & class_names,
-    const std::vector<std::int64_t> & palette, const float filter_class_probability_threshold,
-    const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
-    const std::string & source_reconstruction)
+    const bool use_seg3d_head, const bool use_det3d_head, const std::string & plugins_path,
+    const std::int64_t cloud_capacity, const std::vector<std::int64_t> & voxels_num,
+    const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size,
+    const std::vector<std::string> & segmentation_class_names = {},
+    const std::unordered_map<std::string, std::string> & segmentation_class_mapping = {},
+    const std::vector<std::string> & serialization_orders = {},
+    const std::vector<std::int64_t> & pooling_strides = {},
+    const std::vector<std::int64_t> & enc_channels = {},
+    const std::vector<std::int64_t> & palette = {},
+    const std::vector<std::string> & filter_classes = {},
+    const std::string & filter_output_format = {}, const bool filter_apply_to_segmentation = {},
+    const std::string & source_reconstruction = {},
+    const std::vector<std::int64_t> & dec_depths = {},
+    const std::vector<std::string> & detection_class_names = {},
+    const std::vector<float> & bbox_voxel_size = {},
+    const std::vector<float> & distance_bin_upper_limits = {},
+    const std::vector<float> & detection_score_thresholds = {},
+    const std::vector<float> & yaw_norm_thresholds = {}, const bool has_twist = {},
+    std::size_t num_proposals = {}, const std::vector<float> & post_center_range = {})
+  : use_seg3d_head_(use_seg3d_head), use_det3d_head_(use_det3d_head)
   {
     plugins_path_ = plugins_path;
 
     cloud_capacity_ = cloud_capacity;
+
+    if (!use_seg3d_head_ && !use_det3d_head_) {
+      throw std::runtime_error(
+        "At least one of segmentation3d.use_head or detection3d.use_head must be true.");
+    }
 
     if (voxels_num.size() == 3) {
       min_num_voxels_ = voxels_num[0];
@@ -71,10 +94,18 @@ public:
       voxel_z_size_ = voxel_size[2];
     }
 
-    grid_x_size_ = static_cast<std::int64_t>((max_x_range_ - min_x_range_) / voxel_x_size_);
-    grid_y_size_ = static_cast<std::int64_t>((max_y_range_ - min_y_range_) / voxel_y_size_);
-    grid_z_size_ = static_cast<std::int64_t>((max_z_range_ - min_z_range_) / voxel_z_size_);
-    auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
+    // Cells the device grid mapping (see gridCoord) can emit per axis - one more than
+    // round(extent / size) when a range border is not voxel-aligned. The largest coordinate comes
+    // from the largest float below max_range: the crop is strict and float division is monotonic.
+    const auto grid_cells = [](const float min_range, const float max_range, const float size) {
+      const float min_coord = std::floor(min_range / size);
+      const float max_coord = std::floor(std::nextafter(max_range, min_range) / size);
+      return static_cast<std::int64_t>(max_coord - min_coord) + 1;
+    };
+    grid_x_size_ = grid_cells(min_x_range_, max_x_range_, voxel_x_size_);
+    grid_y_size_ = grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
+    grid_z_size_ = grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
+    const auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
     auto max_voxels_depth =
@@ -83,22 +114,144 @@ public:
       throw std::runtime_error("Serialization depth is too large");
     }
 
-    use_64bit_hash_ =
-      grid_x_size_ * grid_y_size_ * grid_z_size_ > std::numeric_limits<std::uint32_t>::max();
+    serialization_orders_ = validate_serialization_orders(serialization_orders);
+    pooling_strides_ = validate_pooling_strides(pooling_strides);
+    enc_channels_ = validate_enc_channels(enc_channels, pooling_strides_.size() + 1);
 
-    class_names_ = class_names;
+    if (use_seg3d_head_) {
+      segmentation_class_names_ = segmentation_class_names;
+      colors_rgb_ = make_palette(segmentation_class_names_, palette);
+      class_id_to_classification_ =
+        make_class_id_to_classification(segmentation_class_names_, segmentation_class_mapping);
+      for (auto & class_name : segmentation_class_names_) {
+        std::transform(
+          class_name.begin(), class_name.end(), class_name.begin(),
+          [](unsigned char c) { return std::tolower(c); });
+      }
+      filter_class_indices_ = make_filter_class_indices(segmentation_class_names_, filter_classes);
+      filter_output_format_ = filter_output_format;
+      filter_apply_to_segmentation_ = filter_apply_to_segmentation;
+      source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
 
-    colors_rgb_ = make_palette(class_names_, palette);
-
-    for (auto & class_name : class_names_) {
-      std::transform(class_name.begin(), class_name.end(), class_name.begin(), [](unsigned char c) {
-        return std::tolower(c);
-      });
+      // dec_depths drives the seg-head engine input set: block stages consume their
+      if (dec_depths.size() != pooling_strides_.size()) {
+        throw std::runtime_error(
+          "dec_depths must contain one entry per decoder stage (pooling_strides size = " +
+          std::to_string(pooling_strides_.size()) + "), got " + std::to_string(dec_depths.size()) +
+          ".");
+      }
+      for (std::size_t stage = 0; stage < dec_depths.size(); ++stage) {
+        if (dec_depths[stage] < 0) {
+          throw std::runtime_error("dec_depths entries must be non-negative.");
+        }
+      }
+      dec_depths_ = dec_depths;
     }
-    filter_class_probability_threshold_ = filter_class_probability_threshold;
-    filter_class_indices_ = make_filter_class_indices(class_names_, filter_classes);
-    filter_output_format_ = filter_output_format;
-    source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
+
+    if (use_det3d_head_) {
+      if (detection_class_names.empty()) {
+        throw std::runtime_error("detection_class_names must not be empty when use_det3d_head.");
+      }
+      if (bbox_voxel_size.size() != 3) {
+        throw std::runtime_error("bbox_voxel_size must contain 3 elements.");
+      }
+      if (bbox_voxel_size[0] <= 0.0F || bbox_voxel_size[1] <= 0.0F || bbox_voxel_size[2] <= 0.0F) {
+        throw std::runtime_error("bbox_voxel_size values must be positive.");
+      }
+      if (distance_bin_upper_limits.empty()) {
+        throw std::runtime_error("distance_bin_upper_limits must not be empty.");
+      }
+      if (!std::is_sorted(distance_bin_upper_limits.begin(), distance_bin_upper_limits.end())) {
+        throw std::runtime_error("distance_bin_upper_limits must be sorted.");
+      }
+      if (distance_bin_upper_limits.front() <= 0.0F) {
+        throw std::runtime_error("distance_bin_upper_limits values must be positive.");
+      }
+      if (
+        detection_score_thresholds.size() !=
+        distance_bin_upper_limits.size() * detection_class_names.size()) {
+        throw std::runtime_error(
+          "detection_score_thresholds size must match distance bins x detection classes.");
+      }
+      if (!std::all_of(
+            detection_score_thresholds.begin(), detection_score_thresholds.end(),
+            [](float value) { return value >= 0.0F && value <= 1.0F; })) {
+        throw std::runtime_error("detection_score_thresholds values must be between 0 and 1.");
+      }
+      if (yaw_norm_thresholds.size() != detection_class_names.size()) {
+        throw std::runtime_error("yaw_norm_thresholds size must match detection class_names.");
+      }
+      if (!std::all_of(yaw_norm_thresholds.begin(), yaw_norm_thresholds.end(), [](float value) {
+            return value >= 0.0F && value <= 1.0F;
+          })) {
+        throw std::runtime_error("yaw_norm_thresholds values must be between 0 and 1.");
+      }
+
+      detection_class_names_ = detection_class_names;
+      bbox_voxel_x_size_ = bbox_voxel_size[0];
+      bbox_voxel_y_size_ = bbox_voxel_size[1];
+
+      // The exporter taps encoder stages S-2 (BEV resolution) and S-1, so the detection grid
+      // resolution must equal the voxel size at stage S-2's cumulative pooling depth.
+      std::int64_t skip_stage_depth = 0;
+      for (std::size_t stage = 0; stage + 1 < pooling_strides_.size(); ++stage) {
+        for (auto value = pooling_strides_[stage]; value > 1; value >>= 1) {
+          ++skip_stage_depth;
+        }
+      }
+      const auto skip_stage_scale = static_cast<float>(std::int64_t{1} << skip_stage_depth);
+      constexpr float eps = 1e-3F;
+      if (std::abs(bbox_voxel_x_size_ - voxel_x_size_ * skip_stage_scale) > eps) {
+        throw std::runtime_error(
+          "x component of bbox_voxel_size must equal voxel_size * 2^" +
+          std::to_string(skip_stage_depth) + " (the detection branch taps that encoder stage).");
+      }
+      if (std::abs(bbox_voxel_y_size_ - voxel_y_size_ * skip_stage_scale) > eps) {
+        throw std::runtime_error(
+          "y component of bbox_voxel_size must equal voxel_size * 2^" +
+          std::to_string(skip_stage_depth) + " (the detection branch taps that encoder stage).");
+      }
+
+      distance_bin_upper_limits_ = distance_bin_upper_limits;
+      detection_score_thresholds_ = detection_score_thresholds;
+      yaw_norm_thresholds_ = yaw_norm_thresholds;
+      has_twist_ = has_twist;
+
+      const auto bbox_grid_x_size =
+        static_cast<std::size_t>((max_x_range_ - min_x_range_) / bbox_voxel_x_size_);
+      const auto bbox_grid_y_size =
+        static_cast<std::size_t>((max_y_range_ - min_y_range_) / bbox_voxel_y_size_);
+      if (bbox_grid_x_size == 0 || bbox_grid_y_size == 0) {
+        throw std::runtime_error("bbox_voxel_size produces an empty detection grid.");
+      }
+      if (
+        std::abs(
+          (static_cast<float>(bbox_grid_x_size) * bbox_voxel_x_size_) -
+          (max_x_range_ - min_x_range_)) > eps ||
+        std::abs(
+          (static_cast<float>(bbox_grid_y_size) * bbox_voxel_y_size_) -
+          (max_y_range_ - min_y_range_)) > eps) {
+        throw std::runtime_error("bbox_voxel_size must evenly cover the point cloud xy range.");
+      }
+      det_grid_x_size_ = bbox_grid_x_size;
+      det_grid_y_size_ = bbox_grid_y_size;
+
+      if (num_proposals == 0) {
+        throw std::runtime_error("num_proposals must be positive.");
+      }
+      if (post_center_range.size() != 6) {
+        throw std::runtime_error("post_center_range must contain 6 elements.");
+      }
+      if (
+        post_center_range[0] >= post_center_range[3] ||
+        post_center_range[1] >= post_center_range[4] ||
+        post_center_range[2] >= post_center_range[5]) {
+        throw std::runtime_error(
+          "post_center_range minimum values must be smaller than maximum values.");
+      }
+      num_proposals_ = num_proposals;
+      post_center_range_ = post_center_range;
+    }
   }
 
   static SourceReconstruction parse_source_reconstruction(const std::string & value)
@@ -127,6 +280,35 @@ public:
       indices.push_back(static_cast<std::uint32_t>(std::distance(class_names.begin(), it)));
     }
     return indices;
+  }
+
+  /**
+   * @brief Build the lookup table from model class id (index into class_names) to
+   * PointCloudClassification.
+   * @details The model output label index is determined by the class_names order, so the table is
+   * built by looking each class name up in class_mapping. Entries in class_mapping whose key is not
+   * in class_names are ignored, so the map may cover more classes than the loaded model outputs.
+   * @param class_names Segmentation class names, indexed by model output label.
+   * @param class_mapping Class name to PointCloudClassification name.
+   * @return Lookup table with one entry per class name.
+   * @throws std::runtime_error If a class name has no entry in class_mapping.
+   * @throws std::invalid_argument If a mapped value is not a PointCloudClassification name.
+   */
+  static std::vector<std::uint8_t> make_class_id_to_classification(
+    const std::vector<std::string> & class_names,
+    const std::unordered_map<std::string, std::string> & class_mapping)
+  {
+    std::vector<std::uint8_t> lut;
+    lut.reserve(class_names.size());
+    for (const auto & class_name : class_names) {
+      const auto it = class_mapping.find(class_name);
+      if (it == class_mapping.end()) {
+        throw std::runtime_error("class_mapping has no entry for class name '" + class_name + "'.");
+      }
+      lut.push_back(
+        static_cast<std::uint8_t>(autoware::point_types::to_pointcloud_classification(it->second)));
+    }
+    return lut;
   }
 
   static std::vector<float> make_palette(
@@ -159,25 +341,113 @@ public:
     return colors;
   }
 
+  static std::vector<std::string> validate_serialization_orders(
+    const std::vector<std::string> & serialization_orders)
+  {
+    if (serialization_orders.empty()) {
+      throw std::runtime_error("serialization_orders must not be empty.");
+    }
+    if (
+      serialization_orders.size() != 2 || serialization_orders[0] != "z" ||
+      serialization_orders[1] != "z-trans") {
+      throw std::runtime_error(
+        "The current PTv3 preprocessing path supports serialization_orders: ['z', 'z-trans'].");
+    }
+    return serialization_orders;
+  }
+
+  static std::vector<std::int64_t> validate_pooling_strides(
+    const std::vector<std::int64_t> & pooling_strides)
+  {
+    if (pooling_strides.empty()) {
+      throw std::runtime_error("pooling_strides must not be empty.");
+    }
+    for (const auto stride : pooling_strides) {
+      if (stride < 1 || (stride & (stride - 1)) != 0) {
+        throw std::runtime_error("Each pooling stride must be a positive power of two.");
+      }
+    }
+    return pooling_strides;
+  }
+
+  static std::vector<std::int64_t> validate_enc_channels(
+    const std::vector<std::int64_t> & enc_channels, const std::size_t expected_size)
+  {
+    if (enc_channels.size() != expected_size) {
+      throw std::runtime_error(
+        "enc_channels must contain one entry per encoder stage (pooling_strides size + 1 = " +
+        std::to_string(expected_size) + "), got " + std::to_string(enc_channels.size()) + ".");
+    }
+    for (const auto channels : enc_channels) {
+      if (channels < 1) {
+        throw std::runtime_error("Each enc_channels entry must be positive.");
+      }
+    }
+    return enc_channels;
+  }
+
+  // Hard voxel-count bound for one encoder stage: a stage cannot hold more voxels than the grid
+  // has cells at its cumulative pooling depth, and pooling never grows the voxel count. Sizes the
+  // encoder stage buffers and TensorRT profiles.
+  [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
+  {
+    std::int64_t cumulative_depth = 0;
+    for (std::size_t stage = 0; stage < stage_index; ++stage) {
+      for (auto value = pooling_strides_[stage]; value > 1; value >>= 1) {
+        ++cumulative_depth;
+      }
+    }
+    const auto ceil_shift = [cumulative_depth](const std::int64_t size) {
+      return (size + (std::int64_t{1} << cumulative_depth) - 1) >> cumulative_depth;
+    };
+    const auto grid_cells =
+      ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) * ceil_shift(grid_z_size_);
+    return std::min(max_num_voxels_, grid_cells);
+  }
+
   // CUDA parameters
   const std::uint32_t threads_per_block_{256};  // threads number for a block
 
   // TensorRT parameters
   std::string plugins_path_;
 
+  // Head selection
+  bool use_seg3d_head_;
+  bool use_det3d_head_;
+
   // Preprocess parameters
-  bool use_64bit_hash_{};
   std::int32_t serialization_depth_{};
 
   ///// NETWORK PARAMETERS /////
 
-  // Head parameters
-  std::vector<std::string> class_names_;
+  // Encoder
+  std::vector<std::string> segmentation_class_names_;
+  std::vector<std::string> serialization_orders_;
+  std::vector<std::int64_t> pooling_strides_;
+  std::vector<std::int64_t> enc_channels_;  // per encoder stage, finest to deepest
+
+  // Segmentation head
+  std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage
   std::vector<float> colors_rgb_;
-  float filter_class_probability_threshold_{};
+  // class id (index into segmentation_class_names_) -> PointCloudClassification
+  std::vector<std::uint8_t> class_id_to_classification_;
   std::vector<std::uint32_t> filter_class_indices_;
   std::string filter_output_format_;
+  bool filter_apply_to_segmentation_{};
   SourceReconstruction source_reconstruction_{SourceReconstruction::NONE};
+
+  // Detection head
+  std::vector<std::string> detection_class_names_;
+  float bbox_voxel_x_size_{};
+  float bbox_voxel_y_size_{};
+  bool has_twist_{};
+  std::size_t num_proposals_{};
+  std::vector<float> post_center_range_;
+  std::vector<float> distance_bin_upper_limits_;
+  std::vector<float> detection_score_thresholds_;
+  std::vector<float> yaw_norm_thresholds_;
+  std::size_t det_grid_x_size_{};
+  std::size_t det_grid_y_size_{};
 
   // Common network parameters
   std::int64_t cloud_capacity_{};
@@ -198,7 +468,7 @@ public:
   float voxel_y_size_{};
   float voxel_z_size_{};
 
-  // Grid size
+  // Grid size (cells the device grid mapping can emit, see the constructor)
   std::int64_t grid_x_size_{};
   std::int64_t grid_y_size_{};
   std::int64_t grid_z_size_{};

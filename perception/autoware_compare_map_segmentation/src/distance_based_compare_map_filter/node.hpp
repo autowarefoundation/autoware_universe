@@ -119,4 +119,3 @@ public:
 
 // clang-format off
 #endif  // DISTANCE_BASED_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
-// clang-format on

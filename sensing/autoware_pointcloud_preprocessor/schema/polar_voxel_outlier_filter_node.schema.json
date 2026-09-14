@@ -101,6 +101,40 @@
           "default": "4",
           "minimum": 0
         },
+        "low_visibility_entropy_threshold": {
+          "type": "number",
+          "description": "Minimum normalized geometric entropy for low-visibility candidate voxels.",
+          "default": "0.0",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "low_visibility_anisotropy_threshold": {
+          "type": "number",
+          "description": "Maximum geometric anisotropy for low-visibility candidate voxels.",
+          "default": "1.0",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "low_visibility_average_intensity_threshold": {
+          "type": "number",
+          "description": "Maximum voxel average intensity for low-visibility candidate voxels.",
+          "default": "255.0",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "low_visibility_sparse_voxel_point_count_threshold": {
+          "type": "integer",
+          "description": "Maximum point count threshold for sparse low-visibility candidate voxels.",
+          "default": "10",
+          "minimum": 0
+        },
+        "low_visibility_sparse_voxel_secondary_return_ratio_threshold": {
+          "type": "number",
+          "description": "Minimum secondary return ratio for sparse low-visibility candidate voxels.",
+          "default": "0.2",
+          "minimum": 0,
+          "maximum": 1
+        },
         "visibility_estimation_max_secondary_voxel_count": {
           "type": "integer",
           "description": "Maximum secondary voxel count for visibility estimation calculations.",
@@ -119,12 +153,17 @@
         },
         "visibility_estimation_only": {
           "type": "boolean",
-          "description": "Whether to run filter for visibility estimation only without publishing point cloud outputs (for monitoring/diagnostic purposes only).",
+          "description": "Whether to run filter for visibility estimation only without populating the main output point cloud (for monitoring/diagnostic purposes only). Debug point cloud topics are still controlled by their own publish_* parameters.",
           "default": "false"
         },
         "publish_noise_cloud": {
           "type": "boolean",
-          "description": "Whether to generate and publish noise point cloud for debugging (ignored when visibility_estimation_only=true).",
+          "description": "Whether to create, generate, and publish the noise point cloud for debugging. Can be toggled at runtime.",
+          "default": "false"
+        },
+        "publish_low_visibility_voxels": {
+          "type": "boolean",
+          "description": "Whether to create and publish points in selected low-visibility voxels for debugging. Can be toggled at runtime.",
           "default": "false"
         },
         "filter_ratio_error_threshold": {
@@ -193,10 +232,16 @@
         "use_return_type_classification",
         "filter_secondary_returns",
         "secondary_noise_threshold",
+        "low_visibility_entropy_threshold",
+        "low_visibility_anisotropy_threshold",
+        "low_visibility_average_intensity_threshold",
+        "low_visibility_sparse_voxel_point_count_threshold",
+        "low_visibility_sparse_voxel_secondary_return_ratio_threshold",
         "visibility_estimation_max_secondary_voxel_count",
         "primary_return_types",
         "visibility_estimation_only",
         "publish_noise_cloud",
+        "publish_low_visibility_voxels",
         "filter_ratio_error_threshold",
         "filter_ratio_warn_threshold",
         "visibility_error_threshold",

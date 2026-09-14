@@ -2,6 +2,41 @@
 Changelog for package autoware_traffic_light_map_based_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_traffic_light_map_based_detector): simplify detect() and unify ROI computation (`#12565 <https://github.com/autowarefoundation/autoware_universe/issues/12565>`_)
+  * refactor(autoware_traffic_light_map_based_detector): simplify detect() with helper functions
+  Extract traffic light set selection and expect ROI config construction
+  into small helpers so that detect() reads as orchestration logic.
+  * refactor(autoware_traffic_light_map_based_detector): return visible traffic lights by value
+  Replace the output parameter of get_visible_traffic_lights() with a
+  return value so the function signature reflects what is computed.
+  * refactor(autoware_traffic_light_map_based_detector): unify ROI computation and use std::optional
+  Treat the single-transform ROI calculation as the one-element case of
+  the multi-transform bounding ROI calculation, exposing a single
+  get_traffic_light_roi() returning std::optional<TrafficLightRoi>.
+  Promote the per-transform projection to project_traffic_light_to_roi()
+  returning std::optional.
+  * refactor(autoware_traffic_light_map_based_detector): replace unused visualization include with utility/query
+  Drop the autoware_lanelet2_extension visualization header that is no
+  longer used directly and include utility/query.hpp explicitly for the
+  lanelet::utils::query helpers we actually call.
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(autoware_traffic_light_map_based_detector): rename functions to snake_case (`#12551 <https://github.com/autowarefoundation/autoware_universe/issues/12551>`_)
+  * refactor(autoware_traffic_light_map_based_detector): rename functions to snake_case
+  Rename camelCase function names to snake_case per Autoware coding
+  conventions. Test suite/case names in test_utils.cpp are aligned to
+  PascalCase to match the other test suites in the package and comply
+  with Google Test naming guidance.
+  * style(autoware_traffic_light_map_based_detector): wrap long lines after rename
+  Wrap lines that exceeded the 100-character limit after renaming
+  functions to snake_case, fixing cpplint failures in CI.
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Takahisa Ishikawa, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

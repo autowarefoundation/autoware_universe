@@ -1,0 +1,36 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ComponentMonitor.node
+
+package:
+  name: autoware_component_monitor
+  provider: autoware
+
+launch:
+  plugin: autoware::component_monitor::ComponentMonitor
+  executable: autoware_component_monitor_node
+  node_output: screen
+
+# interfaces
+subscribers: []
+
+publishers:
+  - name: component_system_usage
+    message_type: autoware_internal_msgs/msg/ResourceUsageReport
+    remap_target: ~/component_system_usage
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/component_monitor.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: monitor
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: component_system_usage

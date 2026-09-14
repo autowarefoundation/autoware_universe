@@ -29,6 +29,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using Label = autoware_perception_msgs::msg::ObjectClassification;
@@ -87,9 +88,9 @@ Eigen::MatrixXd calcScoreMatrixForAssociation(
 }
 
 DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptions & node_options)
-: rclcpp::Node("decorative_object_merger_node", node_options),
+: Node("decorative_object_merger_node", node_options),
   tf_buffer_(get_clock()),
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_, *this)
 {
   // Subscriber
   sub_main_objects_ = create_subscription<TrackedObjects>(
@@ -159,14 +160,17 @@ DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptio
 
   // debug publisher
   processing_time_publisher_ =
-    std::make_unique<autoware_utils_debug::DebugPublisher>(this, "decorative_object_merger_node");
+    std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "decorative_object_merger_node");
   stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
 
   // diagnostics
-  diagnostics_interface_ptr_ = std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
+  diagnostics_interface_ptr_ = std::make_unique<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
     this, "decorative_object_merger_node");
   stop_watch_ptr_->tic("delay_main_objects");
   stop_watch_ptr_->tic("duration_empty_main_objects");
@@ -201,7 +205,7 @@ void DecorativeTrackerMergerNode::set3dDataAssociation(
  *       else, merge main objects and sub objects
  */
 void DecorativeTrackerMergerNode::mainObjectsCallback(
-  const TrackedObjects::ConstSharedPtr & main_objects)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & main_objects)
 {
   stop_watch_ptr_->toc("processing_time", true);
   stop_watch_ptr_->toc("delay_main_objects", true);
@@ -245,10 +249,11 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
       closest_time_sub_objects, closest_time_sub_objects_later, transformed_main_objects->header);
     if (interpolated_sub_objects.has_value()) {
       // Merge sub objects
-      const auto interp_sub_objs = interpolated_sub_objects.value();
-      debug_object_pub_->publish(interp_sub_objs);
-      this->decorativeMerger(
-        sub_sensor_type_, std::make_shared<TrackedObjects>(interpolated_sub_objects.value()));
+      const auto & interp_sub_objs = interpolated_sub_objects.value();
+      auto debug_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(debug_object_pub_);
+      *debug_msg = interp_sub_objs;
+      debug_object_pub_->publish(std::move(debug_msg));
+      this->decorativeMerger(sub_sensor_type_, std::make_shared<TrackedObjects>(interp_sub_objs));
     } else {
       RCLCPP_DEBUG(this->get_logger(), "interpolated_sub_objects is null");
     }
@@ -256,19 +261,20 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
 
   // try to merge main object
   this->decorativeMerger(main_sensor_type_, transformed_main_objects);
-  const auto & tracked_objects = getTrackedObjects(transformed_main_objects->header);
-  merged_object_pub_->publish(tracked_objects);
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(merged_object_pub_);
+  *output = getTrackedObjects(transformed_main_objects->header);
+  const auto output_stamp = output->header.stamp;
+  merged_object_pub_->publish(std::move(output));
 
   // update diagnostics
   updateDiagnostics();
 
-  published_time_publisher_->publish_if_subscribed(
-    merged_object_pub_, tracked_objects.header.stamp);
+  published_time_publisher_->publish_if_subscribed(merged_object_pub_, output_stamp);
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/cyclic_time_ms", stop_watch_ptr_->toc("cyclic_time", true));
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
-  diagnostics_interface_ptr_->publish(tracked_objects.header.stamp);
+  diagnostics_interface_ptr_->publish(output_stamp);
 }
 
 /**
@@ -277,7 +283,8 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
  * @param msg
  * @note push back sub objects to buffer and remove old sub objects
  */
-void DecorativeTrackerMergerNode::subObjectsCallback(const TrackedObjects::ConstSharedPtr & msg)
+void DecorativeTrackerMergerNode::subObjectsCallback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & msg)
 {
   stop_watch_ptr_->toc("delay_sub_objects", true);
   diagnostics_interface_ptr_->clear();

@@ -40,7 +40,7 @@ private:
     double q_stddev_acc_lat = 1.47;          // [m/s^2] uncertain longitudinal acceleration, 0.15G
     double q_cov_acc_long = 11.8;            // [m/s^2] uncertain longitudinal acceleration, 0.35G
     double q_cov_acc_lat = 2.16;             // [m/s^2] uncertain lateral acceleration, 0.15G
-    double q_stddev_yaw_rate_min = 0.02618;  // [rad/s] uncertain yaw change rate, 1.5deg/s
+    double q_stddev_yaw_rate_min = 0.00873;  // [rad/s] uncertain yaw change rate, 0.5deg/s
     double q_stddev_yaw_rate_max = 0.2618;   // [rad/s] uncertain yaw change rate, 15deg/s
     double q_cov_slip_rate_min =
       2.7416e-5;  // [rad^2/s^2] uncertain slip angle change rate, 0.3 deg/s
@@ -53,8 +53,6 @@ private:
     double wheel_base_ratio_inv =
       1 / (lf_ratio + lr_ratio);  // [-] inverse of the sum of lf_ratio and lr_ratio
     double max_vel = 27.8;        // [m/s] maximum velocity, 100km/h
-    double max_reverse_vel =
-      -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
     double wheel_pos_ratio =
       (lf_ratio + lr_ratio) /
       lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
@@ -65,6 +63,10 @@ private:
       (0.5 - lr_ratio) / (lf_ratio + lr_ratio);  // [-] protrusion from rear wheel position ratio
     double q_cov_length = 0.25;                  // [m^2] covariance of the length uncertainty, 0.5m
   } motion_params_;
+
+  // 180° heading flip on a raw state/covariance pair: swap the axle points about the body
+  // center, negate the longitudinal velocity, swap the matching covariance rows/cols.
+  void flipStateOrientation(StateVec & X, StateMat & P) const;
 
 public:
   BicycleMotionModel();
@@ -106,11 +108,13 @@ public:
     const double & vel_long, const double & vel_lat, const std::array<double, 36> & twist_cov,
     const double & length);
 
-  bool updateStatePoseRear(
-    const double & xr, const double & yr, const std::array<double, 36> & pose_cov);
-
-  bool updateStatePoseFront(
-    const double & xf, const double & yf, const std::array<double, 36> & pose_cov);
+  // Front/rear wheel-anchor update from the observed edge face center (x, y). Because the
+  // measurement constrains a blend of both endpoints, the gain lets the body rotate about the
+  // observed end rather than translating rigidly (which froze yaw). measure_front selects the
+  // front endpoint p2 (gamma_front) vs the rear endpoint p1 (gamma_rear).
+  bool updateStatePoseWheel(
+    const double & x, const double & y, const std::array<double, 36> & pose_cov,
+    const bool measure_front);
 
   enum class LengthUpdateAnchor { CENTER, FRONT, REAR };
   bool updateStateLength(
@@ -118,7 +122,16 @@ public:
 
   bool adjustPosition(const double & delta_x, const double & delta_y);
 
+  // cspell:ignore Persymmetrize
+  // Persymmetrize the rear/front axle position covariance to weaken the coupling that levers a
+  // common-mode lateral error into yaw. Variances only inflate.
+  bool blendAxleCovariance(const double blend_ratio);
+
   bool limitStates();
+
+  // Rotate the tracked heading 180°: swap the axle points about the body center and negate the
+  // longitudinal velocity.
+  bool flipOrientation();
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 

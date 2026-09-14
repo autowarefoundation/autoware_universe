@@ -48,6 +48,36 @@
           "description": "Enable/disable ring outlier filter in the cuda_pointcloud_preprocessor pipeline.",
           "default": "true"
         },
+        "max_input_point_count": {
+          "type": "integer",
+          "description": "Maximum number of input points processed per cloud. Larger inputs are reported as errors and truncated to the first N points.",
+          "default": 691200,
+          "minimum": 1
+        },
+        "max_ring_count": {
+          "type": "integer",
+          "description": "Maximum number of LiDAR rings used for startup allocation of ring outlier filter CUDA buffers.",
+          "default": 128,
+          "minimum": 1
+        },
+        "max_points_per_ring": {
+          "type": "integer",
+          "description": "Maximum number of points per ring used for startup allocation of ring outlier filter CUDA buffers.",
+          "default": 7200,
+          "minimum": 1
+        },
+        "max_twist_frequency_hz": {
+          "type": "number",
+          "description": "Maximum expected twist input frequency. Used to bound the twist queue.",
+          "default": 200.0,
+          "exclusiveMinimum": 0.0
+        },
+        "max_imu_frequency_hz": {
+          "type": "number",
+          "description": "Maximum expected IMU input frequency. Used to bound the IMU queue.",
+          "default": 200.0,
+          "exclusiveMinimum": 0.0
+        },
         "crop_box.min_x": {
           "type": "array",
           "description": "An array in which each element is the minimum x value in a crop box",
@@ -92,6 +122,11 @@
         "object_length_threshold",
         "processing_time_threshold_sec",
         "timestamp_mismatch_fraction_threshold",
+        "max_input_point_count",
+        "max_ring_count",
+        "max_points_per_ring",
+        "max_twist_frequency_hz",
+        "max_imu_frequency_hz",
         "crop_box.min_x",
         "crop_box.min_y",
         "crop_box.min_z",

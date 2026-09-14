@@ -142,7 +142,7 @@ void replaceObjectYawWithLaneletsYaw(
 }
 }  // namespace
 
-PathProcessor::PathProcessor(rclcpp::Node & node) : node_(node)
+PathProcessor::PathProcessor(autoware::agnocast_wrapper::Node & node) : node_(node)
 {
 }
 
@@ -283,8 +283,9 @@ std::optional<PredictedObject> PathProcessor::predict(
 
     const auto trajectory_with_const_velocity = toTrajectoryPoints(predicted_path, abs_obj_speed);
 
-    if (isLateralAccelerationConstraintSatisfied(
-          trajectory_with_const_velocity, params_.prediction_sampling_time_interval)) {
+    if (
+      isLateralAccelerationConstraintSatisfied(
+        trajectory_with_const_velocity, params_.prediction_sampling_time_interval)) {
       predicted_path.confidence = ref_path.probability;
       predicted_paths.push_back(predicted_path);
       continue;

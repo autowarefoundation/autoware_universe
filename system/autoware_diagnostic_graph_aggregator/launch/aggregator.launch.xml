@@ -1,4 +1,6 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="converter_param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
   <arg name="param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/default.param.yaml"/>
   <arg name="graph_file"/>
@@ -9,8 +11,10 @@
   <arg name="~/unknowns" default="/diagnostics_graph/unknowns"/>
   <arg name="~/reset" default="/diagnostics_graph/reset"/>
   <arg name="~/availability" default="/system/command_mode/availability"/>
+  <arg name="~/set_initializing" default="/system/aggregator/set_initializing"/>
 
   <node pkg="autoware_diagnostic_graph_aggregator" exec="aggregator_node">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var param_file)"/>
     <param name="graph_file" value="$(var graph_file)"/>
     <param name="graph_vars" value="$(var graph_vars)"/>
@@ -19,10 +23,12 @@
     <remap from="~/status" to="$(var ~/status)"/>
     <remap from="~/unknowns" to="$(var ~/unknowns)"/>
     <remap from="~/reset" to="$(var ~/reset)"/>
+    <remap from="~/set_initializing" to="$(var ~/set_initializing)"/>
     <remap from="~/availability" to="$(var ~/availability)"/>
   </node>
 
   <node pkg="autoware_diagnostic_graph_aggregator" exec="converter_node">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var converter_param_file)"/>
     <remap from="~/command_mode/availability" to="/system/command_mode/availability"/>
     <remap from="~/operation_mode/availability" to="/system/operation_mode/availability"/>

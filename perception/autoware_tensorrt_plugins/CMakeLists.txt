@@ -152,6 +152,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
 
     ament_add_gtest(reference_kernels_test
       test/argsort_kernel_test.cpp
+      test/segment_csr_kernel_test.cpp
       test/unique_kernel_test.cpp
     )
     if(TARGET reference_kernels_test)

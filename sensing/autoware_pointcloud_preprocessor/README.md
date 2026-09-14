@@ -22,6 +22,7 @@ Detail description of each filter's algorithm is in the following links.
 | distortion_corrector          | compensate pointcloud distortion caused by ego vehicle's movement during 1 scan    | [link](docs/distortion-corrector.md)          |
 | downsample_filter             | downsampling input pointcloud                                                      | [link](docs/downsample-filter.md)             |
 | outlier_filter                | remove points caused by hardware problems, rain drops and small insects as a noise | [link](docs/outlier-filter.md)                |
+| polar_voxel_noise_filter      | remove point cloud noise using polar-coordinate voxels and return-type-aware rules | [link](docs/polar-voxel-noise-filter.md)      |
 | passthrough_filter            | remove points on the outside of a range in given field (e.g. x, y, z, intensity)   | [link](docs/passthrough-filter.md)            |
 | pointcloud_accumulator        | accumulate pointclouds for a given amount of time                                  | [link](docs/pointcloud-accumulator.md)        |
 | pointcloud_densifier          | enhance sparse point clouds by using information from previous frames              | [link](docs/pointcloud-densifier.md)          |

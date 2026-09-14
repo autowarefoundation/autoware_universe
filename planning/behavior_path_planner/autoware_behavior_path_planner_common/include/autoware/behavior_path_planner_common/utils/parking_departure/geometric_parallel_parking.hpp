@@ -151,4 +151,3 @@ private:
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__PARKING_DEPARTURE__GEOMETRIC_PARALLEL_PARKING_HPP_  // NOLINT
-// clang-format on

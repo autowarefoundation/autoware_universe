@@ -126,8 +126,9 @@ std::optional<std::pair<double, double>> compute_time_interval_for_passing_line(
     const auto & base_pose = path_point.point.pose;
     const auto path_point_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(base_pose));
-    if (boost::geometry::intersects(
-          path_point_footprint, lanelet::utils::to2D(line1).basicLineString())) {
+    if (
+      boost::geometry::intersects(
+        path_point_footprint, lanelet::utils::to2D(line1).basicLineString())) {
       entry_time = time;
       break;
     }
@@ -142,8 +143,9 @@ std::optional<std::pair<double, double>> compute_time_interval_for_passing_line(
     const auto & base_pose = path_point.point.pose;
     const auto path_point_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(base_pose));
-    if (boost::geometry::intersects(
-          path_point_footprint, lanelet::utils::to2D(line2).basicLineString())) {
+    if (
+      boost::geometry::intersects(
+        path_point_footprint, lanelet::utils::to2D(line2).basicLineString())) {
       exit_time = time;
       break;
     }
@@ -201,7 +203,8 @@ compute_time_interval_for_passing_line(
          ranges::views::enumerate(precise_predicted_path.path | ranges::views::reverse)) {
       const auto object_poly = autoware_utils_geometry::to_polygon2d(pose, shape);
       const double time = horizon - i * new_time_step;
-      if (entry_time && time < entry_time.value()) {
+      // entry time is checked before loop
+      if (time < entry_time.value()) {
         break;
       }
       if (boost::geometry::intersects(object_poly, line2_2d)) {

@@ -1,0 +1,59 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: PurePursuitLateralController.node
+package:
+  name: autoware_pure_pursuit
+  provider: autoware
+launch:
+  plugin: autoware::pure_pursuit::PurePursuitLateralController
+  executable: autoware_pure_pursuit_lateral_controller_exe
+  node_output: screen
+# interfaces
+subscribers:
+  - name: reference_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: input/reference_trajectory
+  - name: current_odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: input/current_odometry
+publishers:
+  - name: control_raw
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: output/control_raw
+  - name: predicted_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: markers
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/markers
+  - name: ld_outputs
+    message_type: autoware_internal_debug_msgs/msg/Float32MultiArrayStamped
+    remap_target: ~/debug/ld_outputs
+# parameters
+param_files:
+  - name: pure_pursuit_param
+    default: $(find-pkg-share autoware_pure_pursuit)/config/pure_pursuit.param.yaml
+param_values:
+  - name: ld_velocity_ratio
+    type: double
+    default: 2.4
+  - name: min_lookahead_distance
+    type: double
+    default: 4.35
+  - name: max_lookahead_distance
+    type: double
+    default: 15.0
+  - name: enable_path_smoothing
+    type: bool
+    default: false
+  - name: path_filter_moving_ave_num
+    type: int
+    default: 25
+# processes
+processes:
+  - name: compute_lateral_control
+    trigger_conditions:
+      - on_input: reference_trajectory
+      - on_input: current_odometry
+    outcomes:
+      - to_output: control_raw
+      - to_output: predicted_trajectory

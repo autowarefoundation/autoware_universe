@@ -9,9 +9,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/lane_departure_checker_node/parameters.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::lane_departure_checker::LaneDepartureCheckerNode"
   EXECUTABLE lane_departure_checker_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 ament_auto_package(

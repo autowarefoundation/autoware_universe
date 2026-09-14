@@ -34,10 +34,7 @@ namespace lidar_apollo_instance_segmentation
 FeatureGenerator::FeatureGenerator(
   const int width, const int height, const int range, const bool use_intensity_feature,
   const bool use_constant_feature)
-: min_height_(-5.0),
-  max_height_(5.0),
-  use_intensity_feature_(use_intensity_feature),
-  use_constant_feature_(use_constant_feature)
+: min_height_(-5.0), max_height_(5.0)
 {
   // select feature map type
   if (use_constant_feature && use_intensity_feature) {

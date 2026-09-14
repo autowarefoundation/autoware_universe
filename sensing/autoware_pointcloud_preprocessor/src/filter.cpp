@@ -70,14 +70,14 @@ autoware::pointcloud_preprocessor::Filter::Filter(
 {
   // Set parameters (moved from NodeletLazy onInit)
   {
-    tf_input_frame_ = static_cast<std::string>(declare_parameter("input_frame", ""));
-    tf_output_frame_ = static_cast<std::string>(declare_parameter("output_frame", ""));
-    max_queue_size_ = static_cast<std::size_t>(declare_parameter("max_queue_size", 5));
+    tf_input_frame_ = static_cast<std::string>(this->declare_parameter("input_frame", ""));
+    tf_output_frame_ = static_cast<std::string>(this->declare_parameter("output_frame", ""));
+    max_queue_size_ = static_cast<std::size_t>(this->declare_parameter("max_queue_size", 5));
 
     // ---[ Optional parameters
-    use_indices_ = static_cast<bool>(declare_parameter("use_indices", false));
-    latched_indices_ = static_cast<bool>(declare_parameter("latched_indices", false));
-    approximate_sync_ = static_cast<bool>(declare_parameter("approximate_sync", false));
+    use_indices_ = static_cast<bool>(this->declare_parameter("use_indices", false));
+    latched_indices_ = static_cast<bool>(this->declare_parameter("latched_indices", false));
+    approximate_sync_ = static_cast<bool>(this->declare_parameter("approximate_sync", false));
 
     RCLCPP_DEBUG_STREAM(
       this->get_logger(),
@@ -123,6 +123,17 @@ void autoware::pointcloud_preprocessor::Filter::subscribe()
   subscribe(filter_name);
 }
 
+template <template <typename...> class Policy, typename Callback>
+auto autoware::pointcloud_preprocessor::Filter::make_sync(Callback callback)
+  -> std::shared_ptr<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>>
+{
+  auto sync = std::make_shared<message_filters::Synchronizer<Policy<PointCloud2, PointIndices>>>(
+    max_queue_size_);
+  sync->connectInput(sub_input_filter_, sub_indices_filter_);
+  sync->registerCallback(std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
+  return sync;
+}
+
 void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & filter_name)
 {
   // TODO(sykwer): Change the corresponding node to subscribe to `faster_input_indices_callback`
@@ -143,22 +154,16 @@ void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & fi
       this, "indices", rclcpp::SensorDataQoS().keep_last(max_queue_size_).get_rmw_qos_profile());
 
     if (approximate_sync_) {
-      sync_input_indices_a_ = std::make_shared<ApproximateTimeSyncPolicy>(max_queue_size_);
-      sync_input_indices_a_->connectInput(sub_input_filter_, sub_indices_filter_);
-      sync_input_indices_a_->registerCallback(
-        std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
+      sync_input_indices_a_ = make_sync<sync_policies::ApproximateTime>(callback);
     } else {
-      sync_input_indices_e_ = std::make_shared<ExactTimeSyncPolicy>(max_queue_size_);
-      sync_input_indices_e_->connectInput(sub_input_filter_, sub_indices_filter_);
-      sync_input_indices_e_->registerCallback(
-        std::bind(callback, this, std::placeholders::_1, std::placeholders::_2));
+      sync_input_indices_e_ = make_sync<sync_policies::ExactTime>(callback);
     }
   } else {
     // Subscribe in an old fashion to input only (no filters)
     // CAN'T use auto-type here.
     std::function<void(const PointCloud2ConstPtr msg)> cb =
       std::bind(callback, this, std::placeholders::_1, PointIndicesConstPtr());
-    sub_input_ = create_subscription<PointCloud2>(
+    sub_input_ = this->create_subscription<PointCloud2>(
       "input", rclcpp::SensorDataQoS().keep_last(max_queue_size_), cb);
   }
 }
@@ -208,10 +213,11 @@ autoware::pointcloud_preprocessor::Filter::filter_param_callback(
   std::scoped_lock lock(mutex_);
 
   if (get_param(p, "input_frame", tf_input_frame_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting the input TF frame to: %s.", tf_input_frame_.c_str());
+    RCLCPP_DEBUG(this->get_logger(), "Setting the input TF frame to: %s.", tf_input_frame_.c_str());
   }
   if (get_param(p, "output_frame", tf_output_frame_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting the output TF frame to: %s.", tf_output_frame_.c_str());
+    RCLCPP_DEBUG(
+      this->get_logger(), "Setting the output TF frame to: %s.", tf_output_frame_.c_str());
   }
 
   rcl_interfaces::msg::SetParametersResult result;
@@ -268,9 +274,7 @@ void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
     // Convert the cloud into the different frame
     PointCloud2 cloud_transformed;
 
-    if (!managed_tf_buffer_->transformPointcloud(
-          tf_input_frame_, *cloud, cloud_transformed, cloud->header.stamp,
-          rclcpp::Duration::from_seconds(1.0), this->get_logger())) {
+    if (!transform_pointcloud(tf_input_frame_, *cloud, cloud_transformed)) {
       return;
     }
     cloud_tf = std::make_shared<PointCloud2>(cloud_transformed);
@@ -299,9 +303,8 @@ bool autoware::pointcloud_preprocessor::Filter::calculate_transform_matrix(
     this->get_logger(), "[get_transform_matrix] Transforming input dataset from %s to %s.",
     from.header.frame_id.c_str(), target_frame.c_str());
 
-  auto eigen_transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
-    target_frame, from.header.frame_id, from.header.stamp, rclcpp::Duration::from_seconds(1.0),
-    this->get_logger());
+  auto eigen_transform_opt =
+    lookup_transform_matrix(target_frame, from.header.frame_id, from.header.stamp);
   if (!eigen_transform_opt) {
     return false;
   }
@@ -309,6 +312,22 @@ bool autoware::pointcloud_preprocessor::Filter::calculate_transform_matrix(
   transform_info.eigen_transform = *eigen_transform_opt;
   transform_info.need_transform = true;
   return true;
+}
+
+bool autoware::pointcloud_preprocessor::Filter::transform_pointcloud(
+  const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & in,
+  sensor_msgs::msg::PointCloud2 & out)
+{
+  return managed_tf_buffer_->transformPointcloud(
+    target_frame, in, out, in.header.stamp, rclcpp::Duration::from_seconds(1.0),
+    this->get_logger());
+}
+
+std::optional<Eigen::Matrix4f> autoware::pointcloud_preprocessor::Filter::lookup_transform_matrix(
+  const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & stamp)
+{
+  return managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
+    target_frame, source_frame, stamp, rclcpp::Duration::from_seconds(1.0), this->get_logger());
 }
 
 // Returns false in error cases
@@ -325,9 +344,7 @@ bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
     // Convert the cloud into the different frame
     auto cloud_transformed = std::make_unique<PointCloud2>();
 
-    if (!managed_tf_buffer_->transformPointcloud(
-          tf_output_frame_, *output, *cloud_transformed, output->header.stamp,
-          rclcpp::Duration::from_seconds(1.0), this->get_logger())) {
+    if (!transform_pointcloud(tf_output_frame_, *output, *cloud_transformed)) {
       RCLCPP_ERROR(
         this->get_logger(),
         "[convert_output_costly] Error converting output dataset from %s to %s.",
@@ -347,9 +364,7 @@ bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
 
     auto cloud_transformed = std::make_unique<PointCloud2>();
 
-    if (!managed_tf_buffer_->transformPointcloud(
-          tf_input_orig_frame_, *output, *cloud_transformed, output->header.stamp,
-          rclcpp::Duration::from_seconds(1.0), this->get_logger())) {
+    if (!transform_pointcloud(tf_input_orig_frame_, *output, *cloud_transformed)) {
       return false;
     }
 
@@ -369,19 +384,19 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
     !utils::is_data_layout_compatible_with_point_xyzircaedt(*cloud) &&
     !utils::is_data_layout_compatible_with_point_xyzirc(*cloud)) {
     RCLCPP_ERROR(
-      get_logger(),
+      this->get_logger(),
       "The pointcloud layout is not compatible with PointXYZIRCAEDT or PointXYZIRC. Aborting");
 
     if (utils::is_data_layout_compatible_with_point_xyziradrt(*cloud)) {
       RCLCPP_ERROR(
-        get_logger(),
+        this->get_logger(),
         "The pointcloud layout is compatible with PointXYZIRADRT. You may be using legacy "
         "code/data");
     }
 
     if (utils::is_data_layout_compatible_with_point_xyzi(*cloud)) {
       RCLCPP_ERROR(
-        get_logger(),
+        this->get_logger(),
         "The pointcloud layout is compatible with PointXYZI. You may be using legacy "
         "code/data");
     }

@@ -169,6 +169,7 @@ struct Parameters
   double backward_length_buffer_for_blocking_object{0.0};
   double backward_length_from_intersection{5.0};
   bool enable_stopped_vehicle_buffer{false};
+  double overhang_tolerance{0.0};
 
   // parked vehicle
   double object_check_min_road_shoulder_width{0.5};

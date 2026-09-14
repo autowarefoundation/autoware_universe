@@ -1,4 +1,5 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <!-- Input -->
   <arg name="input/objects" default="~/input/objects"/>
   <!-- Output -->
@@ -8,6 +9,7 @@
 
   <!-- Node -->
   <node pkg="autoware_object_sorter" exec="detected_object_sorter_node" name="detected_object_sorter" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/objects" to="$(var input/objects)"/>
     <remap from="~/output/objects" to="$(var output/objects)"/>
     <param from="$(var param_path)"/>

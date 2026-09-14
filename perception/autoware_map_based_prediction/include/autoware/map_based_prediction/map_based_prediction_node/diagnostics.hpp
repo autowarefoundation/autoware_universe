@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE__DIAGNOSTICS_HPP_
 #define AUTOWARE__MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE__DIAGNOSTICS_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
@@ -26,6 +27,12 @@
 namespace autoware::map_based_prediction
 {
 
+using PublishedTimePublisher =
+  autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>;
+using DebugPublisher = autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>;
+using DiagnosticsInterface =
+  autoware_utils::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>;
+
 class Diagnostics
 {
 public:
@@ -35,15 +42,14 @@ public:
     double processing_time_consecutive_excess_tolerance_ms{};
   };
 
-  explicit Diagnostics(rclcpp::Node * node);
+  explicit Diagnostics(autoware::agnocast_wrapper::Node * node);
   void setParams(const Params & params);
-  void setPublishedTimePublisher(std::unique_ptr<autoware_utils::PublishedTimePublisher> publisher);
-  void setProcessingTimePublisher(std::unique_ptr<autoware_utils::DebugPublisher> publisher);
+  void setPublishedTimePublisher(std::unique_ptr<PublishedTimePublisher> publisher);
+  void setProcessingTimePublisher(std::unique_ptr<DebugPublisher> publisher);
 
   // Called from ObjectsCallback after pub_objects_->publish() to record message publish time.
   template <typename T>
-  void publishIfSubscribed(
-    const typename rclcpp::Publisher<T>::SharedPtr & pub, const rclcpp::Time & stamp)
+  void publishIfSubscribed(const AUTOWARE_PUBLISHER_PTR(T) & pub, const rclcpp::Time & stamp)
   {
     if (published_time_publisher_) published_time_publisher_->publish_if_subscribed(pub, stamp);
   }
@@ -52,9 +58,9 @@ public:
   void update(const rclcpp::Time & timestamp, double processing_time_ms, double cyclic_time_ms);
 
 private:
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
-  std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<DiagnosticsInterface> diagnostics_interface_ptr_;
+  std::unique_ptr<PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<DebugPublisher> processing_time_publisher_;
 
   Params params_{};
   std::optional<rclcpp::Time> last_in_time_processing_timestamp_;

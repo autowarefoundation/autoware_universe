@@ -1,4 +1,9 @@
 repositories:
+  # temporarily add autoware_simple_planning_simulator until tagged version is released
+  core/autoware_simple_planning_simulator:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_simple_planning_simulator.git
+    version: main
   tools/autoware_tools:
     type: git
     url: https://github.com/autowarefoundation/autoware_tools.git

@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: TopicStateMonitor.node
+
+package:
+  name: autoware_topic_state_monitor
+  provider: autoware
+
+launch:
+  plugin: autoware::topic_state_monitor::TopicStateMonitorNode
+  executable: autoware_topic_state_monitor_node
+  node_output: screen
+
+# interfaces
+# monitors an arbitrary topic (name/type set by the topic/topic_type parameters) via a
+# generic subscription, and reports its state to /diagnostics via diagnostic_updater.
+# the monitored topic has no fixed message type, so only the diagnostics output is modeled.
+subscribers: []
+
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: monitor
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: diagnostics

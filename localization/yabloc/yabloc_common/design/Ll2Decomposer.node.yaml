@@ -1,0 +1,38 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: Ll2Decomposer.node
+package:
+  name: yabloc_common
+  provider: autoware
+launch:
+  plugin: yabloc::ll2_decomposer::Ll2Decomposer
+  executable: yabloc_ll2_decomposer_node
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+publishers:
+  - name: ll2_road_marking
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: ll2_sign_board
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: ll2_bounding_box
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: sign_board_marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/sign_board_marker
+# parameters
+param_files:
+  - name: ll2_decomposer_param
+    default: config/ll2_decomposer.param.yaml
+param_values: []
+# processes
+processes:
+  - name: decompose_lanelet2
+    trigger_conditions:
+      - on_input: vector_map
+    outcomes:
+      - to_output: ll2_road_marking
+      - to_output: ll2_sign_board
+      - to_output: ll2_bounding_box
+      - to_output: sign_board_marker

@@ -25,9 +25,8 @@
 namespace autoware::map_based_prediction
 {
 
-Diagnostics::Diagnostics(rclcpp::Node * node)
-: diagnostics_interface_ptr_(
-    std::make_unique<autoware_utils::DiagnosticsInterface>(node, "map_based_prediction"))
+Diagnostics::Diagnostics(autoware::agnocast_wrapper::Node * node)
+: diagnostics_interface_ptr_(std::make_unique<DiagnosticsInterface>(node, "map_based_prediction"))
 {
 }
 
@@ -36,14 +35,12 @@ void Diagnostics::setParams(const Params & params)
   params_ = params;
 }
 
-void Diagnostics::setPublishedTimePublisher(
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> publisher)
+void Diagnostics::setPublishedTimePublisher(std::unique_ptr<PublishedTimePublisher> publisher)
 {
   published_time_publisher_ = std::move(publisher);
 }
 
-void Diagnostics::setProcessingTimePublisher(
-  std::unique_ptr<autoware_utils::DebugPublisher> publisher)
+void Diagnostics::setProcessingTimePublisher(std::unique_ptr<DebugPublisher> publisher)
 {
   processing_time_publisher_ = std::move(publisher);
 }

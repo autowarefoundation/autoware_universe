@@ -16,6 +16,7 @@
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_TRAJECTORY_HPP_
 
 #include "autoware_utils/geometry/geometry.hpp"
+#include "builtin_interfaces/msg/time.hpp"
 
 #include "geometry_msgs/msg/point.hpp"
 
@@ -48,6 +49,8 @@ public:
 class MPCTrajectory
 {
 public:
+  //!< @brief absolute time origin
+  builtin_interfaces::msg::Time stamp{};
   std::vector<double> x;              //!< @brief x position x vector
   std::vector<double> y;              //!< @brief y position y vector
   std::vector<double> z;              //!< @brief z position z vector

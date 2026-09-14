@@ -1,0 +1,44 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: CudaScanGroundSegmentationFilter.node
+
+package:
+  name: autoware_ground_segmentation_cuda
+  provider: autoware
+
+launch:
+  plugin: autoware::cuda_ground_segmentation::CudaScanGroundSegmentationFilterNode
+  executable: cuda_scan_ground_segmentation_filter_node
+  node_output: screen
+
+# interfaces
+# cloud I/O uses cuda_blackboard (CudaPointCloud2); shown as sensor_msgs/msg/PointCloud2.
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud
+
+publishers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud
+  - name: ground_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/ground_pointcloud
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/cuda_scan_ground_segmentation_filter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: segment
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: pointcloud
+      - to_output: ground_pointcloud

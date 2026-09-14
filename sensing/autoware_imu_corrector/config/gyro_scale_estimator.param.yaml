@@ -3,7 +3,7 @@
     estimate_scale_init: 1.0
     min_allowed_scale: 0.9
     max_allowed_scale: 1.1
-    threshold_to_estimate_scale: 0.1
+    threshold_to_estimate_scale: 0.05
     percentage_scale_rate_allow_correct: 0.04
     alpha: 0.99
     delay_gyro_ms: 170
@@ -28,7 +28,7 @@
       variance_p_angle: 5e-9
       measurement_noise_r_angle: 0.00005
       min_covariance_angle: 1e-11
-      decay_coefficient: 0.99999998
+      decay_coefficient: 0.9999999998
       samples_in_bounds_to_init: 250
       max_reinitialization_retries: 5
 

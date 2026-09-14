@@ -2,6 +2,75 @@
 Changelog for package autoware_accel_brake_map_calibrator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_tensorrt_yolox): load label data in the node and pass it to the detector (`#12866 <https://github.com/autowarefoundation/autoware_universe/issues/12866>`_)
+  * refactor(autoware_tensorrt_yolox): throw on GPU init failure in constructor
+  Remove `TrtYoloXDetector::isGPUInitialized()` from the public API and
+  instead throw `std::runtime_error` in the constructor when the GPU is
+  not available, so callers do not need to check initialisation state
+  after construction.
+  * refactor(autoware_tensorrt_yolox): pass parsed label data instead of file paths to detector
+  Replace the four label/remap/color-map file-path fields of
+  TrtYoloXDetectorConfig with a single parsed LabelMaps, so the detector is
+  decoupled from file I/O and constructible from in-memory data.
+  - Add LabelMaps plus load_label_maps() (reads files and resolves remaps
+  into ready-to-use lookup tables) and the pure build_roi_id_to_target_id_map()
+  - Move file reading to the node layer; the detector receives resolved tables
+  - Drop the duplicated label members and setupLabel() from the detector
+  * refactor(autoware_tensorrt_yolox): hide internal label helpers from the public header
+  Only load_label_maps, load_image_list and build_roi_id_to_target_id_map are
+  used outside label.cpp, so move the remaining parsing helpers into an
+  anonymous namespace.
+  - Move trim/read_csv/file_exists/load_list_from_text_file and the
+  read_label_file/load_segmentation_colormap/load_label_id_remap_file parsers
+  into an anonymous namespace; simplify them to return values now that the
+  name-to-id outputs are unused
+  - Drop the now-unneeded <cstdint>/<optional> includes from the header
+  - Rewrite test_label to exercise the public load_label_maps and the pure
+  build_roi_id_to_target_id_map instead of the internal parsers
+  * refactor(autoware_tensorrt_yolox): drop the skip_header_lines option
+  Production CSV files always have a header, so read_csv always skipped exactly
+  one line. Hard-code skipping the header line and remove the skip_header_lines
+  parameter from read_csv, load_segmentation_colormap and load_label_id_remap_file.
+  Also remove the now-unused test_label_remap_without_header.csv test fixture.
+  * refactor(autoware_tensorrt_yolox): inline label test data as temp files
+  Remove the test_label_data/ directory and write file contents directly
+  in each test's Arrange section using write_temp_file(), eliminating the
+  ament_index_cpp dependency and the install step for test data.
+  * refactor(autoware_tensorrt_yolox): make build_roi_id_to_target_id_map a file-local helper
+  Move build_roi_id_to_target_id_map into the anonymous namespace in label.cpp
+  since it is only called within load_label_maps. Replace the three direct-call
+  tests with a load_label_maps-level test that covers the missing-label throw path.
+  * refactor(autoware_tensorrt_yolox): restore load_image_list position to minimize diff
+  * refactor(autoware_tensorrt_yolox): simplify load_image_list by removing unused prefix arg
+  The prefix parameter was never exercised — the sole call site passed "".
+  Remove it, rename the parameter to filepath for clarity, and add a doxygen
+  comment matching the style of load_label_maps. Tests are updated accordingly.
+  * refactor(autoware_tensorrt_yolox): replace LabelMaps with RoiLabel and split load functions
+  Replace the struct-of-arrays LabelMaps with a per-class RoiLabel struct
+  (array-of-structs), remove LabelMaps entirely by inlining roi_labels and
+  semseg_color_map directly into TrtYoloXDetectorConfig, and split the
+  monolithic load_label_maps into two focused functions: load_label_maps
+  returning std::vector<RoiLabel> and load_semseg_colormap returning
+  std::vector<Colormap>.
+  * refactor(autoware_tensorrt_yolox): merge load_semseg_colormap into load_segmentation_colormap
+  * feat(tenrorrt_yolox): handle case for contents without valid data
+  * fix(tensorrt_yolox): add bounds check in getColorizedMask to prevent out-of-bounds access
+  * fix(tensorrt_yolox): reindex segmentation colormap by ID to fix out-of-order and non-contiguous entries
+  Previously load_segmentation_colormap() pushed rows in CSV order, so
+  out-of-order or non-contiguous IDs caused getColorizedMask() to map
+  pixel values to wrong colors. Now the parsed entries are placed into a
+  vector sized max_id+1 and indexed by their ID field.
+  Tests added for both the out-of-order and non-contiguous cases.
+  * refactor(autoware_tensorrt_yolox): rename unmapped_label_id to g_unmapped_label_id
+  Rename the global constant from unmapped_label_id to g_unmapped_label_id to follow naming conventions for global variables. Update all references in header, source, and test files.
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Takahisa Ishikawa, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -17,6 +17,7 @@
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -34,6 +35,7 @@ struct ValidatorContext
   geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr acceleration;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map;
   autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr predicted_objects;
+  autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr route;
   autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_light_signals;
 };
 

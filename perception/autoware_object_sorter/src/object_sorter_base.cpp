@@ -20,7 +20,10 @@
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <memory>
+#include <set>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::object_sorter
@@ -30,7 +33,7 @@ using autoware_perception_msgs::msg::DetectedObjects;
 template <typename ObjsMsgType>
 ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
   const std::string & node_name, const rclcpp::NodeOptions & node_options)
-: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
+: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_, *this)
 {
   // Node Parameter
   range_calc_frame_id_ = declare_parameter<std::string>("range_calc_frame_id");
@@ -55,15 +58,36 @@ ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
 template <typename ObjsMsgType>
 void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholding)
 {
-  const std::array<std::string, 8> label_names{"UNKNOWN", "CAR",        "TRUCK",   "BUS",
-                                               "TRAILER", "MOTORCYCLE", "BICYCLE", "PEDESTRIAN"};
-  const std::array<uint8_t, 8> label_number{Label::UNKNOWN, Label::CAR,       Label::TRUCK,
-                                            Label::BUS,     Label::TRAILER,   Label::MOTORCYCLE,
-                                            Label::BICYCLE, Label::PEDESTRIAN};
+  // Discover which labels appear under `sort_target.*` in the YAML overrides,
+  // so adding a new class only requires touching the YAML (plus toLabel()).
+  const std::string prefix = "sort_target.";
+  std::set<std::string> configured_labels;
+  for (const auto & kv : this->get_node_parameters_interface()->get_parameter_overrides()) {
+    const auto & key = kv.first;
+    if (key.rfind(prefix, 0) != 0) {
+      continue;
+    }
+    const auto rest = key.substr(prefix.size());
+    const auto dot_pos = rest.find('.');
+    if (dot_pos == std::string::npos) {
+      continue;
+    }
+    configured_labels.insert(rest.substr(0, dot_pos));
+  }
 
   // read each label settings
-  for (size_t i = 0; i < label_names.size(); i++) {
-    std::string sort_target_label = "sort_target." + label_names[i];
+  for (const auto & label_name : configured_labels) {
+    uint8_t label_id = 0;
+    try {
+      label_id = autoware::object_recognition_utils::toLabel(label_name);
+    } catch (const std::runtime_error & e) {
+      RCLCPP_WARN(
+        this->get_logger(), "Skipping unknown label '%s' in sort_target config: %s",
+        label_name.c_str(), e.what());
+      continue;
+    }
+
+    const std::string sort_target_label = prefix + label_name;
     LabelSettings label_settings;
 
     label_settings.publish = declare_parameter<bool>(sort_target_label + ".publish");
@@ -101,21 +125,24 @@ void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholdi
       };
     }
 
-    label_settings_[label_number[i]] = label_settings;
+    label_settings_[label_id] = label_settings;
   }
 }
 
 template <typename ObjsMsgType>
 void ObjectSorterBase<ObjsMsgType>::objectCallback(
-  const typename ObjsMsgType::ConstSharedPtr input_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & input_msg)
 {
   // Guard
-  if (pub_output_objects_->get_subscription_count() < 1) {
+  if (
+    pub_output_objects_->get_subscription_count() +
+      pub_output_objects_->get_intra_process_subscription_count() <
+    1) {
     return;
   }
 
-  ObjsMsgType output_objects;
-  output_objects.header = input_msg->header;
+  auto output_objects = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_output_objects_);
+  output_objects->header = input_msg->header;
 
   geometry_msgs::msg::TransformStamped tf_input_frame_to_target_frame;
   // Even when it failed to get the transform, we still can do the velocity check
@@ -134,7 +161,15 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   for (const auto & object : input_msg->objects) {
     const uint8_t label =
       autoware::object_recognition_utils::getHighestProbLabel(object.classification);
-    const LabelSettings & label_settings = label_settings_[label];
+    auto label_settings_it = label_settings_.find(label);
+    if (label_settings_it == label_settings_.end()) {
+      // Label not configured (e.g., OVER_DRIVABLE) — fall back to UNKNOWN's settings.
+      label_settings_it = label_settings_.find(Label::UNKNOWN);
+      if (label_settings_it == label_settings_.end()) {
+        continue;
+      }
+    }
+    const LabelSettings & label_settings = label_settings_it->second;
 
     if (!label_settings.publish) {
       continue;
@@ -159,11 +194,11 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
       }
     }
 
-    output_objects.objects.push_back(object);
+    output_objects->objects.push_back(object);
   }
 
   // Publish
-  pub_output_objects_->publish(output_objects);
+  pub_output_objects_->publish(std::move(output_objects));
 }
 
 // Explicit instantiation

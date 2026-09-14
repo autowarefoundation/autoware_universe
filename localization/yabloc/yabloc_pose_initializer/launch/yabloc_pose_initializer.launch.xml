@@ -1,6 +1,8 @@
 <launch>
   <arg name="data_path" default="$(env HOME)/autoware_data/ml_models"/>
-  <arg name="model_path" default="$(var data_path)/yabloc_pose_initializer/saved_model/model_float32.pb"/>
+  <!-- The ONNX is the default because the TensorFlow importer of OpenCV 4.9 and later applies
+       the final softmax along the wrong axis, which empties the mask. -->
+  <arg name="model_path" default="$(var data_path)/yabloc_pose_initializer/saved_model/model_float32.onnx"/>
 
   <node pkg="yabloc_pose_initializer" exec="yabloc_pose_initializer_node" output="both">
     <param from="$(var camera_pose_initializer_param_path)"/>

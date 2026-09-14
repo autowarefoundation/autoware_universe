@@ -38,14 +38,15 @@ TrackerDebugger::TrackerDebugger(
   last_non_warning_timestamp_ = now;
 }
 
-void TrackerDebugger::init(rclcpp::Node & node)
+void TrackerDebugger::init(autoware::agnocast_wrapper::Node & node)
 {
   // declare debug parameters to decide whether to publish debug topics
   loadParameters(node);
   // initialize debug publishers
   if (debug_settings_.publish_processing_time) {
     processing_time_publisher_ =
-      std::make_unique<autoware_utils_debug::DebugPublisher>(&node, "multi_object_tracker");
+      std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        &node, "multi_object_tracker");
   }
 
   if (debug_settings_.publish_tentative_objects) {
@@ -63,7 +64,7 @@ void TrackerDebugger::init(rclcpp::Node & node)
   setupDiagnostics(node);
 }
 
-void TrackerDebugger::loadParameters(rclcpp::Node & node)
+void TrackerDebugger::loadParameters(autoware::agnocast_wrapper::Node & node)
 {
   try {
     debug_settings_.publish_processing_time =
@@ -91,9 +92,10 @@ void TrackerDebugger::loadParameters(rclcpp::Node & node)
   }
 }
 
-void TrackerDebugger::setupDiagnostics(rclcpp::Node & node)
+void TrackerDebugger::setupDiagnostics(autoware::agnocast_wrapper::Node & node)
 {
-  diagnostic_updater_ = std::make_unique<diagnostic_updater::Updater>(&node);
+  diagnostic_updater_ =
+    std::make_unique<autoware::agnocast_wrapper::diagnostic_updater::Updater>(&node);
   diagnostic_updater_->setHardwareID(node.get_name());
   diagnostic_updater_->add("Tracker Timing Diagnostics", this, &TrackerDebugger::checkAllTiming);
   diagnostic_updater_->setPeriod(0.1);

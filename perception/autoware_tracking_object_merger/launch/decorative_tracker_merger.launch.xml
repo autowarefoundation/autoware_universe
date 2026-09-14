@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="node_name" default="$(anon decorative_tracker_merger)"/>
   <arg name="input/main_object" default="main_object"/>
   <arg name="input/sub_object" default="sub_object"/>
@@ -9,6 +10,7 @@
   <arg name="node_param_file_path" default="$(find-pkg-share autoware_tracking_object_merger)/config/decorative_tracker_merger.param.yaml"/>
 
   <node pkg="autoware_tracking_object_merger" exec="decorative_tracker_merger_node" name="$(var node_name)" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="input/main_object" to="$(var input/main_object)"/>
     <remap from="input/sub_object" to="$(var input/sub_object)"/>
     <remap from="output/object" to="$(var output)"/>

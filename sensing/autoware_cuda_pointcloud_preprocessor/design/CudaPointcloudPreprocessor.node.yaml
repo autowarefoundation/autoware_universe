@@ -1,0 +1,51 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: CudaPointcloudPreprocessor.node
+
+package:
+  name: autoware_cuda_pointcloud_preprocessor
+  provider: autoware
+
+launch:
+  plugin: autoware::cuda_pointcloud_preprocessor::CudaPointcloudPreprocessorNode
+  executable: cuda_pointcloud_preprocessor_node
+  node_output: screen
+
+# interfaces
+# NOTE: pointcloud output uses cuda_blackboard transport (CudaPointCloud2);
+# represented as sensor_msgs/msg/PointCloud2 (the negotiated ROS-graph type).
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud
+  - name: twist
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+    remap_target: ~/input/twist
+  - name: imu
+    message_type: sensor_msgs/msg/Imu
+    remap_target: ~/input/imu
+
+publishers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/cuda_pointcloud_preprocessor.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: preprocess
+    trigger_conditions:
+      - and:
+          - on_input: pointcloud
+          - or:
+              - on_input: twist
+              - on_input: imu
+    outcomes:
+      - to_output: pointcloud

@@ -104,8 +104,9 @@ TurnIndicatorsCommand TurnSignalDecider::getTurnSignal(
   // In roundabouts, backward length is needed to adjust the backward length to ensure proper path
   // planning.
   lanelet::ConstLanelet current_lanelet;
-  if (route_handler->getClosestLaneletWithConstrainsWithinRoute(
-        current_pose, &current_lanelet, nearest_dist_threshold, nearest_yaw_threshold)) {
+  if (
+    route_handler->getClosestLaneletWithConstrainsWithinRoute(
+      current_pose, &current_lanelet, nearest_dist_threshold, nearest_yaw_threshold)) {
     backward_length = calculateRoundaboutBackwardLength(
       current_lanelet, *route_handler, backward_length, roundabout_backward_depth_);
   }
@@ -1042,9 +1043,10 @@ std::pair<TurnSignalInfo, bool> TurnSignalDecider::getBehaviorTurnSignalInfo(
   // If the ego has stopped and its close to completing its shift, turn off the blinkers
   constexpr double STOPPED_THRESHOLD = 0.1;  // [m/s]
   if (ego_speed < STOPPED_THRESHOLD && !override_ego_stopped_check) {
-    if (isNearEndOfShift(
-          start_shift_length, end_shift_length, ego_pose.position, current_lanelets,
-          p.turn_signal_shift_length_threshold)) {
+    if (
+      isNearEndOfShift(
+        start_shift_length, end_shift_length, ego_pose.position, current_lanelets,
+        p.turn_signal_shift_length_threshold)) {
       return std::make_pair(TurnSignalInfo(p_path_start, p_path_end), true);
     }
   }

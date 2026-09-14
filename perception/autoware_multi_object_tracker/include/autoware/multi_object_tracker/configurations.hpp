@@ -47,6 +47,7 @@ struct AssociationProfile
 };
 
 using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
+using LabelBoolMap = std::unordered_map<classes::Label, bool, EnumClassHash>;
 
 using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
 struct ShapeLabelKeyHash
@@ -67,12 +68,29 @@ using AssociationMap = std::unordered_map<ShapeLabelKey, AssociationProfileMap, 
 using ShapeLabelToTrackerTypeMap =
   std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
 
+//// Per-tracker-type configuration (parallels tracker_profiles: keyed by tracker type)
+struct PolygonTrackerConfig
+{
+  bool enable_velocity_estimation{true};
+  // Whether to publish estimated velocity, per object classification.
+  // A label absent from the map (or set false) means motion output is suppressed for that label.
+  LabelBoolMap enable_motion_output;
+};
+
+struct StaticTrackerConfig
+{
+  bool convert_polygon_to_bbox{false};
+};
+
+struct TrackerConfigs
+{
+  PolygonTrackerConfig polygon_tracker;
+  StaticTrackerConfig static_tracker;
+};
+
 //// Tracker creation (spawning, type mapping)
 struct TrackerCreationConfig
 {
-  bool enable_unknown_object_velocity_estimation{false};
-  bool enable_unknown_object_motion_output{false};
-
   ShapeLabelToTrackerTypeMap shape_tracker_map;
   std::unordered_set<ShapeLabelKey, ShapeLabelKeyHash> explicit_null_combos;
 
@@ -120,14 +138,11 @@ struct TrackerAssociationConfig
 //// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)
 struct TrackerOverlapManagerConfig
 {
-  float min_known_object_removal_iou{0.0f};
-  float min_unknown_object_removal_iou{0.0f};
-  LabelDoubleMap pruning_giou_thresholds;
-  LabelDoubleMap pruning_distance_thresholds;
-  LabelDoubleMap pruning_distance_thresholds_sq;
-  double pruning_static_object_speed{0.0};
-  double pruning_moving_object_speed{0.0};
-  double pruning_static_iou_threshold{0.0};
+  // Redundancy thresholds per label-pair class.
+  double pedestrian_pair_min_iou{0.0};  // 1D IoU, pedestrian-pedestrian
+  double known_pair_min_iou{0.0};       // 2D IoU, known-known (containment merges below it)
+  double unknown_pair_min_giou{0.0};    // GIoU, unknown-unknown; negative admits disjoint pairs
+  double unknown_pair_max_gap{0.0};     // [m] boundary-gap bound for disjoint unknown pairs
 };
 
 //// Utility: safe map lookup

@@ -16,6 +16,7 @@
 
 #include "autoware/collision_detector/debug.hpp"
 
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
@@ -157,6 +158,14 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
       this->declare_parameter<bool>("nearby_object_type_filters.filter_motorcycle");
     p.nearby_object_type_filters.filter_pedestrian =
       this->declare_parameter<bool>("nearby_object_type_filters.filter_pedestrian");
+    p.nearby_object_type_filters.filter_animal =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_animal");
+    p.nearby_object_type_filters.filter_hazard =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_hazard");
+    p.nearby_object_type_filters.filter_over_drivable =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_over_drivable");
+    p.nearby_object_type_filters.filter_under_drivable =
+      this->declare_parameter<bool>("nearby_object_type_filters.filter_under_drivable");
     p.ignore_behind_rear_axle = this->declare_parameter<bool>("ignore_behind_rear_axle");
     p.time_buffer.on = this->declare_parameter<double>("time_buffer.on_duration");
     p.time_buffer.off = this->declare_parameter<double>("time_buffer.off_duration");
@@ -171,7 +180,9 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
   updater_.add("collision_detect", this, &CollisionDetectorNode::checkCollision);
   updater_.setPeriod(0.1);
 
-  vehicle_stop_checker_ = std::make_unique<autoware::motion_utils::VehicleStopChecker>(this);
+  constexpr double vehicle_velocity_buffer_time_sec = 10.0;
+  vehicle_stop_checker_ = std::make_unique<autoware::motion_utils::VehicleStopCheckerBase>(
+    this, vehicle_velocity_buffer_time_sec);
 }
 
 PredictedObjects CollisionDetectorNode::filterObjects(const PredictedObjects & input_objects)
@@ -214,7 +225,11 @@ PredictedObjects CollisionDetectorNode::filterObjects(const PredictedObjects & i
     const bool is_within_range = (object_distance <= node_param_.nearby_filter_radius);
 
     // Determine if the object should be excluded based on its classification
-    bool should_be_excluded = shouldBeExcluded(object.classification.front().label);
+    const auto classification =
+      object.classification.empty()
+        ? autoware_perception_msgs::msg::ObjectClassification::UNKNOWN
+        : autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    bool should_be_excluded = shouldBeExcluded(classification);
 
     const bool is_within_range_and_filtering_class = is_within_range && should_be_excluded;
 
@@ -318,6 +333,14 @@ bool CollisionDetectorNode::shouldBeExcluded(
       return node_param_.nearby_object_type_filters.filter_motorcycle;
     case autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN:
       return node_param_.nearby_object_type_filters.filter_pedestrian;
+    case autoware_perception_msgs::msg::ObjectClassification::ANIMAL:
+      return node_param_.nearby_object_type_filters.filter_animal;
+    case autoware_perception_msgs::msg::ObjectClassification::HAZARD:
+      return node_param_.nearby_object_type_filters.filter_hazard;
+    case autoware_perception_msgs::msg::ObjectClassification::OVER_DRIVABLE:
+      return node_param_.nearby_object_type_filters.filter_over_drivable;
+    case autoware_perception_msgs::msg::ObjectClassification::UNDER_DRIVABLE:
+      return node_param_.nearby_object_type_filters.filter_under_drivable;
     default:
       return false;
   }
@@ -325,7 +348,7 @@ bool CollisionDetectorNode::shouldBeExcluded(
 
 void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  odometry_ptr_ = sub_odometry_.take_data();
+  odometry_ptr_ = sub_odometry_->take_data();
 
   if (!odometry_ptr_) {
     RCLCPP_INFO_THROTTLE(
@@ -333,15 +356,20 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
     return;
   }
 
+  geometry_msgs::msg::TwistStamped current_velocity;
+  current_velocity.header = odometry_ptr_->header;
+  current_velocity.twist = odometry_ptr_->twist.twist;
+  vehicle_stop_checker_->addTwist(current_velocity);
+
   if (vehicle_stop_checker_->isVehicleStopped()) {
     is_error_diag_ = false;
     stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "vehicle is stopping");
     return;
   }
 
-  pointcloud_ptr_ = sub_pointcloud_.take_data();
-  object_ptr_ = sub_dynamic_objects_.take_data();
-  operation_mode_ptr_ = sub_operation_mode_.take_data();
+  pointcloud_ptr_ = sub_pointcloud_->take_data();
+  object_ptr_ = sub_dynamic_objects_->take_data();
+  operation_mode_ptr_ = sub_operation_mode_->take_data();
 
   if (node_param_.use_pointcloud && !pointcloud_ptr_) {
     RCLCPP_WARN_THROTTLE(
@@ -417,7 +445,9 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
 
   stat.summary(status.level, status.message);
 
-  pub_debug_->publish(generate_debug_markers(ego_polygon, nearest_obstacle, is_error_diag_));
+  auto debug_markers = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_debug_);
+  *debug_markers = generate_debug_markers(ego_polygon, nearest_obstacle, is_error_diag_);
+  pub_debug_->publish(std::move(debug_markers));
 }
 
 std::optional<Obstacle> CollisionDetectorNode::getNearestObstacle(

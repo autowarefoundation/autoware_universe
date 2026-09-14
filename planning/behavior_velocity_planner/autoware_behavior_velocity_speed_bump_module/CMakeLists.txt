@@ -6,12 +6,9 @@ autoware_package()
 pluginlib_export_plugin_description_file(autoware_behavior_velocity_planner plugins.xml)
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/debug.cpp
   src/manager.cpp
   src/scene.cpp
   src/util.cpp
-  src/experimental/manager.cpp
-  src/experimental/scene.cpp
 )
 
 ament_auto_package(INSTALL_TO_SHARE config)

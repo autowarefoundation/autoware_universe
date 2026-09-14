@@ -22,7 +22,7 @@
 
 // ROS includes
 #include "cloud_collector.hpp"
-#include "collector_matching_strategy.hpp"
+#include "collector_matcher.hpp"
 #include "combine_cloud_handler.hpp"
 #include "traits.hpp"
 
@@ -109,7 +109,7 @@ private:
 
   std::shared_ptr<CombineCloudHandler<MsgTraits>> combine_cloud_handler_;
   std::list<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collectors_;
-  std::unique_ptr<CollectorMatchingStrategy<MsgTraits>> collector_matching_strategy_;
+  std::unique_ptr<CollectorMatcher<MsgTraits>> collector_matcher_;
 
   bool init_collector_list_{false};
   static constexpr const int num_of_collectors{3};

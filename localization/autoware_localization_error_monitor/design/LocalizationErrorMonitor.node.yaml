@@ -1,0 +1,34 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: LocalizationErrorMonitor.node
+package:
+  name: autoware_localization_error_monitor
+  provider: autoware
+launch:
+  plugin: autoware::localization_error_monitor::LocalizationErrorMonitor
+  executable: autoware_localization_error_monitor_node
+# interfaces
+subscribers:
+  - name: odom
+    message_type: nav_msgs/msg/Odometry
+    remap_target: input/odom
+publishers:
+  - name: ellipse_marker
+    message_type: visualization_msgs/msg/Marker
+    remap_target: debug/ellipse_marker
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+# parameters
+param_files:
+  - name: localization_error_monitor_param
+    default: config/localization_error_monitor.param.yaml
+param_values: []
+# processes
+processes:
+  - name: monitor_localization_error
+    trigger_conditions:
+      - on_input: odom
+    outcomes:
+      - to_output: ellipse_marker
+      - to_output: diagnostics

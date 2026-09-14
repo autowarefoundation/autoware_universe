@@ -3,50 +3,20 @@
   "title": "Parameters for Multi Object Tracker Node",
   "type": "object",
   "definitions": {
-    "pruning_generalized_iou_thresholds": {
+    "enable_motion_output": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "unknown": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "car": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "truck": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "bus": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "trailer": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "motorcycle": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "bicycle": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "pedestrian": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        }
+        "unknown": { "type": "boolean" },
+        "car": { "type": "boolean" },
+        "truck": { "type": "boolean" },
+        "bus": { "type": "boolean" },
+        "trailer": { "type": "boolean" },
+        "motorcycle": { "type": "boolean" },
+        "bicycle": { "type": "boolean" },
+        "pedestrian": { "type": "boolean" },
+        "animal": { "type": "boolean" },
+        "hazard": { "type": "boolean" }
       },
       "required": [
         "unknown",
@@ -56,58 +26,46 @@
         "trailer",
         "motorcycle",
         "bicycle",
-        "pedestrian"
+        "pedestrian",
+        "animal",
+        "hazard"
       ],
-      "description": "Generalized IoU threshold for each tracked class."
+      "description": "Whether to publish estimated velocity on polygon tracks, per classification."
     },
-    "pruning_distance_thresholds": {
+    "tracker_configs": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Per-tracker-type configuration: behavior knobs scoped to a single tracker type.",
       "properties": {
-        "unknown": {
-          "type": "number",
-          "minimum": 0.0
+        "polygon_tracker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enable_velocity_estimation": {
+              "type": "boolean",
+              "description": "Estimate velocity for polygon tracks.",
+              "default": true
+            },
+            "enable_motion_output": {
+              "$ref": "#/definitions/enable_motion_output"
+            }
+          },
+          "required": ["enable_velocity_estimation", "enable_motion_output"]
         },
-        "car": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "truck": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "bus": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "trailer": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "motorcycle": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "bicycle": {
-          "type": "number",
-          "minimum": 0.0
-        },
-        "pedestrian": {
-          "type": "number",
-          "minimum": 0.0
+        "static_tracker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "convert_polygon_to_bbox": {
+              "type": "boolean",
+              "description": "Convert POLYGON shape to BOUNDING_BOX at publish time.",
+              "default": false
+            }
+          },
+          "required": ["convert_polygon_to_bbox"]
         }
       },
-      "required": [
-        "unknown",
-        "car",
-        "truck",
-        "bus",
-        "trailer",
-        "motorcycle",
-        "bicycle",
-        "pedestrian"
-      ],
-      "description": "Overlap distance threshold for each tracked class."
+      "required": ["polygon_tracker", "static_tracker"]
     },
     "multi_object_tracker_node": {
       "type": "object",
@@ -127,76 +85,57 @@
           "description": "Vehicle's ego frame.",
           "default": "base_link"
         },
-        "enable_delay_compensation": {
-          "type": "boolean",
-          "description": "If True, tracker uses timers to schedule publishers and uses prediction step to extrapolate object state at desired timestamp.",
-          "default": false
-        },
         "consider_odometry_uncertainty": {
           "type": "boolean",
           "description": "If True, consider odometry uncertainty in tracking.",
           "default": false
         },
-        "enable_unknown_object_velocity_estimation": {
-          "type": "boolean",
-          "description": "If True, enable velocity estimation for unknown objects.",
-          "default": true
+        "ego_source": {
+          "type": "string",
+          "enum": ["tf", "odometry"],
+          "description": "Backend used to obtain the time-varying ego pose: 'tf' looks it up from the TF tree (legacy), 'odometry' interpolates it from the subscribed ~/input/odometry buffer (TF fallback on miss).",
+          "default": "tf"
         },
-        "enable_unknown_object_motion_output": {
+        "publish_on_timer": {
           "type": "boolean",
-          "description": "If True, export unknown object velocity.",
+          "description": "Publish trigger, independent of delay_compensation. false publishes tracks on measurement; true publishes them from the periodic timer at publish_rate.",
           "default": false
         },
-        "min_known_object_removal_iou": {
+        "delay_compensation": {
+          "type": "string",
+          "enum": ["none", "publish_delay", "odometry", "full"],
+          "description": "Object-export delay compensation applied to the published tracks (independent of publish_on_timer), ordered from least to most. 'none': no compensation, use the latest detection/update stamp; 'publish_delay': advance the detection stamp by the update->publish delay; 'odometry': compensate up to the newest buffered odometry stamp; 'full': full compensation to the current time.",
+          "default": "none"
+        },
+        "tracker_configs": {
+          "$ref": "#/definitions/tracker_configs"
+        },
+        "pruning_pedestrian_pair_min_iou": {
           "type": "number",
-          "description": "Minimum IOU between associated objects with known label to remove younger tracker.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum 1D IoU between two pedestrian trackers to mark the pair redundant.",
           "default": 0.1
         },
-        "min_unknown_object_removal_iou": {
+        "pruning_known_pair_min_iou": {
           "type": "number",
-          "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker.",
-          "default": 0.001
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum 2D IoU between two known-class trackers to mark the pair redundant; a small fragment contained in a larger object merges by containment below this.",
+          "default": 0.1
         },
-        "pruning_generalized_iou_thresholds": {
-          "$ref": "#/definitions/pruning_generalized_iou_thresholds",
-          "default": {
-            "unknown": -0.3,
-            "car": -0.4,
-            "truck": -0.6,
-            "bus": -0.6,
-            "trailer": -0.6,
-            "motorcycle": -0.1,
-            "bicycle": -0.1,
-            "pedestrian": -0.1
-          }
-        },
-        "pruning_distance_thresholds": {
-          "$ref": "#/definitions/pruning_distance_thresholds",
-          "default": {
-            "unknown": 9.0,
-            "car": 5.0,
-            "truck": 9.0,
-            "bus": 9.0,
-            "trailer": 9.0,
-            "motorcycle": 4.0,
-            "bicycle": 3.0,
-            "pedestrian": 2.0
-          }
-        },
-        "pruning_static_object_speed": {
+        "pruning_unknown_pair_min_giou": {
           "type": "number",
-          "description": "Speed threshold to consider an object as static. Below this speed, nearby unknown objects should always be detected.",
-          "default": 1.38
+          "minimum": -1.0,
+          "maximum": 1.0,
+          "description": "Minimum generalized IoU between two unknown trackers to mark the pair redundant. Negative values admit disjoint pairs, bounded by pruning_unknown_pair_max_gap.",
+          "default": 0.1
         },
-        "pruning_moving_object_speed": {
+        "pruning_unknown_pair_max_gap": {
           "type": "number",
-          "description": "Speed threshold to consider an object as moving. Above this speed, nearby unknown objects should always be merged to avoid false unknown detections.",
-          "default": 5.5
-        },
-        "pruning_static_iou_threshold": {
-          "type": "number",
-          "description": "Generalized IoU threshold for a static object.",
-          "default": 0.0
+          "minimum": 0.0,
+          "description": "Maximum boundary gap [m] for a disjoint unknown-unknown pair to stay merge-eligible.",
+          "default": 1.0
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -243,17 +182,15 @@
         "publish_rate",
         "world_frame_id",
         "ego_frame_id",
-        "enable_delay_compensation",
         "consider_odometry_uncertainty",
-        "enable_unknown_object_velocity_estimation",
-        "enable_unknown_object_motion_output",
-        "min_known_object_removal_iou",
-        "min_unknown_object_removal_iou",
-        "pruning_generalized_iou_thresholds",
-        "pruning_distance_thresholds",
-        "pruning_static_object_speed",
-        "pruning_moving_object_speed",
-        "pruning_static_iou_threshold",
+        "ego_source",
+        "publish_on_timer",
+        "delay_compensation",
+        "tracker_configs",
+        "pruning_pedestrian_pair_min_iou",
+        "pruning_known_pair_min_iou",
+        "pruning_unknown_pair_min_giou",
+        "pruning_unknown_pair_max_gap",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",

@@ -82,7 +82,7 @@ class NaiveMatchingStrategy : public FusionMatchingStrategy<Msg3D, Msg2D, Export
 {
 public:
   explicit NaiveMatchingStrategy(
-    std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && ros2_parent_node,
+    std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && parent_node,
     const std::unordered_map<std::size_t, double> & id_to_offset_map);
 
   [[nodiscard]] std::optional<std::shared_ptr<FusionCollector<Msg3D, Msg2D, ExportObj>>>
@@ -100,7 +100,7 @@ public:
     const std::shared_ptr<MatchingContextBase> & matching_context) override;
 
 private:
-  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> ros2_parent_node_;
+  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> parent_node_;
   std::unordered_map<std::size_t, double> id_to_offset_map_;
   double threshold_;
 };
@@ -110,7 +110,7 @@ class AdvancedMatchingStrategy : public FusionMatchingStrategy<Msg3D, Msg2D, Exp
 {
 public:
   explicit AdvancedMatchingStrategy(
-    std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && ros2_parent_node,
+    std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && parent_node,
     const std::unordered_map<std::size_t, double> & id_to_offset_map);
 
   [[nodiscard]] std::optional<std::shared_ptr<FusionCollector<Msg3D, Msg2D, ExportObj>>>
@@ -128,15 +128,15 @@ public:
 
   double get_concatenation_offset(
     const double & msg3d_timestamp,
-    const std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr> &
-      concatenation_info_msg);
+    const std::optional<AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+      autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)> & concatenation_info_msg);
 
   double extract_fractional(double timestamp);
   void update_fractional_timestamp_set(double new_timestamp);
   double compute_offset(double input_timestamp);
 
 private:
-  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> ros2_parent_node_;
+  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> parent_node_;
   std::unordered_map<std::size_t, double> id_to_offset_map_;
   std::unordered_map<std::size_t, double> id_to_noise_window_map_;
   double msg3d_noise_window_;

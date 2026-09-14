@@ -15,8 +15,6 @@
 #include "traffic_light_category_merger_node.hpp"
 
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -30,22 +28,18 @@ TrafficLightCategoryMergerNode::TrafficLightCategoryMergerNode(
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
-  sync_.registerCallback(std::bind(&TrafficLightCategoryMergerNode::signalsCallback, this, _1, _2));
+  sync_.registerCallback(
+    std::bind(&TrafficLightCategoryMergerNode::signals_callback, this, _1, _2));
   pub_traffic_light_signals_ =
     create_publisher<TrafficLightArray>("output/traffic_signals", rclcpp::QoS{1});
 }
 
-void TrafficLightCategoryMergerNode::signalsCallback(
+void TrafficLightCategoryMergerNode::signals_callback(
   const TrafficLightArray::ConstSharedPtr & car_signals_msg,
   const TrafficLightArray::ConstSharedPtr & pedestrian_signals_msg)
 {
-  TrafficLightArray output;
-  output.header = car_signals_msg->header;
-  output.signals.insert(
-    output.signals.end(), car_signals_msg->signals.begin(), car_signals_msg->signals.end());
-  output.signals.insert(
-    output.signals.end(), pedestrian_signals_msg->signals.begin(),
-    pedestrian_signals_msg->signals.end());
+  const TrafficLightArray output =
+    TrafficLightCategoryMerger::merge(*car_signals_msg, *pedestrian_signals_msg);
   pub_traffic_light_signals_->publish(output);
 }
 

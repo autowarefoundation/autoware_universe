@@ -15,12 +15,13 @@
 #ifndef AUTOWARE__SIMPLE_OBJECT_MERGER__SIMPLE_OBJECT_MERGER_BASE_HPP_
 #define AUTOWARE__SIMPLE_OBJECT_MERGER__SIMPLE_OBJECT_MERGER_BASE_HPP_
 
-#include "autoware_utils/ros/transform_listener.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include <autoware/agnocast_wrapper/message_filters.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
+#include <autoware_utils/ros/transform_listener.hpp>
+#include <rclcpp/rclcpp.hpp>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <chrono>
 #include <memory>
@@ -31,7 +32,7 @@ namespace autoware::simple_object_merger
 {
 
 template <class ObjsMsgType>
-class SimpleObjectMergerBase : public rclcpp::Node
+class SimpleObjectMergerBase : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit SimpleObjectMergerBase(
@@ -47,42 +48,46 @@ public:
 
 private:
   // Subscriber
-  typename rclcpp::Subscription<ObjsMsgType>::SharedPtr sub_objects_{};
-  std::vector<typename rclcpp::Subscription<ObjsMsgType>::SharedPtr> sub_objects_array{};
+  AUTOWARE_SUBSCRIPTION_PTR(ObjsMsgType) sub_objects_ {};
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(ObjsMsgType)> sub_objects_array{};
 
   // Subscriber by message_filter
-  typename message_filters::Subscriber<ObjsMsgType> input0_{};
-  typename message_filters::Subscriber<ObjsMsgType> input1_{};
-  using SyncPolicy = message_filters::sync_policies::ApproximateTime<ObjsMsgType, ObjsMsgType>;
-  using Sync = message_filters::Synchronizer<SyncPolicy>;
+  autoware::agnocast_wrapper::message_filters::Subscriber<ObjsMsgType> input0_{};
+  autoware::agnocast_wrapper::message_filters::Subscriber<ObjsMsgType> input1_{};
+  using SyncPolicy = autoware::agnocast_wrapper::message_filters::sync_policies::ApproximateTime<
+    ObjsMsgType, ObjsMsgType>;
+  using Sync = autoware::agnocast_wrapper::message_filters::Synchronizer<SyncPolicy>;
   typename std::shared_ptr<Sync> sync_ptr_;
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_{};
+  AUTOWARE_TIMER_PTR timer_{};
 
   // Parameter Server
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   // Process callbacks
   virtual void approximateMerger(
-    const typename ObjsMsgType::ConstSharedPtr & object_msg0,
-    const typename ObjsMsgType::ConstSharedPtr & object_msg1);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & object_msg0,
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & object_msg1);
 
   virtual void onTimer();
 
-  void onData(const typename ObjsMsgType::ConstSharedPtr msg, size_t array_number);
+  void onData(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & msg, size_t array_number);
 
   rcl_interfaces::msg::SetParametersResult onSetParam(
     const std::vector<rclcpp::Parameter> & params);
 
 protected:
   // Publisher
-  typename rclcpp::Publisher<ObjsMsgType>::SharedPtr pub_objects_{};
+  AUTOWARE_PUBLISHER_PTR(ObjsMsgType) pub_objects_ {};
 
-  std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
+  using TfListener = autoware_utils::TransformListenerT<
+    autoware::agnocast_wrapper::Node, autoware::agnocast_wrapper::Buffer,
+    autoware::agnocast_wrapper::TransformListener>;
+  std::shared_ptr<TfListener> transform_listener_;
 
   // Data Buffer
-  std::vector<typename ObjsMsgType::ConstSharedPtr> objects_data_{};
+  std::vector<AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType)> objects_data_{};
 
   // Core
   size_t input_topic_size_;
@@ -95,7 +100,7 @@ protected:
     double throttle_interval_sec);
 
   typename ObjsMsgType::SharedPtr getTransformedObjects(
-    typename ObjsMsgType::ConstSharedPtr objects, const std::string & target_frame_id,
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) objects, const std::string & target_frame_id,
     geometry_msgs::msg::TransformStamped::ConstSharedPtr transform);
 };
 
