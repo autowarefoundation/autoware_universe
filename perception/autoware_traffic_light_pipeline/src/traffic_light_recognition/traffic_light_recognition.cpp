@@ -149,13 +149,18 @@ void TrafficLightRecognition::set_map(const autoware_map_msgs::msg::LaneletMapBi
   map_based_detector_.emplace(map_based_detector_config_, map_msg);
 }
 
-std::optional<SetRouteError> TrafficLightRecognition::set_route(
+tl::expected<void, std::string> TrafficLightRecognition::set_route(
   const autoware_planning_msgs::msg::LaneletRoute & route_msg)
 {
   if (!map_based_detector_) {
-    return SetRouteError{"vector map is not set yet"};
+    return tl::make_unexpected(std::string("vector map is not set yet"));
   }
-  return map_based_detector_->set_route(route_msg);
+
+  const auto error = map_based_detector_->set_route(route_msg);
+  if (error) {
+    return tl::make_unexpected(error->message);
+  }
+  return {};
 }
 
 tl::expected<TrafficLightRecognitionResult, std::string> TrafficLightRecognition::run(

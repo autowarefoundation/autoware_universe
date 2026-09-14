@@ -141,9 +141,9 @@ void TrafficLightRecognitionNode::vector_map_callback(
 void TrafficLightRecognitionNode::route_callback(
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg)
 {
-  const auto error = recognition_->set_route(*msg);
-  if (error) {
-    RCLCPP_ERROR(get_logger(), "%s", error->message.c_str());
+  const auto result = recognition_->set_route(*msg);
+  if (!result) {
+    RCLCPP_ERROR(get_logger(), "%s", result.error().c_str());
   }
 }
 

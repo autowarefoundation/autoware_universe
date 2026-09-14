@@ -73,7 +73,7 @@ public:
 
   void set_map(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
-  std::optional<SetRouteError> set_route(
+  tl::expected<void, std::string> set_route(
     const autoware_planning_msgs::msg::LaneletRoute & route_msg);
 
   tl::expected<TrafficLightRecognitionResult, std::string> run(
