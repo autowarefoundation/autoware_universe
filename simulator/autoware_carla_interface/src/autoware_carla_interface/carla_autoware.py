@@ -23,6 +23,7 @@ import carla
 import yaml
 
 from .carla_ros import carla_ros2_interface
+from .modules import scenario_world
 from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import project_point_to_ground
@@ -516,67 +517,15 @@ class InitializeInterface(object):
         self.world.apply_settings(settings)
 
     def _wait_for_external_world(self, client):
-        """Adopt the world the scenario runner owns, once it is driving it.
-
-        In scenario mode the runner (autoware_carla_scenario ScenarioRunner) loads
-        the map, destroys leftover actors (exempting the ego role), enables
-        synchronous mode, and then drives the clock - ticking - while it waits for
-        this node to spawn the "Ego" actor. The handoff must wait for the runner to
-        be actively ticking a live world: an observed world.wait_for_tick() proves
-        exactly that, since in scenario mode this node never ticks (tick_follower /
-        runtime-init spawn). Waiting for that tick also guarantees we spawn only
-        after the runner has loaded its map and passed its cleanup, so our ego and
-        sensors cannot be wiped (the #13319 startup-order race).
-
-        The map name is a best-effort secondary gate when parseable (CARLA 0.10
-        levels often expose no OpenDRIVE metadata, so we fall back to the tick
-        signal alone there). On timeout we adopt whatever world is up so the bridge
-        still starts, surfacing the misconfiguration in the log.
-        """
-        expected = self._normalize_map_name(self.carla_map).lower()
-        deadline = time.time() + max(float(self.scenario_world_wait_timeout), 1.0)
-        self.logger.info(
-            "Scenario mode: waiting for the scenario runner to drive its world "
-            f"(expected map '{expected}') before spawning the ego; not loading the "
-            "world here (the runner owns it)."
+        """Adopt the scenario runner's world (see modules.scenario_world)."""
+        self.world = scenario_world.wait_for_external_world(
+            client,
+            self.carla_map,
+            self.scenario_world_wait_timeout,
+            self.logger,
+            self._query_world_map,
+            self._normalize_map_name,
         )
-        while True:
-            # Re-fetch every iteration: a world reload would replace the episode.
-            world = client.get_world()
-            current, query_failed = self._query_world_map(client)
-            # A parseable name that differs means we are still looking at a
-            # pre-load / wrong world; keep waiting. When the level exposes no
-            # parseable map (query_failed), rely on the tick signal alone.
-            map_ok = query_failed or (current is not None and current.lower() == expected)
-            ticking = False
-            if map_ok:
-                try:
-                    # Blocks until the runner ticks; times out (RuntimeError) when
-                    # nothing is driving the world yet.
-                    world.wait_for_tick(2.0)
-                    ticking = True
-                except RuntimeError:
-                    ticking = False
-            if map_ok and ticking:
-                self.world = client.get_world()
-                self.logger.info(
-                    "Adopted the scenario runner's live CARLA world (map "
-                    f"'{current if current is not None else 'unknown'}')."
-                )
-                return
-            if time.time() >= deadline:
-                self.world = client.get_world()
-                self.logger.warning(
-                    f"Timed out after {self.scenario_world_wait_timeout:.0f}s waiting for the "
-                    f"scenario runner to drive its world (active map: {current}, external tick "
-                    f"seen: {ticking}); adopting the current world as-is. Check that "
-                    "with_scenario's map matches carla_map and that the runner is running."
-                )
-                return
-            if not map_ok:
-                # No blocking wait_for_tick happened this iteration; pace the poll.
-                time.sleep(1.0)
-            time.sleep(1.0)
 
     def _spawn_ego_actor(self):
         """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
