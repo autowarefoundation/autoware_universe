@@ -95,6 +95,8 @@ std::pair<bool, int32_t> ControlPerformanceAnalysisCore::findClosestPrevWayPoint
     p_.acceptable_max_distance_to_waypoint_, p_.acceptable_max_yaw_difference_rad_);
 
   if (!closest_segment) {  // fail to find closest idx
+    idx_prev_wp_.reset();
+    idx_next_wp_.reset();
     return std::make_pair(false, std::numeric_limits<int32_t>::quiet_NaN());
   }
 
@@ -142,7 +144,11 @@ bool ControlPerformanceAnalysisCore::calculateErrorVars()
   }
 
   // update closest index
-  findClosestPrevWayPointIdx_path_direction();
+  if (!findClosestPrevWayPointIdx_path_direction().first) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, clock_, 1000, "Cannot find the closest waypoint within the distance/yaw limits.");
+    return false;
+  }
 
   // Get the interpolated pose
   const auto [success, pose_interp_wp] = calculateClosestPose();
@@ -370,7 +376,7 @@ void ControlPerformanceAnalysisCore::setSteeringStatus(const SteeringReport & st
 std::optional<int32_t> ControlPerformanceAnalysisCore::findCurveRefIdx()
 {
   // Get the previous waypoint as the reference
-  if (!interpolated_pose_ptr_) {
+  if (!interpolated_pose_ptr_ || !idx_prev_wp_) {
     RCLCPP_WARN_THROTTLE(
       logger_, clock_, 1000, "Cannot set the curvature_idx, no valid interpolated pose ...");
     return std::nullopt;
@@ -479,7 +485,7 @@ double ControlPerformanceAnalysisCore::estimateCurvature()
 
 double ControlPerformanceAnalysisCore::estimatePurePursuitCurvature()
 {
-  if (!interpolated_pose_ptr_) {
+  if (!interpolated_pose_ptr_ || !idx_prev_wp_) {
     RCLCPP_WARN_THROTTLE(
       logger_, clock_, 1000,
       "Cannot set pure pursuit_target_point_idx, no valid interpolated pose ...");
