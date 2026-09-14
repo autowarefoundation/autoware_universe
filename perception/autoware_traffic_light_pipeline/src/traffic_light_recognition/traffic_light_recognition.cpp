@@ -24,6 +24,7 @@
 #include <std_msgs/msg/header.hpp>
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
 
+#include <cstdint>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -102,12 +103,7 @@ autoware::tensorrt_yolox::TrtYoloXDetectorConfig make_whole_image_detector_confi
   detector_config.model_path = config.whole_image_detector_model_path;
   detector_config.score_threshold = config.whole_image_detector_score_threshold;
   detector_config.nms_threshold = config.whole_image_detector_nms_threshold;
-  // Only fp16 models are used in this package, so precision and the int8-only knobs
-  // (calibration_algorithm / dla_core_id / quantize_first_layer / quantize_last_layer /
-  // clip_value / calibration_image_list_path) are fixed rather than exposed as parameters.
-  // profile_per_layer is dev-only (may affect execution speed) and likewise fixed. gpu_id is
-  // fixed to the default CUDA device: this package does not need per-node GPU selection.
-  detector_config.precision = "fp16";
+  detector_config.precision = config.whole_image_detector_precision;
   detector_config.calibration_algorithm = "Entropy";
   detector_config.dla_core_id = -1;
   detector_config.quantize_first_layer = false;
@@ -145,33 +141,25 @@ TrafficLightMapBasedDetectorConfig make_map_based_detector_config(
   return detector_config;
 }
 
-CNNConfig make_cnn_config(const std::string & model_path, const std::string & label_path)
+CNNConfig make_cnn_config(const ClassifierModelConfig & classifier_config)
 {
   CNNConfig cnn_config;
-  cnn_config.model_path = model_path;
-  cnn_config.precision = "fp16";
-  cnn_config.labels = read_label_file(label_path);
-  cnn_config.mean = {123.675f, 116.28f, 103.53f};
-  cnn_config.std = {58.395f, 57.12f, 57.375f};
+  cnn_config.model_path = classifier_config.model_path;
+  cnn_config.precision = classifier_config.precision;
+  cnn_config.labels = read_label_file(classifier_config.label_path);
+  cnn_config.mean = classifier_config.mean;
+  cnn_config.std = classifier_config.std;
   return cnn_config;
 }
 
-TrafficLightClassifier make_car_classifier(const TrafficLightRecognitionConfig & config)
+TrafficLightClassifier make_classifier(
+  const TrafficLightRecognitionConfig & config, const ClassifierModelConfig & classifier_config,
+  const uint8_t traffic_light_type)
 {
-  auto backend = std::make_shared<CNNClassifier>(
-    make_cnn_config(config.car_classifier_model_path, config.car_classifier_label_path));
+  auto backend = std::make_shared<CNNClassifier>(make_cnn_config(classifier_config));
   return TrafficLightClassifier(
-    std::move(backend), tier4_perception_msgs::msg::TrafficLight::CAR_TRAFFIC_LIGHT,
-    config.over_exposure_threshold, config.under_exposure_threshold);
-}
-
-TrafficLightClassifier make_pedestrian_classifier(const TrafficLightRecognitionConfig & config)
-{
-  auto backend = std::make_shared<CNNClassifier>(make_cnn_config(
-    config.pedestrian_classifier_model_path, config.pedestrian_classifier_label_path));
-  return TrafficLightClassifier(
-    std::move(backend), tier4_perception_msgs::msg::TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT,
-    config.over_exposure_threshold, config.under_exposure_threshold);
+    std::move(backend), traffic_light_type, config.over_exposure_threshold,
+    config.under_exposure_threshold);
 }
 }  // namespace
 
@@ -179,16 +167,22 @@ void build_engines(const TrafficLightRecognitionConfig & config)
 {
   [[maybe_unused]] autoware::tensorrt_yolox::TrtYoloXDetector whole_image_detector(
     make_whole_image_detector_config(config));
-  [[maybe_unused]] auto car_classifier = make_car_classifier(config);
-  [[maybe_unused]] auto pedestrian_classifier = make_pedestrian_classifier(config);
+  [[maybe_unused]] auto car_classifier = make_classifier(
+    config, config.car_classifier, tier4_perception_msgs::msg::TrafficLight::CAR_TRAFFIC_LIGHT);
+  [[maybe_unused]] auto pedestrian_classifier = make_classifier(
+    config, config.pedestrian_classifier,
+    tier4_perception_msgs::msg::TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT);
 }
 
 TrafficLightRecognition::TrafficLightRecognition(
   const TrafficLightRecognitionConfig & config, const tf2::BufferCore & tf_buffer)
 : map_based_detector_config_(make_map_based_detector_config(config)),
   whole_image_detector_(make_whole_image_detector_config(config)),
-  car_classifier_(make_car_classifier(config)),
-  pedestrian_classifier_(make_pedestrian_classifier(config)),
+  car_classifier_(make_classifier(
+    config, config.car_classifier, tier4_perception_msgs::msg::TrafficLight::CAR_TRAFFIC_LIGHT)),
+  pedestrian_classifier_(make_classifier(
+    config, config.pedestrian_classifier,
+    tier4_perception_msgs::msg::TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT)),
   diagnostics_node_name_(config.diagnostics_node_name),
   tf_buffer_(tf_buffer)
 {

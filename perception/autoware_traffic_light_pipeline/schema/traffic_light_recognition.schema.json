@@ -24,9 +24,15 @@
           "type": "number",
           "description": "NMS threshold for the whole-image yolox detector.",
           "default": 0.7
+        },
+        "precision": {
+          "type": "string",
+          "enum": ["fp32", "fp16", "int8"],
+          "description": "TensorRT engine precision. int8 is calibrated with the Entropy algorithm and a fixed clip value, so it needs no calibration image list.",
+          "default": "fp16"
         }
       },
-      "required": ["model_path", "label_path", "score_threshold", "nms_threshold"],
+      "required": ["model_path", "label_path", "score_threshold", "nms_threshold", "precision"],
       "additionalProperties": false
     },
     "map_based_detector": {
@@ -57,9 +63,31 @@
         "label_path": {
           "type": "string",
           "description": "Path to the classifier's lamp label file, relative to ml_model_path."
+        },
+        "precision": {
+          "type": "string",
+          "enum": ["fp32", "fp16", "int8"],
+          "description": "TensorRT engine precision for this classifier.",
+          "default": "fp16"
+        },
+        "mean": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel mean subtracted from the input image. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [123.675, 116.28, 103.53]
+        },
+        "std": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel standard deviation the input image is divided by. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [58.395, 57.12, 57.375]
         }
       },
-      "required": ["model_path", "label_path"],
+      "required": ["model_path", "label_path", "precision", "mean", "std"],
       "additionalProperties": false
     },
     "pedestrian_classifier": {
@@ -73,9 +101,31 @@
         "label_path": {
           "type": "string",
           "description": "Path to the classifier's lamp label file, relative to ml_model_path."
+        },
+        "precision": {
+          "type": "string",
+          "enum": ["fp32", "fp16", "int8"],
+          "description": "TensorRT engine precision for this classifier.",
+          "default": "fp16"
+        },
+        "mean": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel mean subtracted from the input image. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [123.675, 116.28, 103.53]
+        },
+        "std": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel standard deviation the input image is divided by. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [58.395, 57.12, 57.375]
         }
       },
-      "required": ["model_path", "label_path"],
+      "required": ["model_path", "label_path", "precision", "mean", "std"],
       "additionalProperties": false
     },
     "classifier": {

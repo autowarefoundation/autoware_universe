@@ -32,9 +32,21 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace autoware::traffic_light
 {
+
+struct ClassifierModelConfig
+{
+  std::string model_path;
+  std::string label_path;
+  // TensorRT engine precision: "fp32" / "fp16" / "int8".
+  std::string precision;
+  // Input normalization; must match the preprocessing the model at model_path was trained with.
+  std::vector<float> mean;
+  std::vector<float> std;
+};
 
 struct TrafficLightRecognitionConfig
 {
@@ -43,15 +55,13 @@ struct TrafficLightRecognitionConfig
   std::string whole_image_detector_roi_remap_path;
   float whole_image_detector_score_threshold;
   float whole_image_detector_nms_threshold;
+  std::string whole_image_detector_precision;
 
   double min_timestamp_offset;
   double max_timestamp_offset;
 
-  std::string car_classifier_model_path;
-  std::string car_classifier_label_path;
-
-  std::string pedestrian_classifier_model_path;
-  std::string pedestrian_classifier_label_path;
+  ClassifierModelConfig car_classifier;
+  ClassifierModelConfig pedestrian_classifier;
 
   double over_exposure_threshold;
   double under_exposure_threshold;

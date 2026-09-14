@@ -18,6 +18,7 @@
 #include <exception>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -29,6 +30,25 @@ std::string resolve_artifact(
 {
   const auto relative_path = node->declare_parameter<std::string>(name);
   return ml_model_path.empty() ? relative_path : ml_model_path + "/" + relative_path;
+}
+
+std::vector<float> declare_normalization(rclcpp::Node * node, const std::string & name)
+{
+  const auto values = node->declare_parameter<std::vector<double>>(name);
+  return std::vector<float>(values.begin(), values.end());
+}
+
+// `prefix` is "car_classifier" or "pedestrian_classifier".
+ClassifierModelConfig declare_classifier_config(
+  rclcpp::Node * node, const std::string & ml_model_path, const std::string & prefix)
+{
+  ClassifierModelConfig classifier_config;
+  classifier_config.model_path = resolve_artifact(node, ml_model_path, prefix + ".model_path");
+  classifier_config.label_path = resolve_artifact(node, ml_model_path, prefix + ".label_path");
+  classifier_config.precision = node->declare_parameter<std::string>(prefix + ".precision");
+  classifier_config.mean = declare_normalization(node, prefix + ".mean");
+  classifier_config.std = declare_normalization(node, prefix + ".std");
+  return classifier_config;
 }
 
 TrafficLightRecognitionConfig declare_recognition_config(rclcpp::Node * node)
@@ -51,21 +71,17 @@ TrafficLightRecognitionConfig declare_recognition_config(rclcpp::Node * node)
     static_cast<float>(node->declare_parameter<double>("whole_image_detector.score_threshold"));
   config.whole_image_detector_nms_threshold =
     static_cast<float>(node->declare_parameter<double>("whole_image_detector.nms_threshold"));
+  config.whole_image_detector_precision =
+    node->declare_parameter<std::string>("whole_image_detector.precision");
 
   config.min_timestamp_offset =
     node->declare_parameter<double>("map_based_detector.min_timestamp_offset");
   config.max_timestamp_offset =
     node->declare_parameter<double>("map_based_detector.max_timestamp_offset");
 
-  config.car_classifier_model_path =
-    resolve_artifact(node, ml_model_path, "car_classifier.model_path");
-  config.car_classifier_label_path =
-    resolve_artifact(node, ml_model_path, "car_classifier.label_path");
-
-  config.pedestrian_classifier_model_path =
-    resolve_artifact(node, ml_model_path, "pedestrian_classifier.model_path");
-  config.pedestrian_classifier_label_path =
-    resolve_artifact(node, ml_model_path, "pedestrian_classifier.label_path");
+  config.car_classifier = declare_classifier_config(node, ml_model_path, "car_classifier");
+  config.pedestrian_classifier =
+    declare_classifier_config(node, ml_model_path, "pedestrian_classifier");
 
   config.over_exposure_threshold =
     node->declare_parameter<double>("classifier.over_exposure_threshold");
