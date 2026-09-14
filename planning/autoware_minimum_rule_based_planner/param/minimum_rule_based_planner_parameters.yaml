@@ -141,6 +141,10 @@ minimum_rule_based_planner:
       type: double
       default_value: 3.0
       description: stopping jerk [m/s^3]
+    delay_response_time:
+      type: double
+      default_value: 0.5
+      description: delay response time used to estimate the minimum ego stopping distance [s]
     on_time_buffer:
       type: double
       default_value: 0.5
@@ -149,10 +153,6 @@ minimum_rule_based_planner:
       type: double
       default_value: 1.0
       description: time buffer after obstacle stop [s]
-    lateral_margin:
-      type: double
-      default_value: 0.2
-      description: lateral margin for obstacle stop [m]
     arrived_distance_threshold:
       type: double
       default_value: 0.5
@@ -172,6 +172,11 @@ minimum_rule_based_planner:
           default_value: [car, truck, bus, trailer, pedestrian, hazard, unknown]
           description: types of polygon shaped objects to consider for obstacle stop
           read_only: false
+        pointcloud:
+          type: string_array
+          default_value: [structure, vegetation]
+          description: types of pointcloud to consider for obstacle stop
+          read_only: false
       stopped_velocity_th:
         type: double
         default_value: 0.3
@@ -188,24 +193,96 @@ minimum_rule_based_planner:
         description: safety buffer to expand object shape [m]
         validation:
           bounds<>: [0.0, 10.0]
-    pointcloud:
-      target_types:
-        type: string_array
-        default_value: [structure, vegetation]
-        description: pointcloud types to consider for obstacle stop
-        read_only: false
-      height_buffer:
+      pointcloud_height_buffer:
         type: double
         default_value: 0.5
-        description: height buffer to add above ego height [m]
+        description: height buffer to add above ego height for pointcloud [m]
         validation:
           bounds<>: [0.0, 10.0]
-      min_height:
+      pointcloud_min_height:
         type: double
         default_value: 0.2
         description: minimum height of pointcloud [m]
         validation:
           bounds<>: [0.0, 10.0]
+      lateral_margin:
+        car:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for car objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        truck:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for truck objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        bus:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for bus objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        trailer:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for trailer objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        motorcycle:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for motorcycle objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        bicycle:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for bicycle objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        pedestrian:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for pedestrian objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        hazard:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for hazard objects [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        structure:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for structure pointcloud [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        vegetation:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for vegetation pointcloud [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        unknown:
+          type: double
+          default_value: 0.2
+          description: Lateral margin on top of ego width for unknown objects and unclassified pointcloud [m]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
     rss_params:
       enable:
         type: bool
@@ -260,15 +337,9 @@ minimum_rule_based_planner:
         description: deceleration for ego vehicle used in RSS calculation [m/s^2]
         validation:
           bounds<>: [0.0, 10.0]
-      reaction_time:
-        type: double
-        default_value: 0.4
-        description: reaction time used in RSS calculation [s]
-        validation:
-          bounds<>: [0.0, 10.0]
       safety_margin:
         type: double
-        default_value: 3.0
+        default_value: 1.5
         description: safety margin used in RSS calculation [m]
         validation:
           bounds<>: [0.0, 10.0]

@@ -16,7 +16,6 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 
 #include "autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp"
-#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
 #include "autoware/trajectory_processor/trajectory_processor_plugin_base.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -42,7 +41,6 @@ using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_internal_planning_msgs::msg::SafetyFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_perception_msgs::msg::PredictedObjects;
-using autoware_utils_geometry::MultiPolygon2d;
 using autoware_utils_geometry::Polygon2d;
 using sensor_msgs::msg::PointCloud2;
 using utils::obstacle_stop::CollisionPoint;
@@ -65,7 +63,7 @@ public:
 
   const ModifierParams::ObstacleStop & get_params() const { return params_; }
 
-  void publish_debug_data([[maybe_unused]] const std::string & ns) const override;
+  void publish_debug_data(const std::string & ns) const override;
 
 protected:
   void on_initialize(const TrajectoryProcessorParams & params) override;
@@ -87,8 +85,8 @@ private:
   SafetyFactorArray safety_factors_;
 
   std::unordered_map<utils::obstacle_stop::ObjectType, double> object_decel_map_;
+  utils::obstacle_stop::LateralMarginMap lateral_margin_map_;
 
-  MarkerArray marker_array_;
   PublisherHandle<visualization_msgs::msg::MarkerArray> debug_viz_pub_;
   PublisherHandle<PointCloud2> pub_filtered_pointcloud_;
   PublisherHandle<StringStamped> pub_debug_text_;
