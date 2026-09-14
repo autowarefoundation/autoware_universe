@@ -89,6 +89,11 @@ class InitializeInterface(object):
         self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
         self.force_load_world = self.param_["force_load_world"]
         self.no_rendering_mode = self.param_["no_rendering_mode"]
+        # Scenario mode: the CARLA scenario runner owns the world (loads/reloads
+        # the map and owns the clock), so the interface adopts that world instead
+        # of loading its own (see load_world / _wait_for_external_world).
+        self.scenario_mode = self.param_["scenario_mode"]
+        self.scenario_world_wait_timeout = self.param_["scenario_world_wait_timeout"]
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -510,6 +515,69 @@ class InitializeInterface(object):
         settings.no_rendering_mode = self.no_rendering_mode
         self.world.apply_settings(settings)
 
+    def _wait_for_external_world(self, client):
+        """Adopt the world the scenario runner owns, once it is driving it.
+
+        In scenario mode the runner (autoware_carla_scenario ScenarioRunner) loads
+        the map, destroys leftover actors (exempting the ego role), enables
+        synchronous mode, and then drives the clock - ticking - while it waits for
+        this node to spawn the "Ego" actor. The handoff must wait for the runner to
+        be actively ticking a live world: an observed world.wait_for_tick() proves
+        exactly that, since in scenario mode this node never ticks (tick_follower /
+        runtime-init spawn). Waiting for that tick also guarantees we spawn only
+        after the runner has loaded its map and passed its cleanup, so our ego and
+        sensors cannot be wiped (the #13319 startup-order race).
+
+        The map name is a best-effort secondary gate when parseable (CARLA 0.10
+        levels often expose no OpenDRIVE metadata, so we fall back to the tick
+        signal alone there). On timeout we adopt whatever world is up so the bridge
+        still starts, surfacing the misconfiguration in the log.
+        """
+        expected = self._normalize_map_name(self.carla_map).lower()
+        deadline = time.time() + max(float(self.scenario_world_wait_timeout), 1.0)
+        self.logger.info(
+            "Scenario mode: waiting for the scenario runner to drive its world "
+            f"(expected map '{expected}') before spawning the ego; not loading the "
+            "world here (the runner owns it)."
+        )
+        while True:
+            # Re-fetch every iteration: a world reload would replace the episode.
+            world = client.get_world()
+            current, query_failed = self._query_world_map(client)
+            # A parseable name that differs means we are still looking at a
+            # pre-load / wrong world; keep waiting. When the level exposes no
+            # parseable map (query_failed), rely on the tick signal alone.
+            map_ok = query_failed or (current is not None and current.lower() == expected)
+            ticking = False
+            if map_ok:
+                try:
+                    # Blocks until the runner ticks; times out (RuntimeError) when
+                    # nothing is driving the world yet.
+                    world.wait_for_tick(2.0)
+                    ticking = True
+                except RuntimeError:
+                    ticking = False
+            if map_ok and ticking:
+                self.world = client.get_world()
+                self.logger.info(
+                    "Adopted the scenario runner's live CARLA world (map "
+                    f"'{current if current is not None else 'unknown'}')."
+                )
+                return
+            if time.time() >= deadline:
+                self.world = client.get_world()
+                self.logger.warning(
+                    f"Timed out after {self.scenario_world_wait_timeout:.0f}s waiting for the "
+                    f"scenario runner to drive its world (active map: {current}, external tick "
+                    f"seen: {ticking}); adopting the current world as-is. Check that "
+                    "with_scenario's map matches carla_map and that the runner is running."
+                )
+                return
+            if not map_ok:
+                # No blocking wait_for_tick happened this iteration; pace the poll.
+                time.sleep(1.0)
+            time.sleep(1.0)
+
     def _spawn_ego_actor(self):
         """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
         spawn_point, randomize = self._parse_spawn_point()
@@ -529,23 +597,39 @@ class InitializeInterface(object):
 
     def load_world(self):
         client = self._connect_client()
-        map_verified = self._load_carla_world(client)
-        if not map_verified:
-            # After a failed OpenDRIVE parse, libcarla keeps serving the previous
-            # episode's cached map through this client, so world.get_map() would
-            # return a stale (wrong) map instead of raising. Reconnect with a fresh
-            # client so the mapless world reports honestly downstream
-            # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
-            self.logger.warning(
-                "Reconnecting the CARLA client to discard the stale map cache "
-                "of the previous episode."
-            )
-            client = self._connect_client()
+        if self.scenario_mode:
+            # The scenario runner owns the world: it loads/reloads the map and
+            # owns the clock. Loading the map or applying world settings here
+            # would fight the runner, and its reload would invalidate the ego and
+            # sensors we spawn, so adopt the runner's world instead of loading
+            # our own (see the #13319 review on world/ego ownership).
+            self._wait_for_external_world(client)
+        else:
+            map_verified = self._load_carla_world(client)
+            if not map_verified:
+                # After a failed OpenDRIVE parse, libcarla keeps serving the previous
+                # episode's cached map through this client, so world.get_map() would
+                # return a stale (wrong) map instead of raising. Reconnect with a fresh
+                # client so the mapless world reports honestly downstream
+                # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
+                self.logger.warning(
+                    "Reconnecting the CARLA client to discard the stale map cache "
+                    "of the previous episode."
+                )
+                client = self._connect_client()
 
-        self._wait_for_world(client)
-        self._apply_world_settings()
+            self._wait_for_world(client)
+            self._apply_world_settings()
+
         CarlaDataProvider.set_world(self.world)
         CarlaDataProvider.set_client(client)
+        if self.scenario_mode:
+            # The runner owns and drives the clock (it ticks while waiting for our
+            # ego to appear). Spawn by waiting for the runner's ticks
+            # (wait_for_tick) rather than driving our own world.tick(), so this
+            # node stays a pure follower and never double-advances the runner's
+            # synchronous simulation.
+            CarlaDataProvider.set_runtime_init_mode(True)
         # Vehicle physics differ between CARLA 0.9.x and 0.10 (Chaos); let the
         # interface derive its capability flags (e.g. whether the wheel steer
         # angle is reported) from the server version.

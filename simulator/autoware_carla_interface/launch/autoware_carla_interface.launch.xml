@@ -126,6 +126,35 @@
       default="true"
       description="Require LocalizationInitializationState=INITIALIZED for readiness; set false alongside initialize_localization for ground-truth / E2E localization"
     />
+    <arg
+      name="scenario_world_wait_timeout"
+      default="300.0"
+      description="Seconds the interface waits for the scenario runner to (re)load its world before spawning the ego into it (scenario mode only). Generous by default to cover the runner's first-run venv install"
+    />
+
+    <!-- Scenario-mode gates. When with_scenario is set, the CARLA scenario
+         runner owns the world (it loads/reloads the map - its Hydra map=... - and
+         owns the simulation clock) and its Autoware entity looks up the ego by
+         the exact role name "Ego". The interface must not compete for any of
+         that, so we derive scenario-safe values: force the ego role name to
+         "Ego" (so the framework can find the ego this node spawns; see the
+         upstream review of #13319), turn off the interface's own NPC traffic
+         manager (the scenario owns the moving actors, and the traffic manager
+         would also claim synchronous mode), and set scenario_mode so the node
+         adopts the runner's world instead of loading one.
+         traffic_light.force_green is left as a user passthrough (off by default):
+         it competes with scenario-controlled lights, but camera-less runs may
+         still want it, so it stays an explicit opt-in. -->
+    <let name="is_scenario" value="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)"/>
+    <let name="ego_vehicle_role_name_resolved" value="Ego" if="$(var is_scenario)"/>
+    <let name="ego_vehicle_role_name_resolved" value="$(var ego_vehicle_role_name)" unless="$(var is_scenario)"/>
+    <let name="use_traffic_manager_resolved" value="False" if="$(var is_scenario)"/>
+    <let name="use_traffic_manager_resolved" value="$(var use_traffic_manager)" unless="$(var is_scenario)"/>
+    <!-- The scenario runner owns the simulation clock (it ticks the world), so
+         the interface must follow those ticks rather than drive its own; force
+         tick_follower on in scenario mode. -->
+    <let name="tick_follower_resolved" value="True" if="$(var is_scenario)"/>
+    <let name="tick_follower_resolved" value="$(var tick_follower)" unless="$(var is_scenario)"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -135,12 +164,14 @@
       <param name="sync_mode" value="$(var sync_mode)"/>
       <param name="fixed_delta_seconds" value="$(var fixed_delta_seconds)"/>
       <param name="carla_map" value="$(var carla_map_resolved)"/>
-      <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name)"/>
+      <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name_resolved)"/>
       <param name="spawn_point" value="$(var spawn_point)"/>
       <param name="vehicle_type" value="$(var vehicle_type)"/>
-      <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
+      <param name="use_traffic_manager" value="$(var use_traffic_manager_resolved)"/>
+      <param name="scenario_mode" value="$(var is_scenario)"/>
+      <param name="scenario_world_wait_timeout" value="$(var scenario_world_wait_timeout)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
-      <param name="tick_follower" value="$(var tick_follower)"/>
+      <param name="tick_follower" value="$(var tick_follower_resolved)"/>
       <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
       <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
       <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>

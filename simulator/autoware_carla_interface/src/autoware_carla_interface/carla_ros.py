@@ -133,6 +133,17 @@ class carla_ros2_interface(object):
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
             "force_load_world": (rclpy.Parameter.Type.BOOL, False),
+            # Scenario mode (set from the launch file's with_scenario). The CARLA
+            # scenario runner then owns the world: it loads/reloads the map and
+            # owns the simulation clock, and its Autoware entity looks up the ego
+            # by role name. In this mode the interface adopts the runner's world
+            # instead of loading one and does not apply world settings (see
+            # carla_autoware.load_world / _wait_for_external_world), so its own
+            # reload cannot invalidate the ego and sensors it spawns.
+            "scenario_mode": (rclpy.Parameter.Type.BOOL, False),
+            # Seconds to wait for the scenario runner to (re)load its world
+            # before spawning the ego into it (scenario_mode only).
+            "scenario_world_wait_timeout": (rclpy.Parameter.Type.DOUBLE, 300.0),
             # Minimum throttle applied while accelerating from (near) standstill.
             # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
             # never start moving on the small throttle the actuation map yields
