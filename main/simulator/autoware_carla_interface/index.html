@@ -22759,6 +22759,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#multi-client-co-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-client co-simulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#sensor-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23096,6 +23107,12 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td>Parameter to limit the simulation speed below <code>fixed_delta_seconds</code></td>
 </tr>
 <tr>
+<td><code>tick_follower</code></td>
+<td>bool</td>
+<td>False</td>
+<td>If True, the bridge does not tick the CARLA world and instead follows the frames ticked by another client. See <a href="#multi-client-co-simulation">Multi-client co-simulation</a>.</td>
+</tr>
+<tr>
 <td><code>carla_map</code></td>
 <td>string</td>
 <td>""</td>
@@ -23241,6 +23258,25 @@ cross-shaped neighborhood is sampled and the <strong>highest</strong> ground hit
 fixed z-offset is used, so enabling the flag never raises. The spawn-point path
 logs a warning when it falls back; the RViz initial-pose fallback is silent (and
 with the default random spawn the spawn-point path is not exercised at all).</p>
+<h3 id="multi-client-co-simulation">Multi-client co-simulation<a class="headerlink" href="#multi-client-co-simulation" title="Permanent link">#</a></h3>
+<p>By default this bridge owns the CARLA simulation clock: its main loop calls <code>world.tick()</code> on every
+cycle. A server in synchronous mode advances one frame per <code>tick()</code> call, so a second client that
+also ticks, for example an external traffic simulator feeding background vehicles into the same
+server, makes the simulation advance more than once per intended step.</p>
+<p>Setting <code>tick_follower</code> to <code>True</code> puts the bridge in a passive mode. It no longer ticks the world in
+its main loop, and instead publishes sensor data, the clock and the ego control for the frames that
+the external client ticks. Exactly one client in the whole setup may own the clock.</p>
+<p>Two things to keep in mind when using this mode:</p>
+<ul>
+<li><strong>Start the bridge before the tick owner.</strong> Loading the world still ticks it a few times to bring
+  up the ego vehicle and its sensors, and those ticks must not race the external owner.</li>
+<li><strong>The cadence belongs to the tick owner</strong>, so <code>max_real_delta_seconds</code> no longer paces the loop.
+  Set <code>fixed_delta_seconds</code> to the step length that the owner uses.</li>
+<li><strong><code>/clock</code> starts at zero on the first frame that the bridge processes.</strong> In this mode it stays a
+  constant offset behind the CARLA elapsed time: the idle time before the owner started.</li>
+</ul>
+<p>If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
+and reports how many it skipped through a throttled warning.</p>
 <h3 id="sensor-configuration">Sensor Configuration<a class="headerlink" href="#sensor-configuration" title="Permanent link">#</a></h3>
 <p>The interface uses the <strong><code>carla_sensor_kit</code></strong> which provides 6 cameras for 360-degree coverage, LiDAR, IMU, and GNSS sensors. Sensor configurations are dynamically loaded from Autoware sensor kit calibration files through two configuration files:</p>
 <h4 id="1-sensor-kit-calibration-from-autoware-sensor-kit">1. Sensor Kit Calibration (from Autoware sensor kit)<a class="headerlink" href="#1-sensor-kit-calibration-from-autoware-sensor-kit" title="Permanent link">#</a></h4>
