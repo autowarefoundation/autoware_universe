@@ -78,12 +78,17 @@ public:
   /**
    * @brief Builds the per-stage pooling metadata the encoder graph consumes.
    *
+   * If a level would exceed its capacity (PTv3Config::stage_voxel_capacity), the input is
+   * truncated to the longest prefix whose levels all fit and the metadata is rebuilt from it.
+   *
    * @param grid_coord Grid coordinates of the input voxels, laid out [num_voxels, 3].
-   * @param serialized_code Codes of the input voxels, laid out [num_orders, num_voxels].
-   * @param num_voxels Number of input voxels; clamped to max_num_voxels internally.
+   * @param serialized_code Codes of the first min(num_voxels, max_num_voxels) input voxels, laid
+   * out [num_orders, that count].
+   * @param num_voxels Number of input voxels.
    * @param stages Output device buffers to fill, one per pooling stage.
-   * @param stage_counts Output voxel count per level, laid out [num_stages + 1]; entry 0 is the
-   * (clamped) input count.
+   * @param stage_counts Output voxel count per level on device, [num_stages + 1]; entry 0 is the
+   * input count actually used.
+   * @param stage_counts_host Pinned host copy of stage_counts, valid on return (synchronizes).
    * @pre The input voxels are sorted by their order-0 serialized code (`serialized_code` row 0),
    * as generateFeatures emits them. The coarser levels are derived with prefix scans that rely on
    * this ordering; an unsorted input silently produces wrong metadata. Asserted on device in
@@ -91,7 +96,8 @@ public:
    */
   void generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
-    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
+    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts,
+    std::int64_t * stage_counts_host);
 
   /**
    * @brief Input-level serialization order, laid out [num_orders, num_voxels] to match the
@@ -120,6 +126,12 @@ public:
 private:
   PTv3Config config_;
   cudaStream_t stream_;
+
+  // Derives every level from the first `num_voxels` input voxels; codes are read at `code_stride`.
+  void buildSerializedPoolingLevels(
+    const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t code_stride,
+    std::int64_t num_voxels, const std::vector<SerializedPoolingDeviceStageView> & stages,
+    std::int64_t * stage_counts);
 
   autoware::cuda_utils::CudaUniquePtr<float[]> points_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<float[]> cropped_points_d_{nullptr};
@@ -166,6 +178,11 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
+  // Truncation walk: capacity per level, each stage's indptr pointer, and the resulting count.
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> stage_capacity_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<const std::int64_t *[]> stage_indptr_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t> truncated_input_count_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtrHost<std::int64_t> truncated_input_count_;
   int code_sort_end_bit_{64};
 };
 }  // namespace autoware::ptv3

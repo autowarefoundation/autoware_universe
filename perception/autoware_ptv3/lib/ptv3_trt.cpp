@@ -320,28 +320,26 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
     profile_dims.emplace_back(name, min_dims, opt_dims, max_dims, is_optional);
   };
 
-  const std::int64_t min_voxels = config_.voxels_num_[0];
-  const std::int64_t opt_voxels = config_.voxels_num_[1];
-  const std::int64_t max_voxels = config_.voxels_num_[2];
+  const auto input_counts = config_.stage_profile_counts(0);
   const std::int64_t num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
 
   // Inputs
   add_io(
-    "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {min_voxels, 3}},
-    nvinfer1::Dims{2, {opt_voxels, 3}}, nvinfer1::Dims{2, {max_voxels, 3}},
+    "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {input_counts[0], 3}},
+    nvinfer1::Dims{2, {input_counts[1], 3}}, nvinfer1::Dims{2, {input_counts[2], 3}},
     nvinfer1::DataType::kINT32);
   add_io(
-    "feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::Dims{2, {min_voxels, 4}},
-    nvinfer1::Dims{2, {opt_voxels, 4}}, nvinfer1::Dims{2, {max_voxels, 4}},
+    "feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::Dims{2, {input_counts[0], 4}},
+    nvinfer1::Dims{2, {input_counts[1], 4}}, nvinfer1::Dims{2, {input_counts[2], 4}},
     nvinfer1::DataType::kFLOAT);
   // The encoder consumes the input level's serialization order directly; serialized_code stays a
   // host-side buffer for chaining the pooling stages. Only consumed when the finest stage attends;
   // a convolution-only stage 0 reads no base order.
   for (const auto * name : {"serialized_order", "serialized_inverse"}) {
     add_io(
-      name, nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::Dims{2, {num_orders, min_voxels}},
-      nvinfer1::Dims{2, {num_orders, opt_voxels}}, nvinfer1::Dims{2, {num_orders, max_voxels}},
-      nvinfer1::DataType::kINT64, kOptional);
+      name, nvinfer1::Dims{2, {num_orders, -1}}, nvinfer1::Dims{2, {num_orders, input_counts[0]}},
+      nvinfer1::Dims{2, {num_orders, input_counts[1]}},
+      nvinfer1::Dims{2, {num_orders, input_counts[2]}}, nvinfer1::DataType::kINT64, kOptional);
   }
 
   // Serialized pooling metadata inputs are precomputed on device each frame and fed to the
@@ -349,37 +347,37 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   // (as pooling_cluster_i); the encoder graph does not take them.
   // In the exported ONNX, indices drive native Gather, indptr drives SegmentCSR, and the remaining
   // per-stage tensors feed the following PTv3 serialization steps. Their extents are
-  // data-dependent, so they are declared dynamic and bounded by the voxel-count optimization
-  // profile. A pooled (output) count is at most its input count, so all pooled dims are
-  // conservatively bounded by [1, opt, max] voxels.
+  // data-dependent, so they are declared dynamic and bounded by the profile of the stage they
+  // read (indices) or produce (the rest).
   for (std::size_t stage = 0; stage < config_.pooling_strides_.size(); ++stage) {
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
-    // Input-count-sized tensors. Stage 0 consumes the original voxels and therefore shares their
-    // lower bound; deeper stages consume an already-pooled (smaller) count.
-    const std::int64_t in_min = stage == 0 ? min_voxels : 1;
+    const auto in_counts = config_.stage_profile_counts(stage);
+    const auto out_counts = config_.stage_profile_counts(stage + 1);
+    // Input-count-sized tensors.
     add_io(
-      prefix + "indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {in_min}},
-      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}}, std::nullopt, kOptional);
+      prefix + "indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {in_counts[0]}},
+      nvinfer1::Dims{1, {in_counts[1]}}, nvinfer1::Dims{1, {in_counts[2]}}, std::nullopt,
+      kOptional);
     // Output-count-sized (pooled) tensors.
     add_io(
-      prefix + "indptr", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {2}},
-      nvinfer1::Dims{1, {opt_voxels + 1}}, nvinfer1::Dims{1, {max_voxels + 1}}, std::nullopt,
+      prefix + "indptr", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {out_counts[0] + 1}},
+      nvinfer1::Dims{1, {out_counts[1] + 1}}, nvinfer1::Dims{1, {out_counts[2] + 1}}, std::nullopt,
       kOptional);
     add_io(
-      prefix + "head_indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {1}},
-      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}}, std::nullopt, kOptional);
+      prefix + "head_indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {out_counts[0]}},
+      nvinfer1::Dims{1, {out_counts[1]}}, nvinfer1::Dims{1, {out_counts[2]}}, std::nullopt,
+      kOptional);
     add_io(
-      prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {1, 3}},
-      nvinfer1::Dims{2, {opt_voxels, 3}}, nvinfer1::Dims{2, {max_voxels, 3}},
+      prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {out_counts[0], 3}},
+      nvinfer1::Dims{2, {out_counts[1], 3}}, nvinfer1::Dims{2, {out_counts[2], 3}},
       nvinfer1::DataType::kINT32, kOptional);
-    add_io(
-      prefix + "serialized_order", nvinfer1::Dims{2, {num_orders, -1}},
-      nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
-      nvinfer1::Dims{2, {num_orders, max_voxels}}, std::nullopt, kOptional);
-    add_io(
-      prefix + "serialized_inverse", nvinfer1::Dims{2, {num_orders, -1}},
-      nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
-      nvinfer1::Dims{2, {num_orders, max_voxels}}, std::nullopt, kOptional);
+    for (const auto * field : {"serialized_order", "serialized_inverse"}) {
+      add_io(
+        prefix + field, nvinfer1::Dims{2, {num_orders, -1}},
+        nvinfer1::Dims{2, {num_orders, out_counts[0]}},
+        nvinfer1::Dims{2, {num_orders, out_counts[1]}},
+        nvinfer1::Dims{2, {num_orders, out_counts[2]}}, std::nullopt, kOptional);
+    }
   }
 
   // Outputs: per-encoder-stage point features point_feat_i [N_i, enc_channels[i]],
@@ -407,19 +405,6 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   bindSerializedPoolingAddresses();
 }
 
-std::array<std::int64_t, 3> PTv3TRT::stageProfileCounts(const std::size_t stage_index) const
-{
-  // Head-engine [min, opt, max] profile counts for stage-sized inputs. Stage 0 consumes the
-  // original voxels and shares their lower bound; deeper stages consume an already-pooled
-  // count. The opt entry is only a tactic-selection hint (halving per stage approximates real
-  // pooling); the max entry is the hard geometric bound.
-  const std::int64_t max_count = config_.stage_voxel_capacity(stage_index);
-  const std::int64_t min_count = stage_index == 0 ? config_.voxels_num_[0] : 1;
-  const std::int64_t opt_count =
-    std::clamp(config_.voxels_num_[1] >> stage_index, min_count, max_count);
-  return {min_count, opt_count, max_count};
-}
-
 void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 {
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
@@ -430,7 +415,7 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
   // so it is stage-s-count-sized.
   const auto stage_count = config_.enc_channels_.size();
   for (std::size_t stage = 0; stage < stage_count; ++stage) {
-    const auto counts = stageProfileCounts(stage);
+    const auto counts = config_.stage_profile_counts(stage);
     const auto channels = config_.enc_channels_[stage];
     network_io.emplace_back(
       stageFeatureName(stage), nvinfer1::Dims{2, {-1, channels}}, nvinfer1::DataType::kFLOAT);
@@ -439,7 +424,7 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
       nvinfer1::Dims{2, {counts[1], channels}}, nvinfer1::Dims{2, {counts[2], channels}});
   }
   for (std::size_t stage = 0; stage + 1 < stage_count; ++stage) {
-    const auto counts = stageProfileCounts(stage);
+    const auto counts = config_.stage_profile_counts(stage);
     network_io.emplace_back(
       poolingClusterName(stage), nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT64);
     profile_dims.emplace_back(
@@ -453,7 +438,7 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
     if (config_.dec_depths_[stage] == 0) {
       continue;
     }
-    const auto counts = stageProfileCounts(stage);
+    const auto counts = config_.stage_profile_counts(stage);
     if (stage == 0) {
       for (const auto * name : {"serialized_order", "serialized_inverse"}) {
         network_io.emplace_back(
@@ -573,11 +558,15 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
 
   pre_ptr_->generateSerializedPoolingMetadata(
     grid_coord_d_.get(), serialized_code_d_.get(), num_voxels_, stage_views,
-    serialized_pooling_num_voxels_d_.get());
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    serialized_pooling_num_voxels_.get(), serialized_pooling_num_voxels_d_.get(),
-    (config_.pooling_strides_.size() + 1) * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    serialized_pooling_num_voxels_d_.get(), serialized_pooling_num_voxels_.get());
+
+  if (serialized_pooling_num_voxels_[0] < num_voxels_) {
+    RCLCPP_WARN_STREAM(
+      rclcpp::get_logger("ptv3"),
+      "A pooled level exceeded encoder.pooled_voxels_num_max; the input was truncated from "
+        << num_voxels_ << " to " << serialized_pooling_num_voxels_[0] << " voxels.");
+    num_voxels_ = serialized_pooling_num_voxels_[0];
+  }
 }
 
 bool PTv3TRT::setSerializedPoolingInputShapes()
@@ -617,8 +606,8 @@ void PTv3TRT::initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & tr
   const auto stage_count = config_.enc_channels_.size();
   const auto skip_stage = stage_count - 2;
   const auto deep_stage = stage_count - 1;
-  const auto skip_counts = stageProfileCounts(skip_stage);
-  const auto deep_counts = stageProfileCounts(deep_stage);
+  const auto skip_counts = config_.stage_profile_counts(skip_stage);
+  const auto deep_counts = config_.stage_profile_counts(deep_stage);
   const auto skip_channels = config_.enc_channels_[skip_stage];
   const auto deep_channels = config_.enc_channels_[deep_stage];
 
@@ -948,13 +937,6 @@ bool PTv3TRT::preProcess(
     num_cropped_points_ = static_cast<std::int64_t>(num_cropped_points);
   }
 
-  if (num_voxels_ < config_.min_num_voxels_) {
-    RCLCPP_ERROR_STREAM(
-      rclcpp::get_logger("ptv3"), "Too few voxels (" << num_voxels_
-                                                     << ") for the actual optimization profile ("
-                                                     << config_.min_num_voxels_ << ")");
-    return false;
-  }
   if (num_voxels_ > config_.max_num_voxels_) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("ptv3"), "Actual number of voxels ("
@@ -965,6 +947,13 @@ bool PTv3TRT::preProcess(
   }
 
   precomputeSerializedPoolingMetadata();
+  if (num_voxels_ < config_.min_num_voxels_) {
+    RCLCPP_ERROR_STREAM(
+      rclcpp::get_logger("ptv3"), "Too few voxels (" << num_voxels_
+                                                     << ") for the actual optimization profile ("
+                                                     << config_.min_num_voxels_ << ")");
+    return false;
+  }
 
   encoder_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
   encoder_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});

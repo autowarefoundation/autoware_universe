@@ -117,6 +117,10 @@ This error may occur when TensorRT cannot satisfy the memory requirements for bu
 
 Adjust the `workspace_size` values and the maximum `encoder.voxels_num` value in `config/ptv3.param.yaml` to fit the available GPU memory. Finding a suitable balance between these parameters can resolve the issue.
 
+### GPU memory and `encoder.pooled_voxels_num_max`
+
+`encoder.pooled_voxels_num_max` bounds each pooled encoder level's TensorRT profile and buffers (one entry per `encoder.pooling_strides` entry). Set it from measured per-stage peaks with a margin. A frame whose level would exceed its bound is truncated: the voxels with the largest serialization codes are dropped until every level fits, and a warning is logged.
+
 ## References/External links
 
 [1] Xiaoyang Wu, Li Jiang, Peng-Shuai Wang, Zhijian Liu, Xihui Liu, Yu Qiao, Wanli Ouyang, Tong He, and Hengshuang Zhao. "Point Transformer V3: Simpler, Faster, Stronger." 2024 Conference on Computer Vision and Pattern Recognition. <!-- cspell:disable-line -->

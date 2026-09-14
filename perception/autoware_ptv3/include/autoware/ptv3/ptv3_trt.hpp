@@ -73,7 +73,6 @@ public:
 protected:
   void initPtr();
   void initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-  [[nodiscard]] std::array<std::int64_t, 3> stageProfileCounts(std::size_t stage_index) const;
   void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();

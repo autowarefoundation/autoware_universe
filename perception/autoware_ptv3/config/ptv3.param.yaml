@@ -9,7 +9,8 @@
       onnx_path: "$(var model_path)/$(var model_variant)_encoder.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_encoder.engine"
       workspace_size: 8589934592  # 8 GiB
-      voxels_num: [16000, 160000, 256000]
+      voxels_num: [16000, 178000, 354000]
+      pooled_voxels_num_max: [214000, 100000, 40000, 17000]
     segmentation3d:
       use_head: $(var use_seg3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_seg3d_head.onnx"

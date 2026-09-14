@@ -44,6 +44,7 @@ public:
   PTv3Config(
     const bool use_seg3d_head, const bool use_det3d_head, const std::string & plugins_path,
     const std::int64_t cloud_capacity, const std::vector<std::int64_t> & voxels_num,
+    const std::vector<std::int64_t> & pooled_voxels_num_max,
     const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size,
     const std::vector<std::string> & segmentation_class_names = {},
     const std::unordered_map<std::string, std::string> & segmentation_class_mapping = {},
@@ -116,6 +117,8 @@ public:
 
     serialization_orders_ = validate_serialization_orders(serialization_orders);
     pooling_strides_ = validate_pooling_strides(pooling_strides);
+    pooled_voxels_num_max_ = validate_pooled_voxels_num_max(
+      pooled_voxels_num_max, max_num_voxels_, pooling_strides_.size());
     enc_channels_ = validate_enc_channels(enc_channels, pooling_strides_.size() + 1);
 
     if (use_seg3d_head_) {
@@ -386,9 +389,32 @@ public:
     return enc_channels;
   }
 
-  // Hard voxel-count bound for one encoder stage: a stage cannot hold more voxels than the grid
-  // has cells at its cumulative pooling depth, and pooling never grows the voxel count. Sizes the
-  // encoder stage buffers and TensorRT profiles.
+  // One entry per pooled stage, positive and non-increasing from the input level's maximum.
+  static std::vector<std::int64_t> validate_pooled_voxels_num_max(
+    const std::vector<std::int64_t> & pooled_voxels_num_max, const std::int64_t max_num_voxels,
+    const std::size_t num_pooling_stages)
+  {
+    if (pooled_voxels_num_max.size() != num_pooling_stages) {
+      throw std::runtime_error(
+        "pooled_voxels_num_max must contain one entry per pooling stage (pooling_strides size = " +
+        std::to_string(num_pooling_stages) + "), got " +
+        std::to_string(pooled_voxels_num_max.size()) + ".");
+    }
+    auto previous = max_num_voxels;
+    for (const auto max : pooled_voxels_num_max) {
+      if (max < 1 || max > previous) {
+        throw std::runtime_error(
+          "Each pooled_voxels_num_max entry must be positive and at most the previous stage's "
+          "maximum (" +
+          std::to_string(previous) + "), got " + std::to_string(max) + ".");
+      }
+      previous = max;
+    }
+    return pooled_voxels_num_max;
+  }
+
+  // Voxel-count bound of one encoder stage: the smaller of its configured maximum (voxels_num[2],
+  // then pooled_voxels_num_max) and its grid cell count. Sizes buffers and profiles.
   [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
   {
     std::int64_t cumulative_depth = 0;
@@ -402,7 +428,21 @@ public:
     };
     const auto grid_cells =
       ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) * ceil_shift(grid_z_size_);
-    return std::min(max_num_voxels_, grid_cells);
+    const auto configured_max =
+      stage_index == 0 ? max_num_voxels_ : pooled_voxels_num_max_.at(stage_index - 1);
+    return std::min(configured_max, grid_cells);
+  }
+
+  // [min, opt, max] TensorRT profile of one encoder stage: voxels_num for the input level; pooled
+  // levels use min 1, opt halved per stage, and the stage capacity as max.
+  [[nodiscard]] std::array<std::int64_t, 3> stage_profile_counts(
+    const std::size_t stage_index) const
+  {
+    const std::int64_t max_count = stage_voxel_capacity(stage_index);
+    const std::int64_t min_count =
+      std::min(stage_index == 0 ? min_num_voxels_ : std::int64_t{1}, max_count);
+    const std::int64_t opt_count = std::clamp(voxels_num_[1] >> stage_index, min_count, max_count);
+    return {min_count, opt_count, max_count};
   }
 
   // CUDA parameters
@@ -475,6 +515,7 @@ public:
 
   ///// RUNTIME DIMENSIONS /////
   std::array<std::int64_t, 3> voxels_num_{};
+  std::vector<std::int64_t> pooled_voxels_num_max_;  // one per pooling stage
 };
 
 }  // namespace autoware::ptv3

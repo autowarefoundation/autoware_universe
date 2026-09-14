@@ -111,9 +111,24 @@
           "default": [16000, 128000, 192000],
           "minItems": 3,
           "maxItems": 3
+        },
+        "pooled_voxels_num_max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Voxel-count maximum per pooled encoder stage (one per pooling stride), non-increasing. Bounds the stage's TensorRT profile and buffers; the input is truncated to fit it.",
+          "default": [214000, 100000, 40000, 17000]
         }
       },
-      "required": ["onnx_path", "engine_path", "workspace_size", "voxels_num"],
+      "required": [
+        "onnx_path",
+        "engine_path",
+        "workspace_size",
+        "voxels_num",
+        "pooled_voxels_num_max"
+      ],
       "additionalProperties": false
     },
     "segmentation3d": {
