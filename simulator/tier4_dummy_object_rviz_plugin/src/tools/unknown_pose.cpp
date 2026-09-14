@@ -46,6 +46,8 @@
 
 #include <rviz_common/display_context.hpp>
 
+#include <geometry_msgs/msg/point32.hpp>
+
 #include <algorithm>
 #include <random>
 #include <string>
@@ -121,6 +123,21 @@ SimulatedObject UnknownInitialPoseTool::createObjectMsg() const
   object.shape.dimensions.x = length;
   object.shape.dimensions.y = width;
   object.shape.dimensions.z = 2.0;
+
+  // A POLYGON shape is defined by its footprint, not by `dimensions`. Leaving the footprint empty
+  // yields a zero-area object, which the tracker can never confirm, so the dummy object would never
+  // be published on the tracking topic. Emit the rectangle implied by length/width instead.
+  const auto add_footprint_point = [&object](const double x, const double y) {
+    geometry_msgs::msg::Point32 point;
+    point.x = static_cast<float>(x);
+    point.y = static_cast<float>(y);
+    point.z = 0.0F;
+    object.shape.footprint.points.push_back(point);
+  };
+  add_footprint_point(length / 2.0, width / 2.0);
+  add_footprint_point(-length / 2.0, width / 2.0);
+  add_footprint_point(-length / 2.0, -width / 2.0);
+  add_footprint_point(length / 2.0, -width / 2.0);
 
   // initial state
   object.initial_state.pose_covariance.pose.position.z = position_z_->getFloat();
