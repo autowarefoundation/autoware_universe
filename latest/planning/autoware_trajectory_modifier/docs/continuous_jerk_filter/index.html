@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/trajectory_optimizer_specification/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_modifier/docs/continuous_jerk_filter/">
       
       
-        <link rel="prev" href="../temporal_mpt_optimizer/">
+        <link rel="prev" href="../TrafficLightStop/">
       
       
-        <link rel="next" href="../../../autoware_trajectory_ranker/">
+        <link rel="next" href="../kinematic_feasibility_enforcer/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Trajectory Optimizer - Specification and Assumptions - Autoware Universe Documentation</title>
+        <title>Continuous Jerk Filter - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trajectory-optimizer-specification-and-assumptions" class="md-skip">
+        <a href="#continuous-jerk-filter" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Trajectory Optimizer - Specification and Assumptions
+              Continuous Jerk Filter
             
           </span>
         </div>
@@ -14823,7 +14823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../autoware_trajectory_modifier" class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -22631,66 +22631,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#1-overview-introduction" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        1. Overview Introduction
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#core-design-principle-positions-are-primary-kinematics-are-derived" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Design Principle: Positions Are Primary, Kinematics Are Derived
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#input-requirements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Input Requirements
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-velocity-and-acceleration-are-computed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How Velocity and Acceleration Are Computed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#plugin-pipeline" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin Pipeline
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Plugin Pipeline">
+    <nav class="md-nav" aria-label="1. Overview Introduction">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#default-pipeline" class="md-nav__link">
+  <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Default Pipeline
+        Key Features
       
     </span>
   </a>
@@ -22698,21 +22654,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#plugin-descriptions" class="md-nav__link">
+  <a href="#design-philosophy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Plugin Descriptions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#disabled-plugins" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Disabled Plugins
+        Design Philosophy
       
     </span>
   </a>
@@ -22725,10 +22670,160 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ordering-constraints-summary" class="md-nav__link">
+  <a href="#2-mathematical-formulation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ordering Constraints Summary
+        2. Mathematical Formulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Mathematical Formulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-optimization-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Optimization Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-objective-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Objective Function
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-stop-point-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Stop Point Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-class-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Class Structures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Class Structures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-continuousjerksmootherparams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ContinuousJerkSmootherParams
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-continuousjerksmoother-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 ContinuousJerkSmoother Class
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Implementation Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Implementation Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-qp-problem-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 QP Problem Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-variable-indexing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Variable Indexing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-usage-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Usage Example
       
     </span>
   </a>
@@ -22736,10 +22831,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-arc-length-resampling-is-avoided" class="md-nav__link">
+  <a href="#6-integration-with-trajectory-optimizer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Arc-Length Resampling Is Avoided
+        6. Integration with Trajectory Optimizer
       
     </span>
   </a>
@@ -22747,21 +22842,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#orientation-handling" class="md-nav__link">
+  <a href="#7-performance-considerations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Orientation Handling
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#known-limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Known Limitations
+        7. Performance Considerations
       
     </span>
   </a>
@@ -22788,316 +22872,205 @@
   
 
 
-<div><h1 id="trajectory-optimizer-specification-and-assumptions">Trajectory Optimizer - Specification and Assumptions<a class="headerlink" href="#trajectory-optimizer-specification-and-assumptions" title="Permanent link">#</a></h1>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
-<p>This document describes the current specification, design assumptions, and known limitations of
-<code>autoware_trajectory_optimizer</code>. It is written for engineers integrating upstream planners or
-modifying the pipeline. Read this before touching plugin ordering or resampling logic.</p>
-<hr>
-<h2 id="core-design-principle-positions-are-primary-kinematics-are-derived">Core Design Principle: Positions Are Primary, Kinematics Are Derived<a class="headerlink" href="#core-design-principle-positions-are-primary-kinematics-are-derived" title="Permanent link">#</a></h2>
-<p>The optimizer works in the <strong>position domain</strong>. The path geometry (x, y per point) is what the
-optimization models operate on. Velocity and acceleration fields in the output <code>TrajectoryPoint</code>
-messages are <strong>not preserved from the input</strong> - they are recomputed as numerical derivatives of
-the smoothed positions over a fixed time step.</p>
-<p>This is not an approximation or a convenience. It is the fundamental contract of the pipeline:</p>
+<div><h1 id="continuous-jerk-filter">Continuous Jerk Filter<a class="headerlink" href="#continuous-jerk-filter" title="Permanent link">#</a></h1>
+<h2 id="1-overview-introduction">1. Overview Introduction<a class="headerlink" href="#1-overview-introduction" title="Permanent link">#</a></h2>
+<p>The <strong>Continuous Jerk Smoother</strong> provides jerk-constrained velocity smoothing for neural network output trajectories, ensuring kinematic feasibility while maintaining smooth motion profiles.</p>
+<h3 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">#</a></h3>
 <ul>
-<li>The upstream planner provides positions sampled at a <strong>constant time interval</strong> (dt).</li>
-<li>The optimizer adjusts those positions (smooths the path).</li>
-<li>Kinematics are recalculated from the new positions using the same dt.</li>
+<li><strong>Jerk-constrained optimization</strong>: Enforces jerk limits for comfortable passenger experience</li>
+<li><strong>Stop point detection</strong>: Automatically detects and handles zero-velocity points in trajectories</li>
+<li><strong>Reference tracking</strong>: Tracks input trajectory velocities and accelerations as soft constraints</li>
+<li><strong>Hard constraint enforcement</strong>: Enforces velocity upper bounds (including lateral acceleration limits)</li>
+<li><strong>QP-based formulation</strong>: Uses quadratic programming for efficient optimization</li>
 </ul>
-<p>If you treat the velocity or acceleration fields coming out of the planner as optimization inputs
-to be preserved, you have misunderstood the system.</p>
-<hr>
-<h2 id="input-requirements">Input Requirements<a class="headerlink" href="#input-requirements" title="Permanent link">#</a></h2>
-<p>The optimizer expects trajectory points sampled at a <strong>constant dt</strong>, currently provided by the
-diffusion planner upstream. This means:</p>
+<h3 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">#</a></h3>
+<p>The smoother is adapted from <code>JerkFilteredSmoother</code> but specifically designed for <strong>neural network output paths</strong>. It optimizes velocity profiles while respecting acceleration and jerk constraints, making it suitable for autonomous driving applications where smooth motion is critical.</p>
+<h2 id="2-mathematical-formulation">2. Mathematical Formulation<a class="headerlink" href="#2-mathematical-formulation" title="Permanent link">#</a></h2>
+<h3 id="21-optimization-variables">2.1 Optimization Variables<a class="headerlink" href="#21-optimization-variables" title="Permanent link">#</a></h3>
+<p>The optimization uses the following variables for N trajectory points:</p>
+<div class="arithmatex">\[
+x = \begin{bmatrix}
+  b[0], b[1], ..., b[N-1], \\
+  a[0], a[1], ..., a[N-1], \\
+  \delta[0], ..., \delta[N-1], \\
+  \sigma[0], \sigma[1], ..., \sigma[N-1], \\
+  \gamma[0], \gamma[1], ..., \gamma[N-1]
+\end{bmatrix}
+\]</div>
+<p>Where:</p>
 <ul>
-<li><code>time_from_start[i+1] - time_from_start[i]</code> must be constant and equal to the configured
-  <code>trajectory_qp_smoother.time_step_s</code> (default: 0.1 s).</li>
-<li>Arc length between consecutive points is <strong>not</strong> constant - it varies with velocity.</li>
-<li>Points at low speed are close together in space. Points at high speed are far apart.</li>
+<li><span class="arithmatex">\(b[i] = v[i]^2\)</span> (velocity squared)</li>
+<li><span class="arithmatex">\(a[i]\)</span> = acceleration at point i</li>
+<li><span class="arithmatex">\(\delta[i]\)</span>, <span class="arithmatex">\(\sigma[i]\)</span>, <span class="arithmatex">\(\gamma[i]\)</span> = slack variables for soft constraints</li>
 </ul>
-<p>Do not arc-length resample the input trajectory before feeding it to the optimizer. Arc-length
-resampling destroys the constant-dt structure and breaks the QP smoother assumptions. The QP
-smoother never reads <code>time_from_start</code> from the input - it blindly assumes the configured
-<code>time_step_s</code> applies uniformly to every consecutive point pair. If your input has variable dt,
-the QP solver will silently compute wrong velocities and accelerations.</p>
-<hr>
-<h2 id="how-velocity-and-acceleration-are-computed">How Velocity and Acceleration Are Computed<a class="headerlink" href="#how-velocity-and-acceleration-are-computed" title="Permanent link">#</a></h2>
-<p>After the QP smoother adjusts point positions, the output kinematics are derived as follows:</p>
-<p><strong>Velocity</strong> (second pass, <code>post_process_trajectory</code>):</p>
-<div class="highlight"><pre><span></span><code>v[i] = || p[i] - p[i-1] || / dt        (for i &gt;= 1)
-v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)
-</code></pre></div>
-<p>A 3-point moving average is then applied starting at index 0, which overwrites v[0] with
-<code>(v_input[0] + v_geom[1] + v_geom[2]) / 3</code>. v[0] is therefore not purely preserved - it is
-blended with the geometric velocities of the next two points.</p>
-<p><strong>Acceleration</strong> (fourth pass, <code>recalculate_longitudinal_acceleration</code>):</p>
-<div class="highlight"><pre><span></span><code>a[i] = (v[i+1] - v[i]) / dt
-</code></pre></div>
-<p>The last point gets <code>0.0</code> (explicitly zeroed).</p>
-<p><strong>Consequences:</strong></p>
+<h3 id="22-objective-function">2.2 Objective Function<a class="headerlink" href="#22-objective-function" title="Permanent link">#</a></h3>
+<p>The optimization minimizes a weighted sum of several objectives:</p>
+<h4 id="221-jerk-minimization">2.2.1 Jerk Minimization<a class="headerlink" href="#221-jerk-minimization" title="Permanent link">#</a></h4>
+<p>Minimizes the squared jerk along the trajectory:</p>
+<div class="arithmatex">\[
+J_{jerk} = \sum_{i} w_{jerk} \cdot \left(\frac{a[i+1] - a[i]}{\Delta s} \cdot v_{ref}[i]\right)^2 \cdot \Delta s
+\]</div>
+<p>Where:</p>
 <ul>
-<li>Any velocity profile set by the upstream planner (including stop points, speed limits,
-  deceleration ramps) is <strong>overwritten</strong> for all points. Even v[0], which is initially copied
-  from the input, is blended with the next two geometric velocities by the moving average.</li>
-<li>The velocity at each point reflects only how far the optimizer moved that point relative
-  to the previous one over one dt interval.</li>
-<li>There is no mechanism inside the QP smoother to respect a maximum speed constraint per point.
-  Speed limiting happens in a separate plugin (<code>TrajectoryVelocityOptimizer</code>) that runs later.</li>
+<li><span class="arithmatex">\(w_{jerk}\)</span> = jerk weight parameter</li>
+<li><span class="arithmatex">\(\Delta s\)</span> = distance between consecutive points</li>
+<li><span class="arithmatex">\(v_{ref}[i]\)</span> = reference velocity at segment i</li>
 </ul>
-<hr>
-<h2 id="plugin-pipeline">Plugin Pipeline<a class="headerlink" href="#plugin-pipeline" title="Permanent link">#</a></h2>
-<p>Plugins are loaded in the order specified by <code>plugin_names</code>. Execution order is critical.</p>
-<h3 id="default-pipeline">Default Pipeline<a class="headerlink" href="#default-pipeline" title="Permanent link">#</a></h3>
-<p>The full <code>plugin_names</code> list (from <code>config/trajectory_optimizer.param.yaml</code>) and each plugin's
-enabled state:</p>
-<div class="highlight"><pre><span></span><code>TrajectoryPointFixer                      [ON]
-TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- first pass, before QP
-TrajectoryQPSmoother                      [ON]
-TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- second pass, after QP
-TrajectoryEBSmootherOptimizer             [OFF]
-TrajectorySplineSmoother                  [ON]
-TrajectoryMPTOptimizer                    [OFF]
-TrajectoryVelocityOptimizer               [ON]
-TrajectoryExtender                        [OFF]
-</code></pre></div>
-<p>Note that <code>TrajectoryKinematicFeasibilityEnforcer</code> is listed twice in <code>plugin_names</code> and runs
-both before and after the QP smoother. Each pass is a separate plugin instance operating
-independently.</p>
-<h3 id="plugin-descriptions">Plugin Descriptions<a class="headerlink" href="#plugin-descriptions" title="Permanent link">#</a></h3>
-<h4 id="trajectorypointfixer-enabled">TrajectoryPointFixer (enabled)<a class="headerlink" href="#trajectorypointfixer-enabled" title="Permanent link">#</a></h4>
-<p>Removes duplicate or numerically degenerate points (zero-distance, NaN positions). Optionally
-resamples closely-spaced points. Also runs stop-approach detection and populates the shared
-<code>SemanticSpeedTracker</code> for use by downstream plugins.</p>
-<p>Does not modify velocities or time stamps.</p>
-<p><strong>Stop-approach detection:</strong> Points that are much closer together than normal represent a stop
-zone. With a constant <code>dt</code>, <code>v = ds/dt</code> approaches zero as <code>ds</code> approaches zero, so geometric
-proximity IS a reliable stop indicator. Detection runs in three stages:</p>
+<h4 id="222-velocity-tracking">2.2.2 Velocity Tracking<a class="headerlink" href="#222-velocity-tracking" title="Permanent link">#</a></h4>
+<p>Tracks reference velocities from input trajectory:</p>
+<div class="arithmatex">\[
+J_{vel} = \sum_{i} w_{vel} \cdot (b[i] - v_{ref}[i]^2)^2
+\]</div>
+<h4 id="223-acceleration-tracking">2.2.3 Acceleration Tracking<a class="headerlink" href="#223-acceleration-tracking" title="Permanent link">#</a></h4>
+<p>Tracks reference accelerations from input trajectory:</p>
+<div class="arithmatex">\[
+J_{accel} = \sum_{i} w_{accel} \cdot (a[i] - a_{ref}[i])^2
+\]</div>
+<h4 id="224-slack-variable-penalties">2.2.4 Slack Variable Penalties<a class="headerlink" href="#224-slack-variable-penalties" title="Permanent link">#</a></h4>
+<p>Penalizes constraint violations:</p>
+<div class="arithmatex">\[
+J_{slack} = \sum_{i} (w_v \cdot \delta[i]^2 + w_a \cdot \sigma[i]^2 + w_j \cdot \gamma[i]^2)
+\]</div>
+<h3 id="23-constraints">2.3 Constraints<a class="headerlink" href="#23-constraints" title="Permanent link">#</a></h3>
+<h4 id="231-velocity-upper-bound-soft">2.3.1 Velocity Upper Bound (Soft)<a class="headerlink" href="#231-velocity-upper-bound-soft" title="Permanent link">#</a></h4>
+<div class="arithmatex">\[
+0 \leq b[i] - \delta[i] \leq v_{max}[i]^2
+\]</div>
+<p>Where <span class="arithmatex">\(<span class="arithmatex">\(v_{max}[i]\)</span>\)</span> includes lateral acceleration limits.</p>
+<h4 id="232-acceleration-limits-soft">2.3.2 Acceleration Limits (Soft)<a class="headerlink" href="#232-acceleration-limits-soft" title="Permanent link">#</a></h4>
+<div class="arithmatex">\[
+a_{min} \leq a[i] - \sigma[i] \leq a_{max}
+\]</div>
+<h4 id="233-jerk-limits-soft">2.3.3 Jerk Limits (Soft)<a class="headerlink" href="#233-jerk-limits-soft" title="Permanent link">#</a></h4>
+<div class="arithmatex">\[
+j_{min} \cdot \Delta s \leq (a[i+1] - a[i]) \cdot v_{ref}[i] - \gamma[i] \cdot \Delta s \leq j_{max} \cdot \Delta s
+\]</div>
+<h4 id="234-dynamics-constraint-hard">2.3.4 Dynamics Constraint (Hard)<a class="headerlink" href="#234-dynamics-constraint-hard" title="Permanent link">#</a></h4>
+<p>Relates velocity squared to acceleration:</p>
+<div class="arithmatex">\[
+\frac{b[i+1] - b[i]}{\Delta s} = 2 \cdot a[i]
+\]</div>
+<p>Derived from kinematic relation: <span class="arithmatex">\(\frac{d(v^2)}{ds} = 2a\)</span></p>
+<h4 id="235-initial-conditions-hard">2.3.5 Initial Conditions (Hard)<a class="headerlink" href="#235-initial-conditions-hard" title="Permanent link">#</a></h4>
+<div class="arithmatex">\[
+b[0] = v_0^2
+\]</div>
+<div class="arithmatex">\[
+a[0] = a_0
+\]</div>
+<h3 id="24-stop-point-detection">2.4 Stop Point Detection<a class="headerlink" href="#24-stop-point-detection" title="Permanent link">#</a></h3>
+<p>The optimizer automatically detects stop points (zero velocity) and:</p>
 <ol>
-<li><code>remove_close_proximity_points</code>: marks points that are geometric near-duplicates (<code>ds &lt;
-min_dist_to_remove_m</code>) as stop candidates.</li>
-<li><code>resample_close_proximity_points</code>: resamples clusters of closely-spaced points and marks the
-   cluster endpoint as a stop candidate if the speed is decreasing.</li>
-<li><code>build_stop_approach_ranges</code>: processes all candidates, confirms speed is decreasing toward
-   the candidate (not increasing — that would be a take-off), traces back the deceleration onset,
-   and stores the resulting range in <code>SemanticSpeedTracker.slow_down_ranges</code>.</li>
+<li>Optimizes only up to the stop point</li>
+<li>Sets velocities to zero for points after the stop</li>
+<li>Reduces computational complexity</li>
 </ol>
-<p>If no candidates produce valid stop approach ranges, a velocity-profile scan
-(<code>detect_velocity_based_stop</code>) is run as a fallback for constant-spacing trajectories where no
-geometric clusters exist.</p>
-<h4 id="trajectorykinematicfeasibilityenforcer-enabled-runs-twice">TrajectoryKinematicFeasibilityEnforcer (enabled, runs twice)<a class="headerlink" href="#trajectorykinematicfeasibilityenforcer-enabled-runs-twice" title="Permanent link">#</a></h4>
-<p>Forward-propagating filter that clamps heading changes at each trajectory segment to respect
-Ackermann steering geometry and a maximum yaw rate limit. At each step:</p>
-<div class="highlight"><pre><span></span><code>delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)
+<h2 id="3-class-structures">3. Class Structures<a class="headerlink" href="#3-class-structures" title="Permanent link">#</a></h2>
+<h3 id="31-continuousjerksmootherparams">3.1 <code>ContinuousJerkSmootherParams</code><a class="headerlink" href="#31-continuousjerksmootherparams" title="Permanent link">#</a></h3>
+<p>Configuration structure containing all tunable parameters:</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// QP optimization weights</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">jerk_weight</span><span class="p">{</span><span class="mf">10.0</span><span class="p">};</span><span class="w">                </span><span class="c1">// Weight for jerk minimization</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_v_weight</span><span class="p">{</span><span class="mf">10000.0</span><span class="p">};</span><span class="w">           </span><span class="c1">// Weight for velocity limit violation</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_a_weight</span><span class="p">{</span><span class="mf">5000.0</span><span class="p">};</span><span class="w">            </span><span class="c1">// Weight for acceleration limit violation</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">over_j_weight</span><span class="p">{</span><span class="mf">200.0</span><span class="p">};</span><span class="w">             </span><span class="c1">// Weight for jerk limit violation</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">velocity_tracking_weight</span><span class="p">{</span><span class="mf">100.0</span><span class="p">};</span><span class="w">  </span><span class="c1">// Weight for tracking reference velocity</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">accel_tracking_weight</span><span class="p">{</span><span class="mf">10.0</span><span class="p">};</span><span class="w">      </span><span class="c1">// Weight for tracking reference acceleration</span>
+
+<span class="w">  </span><span class="c1">// Kinematic limits</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">max_accel</span><span class="p">{</span><span class="mf">2.0</span><span class="p">};</span><span class="w">   </span><span class="c1">// Maximum acceleration [m/s²]</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">min_decel</span><span class="p">{</span><span class="mf">-3.0</span><span class="p">};</span><span class="w">  </span><span class="c1">// Minimum deceleration [m/s²]</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">max_jerk</span><span class="p">{</span><span class="mf">1.5</span><span class="p">};</span><span class="w">    </span><span class="c1">// Maximum jerk [m/s³]</span>
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">min_jerk</span><span class="p">{</span><span class="mf">-1.5</span><span class="p">};</span><span class="w">   </span><span class="c1">// Minimum jerk [m/s³]</span>
+<span class="p">};</span>
 </code></pre></div>
-<p>where <code>kappa_max = tan(delta_max) / L</code>, <code>s</code> is the segment arc length, and <code>avg_dt</code> is a single
-average time step computed from all <code>time_from_start</code> deltas in the input trajectory (fallback:
-0.1 s). The same <code>avg_dt</code> is used for every segment - per-segment dt is not recomputed from
-distance or velocity.</p>
-<p>Positions are adjusted to enforce this limit while preserving segment arc lengths. Velocities
-and <code>time_from_start</code> are not modified.</p>
-<p>Running it <strong>before</strong> the QP smoother pre-conditions the path so the QP operates on a
-kinematically plausible input. Running it <strong>after</strong> the QP smoother catches any constraint
-violations reintroduced by the smoothing. The second pass uses the same parameter set as the
-first.</p>
-<h4 id="trajectoryqpsmoother-enabled">TrajectoryQPSmoother (enabled)<a class="headerlink" href="#trajectoryqpsmoother-enabled" title="Permanent link">#</a></h4>
-<p>The primary path smoother. Solves a quadratic program that minimizes path curvature
-(<code>||p[i+1] - 2*p[i] + p[i-1]||^2 / dt^2</code>) while penalizing deviation from the input path.</p>
-<p>Decision variables: <code>[x_0, y_0, ..., x_{N-1}, y_{N-1}]</code> - positions only.</p>
-<p>Hard constraints: the first <code>num_constrained_points_start</code> and last <code>num_constrained_points_end</code>
-points are fixed to their input positions (defaults: start = 3, end = 0). Additionally, any
-stop points detected by <code>TrajectoryPointFixer</code> (via <code>SemanticSpeedTracker</code>) are added as hard
-equality constraints, pinning their positions regardless of smoothness weight.</p>
-<p>After solving, velocities and accelerations are recomputed from the smoothed positions as
-described above. For points within detected stop approach ranges, the planner's original velocity
-profile is restored after the moving average step, preserving the intended deceleration curve.
-The stop point itself is forced to zero velocity unconditionally. Orientations are recalculated
-from the smoothed path geometry. Optionally, orientations can instead be copied from the original
-input trajectory via nearest-neighbor matching (<code>preserve_input_trajectory_orientation</code>), but
-this is <strong>disabled by default</strong>.</p>
-<p><strong>The QP smoother must run before any plugin that resamples the trajectory.</strong> Resampling
-(changing the number of points or their spacing in arc length) breaks the constant-dt assumption
-and invalidates the curvature penalty scaling.</p>
-<h4 id="trajectorysplinesmoother-enabled">TrajectorySplineSmoother (enabled)<a class="headerlink" href="#trajectorysplinesmoother-enabled" title="Permanent link">#</a></h4>
-<p>Resamples the trajectory using Akima spline interpolation at a fixed arc-length resolution
-(<code>interpolation_resolution_m</code>, default: 0.2 m).
-<code>preserve_input_trajectory_orientation</code> is available but <strong>disabled by default</strong>; orientations
-are computed from the spline geometry. After resampling, <code>time_from_start</code> is recomputed for all trajectory points; any <code>time_from_start</code> values supplied by upstream modules are therefore overwritten.</p>
-<p>This plugin <strong>breaks the constant-dt property</strong>. After it runs, points are no longer at uniform
-time intervals - they are at uniform arc-length intervals. This is intentional and necessary:
-the downstream controller requires points that are not too close in space, regardless of velocity.
-If points are too close (as they are at low speed with constant-dt sampling), the controller
-produces poor curvature tracking.</p>
-<p>The spline smoother must run <strong>after</strong> the QP smoother for this reason.</p>
-<h4 id="trajectoryvelocityoptimizer-enabled">TrajectoryVelocityOptimizer (enabled)<a class="headerlink" href="#trajectoryvelocityoptimizer-enabled" title="Permanent link">#</a></h4>
-<p>Operates on the velocity profile of the trajectory after the path geometry has been fixed by
-the smoothers. It does not modify positions.</p>
-<p>Responsibilities:</p>
+<h3 id="32-continuousjerksmoother-class">3.2 <code>ContinuousJerkSmoother</code> Class<a class="headerlink" href="#32-continuousjerksmoother-class" title="Permanent link">#</a></h3>
+<h4 id="321-public-interface">3.2.1 Public Interface<a class="headerlink" href="#321-public-interface" title="Permanent link">#</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ContinuousJerkSmoother</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">  </span><span class="c1">// Constructor</span>
+<span class="w">  </span><span class="k">explicit</span><span class="w"> </span><span class="n">ContinuousJerkSmoother</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">params</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Main smoothing function</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">v0</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Initial velocity [m/s]</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">a0</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Initial acceleration [m/s²]</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">TrajectoryPoints</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w">     </span><span class="c1">// Input trajectory points</span>
+<span class="w">    </span><span class="n">TrajectoryPoints</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">output</span><span class="p">,</span><span class="w">          </span><span class="c1">// Output smoothed trajectory points</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">max_velocity_per_point</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">  </span><span class="c1">// Per-point velocity upper bounds</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Parameter management</span>
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="nf">set_params</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">params</span><span class="p">);</span>
+<span class="w">  </span><span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="nf">get_params</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="p">;</span>
+
+<span class="w">  </span><span class="o">~</span><span class="n">ContinuousJerkSmoother</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div>
+<h2 id="4-implementation-details">4. Implementation Details<a class="headerlink" href="#4-implementation-details" title="Permanent link">#</a></h2>
+<h3 id="41-qp-problem-setup">4.1 QP Problem Setup<a class="headerlink" href="#41-qp-problem-setup" title="Permanent link">#</a></h3>
+<p>The optimization problem is formulated as:</p>
+<div class="arithmatex">\[
+\begin{align}
+\text{minimize:} &amp; \quad \frac{1}{2} x^T P x + q^T x \\
+\text{subject to:} &amp; \quad l \leq Ax \leq u
+\end{align}
+\]</div>
+<p>Where:</p>
 <ul>
-<li><strong>Speed cap</strong> (<code>limit_speed</code>, enabled by default): applies a global maximum speed from an
-  external velocity limit topic or the configured default.</li>
-<li><strong>Lateral acceleration limiting</strong> (<code>limit_lateral_acceleration</code>, disabled by default): for each consecutive point pair, it
-  computes <code>yaw_rate = |delta_yaw / delta_time|</code> from orientation differences and
-  <code>time_from_start</code>. If <code>v * yaw_rate &gt; a_lat_max</code>, the point's speed is capped to
-  <code>v_limit = a_lat_max / yaw_rate</code>.</li>
-<li><strong>Jerk-filtered velocity smoothing</strong> (<code>smooth_velocities</code>, disabled by default): runs the
-  in-package <code>ContinuousJerkSmoother</code> (QP-based, via <code>autoware_qp_interface</code>) that enforces
-  <code>limit.max_acc</code>, <code>limit.min_acc</code>, <code>limit.max_jerk</code>, <code>limit.min_jerk</code> on the velocity profile.</li>
-<li><strong>Pull-out speed</strong> (<code>set_engage_speed</code>, disabled by default): clamps initial velocity to
-  <code>target_pull_out_speed_mps</code> when the vehicle is near standstill. Applied after speed limiting
-  and jerk smoothing so those stages cannot overwrite the engage/pull-out constraints.</li>
+<li><span class="arithmatex">\(P\)</span> = Hessian matrix (quadratic terms)</li>
+<li><span class="arithmatex">\(q\)</span> = Linear term vector</li>
+<li><span class="arithmatex">\(A\)</span> = Constraint matrix</li>
+<li><span class="arithmatex">\(l\)</span>, <span class="arithmatex">\(<span class="arithmatex">\(u\)</span>\)</span> = Lower and upper bounds</li>
 </ul>
-<p>The velocity optimizer is the only stage where velocity values in the output trajectory are
-computed with awareness of physical limits. Everything before it treats velocity as a side effect
-of position geometry.</p>
-<h3 id="disabled-plugins">Disabled Plugins<a class="headerlink" href="#disabled-plugins" title="Permanent link">#</a></h3>
-<h4 id="trajectoryebsmootheroptimizer-disabled">TrajectoryEBSmootherOptimizer (disabled)<a class="headerlink" href="#trajectoryebsmootheroptimizer-disabled" title="Permanent link">#</a></h4>
-<p>Elastic Band path smoother wrapping <code>autoware_path_smoother</code>. Resamples the trajectory
-internally. After smoothing, recomputes <code>time_from_start</code> from velocity and arc length.</p>
-<p>This plugin is effectively deprecated in the current pipeline. It conflicts with the QP smoother
-ordering constraint and its output quality relative to the QP smoother does not justify its
-presence. It exists for historical reasons.</p>
-<h4 id="trajectoryextender-disabled">TrajectoryExtender (disabled)<a class="headerlink" href="#trajectoryextender-disabled" title="Permanent link">#</a></h4>
-<p>Extends the trajectory backward by prepending past ego states stored in a rolling history buffer.
-The intent is to provide the controller a trajectory that starts behind the vehicle's current
-position, giving it a smooth reference even when the vehicle has advanced past the planner's
-output head.</p>
-<p>Known issue: the extender introduces a discontinuity at the junction between the history points
-and the planner output, which causes artifacts in the QP smoother and degrades smoothing results.
-For this reason it is disabled and its placement in the pipeline is near the end (after smoothers)
-to minimize damage if enabled. This discontinuity is an open problem.</p>
-<h4 id="trajectorymptoptimizer-disabled-experimental">TrajectoryMPTOptimizer (disabled, experimental)<a class="headerlink" href="#trajectorymptoptimizer-disabled-experimental" title="Permanent link">#</a></h4>
-<p>Model Predictive Trajectory optimizer wrapping <code>autoware_path_optimizer</code>'s <code>MPTOptimizer</code>.
-Takes the trajectory and constructs simple perpendicular corridor bounds around it, then solves
-a bicycle-model QP to refine the path within those bounds.</p>
-<p>After optimization, recomputes kinematics using kinematic equations (<code>v^2 = v0^2 + 2as</code>) rather
-than constant dt, propagating <code>time_from_start</code> forward through the trajectory.</p>
-<p>This plugin was conceived as a complement to or replacement for the spline smoother, but it did
-not produce results good enough to justify enabling it by default. The corridor bounds are
-synthetic (perpendicular offsets from the reference path) rather than derived from map data,
-which limits the optimizer's ability to meaningfully reshape the trajectory.</p>
-<hr>
-<h2 id="ordering-constraints-summary">Ordering Constraints Summary<a class="headerlink" href="#ordering-constraints-summary" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Rule</th>
-<th>Reason</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Kinematic enforcer before QP</td>
-<td>Pre-conditions path so QP operates on feasible input</td>
-</tr>
-<tr>
-<td>QP smoother before spline/EB smoother</td>
-<td>Both resampling plugins destroy constant-dt; QP needs it</td>
-</tr>
-<tr>
-<td>Kinematic enforcer after QP (second pass)</td>
-<td>Catches constraint violations reintroduced by smoothing</td>
-</tr>
-<tr>
-<td>QP smoother before velocity optimizer</td>
-<td>Velocity optimizer works on the final path geometry</td>
-</tr>
-<tr>
-<td>Point fixer at start</td>
-<td>Degenerate inputs break the QP solver</td>
-</tr>
-<tr>
-<td>Extender after smoothers (if enabled)</td>
-<td>Discontinuity artifacts damage smoother output</td>
-</tr>
-</tbody>
-</table>
-<hr>
-<h2 id="why-arc-length-resampling-is-avoided">Why Arc-Length Resampling Is Avoided<a class="headerlink" href="#why-arc-length-resampling-is-avoided" title="Permanent link">#</a></h2>
-<p>The optimizer operates under a contract with the upstream planner: the planner outputs (x, y)
-positions at a constant time interval. The optimizer's job is to refine those positions while
-introducing the minimum changes necessary to produce a smooth, feasible path.</p>
-<p>This minimal-change philosophy is deliberate. If the optimizer aggressively resamples and
-reshapes the trajectory, it becomes impossible to attribute failures correctly. When something
-goes wrong in the vehicle's behavior, you need to know whether the fault is on the model side
-(the planner produced a bad trajectory) or on the optimizer side (the optimizer distorted a
-good one). Heavy arc-length resampling muddles that boundary: the optimizer's output no longer
-resembles the planner's intent, and debugging becomes guesswork.</p>
-<p>By preserving the relative spacing of points - moving them laterally to smooth the path, but
-not redistributing them along the arc - the optimizer keeps the planner's intent legible in its
-output. Each output point corresponds directly to an input point. Deviations are local and
-bounded by the fidelity weight.</p>
-<p>Arc-length resampling also has a concrete technical incompatibility with the QP smoother. The
-curvature penalty term:</p>
-<div class="highlight"><pre><span></span><code>J_smooth = weight_smoothness / dt^2 * sum || p[i+1] - 2*p[i] + p[i-1] ||^2
+<h3 id="42-variable-indexing">4.2 Variable Indexing<a class="headerlink" href="#42-variable-indexing" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">IDX_B0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of b variables (velocity squared)</span>
+<span class="n">IDX_A0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of a variables (acceleration)</span>
+<span class="n">IDX_DELTA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of delta variables (velocity slack)</span>
+<span class="n">IDX_SIGMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of sigma variables (acceleration slack)</span>
+<span class="n">IDX_GAMMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of gamma variables (jerk slack)</span>
 </code></pre></div>
-<p>is a second-order finite difference approximation of acceleration, valid only when consecutive
-points are separated by a constant time interval <code>dt</code>. After arc-length resampling, points are
-separated by a constant spatial interval <code>ds</code> instead. The QP smoother has no way to detect
-this - it will still run and converge, but the weight scaling is wrong and the
-smoothness-vs-fidelity tradeoff will be miscalibrated relative to the configured parameters.</p>
-<p>The spline smoother at the end of the pipeline does arc-length resample. This is a known and
-accepted exception: the downstream controller requires points that are not too close in space,
-and at low speed with constant-dt sampling they are. The spline smoother runs after all
-position-domain optimization is complete, so it does not corrupt any optimizer's assumptions.
-Any plugin that arc-length resamples before the QP smoother has no place in this pipeline.</p>
-<hr>
-<h2 id="orientation-handling">Orientation Handling<a class="headerlink" href="#orientation-handling" title="Permanent link">#</a></h2>
-<p>Orientations are not optimized directly by any plugin. They are recomputed from path geometry
-after position changes:</p>
-<div class="highlight"><pre><span></span><code>yaw[i] = atan2(y[i+1] - y[i], x[i+1] - x[i])
+<h3 id="43-error-handling">4.3 Error Handling<a class="headerlink" href="#43-error-handling" title="Permanent link">#</a></h3>
+<ul>
+<li>Returns <code>false</code> if optimization fails</li>
+<li>Logs warnings for empty trajectories or optimization failures</li>
+<li>Handles NaN values in optimization results</li>
+<li>Provides fallback behavior for edge cases</li>
+</ul>
+<h2 id="5-usage-example">5. Usage Example<a class="headerlink" href="#5-usage-example" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1">// Create smoother with default parameters</span>
+<span class="n">ContinuousJerkSmootherParams</span><span class="w"> </span><span class="n">params</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">max_accel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.5</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">min_decel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-4.0</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">max_jerk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.0</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">min_jerk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-2.0</span><span class="p">;</span>
+
+<span class="n">ContinuousJerkSmoother</span><span class="w"> </span><span class="nf">smoother</span><span class="p">(</span><span class="n">params</span><span class="p">);</span>
+
+<span class="c1">// Apply smoothing</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">v0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">;</span><span class="w">  </span><span class="c1">// Initial velocity [m/s]</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">a0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w">  </span><span class="c1">// Initial acceleration [m/s²]</span>
+<span class="n">TrajectoryPoints</span><span class="w"> </span><span class="n">input_trajectory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">TrajectoryPoints</span><span class="w"> </span><span class="n">output_trajectory</span><span class="p">;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">max_velocities</span><span class="p">(</span><span class="n">input_trajectory</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span><span class="w"> </span><span class="mf">10.0</span><span class="p">);</span><span class="w">  </span><span class="c1">// 10 m/s limit</span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="n">success</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">smoother</span><span class="p">.</span><span class="n">apply</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span><span class="w"> </span><span class="n">a0</span><span class="p">,</span><span class="w"> </span><span class="n">input_trajectory</span><span class="p">,</span><span class="w"> </span><span class="n">output_trajectory</span><span class="p">,</span><span class="w"> </span><span class="n">max_velocities</span><span class="p">);</span>
 </code></pre></div>
-<p>Both the QP smoother and the spline smoother offer <code>preserve_input_trajectory_orientation</code>, which
-copies orientations from the original input via nearest-neighbor matching instead of computing
-them from the smoothed geometry. This option is <strong>disabled by default in both plugins</strong>, so
-orientations are derived purely from the smoothed path tangent.</p>
-<p>When enabled, the rationale is that the diffusion planner produces orientations that encode the
-intended heading, which may differ from the pure geometric tangent of the smoothed path. If the
-smoothing deviation is small relative to the configured distance threshold (QP smoother:
-<code>max_distance_for_orientation_m</code>; spline smoother: <code>max_distance_discrepancy_m</code>; both default
-to 5.0 m), the copied orientation is close enough to the geometric tangent that the error is
-acceptable.</p>
-<hr>
-<h2 id="known-limitations">Known Limitations<a class="headerlink" href="#known-limitations" title="Permanent link">#</a></h2>
+<h2 id="6-integration-with-trajectory-optimizer">6. Integration with Trajectory Optimizer<a class="headerlink" href="#6-integration-with-trajectory-optimizer" title="Permanent link">#</a></h2>
+<p>The continuous jerk smoother is typically used within the trajectory velocity optimizer pipeline:</p>
 <ol>
-<li>
-<p><strong>Stop velocity preservation depends on detection.</strong> Stop points are detected from geometric
-   proximity (<code>ds &lt; min_dist_to_remove_m</code>) and velocity profile. If a planner encodes a stop
-   zone with point spacings above the detection threshold and no near-zero velocities below
-   <code>stop_detection_velocity_threshold_mps</code>, the stop will not be detected and the QP smoother
-   will overwrite the velocity profile as normal.</p>
-</li>
-<li>
-<p><strong>Constant-dt is broken at the pipeline end.</strong> The spline smoother as the last geometric step
-   converts the trajectory to arc-length parameterization. Downstream consumers receive a
-   trajectory that does not have constant-dt points. This is currently acceptable for the
-   controller but means the optimizer output cannot be cleanly fed back into another constant-dt
-   optimizer pass.</p>
-</li>
-<li>
-<p><strong>The QP smoother ignores <code>time_from_start</code> in the input.</strong> It uses its own configured
-   <code>time_step_s</code> uniformly. If the input trajectory has a different dt (e.g., because a resampler
-   ran earlier), the QP smoother will produce incorrect velocities without warning.</p>
-</li>
-<li>
-<p><strong>Velocities outside detected stop zones are geometric.</strong> For points not in a detected stop
-   approach range, velocities are recomputed from position differences and blended through a
-   3-point moving average. The planner's velocity values are not preserved there. For detected
-   stop approach zones, the planner's original velocity profile is restored after the moving
-   average and the stop point is forced to zero (see TrajectoryQPSmoother section).</p>
-</li>
-<li>
-<p><strong>Trajectory extender discontinuity is unresolved.</strong> The history-based backward extension
-   creates a positional gap at the junction point that propagates through the smoothers. No fix
-   is currently planned.</p>
-</li>
-<li>
-<p><strong>MPT bounds are not map-aware.</strong> The MPT optimizer's corridor bounds are simple perpendicular
-   offsets, not derived from lanelet or drivable area data. The optimizer has no knowledge of
-   actual road boundaries. Currently, there are no plans to introduce a map dependency into the optimizer node.</p>
-</li>
-</ol></div>
+<li><strong>Input</strong>: Raw trajectory with reference velocities</li>
+<li><strong>Preprocessing</strong>: Calculate per-point velocity limits (considering lateral acceleration)</li>
+<li><strong>Optimization</strong>: Apply continuous jerk smoothing</li>
+<li><strong>Output</strong>: Kinematically feasible trajectory with smooth velocity profile</li>
+</ol>
+<h2 id="7-performance-considerations">7. Performance Considerations<a class="headerlink" href="#7-performance-considerations" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>Computational Complexity</strong>: <span class="arithmatex">\(<span class="arithmatex">\(O(N^3)\)</span>\)</span> for QP solving, but N is typically small (≤ 100 points)</li>
+<li><strong>Memory Usage</strong>: Matrices of size <span class="arithmatex">\(<span class="arithmatex">\((5N \times 5N)\)</span>\)</span> for P and <span class="arithmatex">\(<span class="arithmatex">\((4N \times 5N)\)</span>\)</span> for A</li>
+<li><strong>Real-time Feasibility</strong>: Suitable for real-time operation with typical trajectory lengths</li>
+</ul></div>
 
 
 
@@ -23133,7 +23106,7 @@ acceptable.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../temporal_mpt_optimizer/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Temporal MPT Optimizer">
+          <a href="../TrafficLightStop/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Traffic Light Stop">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23143,20 +23116,20 @@ acceptable.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Temporal MPT Optimizer
+                Traffic Light Stop
               </div>
             </div>
           </a>
         
         
           
-          <a href="../../../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Ranker">
+          <a href="../kinematic_feasibility_enforcer/" class="md-footer__link md-footer__link--next" aria-label="Next: Ackermann Kinematic Feasibility Enforcer">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Trajectory Ranker
+                Ackermann Kinematic Feasibility Enforcer
               </div>
             </div>
             <div class="md-footer__button md-icon">

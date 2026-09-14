@@ -8,7 +8,7 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_modifier/">
       
       
         <link rel="prev" href="../autoware_trajectory_gate/">
@@ -25,7 +25,7 @@
     
     
       
-        <title>Autoware Trajectory Processor - Autoware Universe Documentation</title>
+        <title>Autoware Trajectory Modifier - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#autoware-trajectory-processor" class="md-skip">
+        <a href="#autoware-trajectory-modifier" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Autoware Trajectory Processor
+              Autoware Trajectory Modifier
             
           </span>
         </div>
@@ -14823,7 +14823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autoware_trajectory_modifier" class="md-nav__link">
+      <a href="." class="md-nav__link">
         
   
   
@@ -22855,9 +22855,9 @@
   
 
 
-<div><h1 id="autoware-trajectory-processor">Autoware Trajectory Processor<a class="headerlink" href="#autoware-trajectory-processor" title="Permanent link">#</a></h1>
+<div><h1 id="autoware-trajectory-modifier">Autoware Trajectory Modifier<a class="headerlink" href="#autoware-trajectory-modifier" title="Permanent link">#</a></h1>
 <h2 id="unified-node-and-pipeline">Unified Node and Pipeline<a class="headerlink" href="#unified-node-and-pipeline" title="Permanent link">#</a></h2>
-<p>The <code>autoware_trajectory_processor</code> package runs safety modifiers and trajectory optimizers in one ordered plugin pipeline. It takes candidate trajectories as input, applies modifier plugins first and optimizer plugins second by default, and publishes both the processed candidates and the first candidate as the selected trajectory.</p>
+<p>The <code>autoware_trajectory_modifier</code> package runs safety modifiers and trajectory optimizers in one ordered plugin pipeline. It takes candidate trajectories as input, applies modifier plugins first and optimizer plugins second by default, and publishes both the processed candidates and the first candidate as the selected trajectory.</p>
 <h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Plugin-based architecture</strong> - Modular optimization pipeline where each step is a separate plugin</li>
@@ -22874,20 +22874,20 @@
 <li><strong>Dynamic parameter reconfiguration</strong> - Runtime parameter updates supported</li>
 </ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
-<p>The package uses one <code>TrajectoryProcessor</code> ROS 2 component. Plugins are dynamically loaded at startup, inherit from <code>TrajectoryProcessorPluginBase</code>, and execute in the exact order configured by <code>plugin_names</code>.</p>
+<p>The package uses one <code>TrajectoryModifier</code> ROS 2 component. Plugins are dynamically loaded at startup, inherit from <code>TrajectoryModifierPluginBase</code>, and execute in the exact order configured by <code>plugin_names</code>.</p>
 <h3 id="plugin-loading-and-execution">Plugin Loading and Execution<a class="headerlink" href="#plugin-loading-and-execution" title="Permanent link">#</a></h3>
 <p>Plugins are loaded based on the <code>plugin_names</code> parameter, which defines both which plugins to load and their execution order:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::StopPointFixer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::ObstacleStop"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::VelocityModifier"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryQPSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectorySplineSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryExtender"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::StopPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::ObstacleStop"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::VelocityModifier"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryQPSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryEBSmootherOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectorySplineSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryVelocityOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryExtender"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryPointFixer"</span>
 </code></pre></div>
 <h3 id="available-plugins">Available Plugins<a class="headerlink" href="#available-plugins" title="Permanent link">#</a></h3>
 <ol>
@@ -22960,7 +22960,7 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>plugin_<wbr>names</wbr></td>
 <td>array</td>
 <td>Ordered list of modifier and optimizer plugin class names</td>
-<td>["autoware::trajectory_<wbr>processor::plugin::StopPointFixer", "autoware::trajectory_<wbr>processor::plugin::SurroundObstacleStop", "autoware::trajectory_<wbr>processor::plugin::ObstacleStop", "autoware::trajectory_<wbr>processor::plugin::TrafficLightStop", "autoware::trajectory_<wbr>processor::plugin::VelocityModifier", "autoware::trajectory_<wbr>processor::plugin::TrajectoryPointFixer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryKinematicFeasibilityEnforcer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryQPSmoother", "autoware::trajectory_<wbr>processor::plugin::TrajectoryKinematicFeasibilityEnforcer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryVelocityOptimizer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryEBSmootherOptimizer", "autoware::trajectory_<wbr>processor::plugin::TrajectorySplineSmoother", "autoware::trajectory_<wbr>processor::plugin::TrajectoryMPTOptimizer", "autoware::trajectory_<wbr>processor::plugin::TrajectoryExtender"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>["autoware::trajectory_<wbr>modifier::plugin::StopPointFixer", "autoware::trajectory_<wbr>modifier::plugin::SurroundObstacleStop", "autoware::trajectory_<wbr>modifier::plugin::ObstacleStop", "autoware::trajectory_<wbr>modifier::plugin::TrafficLightStop", "autoware::trajectory_<wbr>modifier::plugin::VelocityModifier", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryPointFixer", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryKinematicFeasibilityEnforcer", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryQPSmoother", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryKinematicFeasibilityEnforcer", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryVelocityOptimizer", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryEBSmootherOptimizer", "autoware::trajectory_<wbr>modifier::plugin::TrajectorySplineSmoother", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryMPTOptimizer", "autoware::trajectory_<wbr>modifier::plugin::TrajectoryExtender"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24352,13 +24352,13 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <li><strong>Plugin-Specific Parameters</strong> - Namespaced parameters for each plugin (e.g., <code>trajectory_qp_smoother.weight_smoothness</code>)</li>
 </ol>
 <h4 id="configuring-plugin-order">Configuring Plugin Order<a class="headerlink" href="#configuring-plugin-order" title="Permanent link">#</a></h4>
-<p>To change plugin execution order, modify the <code>plugin_names</code> array in <code>config/trajectory_processor.param.yaml</code>:</p>
+<p>To change plugin execution order, modify the <code>plugin_names</code> array in <code>config/trajectory_modifier.param.yaml</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Example: Run spline smoother before velocity optimizer</span>
 <span class="nt">plugin_names</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectorySplineSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectorySplineSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryVelocityOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_modifier::plugin::TrajectoryPointFixer"</span>
 </code></pre></div>
 <h5 id="critical-qp-smoother-ordering-constraint">CRITICAL: QP Smoother Ordering Constraint<a class="headerlink" href="#critical-qp-smoother-ordering-constraint" title="Permanent link">#</a></h5>
 <p>The <code>TrajectoryQPSmoother</code> plugin <strong>MUST run before</strong> any plugins that resample or modify trajectory structure:</p>
@@ -24380,9 +24380,9 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <li>Configurable parameters to adjust modification behavior</li>
 </ul>
 <h3 id="architecture_1">Architecture<a class="headerlink" href="#architecture_1" title="Permanent link">#</a></h3>
-<p>Modifier and optimizer algorithms use the same plugin interface. Each plugin inherits from <code>TrajectoryProcessorPluginBase</code>.</p>
+<p>Modifier and optimizer algorithms use the same plugin interface. Each plugin inherits from <code>TrajectoryModifierPluginBase</code>.</p>
 <h4 id="plugin-interface">Plugin Interface<a class="headerlink" href="#plugin-interface" title="Permanent link">#</a></h4>
-<p>All modifier plugins must inherit from <code>TrajectoryProcessorPluginBase</code> and implement:</p>
+<p>All modifier plugins must inherit from <code>TrajectoryModifierPluginBase</code> and implement:</p>
 <ul>
 <li><code>process()</code> - Process trajectory points and return <code>ProcessingResult::Modified</code> or <code>ProcessingResult::Unchanged</code></li>
 <li><code>on_initialize()</code> - Initialize plugin members and parameters</li>
@@ -24420,15 +24420,15 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <li><strong>Output</strong>: Modified <code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code> and selected <code>autoware_planning_msgs::msg::Trajectory</code></li>
 </ul>
 <h3 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">#</a></h3>
-<p>See the unified parameter schema above and <code>config/trajectory_processor.param.yaml</code>.</p>
+<p>See the unified parameter schema above and <code>config/trajectory_modifier.param.yaml</code>.</p>
 <p>Parameters can be set via YAML configuration files in the <code>config/</code> directory.</p>
 <h3 id="adding-new-modifier-plugins">Adding New Modifier Plugins<a class="headerlink" href="#adding-new-modifier-plugins" title="Permanent link">#</a></h3>
 <p>To add a new modifier plugin:</p>
 <ol>
 <li>Create header and source files in <code>trajectory_modifier_plugins/</code></li>
-<li>Inherit from <code>TrajectoryProcessorPluginBase</code></li>
+<li>Inherit from <code>TrajectoryModifierPluginBase</code></li>
 <li>Implement the required virtual methods</li>
-<li>Export the plugin with <code>TrajectoryProcessorPluginBase</code> and register it in <code>plugins.xml</code></li>
+<li>Export the plugin with <code>TrajectoryModifierPluginBase</code> and register it in <code>plugins.xml</code></li>
 <li>Add plugin-specific parameters to the schema and config files</li>
 </ol></div>
 

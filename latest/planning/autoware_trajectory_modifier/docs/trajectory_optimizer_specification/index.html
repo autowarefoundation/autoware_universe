@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/temporal_mpt_optimizer/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_modifier/docs/trajectory_optimizer_specification/">
       
       
-        <link rel="prev" href="../qp_smoother/">
+        <link rel="prev" href="../temporal_mpt_optimizer/">
       
       
-        <link rel="next" href="../trajectory_optimizer_specification/">
+        <link rel="next" href="../../../autoware_trajectory_ranker/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Temporal MPT Optimizer - Autoware Universe Documentation</title>
+        <title>Trajectory Optimizer - Specification and Assumptions - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#temporal-mpt-optimizer" class="md-skip">
+        <a href="#trajectory-optimizer-specification-and-assumptions" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Temporal MPT Optimizer
+              Trajectory Optimizer - Specification and Assumptions
             
           </span>
         </div>
@@ -14823,7 +14823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../autoware_trajectory_modifier" class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -22642,22 +22642,77 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#role-in-the-plugin-pipeline" class="md-nav__link">
+  <a href="#core-design-principle-positions-are-primary-kinematics-are-derived" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Role in the plugin pipeline
+        Core Design Principle: Positions Are Primary, Kinematics Are Derived
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Role in the plugin pipeline">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-velocity-and-acceleration-are-computed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Velocity and Acceleration Are Computed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plugin-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plugin Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin Pipeline">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#what-each-replaced-plugin-contributes" class="md-nav__link">
+  <a href="#default-pipeline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What each replaced plugin contributes
+        Default Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plugin Descriptions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabled-plugins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabled Plugins
       
     </span>
   </a>
@@ -22670,10 +22725,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#horizon-codegen" class="md-nav__link">
+  <a href="#ordering-constraints-summary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Horizon (codegen)
+        Ordering Constraints Summary
       
     </span>
   </a>
@@ -22681,60 +22736,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mpc-formulation" class="md-nav__link">
+  <a href="#why-arc-length-resampling-is-avoided" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MPC formulation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="MPC formulation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vehicle-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Vehicle model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cost" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cost
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reference-construction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Reference construction
+        Why Arc-Length Resampling Is Avoided
       
     </span>
   </a>
@@ -22742,54 +22747,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#enabling-the-plugin" class="md-nav__link">
+  <a href="#orientation-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enabling the plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#build-requirements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Build requirements
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#debug-visualization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Debug visualization
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#comparison-with-spatial-mpt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Comparison with spatial MPT
+        Orientation Handling
       
     </span>
   </a>
@@ -22800,7 +22761,7 @@
   <a href="#known-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Known limitations
+        Known Limitations
       
     </span>
   </a>
@@ -22827,240 +22788,316 @@
   
 
 
-<div><h1 id="temporal-mpt-optimizer">Temporal MPT Optimizer<a class="headerlink" href="#temporal-mpt-optimizer" title="Permanent link">#</a></h1>
+<div><h1 id="trajectory-optimizer-specification-and-assumptions">Trajectory Optimizer - Specification and Assumptions<a class="headerlink" href="#trajectory-optimizer-specification-and-assumptions" title="Permanent link">#</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
-<p>The <strong>TrajectoryTemporalMPTOptimizer</strong> plugin refines the incoming trajectory using a fixed-horizon <strong>acados</strong> MPC for a temporal kinematic bicycle model. Unlike the spatial <a href="../mpt_optimizer/">MPT optimizer</a> (QP with corridor bounds from <code>autoware_path_optimizer</code>), this plugin tracks a <strong>time-ordered</strong> reference sequence: stage <code>k</code> uses trajectory point <code>start_idx + k</code> without arc-length resampling.</p>
-<p>States are <span class="arithmatex">\((x, y, \psi, v)\)</span>; controls are longitudinal acceleration and steering command <span class="arithmatex">\((a, \delta)\)</span>. The solver is generated at build time from <code>src/acados_mpt/generators/path_tracking_mpc_temporal.py</code>.</p>
-<h2 id="role-in-the-plugin-pipeline">Role in the plugin pipeline<a class="headerlink" href="#role-in-the-plugin-pipeline" title="Permanent link">#</a></h2>
-<p>The default trajectory optimizer pipeline runs many plugins in sequence after basic cleanup:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryQPSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryKinematicFeasibilityEnforcer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryVelocityOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryEBSmootherOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectorySplineSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryMPTOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryExtender"</span>
-</code></pre></div>
-<p><strong>TrajectoryTemporalMPTOptimizer</strong> is intended to replace that entire post-<code>TrajectoryPointFixer</code> chain with a single joint optimization step. When enabled, a minimal pipeline is:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryPointFixer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_processor::plugin::TrajectoryTemporalMPTOptimizer"</span>
-
-<span class="nt">use_temporal_mpt_optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</code></pre></div>
-<p>Turn off the plugins it supersedes (<code>use_qp_smoother</code>, <code>use_velocity_optimizer</code>, <code>use_eb_smoother</code>, <code>use_akima_spline_interpolation</code>, <code>use_kinematic_feasibility_enforcer</code>, <code>use_mpt_optimizer</code>, <code>use_trajectory_extender</code>) so they are not loaded in parallel.</p>
-<h3 id="what-each-replaced-plugin-contributes">What each replaced plugin contributes<a class="headerlink" href="#what-each-replaced-plugin-contributes" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Replaced plugin</th>
-<th>Classical role</th>
-<th>Absorbed by temporal MPC</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>TrajectoryKinematicFeasibilityEnforcer</strong></td>
-<td>Clamps yaw change per segment to Ackermann and yaw-rate limits</td>
-<td>Bicycle dynamics with bounded steering <span class="arithmatex">\(\delta\)</span> and lateral-acceleration constraint <span class="arithmatex">\(a\_\mathrm{lat} = v^2 K\)</span></td>
-</tr>
-<tr>
-<td><strong>TrajectoryQPSmoother</strong></td>
-<td>Smooths <span class="arithmatex">\((x, y)\)</span> via QP curvature penalty while tracking the reference</td>
-<td>Running cost on state tracking <span class="arithmatex">\((x, y, \psi, v)\)</span> plus control penalty on <span class="arithmatex">\((a, \delta)\)</span></td>
-</tr>
-<tr>
-<td><strong>TrajectoryVelocityOptimizer</strong></td>
-<td>Jerk-filtered longitudinal velocity profile</td>
-<td>Speed is a state; longitudinal acceleration is a control with box constraints</td>
-</tr>
-<tr>
-<td><strong>TrajectoryEBSmootherOptimizer</strong></td>
-<td>Elastic-band geometric path smoothing</td>
-<td>Implicit in jointly optimized <span class="arithmatex">\((x, y)\)</span> trajectory over the MPC horizon</td>
-</tr>
-<tr>
-<td><strong>TrajectorySplineSmoother</strong></td>
-<td>Akima spline interpolation of path geometry</td>
-<td>Not needed when MPC directly outputs a smooth state trajectory</td>
-</tr>
-<tr>
-<td><strong>TrajectoryMPTOptimizer</strong></td>
-<td>Spatial QP-MPT with adaptive corridor bounds</td>
-<td>Replaced by this temporal acados solver (different formulation, no corridor bounds)</td>
-</tr>
-<tr>
-<td><strong>TrajectoryExtender</strong></td>
-<td>Backward extension from past ego odometry</td>
-<td><strong>Not</strong> performed by temporal MPT; keep only if backward extension is still required</td>
-</tr>
-</tbody>
-</table>
-<p>The incoming message from upstream planning is treated as the MPC reference. The plugin overwrites at most the first <span class="arithmatex">\(N+1\)</span> points (8.0 s at 0.1 s spacing) with the optimized state and control trajectory.</p>
-<h2 id="horizon-codegen">Horizon (codegen)<a class="headerlink" href="#horizon-codegen" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Quantity</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Horizon length <span class="arithmatex">\(T_f\)</span></td>
-<td>8.0 s</td>
-</tr>
-<tr>
-<td>Stages <span class="arithmatex">\(N\)</span></td>
-<td>80</td>
-</tr>
-<tr>
-<td>Time step <span class="arithmatex">\(\Delta t\)</span></td>
-<td>0.1 s (<span class="arithmatex">\(T_f / N\)</span>)</td>
-</tr>
-</tbody>
-</table>
-<p>These values are fixed in the Python OCP definition; changing them requires regenerating the acados solver and rebuilding.</p>
-<h2 id="mpc-formulation">MPC formulation<a class="headerlink" href="#mpc-formulation" title="Permanent link">#</a></h2>
-<h3 id="vehicle-model">Vehicle model<a class="headerlink" href="#vehicle-model" title="Permanent link">#</a></h3>
-<p>Kinematic bicycle in the world frame (<code>generators/bicycle_model_temporal.py</code>):</p>
+<p>This document describes the current specification, design assumptions, and known limitations of
+<code>autoware_trajectory_optimizer</code>. It is written for engineers integrating upstream planners or
+modifying the pipeline. Read this before touching plugin ordering or resampling logic.</p>
+<hr>
+<h2 id="core-design-principle-positions-are-primary-kinematics-are-derived">Core Design Principle: Positions Are Primary, Kinematics Are Derived<a class="headerlink" href="#core-design-principle-positions-are-primary-kinematics-are-derived" title="Permanent link">#</a></h2>
+<p>The optimizer works in the <strong>position domain</strong>. The path geometry (x, y per point) is what the
+optimization models operate on. Velocity and acceleration fields in the output <code>TrajectoryPoint</code>
+messages are <strong>not preserved from the input</strong> - they are recomputed as numerical derivatives of
+the smoothed positions over a fixed time step.</p>
+<p>This is not an approximation or a convenience. It is the fundamental contract of the pipeline:</p>
 <ul>
-<li>States: <span class="arithmatex">\(x, y, \psi, v\)</span></li>
-<li>Controls: longitudinal acceleration <span class="arithmatex">\(a\)</span>, front steering <span class="arithmatex">\(\delta\)</span> [rad]</li>
-<li>Parameters: <span class="arithmatex">\(l_f, l_r\)</span> from <code>vehicle_info</code> via <code>cg_distance_from_rear_axle_ratio</code></li>
+<li>The upstream planner provides positions sampled at a <strong>constant time interval</strong> (dt).</li>
+<li>The optimizer adjusts those positions (smooths the path).</li>
+<li>Kinematics are recalculated from the new positions using the same dt.</li>
 </ul>
-<h3 id="cost">Cost<a class="headerlink" href="#cost" title="Permanent link">#</a></h3>
-<p>LINEAR*LS tracking of the reference against <span class="arithmatex">\([x, y, \psi, v, a*\mathrm{ref}, \delta*\mathrm{ref}]\)</span> with weights from <code>path_tracking_mpc_temporal.py</code> (<span class="arithmatex">\(Q\)</span>, <span class="arithmatex">\(R\)</span>, terminal <span class="arithmatex">\(Q_e\)</span>). Control references <span class="arithmatex">\(a*\mathrm{ref}\)</span> and <span class="arithmatex">\(\delta\_\mathrm{ref}\)</span> are set to zero at runtime.</p>
-<h3 id="constraints">Constraints<a class="headerlink" href="#constraints" title="Permanent link">#</a></h3>
+<p>If you treat the velocity or acceleration fields coming out of the planner as optimization inputs
+to be preserved, you have misunderstood the system.</p>
+<hr>
+<h2 id="input-requirements">Input Requirements<a class="headerlink" href="#input-requirements" title="Permanent link">#</a></h2>
+<p>The optimizer expects trajectory points sampled at a <strong>constant dt</strong>, currently provided by the
+diffusion planner upstream. This means:</p>
 <ul>
-<li>Longitudinal acceleration and steering command box limits</li>
-<li>Nonlinear lateral-acceleration bound: <span class="arithmatex">\(|a\_\mathrm{lat}| \le 1.2\,\mathrm{m/s^2}\)</span></li>
-<li>Fixed initial state at stage 0</li>
+<li><code>time_from_start[i+1] - time_from_start[i]</code> must be constant and equal to the configured
+  <code>trajectory_qp_smoother.time_step_s</code> (default: 0.1 s).</li>
+<li>Arc length between consecutive points is <strong>not</strong> constant - it varies with velocity.</li>
+<li>Points at low speed are close together in space. Points at high speed are far apart.</li>
 </ul>
-<h2 id="reference-construction">Reference construction<a class="headerlink" href="#reference-construction" title="Permanent link">#</a></h2>
-<p>Horizon references are built in <code>trajectory_temporal_mpt_optimizer_utils</code> before each solve:</p>
+<p>Do not arc-length resample the input trajectory before feeding it to the optimizer. Arc-length
+resampling destroys the constant-dt structure and breaks the QP smoother assumptions. The QP
+smoother never reads <code>time_from_start</code> from the input - it blindly assumes the configured
+<code>time_step_s</code> applies uniformly to every consecutive point pair. If your input has variable dt,
+the QP solver will silently compute wrong velocities and accelerations.</p>
+<hr>
+<h2 id="how-velocity-and-acceleration-are-computed">How Velocity and Acceleration Are Computed<a class="headerlink" href="#how-velocity-and-acceleration-are-computed" title="Permanent link">#</a></h2>
+<p>After the QP smoother adjusts point positions, the output kinematics are derived as follows:</p>
+<p><strong>Velocity</strong> (second pass, <code>post_process_trajectory</code>):</p>
+<div class="highlight"><pre><span></span><code>v[i] = || p[i] - p[i-1] || / dt        (for i &gt;= 1)
+v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)
+</code></pre></div>
+<p>A 3-point moving average is then applied starting at index 0, which overwrites v[0] with
+<code>(v_input[0] + v_geom[1] + v_geom[2]) / 3</code>. v[0] is therefore not purely preserved - it is
+blended with the geometric velocities of the next two points.</p>
+<p><strong>Acceleration</strong> (fourth pass, <code>recalculate_longitudinal_acceleration</code>):</p>
+<div class="highlight"><pre><span></span><code>a[i] = (v[i+1] - v[i]) / dt
+</code></pre></div>
+<p>The last point gets <code>0.0</code> (explicitly zeroed).</p>
+<p><strong>Consequences:</strong></p>
+<ul>
+<li>Any velocity profile set by the upstream planner (including stop points, speed limits,
+  deceleration ramps) is <strong>overwritten</strong> for all points. Even v[0], which is initially copied
+  from the input, is blended with the next two geometric velocities by the moving average.</li>
+<li>The velocity at each point reflects only how far the optimizer moved that point relative
+  to the previous one over one dt interval.</li>
+<li>There is no mechanism inside the QP smoother to respect a maximum speed constraint per point.
+  Speed limiting happens in a separate plugin (<code>TrajectoryVelocityOptimizer</code>) that runs later.</li>
+</ul>
+<hr>
+<h2 id="plugin-pipeline">Plugin Pipeline<a class="headerlink" href="#plugin-pipeline" title="Permanent link">#</a></h2>
+<p>Plugins are loaded in the order specified by <code>plugin_names</code>. Execution order is critical.</p>
+<h3 id="default-pipeline">Default Pipeline<a class="headerlink" href="#default-pipeline" title="Permanent link">#</a></h3>
+<p>The full <code>plugin_names</code> list (from <code>config/trajectory_optimizer.param.yaml</code>) and each plugin's
+enabled state:</p>
+<div class="highlight"><pre><span></span><code>TrajectoryPointFixer                      [ON]
+TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- first pass, before QP
+TrajectoryQPSmoother                      [ON]
+TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- second pass, after QP
+TrajectoryEBSmootherOptimizer             [OFF]
+TrajectorySplineSmoother                  [ON]
+TrajectoryMPTOptimizer                    [OFF]
+TrajectoryVelocityOptimizer               [ON]
+TrajectoryExtender                        [OFF]
+</code></pre></div>
+<p>Note that <code>TrajectoryKinematicFeasibilityEnforcer</code> is listed twice in <code>plugin_names</code> and runs
+both before and after the QP smoother. Each pass is a separate plugin instance operating
+independently.</p>
+<h3 id="plugin-descriptions">Plugin Descriptions<a class="headerlink" href="#plugin-descriptions" title="Permanent link">#</a></h3>
+<h4 id="trajectorypointfixer-enabled">TrajectoryPointFixer (enabled)<a class="headerlink" href="#trajectorypointfixer-enabled" title="Permanent link">#</a></h4>
+<p>Removes duplicate or numerically degenerate points (zero-distance, NaN positions). Optionally
+resamples closely-spaced points. Also runs stop-approach detection and populates the shared
+<code>SemanticSpeedTracker</code> for use by downstream plugins.</p>
+<p>Does not modify velocities or time stamps.</p>
+<p><strong>Stop-approach detection:</strong> Points that are much closer together than normal represent a stop
+zone. With a constant <code>dt</code>, <code>v = ds/dt</code> approaches zero as <code>ds</code> approaches zero, so geometric
+proximity IS a reliable stop indicator. Detection runs in three stages:</p>
 <ol>
-<li><strong>Initial state</strong> <span class="arithmatex">\(x_0\)</span> from the first trajectory point <span class="arithmatex">\((x, y, \psi, v)\)</span>.</li>
-<li><strong>Closest-point start</strong> <code>start_idx</code>: index whose XY position is nearest <span class="arithmatex">\(x_0\)</span> (typically 0 when the ego is at <code>traj_points[0]</code>).</li>
-<li><strong>Horizon sampling</strong>: stage <span class="arithmatex">\(k\)</span> uses point <code>min(start_idx + k, n_pts - 1)</code> — a time-ordered discrete sequence, not arc-length resampling.</li>
-<li><strong>Yaw bias</strong>: reference yaw is shifted by an integer multiple of <span class="arithmatex">\(2\pi\)</span> so heading cost aligns with <span class="arithmatex">\(x_0.\psi\)</span> when planner yaw branches differ.</li>
-<li><strong>Ego-centered coordinates</strong>: all position references and the state passed to the solver are translated by <span class="arithmatex">\(-x_0[:2]\)</span>; the solution is shifted back before writing to the output message.</li>
+<li><code>remove_close_proximity_points</code>: marks points that are geometric near-duplicates (<code>ds &lt;
+min_dist_to_remove_m</code>) as stop candidates.</li>
+<li><code>resample_close_proximity_points</code>: resamples clusters of closely-spaced points and marks the
+   cluster endpoint as a stop candidate if the speed is decreasing.</li>
+<li><code>build_stop_approach_ranges</code>: processes all candidates, confirms speed is decreasing toward
+   the candidate (not increasing — that would be a take-off), traces back the deceleration onset,
+   and stores the resulting range in <code>SemanticSpeedTracker.slow_down_ranges</code>.</li>
 </ol>
-<p>Unit tests for this logic live in <code>tests/test_trajectory_temporal_mpt_optimizer_utils.cpp</code>.</p>
-<h2 id="enabling-the-plugin">Enabling the plugin<a class="headerlink" href="#enabling-the-plugin" title="Permanent link">#</a></h2>
-<p>Two steps are required:</p>
-<ol>
-<li>Add the plugin class to <code>plugin_names</code> in <code>config/trajectory_optimizer.param.yaml</code> (position sets when it runs relative to other plugins).</li>
-<li>Set <code>use_temporal_mpt_optimizer: true</code> (runtime gate inside <code>process()</code>).</li>
-</ol>
-<p>To disable completely, remove the class from <code>plugin_names</code>. Setting only <code>use_temporal_mpt_optimizer: false</code> skips optimization but still loads and initializes acados if the plugin remains in the list.</p>
-<p>Plugin-specific parameters live in <code>config/plugins/trajectory_temporal_mpt_optimizer.param.yaml</code> (loaded from <code>launch/trajectory_optimizer.launch.xml</code>).</p>
-<h2 id="build-requirements">Build requirements<a class="headerlink" href="#build-requirements" title="Permanent link">#</a></h2>
-<ul>
-<li><a href="https://github.com/acados/acados">acados</a> installed and <code>ACADOS_SOURCE_DIR</code> set (see Autoware ansible <code>setup_acados</code> role).</li>
-<li>At configure/build time, Python codegen runs via <code>src/acados_mpt/CMakeLists.txt</code> and produces <code>c_generated_code/</code> in the build tree.</li>
-</ul>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>cg_distance_from_rear_axle_ratio</code></td>
-<td><code>0.8</code></td>
-<td>CG distance from rear axle as a fraction of <code>wheel_base</code> (<code>vehicle_info</code>). <code>lr = ratio × wheel_base</code>, <code>lf = wheel_base − lr</code>. Applied at node startup only (restart to change).</td>
-</tr>
-<tr>
-<td><code>min_points_for_optimization</code></td>
-<td><code>2</code></td>
-<td>Minimum trajectory points required before running MPC</td>
-</tr>
-<tr>
-<td><code>enable_debug_info</code></td>
-<td><code>false</code></td>
-<td>Extra <code>RCLCPP_INFO</code> / <code>WARN</code> on solve success or failure</td>
-</tr>
-<tr>
-<td><code>publish_debug_topics</code></td>
-<td><code>false</code></td>
-<td>Publish reference, odometry, output trajectory, solve status, and control debug topics under <code>~/debug/temporal_mpt/</code></td>
-</tr>
-<tr>
-<td><code>write_replay_fixture</code></td>
-<td><code>false</code></td>
-<td>Write a text fixture for offline replay (e.g. Python generators)</td>
-</tr>
-<tr>
-<td><code>replay_fixture_directory</code></td>
-<td><code>~/.ros/autoware_temporal_mpt_replay</code></td>
-<td>Output directory for replay fixtures</td>
-</tr>
-<tr>
-<td><code>log_replay_fixture_to_console</code></td>
-<td><code>false</code></td>
-<td>Log fixture path and contents to the console</td>
-</tr>
-</tbody>
-</table>
-<p><code>wheel_base</code> is read from the vehicle description (<code>vehicle_info.param.yaml</code>, loaded with the stack via <code>common_param_path</code> in <code>trajectory_optimizer.launch.xml</code>), not from this plugin YAML.</p>
-<h2 id="debug-visualization">Debug visualization<a class="headerlink" href="#debug-visualization" title="Permanent link">#</a></h2>
-<p>With <code>publish_debug_topics: true</code>, run:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_trajectory_optimizer<span class="w"> </span>temporal_mpt_debug_visualizer.py
+<p>If no candidates produce valid stop approach ranges, a velocity-profile scan
+(<code>detect_velocity_based_stop</code>) is run as a fallback for constant-spacing trajectories where no
+geometric clusters exist.</p>
+<h4 id="trajectorykinematicfeasibilityenforcer-enabled-runs-twice">TrajectoryKinematicFeasibilityEnforcer (enabled, runs twice)<a class="headerlink" href="#trajectorykinematicfeasibilityenforcer-enabled-runs-twice" title="Permanent link">#</a></h4>
+<p>Forward-propagating filter that clamps heading changes at each trajectory segment to respect
+Ackermann steering geometry and a maximum yaw rate limit. At each step:</p>
+<div class="highlight"><pre><span></span><code>delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)
 </code></pre></div>
-<p>See <code>scripts/temporal_mpt_debug_visualizer.py</code> for topic names and options.</p>
-<h2 id="comparison-with-spatial-mpt">Comparison with spatial MPT<a class="headerlink" href="#comparison-with-spatial-mpt" title="Permanent link">#</a></h2>
+<p>where <code>kappa_max = tan(delta_max) / L</code>, <code>s</code> is the segment arc length, and <code>avg_dt</code> is a single
+average time step computed from all <code>time_from_start</code> deltas in the input trajectory (fallback:
+0.1 s). The same <code>avg_dt</code> is used for every segment - per-segment dt is not recomputed from
+distance or velocity.</p>
+<p>Positions are adjusted to enforce this limit while preserving segment arc lengths. Velocities
+and <code>time_from_start</code> are not modified.</p>
+<p>Running it <strong>before</strong> the QP smoother pre-conditions the path so the QP operates on a
+kinematically plausible input. Running it <strong>after</strong> the QP smoother catches any constraint
+violations reintroduced by the smoothing. The second pass uses the same parameter set as the
+first.</p>
+<h4 id="trajectoryqpsmoother-enabled">TrajectoryQPSmoother (enabled)<a class="headerlink" href="#trajectoryqpsmoother-enabled" title="Permanent link">#</a></h4>
+<p>The primary path smoother. Solves a quadratic program that minimizes path curvature
+(<code>||p[i+1] - 2*p[i] + p[i-1]||^2 / dt^2</code>) while penalizing deviation from the input path.</p>
+<p>Decision variables: <code>[x_0, y_0, ..., x_{N-1}, y_{N-1}]</code> - positions only.</p>
+<p>Hard constraints: the first <code>num_constrained_points_start</code> and last <code>num_constrained_points_end</code>
+points are fixed to their input positions (defaults: start = 3, end = 0). Additionally, any
+stop points detected by <code>TrajectoryPointFixer</code> (via <code>SemanticSpeedTracker</code>) are added as hard
+equality constraints, pinning their positions regardless of smoothness weight.</p>
+<p>After solving, velocities and accelerations are recomputed from the smoothed positions as
+described above. For points within detected stop approach ranges, the planner's original velocity
+profile is restored after the moving average step, preserving the intended deceleration curve.
+The stop point itself is forced to zero velocity unconditionally. Orientations are recalculated
+from the smoothed path geometry. Optionally, orientations can instead be copied from the original
+input trajectory via nearest-neighbor matching (<code>preserve_input_trajectory_orientation</code>), but
+this is <strong>disabled by default</strong>.</p>
+<p><strong>The QP smoother must run before any plugin that resamples the trajectory.</strong> Resampling
+(changing the number of points or their spacing in arc length) breaks the constant-dt assumption
+and invalidates the curvature penalty scaling.</p>
+<h4 id="trajectorysplinesmoother-enabled">TrajectorySplineSmoother (enabled)<a class="headerlink" href="#trajectorysplinesmoother-enabled" title="Permanent link">#</a></h4>
+<p>Resamples the trajectory using Akima spline interpolation at a fixed arc-length resolution
+(<code>interpolation_resolution_m</code>, default: 0.2 m).
+<code>preserve_input_trajectory_orientation</code> is available but <strong>disabled by default</strong>; orientations
+are computed from the spline geometry. After resampling, <code>time_from_start</code> is recomputed for all trajectory points; any <code>time_from_start</code> values supplied by upstream modules are therefore overwritten.</p>
+<p>This plugin <strong>breaks the constant-dt property</strong>. After it runs, points are no longer at uniform
+time intervals - they are at uniform arc-length intervals. This is intentional and necessary:
+the downstream controller requires points that are not too close in space, regardless of velocity.
+If points are too close (as they are at low speed with constant-dt sampling), the controller
+produces poor curvature tracking.</p>
+<p>The spline smoother must run <strong>after</strong> the QP smoother for this reason.</p>
+<h4 id="trajectoryvelocityoptimizer-enabled">TrajectoryVelocityOptimizer (enabled)<a class="headerlink" href="#trajectoryvelocityoptimizer-enabled" title="Permanent link">#</a></h4>
+<p>Operates on the velocity profile of the trajectory after the path geometry has been fixed by
+the smoothers. It does not modify positions.</p>
+<p>Responsibilities:</p>
+<ul>
+<li><strong>Speed cap</strong> (<code>limit_speed</code>, enabled by default): applies a global maximum speed from an
+  external velocity limit topic or the configured default.</li>
+<li><strong>Lateral acceleration limiting</strong> (<code>limit_lateral_acceleration</code>, disabled by default): for each consecutive point pair, it
+  computes <code>yaw_rate = |delta_yaw / delta_time|</code> from orientation differences and
+  <code>time_from_start</code>. If <code>v * yaw_rate &gt; a_lat_max</code>, the point's speed is capped to
+  <code>v_limit = a_lat_max / yaw_rate</code>.</li>
+<li><strong>Jerk-filtered velocity smoothing</strong> (<code>smooth_velocities</code>, disabled by default): runs the
+  in-package <code>ContinuousJerkSmoother</code> (QP-based, via <code>autoware_qp_interface</code>) that enforces
+  <code>limit.max_acc</code>, <code>limit.min_acc</code>, <code>limit.max_jerk</code>, <code>limit.min_jerk</code> on the velocity profile.</li>
+<li><strong>Pull-out speed</strong> (<code>set_engage_speed</code>, disabled by default): clamps initial velocity to
+  <code>target_pull_out_speed_mps</code> when the vehicle is near standstill. Applied after speed limiting
+  and jerk smoothing so those stages cannot overwrite the engage/pull-out constraints.</li>
+</ul>
+<p>The velocity optimizer is the only stage where velocity values in the output trajectory are
+computed with awareness of physical limits. Everything before it treats velocity as a side effect
+of position geometry.</p>
+<h3 id="disabled-plugins">Disabled Plugins<a class="headerlink" href="#disabled-plugins" title="Permanent link">#</a></h3>
+<h4 id="trajectoryebsmootheroptimizer-disabled">TrajectoryEBSmootherOptimizer (disabled)<a class="headerlink" href="#trajectoryebsmootheroptimizer-disabled" title="Permanent link">#</a></h4>
+<p>Elastic Band path smoother wrapping <code>autoware_path_smoother</code>. Resamples the trajectory
+internally. After smoothing, recomputes <code>time_from_start</code> from velocity and arc length.</p>
+<p>This plugin is effectively deprecated in the current pipeline. It conflicts with the QP smoother
+ordering constraint and its output quality relative to the QP smoother does not justify its
+presence. It exists for historical reasons.</p>
+<h4 id="trajectoryextender-disabled">TrajectoryExtender (disabled)<a class="headerlink" href="#trajectoryextender-disabled" title="Permanent link">#</a></h4>
+<p>Extends the trajectory backward by prepending past ego states stored in a rolling history buffer.
+The intent is to provide the controller a trajectory that starts behind the vehicle's current
+position, giving it a smooth reference even when the vehicle has advanced past the planner's
+output head.</p>
+<p>Known issue: the extender introduces a discontinuity at the junction between the history points
+and the planner output, which causes artifacts in the QP smoother and degrades smoothing results.
+For this reason it is disabled and its placement in the pipeline is near the end (after smoothers)
+to minimize damage if enabled. This discontinuity is an open problem.</p>
+<h4 id="trajectorymptoptimizer-disabled-experimental">TrajectoryMPTOptimizer (disabled, experimental)<a class="headerlink" href="#trajectorymptoptimizer-disabled-experimental" title="Permanent link">#</a></h4>
+<p>Model Predictive Trajectory optimizer wrapping <code>autoware_path_optimizer</code>'s <code>MPTOptimizer</code>.
+Takes the trajectory and constructs simple perpendicular corridor bounds around it, then solves
+a bicycle-model QP to refine the path within those bounds.</p>
+<p>After optimization, recomputes kinematics using kinematic equations (<code>v^2 = v0^2 + 2as</code>) rather
+than constant dt, propagating <code>time_from_start</code> forward through the trajectory.</p>
+<p>This plugin was conceived as a complement to or replacement for the spline smoother, but it did
+not produce results good enough to justify enabling it by default. The corridor bounds are
+synthetic (perpendicular offsets from the reference path) rather than derived from map data,
+which limits the optimizer's ability to meaningfully reshape the trajectory.</p>
+<hr>
+<h2 id="ordering-constraints-summary">Ordering Constraints Summary<a class="headerlink" href="#ordering-constraints-summary" title="Permanent link">#</a></h2>
 <table>
 <thead>
 <tr>
-<th>Aspect</th>
-<th>Spatial <code>TrajectoryMPTOptimizer</code></th>
-<th>Temporal <code>TrajectoryTemporalMPTOptimizer</code></th>
+<th>Rule</th>
+<th>Reason</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Solver</td>
-<td>QP (<code>autoware_path_optimizer</code>)</td>
-<td>acados SQP</td>
+<td>Kinematic enforcer before QP</td>
+<td>Pre-conditions path so QP operates on feasible input</td>
 </tr>
 <tr>
-<td>Reference parameterization</td>
-<td>Spatial / corridor-based</td>
-<td>Time-ordered discrete points</td>
+<td>QP smoother before spline/EB smoother</td>
+<td>Both resampling plugins destroy constant-dt; QP needs it</td>
 </tr>
 <tr>
-<td>Bounds</td>
-<td>Adaptive lateral corridor</td>
-<td>Lateral-acceleration + steering limits</td>
+<td>Kinematic enforcer after QP (second pass)</td>
+<td>Catches constraint violations reintroduced by smoothing</td>
 </tr>
 <tr>
-<td>Velocity handling</td>
-<td>Recalculated post-optimization</td>
-<td>Optimized as a state</td>
+<td>QP smoother before velocity optimizer</td>
+<td>Velocity optimizer works on the final path geometry</td>
 </tr>
 <tr>
-<td>Typical pipeline position</td>
-<td>After multiple smoothers</td>
-<td>Replaces smoothers + spatial MPT</td>
+<td>Point fixer at start</td>
+<td>Degenerate inputs break the QP solver</td>
+</tr>
+<tr>
+<td>Extender after smoothers (if enabled)</td>
+<td>Discontinuity artifacts damage smoother output</td>
 </tr>
 </tbody>
 </table>
-<h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">#</a></h2>
-<ul>
-<li>Only the first <span class="arithmatex">\(N+1\)</span> trajectory points are overwritten with the MPC state trajectory; the rest of the message is unchanged.</li>
-<li>On solver failure (<code>status != 0</code>), the plugin returns without modifying <code>traj_points</code> (debug topics may still publish the last iterate if enabled).</li>
-<li>Reference yaw uses a <span class="arithmatex">\(2\pi\)</span> bias so heading cost aligns with the initial state when planner yaw branches differ.</li>
-<li>Requires a successful acados build; the plugin creates the solver at initialization when loaded.</li>
-<li>Does not extend the trajectory backward; use <code>TrajectoryExtender</code> separately if that behavior is still needed.</li>
-</ul></div>
+<hr>
+<h2 id="why-arc-length-resampling-is-avoided">Why Arc-Length Resampling Is Avoided<a class="headerlink" href="#why-arc-length-resampling-is-avoided" title="Permanent link">#</a></h2>
+<p>The optimizer operates under a contract with the upstream planner: the planner outputs (x, y)
+positions at a constant time interval. The optimizer's job is to refine those positions while
+introducing the minimum changes necessary to produce a smooth, feasible path.</p>
+<p>This minimal-change philosophy is deliberate. If the optimizer aggressively resamples and
+reshapes the trajectory, it becomes impossible to attribute failures correctly. When something
+goes wrong in the vehicle's behavior, you need to know whether the fault is on the model side
+(the planner produced a bad trajectory) or on the optimizer side (the optimizer distorted a
+good one). Heavy arc-length resampling muddles that boundary: the optimizer's output no longer
+resembles the planner's intent, and debugging becomes guesswork.</p>
+<p>By preserving the relative spacing of points - moving them laterally to smooth the path, but
+not redistributing them along the arc - the optimizer keeps the planner's intent legible in its
+output. Each output point corresponds directly to an input point. Deviations are local and
+bounded by the fidelity weight.</p>
+<p>Arc-length resampling also has a concrete technical incompatibility with the QP smoother. The
+curvature penalty term:</p>
+<div class="highlight"><pre><span></span><code>J_smooth = weight_smoothness / dt^2 * sum || p[i+1] - 2*p[i] + p[i-1] ||^2
+</code></pre></div>
+<p>is a second-order finite difference approximation of acceleration, valid only when consecutive
+points are separated by a constant time interval <code>dt</code>. After arc-length resampling, points are
+separated by a constant spatial interval <code>ds</code> instead. The QP smoother has no way to detect
+this - it will still run and converge, but the weight scaling is wrong and the
+smoothness-vs-fidelity tradeoff will be miscalibrated relative to the configured parameters.</p>
+<p>The spline smoother at the end of the pipeline does arc-length resample. This is a known and
+accepted exception: the downstream controller requires points that are not too close in space,
+and at low speed with constant-dt sampling they are. The spline smoother runs after all
+position-domain optimization is complete, so it does not corrupt any optimizer's assumptions.
+Any plugin that arc-length resamples before the QP smoother has no place in this pipeline.</p>
+<hr>
+<h2 id="orientation-handling">Orientation Handling<a class="headerlink" href="#orientation-handling" title="Permanent link">#</a></h2>
+<p>Orientations are not optimized directly by any plugin. They are recomputed from path geometry
+after position changes:</p>
+<div class="highlight"><pre><span></span><code>yaw[i] = atan2(y[i+1] - y[i], x[i+1] - x[i])
+</code></pre></div>
+<p>Both the QP smoother and the spline smoother offer <code>preserve_input_trajectory_orientation</code>, which
+copies orientations from the original input via nearest-neighbor matching instead of computing
+them from the smoothed geometry. This option is <strong>disabled by default in both plugins</strong>, so
+orientations are derived purely from the smoothed path tangent.</p>
+<p>When enabled, the rationale is that the diffusion planner produces orientations that encode the
+intended heading, which may differ from the pure geometric tangent of the smoothed path. If the
+smoothing deviation is small relative to the configured distance threshold (QP smoother:
+<code>max_distance_for_orientation_m</code>; spline smoother: <code>max_distance_discrepancy_m</code>; both default
+to 5.0 m), the copied orientation is close enough to the geometric tangent that the error is
+acceptable.</p>
+<hr>
+<h2 id="known-limitations">Known Limitations<a class="headerlink" href="#known-limitations" title="Permanent link">#</a></h2>
+<ol>
+<li>
+<p><strong>Stop velocity preservation depends on detection.</strong> Stop points are detected from geometric
+   proximity (<code>ds &lt; min_dist_to_remove_m</code>) and velocity profile. If a planner encodes a stop
+   zone with point spacings above the detection threshold and no near-zero velocities below
+   <code>stop_detection_velocity_threshold_mps</code>, the stop will not be detected and the QP smoother
+   will overwrite the velocity profile as normal.</p>
+</li>
+<li>
+<p><strong>Constant-dt is broken at the pipeline end.</strong> The spline smoother as the last geometric step
+   converts the trajectory to arc-length parameterization. Downstream consumers receive a
+   trajectory that does not have constant-dt points. This is currently acceptable for the
+   controller but means the optimizer output cannot be cleanly fed back into another constant-dt
+   optimizer pass.</p>
+</li>
+<li>
+<p><strong>The QP smoother ignores <code>time_from_start</code> in the input.</strong> It uses its own configured
+   <code>time_step_s</code> uniformly. If the input trajectory has a different dt (e.g., because a resampler
+   ran earlier), the QP smoother will produce incorrect velocities without warning.</p>
+</li>
+<li>
+<p><strong>Velocities outside detected stop zones are geometric.</strong> For points not in a detected stop
+   approach range, velocities are recomputed from position differences and blended through a
+   3-point moving average. The planner's velocity values are not preserved there. For detected
+   stop approach zones, the planner's original velocity profile is restored after the moving
+   average and the stop point is forced to zero (see TrajectoryQPSmoother section).</p>
+</li>
+<li>
+<p><strong>Trajectory extender discontinuity is unresolved.</strong> The history-based backward extension
+   creates a positional gap at the junction point that propagates through the smoothers. No fix
+   is currently planned.</p>
+</li>
+<li>
+<p><strong>MPT bounds are not map-aware.</strong> The MPT optimizer's corridor bounds are simple perpendicular
+   offsets, not derived from lanelet or drivable area data. The optimizer has no knowledge of
+   actual road boundaries. Currently, there are no plans to introduce a map dependency into the optimizer node.</p>
+</li>
+</ol></div>
 
 
 
@@ -23096,7 +23133,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../qp_smoother/" class="md-footer__link md-footer__link--prev" aria-label="Previous: QP-Based Trajectory Smoother">
+          <a href="../temporal_mpt_optimizer/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Temporal MPT Optimizer">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23106,20 +23143,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                QP-Based Trajectory Smoother
+                Temporal MPT Optimizer
               </div>
             </div>
           </a>
         
         
           
-          <a href="../trajectory_optimizer_specification/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Optimizer - Specification and Assumptions">
+          <a href="../../../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Ranker">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Trajectory Optimizer - Specification and Assumptions
+                Trajectory Ranker
               </div>
             </div>
             <div class="md-footer__button md-icon">

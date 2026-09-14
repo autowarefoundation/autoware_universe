@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_processor/docs/qp_smoother/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_modifier/docs/TrafficLightStop/">
       
       
-        <link rel="prev" href="../mpt_optimizer/">
+        <link rel="prev" href="../../">
       
       
-        <link rel="next" href="../temporal_mpt_optimizer/">
+        <link rel="next" href="../continuous_jerk_filter/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>QP-Based Trajectory Smoother - Autoware Universe Documentation</title>
+        <title>Traffic Light Stop - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#qp-based-trajectory-smoother" class="md-skip">
+        <a href="#traffic-light-stop" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              QP-Based Trajectory Smoother
+              Traffic Light Stop
             
           </span>
         </div>
@@ -14823,7 +14823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../autoware_trajectory_modifier" class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -22631,10 +22631,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#purposerole" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Purpose/Role
       
     </span>
   </a>
@@ -22642,22 +22642,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mathematical-formulation" class="md-nav__link">
+  <a href="#algorithm-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mathematical Formulation
+        Algorithm Overview
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Mathematical Formulation">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interface">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#decision-variables" class="md-nav__link">
+  <a href="#context-data" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Decision Variables
+        Context &amp; Data
       
     </span>
   </a>
@@ -22665,133 +22676,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#objective-function" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Objective Function
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#velocity-based-fidelity-weighting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Velocity-Based Fidelity Weighting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Velocity-Based Fidelity Weighting">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#motivation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Motivation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sigmoid-weight-function" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sigmoid Weight Function
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#weight-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Weight Behavior
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#stop-point-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Stop Point Handling
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Stop Point Handling">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hard-position-constraint" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hard Position Constraint
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#velocity-profile-preservation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Velocity Profile Preservation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#post-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Post-Processing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -22800,232 +22684,10 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Parameters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#core-optimization-weights" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Optimization Weights
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#velocity-based-fidelity" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Velocity-Based Fidelity
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#point-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Point Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#solver-settings" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Solver Settings
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#orientation-preservation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Orientation Preservation
-      
-    </span>
-  </a>
-  
 </li>
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-1-disable-velocity-based-fidelity" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example 1: Disable Velocity-Based Fidelity
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-2-tune-velocity-threshold" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example 2: Tune Velocity Threshold
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-3-more-aggressive-low-speed-smoothing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example 3: More Aggressive Low-Speed Smoothing
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-4-sharper-transition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example 4: Sharper Transition
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-5-constrain-only-first-point" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example 5: Constrain Only First Point
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-6-constrain-last-2-points" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example 6: Constrain Last 2 Points
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-7-preserve-larger-initial-region" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example 7: Preserve Larger Initial Region
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#debugging" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Debugging
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Debugging">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#view-debug-logs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        View Debug Logs
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#check-parameter-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Check Parameter Values
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#monitor-performance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Monitor Performance
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
   
 </li>
       
@@ -23049,252 +22711,130 @@
   
 
 
-<div><h1 id="qp-based-trajectory-smoother">QP-Based Trajectory Smoother<a class="headerlink" href="#qp-based-trajectory-smoother" title="Permanent link">#</a></h1>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
-<p>The QP (Quadratic Programming) smoother is a plugin in the trajectory optimizer that provides optimization-based trajectory smoothing using the OSQP solver. It smooths the geometric path (x,y positions) while maintaining path fidelity to the original trajectory from the planner.</p>
-<h2 id="mathematical-formulation">Mathematical Formulation<a class="headerlink" href="#mathematical-formulation" title="Permanent link">#</a></h2>
-<h3 id="decision-variables">Decision Variables<a class="headerlink" href="#decision-variables" title="Permanent link">#</a></h3>
-<p>The optimization operates on 2D path positions:</p>
-<div class="highlight"><pre><span></span><code>x = [x_0, y_0, x_1, y_1, ..., x_{N-1}, y_{N-1}]
-</code></pre></div>
-<p>where N is the number of trajectory points.</p>
-<h3 id="objective-function">Objective Function<a class="headerlink" href="#objective-function" title="Permanent link">#</a></h3>
-<p>The optimizer minimizes a weighted combination of two terms:</p>
-<div class="highlight"><pre><span></span><code>minimize: J = J_smoothness + J_fidelity
-</code></pre></div>
-<h4 id="smoothness-term">Smoothness Term<a class="headerlink" href="#smoothness-term" title="Permanent link">#</a></h4>
-<p>Minimizes path curvature using second-order finite differences:</p>
-<div class="highlight"><pre><span></span><code>J_smoothness = w_smoothness * Σ ||(p_{i+1} - 2*p_i + p_{i-1})||²
-</code></pre></div>
-<p>This term is scaled by <code>1/dt²</code> for velocity-aware smoothing.</p>
-<h4 id="fidelity-term">Fidelity Term<a class="headerlink" href="#fidelity-term" title="Permanent link">#</a></h4>
-<p>Keeps the smoothed path close to the original trajectory:</p>
-<div class="highlight"><pre><span></span><code>J_fidelity = Σ w_i * ||p_i - p_i^orig||²
-</code></pre></div>
-<p>where <code>w_i</code> is the per-point fidelity weight (see Velocity-Based Fidelity section).</p>
-<h3 id="constraints">Constraints<a class="headerlink" href="#constraints" title="Permanent link">#</a></h3>
+<div><h1 id="traffic-light-stop">Traffic Light Stop<a class="headerlink" href="#traffic-light-stop" title="Permanent link">#</a></h1>
+<h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
+<p>This module modifies DP trajectories if they are found to run through a red or amber traffic light. If it finds that the DP trajectories causes the ego to cross or overshoot a red/amber traffic light, it will insert a stop point to ensure traffic rules compliance.</p>
+<p>This module uses the TrafficLightComplianceChecker to check for violations. For details of the compliance checker logic refer to
+<a href="../../../../common/autoware_traffic_light_compliance_checker/">Compliance Checker Documentation</a>.</p>
+<p>The TrafficLightComplianceChecker will check for violations and return the results. The traffic light stop module will then scan the provided results for any red/amber light crossing. If the trajectory is crossing a red/amber light then a stop point is inserted.</p>
+<h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
+<p>The following diagram shows the overall logic flow of the TrafficLightStop module:</p>
+<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjEiIGRhdGEtZGlhZ3JhbS10eXBlPSJBQ1RJVklUWSIgc3R5bGU9IndpZHRoOjQwM3B4O2hlaWdodDoxMjY0cHg7YmFja2dyb3VuZDojRkZGRkZGOyIgd2lkdGg9IjQwM3B4IiBoZWlnaHQ9IjEyNjRweCIgdmlld0JveD0iMCAwIDQwMyAxMjY0IiB6b29tQW5kUGFuPSJtYWduaWZ5IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyI+PD9wbGFudHVtbCAxLjIwMjYuOGJldGExPz48ZGVmcy8+PGcgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGxlbmd0aEFkanVzdD0ic3BhY2luZyI+PGVsbGlwc2UgY3g9IjIwMy44MTEiIGN5PSIyNSIgcng9IjEwIiByeT0iMTAiIGZpbGw9IiMyMjIiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48cmVjdCB4PSI1Ni4wMzYiIHk9IjQ1IiB3aWR0aD0iMzAxLjQyMyIgaGVpZ2h0PSI1NDIuMzkxIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48cGF0aCBkPSJNMjM0LjkzOCw0NSBMMjM0LjkzOCw1NC4yOTcgTDIyNC45MzgsNjQuMjk3IEw1Ni4wMzYsNjQuMjk3IiBzdHlsZT0ic3Ryb2tlOiMwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIGZpbGw9Im5vbmUiLz48dGV4dCB4PSI1OS4wMzYiIHk9IjU4Ljk5NSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxNCIgdGV4dExlbmd0aD0iMTY4LjkwMiI+SXMgTW9kaWZpY2F0aW9uIFJlcXVpcmVkPC90ZXh0PjxyZWN0IHg9IjE1Ni4wMDYiIHk9IjEzMS4zMDkiIHdpZHRoPSI5NS42MDkiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRkZGRkUwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE2Ni4wMDYiIHk9IjE1Mi40NDciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9Ijc1LjYwOSI+UmV0dXJuIEZhbHNlPC90ZXh0PjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iMjA0LjM5MSIgcng9IjExIiByeT0iMTEiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48ZWxsaXBzZSBjeD0iMjAzLjgxMSIgY3k9IjIwNC4zOTEiIHJ4PSI2IiByeT0iNiIgZmlsbD0iIzIyMiIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iOTMuMTY0LDgxLjI5NywzMTQuNDU4LDgxLjI5NywzMjYuNDU4LDk0LjEwMiwzMTQuNDU4LDEwNi45MDYsOTMuMTY0LDEwNi45MDYsODEuMTY0LDk0LjEwMiw5My4xNjQsODEuMjk3IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMjA3LjgxMSIgeT0iMTE3LjExNyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTkuMDA4Ij55ZXM8L3RleHQ+PHRleHQgeD0iOTMuMTY0IiB5PSI5MS41MDciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjIxNy43OTgiPklzIEZlYXR1cmUgRGlzYWJsZWQgT1IgSW52YWxpZCBJbnB1dCBPUjwvdGV4dD48dGV4dCB4PSIxMDQuNTY0IiB5PSIxMDQuMzEyIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxOTguNDk0Ij5Db21wbGlhbmNlIENoZWNrZXIgTm90IEluaXRpYWxpemVkPzwvdGV4dD48dGV4dCB4PSIzMjYuNDU4IiB5PSI5MS41MDciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjEzLjcwMiI+bm88L3RleHQ+PHJlY3QgeD0iNjYuMDM2IiB5PSIyNTcuMzkxIiB3aWR0aD0iMjc1LjU1MSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iNzYuMDM2IiB5PSIyNzguNTI5IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIyNTUuNTUxIj5Db25zdHVjdCBDb21wbGlhbmNlIENoZWNrZXIgSW5wdXQgU3RydWN0PC90ZXh0PjxyZWN0IHg9IjExOC4yOSIgeT0iMzExLjM1OSIgd2lkdGg9IjE3MS4wNDMiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjQUREOEU2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjEyOC4yOSIgeT0iMzMyLjQ5OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTUxLjA0MyI+UnVuIENvbXBsaWFuY2UgQ2hlY2tlcjwvdGV4dD48cmVjdCB4PSIxNTYuMDA2IiB5PSI0MTUuMzQiIHdpZHRoPSI5NS42MDkiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRkZGRkUwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE2Ni4wMDYiIHk9IjQzNi40NzkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9Ijc1LjYwOSI+UmV0dXJuIEZhbHNlPC90ZXh0PjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iNDg4LjQyMiIgcng9IjExIiByeT0iMTEiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48ZWxsaXBzZSBjeD0iMjAzLjgxMSIgY3k9IjQ4OC40MjIiIHJ4PSI2IiByeT0iNiIgZmlsbD0iIzIyMiIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTMxLjczNiwzNjUuMzI4LDI3NS44ODYsMzY1LjMyOCwyODcuODg2LDM3OC4xMzMsMjc1Ljg4NiwzOTAuOTM4LDEzMS43MzYsMzkwLjkzOCwxMTkuNzM2LDM3OC4xMzMsMTMxLjczNiwzNjUuMzI4IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMjA3LjgxMSIgeT0iNDAxLjE0OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTkuMDA4Ij55ZXM8L3RleHQ+PHRleHQgeD0iMTMxLjczNiIgeT0iMzc1LjUzOSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTQwLjY1MyI+SXMgUmVzdWx0cyBVbmF2YWlsYWJsZSBPUjwvdGV4dD48dGV4dCB4PSIxNDIuNjkzIiB5PSIzODguMzQzIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxMjIuMjM1Ij5ObyBWaW9sYXRpb24gaXMgRm91bmQ/PC90ZXh0Pjx0ZXh0IHg9IjI4Ny44ODYiIHk9IjM3NS41MzkiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjEzLjcwMiI+bm88L3RleHQ+PHJlY3QgeD0iODUuOTE0IiB5PSI1NDEuNDIyIiB3aWR0aD0iMjM1Ljc5NSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iOTUuOTE0IiB5PSI1NjIuNTYxIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIyMTUuNzk1Ij5TZXQgTmVhcmVzdCBWaW9sYXRpb24gJmFtcDsgRGVidWcgRGF0YTwvdGV4dD48cmVjdCB4PSIxNiIgeT0iNTk3LjM5MSIgd2lkdGg9IjM2Ny41ODMiIGhlaWdodD0iNTUwLjk5NiIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PHBhdGggZD0iTTE0OC4yNjgsNTk3LjM5MSBMMTQ4LjI2OCw2MDYuNjg4IEwxMzguMjY4LDYxNi42ODggTDE2LDYxNi42ODgiIHN0eWxlPSJzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MS41OyIgZmlsbD0ibm9uZSIvPjx0ZXh0IHg9IjE5IiB5PSI2MTEuMzg2IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjE0IiB0ZXh0TGVuZ3RoPSIxMjIuMjY4Ij5Nb2RpZnkgVHJhamVjdG9yeTwvdGV4dD48cmVjdCB4PSIxMTAuNjY3IiB5PSI2MzMuNjg4IiB3aWR0aD0iMTg2LjI4OSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMTIwLjY2NyIgeT0iNjU0LjgyNiIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTY2LjI4OSI+Q2FsY3VsYXRlIFRyYWplY3RvcnkgTGVuZ3RoPC90ZXh0PjxyZWN0IHg9IjEyNy43MzUiIHk9IjY4Ny42NTYiIHdpZHRoPSIxNTIuMTUyIiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0FERDhFNiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIxMzcuNzM1IiB5PSI3MDguNzk1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIxMzIuMTUyIj5DYWxjdWxhdGUgU3RvcCBNYXJnaW48L3RleHQ+PHJlY3QgeD0iMzkuMjYxIiB5PSI3NDEuNjI1IiB3aWR0aD0iMzI5LjEiIGhlaWdodD0iNDcuOTM4IiBmaWxsPSIjQUREOEU2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9Ijg4Ljg0NCIgeT0iNzYyLjc2NCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMjI5LjkzNCI+Q2FsY3VsYXRlIFRhcmdldCBTdG9wIFBvaW50IEFyYyBsZW5ndGg8L3RleHQ+PHRleHQgeD0iNDkuMjYxIiB5PSI3NzYuNzMyIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIzMDkuMSI+KENsYW1wZWQgYnkgTWluLiBTdG9wcGluZyBEaXN0YW5jZSAmYW1wOyBUcmFqIExlbmd0aCk8L3RleHQ+PHJlY3QgeD0iMTU2LjAwNiIgeT0iODU3Ljk2NSIgd2lkdGg9Ijk1LjYwOSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGRkZGRTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMTY2LjAwNiIgeT0iODc5LjEwNCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iNzUuNjA5Ij5SZXR1cm4gRmFsc2U8L3RleHQ+PGVsbGlwc2UgY3g9IjIwMy44MTEiIGN5PSI5MzEuNDQ5IiByeD0iMTEiIHJ5PSIxMSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iOTMxLjQ0OSIgcng9IjYiIHJ5PSI2IiBmaWxsPSIjMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxMjYuMjUsODA5LjU2MywyODEuMzcyLDgwOS41NjMsMjkzLjM3Miw4MjEuNTYzLDI4MS4zNzIsODMzLjU2MywxMjYuMjUsODMzLjU2MywxMTQuMjUsODIxLjU2MywxMjYuMjUsODA5LjU2MyIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9IjIwNy44MTEiIHk9Ijg0My43NzMiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjE5LjAwOCI+eWVzPC90ZXh0Pjx0ZXh0IHg9IjEyNi4yNSIgeT0iODI1LjM3MSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTU1LjEyMyI+SXMgU3RvcCBQb2ludCBFeGlzdHMgYWxyZWFkeT88L3RleHQ+PHRleHQgeD0iMjkzLjM3MiIgeT0iODE4Ljk2OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTMuNzAyIj5ubzwvdGV4dD48cG9seWdvbiBwb2ludHM9IjExNy44MTQsOTg0LjQ0OSwyODkuODA4LDk4NC40NDksMzAxLjgwOCw5OTYuNDQ5LDI4OS44MDgsMTAwOC40NDksMTE3LjgxNCwxMDA4LjQ0OSwxMDUuODE0LDk5Ni40NDksMTE3LjgxNCw5ODQuNDQ5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMTE3LjgxNCIgeT0iMTAwMC4yNTciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjE3MS45OTMiPklzIEFycml2ZWQgYXQgVGFyZ2V0IFN0b3AgUG9pbnQ/PC90ZXh0Pjx0ZXh0IHg9Ijg2LjgwNiIgeT0iOTkzLjg1NSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTkuMDA4Ij55ZXM8L3RleHQ+PHRleHQgeD0iMzAxLjgwOCIgeT0iOTkzLjg1NSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTMuNzAyIj5ubzwvdGV4dD48cmVjdCB4PSIyOCIgeT0iMTAxOC40NDkiIHdpZHRoPSIxMzUuNjI5IiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIzOCIgeT0iMTAzOS41ODgiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjExNS42MjkiPlNldCBTdG9wIFRyYWplY3Rvcnk8L3RleHQ+PHJlY3QgeD0iMjUyLjAzMiIgeT0iMTAxOC40NDkiIHdpZHRoPSIxMTkuNTUxIiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIyNjIuMDMyIiB5PSIxMDM5LjU4OCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iOTkuNTUxIj5JbnNlcnQgU3RvcCBQb2ludDwvdGV4dD48cG9seWdvbiBwb2ludHM9IjIwMy44MTEsMTA1OC40MTgsMjE1LjgxMSwxMDcwLjQxOCwyMDMuODExLDEwODIuNDE4LDE5MS44MTEsMTA3MC40MTgsMjAzLjgxMSwxMDU4LjQxOCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxyZWN0IHg9IjEzNS4zODEiIHk9IjExMDIuNDE4IiB3aWR0aD0iMTM2Ljg1OSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNBREQ4RTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMTQ1LjM4MSIgeT0iMTEyMy41NTciIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjExNi44NTkiPlNldCBQbGFubmluZyBGYWN0b3I8L3RleHQ+PHJlY3QgeD0iMTU3Ljk5MyIgeT0iMTE2OC4zODciIHdpZHRoPSI5MS42MzciIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjOTBFRTkwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjE2Ny45OTMiIHk9IjExODkuNTI1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSI3MS42MzciPlJldHVybiBUcnVlPC90ZXh0PjxlbGxpcHNlIGN4PSIyMDMuODExIiBjeT0iMTIzMy4zNTUiIHJ4PSIxMSIgcnk9IjExIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9IjIwMy44MTEiIGN5PSIxMjMzLjM1NSIgcng9IjYiIHJ5PSI2IiBmaWxsPSIjMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIxNjUuMjc3IiB4Mj0iMjAzLjgxMSIgeTI9IjE5My4zOTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsMTgzLjM5MSwyMDMuODExLDE5My4zOTEsMjA3LjgxMSwxODMuMzkxLDIwMy44MTEsMTg3LjM5MSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjEwNi45MDYiIHgyPSIyMDMuODExIiB5Mj0iMTMxLjMwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSwxMjEuMzA5LDIwMy44MTEsMTMxLjMwOSwyMDcuODExLDEyMS4zMDksMjAzLjgxMSwxMjUuMzA5IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzMjYuNDU4IiB5MT0iOTQuMTAyIiB4Mj0iMzM4LjQ1OCIgeTI9Ijk0LjEwMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzM0LjQ1OCwxNjMuMzkxLDMzOC40NTgsMTczLjM5MSwzNDIuNDU4LDE2My4zOTEsMzM4LjQ1OCwxNjcuMzkxIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzMzguNDU4IiB5MT0iOTQuMTAyIiB4Mj0iMzM4LjQ1OCIgeTI9IjIzNy4zOTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMzM4LjQ1OCIgeTE9IjIzNy4zOTEiIHgyPSIyMDMuODExIiB5Mj0iMjM3LjM5MSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iMjM3LjM5MSIgeDI9IjIwMy44MTEiIHkyPSIyNTcuMzkxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDI0Ny4zOTEsMjAzLjgxMSwyNTcuMzkxLDIwNy44MTEsMjQ3LjM5MSwyMDMuODExLDI1MS4zOTEiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIyOTEuMzU5IiB4Mj0iMjAzLjgxMSIgeTI9IjMxMS4zNTkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsMzAxLjM1OSwyMDMuODExLDMxMS4zNTksMjA3LjgxMSwzMDEuMzU5LDIwMy44MTEsMzA1LjM1OSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjQ0OS4zMDkiIHgyPSIyMDMuODExIiB5Mj0iNDc3LjQyMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw0NjcuNDIyLDIwMy44MTEsNDc3LjQyMiwyMDcuODExLDQ2Ny40MjIsMjAzLjgxMSw0NzEuNDIyIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iMzkwLjkzOCIgeDI9IjIwMy44MTEiIHkyPSI0MTUuMzQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsNDA1LjM0LDIwMy44MTEsNDE1LjM0LDIwNy44MTEsNDA1LjM0LDIwMy44MTEsNDA5LjM0IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyODcuODg2IiB5MT0iMzc4LjEzMyIgeDI9IjI5OS44ODYiIHkyPSIzNzguMTMzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIyOTUuODg2LDQ0Ny40MjIsMjk5Ljg4Niw0NTcuNDIyLDMwMy44ODYsNDQ3LjQyMiwyOTkuODg2LDQ1MS40MjIiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjI5OS44ODYiIHkxPSIzNzguMTMzIiB4Mj0iMjk5Ljg4NiIgeTI9IjUyMS40MjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMjk5Ljg4NiIgeTE9IjUyMS40MjIiIHgyPSIyMDMuODExIiB5Mj0iNTIxLjQyMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iNTIxLjQyMiIgeDI9IjIwMy44MTEiIHkyPSI1NDEuNDIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDUzMS40MjIsMjAzLjgxMSw1NDEuNDIyLDIwNy44MTEsNTMxLjQyMiwyMDMuODExLDUzNS40MjIiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIzNDUuMzI4IiB4Mj0iMjAzLjgxMSIgeTI9IjM2NS4zMjgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsMzU1LjMyOCwyMDMuODExLDM2NS4zMjgsMjA3LjgxMSwzNTUuMzI4LDIwMy44MTEsMzU5LjMyOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjM1IiB4Mj0iMjAzLjgxMSIgeTI9IjgxLjI5NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw3MS4yOTcsMjAzLjgxMSw4MS4yOTcsMjA3LjgxMSw3MS4yOTcsMjAzLjgxMSw3NS4yOTciIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSI2NjcuNjU2IiB4Mj0iMjAzLjgxMSIgeTI9IjY4Ny42NTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsNjc3LjY1NiwyMDMuODExLDY4Ny42NTYsMjA3LjgxMSw2NzcuNjU2LDIwMy44MTEsNjgxLjY1NiIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjcyMS42MjUiIHgyPSIyMDMuODExIiB5Mj0iNzQxLjYyNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw3MzEuNjI1LDIwMy44MTEsNzQxLjYyNSwyMDcuODExLDczMS42MjUsMjAzLjgxMSw3MzUuNjI1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iODkxLjkzNCIgeDI9IjIwMy44MTEiIHkyPSI5MjAuNDQ5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDkxMC40NDksMjAzLjgxMSw5MjAuNDQ5LDIwNy44MTEsOTEwLjQ0OSwyMDMuODExLDkxNC40NDkiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSI4MzMuNTYzIiB4Mj0iMjAzLjgxMSIgeTI9Ijg1Ny45NjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjE5OS44MTEsODQ3Ljk2NSwyMDMuODExLDg1Ny45NjUsMjA3LjgxMSw4NDcuOTY1LDIwMy44MTEsODUxLjk2NSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjkzLjM3MiIgeTE9IjgyMS41NjMiIHgyPSIzMDUuMzcyIiB5Mj0iODIxLjU2MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzAxLjM3Miw4OTAuNDQ5LDMwNS4zNzIsOTAwLjQ0OSwzMDkuMzcyLDg5MC40NDksMzA1LjM3Miw4OTQuNDQ5IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzMDUuMzcyIiB5MT0iODIxLjU2MyIgeDI9IjMwNS4zNzIiIHkyPSI5NjQuNDQ5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjMwNS4zNzIiIHkxPSI5NjQuNDQ5IiB4Mj0iMjAzLjgxMSIgeTI9Ijk2NC40NDkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9Ijk2NC40NDkiIHgyPSIyMDMuODExIiB5Mj0iOTg0LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSw5NzQuNDQ5LDIwMy44MTEsOTg0LjQ0OSwyMDcuODExLDk3NC40NDksMjAzLjgxMSw5NzguNDQ5IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iNzg5LjU2MyIgeDI9IjIwMy44MTEiIHkyPSI4MDkuNTYzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDc5OS41NjMsMjAzLjgxMSw4MDkuNTYzLDIwNy44MTEsNzk5LjU2MywyMDMuODExLDgwMy41NjMiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjEwNS44MTQiIHkxPSI5OTYuNDQ5IiB4Mj0iOTUuODE0IiB5Mj0iOTk2LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI5NS44MTQiIHkxPSI5OTYuNDQ5IiB4Mj0iOTUuODE0IiB5Mj0iMTAxOC40NDkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjkxLjgxNCwxMDA4LjQ0OSw5NS44MTQsMTAxOC40NDksOTkuODE0LDEwMDguNDQ5LDk1LjgxNCwxMDEyLjQ0OSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzAxLjgwOCIgeTE9Ijk5Ni40NDkiIHgyPSIzMTEuODA4IiB5Mj0iOTk2LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIzMTEuODA4IiB5MT0iOTk2LjQ0OSIgeDI9IjMxMS44MDgiIHkyPSIxMDE4LjQ0OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzA3LjgwOCwxMDA4LjQ0OSwzMTEuODA4LDEwMTguNDQ5LDMxNS44MDgsMTAwOC40NDksMzExLjgwOCwxMDEyLjQ0OSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iOTUuODE0IiB5MT0iMTA1Mi40MTgiIHgyPSI5NS44MTQiIHkyPSIxMDcwLjQxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI5NS44MTQiIHkxPSIxMDcwLjQxOCIgeDI9IjE5MS44MTEiIHkyPSIxMDcwLjQxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTgxLjgxMSwxMDY2LjQxOCwxOTEuODExLDEwNzAuNDE4LDE4MS44MTEsMTA3NC40MTgsMTg1LjgxMSwxMDcwLjQxOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzExLjgwOCIgeTE9IjEwNTIuNDE4IiB4Mj0iMzExLjgwOCIgeTI9IjEwNzAuNDE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjMxMS44MDgiIHkxPSIxMDcwLjQxOCIgeDI9IjIxNS44MTEiIHkyPSIxMDcwLjQxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMjI1LjgxMSwxMDY2LjQxOCwyMTUuODExLDEwNzAuNDE4LDIyNS44MTEsMTA3NC40MTgsMjIxLjgxMSwxMDcwLjQxOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjEwODIuNDE4IiB4Mj0iMjAzLjgxMSIgeTI9IjExMDIuNDE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDEwOTIuNDE4LDIwMy44MTEsMTEwMi40MTgsMjA3LjgxMSwxMDkyLjQxOCwyMDMuODExLDEwOTYuNDE4IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIyMDMuODExIiB5MT0iNTc1LjM5MSIgeDI9IjIwMy44MTEiIHkyPSI2MzMuNjg4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDYyMy42ODgsMjAzLjgxMSw2MzMuNjg4LDIwNy44MTEsNjIzLjY4OCwyMDMuODExLDYyNy42ODgiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjIwMy44MTEiIHkxPSIxMTM2LjM4NyIgeDI9IjIwMy44MTEiIHkyPSIxMTY4LjM4NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTk5LjgxMSwxMTU4LjM4NywyMDMuODExLDExNjguMzg3LDIwNy44MTEsMTE1OC4zODcsMjAzLjgxMSwxMTYyLjM4NyIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjAzLjgxMSIgeTE9IjEyMDIuMzU1IiB4Mj0iMjAzLjgxMSIgeTI9IjEyMjIuMzU1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxOTkuODExLDEyMTIuMzU1LDIwMy44MTEsMTIyMi4zNTUsMjA3LjgxMSwxMjEyLjM1NSwyMDMuODExLDEyMTYuMzU1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjw/cGxhbnR1bWwtc3JjIGhMQjFSamYwNEJ0eEFxUUE1QzZiN20xSEFjZjJZbkhlMUJISGZMbTZVcDFSYmJidFR2UTZMbHR0WmVxSkI0WHhJSXdzakZGY3BOamw5Y21DYi1YbjJwY2pDNWZQcUFDQ2gyYnVJb29Hd09UeTRmdkhJeW1zWE5VSHl6SFB2LTdZX2pEdVNQQzRHSXo5TElYWDc2M1lTaENvNk9mbjMzRnc0T3NkNzd1ZFBXS1RCT3k4OU5nMmVHY3VqNWh2RjhDbnh6MlFORnpiYkVoWFdMRXRCUXIxcFdaSURNS1J5WjFyZVdXWkhoNl9BN19WMUxhSkdzVEZlUGxxUGdJcTMyRXFXVmZOTG5VdGZiWkJEeEJNX1JvLUxlc2tKNFhCcTY3TkpPWExPejlCN0dVOWNTMEJxbXZRdmtBcl9pcHRtS1BJamp1aXlXaXpmeDM2eU9vMlBYbFcyLUNFWlFyUzdwbkU3Tm1ycFh3SUNYZkQ1VXFSczlnSm05SkdLdjNNVzRpT3FaOE1DNEoxS3dMX2NsTkxremwzbWtEdG9pSnZsVXdqYndCRGVmOUctX3NNazkzck1KMTd4NW9ibUdIek9WV19nOEsySTB4V0VzVnF3V08tMHJrSkZ0MGRqUldqektRTVV2V09WYlZaSWlENVRKcklIdHpQWXNoYVRGLW5XSFJ6cFFEczFhM2gyVkZ6d3lEazlXb3lEcGlMWWQ5a3dNSjhfQWJ1SkJGVmVrc0RFUDFsel9WUlV4c3BvNW1iQ0NBZ3pOb0hKb09NRlh1elZGSDR0NVp1Mm0wMD8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title=""></p>
+<h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
+<h3 id="context-data">Context &amp; Data<a class="headerlink" href="#context-data" title="Permanent link">#</a></h3>
+<p>The module utilizes the following data from <code>TrajectoryModifierContext</code> and <code>TrajectoryModifierData</code>:</p>
 <ul>
-<li><strong>Start points</strong>: Configurable number of points from trajectory start are fixed (controlled by <code>num_constrained_points_start</code> parameter, default: 3)</li>
-<li><strong>End points</strong>: Configurable number of points from trajectory end are fixed (controlled by <code>num_constrained_points_end</code> parameter, default: 0)</li>
+<li><strong>Vehicle Info</strong>: Used to account for the vehicle's dimensions (longitudinal offset) when checking for stop line intersections &amp; computing stopping margin.</li>
+<li><strong>Lanelet Map</strong>: Used to find regulatory elements (traffic lights) and their associated stop lines.</li>
+<li><strong>Traffic Light Signals</strong>: Provides the current state (color) of traffic light groups.</li>
+<li><strong>Route</strong>: Used to map traffic light signals to lanelets and filter those that are relevant to the vehicle's path.</li>
+<li><strong>Odometry</strong>: Provides the current ego velocity to determine if ego is stopped and to calculate stopping distances.</li>
+<li><strong>Acceleration</strong>: Provides the current ego acceleration to calculate stopping distances.</li>
 </ul>
-<h2 id="velocity-based-fidelity-weighting">Velocity-Based Fidelity Weighting<a class="headerlink" href="#velocity-based-fidelity-weighting" title="Permanent link">#</a></h2>
-<h3 id="motivation">Motivation<a class="headerlink" href="#motivation" title="Permanent link">#</a></h3>
-<p>At low speeds, trajectory noise from the planner can cause jittery behavior. The velocity-based fidelity feature addresses this by:</p>
-<ul>
-<li><strong>Low speeds</strong>: Lower fidelity weight → more aggressive smoothing.</li>
-<li><strong>High speeds</strong>: Higher fidelity weight → preserve planner intent.</li>
-</ul>
-<h3 id="sigmoid-weight-function">Sigmoid Weight Function<a class="headerlink" href="#sigmoid-weight-function" title="Permanent link">#</a></h3>
-<p>Per-point fidelity weights are computed using a sigmoid function:</p>
-<div class="highlight"><pre><span></span><code>w_i = w_min + (w_max - w_min) * σ(k * (|v_i| - v_th))
-
-where σ(x) = 1 / (1 + exp(-x))
-</code></pre></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li><code>v_th</code>: Velocity threshold at sigmoid midpoint (default: 0.3 m/s)</li>
-<li><code>k</code>: Sigmoid sharpness (default: 50.0, higher = sharper transition)</li>
-<li><code>w_min</code>: Minimum weight at very low speeds (default: 0.01)</li>
-<li><code>w_max</code>: Maximum weight at high speeds (default: 1.0)</li>
-</ul>
-<p><strong>Key Properties:</strong></p>
-<ul>
-<li>Uses absolute velocity magnitude to handle reverse driving</li>
-<li>Smooth continuous transition (no discontinuities)</li>
-<li>Velocity threshold defines where weight is halfway between min/max</li>
-<li>Sharpness controls how rapidly weight changes near threshold</li>
-</ul>
-<h3 id="weight-behavior">Weight Behavior<a class="headerlink" href="#weight-behavior" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>weight
-1.0 |           _______  (high speed, preserve path)
-    |          /
-    |         /
-0.01|_______/            (low speed, allow smoothing)
-      0    v_th      v_max
-           (0.3 m/s)
-             speed
-</code></pre></div>
-<h2 id="stop-point-handling">Stop Point Handling<a class="headerlink" href="#stop-point-handling" title="Permanent link">#</a></h2>
-<p>When <code>TrajectoryPointFixer</code> detects a deceleration-to-stop zone, it populates the shared
-<code>SemanticSpeedTracker</code> with the range of points covering the deceleration. The QP smoother
-uses this information in two ways:</p>
-<h3 id="hard-position-constraint">Hard Position Constraint<a class="headerlink" href="#hard-position-constraint" title="Permanent link">#</a></h3>
-<p>Each detected stop point is added as an equality constraint in the OSQP problem, pinning its
-position regardless of the smoothness weight:</p>
-<div class="highlight"><pre><span></span><code>p[stop_idx] = p[stop_idx]^orig    (hard constraint)
-</code></pre></div>
-<p>This prevents the smoother from displacing the vehicle's intended stop position.</p>
-<h3 id="velocity-profile-preservation">Velocity Profile Preservation<a class="headerlink" href="#velocity-profile-preservation" title="Permanent link">#</a></h3>
-<p>After the geometric velocity recalculation and moving average, the planner's original velocity
-profile is restored for all points in detected stop approach ranges:</p>
-<div class="highlight"><pre><span></span><code>v[i] = input_trajectory[i].v    (for i in stop approach range)
-v[stop_idx] = 0.0               (stop forced to zero unconditionally)
-</code></pre></div>
-<p>This ensures the downstream jerk smoother (<code>TrajectoryVelocityOptimizer</code>) receives the correct
-<code>v_ref</code> profile and can plan a kinematically feasible deceleration to zero.</p>
-<h2 id="post-processing">Post-Processing<a class="headerlink" href="#post-processing" title="Permanent link">#</a></h2>
-<p>After QP optimization solves for smoothed positions, the following are applied in order:</p>
-<ol>
-<li><strong>Orientation</strong>: Computed from path tangent between consecutive points</li>
-<li><strong>Velocity</strong>: Derived from position differences and time step (<code>v[i] = ds/dt</code>)</li>
-<li><strong>Velocity smoothing</strong>: 3-point moving average to reduce numerical differentiation noise</li>
-<li><strong>Stop zone restoration</strong>: Input velocities restored for detected stop approach ranges; stop
-   point forced to zero</li>
-<li><strong>Acceleration</strong>: Derived from velocity differences</li>
-</ol>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<h3 id="core-optimization-weights">Core Optimization Weights<a class="headerlink" href="#core-optimization-weights" title="Permanent link">#</a></h3>
-<ul>
-<li><code>weight_smoothness</code> (default: 10.0)<ul>
-<li>Controls smoothness penalty</li>
-<li>Higher values → smoother but more deviation from original path</li>
-</ul>
-</li>
-<li><code>weight_fidelity</code> (default: 1.0)<ul>
-<li>Baseline fidelity weight (used when velocity-based feature disabled)</li>
-<li>Higher values → closer to original path</li>
-</ul>
-</li>
-</ul>
-<h3 id="velocity-based-fidelity">Velocity-Based Fidelity<a class="headerlink" href="#velocity-based-fidelity" title="Permanent link">#</a></h3>
-<ul>
-<li><code>use_velocity_based_fidelity</code> (default: true)<ul>
-<li>Master switch for velocity-dependent weighting</li>
-<li>Set to <code>true</code> to enable feature</li>
-</ul>
-</li>
-<li><code>velocity_threshold_mps</code> (default: 0.3)<ul>
-<li>Speed at which sigmoid transitions (midpoint)</li>
-<li>Lower values → earlier transition to high fidelity</li>
-</ul>
-</li>
-<li><code>sigmoid_sharpness</code> (default: 50.0)<ul>
-<li>Controls transition steepness</li>
-<li>Range: [1, 100], higher = sharper step-like transition</li>
-</ul>
-</li>
-<li><code>min_fidelity_weight</code> (default: 0.01)<ul>
-<li>Weight applied at very low speeds</li>
-<li>Lower values → more aggressive smoothing when stopped/slow</li>
-</ul>
-</li>
-<li><code>max_fidelity_weight</code> (default: 1.0)<ul>
-<li>Weight applied at high speeds</li>
-<li>Higher values → stronger preservation of planner path</li>
-</ul>
-</li>
-</ul>
-<h3 id="point-constraints">Point Constraints<a class="headerlink" href="#point-constraints" title="Permanent link">#</a></h3>
-<ul>
-<li><code>num_constrained_points_start</code> (default: 3)<ul>
-<li>Number of points from trajectory start to fix as hard constraints</li>
-<li>Recommended: 3 to preserve initial acceleration</li>
-<li>Set to 0 to allow all points to be optimized (may cause initial state discontinuities)</li>
-</ul>
-</li>
-<li><code>num_constrained_points_end</code> (default: 0)<ul>
-<li>Number of points from trajectory end to fix as hard constraints</li>
-<li>Set to 0 for maximum smoothness at trajectory end</li>
-<li>Increase if you need to preserve goal state and acceleration</li>
-</ul>
-</li>
-</ul>
-<h3 id="solver-settings">Solver Settings<a class="headerlink" href="#solver-settings" title="Permanent link">#</a></h3>
-<ul>
-<li><code>time_step_s</code> (default: 0.1)<ul>
-<li>Time discretization for velocity/acceleration calculations</li>
-</ul>
-</li>
-<li><code>osqp_eps_abs</code> / <code>osqp_eps_rel</code> (default: 1e-4)<ul>
-<li>OSQP solver convergence tolerances</li>
-</ul>
-</li>
-<li><code>osqp_max_iter</code> (default: 100)<ul>
-<li>Maximum solver iterations</li>
-</ul>
-</li>
-<li><code>osqp_verbose</code> (default: false)<ul>
-<li>Enable OSQP debug output</li>
-</ul>
-</li>
-</ul>
-<h3 id="orientation-preservation">Orientation Preservation<a class="headerlink" href="#orientation-preservation" title="Permanent link">#</a></h3>
-<ul>
-<li><code>preserve_input_trajectory_orientation</code> (default: false)<ul>
-<li>Copy orientations from the original input trajectory (nearest-neighbor match) instead of
-  deriving them from the smoothed path tangent</li>
-</ul>
-</li>
-<li><code>max_distance_for_orientation_m</code> (default: 5.0)<ul>
-<li>Maximum search distance for nearest-neighbor orientation matching [m]</li>
-</ul>
-</li>
-</ul>
-<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">#</a></h2>
-<h3 id="example-1-disable-velocity-based-fidelity">Example 1: Disable Velocity-Based Fidelity<a class="headerlink" href="#example-1-disable-velocity-based-fidelity" title="Permanent link">#</a></h3>
-<p>Velocity-based fidelity is enabled by default. To disable it and use a uniform fidelity weight:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity<span class="w"> </span><span class="nb">false</span>
-</code></pre></div>
-<h3 id="example-2-tune-velocity-threshold">Example 2: Tune Velocity Threshold<a class="headerlink" href="#example-2-tune-velocity-threshold" title="Permanent link">#</a></h3>
-<p>To make the transition occur at higher speeds (0.5 m/s instead of 0.3 m/s):</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.velocity_threshold_mps<span class="w"> </span><span class="m">0</span>.5
-</code></pre></div>
-<h3 id="example-3-more-aggressive-low-speed-smoothing">Example 3: More Aggressive Low-Speed Smoothing<a class="headerlink" href="#example-3-more-aggressive-low-speed-smoothing" title="Permanent link">#</a></h3>
-<p>To allow even more smoothing at low speeds:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.min_fidelity_weight<span class="w"> </span><span class="m">0</span>.005
-</code></pre></div>
-<h3 id="example-4-sharper-transition">Example 4: Sharper Transition<a class="headerlink" href="#example-4-sharper-transition" title="Permanent link">#</a></h3>
-<p>To make the velocity-based transition more step-like:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.sigmoid_sharpness<span class="w"> </span><span class="m">80</span>.0
-</code></pre></div>
-<h3 id="example-5-constrain-only-first-point">Example 5: Constrain Only First Point<a class="headerlink" href="#example-5-constrain-only-first-point" title="Permanent link">#</a></h3>
-<p>For maximum smoothness (only preserve initial position):</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">1</span>
-</code></pre></div>
-<h3 id="example-6-constrain-last-2-points">Example 6: Constrain Last 2 Points<a class="headerlink" href="#example-6-constrain-last-2-points" title="Permanent link">#</a></h3>
-<p>To preserve the goal state exactly:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end<span class="w"> </span><span class="m">2</span>
-</code></pre></div>
-<h3 id="example-7-preserve-larger-initial-region">Example 7: Preserve Larger Initial Region<a class="headerlink" href="#example-7-preserve-larger-initial-region" title="Permanent link">#</a></h3>
-<p>To preserve the first 5 points (useful for very noisy planners):</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">5</span>
-</code></pre></div>
-<h2 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">#</a></h2>
-<h3 id="view-debug-logs">View Debug Logs<a class="headerlink" href="#view-debug-logs" title="Permanent link">#</a></h3>
-<p>Enable debug logging to see weight statistics and solver diagnostics:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_trajectory_optimizer<span class="w"> </span>autoware_trajectory_optimizer_node<span class="w"> </span>--ros-args<span class="w"> </span>--log-level<span class="w"> </span>trajectory_optimizer:<span class="o">=</span>debug
-</code></pre></div>
-<h3 id="check-parameter-values">Check Parameter Values<a class="headerlink" href="#check-parameter-values" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Check if velocity-based fidelity is enabled</span>
-ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity
-
-<span class="c1"># Check weight configuration</span>
-ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.min_fidelity_weight
-ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.max_fidelity_weight
-
-<span class="c1"># Check constraint configuration</span>
-ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start
-ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end
-</code></pre></div>
-<h3 id="monitor-performance">Monitor Performance<a class="headerlink" href="#monitor-performance" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># View processing time metrics</span>
-ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>/planning/trajectory_optimizer/debug/processing_time_detail_ms
-</code></pre></div>
-<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
-<ol>
-<li><strong>Path deviation</strong>: Heavy smoothing can cause deviation from original path</li>
-<li><strong>Velocity outside stop zones differs from planner intent</strong>: Velocity is recalculated from
-   smoothed geometry for normal trajectory segments; only detected stop approach zones preserve
-   the planner's velocity profile</li>
-<li><strong>Computational cost</strong>: QP solve adds overhead compared to simpler smoothers</li>
-<li><strong>Parameter sensitivity</strong>: Requires tuning for specific vehicle dynamics</li>
-</ol>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
-<ul>
-<li>OSQP Solver: <a href="https://osqp.org/">https://osqp.org/</a></li>
-<li>Autoware OSQP Interface: <code>autoware_osqp_interface</code> package</li>
-<li>Parent Package: <code>autoware_trajectory_optimizer</code></li>
-</ul></div>
+<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
+<p>The module parameters are grouped under <code>traffic_light_stop</code> section of <code>trajectory_modifier.param.yaml</code></p>
+<table>
+<thead>
+<tr>
+<th>Parameter name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stop_margin</code></td>
+<td>double</td>
+<td>0.75</td>
+<td>[m] Distance to keep from stop line (measured from ego front)</td>
+</tr>
+<tr>
+<td><code>stop_for_red_light</code></td>
+<td>bool</td>
+<td>true</td>
+<td>Flag to enable/disable stopping for red light violation</td>
+</tr>
+<tr>
+<td><code>stop_for_amber_light</code></td>
+<td>bool</td>
+<td>false</td>
+<td>Flag to enable/disable stopping for amber light violation</td>
+</tr>
+<tr>
+<td><code>treat_amber_light_as_red</code></td>
+<td>bool</td>
+<td>false</td>
+<td>When true, amber lights are treated identically to red lights (rejection on intersection regardless of distance).</td>
+</tr>
+<tr>
+<td><code>treat_unknown_light_as_red</code></td>
+<td>bool</td>
+<td>false</td>
+<td>When true, unknown lights are treated identically to red lights (rejection on intersection).</td>
+</tr>
+<tr>
+<td><code>overshoot_tolerance</code></td>
+<td>double</td>
+<td>0.0</td>
+<td>[m] Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible.</td>
+</tr>
+<tr>
+<td><code>allow_if_cannot_stop_distance</code></td>
+<td>double</td>
+<td>0.0</td>
+<td>[m] Allow crossing when the ego front is within this distance and ego cannot stop before the stop line.</td>
+</tr>
+<tr>
+<td><code>min_lookahead_distance</code></td>
+<td>double</td>
+<td>20.0</td>
+<td>[m] Minimum forward length to scan for stop lines even when comfortable stopping distance is shorter.</td>
+</tr>
+<tr>
+<td><code>th_stable_duration_red</code></td>
+<td>double</td>
+<td>0.2</td>
+<td>[s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).</td>
+</tr>
+<tr>
+<td><code>th_stable_duration_amber</code></td>
+<td>double</td>
+<td>0.2</td>
+<td>[s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).</td>
+</tr>
+<tr>
+<td><code>th_stable_duration_unknown</code></td>
+<td>double</td>
+<td>0.0</td>
+<td>[s] Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving).</td>
+</tr>
+<tr>
+<td><code>th_amber_rejection_hysteresis</code></td>
+<td>double</td>
+<td>0.5</td>
+<td>[s] Duration to persist an amber rejection state to prevent "flipping" due to minor velocity/distance changes.</td>
+</tr>
+<tr>
+<td><code>crossing_time_limit</code></td>
+<td>double</td>
+<td>2.75</td>
+<td>[s] Maximum time allowed for the ego vehicle to cross the stop line after an amber light appears.</td>
+</tr>
+<tr>
+<td><code>delay_response_time</code></td>
+<td>double</td>
+<td>0.5</td>
+<td>[s] Delay response time used to estimate the minimum ego stopping distance.</td>
+</tr>
+<tr>
+<td><code>ego_stopped_vel_th</code></td>
+<td>double</td>
+<td>0.01</td>
+<td>[m/s] Velocity below which ego is considered stopped when checking traffic lights.</td>
+</tr>
+</tbody>
+</table></div>
 
 
 
@@ -23330,7 +22870,7 @@ ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../mpt_optimizer/" class="md-footer__link md-footer__link--prev" aria-label="Previous: MPT (Model Predictive Trajectory) Optimizer">
+          <a href="../../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Autoware Trajectory Modifier">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23340,20 +22880,20 @@ ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</
                 Previous
               </span>
               <div class="md-ellipsis">
-                MPT (Model Predictive Trajectory) Optimizer
+                Autoware Trajectory Modifier
               </div>
             </div>
           </a>
         
         
           
-          <a href="../temporal_mpt_optimizer/" class="md-footer__link md-footer__link--next" aria-label="Next: Temporal MPT Optimizer">
+          <a href="../continuous_jerk_filter/" class="md-footer__link md-footer__link--next" aria-label="Next: Continuous Jerk Filter">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Temporal MPT Optimizer
+                Continuous Jerk Filter
               </div>
             </div>
             <div class="md-footer__button md-icon">
