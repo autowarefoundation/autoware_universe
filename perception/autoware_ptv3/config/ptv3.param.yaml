@@ -5,6 +5,8 @@
     # network
     trt_precision: fp16
     cloud_capacity: 2000000
+    densification_world_frame_id: map
+    densification_num_past_frames: 1
     encoder:
       onnx_path: "$(var model_path)/$(var model_variant)_encoder.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_encoder.engine"
@@ -15,27 +17,28 @@
       use_head: $(var use_seg3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_seg3d_head.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_seg3d_head.engine"
-      workspace_size: 8589934592  # 8 GiB
-      source_reconstruction: "full"
+      workspace_size: 17179869184  # 16 GiB
+      source_reconstruction: "partial"
       # Mapping from segmentation3d.class_names to autoware::point_types::PointCloudClassification.
       class_mapping:
         car: CAR
         truck: TRUCK
         bus: BUS
+        motorcycle: MOTORCYCLE
         bicycle: BICYCLE
         pedestrian: PEDESTRIAN
+        animal: ANIMAL
+        barrier: STRUCTURE
         traffic_cone: HAZARD
         debris: HAZARD
-        vertical_thin: HAZARD
-        barrier: STRUCTURE
-        building: STRUCTURE
-        static_clutter: STRUCTURE
-        drivable_flat: FLAT_SURFACE
-        non_drivable_flat: FLAT_SURFACE
+        driveable_flat: FLAT_SURFACE
+        non_driveable_flat: FLAT_SURFACE
         vegetation: VEGETATION
+        manmade: STRUCTURE
+        vertical_thin: HAZARD
         noise: NOISE
       filter:
-        classes: ["drivable_flat", "non_drivable_flat", "noise"]
+        classes: ["driveable_flat", "non_driveable_flat", "noise"]
         output_format: ""
         apply_to_segmentation: false
     detection3d:
@@ -46,42 +49,54 @@
       post_process_params:
         iou_nms_search_distance_2d: 10.0
         iou_nms_threshold: 0.1
-        yaw_norm_thresholds: [0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.1]
+        yaw_norm_thresholds: [0.1, 0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.1, 0.0, 0.0]
       detection_score_thresholds:
         distance_bin_upper_limits: [50.0, 90.0, 121.0, 200.0]
         min_confidence_scores:
           CAR: [0.1, 0.1, 0.1, 0.1]
           TRUCK: [0.1, 0.1, 0.1, 0.1]
           BUS: [0.1, 0.1, 0.1, 0.1]
+          MOTORCYCLE: [0.1, 0.1, 0.1, 0.1]
           BICYCLE: [0.1, 0.1, 0.1, 0.1]
           PEDESTRIAN: [0.1, 0.1, 0.1, 0.1]
-          TRAFFIC_CONE: [0.1, 0.1, 0.1, 0.1]
+          ANIMAL: [0.1, 0.1, 0.1, 0.1]
           BARRIER: [0.1, 0.1, 0.1, 0.1]
+          TRAFFIC_CONE: [0.1, 0.1, 0.1, 0.1]
+          DEBRIS: [0.1, 0.1, 0.1, 0.1]
       allow_remapping_by_area_matrix:
         # Row: original class. Column: class to remap to.
-        # CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN, TRAFFIC_CONE, BARRIER
-        [0,    1,    0,   0,       0,           0,            0,        # CAR
-        0,    0,    0,   0,       0,           0,            0,        # TRUCK
-        0,    0,    0,   0,       0,           0,            0,        # BUS
-        0,    0,    0,   0,       0,           0,            0,        # BICYCLE
-        0,    0,    0,   0,       0,           0,            0,        # PEDESTRIAN
-        0,    0,    0,   0,       0,           0,            0,        # TRAFFIC_CONE
-        0,    0,    0,   0,       0,           0,            0]        # BARRIER
+        # UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # UNKNOWN
+         0, 0, 1, 0, 0, 0, 0, 0, 0, 0,  # CAR
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # TRUCK
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # BUS
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # TRAILER
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # MOTORCYCLE
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # BICYCLE
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # PEDESTRIAN
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # ANIMAL
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # HAZARD
       min_area_matrix:
-        # CAR,    TRUCK,  BUS,   BICYCLE, PEDESTRIAN, TRAFFIC_CONE, BARRIER
-        [0.000,  12.100,  0.000, 0.000,   0.000,      0.000,        0.000,    # CAR
-        0.000,   0.000,  0.000, 0.000,   0.000,      0.000,        0.000,    # TRUCK
-        0.000,   0.000,  0.000, 0.000,   0.000,      0.000,        0.000,    # BUS
-        0.000,   0.000,  0.000, 0.000,   0.000,      0.000,        0.000,    # BICYCLE
-        0.000,   0.000,  0.000, 0.000,   0.000,      0.000,        0.000,    # PEDESTRIAN
-        0.000,   0.000,  0.000, 0.000,   0.000,      0.000,        0.000,    # TRAFFIC_CONE
-        0.000,   0.000,  0.000, 0.000,   0.000,      0.000,        0.000]    # BARRIER
+        # UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD
+        [0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # UNKNOWN
+         0.000, 0.000, 12.100, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # CAR
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # TRUCK
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # BUS
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # TRAILER
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # MOTORCYCLE
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # BICYCLE
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # PEDESTRIAN
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # ANIMAL
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000]  # HAZARD
       max_area_matrix:
-        # CAR,    TRUCK,   BUS,   BICYCLE, PEDESTRIAN, TRAFFIC_CONE, BARRIER
-        [0.000,  36.000,  0.000,  0.000,   0.000,      0.000,        0.000,    # CAR
-        0.000,   0.000,  0.000,  0.000,   0.000,      0.000,        0.000,    # TRUCK
-        0.000,   0.000,  0.000,  0.000,   0.000,      0.000,        0.000,    # BUS
-        0.000,   0.000,  0.000,  0.000,   0.000,      0.000,        0.000,    # BICYCLE
-        0.000,   0.000,  0.000,  0.000,   0.000,      0.000,        0.000,    # PEDESTRIAN
-        0.000,   0.000,  0.000,  0.000,   0.000,      0.000,        0.000,    # TRAFFIC_CONE
-        0.000,   0.000,  0.000,  0.000,   0.000,      0.000,        0.000]    # BARRIER
+        # UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD
+        [0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # UNKNOWN
+         0.000, 0.000, 36.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # CAR
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # TRUCK
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # BUS
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # TRAILER
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # MOTORCYCLE
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # BICYCLE
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # PEDESTRIAN
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,  # ANIMAL
+         0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000]  # HAZARD
