@@ -44,9 +44,11 @@ public:
   PTv3Config(
     const bool use_seg3d_head, const bool use_det3d_head, const std::string & plugins_path,
     const std::int64_t cloud_capacity, const std::string & densification_world_frame_id,
-    const std::int64_t densification_num_past_frames, const std::vector<std::int64_t> & voxels_num,
-    const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size,
-    const std::int64_t max_points_per_voxel,
+    const std::int64_t densification_num_past_frames,
+    const std::vector<std::int64_t> & voxels_num_min,
+    const std::vector<std::int64_t> & voxels_num_opt,
+    const std::vector<std::int64_t> & voxels_num_max, const std::vector<float> & point_cloud_range,
+    const std::vector<float> & voxel_size, const std::int64_t max_points_per_voxel,
     const std::vector<std::string> & segmentation_class_names = {},
     const std::unordered_map<std::string, std::string> & segmentation_class_mapping = {},
     const std::vector<std::string> & serialization_orders = {},
@@ -84,14 +86,6 @@ public:
     densification_num_past_frames_ = densification_num_past_frames;
     densified_cloud_capacity_ = cloud_capacity_ * (densification_num_past_frames_ + 1);
 
-    if (voxels_num.size() == 3) {
-      min_num_voxels_ = voxels_num[0];
-      max_num_voxels_ = voxels_num[2];
-
-      voxels_num_[0] = voxels_num[0];
-      voxels_num_[1] = voxels_num[1];
-      voxels_num_[2] = voxels_num[2];
-    }
     if (point_cloud_range.size() == 6) {
       min_x_range_ = point_cloud_range[0];
       min_y_range_ = point_cloud_range[1];
@@ -124,14 +118,20 @@ public:
     const auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
-    auto max_voxels_depth =
+    serialization_orders_ = validate_serialization_orders(serialization_orders);
+    pooling_strides_ = validate_pooling_strides(pooling_strides);
+    validate_voxels_num(
+      voxels_num_min, voxels_num_opt, voxels_num_max, pooling_strides_.size() + 1);
+    voxels_num_min_ = voxels_num_min;
+    voxels_num_opt_ = voxels_num_opt;
+    voxels_num_max_ = voxels_num_max;
+    min_num_voxels_ = voxels_num_min_[0];
+    max_num_voxels_ = voxels_num_max_[0];
+    const auto max_voxels_depth =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_num_voxels_))));
     if (serialization_depth_ * 3 + max_voxels_depth >= 64) {
       throw std::runtime_error("Serialization depth is too large");
     }
-
-    serialization_orders_ = validate_serialization_orders(serialization_orders);
-    pooling_strides_ = validate_pooling_strides(pooling_strides);
     enc_channels_ = validate_enc_channels(enc_channels, pooling_strides_.size() + 1);
 
     if (use_seg3d_head_) {
@@ -410,9 +410,53 @@ public:
     return enc_channels;
   }
 
-  // Hard voxel-count bound for one encoder stage: a stage cannot hold more voxels than the grid
-  // has cells at its cumulative pooling depth, and pooling never grows the voxel count. Sizes the
-  // encoder stage buffers and TensorRT profiles.
+  // The per-stage TensorRT profile arrays: one entry per encoder stage (input level first, then
+  // one per pooling stride), each stage's min <= opt <= max, min >= 1 (a profile cannot admit an
+  // empty tensor; the node rejects empty frames itself) and max non-increasing across stages,
+  // since pooling never grows the voxel count.
+  static void validate_voxels_num(
+    const std::vector<std::int64_t> & voxels_num_min,
+    const std::vector<std::int64_t> & voxels_num_opt,
+    const std::vector<std::int64_t> & voxels_num_max, const std::size_t num_stages)
+  {
+    const auto check_size = [num_stages](
+                              const std::string & name, const std::vector<std::int64_t> & values) {
+      if (values.size() != num_stages) {
+        throw std::runtime_error(
+          name + " must contain one entry per encoder stage (pooling_strides size + 1 = " +
+          std::to_string(num_stages) + "), got " + std::to_string(values.size()) + ".");
+      }
+    };
+    check_size("voxels_num_min", voxels_num_min);
+    check_size("voxels_num_opt", voxels_num_opt);
+    check_size("voxels_num_max", voxels_num_max);
+    for (std::size_t stage = 0; stage < num_stages; ++stage) {
+      const auto at = "[" + std::to_string(stage) + "]";
+      if (voxels_num_min[stage] < 1) {
+        throw std::runtime_error("voxels_num_min" + at + " must be at least 1.");
+      }
+      if (
+        voxels_num_opt[stage] < voxels_num_min[stage] ||
+        voxels_num_max[stage] < voxels_num_opt[stage]) {
+        throw std::runtime_error(
+          "voxels_num_min" + at + " <= voxels_num_opt" + at + " <= voxels_num_max" + at +
+          " is violated: " + std::to_string(voxels_num_min[stage]) + ", " +
+          std::to_string(voxels_num_opt[stage]) + ", " + std::to_string(voxels_num_max[stage]) +
+          ".");
+      }
+      if (stage > 0 && voxels_num_max[stage] > voxels_num_max[stage - 1]) {
+        throw std::runtime_error(
+          "voxels_num_max" + at + " = " + std::to_string(voxels_num_max[stage]) +
+          " exceeds the previous stage's maximum " + std::to_string(voxels_num_max[stage - 1]) +
+          "; pooling never grows the voxel count.");
+      }
+    }
+  }
+
+  // Hard voxel-count bound for one encoder stage: the smaller of the configured voxels_num_max for
+  // that stage and the grid's cell count at the stage's cumulative pooling depth, since pooling
+  // never grows the voxel count. Sizes the encoder stage buffers and TensorRT profiles, and is the
+  // count the preprocessing truncates a level to when a frame exceeds it.
   [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
   {
     std::int64_t cumulative_depth = 0;
@@ -426,19 +470,19 @@ public:
     };
     const auto grid_cells =
       ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) * ceil_shift(grid_z_size_);
-    return std::min(max_num_voxels_, grid_cells);
+    return std::min(voxels_num_max_.at(stage_index), grid_cells);
   }
 
-  // [min, opt, max] profile counts for a tensor sized by one encoder stage. max is the stage's
-  // voxel capacity; opt is scaled from the configured profile and min is kept within the bound.
+  // [min, opt, max] TensorRT profile counts for a tensor sized by one encoder stage: the
+  // configured voxels_num_{min,opt,max} entries of that stage, with max replaced by the stage's
+  // voxel capacity (the grid bound may be tighter) and min and opt kept within it.
   [[nodiscard]] std::array<std::int64_t, 3> stage_profile_counts(
     const std::size_t stage_index) const
   {
     const std::int64_t max_count = stage_voxel_capacity(stage_index);
-    const std::int64_t min_count =
-      std::min(stage_index == 0 ? voxels_num_[0] : std::int64_t{1}, max_count);
+    const std::int64_t min_count = std::min(voxels_num_min_.at(stage_index), max_count);
     const std::int64_t opt_count =
-      std::clamp(voxels_num_[1] * max_count / voxels_num_[2], min_count, max_count);
+      std::clamp(voxels_num_opt_.at(stage_index), min_count, max_count);
     return {min_count, opt_count, max_count};
   }
 
@@ -489,8 +533,8 @@ public:
   // Common network parameters
   std::int64_t cloud_capacity_{};            // capacity of one lidar frame
   std::int64_t densified_cloud_capacity_{};  // capacity of the multi-frame network input
-  std::int64_t min_num_voxels_{};
-  std::int64_t max_num_voxels_{};
+  std::int64_t min_num_voxels_{};            // voxels_num_min_[0]
+  std::int64_t max_num_voxels_{};            // voxels_num_max_[0]
   std::int64_t max_points_per_voxel_{};  // padded voxel slots, matches the training voxelizer
   const std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, time_lag
 
@@ -520,7 +564,10 @@ public:
   std::int64_t grid_z_size_{};
 
   ///// RUNTIME DIMENSIONS /////
-  std::array<std::int64_t, 3> voxels_num_{};
+  // Per-stage TensorRT profile counts, [num_pooling_stages + 1] each; see stage_profile_counts.
+  std::vector<std::int64_t> voxels_num_min_;
+  std::vector<std::int64_t> voxels_num_opt_;
+  std::vector<std::int64_t> voxels_num_max_;
 };
 
 }  // namespace autoware::ptv3

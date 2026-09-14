@@ -119,6 +119,24 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   pooling_workspace_size_ = std::max(pooling_sort_workspace_size, pooling_scan_workspace_size);
   pooling_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(pooling_workspace_size_);
 
+  const auto num_levels = config_.pooling_strides_.size() + 1;
+  std::vector<std::int64_t> stage_capacity(num_levels);
+  for (std::size_t level = 0; level < num_levels; ++level) {
+    stage_capacity[level] = config_.stage_voxel_capacity(level);
+  }
+  stage_capacity_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(num_levels);
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    stage_capacity_d_.get(), stage_capacity.data(), num_levels * sizeof(std::int64_t),
+    cudaMemcpyHostToDevice, stream_));
+  stage_indptr_d_ = autoware::cuda_utils::make_unique<const std::int64_t *[]>(
+    std::max<std::size_t>(config_.pooling_strides_.size(), 1));
+  truncated_input_count_d_ = autoware::cuda_utils::make_unique<std::int64_t>();
+  truncated_input_count_ =
+    autoware::cuda_utils::make_unique_host<std::int64_t>(cudaHostAllocDefault);
+  truncated_serialized_code_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
   CHECK_CUDA_ERROR(
     cudaEventCreateWithFlags(&num_cropped_points_copy_event_, cudaEventDisableTiming));
   CHECK_CUDA_ERROR(
@@ -621,6 +639,34 @@ __global__ void fillOrderAndInverseKernel(
   inverse_out[order_index * out_count + segment_index] = out_idx;
 }
 
+/**
+ * @brief Finds the longest input prefix whose pooled levels all fit their capacities.
+ *
+ * Walks from the coarsest level down. Keeping the first `count` voxels of level s + 1 keeps
+ * exactly the first `indptr[s][count]` voxels of level s (parents are contiguous runs in storage
+ * order and `indptr[s][pooled_count] == input_count`), which is then capped by level s's own
+ * capacity before descending. Single-threaded: the walk is a handful of dependent loads.
+ *
+ * @param stage_counts Voxel count per level, [num_stages + 1].
+ * @param stage_indptr Each stage's indptr buffer, [num_stages].
+ * @param stage_capacity Voxel capacity per level, [num_stages + 1].
+ * @param num_stages Number of pooling stages.
+ * @param truncated_input_count_out The input count to rebuild from; equals stage_counts[0] when
+ * every level already fits.
+ */
+__global__ void truncatedInputCountKernel(
+  const std::int64_t * __restrict__ stage_counts,
+  const std::int64_t * const * __restrict__ stage_indptr,
+  const std::int64_t * __restrict__ stage_capacity, std::int32_t num_stages,
+  std::int64_t * __restrict__ truncated_input_count_out)
+{
+  auto count = min(stage_counts[num_stages], stage_capacity[num_stages]);
+  for (std::int32_t stage = num_stages - 1; stage >= 0; --stage) {
+    count = min(stage_indptr[stage][count], stage_capacity[stage]);
+  }
+  *truncated_input_count_out = count;
+}
+
 std::int32_t poolingDepth(const std::int64_t stride)
 {
   std::int32_t depth = 0;
@@ -630,7 +676,7 @@ std::int32_t poolingDepth(const std::int64_t stride)
   return depth;
 }
 
-void PreprocessCuda::generateSerializedPoolingMetadata(
+std::int64_t PreprocessCuda::generateSerializedPoolingMetadata(
   const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
   const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts)
 {
@@ -638,31 +684,75 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
     throw std::runtime_error("Serialized pooling stage buffer count does not match config.");
   }
 
+  auto input_count = std::min(num_voxels, config_.max_num_voxels_);
+  buildSerializedPoolingLevels(grid_coord, serialized_code, input_count, stages, stage_counts);
+  if (stages.empty() || input_count == 0) {
+    return input_count;
+  }
+
+  // Check the pooled levels against their capacities. A level at its cap is fine; only a level
+  // over it forces a shorter input and a rebuild, which cannot overflow again: a prefix of a
+  // level pools into a prefix of the next, so every count is monotonic in the input count.
+  std::vector<const std::int64_t *> stage_indptr(stages.size());
+  for (std::size_t stage = 0; stage < stages.size(); ++stage) {
+    stage_indptr[stage] = stages[stage].indptr;
+  }
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    stage_indptr_d_.get(), stage_indptr.data(), stages.size() * sizeof(const std::int64_t *),
+    cudaMemcpyHostToDevice, stream_));
+  truncatedInputCountKernel<<<1, 1, 0, stream_>>>(
+    stage_counts, stage_indptr_d_.get(), stage_capacity_d_.get(),
+    static_cast<std::int32_t>(stages.size()), truncated_input_count_d_.get());
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    truncated_input_count_.get(), truncated_input_count_d_.get(), sizeof(std::int64_t),
+    cudaMemcpyDeviceToHost, stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  const auto truncated_input_count = *truncated_input_count_;
+  if (truncated_input_count < input_count) {
+    // serialized_code is laid out [num_orders, input_count]; the rebuild reads the kept prefix
+    // of every row at the shorter stride, so compact it first (one strided copy).
+    const auto num_orders = config_.serialization_orders_.size();
+    CHECK_CUDA_ERROR(cudaMemcpy2DAsync(
+      truncated_serialized_code_d_.get(), truncated_input_count * sizeof(std::int64_t),
+      serialized_code, input_count * sizeof(std::int64_t),
+      truncated_input_count * sizeof(std::int64_t), num_orders, cudaMemcpyDeviceToDevice, stream_));
+    input_count = truncated_input_count;
+    buildSerializedPoolingLevels(
+      grid_coord, truncated_serialized_code_d_.get(), input_count, stages, stage_counts);
+  }
+  return input_count;
+}
+
+void PreprocessCuda::buildSerializedPoolingLevels(
+  const std::int32_t * grid_coord, const std::int64_t * serialized_code,
+  const std::int64_t num_voxels, const std::vector<SerializedPoolingDeviceStageView> & stages,
+  std::int64_t * stage_counts)
+{
   const auto capacity = config_.max_num_voxels_;
   const auto num_orders = static_cast<std::int32_t>(config_.serialization_orders_.size());
   const auto num_blocks = divup(static_cast<std::size_t>(capacity), config_.threads_per_block_);
-  const auto clamped_num_voxels = std::min(num_voxels, capacity);
   const auto voxel_blocks = divup(
-    static_cast<std::size_t>(std::max<std::int64_t>(clamped_num_voxels, 1)),
-    config_.threads_per_block_);
+    static_cast<std::size_t>(std::max<std::int64_t>(num_voxels, 1)), config_.threads_per_block_);
 
-  setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, clamped_num_voxels);
+  setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   // The input level is already sorted by order-0 code, so its order-0 order and inverse rows are
   // simply 0..n-1. The remaining orders cannot be derived from it and need one real sort each -
   // the only sorts in this function.
-  if (clamped_num_voxels > 0) {
+  if (num_voxels > 0) {
     fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
-      input_level_order_d_.get(), clamped_num_voxels);
+      input_level_order_d_.get(), num_voxels);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
     fillIdentityKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
-      input_level_inverse_d_.get(), clamped_num_voxels);
+      input_level_inverse_d_.get(), num_voxels);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
     for (std::int32_t order_index = 1; order_index < num_orders; ++order_index) {
       prepareInputLevelOrderSortKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
-        serialized_code, order_sort_keys_d_.get(), order_sort_indices_d_.get(), clamped_num_voxels,
+        serialized_code, order_sort_keys_d_.get(), order_sort_indices_d_.get(), num_voxels,
         order_index);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
@@ -670,12 +760,12 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
         cub::DeviceRadixSort::SortPairs(
           pooling_workspace_d_.get(), pooling_workspace_size_, order_sort_keys_d_.get(),
           order_sort_sorted_keys_d_.get(), order_sort_indices_d_.get(),
-          input_level_order_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels, 0,
-          code_sort_end_bit_, stream_));
+          input_level_order_d_.get() + order_index * num_voxels, num_voxels, 0, code_sort_end_bit_,
+          stream_));
 
       scatterInverseKernel<<<voxel_blocks, config_.threads_per_block_, 0, stream_>>>(
-        input_level_order_d_.get() + order_index * clamped_num_voxels,
-        input_level_inverse_d_.get() + order_index * clamped_num_voxels, clamped_num_voxels);
+        input_level_order_d_.get() + order_index * num_voxels,
+        input_level_inverse_d_.get() + order_index * num_voxels, num_voxels);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
     }
   }

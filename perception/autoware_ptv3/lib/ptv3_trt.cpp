@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -568,13 +569,30 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
         stage.serialized_inverse.get()});
   }
 
-  pre_ptr_->generateSerializedPoolingMetadata(
+  const auto used_num_voxels = pre_ptr_->generateSerializedPoolingMetadata(
     grid_coord_d_.get(), serialized_code_d_.get(), num_voxels_, stage_views,
     serialized_pooling_num_voxels_d_.get());
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     serialized_pooling_num_voxels_.get(), serialized_pooling_num_voxels_d_.get(),
     (config_.pooling_strides_.size() + 1) * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  if (used_num_voxels < num_voxels_) {
+    // A pooled level would have exceeded its capacity (encoder.voxels_num_max): the input
+    // was truncated to the longest prefix whose levels all fit. The voxels are in serialization
+    // order, so the dropped ones are those with the largest codes.
+    std::ostringstream levels;
+    for (std::size_t level = 1; level <= config_.pooling_strides_.size(); ++level) {
+      levels << (level == 1 ? "" : ", ") << serialized_pooling_num_voxels_[level] << "/"
+             << config_.stage_voxel_capacity(level);
+    }
+    RCLCPP_WARN_STREAM(
+      rclcpp::get_logger("ptv3"),
+      "A pooled level exceeded its voxel capacity; the input was truncated from "
+        << num_voxels_ << " to " << used_num_voxels
+        << " voxels (pooled level counts/capacities: " << levels.str() << ").");
+    num_voxels_ = used_num_voxels;
+  }
 }
 
 bool PTv3TRT::setSerializedPoolingInputShapes()
@@ -931,6 +949,14 @@ bool PTv3TRT::preProcess(
   }
 
   precomputeSerializedPoolingMetadata();
+  if (num_voxels_ < config_.min_num_voxels_) {
+    RCLCPP_ERROR_STREAM(
+      rclcpp::get_logger("ptv3"), "Too few voxels ("
+                                    << num_voxels_ << ") left after truncating to the pooled level "
+                                    << "capacities for the actual optimization profile ("
+                                    << config_.min_num_voxels_ << ")");
+    return false;
+  }
 
   encoder_trt_ptr_->setInputShape(
     "voxels", nvinfer1::Dims{

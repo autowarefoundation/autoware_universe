@@ -36,7 +36,9 @@ PTv3Config make_test_config(const bool filter_apply_to_segmentation = false)
 {
   PTv3ConfigParams params;
   params.cloud_capacity = 128;
-  params.voxels_num = {16, 32, 64};
+  params.voxels_num_min = {16, 1, 1};
+  params.voxels_num_opt = {32, 32, 32};
+  params.voxels_num_max = {64, 64, 64};
   params.point_cloud_range = {-10.0F, -10.0F, -3.0F, 10.0F, 10.0F, 3.0F};
   params.voxel_size = {0.2F, 0.2F, 0.2F};
   params.segmentation_class_names = {"car", "truck", "drivable_flat"};

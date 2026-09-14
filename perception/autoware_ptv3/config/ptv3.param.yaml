@@ -11,7 +11,13 @@
       onnx_path: "$(var model_path)/$(var model_variant)_encoder.onnx"
       engine_path: "$(var model_path)/$(var model_variant)_encoder.engine"
       workspace_size: 8589934592  # 8 GiB
-      voxels_num: [16000, 256000, 512000]
+      # TensorRT profile per encoder stage (input level first, then one entry per pooling stride).
+      # max bounds the stage's profile and buffers; a frame whose level would exceed it is truncated
+      # (the voxels with the largest serialization codes are dropped) until every level fits. opt
+      # is the shape TensorRT tunes kernels for; min is 1, the node rejects empty frames itself.
+      voxels_num_min: [1, 1, 1, 1, 1]
+      voxels_num_opt: [178000, 77000, 29000, 11000, 4000]
+      voxels_num_max: [354000, 214000, 100000, 40000, 17000]
     segmentation3d:
       use_head: $(var use_seg3d_head)
       onnx_path: "$(var model_path)/$(var model_variant)_seg3d_head.onnx"

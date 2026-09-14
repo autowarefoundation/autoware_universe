@@ -128,9 +128,17 @@ The model was trained on the T4Dataset using approximately 4,000 frames and is a
 
 ### `Fail to create host memory`
 
-This error may occur when TensorRT cannot satisfy the memory requirements for building an engine. A `workspace_size` that is too small can prevent TensorRT from using the tactics needed for the configured input profiles. Conversely, a `workspace_size` that is too large can allow memory usage to exceed the GPU's available VRAM. A large maximum value in `encoder.voxels_num` also increases the size of TensorRT profiles and intermediate buffers.
+This error may occur when TensorRT cannot satisfy the memory requirements for building an engine. A `workspace_size` that is too small can prevent TensorRT from using the tactics needed for the configured input profiles. Conversely, a `workspace_size` that is too large can allow memory usage to exceed the GPU's available VRAM. Large `encoder.voxels_num_max` values also increase the size of TensorRT profiles and intermediate buffers.
 
-Adjust the `workspace_size` values and the maximum `encoder.voxels_num` value in `config/ptv3.param.yaml` to fit the available GPU memory. Finding a suitable balance between these parameters can resolve the issue.
+Adjust the `workspace_size` values and `encoder.voxels_num_max` in `config/ptv3.param.yaml` to fit the available GPU memory. Finding a suitable balance between these parameters can resolve the issue.
+
+### GPU memory and the per-stage profiles `encoder.voxels_num_{min,opt,max}`
+
+TensorRT sizes each engine's activation memory for the profile maximum, not for the actual frame. If every pooled encoder level were bounded by the input maximum, the deeper levels would be over-provisioned many times over, since stride-2 pooling merges at least half of a lidar sweep's voxels at every level in practice while the channel width doubles per level; the deepest levels would then dominate the encoder's and the segmentation head's memory.
+
+`encoder.voxels_num_min`, `encoder.voxels_num_opt` and `encoder.voxels_num_max` give the TensorRT profile of every encoder stage (the input level first, then one entry per `encoder.pooling_strides` entry). `max` sizes the stage's profiles and buffers and therefore the GPU memory; choose it from measured per-stage peaks on representative data with a safety margin. `opt` is the shape TensorRT tunes kernels for; set it to the typical or realistic worst-case count. `min` can stay 1 everywhere, since the node rejects empty frames itself.
+
+If a frame's level would exceed its `max`, the node truncates the input instead of failing: voxels are processed in serialization (space-filling curve) order, so the voxels with the largest codes are dropped until every level fits, and a warning reports the per-level counts. This keeps the tensors consistent but removes a spatial region at the end of the curve, so `max` should be set high enough that truncation stays exceptional.
 
 ## References/External links
 

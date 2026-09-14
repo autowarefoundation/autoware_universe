@@ -378,7 +378,9 @@ TEST_F(PreprocessKernelTest, VoxelsAreOrderedByOrder0SerializedCode)
 {
   PTv3ConfigParams params;
   params.cloud_capacity = 64;
-  params.voxels_num = {1, 32, 64};
+  params.voxels_num_min = {1, 1, 1};
+  params.voxels_num_opt = {32, 32, 32};
+  params.voxels_num_max = {64, 64, 64};
   params.point_cloud_range = {0.0F, 0.0F, 0.0F, 8.0F, 8.0F, 8.0F};
   params.voxel_size = {1.0F, 1.0F, 1.0F};
 
@@ -418,7 +420,9 @@ TEST_F(PreprocessKernelTest, UnalignedRangeBoundaryKeepsCornerVoxelsDistinct)
 {
   PTv3ConfigParams params;
   params.cloud_capacity = 64;
-  params.voxels_num = {1, 32, 64};
+  params.voxels_num_min = {1, 1, 1};
+  params.voxels_num_opt = {32, 32, 32};
+  params.voxels_num_max = {64, 64, 64};
   params.point_cloud_range = {0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 16.5F};
   params.voxel_size = {1.0F, 1.0F, 1.0F};
   const std::vector<float> host_points{
@@ -446,7 +450,9 @@ TEST_F(PreprocessKernelTest, Base10AlignedBordersStayWithinSerializationDepth)
 {
   PTv3ConfigParams params;
   params.cloud_capacity = 64;
-  params.voxels_num = {1, 32, 64};
+  params.voxels_num_min = {1, 1, 1};
+  params.voxels_num_opt = {32, 32, 32};
+  params.voxels_num_max = {64, 64, 64};
   params.point_cloud_range = {-102.4F, -102.4F, -102.4F, 102.4F, 102.4F, 102.4F};
   params.voxel_size = {0.1F, 0.1F, 0.1F};
   const float below_max = std::nextafter(102.4F, 0.0F);

@@ -94,18 +94,31 @@ public:
   /**
    * @brief Builds the per-stage pooling metadata the encoder graph consumes.
    *
+   * Every level is kept within its configured capacity (PTv3Config::stage_voxel_capacity). The
+   * input level is clamped to max_num_voxels up front. If a pooled level would exceed its cap,
+   * the input is truncated instead: the levels are sorted by order-0 code and each parent's
+   * children are contiguous, so keeping the first `cap` pooled voxels of a level is the same as
+   * keeping a prefix of every finer level, down to a prefix of the input. The metadata is then
+   * rebuilt from that shorter input, so all levels stay mutually consistent (no cluster or
+   * head index points past a level's count). This drops the voxels with the largest codes, i.e.
+   * a spatial region at the far end of the serialization curve, not a spatially uniform subset.
+   *
    * @param grid_coord Grid coordinates of the input voxels, laid out [num_voxels, 3].
    * @param serialized_code Codes of the input voxels, laid out [num_orders, num_voxels].
    * @param num_voxels Number of input voxels; clamped to max_num_voxels internally.
    * @param stages Output device buffers to fill, one per pooling stage.
    * @param stage_counts Output voxel count per level, laid out [num_stages + 1]; entry 0 is the
-   * (clamped) input count.
+   * input count actually used.
+   * @return The input count actually used: `num_voxels` clamped to max_num_voxels and, if a
+   * pooled level would have exceeded its capacity, truncated further. Only the first that many
+   * input voxels are described by the metadata; the caller must feed the encoder that count.
+   * Synchronizes the stream when a pooled level's count has to be checked against its cap.
    * @pre The input voxels are sorted by their order-0 serialized code (`serialized_code` row 0),
    * as generateFeatures emits them. The coarser levels are derived with prefix scans that rely on
    * this ordering; an unsorted input silently produces wrong metadata. Asserted on device in
    * debug builds.
    */
-  void generateSerializedPoolingMetadata(
+  std::int64_t generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
     const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
 
@@ -138,6 +151,16 @@ public:
 private:
   PTv3Config config_;
   cudaStream_t stream_;
+
+  /**
+   * @brief One derivation of every pooled level from the first `num_voxels` input voxels.
+   *
+   * Fills the input-level orders and all `stages`; does not check the pooled levels against
+   * their capacities (see generateSerializedPoolingMetadata).
+   */
+  void buildSerializedPoolingLevels(
+    const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
+    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
 
   autoware::cuda_utils::CudaUniquePtr<float[]> cropped_points_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_mask_d_{nullptr};
@@ -185,6 +208,19 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
+
+  /// Voxel capacity per level, [num_stages + 1] (PTv3Config::stage_voxel_capacity), on device.
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> stage_capacity_d_{nullptr};
+  /// Each stage's indptr buffer, [num_stages], for the single-thread truncation walk.
+  autoware::cuda_utils::CudaUniquePtr<const std::int64_t *[]> stage_indptr_d_{nullptr};
+  /// Largest input prefix whose pooled levels all fit their capacities; device result and its
+  /// pinned host mirror.
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t> truncated_input_count_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtrHost<std::int64_t> truncated_input_count_;
+  /// The kept input voxels' codes, dense [num_orders, truncated_input_count]: the caller's
+  /// serialized_code buffer keeps the full input count as its row stride, so a rebuild from a
+  /// shorter input reads a compacted copy instead.
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> truncated_serialized_code_d_{nullptr};
 
   int code_sort_end_bit_{64};
 };
