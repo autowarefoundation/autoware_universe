@@ -30,6 +30,7 @@
 
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using nav_msgs::msg::Odometry;
 
 Trajectory make_linear_trajectory(
   const TrajectoryPoint & start, const TrajectoryPoint & end, size_t num_points, double velocity)
@@ -71,6 +72,14 @@ TrajectoryPoint make_trajectory_point(double x, double y)
   point.pose.position.x = x;
   point.pose.position.y = y;
   return point;
+}
+
+Odometry make_odometry(double longitudinal_velocity)
+{
+  Odometry odometry;
+  odometry.pose.pose.orientation.w = 1.0;
+  odometry.twist.twist.linear.x = longitudinal_velocity;
+  return odometry;
 }
 
 namespace autoware::control_validator
@@ -230,5 +239,73 @@ INSTANTIATE_TEST_SUITE_P(
     std::make_tuple(false, 1.0, 5.0), std::make_tuple(false, 1.0, -5.0),
     std::make_tuple(true, -1.0, -1.0), std::make_tuple(false, -1.0, -5.0),
     std::make_tuple(false, -1.0, 5.0)));
+
+class VelocityValidatorTest
+: public ::testing::TestWithParam<std::tuple<double, double, bool, bool>>
+{
+public:
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics)
+  {
+    velocity_validator_->validate(res, reference_trajectory, kinematics);
+  }
+
+protected:
+  void SetUp() override
+  {
+    rclcpp::init(0, nullptr);
+    rclcpp::NodeOptions options;
+    options.arguments(
+      {"--ros-args", "--params-file",
+       ament_index_cpp::get_package_share_directory("autoware_control_validator") +
+         "/config/control_validator.param.yaml",
+       "--params-file",
+       ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+         "/config/test_vehicle_info.param.yaml"});
+
+    node_ = std::make_shared<ControlValidator>(options);
+    ::control_validator::ParamListener param_listener(node_->get_node_parameters_interface());
+    velocity_validator_ = std::make_shared<VelocityValidator>(param_listener.get_params());
+  }
+  void TearDown() override { rclcpp::shutdown(); }
+
+  std::shared_ptr<ControlValidator> node_;
+  std::shared_ptr<VelocityValidator> velocity_validator_;
+};
+
+TEST_P(VelocityValidatorTest, test_velocity_validation)
+{
+  const auto [target_vel, vehicle_vel, expected_is_rolling_back, expected_is_over_velocity] =
+    GetParam();
+
+  const auto reference_trajectory = make_linear_trajectory(
+    make_trajectory_point(0, 0), make_trajectory_point(10, 0), 11, target_vel);
+  const auto kinematics = make_odometry(vehicle_vel);
+
+  ControlValidatorStatus res;
+  res.is_rolling_back = false;
+  res.is_over_velocity = false;
+  validate(res, reference_trajectory, kinematics);
+
+  EXPECT_EQ(res.is_rolling_back, expected_is_rolling_back);
+  EXPECT_EQ(res.is_over_velocity, expected_is_over_velocity);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+  VelocityValidatorTests, VelocityValidatorTest,
+  ::testing::Values(
+    // 1. non-zero target velocity with no rollback (same sign)
+    std::make_tuple(1.0, 1.0, false, false),
+    // 2. zero target velocity with no rollback (forward motion while stopped target)
+    std::make_tuple(0.0, 1.0, false, false),
+    // 3. non-zero target velocity with rollback (opposite signs)
+    std::make_tuple(1.0, -1.0, true, false),
+    // 4. zero target velocity with rollback (backward motion while stopped target)
+    std::make_tuple(0.0, -1.0, true, false),
+    // over velocity: vehicle much faster than target
+    std::make_tuple(1.0, 5.0, false, true),
+    // reverse driving with matching signs is not rollback
+    std::make_tuple(-1.0, -1.0, false, false)));
 
 }  // namespace autoware::control_validator
