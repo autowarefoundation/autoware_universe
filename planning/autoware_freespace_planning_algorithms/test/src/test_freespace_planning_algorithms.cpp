@@ -16,6 +16,7 @@
 #include "autoware/freespace_planning_algorithms/astar_search.hpp"
 #include "autoware/freespace_planning_algorithms/rrtstar.hpp"
 
+#include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rcpputils/filesystem_helper.hpp>
 #include <rosbag2_cpp/writer.hpp>
@@ -41,8 +42,9 @@ const double length_lexus = 5.5;
 const double width_lexus = 2.75;
 const double base_length_lexus = 3.0;
 const double max_steering_lexus = 0.7;
-const fpa::VehicleShape vehicle_shape =
-  fpa::VehicleShape(length_lexus, width_lexus, base_length_lexus, max_steering_lexus, 1.5);
+const autoware::vehicle_info_utils::VehicleInfo vehicle_info =
+  autoware::vehicle_info_utils::VehicleInfo::createVehicleInfoForVehicleShape(
+    length_lexus, width_lexus, base_length_lexus, max_steering_lexus, 1.5);
 const double pi = 3.1415926;
 const std::array<double, 3> start_pose{5.5, 4., pi * 0.5};
 const std::array<double, 3> goal_pose1{8.0, 26.3, pi * 1.5};   // easiest
@@ -241,7 +243,7 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_astar(bool use_multi)
 
   auto clock_ptr = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
   auto algo =
-    std::make_unique<fpa::AstarSearch>(planner_common_param, vehicle_shape, astar_param, clock_ptr);
+    std::make_unique<fpa::AstarSearch>(planner_common_param, vehicle_info, astar_param, clock_ptr);
   return algo;
 }
 
@@ -257,7 +259,7 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_rrtstar(bool informed,
 
   auto clock_ptr = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
   auto algo =
-    std::make_unique<fpa::RRTStar>(planner_common_param, vehicle_shape, rrtstar_param, clock_ptr);
+    std::make_unique<fpa::RRTStar>(planner_common_param, vehicle_info, rrtstar_param, clock_ptr);
   return algo;
 }
 
@@ -367,11 +369,13 @@ bool test_algorithm(enum AlgorithmType algo_type, bool dump_rosbag = false)
       writer.open(storage_options, converter_options);
 
       add_message_to_rosbag(
-        writer, create_float_msg(vehicle_shape.length), "vehicle_length", "std_msgs/msg/Float64");
+        writer, create_float_msg(vehicle_info.vehicle_length_m), "vehicle_length",
+        "std_msgs/msg/Float64");
       add_message_to_rosbag(
-        writer, create_float_msg(vehicle_shape.width), "vehicle_width", "std_msgs/msg/Float64");
+        writer, create_float_msg(vehicle_info.vehicle_width_m), "vehicle_width",
+        "std_msgs/msg/Float64");
       add_message_to_rosbag(
-        writer, create_float_msg(vehicle_shape.base2back), "vehicle_base2back",
+        writer, create_float_msg(vehicle_info.rear_overhang_m), "vehicle_base2back",
         "std_msgs/msg/Float64");
 
       add_message_to_rosbag(writer, costmap_msg, "costmap", "nav_msgs/msg/OccupancyGrid");
