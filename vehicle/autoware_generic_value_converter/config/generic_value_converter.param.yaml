@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    csv_path_value_map: "$(find-pkg-share autoware_generic_value_converter)/data/value_map.csv"
+    max_value: 3.0
+    min_value: -5.0
+    convert_value_cmd: true
+    use_value_ff: true
