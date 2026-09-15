@@ -77,7 +77,8 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
     pub_transform_ = this->create_publisher<tf2_msgs::msg::TFMessage>(node_param_.remap_topic, qos);
 
     sub_transform_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-      node_param_.topic, qos, [this](tf2_msgs::msg::TFMessage::SharedPtr msg) {
+      node_param_.topic, qos,
+      [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(tf2_msgs::msg::TFMessage) & msg) {
         for (const auto & transform : msg->transforms) {
           if (
             transform.header.frame_id != node_param_.frame_id ||
@@ -98,7 +99,7 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
 
     sub_topic_ = this->create_generic_subscription(
       node_param_.topic, node_param_.topic_type, qos,
-      [this]([[maybe_unused]] std::shared_ptr<rclcpp::SerializedMessage> msg) {
+      [this]([[maybe_unused]] std::shared_ptr<const rclcpp::SerializedMessage> msg) {
         if (!is_relaying_) return;
 
         if (node_param_.enable_keep_publishing) {
@@ -112,15 +113,16 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
   // Timer
   if (node_param_.enable_keep_publishing) {
     const auto update_period_ns = rclcpp::Rate(node_param_.update_rate).period();
-    timer_ = rclcpp::create_timer(this, get_clock(), update_period_ns, [this]() {
-      if (!is_relaying_) return;
+    timer_ =
+      autoware::agnocast_wrapper::create_timer(this, get_clock(), update_period_ns, [this]() {
+        if (!is_relaying_) return;
 
-      if (node_param_.is_transform) {
-        if (last_tf_topic_) pub_transform_->publish(*last_tf_topic_);
-      } else {
-        if (last_topic_) pub_topic_->publish(*last_topic_);
-      }
-    });
+        if (node_param_.is_transform) {
+          if (last_tf_topic_) pub_transform_->publish(*last_tf_topic_);
+        } else {
+          if (last_topic_) pub_topic_->publish(*last_topic_);
+        }
+      });
   }
 }
 }  // namespace autoware::topic_relay_controller
