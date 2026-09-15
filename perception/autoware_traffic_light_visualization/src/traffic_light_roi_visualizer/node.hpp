@@ -61,15 +61,15 @@ class TrafficLightRoiVisualizerNode : public rclcpp::Node
 {
 public:
   explicit TrafficLightRoiVisualizerNode(const rclcpp::NodeOptions & options);
-  void connectCb();
+  void connect_cb();
 
-  void imageRoiCallback(
+  void image_roi_callback(
     const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
     const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_tl_roi_msg,
     const tier4_perception_msgs::msg::TrafficLightArray::ConstSharedPtr &
       input_traffic_signals_msg);
 
-  void imageRoughRoiCallback(
+  void image_rough_roi_callback(
     const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
     const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_tl_roi_msg,
     const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_tl_rough_roi_msg,
@@ -103,7 +103,7 @@ private:
    * @param color Color string.
    * @return RGB color.
    */
-  static cv::Scalar strToColor(const std::string & color)
+  static cv::Scalar str_to_color(const std::string & color)
   {
     if (color == "red") {
       return {254, 149, 149};
@@ -121,7 +121,7 @@ private:
    * @param label String formatted as `<Color0>-<Shape0>,<Color1>-<Shape1>,...,<ColorN>-<ShapeN>`.
    * @return Extracted information includes a color associated with "circle" and shape names.
    */
-  static TrafficLightShapeInfo extractShapeInfo(const std::string & label)
+  static TrafficLightShapeInfo extract_shape_info(const std::string & label)
   {
     cv::Scalar color{255, 255, 255};
     std::vector<std::string> shapes;
@@ -134,7 +134,7 @@ private:
         auto shape = segment.substr(hyphen_pos + 1);
         if (shape == "circle") {
           const auto color_str = segment.substr(0, hyphen_pos);
-          color = strToColor(color_str);
+          color = str_to_color(color_str);
         }
         shapes.emplace_back(shape);
       }
@@ -142,19 +142,21 @@ private:
     return {color, shapes};
   }
 
-  bool createRect(
+  /// Draws the ROI in `color` and writes its traffic light id next to it.
+  bool draw_roi_with_id(
     cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoi & tl_roi,
     const cv::Scalar & color);
 
-  bool createRect(
+  /// Draws the ROI in the color of `result` and a label box with its shape and confidence.
+  bool draw_roi_with_label(
     cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoi & tl_roi,
     const ClassificationResult & result);
 
-  bool getClassificationResult(
+  bool get_classification_result(
     int id, const tier4_perception_msgs::msg::TrafficLightArray & traffic_signals,
     ClassificationResult & result);
 
-  bool getRoiFromId(
+  bool get_roi_from_id(
     int id, const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & rois,
     tier4_perception_msgs::msg::TrafficLightRoi & correspond_roi);
 
